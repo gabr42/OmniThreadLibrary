@@ -11,7 +11,7 @@ uses
   OtlComm,
   OtlThreadPool;
   
-  ' could use taskcontrol.WaitFirInit: boolean (in IOmniWorker mode)
+// TODO 1 -oPrimoz Gabrijelcic : could use taskcontrol.WaitForInit: boolean (in IOmniWorker mode)
 
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
@@ -66,6 +66,7 @@ type
     function  GetUniqueID: cardinal;
   //
     function  Alertable: IOmniTaskControl;
+    function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
@@ -87,10 +88,12 @@ type
   function CreateTask(executor: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(executor: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
+  function CreateTask(worker: TOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
 
 implementation
 
 uses
+  Messages,
   HVStringBuilder,
   DSiWin32,
   GpStuff,
@@ -176,7 +179,7 @@ type
     property Task: IOmniTask read otTask;
   end; { TOmniThread }
 
-  TOmniTaskControlOption = (tcoAlertableWait);
+  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl)
@@ -195,10 +198,13 @@ type
     otcTerminateEvent : TDSiEventHandle;
     otcThread         : TOmniThread;
     otcUniqueID       : cardinal;
-    otcWorker         : IOmniWorker;
+    otcWakeMask       : DWORD;
+    otcWorkerIntf     : IOmniWorker;
+    otcWorkerObj_ref  : TOmniWorker;
   strict protected
     procedure DispatchMessages(task: IOmniTask);
     procedure Initialize;
+    procedure ProcessThreadMessages;
   protected
     function  Alertable: IOmniTaskControl;
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -208,9 +214,11 @@ type
     function  GetUniqueID: cardinal; inline;
   public
     constructor Create(worker: IOmniWorker; const taskName: string); overload;
+    constructor Create(worker: TOmniWorker; const taskName: string); overload;
     constructor Create(executor: TOmniTaskMethod; const taskName: string); overload;
     constructor Create(executor: TOmniTaskProcedure; const taskName: string); overload;
     destructor  Destroy; override;
+    function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
@@ -245,6 +253,11 @@ begin
 end; { CreateTask }
 
 function CreateTask(worker: IOmniWorker; const taskName: string): IOmniTaskControl; overload;
+begin
+  Result := TOmniTaskControl.Create(worker, taskName);
+end; { CreateTask }
+
+function CreateTask(worker: TOmniWorker; const taskName: string): IOmniTaskControl; overload;
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -468,7 +481,7 @@ end; { TOmniTaskExecutor.GetProc }
 
 constructor TOmniTaskControl.Create(worker: IOmniWorker; const taskName: string);
 begin
-  otcWorker := worker;
+  otcWorkerIntf := worker;
   otcExecutor := TOmniTaskExecutor.CreateMethod(DispatchMessages);
   otcTaskName := taskName;
   Initialize;
@@ -484,6 +497,14 @@ end; { TOmniTaskControl.Create }
 constructor TOmniTaskControl.Create(executor: TOmniTaskProcedure; const taskName: string);
 begin
   otcExecutor := TOmniTaskExecutor.CreateProc(executor);
+  otcTaskName := taskName;
+  Initialize;
+end; { TOmniTaskControl.Create }
+
+constructor TOmniTaskControl.Create(worker: TOmniWorker; const taskName: string);
+begin
+  otcWorkerObj_ref := worker;
+  otcExecutor := TOmniTaskExecutor.CreateMethod(DispatchMessages);
   otcTaskName := taskName;
   Initialize;
 end; { TOmniTaskControl.Create }
@@ -504,8 +525,8 @@ end; { TOmniTaskControl.Destroy }
 
 function TOmniTaskControl.Alertable: IOmniTaskControl;
 begin
-  if not assigned(otcWorker) then
-    raise Exception.Create('TOmniTaskControl.Alertable: Alertable wait is only available when working with an IOmniWorker');
+  if not (assigned(otcWorkerIntf) or assigned(otcWorkerObj_ref)) then
+    raise Exception.Create('TOmniTaskControl.Alertable: Alertable wait is only available when working with an OmniWorker');
   Include(otcOptions, tcoAlertableWait);
   Result := Self;
 end; { TOmniTaskControl.Alertable }
@@ -513,14 +534,33 @@ end; { TOmniTaskControl.Alertable }
 ///<summary>Message dispatching loop. *** Executed from the task thread *** </summary>
 procedure TOmniTaskControl.DispatchMessages(task: IOmniTask);
 var
+  flags      : DWORD;
   lastIdle_ms: int64;
   msg        : TOmniMessage;
   timeout_ms : int64;
+  wakeMask   : DWORD;
 begin
-  otcWorker.Task := task;
-  if not otcWorker.Initialize then
-    Exit;
+  if assigned(otcWorkerIntf) and assigned(otcWorkerObj_ref) then
+    raise Exception.Create('TOmniTaskControl: Internal error, both otcWorkerIntf and otcWorkerObj are assigned');
+  if assigned(otcWorkerIntf) then begin
+    otcWorkerIntf.Task := task;
+    if not otcWorkerIntf.Initialize then
+      Exit;
+  end;
+  if assigned(otcWorkerObj_ref) then begin
+    otcWorkerObj_ref.Task := task;
+    if not otcWorkerObj_ref.Initialize then
+      Exit;
+  end;
   try
+    if tcoMessageWait in Options then
+      wakeMask := otcWakeMask
+    else
+      wakeMask := 0;
+    if tcoAlertableWait in Options then
+      flags := MWMO_ALERTABLE
+    else
+      flags := 0;
     lastIdle_ms := DSiTimeGetTime64;
     repeat
       if otcIdleInterval_ms <= 0 then
@@ -530,23 +570,34 @@ begin
         if timeout_ms < 0 then
           timeout_ms := 0;
       end;
-      case DSiWaitForTwoObjectsEx(task.TerminateEvent, task.Comm.NewMessageEvent, false,
-             cardinal(timeout_ms), tcoAlertableWait in Options)
+      case DSiMsgWaitForTwoObjectsEx(task.TerminateEvent, task.Comm.NewMessageEvent,
+             cardinal(timeout_ms), wakeMask, flags)
       of
         WAIT_OBJECT_1:
-          if task.Comm.Receive(msg) then
-            otcWorker.DispatchMessage(msg);
+          if task.Comm.Receive(msg) then begin
+            if assigned(otcWorkerIntf) then
+              otcWorkerIntf.DispatchMessage(msg);
+            if assigned(otcWorkerObj_ref) then
+              otcWorkerObj_ref.DispatchMessage(msg)
+          end;
+        WAIT_OBJECT_2: //message
+          ProcessThreadMessages;
         WAIT_IO_COMPLETION:
-          timeout_ms := timeout_ms; // do-nothing
+          ; // do-nothing
         WAIT_TIMEOUT:
           begin
             if otcIdleMessage >= 0 then begin
               msg.MsgID := otcIdleMessage;
               msg.MsgData := Null;
-              otcWorker.DispatchMessage(msg)
+              if assigned(otcWorkerIntf) then
+                otcWorkerIntf.DispatchMessage(msg);
+              if assigned(otcWorkerObj_ref) then
+                otcWorkerObj_ref.DispatchMessage(msg);
             end
-            else if assigned(otcWorker) then
-              otcWorker.Idle;
+            else if assigned(otcWorkerIntf) then
+              otcWorkerIntf.Idle
+            else if assigned(otcWorkerObj_ref) then
+              otcWorkerObj_ref.Idle;
             lastIdle_ms := DSiTimeGetTime64;
           end; //WAIT_TIMEOUT
         else
@@ -554,12 +605,17 @@ begin
       end; //case
     until false;
   finally
-    if assigned(otcWorker) then begin
-      otcWorker.Cleanup;
-      otcWorker.Task := nil;
+    if assigned(otcWorkerIntf) then begin
+      otcWorkerIntf.Cleanup;
+      otcWorkerIntf.Task := nil;
+    end;
+    if assigned(otcWorkerObj_ref) then begin
+      otcWorkerObj_ref.Cleanup;
+      otcWorkerObj_ref.Task := nil;
     end;
   end;
-  otcWorker := nil;
+  otcWorkerIntf := nil;
+  otcWorkerObj_ref := nil;
 end; { TOmniTaskControl.DispatchMessages }
 
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
@@ -592,11 +648,30 @@ begin
   otcUniqueID := taskUID.Increment;
   otcCommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
-  otcTerminateEvent := CreateEvent(nil, false, false, nil);
+  otcTerminateEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcTerminateEvent <> 0);
-  otcTerminatedEvent := CreateEvent(nil, false, false, nil);
+  otcTerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcTerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
+
+function TOmniTaskControl.MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+begin
+  if not (assigned(otcWorkerIntf) or assigned(otcWorkerObj_ref)) then
+    raise Exception.Create('TOmniTaskControl.MsgWait: Message wait is only available when working with an OmniWorker');
+  Include(otcOptions, tcoMessageWait);
+  otcWakeMask := wakeMask;
+  Result := Self;
+end; { TOmniTaskControl.MsgWait }
+
+procedure TOmniTaskControl.ProcessThreadMessages;
+var
+  msg: TMsg;
+begin
+  while PeekMessage(Msg, 0, 0, 0, PM_REMOVE) and (Msg.Message <> WM_QUIT) do begin
+    TranslateMessage(Msg);
+    DispatchMessage(Msg);
+  end;
+end; { TOmniTaskControl.ProcessThreadMessages }
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
@@ -631,7 +706,7 @@ end; { TOmniTaskControl.Schedule }
 function TOmniTaskControl.SetIdle(interval_ms: cardinal; idleMessage: integer):
   IOmniTaskControl;
 begin
-  if not assigned(otcWorker) then
+  if not assigned(otcWorkerIntf) then
     raise Exception.Create('TOmniTaskControl.SetIdle: Idle mode is only available when working with an IOmniWorker');
   otcIdleInterval_ms := interval_ms;
   otcIdleMessage := idleMessage;
