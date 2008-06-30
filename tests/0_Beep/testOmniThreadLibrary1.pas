@@ -3,11 +3,9 @@ unit testOmniThreadLibrary1;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ActnList,
-  OtlCommon,
-  OtlTask,
-  OtlTaskEvents;
+  Windows, SysUtils,
+  Classes, Controls, StdCtrls, Forms,
+  OtlTask;
 
 type
   TfrmTestOTL = class(TForm)
