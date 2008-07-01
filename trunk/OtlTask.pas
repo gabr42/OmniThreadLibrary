@@ -54,14 +54,16 @@ uses
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
+    function  GetName: string;
     function  GetParam(idxParam: integer): TOmniValue;
     function  GetParamByName(const paramName: string): TOmniValue;
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: cardinal;
   //
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure Terminate; 
+    procedure Terminate;
     property Comm: IOmniCommunicationEndpoint read GetComm;
+    property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
@@ -185,31 +187,43 @@ type
     otExecutor       : TOmniTaskExecutor;
     otMonitorWindow  : THandle;
     otParameters_ref : TOmniValueContainer;
+    otTaskName       : string;
     otTerminatedEvent: TDSiEventHandle;
     otTerminateEvent : TDSiEventHandle;
     otUniqueID       : cardinal;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
+    function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
     function  GetTerminateEvent: THandle; inline;
     function  GetUniqueID: cardinal; inline;
     procedure Terminate; inline;
   public
-    constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer; comm:
-      IOmniTwoWayChannel; uniqueID: cardinal; terminateEvent, terminatedEvent:
-      TDSiEventHandle; monitorWindow: THandle);
+    constructor Create(executor: TOmniTaskExecutor; const taskName: string; parameters:
+      TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal; terminateEvent,
+      terminatedEvent: TDSiEventHandle; monitorWindow: THandle);
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     property Comm: IOmniCommunicationEndpoint read GetComm;
+    property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
   end; { TOmniTask }
 
-  TOmniThread = class(TThread)
+  TThreadNameInfo = record
+    FType    : LongWord; // must be 0x1000
+    FName    : PChar;    // pointer to name (in user address space)
+    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
+    FFlags   : LongWord; // reserved for future use, must be zero
+  end; { TThreadNameInfo }
+
+  TOmniThread = class(TThread) // TODO 3 -oPrimoz Gabrijelcic : Factor this class into OtlThread unit?
   strict private
     otTask: IOmniTask;
+  strict protected
+    procedure SetThreadName(const name: string);
   protected
     procedure Execute; override;
   public
@@ -335,12 +349,13 @@ end; { TOmniWorker.SetTask }
 
 { TOmniTask }
 
-constructor TOmniTask.Create(executor: TOmniTaskExecutor; parameters:
-  TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal; terminateEvent,
-  terminatedEvent: TDSiEventHandle; monitorWindow: THandle);
+constructor TOmniTask.Create(executor: TOmniTaskExecutor; const taskName: string;
+  parameters: TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal;
+  terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle);
 begin
   inherited Create;
   otExecutor := executor;
+  otTaskName := taskName;
   otParameters_ref := parameters;
   otCommChannel := comm;
   otUniqueID := uniqueID;
@@ -361,6 +376,11 @@ function TOmniTask.GetComm: IOmniCommunicationEndpoint;
 begin
   Result := otCommChannel.Endpoint2;
 end; { TOmniTask.GetComm }
+
+function TOmniTask.GetName: string;
+begin
+  Result := otTaskName;
+end; { TOmniTask.GetName }
 
 function TOmniTask.GetParam(idxParam: integer): TOmniValue;
 begin
@@ -723,19 +743,15 @@ var
   task: IOmniTask;
 begin
   otcParameters.Lock;
-  task := TOmniTask.Create(otcExecutor, otcParameters, otcCommChannel, otcUniqueID,
-    otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow);
+  task := TOmniTask.Create(otcExecutor, otcTaskName, otcParameters, otcCommChannel,
+    otcUniqueID, otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow);
   otcThread := TOmniThread.Create(task);
   otcThread.Resume;
   Result := Self;
 end; { TOmniTaskControl.Run }
 
 function TOmniTaskControl.Schedule(threadPool: IOmniThreadPool): IOmniTaskControl;
-//var
-//  task: IOmniTask;
 begin
-//  otcParameters.Lock;
-//  task := TOmniTask.Create(otcExecutor, otcParameters, otcComm);
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniTaskControl.Schedule
   raise Exception.Create('Thread pools are not implemented - yet ...');
 //  Result := Self;
@@ -800,7 +816,25 @@ end; { TOmniThread.Create }
 
 procedure TOmniThread.Execute;
 begin
+  {$IFNDEF OTL_DontSetThreadName}
+  SetThreadName(otTask.Name);
+  {$ENDIF OTL_DontSetThreadName}
   (otTask as IOmniTaskExecutor).Execute;
 end; { TOmniThread.Execute }
+
+procedure TOmniThread.SetThreadName(const name: string);
+var
+  ThreadNameInfo: TThreadNameInfo; 
+begin
+  ThreadNameInfo.FType := $1000;
+  ThreadNameInfo.FName := PChar(name);
+  ThreadNameInfo.FThreadID := $FFFFFFFF;
+  ThreadNameInfo.FFlags := 0;
+  try
+    RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
+  except
+    // ignore
+  end;
+end; { TOmniThread.SetThreadName }
 
 end.
