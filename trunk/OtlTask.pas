@@ -113,7 +113,8 @@ type
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
     function  SetIdle(interval_ms: cardinal; idleMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
-    function  SetParameter(paramValue: TOmniValue; const paramName: string = ''): IOmniTaskControl;
+    function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
+    function  SetParameter(paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(parameters: array of TOmniValue): IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
@@ -281,7 +282,8 @@ type
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
     function  SetIdle(interval_ms: cardinal; idleMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
-    function  SetParameter(paramValue: TOmniValue; const paramName: string = ''): IOmniTaskControl;
+    function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
+    function  SetParameter(paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(parameters: array of TOmniValue): IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
@@ -803,11 +805,16 @@ begin
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 
-function TOmniTaskControl.SetParameter(paramValue: TOmniValue;
-  const paramName: string): IOmniTaskControl;
+function TOmniTaskControl.SetParameter(const paramName: string;
+  paramValue: TOmniValue): IOmniTaskControl; 
 begin
   otcParameters.Add(paramValue, paramName);
   Result := Self;
+end; { TOmniTaskControl.SetParameter }
+
+function TOmniTaskControl.SetParameter(paramValue: TOmniValue): IOmniTaskControl;
+begin
+  SetParameter('', paramValue);
 end; { TOmniTaskControl.SetParameter }
 
 function TOmniTaskControl.SetParameters(parameters: array of TOmniValue): IOmniTaskControl;
