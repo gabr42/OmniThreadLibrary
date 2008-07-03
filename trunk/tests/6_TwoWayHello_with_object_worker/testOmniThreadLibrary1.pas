@@ -118,8 +118,7 @@ end;
 
 procedure TAsyncHello.OMChangeMessage(var msg: TOmniMessage);
 begin
-  if msg.MsgID = MSG_CHANGE_MESSAGE then
-    aiMessage := msg.MsgData;
+  aiMessage := msg.MsgData;
 end;
 
 procedure TAsyncHello.OMSendMessage(var msg: TOmniMessage);
