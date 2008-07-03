@@ -77,8 +77,8 @@ begin
   FHelloTask :=
     OmniTaskEventDispatch1.Monitor(CreateTask(worker, 'Hello')).
     SetIdle(1000, MSG_SEND_MESSAGE).
-    SetParameter(1000, 'Delay').
-    SetParameter('Hello', 'Message').
+    SetParameter('Delay', 1000).
+    SetParameter('Message', 'Hello').
     Run;
 end;
 
