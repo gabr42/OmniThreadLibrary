@@ -73,7 +73,7 @@ procedure TfrmTestOTL.actStartHelloExecute(Sender: TObject);
 begin
   FHelloTask :=
     OmniTaskEventDispatch1.Monitor(CreateTask(TAsyncHello.Create('Hello'), 'Hello')).
-    SetIdle(1000, MSG_SEND_MESSAGE).
+    SetTimer(1000, MSG_SEND_MESSAGE).
     SetParameter('Delay', 1000).
     FreeOnTerminate.
     Run;

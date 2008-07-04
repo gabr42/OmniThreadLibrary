@@ -48,8 +48,8 @@ uses
   OtlCommon,
   OtlComm,
   OtlThreadPool;
-  
-// TODO 1 -oPrimoz Gabrijelcic : could use taskcontrol.WaitForInit: boolean (in IOmniWorker mode)
+
+{ TODO 1 -oPrimoz Gabrijelcic : Rename SetTimer into SetTimer }  
 
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
@@ -76,7 +76,7 @@ type
   //
     procedure Cleanup;
     procedure DispatchMessage(var msg: TOmniMessage);
-    procedure Idle;
+    procedure Timer;
     function  Initialize: boolean;
     property Task: IOmniTask read GetTask write SetTask;
   end; { IOmniWorker }
@@ -89,7 +89,7 @@ type
     function  GetTask: IOmniTask;
     procedure SetTask(const value: IOmniTask);
   public
-    procedure Idle; virtual;
+    procedure Timer; virtual;
     function  Initialize: boolean; virtual;
     procedure Cleanup; virtual;
     property Task: IOmniTask read GetTask write SetTask;
@@ -111,7 +111,7 @@ type
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
-    function  SetIdle(interval_ms: cardinal; idleMessage: integer = -1): IOmniTaskControl;
+    function  SetTimer(interval_ms: cardinal; timerMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(paramValue: TOmniValue): IOmniTaskControl; overload;
@@ -243,8 +243,6 @@ type
     otcExecutor         : TOmniTaskExecutor;
     otcExit             : integer;
     otcExitMessage      : string;
-    otcIdleInterval_ms  : cardinal;
-    otcIdleMessage      : integer;
     otcMonitorWindow    : THandle;
     otcOptions          : TOmniTaskControlOptions;
     otcParameters       : TOmniValueContainer;
@@ -252,6 +250,8 @@ type
     otcTerminatedEvent  : TDSiEventHandle;
     otcTerminateEvent   : TDSiEventHandle;
     otcThread           : TOmniThread;
+    otcTimerInterval_ms : cardinal;
+    otcTimerMessage     : integer;
     otcUniqueID         : cardinal;
     otcWakeMask         : DWORD;
     otcWorkerInitialized: THandle;
@@ -280,7 +280,7 @@ type
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
-    function  SetIdle(interval_ms: cardinal; idleMessage: integer = -1): IOmniTaskControl;
+    function  SetTimer(interval_ms: cardinal; timerMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(paramValue: TOmniValue): IOmniTaskControl; overload;
@@ -342,11 +342,6 @@ begin
   Result := owTask;
 end; { TOmniWorker.GetTask }
 
-procedure TOmniWorker.Idle;
-begin
-  //do-nothing
-end; { TOmniWorker.Idle }
-
 function TOmniWorker.Initialize: boolean;
 begin
   //do-nothing
@@ -357,6 +352,11 @@ procedure TOmniWorker.SetTask(const value: IOmniTask);
 begin
   owTask := value;
 end; { TOmniWorker.SetTask }
+
+procedure TOmniWorker.Timer;
+begin
+  //do-nothing
+end; { TOmniWorker.Timer }
 
 { TOmniTask }
 
@@ -606,11 +606,11 @@ end; { TOmniTaskControl.Alertable }
 ///<summary>Message dispatching loop. *** Executed from the task thread *** </summary>
 procedure TOmniTaskControl.DispatchMessages(task: IOmniTask);
 var
-  flags      : DWORD;
-  lastIdle_ms: int64;
-  msg        : TOmniMessage;
-  timeout_ms : int64;
-  wakeMask   : DWORD;
+  flags       : DWORD;
+  lastTimer_ms: int64;
+  msg         : TOmniMessage;
+  timeout_ms  : int64;
+  wakeMask    : DWORD;
 begin
   if assigned(otcWorkerIntf) and assigned(otcWorkerObj_ref) then
     raise Exception.Create('TOmniTaskControl: Internal error, both otcWorkerIntf and otcWorkerObj are assigned');
@@ -637,12 +637,12 @@ begin
       flags := MWMO_ALERTABLE
     else
       flags := 0;
-    lastIdle_ms := DSiTimeGetTime64;
+    lastTimer_ms := DSiTimeGetTime64;
     repeat
-      if otcIdleInterval_ms <= 0 then
+      if otcTimerInterval_ms <= 0 then
         timeout_ms := INFINITE
       else begin
-        timeout_ms := otcIdleInterval_ms - (DSiTimeGetTime64 - lastIdle_ms);
+        timeout_ms := otcTimerInterval_ms - (DSiTimeGetTime64 - lastTimer_ms);
         if timeout_ms < 0 then
           timeout_ms := 0;
       end;
@@ -662,8 +662,8 @@ begin
           ; // do-nothing
         WAIT_TIMEOUT:
           begin
-            if otcIdleMessage >= 0 then begin
-              msg.MsgID := otcIdleMessage;
+            if otcTimerMessage >= 0 then begin
+              msg.MsgID := otcTimerMessage;
               msg.MsgData := Null;
               if assigned(otcWorkerIntf) then
                 otcWorkerIntf.DispatchMessage(msg);
@@ -671,10 +671,10 @@ begin
                 otcWorkerObj_ref.DispatchMessage(msg);
             end
             else if assigned(otcWorkerIntf) then
-              otcWorkerIntf.Idle
+              otcWorkerIntf.Timer
             else if assigned(otcWorkerObj_ref) then
-              otcWorkerObj_ref.Idle;
-            lastIdle_ms := DSiTimeGetTime64;
+              otcWorkerObj_ref.Timer;
+            lastTimer_ms := DSiTimeGetTime64;
           end; //WAIT_TIMEOUT
         else
           break; //repeat
@@ -786,15 +786,15 @@ begin
 //  Result := Self;
 end; { TOmniTaskControl.Schedule }
 
-function TOmniTaskControl.SetIdle(interval_ms: cardinal; idleMessage: integer):
+function TOmniTaskControl.SetTimer(interval_ms: cardinal; timerMessage: integer):
   IOmniTaskControl;
 begin
   if not (assigned(otcWorkerIntf) or assigned(otcWorkerObj_ref)) then
-    raise Exception.Create('TOmniTaskControl.SetIdle: Idle mode is only available when working with an OmniWorker');
-  otcIdleInterval_ms := interval_ms;
-  otcIdleMessage := idleMessage;
+    raise Exception.Create('TOmniTaskControl.SetTimer: Timer mode is only available when working with an OmniWorker');
+  otcTimerInterval_ms := interval_ms;
+  otcTimerMessage := timerMessage;
   Result := Self;
-end; { TOmniTaskControl.SetIdle }
+end; { TOmniTaskControl.SetTimer }
 
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
