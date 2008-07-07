@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-06-30
-///   Version           : 0.1
+///   Last modification : 2008-07-07
+///   Version           : 0.2
 ///</para><para>
 ///   History:
+///     0.2: 2008-07-07
+///       - Included experimenal lock-free buffer, donated by GJ.
+///         To enable this code, compile with /dLockFreeBuffer.
 ///</para></remarks>
 
 unit OtlComm;
@@ -50,7 +53,6 @@ uses
 
 const
   CDefaultQueueSize = 65520 div 20 {3276 entries; 20 = SizeOf(TOmniMessage)};
-
 type
   TOmniMessage = record
     MsgID  : word;
@@ -87,6 +89,8 @@ uses
 type
   {:Fixed-size ring buffer of TOmniValues references.
   }
+
+{$IFNDEF LockFreeBuffer}
   TOmniRingBuffer = class
   strict private
     orbBuffer              : array of TOmniMessage;
@@ -116,6 +120,44 @@ type
     procedure Unlock; inline;
     property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
   end; { TOmniRingBuffer }
+{$ELSE}
+  PLinkedOmniMessage = ^TLinkedOmniMessage;
+  TLinkedOmniMessage = packed record
+    Next: PLinkedOmniMessage;
+    OmniMessage: TOmniMessage;
+  end;
+
+  TOmniRingBuffer = class
+  strict private
+    orbBottomInUseLink     : PLinkedOmniMessage;
+    orbTopInUseLink        : PLinkedOmniMessage;
+    orbBottomFreeLink      : PLinkedOmniMessage;
+    orbTopFreeLink         : PLinkedOmniMessage;
+    orbBuffer              : array of TLinkedOmniMessage;
+    orbCount               : TGp4AlignedInt;
+    orbBufferSize          : integer;
+//
+    orbMonitorMessageLParam: integer;
+    orbMonitorMessageWParam: integer;
+    orbMonitorWindow       : Cardinal;
+    orbNewMessageEvt       : TDSiEventHandle;
+    function NewLink: PLinkedOmniMessage;
+    procedure RecycleLink(const ALink: PLinkedOmniMessage);
+    procedure PushLink(const ALink: PLinkedOmniMessage);
+    function PopLink: PLinkedOmniMessage;
+  public
+    constructor Create(bufferSize: integer);
+    destructor Destroy; override;
+    function  Count: integer; inline;
+    function Dequeue: TOmniMessage;
+    function Enqueue(value: TOmniMessage): Boolean;
+    function IsEmpty: boolean; inline;
+    function IsFull: boolean; inline;
+    procedure RemoveMonitor;
+    procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
+    property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
+  end; { TOmniRingBuffer }
+{$ENDIF}
 
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
   strict private
@@ -159,6 +201,7 @@ end; { CreateTwoWayChannel }
 
 { TOmniRingBuffer }
 
+{$IFNDEF LockFreeBuffer}
 constructor TOmniRingBuffer.Create(bufferSize: integer);
 begin
   orbLock := TSpinLock.Create;
@@ -283,7 +326,163 @@ procedure TOmniRingBuffer.Unlock;
 begin
   orbLock.Release;
 end; { TOmniRingBuffer.Unlock }
+{$ELSE}
 
+function TOmniRingBuffer.Count: integer;
+begin
+  Result := orbCount;
+end;
+
+constructor TOmniRingBuffer.Create(bufferSize: integer);
+var
+  n: Cardinal;
+begin
+  orbBufferSize := bufferSize;
+  SetLength(orbBuffer, orbBufferSize + 1);
+  orbNewMessageEvt := CreateEvent(nil, false, false, nil);
+  Win32Check(orbNewMessageEvt <> 0);
+  Assert(SizeOf(THandle) = SizeOf(cardinal));
+  orbMonitorWindow := 0;
+//Format buffer to FreeChain, init orbTopFreeLink and orbBottomFreeLink
+  orbBottomFreeLink := @orbBuffer[0];
+  for n := 0 to orbBufferSize -1 do
+    orbBuffer[n].Next := @orbBuffer[n +1];
+  orbBuffer[orbBufferSize].Next := @orbBottomFreeLink;
+  orbTopFreeLink := @orbBuffer[orbBufferSize];
+//Init orbSubInUseLink and orbTailInUseLink
+  orbTopInUseLink := @orbBottomInUseLink;
+  orbBottomInUseLink := @orbBottomInUseLink;
+end;
+
+function TOmniRingBuffer.NewLink: PLinkedOmniMessage;
+//orbTopFreeLink >> <<  Link.Next << Link.Next << ... << Link.Next
+//FILO buffer logic                                        ^------ < orbBottomFreeLink
+asm
+//orbBottomFreeLink point on first added link in chain.
+//orbTopFreeLink point on last added link in chain. The pointer address of last link is @orbBottomFreeLink
+//Remove link from chain
+
+  lea   ecx, eax.orbTopFreeLink           //ecx := @orbTopFreeLink
+  mov   eax, [ecx]                        //Result := orbTopFreeLink^
+@spin:
+  mov   edx, [eax]                        //edx := Result.Next
+  lock  cmpxchg [ecx], edx                //orbBottomFreeLink := Result.Next
+  jnz   @spin                             //Do spin ???
+end;
+
+procedure TOmniRingBuffer.RecycleLink(const ALink: PLinkedOmniMessage);
+//orbTopFreeLink >> <<  Link.Next << Link.Next << ... << Link.Next
+//FILO buffer logic                                      ^------ < orbBottomFreeLink
+asm
+//orbBottomFreeLink point on first added link in chain.
+//orbTopFreeLink point on last added link in chain. The pointer address of last link is @orbBottomFreeLink
+
+  push  ebx                                //edx := @ALink
+  lea   ebx, eax.orbBottomFreeLink         //ebx = @orbBottomFreeLink
+  lea   ecx, eax.orbTopFreeLink            //ecx := @orbTopFreeLink
+  mov   [edx], ebx                         //ALink.Next := @orbBottomFreeLink (mark new chain end)
+  mov   eax, [ecx]                         //eax := orbTopFreeLink
+@spin:
+  lock  cmpxchg [ecx], edx                 //orbTopFreeLink := @ALink
+  jnz   @spin                              //Do spin ???
+  mov   eax, ecx
+  lock  cmpxchg [ebx], edx                 //Set orbBottomFreeLink
+  pop   ebx
+end;
+
+function TOmniRingBuffer.PopLink: PLinkedOmniMessage;
+//orbTopInUseLink >> << Link.Next << Link.Next << ... << Link.Next
+//FILO buffer logic                                        ^------ < orbBottomInUseLink
+//Remove link from chain
+asm
+  lea   ecx, eax.orbTopInUseLink           //ecx := @orbTopInUseLink
+  mov   eax, [ecx]                         //eax := Result orbTopInUseLink^
+@spin:
+  mov   edx, [eax]                         //edx := Result.Next       
+  lock  cmpxchg [ecx], edx                 //orbTopInUseLink := Result.Next
+  jnz   @spin                              //Do spin ???
+end;
+
+procedure TOmniRingBuffer.PushLink(const ALink: PLinkedOmniMessage);
+//orbTopInUseLink >> << Link.Next << Link.Next << ... << Link.Next
+//FILO buffer logic                                        ^------ < orbBottomInUseLink
+asm
+  push  ebx                                //edx := @ALink
+  lea   ebx, eax.orbBottomInUseLink        //ebx := @orbBottomInUseLink
+  lea   ecx, eax.orbTopInUseLink           //ecx := @orbTopInUseLink
+  mov   [edx], ebx                         //ALink.Next := @orbBottomInUseLink
+  mov   eax, [ecx]
+@spin:
+  lock  cmpxchg [ecx], edx                 //orbTopInUseLink := @ALink
+  jnz   @spin                              //Do spin ???
+  mov   eax, ecx
+  lock  cmpxchg [ebx], edx                 //Set orbBottomInUseLink
+  pop   ebx
+end;
+
+function TOmniRingBuffer.IsEmpty: boolean;
+begin
+  Result := orbTopInUseLink = @orbBottomInUseLink;
+end;
+
+function TOmniRingBuffer.IsFull: boolean;
+begin
+  Result := orbTopFreeLink = @orbBottomFreeLink;
+end;
+
+function TOmniRingBuffer.Enqueue(value: TOmniMessage): Boolean;
+var
+  LinkedOmniMessage: PLinkedOmniMessage;
+begin
+  LinkedOmniMessage := NewLink;
+  Result := not(LinkedOmniMessage = @orbBottomFreeLink);
+  if not Result then
+    exit;
+  LinkedOmniMessage^.OmniMessage := value;;
+  PushLink(LinkedOmniMessage);
+//...
+  orbCount.Value := orbCount + 1;
+  SetEvent(orbNewMessageEvt);
+  if orbMonitorWindow <> 0 then
+    PostMessage(orbMonitorWindow, COmniTaskMsg_NewMessage, orbMonitorMessageWParam,
+      orbMonitorMessageLParam);
+end;
+
+function TOmniRingBuffer.Dequeue: TOmniMessage;
+var
+  LinkedOmniMessage: PLinkedOmniMessage;
+begin
+  LinkedOmniMessage := PopLink;
+  if LinkedOmniMessage = @orbBottomInUseLink then
+    raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty');
+  Result := LinkedOmniMessage^.OmniMessage;
+  RecycleLink(LinkedOmniMessage);
+//...
+  orbCount.Value := orbCount - 1;
+  if not IsEmpty then
+    SetEvent(orbNewMessageEvt);
+end;
+
+destructor TOmniRingBuffer.Destroy;
+begin
+  DSiCloseHandleAndNull(orbNewMessageEvt);
+  inherited;
+end;
+
+procedure TOmniRingBuffer.RemoveMonitor;
+begin
+  orbMonitorWindow := 0;
+end; { TOmniRingBuffer.RemoveMonitor }
+
+procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLParam:
+  integer);
+begin
+  orbMonitorWindow := cardinal(hWindow);
+  orbMonitorMessageWParam := messageWParam;
+  orbMonitorMessageLParam := messageLParam;
+end; { TOmniRingBuffer.SetMonitor }
+
+{$ENDIF}
 { TOmniCommunicationEndpoint }
 
 constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniRingBuffer);
