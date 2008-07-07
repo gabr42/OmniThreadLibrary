@@ -147,7 +147,7 @@ type
     function PopLink: PLinkedOmniMessage;
   public
     constructor Create(bufferSize: integer);
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function  Count: integer; inline;
     function Dequeue: TOmniMessage;
     function Enqueue(value: TOmniMessage): Boolean;
@@ -184,7 +184,7 @@ type
     twcMessageQueueSize: integer;
     twcUnidirQueue     : array [1..2] of TOmniRingBuffer;
   strict protected
-    procedure CreateBuffers; {inline;} // TODO 1 -oPrimoz Gabrijelcic : testing, remove! 
+    procedure CreateBuffers; inline; 
   public
     constructor Create(messageQueueSize: integer);
     destructor  Destroy; override;
