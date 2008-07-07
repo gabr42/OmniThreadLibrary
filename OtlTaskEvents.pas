@@ -40,6 +40,8 @@ unit OtlTaskEvents;
 
 interface
 
+{$R OtlTaskEvents.dcr}
+
 uses
   Messages,
   Classes,
