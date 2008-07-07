@@ -91,9 +91,9 @@ function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$
 function  OffsetPtr(ptr: pointer; offset: integer): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 ///<summary>Reverses byte order in a 4-byte number.</summary>
-function  ReverseDWord(dw: DWORD): DWORD;                                     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  ReverseDWord(dw: DWORD): DWORD;
 ///<summary>Reverses byte order in a 2-byte number.</summary>
-function  ReverseWord(w: word): word;                                         {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  ReverseWord(w: word): word;
 
 ///<summary>Locates specified value in a buffer.</summary>
 ///<returns>Offset of found value (0..dataLen-1) or -1 if value was not found.</returns>
@@ -221,6 +221,7 @@ begin
         vtCurrency:   Result[i] := VCurrency^;
         vtVariant:    Result[i] := VVariant^;
         vtObject:     Result[i] := integer(VObject);
+        vtWideString: Result[i] := WideString(VWideString);
       else
         raise Exception.Create ('OpenArrayToVarArray: invalid data type')
       end; //case
@@ -229,38 +230,14 @@ begin
 end; { OpenArrayToVarArray }
 
 function ReverseDWord(dw: cardinal): cardinal;
-var
-  pIn : PByte;
-  pOut: PByte;
-begin
-  pIn := @dw;
-  pOut := @Result;
-  Inc(pOut, 3);
-  pOut^ := pIn^;
-  Inc(pIn);
-  Dec(pOut);
-  pOut^ := pIn^;
-  Inc(pIn);
-  Dec(pOut);
-  pOut^ := pIn^;
-  Inc(pIn);
-  Dec(pOut);
-  pOut^ := pIn^;
+asm
+  bswap eax
 end; { ReverseDWord }
 
 function ReverseWord(w: word): word;
-var
-  pIn : PByte;
-  pOut: PByte;
-begin
-  pIn := @w;
-  pOut := @Result;
-  Inc(pOut, 1);
-  pOut^ := pIn^;
-  Inc(pIn);
-  Dec(pOut);
-  pOut^ := pIn^;
-end; { ReverseDWord }
+asm
+   xchg   al, ah
+end; { ReverseWord }
 
 function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
 asm
