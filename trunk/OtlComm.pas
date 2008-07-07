@@ -129,22 +129,18 @@ type
 
   TOmniRingBuffer = class
   strict private
-    orbBottomInUseLink     : PLinkedOmniMessage;
-    orbTopInUseLink        : PLinkedOmniMessage;
-    orbBottomFreeLink      : PLinkedOmniMessage;
-    orbTopFreeLink         : PLinkedOmniMessage;
+    orbPublicChain         : PLinkedOmniMessage;
+    orbRecycleChain        : PLinkedOmniMessage;
     orbBuffer              : array of TLinkedOmniMessage;
-    orbCount               : TGp4AlignedInt;
     orbBufferSize          : integer;
+    orbCount               : TGp4AlignedInt;
 //
     orbMonitorMessageLParam: integer;
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : Cardinal;
     orbNewMessageEvt       : TDSiEventHandle;
-    function NewLink: PLinkedOmniMessage;
-    procedure RecycleLink(const ALink: PLinkedOmniMessage);
-    procedure PushLink(const ALink: PLinkedOmniMessage);
-    function PopLink: PLinkedOmniMessage;
+    function PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
+    procedure PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
   public
     constructor Create(bufferSize: integer);
     destructor  Destroy; override;
@@ -344,102 +340,62 @@ begin
   Assert(SizeOf(THandle) = SizeOf(cardinal));
   orbMonitorWindow := 0;
 //Format buffer to FreeChain, init orbTopFreeLink and orbBottomFreeLink
-  orbBottomFreeLink := @orbBuffer[0];
+  orbRecycleChain := @orbBuffer[0];
   for n := 0 to orbBufferSize -1 do
     orbBuffer[n].Next := @orbBuffer[n +1];
-  orbBuffer[orbBufferSize].Next := @orbBottomFreeLink;
-  orbTopFreeLink := @orbBuffer[orbBufferSize];
+  orbBuffer[orbBufferSize].Next := nil;
 //Init orbSubInUseLink and orbTailInUseLink
-  orbTopInUseLink := @orbBottomInUseLink;
-  orbBottomInUseLink := @orbBottomInUseLink;
+  orbPublicChain := nil;
 end;
 
-function TOmniRingBuffer.NewLink: PLinkedOmniMessage;
-//orbTopFreeLink >> <<  Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                                        ^------ < orbBottomFreeLink
+function TOmniRingBuffer.PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
+//nil << Link.Next << Link.Next << ... << Link.Next
+//FIFO buffer logic                         ^------ < AChainHead
 asm
-//orbBottomFreeLink point on first added link in chain.
-//orbTopFreeLink point on last added link in chain. The pointer address of last link is @orbBottomFreeLink
-//Remove link from chain
-
-  lea   ecx, eax.orbTopFreeLink           //ecx := @orbTopFreeLink
-  mov   eax, [ecx]                        //Result := orbTopFreeLink^
+  mov   eax, [edx]                        //Result := AChainHead
+  test  eax, eax
+  jz    @Exit
 @spin:
-  mov   edx, [eax]                        //edx := Result.Next
-  lock  cmpxchg [ecx], edx                //orbBottomFreeLink := Result.Next
+  mov   ecx, [eax]                        //ecx := Result.Next
+  lock cmpxchg [edx], ecx                 //AChainHead := Result.Next
   jnz   @spin                             //Do spin ???
+@Exit:
 end;
 
-procedure TOmniRingBuffer.RecycleLink(const ALink: PLinkedOmniMessage);
-//orbTopFreeLink >> <<  Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                                      ^------ < orbBottomFreeLink
+procedure TOmniRingBuffer.PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
+//nil << Link.Next << Link.Next << ... << Link.Next
+//FIFO buffer logic                         ^------ < AChainHead
 asm
-//orbBottomFreeLink point on first added link in chain.
-//orbTopFreeLink point on last added link in chain. The pointer address of last link is @orbBottomFreeLink
-
-  push  ebx                                //edx := @ALink
-  lea   ebx, eax.orbBottomFreeLink         //ebx = @orbBottomFreeLink
-  lea   ecx, eax.orbTopFreeLink            //ecx := @orbTopFreeLink
-  mov   [edx], ebx                         //ALink.Next := @orbBottomFreeLink (mark new chain end)
-  mov   eax, [ecx]                         //eax := orbTopFreeLink
-@spin:
-  lock  cmpxchg [ecx], edx                 //orbTopFreeLink := @ALink
-  jnz   @spin                              //Do spin ???
-  mov   eax, ecx
-  lock  cmpxchg [ebx], edx                 //Set orbBottomFreeLink
-  pop   ebx
-end;
-
-function TOmniRingBuffer.PopLink: PLinkedOmniMessage;
-//orbTopInUseLink >> << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                                        ^------ < orbBottomInUseLink
-//Remove link from chain
-asm
-  lea   ecx, eax.orbTopInUseLink           //ecx := @orbTopInUseLink
-  mov   eax, [ecx]                         //eax := Result orbTopInUseLink^
-@spin:
-  mov   edx, [eax]                         //edx := Result.Next       
-  lock  cmpxchg [ecx], edx                 //orbTopInUseLink := Result.Next
-  jnz   @spin                              //Do spin ???
-end;
-
-procedure TOmniRingBuffer.PushLink(const ALink: PLinkedOmniMessage);
-//orbTopInUseLink >> << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                                        ^------ < orbBottomInUseLink
-asm
-  push  ebx                                //edx := @ALink
-  lea   ebx, eax.orbBottomInUseLink        //ebx := @orbBottomInUseLink
-  lea   ecx, eax.orbTopInUseLink           //ecx := @orbTopInUseLink
-  mov   [edx], ebx                         //ALink.Next := @orbBottomInUseLink
-  mov   eax, [ecx]
-@spin:
-  lock  cmpxchg [ecx], edx                 //orbTopInUseLink := @ALink
-  jnz   @spin                              //Do spin ???
-  mov   eax, ecx
-  lock  cmpxchg [ebx], edx                 //Set orbBottomInUseLink
-  pop   ebx
+  mov   eax, [ecx]                         //ecx := AChainHead
+@Hopla:
+  mov   [edx], eax                         //ALink := AChainHead.Next
+  lock cmpxchg [ecx], edx                  //AChainHead := ALink
+  jnz   @Hopla
 end;
 
 function TOmniRingBuffer.IsEmpty: boolean;
 begin
-  Result := orbTopInUseLink = @orbBottomInUseLink;
+  Result := orbPublicChain = nil;
 end;
 
 function TOmniRingBuffer.IsFull: boolean;
 begin
-  Result := orbTopFreeLink = @orbBottomFreeLink;
+  Result := orbRecycleChain = nil;
 end;
 
 function TOmniRingBuffer.Enqueue(value: TOmniMessage): Boolean;
 var
   LinkedOmniMessage: PLinkedOmniMessage;
 begin
-  LinkedOmniMessage := NewLink;
-  Result := not(LinkedOmniMessage = @orbBottomFreeLink);
+  LinkedOmniMessage := PopLink(orbRecycleChain);
+  Result := not(LinkedOmniMessage = nil);
   if not Result then
+  begin
+    orbCount.Value :=9;
     exit;
+  end;
   LinkedOmniMessage^.OmniMessage := value;;
-  PushLink(LinkedOmniMessage);
+  PushLink(LinkedOmniMessage, orbPublicChain);
 //...
   orbCount.Value := orbCount + 1;
   SetEvent(orbNewMessageEvt);
@@ -452,11 +408,11 @@ function TOmniRingBuffer.Dequeue: TOmniMessage;
 var
   LinkedOmniMessage: PLinkedOmniMessage;
 begin
-  LinkedOmniMessage := PopLink;
-  if LinkedOmniMessage = @orbBottomInUseLink then
+  LinkedOmniMessage := PopLink(orbPublicChain);
+  if LinkedOmniMessage = nil then  
     raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty');
   Result := LinkedOmniMessage^.OmniMessage;
-  RecycleLink(LinkedOmniMessage);
+  PushLink(LinkedOmniMessage, orbRecycleChain);
 //...
   orbCount.Value := orbCount - 1;
   if not IsEmpty then
