@@ -36,7 +36,7 @@
 ///   History:
 ///     0.2: 2008-07-07
 ///       - Included experimenal lock-free buffer, donated by GJ.
-///         To enable this code, compile with /dLockFreeBuffer.
+///         To enable this code, compile with /dOTL_LockFreeBuffer.
 ///</para></remarks>
 
 unit OtlComm;
@@ -90,7 +90,7 @@ type
   {:Fixed-size ring buffer of TOmniValues references.
   }
 
-{$IFNDEF LockFreeBuffer}
+{$IFNDEF OTL_LockFreeBuffer}
   TOmniRingBuffer = class
   strict private
     orbBuffer              : array of TOmniMessage;
@@ -120,7 +120,7 @@ type
     procedure Unlock; inline;
     property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
   end; { TOmniRingBuffer }
-{$ELSE}
+{$ELSE OTL_LockFreeBuffer}
   PLinkedOmniMessage = ^TLinkedOmniMessage;
   TLinkedOmniMessage = packed record
     Next: PLinkedOmniMessage;
@@ -153,7 +153,7 @@ type
     procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
     property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
   end; { TOmniRingBuffer }
-{$ENDIF}
+{$ENDIF OTL_LockFreeBuffer}
 
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
   strict private
@@ -197,7 +197,7 @@ end; { CreateTwoWayChannel }
 
 { TOmniRingBuffer }
 
-{$IFNDEF LockFreeBuffer}
+{$IFNDEF OTL_LockFreeBuffer}
 constructor TOmniRingBuffer.Create(bufferSize: integer);
 begin
   orbLock := TSpinLock.Create;
@@ -322,7 +322,7 @@ procedure TOmniRingBuffer.Unlock;
 begin
   orbLock.Release;
 end; { TOmniRingBuffer.Unlock }
-{$ELSE}
+{$ELSE OTL_LockFreeBuffer}
 
 function TOmniRingBuffer.Count: integer;
 begin
@@ -437,8 +437,8 @@ begin
   orbMonitorMessageWParam := messageWParam;
   orbMonitorMessageLParam := messageLParam;
 end; { TOmniRingBuffer.SetMonitor }
+{$ENDIF OTL_LockFreeBuffer}
 
-{$ENDIF}
 { TOmniCommunicationEndpoint }
 
 constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniRingBuffer);
