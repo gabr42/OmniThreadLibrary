@@ -80,15 +80,13 @@ unit SpinLock;
 
 }
 
+{$DEFINE SpinLock}
 {$DEFINE ASM}
 {$DEFINE DynamicSleep}
 
 interface
 
-uses Windows, SyncObjs;
-
-const
-  PageSize = MAXWORD + 1;
+uses Windows, SyncObjs, JclSynch;
 
 type
   PLockMap = ^TLockMap;
@@ -98,6 +96,7 @@ type
   end;
 
 const
+  PageSize = MAXWORD + 1;
   MaxLocks = PageSize div SizeOf(TLockMap);
 
 type
@@ -113,8 +112,8 @@ type
     constructor Create(const SleepAmount: Cardinal = 1;
       const NoSleepCount: Cardinal = 3000); virtual;
     destructor Destroy; override;
-    procedure Acquire; overload; override;
-    function Acquire(TryCount: Cardinal): Boolean; reintroduce; overload;
+    procedure Acquire; overload; override; 
+    function Acquire(TryCount: Cardinal): Boolean; reintroduce; overload; virtual;
     procedure Release; override;
   end;
 
@@ -136,6 +135,38 @@ type
       const SleepAmount: Cardinal = 1; const NoSleepCount: Cardinal = 3000); reintroduce;
   end;
 
+  TTicketInfo = packed record
+    case Boolean of
+      False: (
+        Owner: Word;
+        Next: Word;
+      );
+
+      True: (
+        Combined: Cardinal
+      );
+  end;
+
+  PLockMap2 = ^TLockMap2;
+  TLockMap2 = record
+    Lock: Cardinal;
+    LockCount: Cardinal;
+    Ticket: TTicketInfo;
+  end;
+
+  TTicketSpinLock = class(TSpinLock)
+  private
+    const COwnerOffset = SizeOf(TLockMap);
+    const CNextOffset  = COwnerOffset + SizeOf(Word);
+  protected
+    procedure InitLockMap; override;
+    procedure ReleaseLockMap; override;
+  public
+    procedure Acquire; override;
+    function Acquire(TryCount: Cardinal): Boolean; override;
+    procedure Release; override;
+  end;
+
 implementation
 
 uses SysUtils;
@@ -153,12 +184,18 @@ type
   PLockMapArray = ^TLockMapArray;
   TLockMapArray = array[0..MaxLocks-1] of TLockMap;
 
-{$IFNDEF ASM}
+{$IFNDEF _ASM}
 { compares CompareValue and Target and returns the initial value of Target
   if they're equal, Target is set to NewVal }
 function LockCmpxchg(CompareVal, NewVal: Cardinal; var Target: Cardinal): Cardinal;
 asm
   lock cmpxchg [ecx], edx
+end;
+
+{ increment Target by Source and return Targt's old value }
+function LockXadd(const Source: Cardinal; var Target: Cardinal): Cardinal;
+asm
+  lock xadd [edx], eax
 end;
 {$ENDIF}
 
@@ -204,8 +241,10 @@ begin
   begin
     Sleep(LSleepAmount);
     LOwner := LockCmpxchg(0, LLock, FOwner.Lock);
+    {$IFDEF DynamicSleep}
     if LSleepAmount < FSleepAmount then
       Inc(LSleepAmount, LSleepAmount + 1);
+    {$ENDIF}
   end;
   Inc(FOwner.LockCount);
 {$ELSE}
@@ -217,9 +256,9 @@ asm
     ESI - FNoSleepCount to 0 (decrementing), 0 to FSleepAmount (incrementing)
   }
 
-  mov ecx, fs:[$00000018]       // get thread id into ecx
+  mov ecx, fs:[$00000018]       // get thread information block
   mov edx, [eax].FOwner         // move owner to edx
-  mov ecx, [ecx+$24]            // moved here for instruction pairing
+  mov ecx, [ecx+$24]            // get thread id into ecx (moved here for instruction pairing)
   push ebx                      // save ebx and store self in it
   mov ebx, eax
   xor eax, eax                  // clear eax for comparison to 0
@@ -231,11 +270,11 @@ asm
   mov esi, [ebx].FNoSleepCount  // set nosleep counter
   test esi, esi                 // if nosleep is 0 then jump to waitLoop
   jz @@waitLoop
-  add esi, 1
+  inc esi
   xor eax, eax
 
 @@noSleepLoop:
-  sub esi, 1                    // decrement local NoSleepCount
+  dec esi                       // decrement local NoSleepCount
   jz @@waitLoop                 // if we reached 0 then go to waitable loop
   pause
   cmp [edx], 0                  // check the owner (volatile read)
@@ -269,7 +308,7 @@ asm
   pop esi
 
 @@exitImmediate:
-  add [edx+$04], 1              // inrement lock count
+  inc [edx+$04]                 // increment lock count
   pop ebx
 {$ENDIF}
 end;
@@ -307,8 +346,10 @@ begin
     Sleep(LSleepAmount);
     Dec(TryCount);
     LOwner := LockCmpxchg(0, LLock, FOwner.Lock);
+    {$IFDEF DynamicSleep}
     if LSleepAmount < FSleepAmount then
       Inc(LSleepAmount, LSleepAmount + 1);
+    {$ENDIF}
   end;
 
   Result := TryCount > 0;
@@ -344,13 +385,13 @@ asm
   mov esi, [ebx].FNoSleepCount  // set nosleep counter
   test esi, esi                 // if nosleep is 0 then jump to waitLoop
   jz @@waitLoop
-  add esi, 1
+  inc esi
   xor eax, eax
 
 @@noSleepLoop:
-  sub esi, 1                       // decrement local NoSleepCount
+  dec esi                       // decrement local NoSleepCount
   jz @@waitLoop                 // if we reached 0 then go to waitable loop
-  sub edi, 1                       // decrement TryCount
+  dec edi                       // decrement TryCount
   jz @@exitNoSleep              // if we reached 0 then exit
   pause
   cmp [edx], 0                  // check the owner (volatile read)
@@ -359,7 +400,7 @@ asm
   jz @@exitNoSleep              // if obtained we exit else enter waitable loop
 
 @@waitLoop:
-  sub edi, 1                    // decrement TryCount
+  dec edi                       // decrement TryCount
   jz @@exit                     // if we reached 0 then exit
   push ecx                      // save ecx and edx coz Sleep modifies them
   push edx
@@ -389,7 +430,7 @@ asm
 @@exitImmediate:
   xor eax, eax
   cmp eax, edi                  // check TryCount
-  adc [edx+$04], 0              // if it's above 0 then inrement lock count
+  adc [edx+$04], 0              // if it's above 0 then increment lock count
   mov eax, edi                  // store result
   pop ebx
   pop edi
@@ -448,7 +489,7 @@ asm
   cmp [edx], eax                // test if we own the lock, exit if not
   jne @@exit
   xor ecx, ecx                  // clear ecx for reseting the lock
-  sub [edx+$04], 1              // decrement lock count
+  dec [edx+$04]                 // decrement lock count
   cmovnz eax, ecx               // if not reached 0, set copy ecx to eax
   lock cmpxchg [edx], ecx       // release lock
 @@exit:
@@ -536,6 +577,171 @@ begin
 
     CloseHandle(FHandle);
   end;
+end;
+
+{ TTicketSpinLock }
+
+procedure TTicketSpinLock.Acquire;
+const
+  CInc = $00010000;
+var
+  LOwnerPtr: PLockMap2;
+  LTicket: Word;
+  LOwner: Cardinal;
+  LLock: Cardinal;
+  LSleepCounter: Cardinal;
+  LSleepAmount: Cardinal;
+{$IFNDEF ASM}
+begin
+  LLock := GetCurrentThreadId;
+  LOwner := FOwner.Lock;
+  if LOwner <> LLock then
+  begin
+    LOwnerPtr := PLockMap2(FOwner);
+    LOwner := LockXadd(CInc, LOwnerPtr.Ticket.Combined);
+    LTicket := TTicketInfo(LOwner).Next;
+    if TTicketInfo(LOwner).Owner <> LTicket then
+    begin
+      if FNoSleepCount > 0 then
+      begin
+        LSleepCounter := FNoSleepCount;
+        while (LOwner <> LTicket) and (LSleepCounter > 0) do
+        begin
+          Dec(LSleepCounter);
+          LOwner := LOwnerPtr.Ticket.Owner;
+        end;
+      end;
+  
+      LSleepAmount := 0;
+      while (LOwner <> LTicket) do
+      begin
+        Sleep(LSleepAmount);
+        LOwner := LOwnerPtr.Ticket.Owner;
+        {$IFDEF DynamicSleep}
+        if LSleepAmount < FSleepAmount then
+          Inc(LSleepAmount, LSleepAmount + 1);
+        {$ENDIF}
+      end;
+    end;
+
+    FOWner.Lock := LLock;
+  end;
+  Inc(FOwner.LockCount);
+{$ELSE}
+asm
+  mov ecx, fs:[$00000018]       // get thread information block
+  mov edx, [eax].FOwner         // move owner to edx
+  mov ecx, [ecx+$24]            // get thread id into ecx
+  cmp ecx, [edx]                // compare the owner
+  je @@incLockCount             // if we own the lock just exit and increment lock count
+
+  mov LLock, ecx                // store ThreadID in local variable
+  mov LOwnerPtr, edx            // store Owner record in local variable
+  mov ecx, CInc
+  lock xadd [edx+COwnerOffset], ecx // increment the Ticket number and get the owner|ticket in ecx
+  movzx edx, cx                 // copy the owner to edx
+  shr ecx, 16                   // shift to get only the ticket number
+  cmp cx, dx                    // compare ticket and owner
+  je @@setOwnerThreadId         // exit if equal (we've obtained the lock)
+
+  // copy parameters to local variables
+  mov LTicket, cx
+  mov ecx, [eax].FNoSleepCount
+  mov LSleepCounter, ecx
+  mov edx, [eax].FSleepAmount
+  mov LSleepAmount, edx
+  inc LSleepCounter
+
+
+@@noSleepLoop:
+  pause
+  mov eax, LOwnerPtr
+  mov eax, [eax + COwnerOffset] // copy the owner
+  cmp LTicket, ax               // compare ticket and owner
+  je @@setOwnerThreadId         // if it's owned then set owner and exit
+  dec LSleepCounter             // decrement NoSleepCount
+  jnz @@noSleepLoop             // if not 0 repeat the loop
+
+
+@@waitLoop:
+{$IFDEF DynamicSleep}
+  xor eax, eax
+  mov ecx, LSleepCounter        // starts from 0
+  cmp ecx, LSleepAmount         // compare local SleepAmount counter
+  cmovc eax, LSleepCounter      // if less than SleepAmount then copy to eax
+  adc LSleepCounter, eax        // if compare was less we double esi and add 1
+  push LSleepCounter
+{$ELSE}
+  push LSleepAmount
+{$ENDIF}
+  call Windows.Sleep
+  mov eax, LOwnerPtr
+  mov eax, [eax + COwnerOffset] // copy the owner
+  cmp LTicket, ax               // compare ticket and owner
+  jne @@waitLoop                // if not equal we repeat the loop
+
+
+@@setOwnerThreadId:
+  mov eax, LLock
+  mov ecx, LOwnerPtr
+  mov [ecx], eax          // set the owning ThreadID
+
+@@incLockCount:
+  mov edx, LOwnerPtr
+  inc [edx + $04]               // increment lock count
+{$ENDIF}
+end;
+
+function TTicketSpinLock.Acquire(TryCount: Cardinal): Boolean;
+begin
+  raise Exception.Create('TicketSpinLock does not support TryAcquire');
+end;
+
+procedure TTicketSpinLock.InitLockMap;
+begin
+  FOwner := AllocMem(SizeOf(TLockMap2));
+end;
+
+procedure TTicketSpinLock.Release;
+{$IFNDEF ASM}
+var
+  LLock: Cardinal;
+begin
+  LLock := GetCurrentThreadId;
+  if (FOwner.Lock = LLock) then
+  begin
+    if (FOwner.LockCount > 0) then
+      Dec(FOwner.LockCount);
+
+    if FOwner.LockCount = 0 then
+    begin
+      FOwner.Lock := 0;
+      Inc(PLockMap2(FOwner).Ticket.Owner);
+    end;
+  end;
+{$ELSE}
+asm
+  mov edx, [eax].FOwner         // store self in edx
+  mov eax, fs:[$00000018]       // get thread id
+  mov eax, [eax+$24]
+  cmp [edx], eax                // test if we own the lock, exit if not
+  jne @@exit
+
+  xor eax, eax
+  xor ecx, ecx
+  dec [edx+$04]                 // decrement lock count
+  cmovnz ecx, [edx]             // if not reached 0 we copy the old owner
+  setz al                       // if reached 0, set eax to 1
+  mov [edx], ecx                // set the new owner threadId
+  lock add [edx + COwnerOffset], ax   // increment Owner and thus release the lock
+@@exit:
+  db $F3, $C3                   // Two-Byte Near-Return RET
+{$ENDIF}
+end;
+
+procedure TTicketSpinLock.ReleaseLockMap;
+begin
+  FreeMem(FOwner);
 end;
 
 end.
