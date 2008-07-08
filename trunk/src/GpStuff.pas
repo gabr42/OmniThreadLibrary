@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-06-19
-   Version           : 1.09
+   Last modification : 2008-07-08
+   Version           : 1.10
 </pre>*)(*
    History:
+     1.10: 2008-07-08
+       - [GJ] ReverseWord/ReverseDWord rewritten in assembler.
      1.09: 2008-06-19
        - Implemented 4-aligned integer, TGp4AlignedInt.
      1.08: 2008-04-08
