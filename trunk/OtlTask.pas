@@ -146,6 +146,7 @@ uses
   HVStringBuilder,
   DSiWin32,
   GpStuff,
+  SpinLock,
   OtlTaskEvents;
 
 type
@@ -154,17 +155,20 @@ type
 
   TOmniTaskExecutor = class
   strict private
-    oteExecutorType     : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
-    oteMethod           : TOmniTaskMethod;
-    oteOptions          : TOmniTaskControlOptions;
-    oteProc             : TOmniTaskProcedure;
-    oteTimerInterval_ms : cardinal;
-    oteTimerMessage     : integer;
-    oteWakeMask         : DWORD;
-    oteWorkerInitialized: THandle;
-    oteWorkerInitOK     : boolean;
-    oteWorkerIntf       : IOmniWorker;
-    oteWorkerObj_ref    : TOmniWorker;
+    oteCommList          : TInterfaceList;
+    oteCommLock          : TSpinLock;
+    oteCommRebuildHandles: THandle;
+    oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
+    oteMethod            : TOmniTaskMethod;
+    oteOptions           : TOmniTaskControlOptions;
+    oteProc              : TOmniTaskProcedure;
+    oteTimerInterval_ms  : cardinal;
+    oteTimerMessage      : integer;
+    oteWakeMask          : DWORD;
+    oteWorkerInitialized : THandle;
+    oteWorkerInitOK      : boolean;
+    oteWorkerIntf        : IOmniWorker;
+    oteWorkerObj_ref     : TOmniWorker;
   strict protected
     procedure Initialize;
     procedure ProcessThreadMessages;
@@ -190,7 +194,7 @@ type
     property WorkerInitOK: boolean read oteWorkerInitOK;
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
     property WorkerObj_ref: TOmniWorker read oteWorkerObj_ref;
-  end; { TOmniWorkerExecutor }
+  end; { TOmniTaskExecutor }
 
   TOmniValueContainer = class
   strict private
@@ -568,22 +572,56 @@ begin
   oteExecutorType := etWorkerObj;
   oteWorkerObj_ref := workerObj_ref;
   Initialize;
-end; { TOmniWorkerExecutor.Create }
+end; { TOmniTaskExecutor.Create }
 
 destructor TOmniTaskExecutor.Destroy;
 begin
+  oteCommLock.Acquire;
+  try
+    FreeAndNil(oteCommList);
+  finally oteCommLock.Release; end;
+  FreeAndNil(oteCommLock);
+  DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
-end; { TOmniWorkerExecutor.Destroy }
+end; { TOmniTaskExecutor.Destroy }
 
 procedure TOmniTaskExecutor.Asy_DispatchMessages(task: IOmniTask);
+
 var
+  numWaitHandles: cardinal;
+  waitHandles   : array [0..63] of THandle;
+
+  procedure RebuildWaitHandles;
+  var
+    intf: IInterface;
+  begin
+    oteCommLock.Acquire;
+    try
+      waitHandles[0] := task.TerminateEvent;
+      waitHandles[1] := task.Comm.NewMessageEvent;
+      waitHandles[2] := oteCommRebuildHandles;
+      numWaitHandles := 3;
+      if assigned(oteCommList) then
+        for intf in oteCommList do begin
+          if numWaitHandles > High(waitHandles) then
+            raise Exception.CreateFmt('TOmniTaskExecutor.Asy_DispatchMessages: Cannot wait on more than %d handles', [numWaitHandles]);
+          waitHandles[numWaitHandles] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
+          Inc(numWaitHandles);
+        end;
+    finally oteCommLock.Release; end;
+  end; { RebuildWaitHandles }
+
+var
+  awaited     : DWORD;
   flags       : DWORD;
+  gotMsg      : boolean;
   lastTimer_ms: int64;
   msg         : TOmniMessage;
   timeout_ms  : int64;
   waitWakeMask: DWORD;
-begin
+
+begin { TOmniTaskExecutor.Asy_DispatchMessages }
   if assigned(WorkerIntf) and assigned(WorkerObj_ref) then
     raise Exception.Create('TOmniTaskControl: Internal error, both WorkerIntf and WorkerObj are assigned');
   oteWorkerInitOK := false;
@@ -609,6 +647,7 @@ begin
       flags := MWMO_ALERTABLE
     else
       flags := 0;
+    RebuildWaitHandles;
     lastTimer_ms := DSiTimeGetTime64;
     repeat
       if TimerInterval_ms <= 0 then
@@ -618,39 +657,51 @@ begin
         if timeout_ms < 0 then
           timeout_ms := 0;
       end;
-      case DSiMsgWaitForTwoObjectsEx(task.TerminateEvent, task.Comm.NewMessageEvent,
-             cardinal(timeout_ms), waitWakeMask, flags)
-      of
-        WAIT_OBJECT_1:
-          if task.Comm.Receive(msg) then begin
-            if assigned(WorkerIntf) then
-              WorkerIntf.DispatchMessage(msg);
-            if assigned(WorkerObj_ref) then
-              WorkerObj_ref.DispatchMessage(msg)
-          end;
-        WAIT_OBJECT_2: //message
-          ProcessThreadMessages;
-        WAIT_IO_COMPLETION:
-          ; // do-nothing
-        WAIT_TIMEOUT:
-          begin
-            if TimerMessage >= 0 then begin
-              msg.MsgID := TimerMessage;
-              msg.MsgData := Null;
-              if assigned(WorkerIntf) then
-                WorkerIntf.DispatchMessage(msg);
-              if assigned(WorkerObj_ref) then
-                WorkerObj_ref.DispatchMessage(msg);
-            end
-            else if assigned(WorkerIntf) then
-              WorkerIntf.Timer
-            else if assigned(WorkerObj_ref) then
-              WorkerObj_ref.Timer;
-            lastTimer_ms := DSiTimeGetTime64;
-          end; //WAIT_TIMEOUT
-        else
-          break; //repeat
-      end; //case
+      awaited := MsgWaitForMultipleObjectsEx(numWaitHandles, waitHandles,
+        cardinal(timeout_ms), waitWakeMask, flags);
+      if (awaited = WAIT_OBJECT_0) or (awaited = WAIT_ABANDONED) then
+        break //repeat
+      else if (awaited = WAIT_OBJECT_1) or
+              ((awaited >= WAIT_OBJECT_3) and (awaited <= numWaitHandles)) then
+      begin
+        if awaited = WAIT_OBJECT_1 then
+          gotMsg := task.Comm.Receive(msg)
+        else begin
+          oteCommLock.Acquire;
+          try
+            gotMsg := (oteCommList[awaited - WAIT_OBJECT_3] as IOmniCommunicationEndpoint).Receive(msg);
+          finally oteCommLock.Release; end;
+        end;
+        if gotMsg then begin
+          if assigned(WorkerIntf) then
+            WorkerIntf.DispatchMessage(msg);
+          if assigned(WorkerObj_ref) then
+            WorkerObj_ref.DispatchMessage(msg)
+        end;
+      end // WAIT_OBJECT_1, WAIT_OBJECT3 .. numWaitHandles
+      else if awaited = WAIT_OBJECT_2 then
+        RebuildWaitHandles
+      else if awaited = (numWaitHandles + 1) then //message
+        ProcessThreadMessages
+      else if awaited = WAIT_IO_COMPLETION then
+        // do-nothing
+      else if awaited = WAIT_TIMEOUT then begin
+        if TimerMessage >= 0 then begin
+          msg.MsgID := TimerMessage;
+          msg.MsgData := Null;
+          if assigned(WorkerIntf) then
+            WorkerIntf.DispatchMessage(msg);
+          if assigned(WorkerObj_ref) then
+            WorkerObj_ref.DispatchMessage(msg);
+        end
+        else if assigned(WorkerIntf) then
+          WorkerIntf.Timer
+        else if assigned(WorkerObj_ref) then
+          WorkerObj_ref.Timer;
+        lastTimer_ms := DSiTimeGetTime64;
+      end //WAIT_TIMEOUT
+      else //errors
+        RaiseLastOSError;
     until false;
   finally
     if assigned(WorkerIntf) then begin
@@ -666,7 +717,7 @@ begin
   if tcoFreeOnTerminate in Options then
     oteWorkerObj_ref.Free;
   oteWorkerObj_ref := nil;
-end; { TOmniWorkerExecutor.Asy_DispatchMessages }
+end; { TOmniTaskExecutor.Asy_DispatchMessages }
 
 procedure TOmniTaskExecutor.Asy_Execute(task: IOmniTask);
 begin
@@ -685,17 +736,35 @@ end; { TOmniTaskExecutor.Asy_Execute }
 
 procedure TOmniTaskExecutor.Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  // TODO -cMM: TOmniTaskExecutor.Asy_RegisterComm default body inserted
+  if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
+    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
+  oteCommLock.Acquire;
+  try
+    if not assigned(oteCommList) then
+      oteCommList := TInterfaceList.Create;
+    oteCommList.Add(comm);
+    SetEvent(oteCommRebuildHandles);
+  finally oteCommLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  // TODO -cMM: TOmniTaskExecutor.Asy_UnregisterComm default body inserted
+  if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
+    raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
+  oteCommLock.Acquire;
+  try
+    oteCommList.Remove(comm);
+    if oteCommList.Count = 0 then
+      FreeAndNil(oteCommList);
+    SetEvent(oteCommRebuildHandles);
+  finally oteCommLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
+  oteCommLock := TSpinLock.Create;
+  oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
@@ -914,6 +983,9 @@ end; { TOmniTaskControl.SetParameters }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
+{ TODO : 
+reset executor and exit immediately if task was not started at all
+or raise exception? }
   SetEvent(otcTerminateEvent);
   Result := WaitFor(maxWait_ms);
 end; { TOmniTaskControl.Terminate }
