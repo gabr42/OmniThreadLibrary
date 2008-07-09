@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-07
-///   Version           : 0.2
+///   Last modification : 2008-07-09
+///   Version           : 0.2a
 ///</para><para>
 ///   History:
+///     0.2a: 2008-07-09
+///       - Replaced spinlocks with ticket spinlocks. There seems to be a
+///         problem with the SpinLock code and ticket spinlocks should be faster
+///         in our scenario anyway.
 ///     0.2: 2008-07-07
 ///       - Included experimenal lock-free buffer, donated by GJ.
 ///         To enable this code, compile with /dOTL_LockFreeBuffer.
@@ -100,8 +104,8 @@ type
     orbBufferSize          : integer;
     orbCount               : TGp4AlignedInt;
     orbHead                : integer;
-//    orbLock                : TSpinLock;
-    orbLock                : TCriticalSection;
+    orbLock                : TTicketSpinLock;
+//    orbLock                : TCriticalSection;
     orbMonitorMessageLParam: integer;
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : TGp4AlignedInt;
@@ -180,7 +184,8 @@ type
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
   strict private
     twcEndpoint        : array [1..2] of IOmniCommunicationEndpoint;
-    twcLock            : TSpinLock;
+    twcLock            : TTicketSpinLock;
+//    twcLock            : TCriticalSection;
     twcMessageQueueSize: integer;
     twcUnidirQueue     : array [1..2] of TOmniRingBuffer;
   strict protected
@@ -204,8 +209,8 @@ end; { CreateTwoWayChannel }
 {$IFNDEF OTL_LockFreeBuffer}
 constructor TOmniRingBuffer.Create(bufferSize: integer);
 begin
-//  orbLock := TSpinLock.Create;
-  orbLock := TCriticalSection.Create;
+  orbLock := TTicketSpinLock.Create;
+//  orbLock := TCriticalSection.Create;
   orbBufferSize := bufferSize;
   SetLength(orbBuffer, orbBufferSize+1);
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
@@ -514,7 +519,8 @@ constructor TOmniTwoWayChannel.Create(messageQueueSize: integer);
 begin
   inherited Create;
   twcMessageQueueSize := messageQueueSize;
-  twcLock := TSpinLock.Create;
+  twcLock := TTicketSpinLock.Create;
+//  twcLock := TCriticalSection.Create;
 end; { TOmniTwoWayChannel.Create }
 
 destructor TOmniTwoWayChannel.Destroy;
