@@ -53,6 +53,7 @@ uses
 
 const
   CDefaultQueueSize = 65520 div 20 {3276 entries; 20 = SizeOf(TOmniMessage)};
+
 type
   TOmniMessage = record
     MsgID  : word;
@@ -93,6 +94,7 @@ type
 {$IFNDEF OTL_LockFreeBuffer}
   TOmniRingBuffer = class
   strict private
+    ///<link>association</link>
     orbBuffer              : array of TOmniMessage;
     orbBufferSize          : integer;
     orbCount               : TGp4AlignedInt;
