@@ -86,7 +86,7 @@ unit SpinLock;
 
 interface
 
-uses Windows, SyncObjs, JclSynch;
+uses Windows, SyncObjs;
 
 type
   PLockMap = ^TLockMap;
