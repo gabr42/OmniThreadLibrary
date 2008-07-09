@@ -710,29 +710,32 @@ end; { TOmniTaskControl.ProcessThreadMessages }
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
 begin
-  if not (assigned(WorkerIntf) or assigned(WorkerObj_ref)) then 
-    if ([tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate] * Options) <> [] then
-      raise Exception.Create('TOmniTaskExecutor.SetOptions: Trying to set IOmniWorker/TOmniWorker specific option(s)');
+  if (([tcoAlertableWait, tcoMessageWait] * Options) <> []) and
+     (not (oteExecutorType in [etWorkerIntf, etWorkerObj]))
+  then
+    raise Exception.Create('TOmniTaskExecutor.SetOptions: Trying to set IOmniWorker/TOmniWorker specific option(s)');
+  if (([tcoFreeOnTerminate] * Options) <> []) and (oteExecutorType <> etWorkerObj) then
+    raise Exception.Create('TOmniTaskExecutor.SetOptions: Trying to set TOmniWorker specific option(s)');
   oteOptions := value;
 end; { TOmniTaskExecutor.SetOptions }
 
 procedure TOmniTaskExecutor.SetTimerInterval_ms(const value: cardinal);
 begin
-  if not (assigned(WorkerIntf) or assigned(WorkerObj_ref)) then
+  if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.SetTimerInterval_ms: Timer support is only available when working with an IOmniWorker/TOmniWorker');
   oteTimerInterval_ms := value;
 end; { TOmniTaskExecutor.SetTimerInterval_ms }
 
 procedure TOmniTaskExecutor.SetTimerMessage(const value: integer);
 begin
-  if not (assigned(WorkerIntf) or assigned(WorkerObj_ref)) then
+  if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.SetTimerMessage: Timer support is only available when working with an IOmniWorker/TOmniWorker');
   oteTimerMessage := value;
 end; { TOmniTaskExecutor.SetTimerMessage }
 
 function TOmniTaskExecutor.WaitForInit: boolean;
 begin
-  if not (assigned(WorkerIntf) or assigned(WorkerObj_ref)) then
+  if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.WaitForInit: Wait for init is only available when working with an IOmniWorker/TOmniWorker');
   WaitForSingleObject(WorkerInitialized, INFINITE);
   Result := WorkerInitOK;
