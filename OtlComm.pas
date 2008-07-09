@@ -55,15 +55,17 @@ uses
   DSiWin32,
   OtlCommon;
 
-const
-  CDefaultQueueSize = 65520 div 20 {3276 entries; 20 = SizeOf(TOmniMessage)};
-
 type
+  {$A4}
   TOmniMessage = record
     MsgID  : word;
     MsgData: TOmniValue;
   end; { TOmniMessage }
 
+const
+  CDefaultQueueSize = 65520 div SizeOf(TOmniMessage); {3276 entries}
+
+type
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
     function  GetNewMessageEvent: THandle;
   //
@@ -89,7 +91,6 @@ implementation
 uses
   Windows,
   SysUtils,
-  SyncObjs,
   OtlTaskEvents;
 
 type
@@ -105,7 +106,6 @@ type
     orbCount               : TGp4AlignedInt;
     orbHead                : integer;
     orbLock                : TTicketSpinLock;
-//    orbLock                : TCriticalSection;
     orbMonitorMessageLParam: integer;
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : TGp4AlignedInt;
@@ -185,7 +185,6 @@ type
   strict private
     twcEndpoint        : array [1..2] of IOmniCommunicationEndpoint;
     twcLock            : TTicketSpinLock;
-//    twcLock            : TCriticalSection;
     twcMessageQueueSize: integer;
     twcUnidirQueue     : array [1..2] of TOmniRingBuffer;
   strict protected
@@ -210,7 +209,6 @@ end; { CreateTwoWayChannel }
 constructor TOmniRingBuffer.Create(bufferSize: integer);
 begin
   orbLock := TTicketSpinLock.Create;
-//  orbLock := TCriticalSection.Create;
   orbBufferSize := bufferSize;
   SetLength(orbBuffer, orbBufferSize+1);
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
@@ -520,7 +518,6 @@ begin
   inherited Create;
   twcMessageQueueSize := messageQueueSize;
   twcLock := TTicketSpinLock.Create;
-//  twcLock := TCriticalSection.Create;
 end; { TOmniTwoWayChannel.Create }
 
 destructor TOmniTwoWayChannel.Destroy;
