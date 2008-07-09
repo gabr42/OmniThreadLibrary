@@ -441,7 +441,7 @@ END
 /* c:\program files\codegear\rad studio\5.0\lib\Controls.res */
 /* c:\program files\codegear\rad studio\5.0\lib\Buttons.res */
 /* c:\program files\codegear\rad studio\5.0\lib\FileCtrl.res */
-/* X:\MSTPL\OmniThreadLibrary\OtlTaskEvents.dcr */
-/* X:\MSTPL\OmniThreadLibrary\tests\2_TwoWayHello\testOmniThreadLibrary1.dfm */
+/* ..\..\OtlTaskEvents.dcr */
+/* testOmniThreadLibrary1.dfm */
 /* X:\MSTPL\OmniThreadLibrary\tests\2_TwoWayHello\testOmniThreadLibrary.res */
 /* X:\MSTPL\OmniThreadLibrary\tests\2_TwoWayHello\testOmniThreadLibrary.drf */
