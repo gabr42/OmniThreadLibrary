@@ -149,13 +149,12 @@ uses
   OtlTaskEvents;
 
 type
-  TOmniTaskExecutorType = (etNone, etMethod, etProcedure);
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
 
   TOmniTaskExecutor = class
   strict private
-    oteExecutorType     : TOmniTaskExecutorType;
+    oteExecutorType     : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
     oteMethod           : TOmniTaskMethod;
     oteOptions          : TOmniTaskControlOptions;
     oteProc             : TOmniTaskProcedure;
@@ -167,8 +166,6 @@ type
     oteWorkerIntf       : IOmniWorker;
     oteWorkerObj_ref    : TOmniWorker;
   strict protected
-    function  GetMethod: TOmniTaskMethod;
-    function  GetProc: TOmniTaskProcedure;
     procedure Initialize;
     procedure ProcessThreadMessages;
     procedure SetOptions(const value: TOmniTaskControlOptions);
@@ -181,9 +178,10 @@ type
     constructor Create(workerObj_ref: TOmniWorker); overload;
     destructor  Destroy; override;
     procedure Asy_DispatchMessages(task: IOmniTask);
-    procedure Execute(task: IOmniTask);
+    procedure Asy_Execute(task: IOmniTask);
+    procedure Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
+    procedure Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
     function WaitForInit: boolean;
-    property ExecutorType: TOmniTaskExecutorType read oteExecutorType;
     property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
     property TimerInterval_ms: cardinal read oteTimerInterval_ms write SetTimerInterval_ms;
     property TimerMessage: integer read oteTimerMessage write SetTimerMessage;
@@ -192,8 +190,6 @@ type
     property WorkerInitOK: boolean read oteWorkerInitOK;
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
     property WorkerObj_ref: TOmniWorker read oteWorkerObj_ref;
-    property Method: TOmniTaskMethod read GetMethod;
-    property Proc: TOmniTaskProcedure read GetProc;
   end; { TOmniWorkerExecutor }
 
   TOmniValueContainer = class
@@ -405,7 +401,7 @@ end; { TOmniTask.Create }
 
 procedure TOmniTask.Execute;
 begin
-  otExecutor_ref.Execute(Self);
+  otExecutor_ref.Asy_Execute(Self);
   if otMonitorWindow <> 0 then
     PostMessage(otMonitorWindow, COmniTaskMsg_Terminated, integer(otUniqueID), 0);
   SetEvent(otTerminatedEvent);
@@ -443,7 +439,7 @@ end; { TOmniTask.GetUniqueID }
 
 procedure TOmniTask.RegisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  { TODO 1 -ogabr : implement: TOmniTask.RegisterComm }
+  otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
 procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
@@ -458,7 +454,7 @@ end; { TOmniTask.Terminate }
 
 procedure TOmniTask.UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  { TODO 1 -ogabr : implement: TOmniTask.UnregisterComm }
+  otExecutor_ref.Asy_UnregisterComm(comm);
 end; { TOmniTask.UnregisterComm }
 
 { TOmniValueContainer }
@@ -548,8 +544,7 @@ end; { TOmniValueContainer.ParamByName }
 
 constructor TOmniTaskExecutor.Create(workerIntf: IOmniWorker);
 begin
-  oteExecutorType := etMethod;
-  oteMethod := Asy_DispatchMessages;
+  oteExecutorType := etWorkerIntf;
   oteWorkerIntf := workerIntf;
   Initialize;
 end; { TOmniTaskExecutor.Create }
@@ -570,8 +565,7 @@ end; { TOmniTaskExecutor.Create }
 
 constructor TOmniTaskExecutor.Create(workerObj_ref: TOmniWorker);
 begin
-  oteExecutorType := etMethod;
-  oteMethod := Asy_DispatchMessages;
+  oteExecutorType := etWorkerObj;
   oteWorkerObj_ref := workerObj_ref;
   Initialize;
 end; { TOmniWorkerExecutor.Create }
@@ -674,31 +668,30 @@ begin
   oteWorkerObj_ref := nil;
 end; { TOmniWorkerExecutor.Asy_DispatchMessages }
 
-procedure TOmniTaskExecutor.Execute(task: IOmniTask);
+procedure TOmniTaskExecutor.Asy_Execute(task: IOmniTask);
 begin
-  case ExecutorType of
+  case oteExecutorType of
     etMethod:
-      Method(task);
+      oteMethod(task);
     etProcedure:
-      Proc(task);
+      oteProc(task);
+    etWorkerIntf,
+    etWorkerObj:
+      Asy_DispatchMessages(task);
     else
-      raise Exception.Create('TOmniTaskExecutor.Execute: Executor is not set');
+      raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
   end;
-end; { TOmniTaskExecutor.Execute }
+end; { TOmniTaskExecutor.Asy_Execute }
 
-function TOmniTaskExecutor.GetMethod: TOmniTaskMethod;
+procedure TOmniTaskExecutor.Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  if oteExecutorType <> etMethod then
-    raise Exception.Create('TOmniTaskExecutor: Executor is not a method');
-  Result := oteMethod;
-end; { TOmniTaskExecutor.GetMethod }
+  // TODO -cMM: TOmniTaskExecutor.Asy_RegisterComm default body inserted
+end; { TOmniTaskExecutor.Asy_RegisterComm }
 
-function TOmniTaskExecutor.GetProc: TOmniTaskProcedure;
+procedure TOmniTaskExecutor.Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
-  if oteExecutorType <> etProcedure then
-    raise Exception.Create('TOmniTaskExecutor: Executor is not a procedure');
-  Result := oteProc;
-end; { TOmniTaskExecutor.GetProc }
+  // TODO -cMM: TOmniTaskExecutor.Asy_UnregisterComm default body inserted
+end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
