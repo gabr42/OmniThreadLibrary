@@ -85,6 +85,7 @@ implementation
 uses
   Windows,
   SysUtils,
+  SyncObjs,
   OtlTaskEvents;
 
 type
@@ -99,7 +100,8 @@ type
     orbBufferSize          : integer;
     orbCount               : TGp4AlignedInt;
     orbHead                : integer;
-    orbLock                : TSpinLock;
+//    orbLock                : TSpinLock;
+    orbLock                : TCriticalSection;
     orbMonitorMessageLParam: integer;
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : TGp4AlignedInt;
@@ -202,7 +204,8 @@ end; { CreateTwoWayChannel }
 {$IFNDEF OTL_LockFreeBuffer}
 constructor TOmniRingBuffer.Create(bufferSize: integer);
 begin
-  orbLock := TSpinLock.Create;
+//  orbLock := TSpinLock.Create;
+  orbLock := TCriticalSection.Create;
   orbBufferSize := bufferSize;
   SetLength(orbBuffer, orbBufferSize+1);
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
