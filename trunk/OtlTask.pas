@@ -38,6 +38,11 @@
 ///       - TOmniTaskExcecutor changed from a record to a class.
 ///       - IOmniWorker/TOmniWorker message dispatcher extracted into the
 ///         TOmniTaskExecutor class.
+///       - Added support for dispatching additional communication channel
+///         messages.
+///       - Replaced spinlocks with ticket spinlocks. There seems to be a
+///         problem with the SpinLock code and ticket spinlocks should be faster
+///         in our scenario anyway.
 ///</para></remarks>
 
 unit OtlTask;
@@ -156,7 +161,7 @@ type
   TOmniTaskExecutor = class
   strict private
     oteCommList          : TInterfaceList;
-    oteCommLock          : TSpinLock;
+    oteCommLock          : TTicketSpinLock;
     oteCommRebuildHandles: THandle;
     oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
     oteMethod            : TOmniTaskMethod;
@@ -763,7 +768,7 @@ end; { TOmniTaskExecutor.Asy_UnregisterComm }
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
-  oteCommLock := TSpinLock.Create;
+  oteCommLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
 end; { TOmniTaskExecutor.Initialize }
 
