@@ -84,7 +84,8 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
-  function CreateTwoWayChannel(queueSize: integer = CDefaultQueueSize): IOmniTwoWayChannel;
+  function CreateTwoWayChannel(numElemenets: integer = CDefaultQueueSize):
+    IOmniTwoWayChannel;
 
 implementation
 
@@ -114,7 +115,7 @@ type
   strict protected
     function  IncPointer(const ptr: integer; increment: integer = 1): integer; inline;
   public
-    constructor Create(bufferSize: integer);
+    constructor Create(numElements: integer);
     destructor  Destroy; override;
     procedure Clear; inline;
     function  Count: integer; inline;
@@ -147,16 +148,16 @@ type
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : Cardinal;
     orbNewMessageEvt       : TDSiEventHandle;
-    function PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
+    function  PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
     procedure PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
   public
-    constructor Create(bufferSize: integer);
+    constructor Create(numElements: integer);
     destructor  Destroy; override;
     function  Count: integer; inline;
-    function Dequeue: TOmniMessage;
-    function Enqueue(value: TOmniMessage): Boolean;
-    function IsEmpty: boolean; inline;
-    function IsFull: boolean; inline;
+    function  Dequeue: TOmniMessage;
+    function  Enqueue(value: TOmniMessage): Boolean;
+    function  IsEmpty: boolean; inline;
+    function  IsFull: boolean; inline;
     procedure RemoveMonitor;
     procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
     property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
@@ -198,18 +199,18 @@ type
 
 { exports }
 
-function CreateTwoWayChannel(queueSize: integer = CDefaultQueueSize): IOmniTwoWayChannel;
+function CreateTwoWayChannel(numElemenets: integer): IOmniTwoWayChannel;
 begin
-  Result := TOmniTwoWayChannel.Create(queueSize);
+  Result := TOmniTwoWayChannel.Create(numElemenets);
 end; { CreateTwoWayChannel }
 
 { TOmniRingBuffer }
 
 {$IFNDEF OTL_LockFreeBuffer}
-constructor TOmniRingBuffer.Create(bufferSize: integer);
+constructor TOmniRingBuffer.Create(numElements: integer);
 begin
   orbLock := TTicketSpinLock.Create;
-  orbBufferSize := bufferSize;
+  orbBufferSize := numElements;
   SetLength(orbBuffer, orbBufferSize+1);
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
   Win32Check(orbNewMessageEvt <> 0);
@@ -337,11 +338,11 @@ begin
   Result := orbCount;
 end;
 
-constructor TOmniRingBuffer.Create(bufferSize: integer);
+constructor TOmniRingBuffer.Create(numElements: integer);
 var
   n: Cardinal;
 begin
-  orbBufferSize := bufferSize;
+  orbBufferSize := numElements;
   SetLength(orbBuffer, orbBufferSize + 1);
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
   Win32Check(orbNewMessageEvt <> 0);
