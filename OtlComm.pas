@@ -149,18 +149,21 @@ type
     orbBuffer              : array of TLinkedOmniMessage;
     orbBufferSize          : integer;
     orbCount               : TGp4AlignedInt;
+    orbDequeuedMessages: PLinkedOmniMessage;
 //
     orbMonitorMessageLParam: integer;
     orbMonitorMessageWParam: integer;
     orbMonitorWindow       : Cardinal;
     orbNewMessageEvt       : TDSiEventHandle;
+  strict protected
+    function  DequeueAll(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
     function  PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
     procedure PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
   public
     constructor Create(numElements: integer);
     destructor  Destroy; override;
     function  Count: integer; inline;
-    function  Dequeue: TOmniMessage;
+    function  Dequeue: TOmniMessage; 
     function  Enqueue(value: TOmniMessage): Boolean;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
@@ -390,12 +393,14 @@ end;
 
 function TOmniRingBuffer.IsEmpty: boolean;
 begin
-  Result := orbPublicChain = nil;
+//  Result := orbPublicChain = nil;
+  Result := (orbCount = 0);
 end;
 
 function TOmniRingBuffer.IsFull: boolean;
 begin
-  Result := orbRecycleChain = nil;
+//  Result := orbRecycleChain = nil;
+  Result := (orbCount = orbBufferSize);
 end;
 
 function TOmniRingBuffer.Enqueue(value: TOmniMessage): Boolean;
@@ -419,15 +424,39 @@ function TOmniRingBuffer.Dequeue: TOmniMessage;
 var
   LinkedOmniMessage: PLinkedOmniMessage;
 begin
-  LinkedOmniMessage := PopLink(orbPublicChain);
-  if LinkedOmniMessage = nil then  
+  if not assigned(orbDequeuedMessages) then
+    orbDequeuedMessages := DequeueAll(orbPublicChain);
+  if not assigned(orbDequeuedMessages) then
+    raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty');
+  LinkedOmniMessage := PopLink(orbDequeuedMessages);
+  if LinkedOmniMessage = nil then
     raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty');
   Result := LinkedOmniMessage^.OmniMessage;
   PushLink(LinkedOmniMessage, orbRecycleChain);
-//...
   orbCount.Value := orbCount - 1;
   if not IsEmpty then
     SetEvent(orbNewMessageEvt);
+end;
+
+function TOmniRingBuffer.DequeueAll(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
+//nil << Link.Next << Link.Next << ... << Link.Next
+//FILO buffer logic                        ^------ < AChainHead
+asm
+@Spin:
+  mov   eax, [edx]
+  lock cmpxchg [edx], ecx                 {Cut ChainHead}
+  jnz   @Spin
+  test  eax,eax
+  jz    @Exit
+@Walk:
+  xchg  [eax], ecx                         {Turn links}
+  and   ecx, ecx
+  jz    @Exit
+  xchg  [ecx], eax
+  and   eax, eax
+  jnz   @Walk
+  mov   eax, ecx
+@Exit:
 end;
 
 destructor TOmniRingBuffer.Destroy;
@@ -602,6 +631,6 @@ begin
 end;
 
 initialization
-  RingBufferTest;
+//  RingBufferTest;
 {$ENDIF DEBUG}
 end.
