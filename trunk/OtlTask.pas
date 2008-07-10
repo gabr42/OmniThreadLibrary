@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-09
-///   Version           : 0.2
+///   Last modification : 2008-07-10
+///   Version           : 0.3
 ///</para><para>
 ///   History:
+///     0.3: 2008-07-10
+///       - Implemented ExitCode/ExitMessage/SetExitStatus.
 ///     0.2: 2008-07-09
 ///       - TOmniTaskExcecutor changed from a record to a class.
 ///       - IOmniWorker/TOmniWorker message dispatcher extracted into the
@@ -161,9 +163,11 @@ type
   TOmniTaskExecutor = class
   strict private
     oteCommList          : TInterfaceList;
-    oteCommLock          : TTicketSpinLock;
     oteCommRebuildHandles: THandle;
+    oteExitCode          : TGp4AlignedInt;
+    oteExitMessage       : string;
     oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
+    oteLock              : TTicketSpinLock;
     oteMethod            : TOmniTaskMethod;
     oteOptions           : TOmniTaskControlOptions;
     oteProc              : TOmniTaskProcedure;
@@ -180,6 +184,9 @@ type
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInterval_ms(const value: cardinal);
     procedure SetTimerMessage(const value: integer);
+  protected
+    function GetExitCode: integer; inline;
+    function GetExitMessage: string;
   public
     constructor Create(workerIntf: IOmniWorker); overload;
     constructor Create(method: TOmniTaskMethod); overload;
@@ -189,8 +196,11 @@ type
     procedure Asy_DispatchMessages(task: IOmniTask);
     procedure Asy_Execute(task: IOmniTask);
     procedure Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
+    procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
     function WaitForInit: boolean;
+    property ExitCode: integer read GetExitCode;
+    property ExitMessage: string read GetExitMessage;
     property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
     property TimerInterval_ms: cardinal read oteTimerInterval_ms write SetTimerInterval_ms;
     property TimerMessage: integer read oteTimerMessage write SetTimerMessage;
@@ -257,13 +267,6 @@ type
     property TerminateEvent: THandle read GetTerminateEvent;
   end; { TOmniTask }
 
-  TThreadNameInfo = record
-    FType    : LongWord; // must be 0x1000
-    FName    : PChar;    // pointer to name (in user address space)
-    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
-    FFlags   : LongWord; // reserved for future use, must be zero
-  end; { TThreadNameInfo }
-
   TOmniThread = class(TThread) // TODO 3 -oPrimoz Gabrijelcic : Factor this class into OtlThread unit?
   strict private
     otTask: IOmniTask;
@@ -280,8 +283,6 @@ type
   strict private
     otcCommChannel    : IOmniTwoWayChannel;
     otcExecutor       : TOmniTaskExecutor;
-    otcExit           : integer;
-    otcExitMessage    : string;
     otcMonitorWindow  : THandle;
     otcParameters     : TOmniValueContainer;
     otcTaskName       : string;
@@ -453,7 +454,7 @@ end; { TOmniTask.RegisterComm }
 
 procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
 begin
-  raise Exception.Create('Not implemented: TOmniTask.SetExitStatus');
+  otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
 end; { TOmniTask.SetExitStatus }
 
 procedure TOmniTask.Terminate;
@@ -581,11 +582,11 @@ end; { TOmniTaskExecutor.Create }
 
 destructor TOmniTaskExecutor.Destroy;
 begin
-  oteCommLock.Acquire;
+  oteLock.Acquire;
   try
     FreeAndNil(oteCommList);
-  finally oteCommLock.Release; end;
-  FreeAndNil(oteCommLock);
+  finally oteLock.Release; end;
+  FreeAndNil(oteLock);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -601,7 +602,7 @@ var
   var
     intf: IInterface;
   begin
-    oteCommLock.Acquire;
+    oteLock.Acquire;
     try
       waitHandles[0] := task.TerminateEvent;
       waitHandles[1] := task.Comm.NewMessageEvent;
@@ -614,7 +615,7 @@ var
           waitHandles[numWaitHandles] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
           Inc(numWaitHandles);
         end;
-    finally oteCommLock.Release; end;
+    finally oteLock.Release; end;
   end; { RebuildWaitHandles }
 
 var
@@ -672,10 +673,10 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
         if awaited = WAIT_OBJECT_1 then
           gotMsg := task.Comm.Receive(msg)
         else begin
-          oteCommLock.Acquire;
+          oteLock.Acquire;
           try
             gotMsg := (oteCommList[awaited - WAIT_OBJECT_3] as IOmniCommunicationEndpoint).Receive(msg);
-          finally oteCommLock.Release; end;
+          finally oteLock.Release; end;
         end;
         if gotMsg then begin
           if assigned(WorkerIntf) then
@@ -743,32 +744,57 @@ procedure TOmniTaskExecutor.Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
 begin
   if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.Asy_RegisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
-  oteCommLock.Acquire;
+  oteLock.Acquire;
   try
     if not assigned(oteCommList) then
       oteCommList := TInterfaceList.Create;
     oteCommList.Add(comm);
     SetEvent(oteCommRebuildHandles);
-  finally oteCommLock.Release; end;
+  finally oteLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
+
+procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
+  const exitMessage: string);
+begin
+  oteExitCode.Value := cardinal(exitCode);
+  oteLock.Acquire;
+  try
+    oteExitMessage := exitMessage;
+    UniqueString(oteExitMessage);
+  finally oteLock.Release; end;
+end; { TOmniTaskExecutor.Asy_SetExitStatus } 
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
   if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
-  oteCommLock.Acquire;
+  oteLock.Acquire;
   try
     oteCommList.Remove(comm);
     if oteCommList.Count = 0 then
       FreeAndNil(oteCommList);
     SetEvent(oteCommRebuildHandles);
-  finally oteCommLock.Release; end;
+  finally oteLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
+
+function TOmniTaskExecutor.GetExitCode: integer;
+begin
+  Result := oteExitCode;
+end; { TOmniTaskExecutor.GetExitCode }
+
+function TOmniTaskExecutor.GetExitMessage: string;
+begin
+  oteLock.Acquire;
+  try
+    Result := oteExitMessage;
+    UniqueString(Result);
+  finally oteLock.Release; end;
+end; { TOmniTaskExecutor.GetExitMessage }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
-  oteCommLock := TTicketSpinLock.Create;
+  oteLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
 end; { TOmniTaskExecutor.Initialize }
 
@@ -879,12 +905,12 @@ end; { TOmniTaskControl.GetComm }
 
 function TOmniTaskControl.GetExitCode: integer;
 begin
-  Result := otcExit;
+  Result := otcExecutor.ExitCode;
 end; { TOmniTaskControl.GetExitCode }
 
 function TOmniTaskControl.GetExitMessage: string;
 begin
-  Result := otcExitMessage;
+  Result := otcExecutor.ExitMessage;
 end; { TOmniTaskControl.GetExitMessage }
 
 function TOmniTaskControl.GetName: string;
@@ -1028,8 +1054,15 @@ begin
 end; { TOmniThread.Execute }
 
 procedure TOmniThread.SetThreadName(const name: string);
+type
+  TThreadNameInfo = record
+    FType    : LongWord; // must be 0x1000
+    FName    : PChar;    // pointer to name (in user address space)
+    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
+    FFlags   : LongWord; // reserved for future use, must be zero
+  end; { TThreadNameInfo }
 var
-  ThreadNameInfo: TThreadNameInfo; 
+  ThreadNameInfo: TThreadNameInfo;
 begin
   ThreadNameInfo.FType := $1000;
   ThreadNameInfo.FName := PChar(name);
@@ -1037,9 +1070,7 @@ begin
   ThreadNameInfo.FFlags := 0;
   try
     RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
-  except
-    // ignore
-  end;
+  except {ignore} end;
 end; { TOmniThread.SetThreadName }
 
 end.
