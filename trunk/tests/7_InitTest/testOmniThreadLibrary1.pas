@@ -43,7 +43,6 @@ uses
 
 {$R *.dfm}
 
-
 { TInitTest }
 
 constructor TInitTest.Create(success: boolean);
@@ -54,6 +53,10 @@ end;
 function TInitTest.Initialize: boolean;
 begin
   Task.Comm.Send(0, 'pre-init');
+  if itSuccess then
+    Task.SetExitStatus(1, 'ok')
+  else
+    Task.SetExitStatus(-1, 'fail');
   Result := itSuccess;
 end;
 
@@ -95,6 +98,8 @@ begin
     lbLog.Items.Add('Init failed');
   lbLog.ItemIndex := lbLog.Items.Count - 1;
   Application.ProcessMessages; // process waiting messages
+  lbLog.Items.Add(Format('Exit code: %d', [task.ExitCode]));
+  lbLog.Items.Add(Format('Exit message: %s', [task.ExitMessage]));
   task.Terminate;
   task := nil;
 end;
