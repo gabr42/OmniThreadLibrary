@@ -14,6 +14,8 @@ type
     lbLog: TListBox;
     btnRunTests: TButton;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
+    procedure FormDestroy(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
     procedure btnRunTestsClick(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   private
@@ -35,6 +37,8 @@ uses
 {$R *.dfm}
 
 const
+  CTestQueueLength = 10000;
+
   // GUI -> thread messages
   MSG_START_TEST        = 1;
   MSG_NOTIFY_TEST_START = 2;
@@ -44,9 +48,11 @@ const
   MSG_START_TIMING  = 100;
   MSG_END_TIMING    = 101;
   MSG_DUMP_TEST     = 102;
+  MSG_REQ           = 103;
+  MSG_ACK           = 104;
 
 type
-  TTestSuite = (tsDump);
+  TTestSuite = (tsDump, tsMessageExchange);
 
   TCommTester = class(TOmniWorker)
   strict private
@@ -57,14 +63,19 @@ type
     ctTestStart_ms  : int64;
     ctTestSuite     : TTestSuite;
   private
+    procedure InitiateMessageExchangeTest;
   strict protected
+    procedure InitiateDumpTest;
     procedure RunDumpTest;
+    procedure RunMessageExchangeTest;
   public
     constructor Create(commEndpoint: IOmniCommunicationEndpoint; commBufferSize: integer);
     function  Initialize: boolean; override;
+    procedure OMAck(var msg: TOmniMessage); message MSG_ACK;
     procedure OMDumpTest(var msg: TOmniMessage); message MSG_DUMP_TEST;
     procedure OMEndTiming(var msg: TOmniMessage); message MSG_END_TIMING;
     procedure OMNotifyTestEnd(var msg: TOmniMessage); message MSG_NOTIFY_TEST_END;
+    procedure OMReq(var msg: TOmniMessage); message MSG_REQ;
     procedure OMStartTest(var msg: TOmniMessage); message MSG_START_TEST;
     procedure OMStartTiming(var msg: TOmniMessage); message MSG_START_TIMING;
   end; { TCommTester }
@@ -83,6 +94,30 @@ function TCommTester.Initialize: boolean;
 begin
   Task.RegisterComm(ctComm);
   Result := true;
+end;
+
+procedure TCommTester.InitiateDumpTest;
+begin
+  Task.Comm.Send(MSG_NOTIFY_TEST_START, 'Dump');
+  ctTestSuite := tsDump;
+  ctTestRepetition := 1;
+  RunDumpTest;
+end; 
+
+procedure TCommTester.InitiateMessageExchangeTest;
+begin
+  Task.Comm.Send(MSG_NOTIFY_TEST_START, 'MessageExchange');
+  ctTestSuite := tsMessageExchange;
+  ctTestRepetition := 1;
+  RunMessageExchangeTest;
+end;
+
+procedure TCommTester.OMAck(var msg: TOmniMessage);
+begin
+  if msg.MsgData < ctCommSize then
+    ctComm.Send(MSG_REQ, msg.MsgData + 1)
+  else
+    ctComm.Send(MSG_END_TIMING, 0);
 end;
 
 procedure TCommTester.OMDumpTest(var msg: TOmniMessage);
@@ -106,19 +141,33 @@ end;
 procedure TCommTester.OMNotifyTestEnd(var msg: TOmniMessage);
 begin
   Assert(TTestSuite(msg.MsgData) = ctTestSuite);
-  if ctTestSuite = tsDump then begin
+  if ctTestSuite = tsMessageExchange then begin
     Inc(ctTestRepetition);
     if ctTestRepetition <= 10 then
-      RunDumpTest;
+      RunMessageExchangeTest;
+  end
+  else if ctTestSuite = tsDump then begin
+    Inc(ctTestRepetition);
+    if ctTestRepetition <= 10 then
+      RunDumpTest
+    else
+      InitiateMessageExchangeTest;
   end;
+end;
+
+procedure TCommTester.OMReq(var msg: TOmniMessage);
+begin
+  Assert(ctTestSuite = tsMessageExchange);
+  if msg.MsgData <> ctExpectedValue then
+    raise Exception.CreateFmt('Invalid value received (%d, expected %d)',
+      [integer(msg.MsgData), ctExpectedValue]);
+  ctComm.Send(MSG_ACK, msg.MsgData);
+  Inc(ctExpectedValue);
 end;
 
 procedure TCommTester.OMStartTest(var msg: TOmniMessage);
 begin
-  Task.Comm.Send(MSG_NOTIFY_TEST_START, 'Dump');
-  ctTestSuite := tsDump;
-  ctTestRepetition := 1;
-  RunDumpTest;
+  InitiateDumpTest;
 end;
 
 procedure TCommTester.OMStartTiming(var msg: TOmniMessage);
@@ -139,15 +188,32 @@ begin
   ctComm.Send(MSG_END_TIMING, 0);
 end;
 
+procedure TCommTester.RunMessageExchangeTest;
+begin
+  // run ctCommSize message exchanges
+  ctComm.Send(MSG_START_TIMING, Ord(tsMessageExchange));
+  ctComm.Send(MSG_REQ, 1);
+end;
+
 { TfrmTestOtlComm }
+
+procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+begin
+  FClient1.Terminate;
+  FClient2.Terminate;
+end;
+
+procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
+begin
+  FCommChannel := CreateTwoWayChannel(CTestQueueLength);
+  FClient1 := OmniTaskEventDispatch1.Monitor(
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, CTestQueueLength))).Run;
+  FClient2 := OmniTaskEventDispatch1.Monitor(
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, CTestQueueLength))).Run;
+end;
 
 procedure TfrmTestOtlComm.btnRunTestsClick(Sender: TObject);
 begin
-  FCommChannel := CreateTwoWayChannel(10240);
-  FClient1 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 10240))).Run;
-  FClient2 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 10240))).Run;
   FClient1.Comm.Send(MSG_START_TEST, 0);
 end;
 
@@ -164,7 +230,7 @@ begin
   task.Comm.Receive(msg);
   case msg.MsgID of
     MSG_NOTIFY_TEST_START:
-      Log(Format('Running test %s', [msg.MsgData]));
+      Log(Format('Running test %s; %d messages', [msg.MsgData, CTestQueueLength]));
     MSG_NOTIFY_TEST_END:
       begin
         testDuration_ms := msg.MsgData;

@@ -2,7 +2,7 @@ object frmTestOtlComm: TfrmTestOtlComm
   Left = 0
   Top = 0
   Caption = 'OtlComm tester'
-  ClientHeight = 286
+  ClientHeight = 306
   ClientWidth = 426
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -11,17 +11,19 @@ object frmTestOtlComm: TfrmTestOtlComm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 89
     Top = 0
     Width = 337
-    Height = 286
+    Height = 306
     Align = alRight
     ItemHeight = 13
     TabOrder = 0
-    ExplicitTop = 8
+    ExplicitHeight = 286
   end
   object btnRunTests: TButton
     Left = 8
