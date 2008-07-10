@@ -183,7 +183,7 @@ var
 begin
   // dump ctCommSize message into the comm link
   ctComm.Send(MSG_START_TIMING, Ord(tsDump));
-  for iMsg := 1 to ctCommSize do
+  for iMsg := 1 to ctCommSize-2 do // leave place for MSG_START_TIMING and MSG_END_TIMING in the queue
     ctComm.Send(MSG_DUMP_TEST, iMsg);
   ctComm.Send(MSG_END_TIMING, 0);
 end;
