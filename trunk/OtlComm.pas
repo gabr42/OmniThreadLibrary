@@ -31,9 +31,11 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2008-07-09
-///   Version           : 0.2a
+///   Version           : 0.2b
 ///</para><para>
 ///   History:
+///     0.2b: 2008-07-10
+///       - Disabled lock-free buffer as it turned out to be a stack, not a queue.
 ///     0.2a: 2008-07-09
 ///       - Replaced spinlocks with ticket spinlocks. There seems to be a
 ///         problem with the SpinLock code and ticket spinlocks should be faster
@@ -42,6 +44,10 @@
 ///       - Included experimenal lock-free buffer, donated by GJ.
 ///         To enable this code, compile with /dOTL_LockFreeBuffer.
 ///</para></remarks>
+
+{$IFDEF OTL_LockFreeBuffer}
+  'Lock-free buffer is not functional - don't use it'
+{$ENDIF}
 
 unit OtlComm;
 
@@ -84,7 +90,7 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
-  function CreateTwoWayChannel(numElemenets: integer = CDefaultQueueSize):
+  function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
     IOmniTwoWayChannel;
 
 implementation
@@ -199,9 +205,9 @@ type
 
 { exports }
 
-function CreateTwoWayChannel(numElemenets: integer): IOmniTwoWayChannel;
+function CreateTwoWayChannel(numElements: integer): IOmniTwoWayChannel;
 begin
-  Result := TOmniTwoWayChannel.Create(numElemenets);
+  Result := TOmniTwoWayChannel.Create(numElements);
 end; { CreateTwoWayChannel }
 
 { TOmniRingBuffer }
@@ -399,13 +405,9 @@ begin
   LinkedOmniMessage := PopLink(orbRecycleChain);
   Result := not(LinkedOmniMessage = nil);
   if not Result then
-  begin
-    orbCount.Value :=9;
-    exit;
-  end;
+    Exit;
   LinkedOmniMessage^.OmniMessage := value;;
   PushLink(LinkedOmniMessage, orbPublicChain);
-//...
   orbCount.Value := orbCount + 1;
   SetEvent(orbNewMessageEvt);
   if orbMonitorWindow <> 0 then
@@ -569,4 +571,37 @@ begin
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
 
+{$IFDEF DEBUG}
+procedure RingBufferTest;
+var
+  i  : integer;
+  msg: TOmniMessage;         
+  rb : TOmniRingBuffer;
+begin
+  rb := TOmniRingBuffer.Create(100);
+  try
+    if not rb.IsEmpty then
+      raise Exception.Create('Buffer is not empty when created');
+    for i := 1 to 100 do begin
+      msg.MsgID := i;
+      msg.MsgData := -i;
+      if not rb.Enqueue(msg) then
+        raise Exception.CreateFmt('Enqueue failed on element %d', [msg.MsgID]);
+    end;
+    for i := 1 to 100 do begin
+      if rb.IsEmpty then
+        raise Exception.CreateFmt('Buffer is empty on element %d', [i]);
+      msg := rb.Dequeue;
+      if (msg.MsgID <> i) or (msg.MsgData <> -i) then
+        raise Exception.CreateFmt('Retrieved (%d, %d), expected (%d, %d)',
+          [msg.MsgID, integer(msg.MsgData), i, -i]);
+    end;
+    if not rb.IsEmpty then
+      raise Exception.Create('Buffer is not empty at the end');
+  finally FreeAndNil(rb); end;
+end;
+
+initialization
+  RingBufferTest;
+{$ENDIF DEBUG}
 end.
