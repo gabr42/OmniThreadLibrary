@@ -23,7 +23,6 @@ object frmTestOtlComm: TfrmTestOtlComm
     Align = alRight
     ItemHeight = 13
     TabOrder = 0
-    ExplicitHeight = 286
   end
   object btnRunTests: TButton
     Left = 8
