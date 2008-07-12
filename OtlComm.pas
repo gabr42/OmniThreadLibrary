@@ -29,6 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
+///   Contributors      : GJ
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2008-07-11
 ///   Version           : 0.3
@@ -53,9 +54,8 @@ unit OtlComm;
 interface
 
 uses
-  Variants,
+  SyncObjs,
   SpinLock,
-  GpLists,
   GpStuff,
   DSiWin32,
   OtlCommon;
@@ -89,52 +89,29 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
-  function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
-    IOmniTwoWayChannel;
+  IOmniMonitorParams = interface
+    function GetWindow: THandle;
+    function GetWParam: integer;
+    function GetLParam: integer;
+    property Window: THandle read GetWindow;
+    property WParam: integer read GetWParam;
+    property LParam: integer read GetLParam;
+  end;
 
-implementation
+  TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
+  protected
+    function GetWindow: THandle;
+    function GetWParam: integer;
+    function GetLParam: integer;
+  public
+    Window: THandle;
+    WParam: integer;
+    LParam: integer;
+    constructor Create(const Window: THandle; const WParam, LParam: integer);
+  end;
 
-uses
-  Windows,
-  SysUtils,
-  OtlTaskEvents;
-
-type
   {:Fixed-size ring buffer of TOmniValues references.
   }
-
-{$IFDEF OTL_LockingBuffer}
-  TOmniRingBuffer = class
-  strict private
-    ///<link>association</link>
-    orbBuffer              : array of TOmniMessage;
-    orbBufferSize          : integer;
-    orbCount               : TGp4AlignedInt;
-    orbHead                : integer;
-    orbLock                : TTicketSpinLock;
-    orbMonitorMessageLParam: integer;
-    orbMonitorMessageWParam: integer;
-    orbMonitorWindow       : TGp4AlignedInt;
-    orbNewMessageEvt       : TDSiEventHandle;
-    orbTail                : integer;
-  strict protected
-    function  IncPointer(const ptr: integer; increment: integer = 1): integer; inline;
-  public
-    constructor Create(numElements: integer);
-    destructor  Destroy; override;
-    procedure Clear; inline;
-    function  Count: integer; inline;
-    function  Dequeue: TOmniMessage;
-    function  Enqueue(value: TOmniMessage): boolean;
-    function  IsEmpty: boolean; inline;
-    function  IsFull: boolean; inline;
-    procedure Lock; inline;
-    procedure RemoveMonitor;
-    procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
-    procedure Unlock; inline;
-    property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
-  end; { TOmniRingBuffer }
-{$ELSE OTL_LockingBuffer}
   PLinkedOmniMessage = ^TLinkedOmniMessage;
   TLinkedOmniMessage = packed record
     Next: PLinkedOmniMessage;
@@ -146,9 +123,7 @@ type
     orbBuffer              : array of TLinkedOmniMessage;
     orbBufferSize          : integer;
     orbDequeuedMessages    : PLinkedOmniMessage;
-    orbMonitorMessageLParam: integer;
-    orbMonitorMessageWParam: integer;
-    orbMonitorWindow       : Cardinal;
+    orbMonitorParams: IOmniMonitorParams;
     orbNewMessageEvt       : TDSiEventHandle;
     orbPublicChain         : PLinkedOmniMessage;
     orbRecycleChain        : PLinkedOmniMessage;
@@ -167,8 +142,19 @@ type
     procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
     property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
   end; { TOmniRingBuffer }
-{$ENDIF OTL_LockingBuffer}
 
+  function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
+    IOmniTwoWayChannel;
+
+implementation
+
+uses
+  Windows,
+  SysUtils,
+  {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
+  OtlTaskEvents;
+
+type
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
   strict private
     ceReader_ref: TOmniRingBuffer;
@@ -190,7 +176,7 @@ type
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
   strict private
     twcEndpoint        : array [1..2] of IOmniCommunicationEndpoint;
-    twcLock            : TTicketSpinLock;
+    twcLock            : TSynchroObject;
     twcMessageQueueSize: integer;
     twcUnidirQueue     : array [1..2] of TOmniRingBuffer;
   strict protected
@@ -211,134 +197,6 @@ end; { CreateTwoWayChannel }
 
 { TOmniRingBuffer }
 
-{$IFDEF OTL_LockingBuffer}
-constructor TOmniRingBuffer.Create(numElements: integer);
-begin
-  orbLock := TTicketSpinLock.Create;
-  orbBufferSize := numElements;
-  SetLength(orbBuffer, orbBufferSize+1);
-  orbNewMessageEvt := CreateEvent(nil, false, false, nil);
-  Win32Check(orbNewMessageEvt <> 0);
-  Assert(SizeOf(THandle) = SizeOf(cardinal));
-  orbMonitorWindow.Value := 0;
-end; { TOmniRingBuffer.Create }
-
-{:Destroys ring buffer. If OwnsObjects is set, destroys all objects currently
-  in the buffer.
-}
-destructor TOmniRingBuffer.Destroy;
-begin
-  DSiCloseHandleAndNull(orbNewMessageEvt);
-  Clear;
-  FreeAndNil(orbLock);
-  inherited;
-end; { TOmniRingBuffer.Destroy }
-
-procedure TOmniRingBuffer.Clear;
-begin
-  Lock;
-  try
-    orbTail := orbHead;
-    orbCount.Value := 0;
-  finally Unlock; end;
-end; { TOmniRingBuffer.Clear }
-
-{:Returns number of objects in the buffer.
-}
-function TOmniRingBuffer.Count: integer;
-begin
-  Result := orbCount;
-end; { TOmniRingBuffer.Count }
-
-{:Removes tail object from the buffer, without destroying it. Returns nil if
-  buffer is empty.
-}
-function TOmniRingBuffer.Dequeue: TOmniMessage;
-begin
-  Lock;
-  try
-    if IsEmpty then
-      raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty')
-    else begin
-      Result := orbBuffer[orbTail];
-      orbTail := IncPointer(orbTail);
-      orbCount.Value := orbCount - 1;
-      if orbCount > 0 then
-        SetEvent(orbNewMessageEvt);
-    end;
-  finally Unlock; end;
-end; { TOmniRingBuffer.Dequeue }
-
-{:Inserts object into the buffer. Returns false if the buffer is full.
-}
-function TOmniRingBuffer.Enqueue(value: TOmniMessage): boolean;
-begin
-  Lock;
-  try
-    if IsFull then
-      Result := false
-    else begin
-      orbBuffer[orbHead] := value;
-      orbHead := IncPointer(orbHead);
-      orbCount.Value := orbCount + 1;
-      SetEvent(orbNewMessageEvt);
-      if orbMonitorWindow <> 0 then
-        PostMessage(orbMonitorWindow, COmniTaskMsg_NewMessage, orbMonitorMessageWParam,
-          orbMonitorMessageLParam);
-      Result := true;
-    end;
-  finally Unlock; end;
-end; { TOmniRingBuffer.Enqueue }
-
-{:Increments internal pointer (head or tail), wraps it to the buffer size and
-  returns new value.
-}
-function TOmniRingBuffer.IncPointer(const ptr: integer;
-  increment: integer): integer;
-begin
-  Result := (ptr + increment) mod (orbBufferSize + 1);
-end; { TOmniRingBuffer.IncPointer }
-
-{:Checks whether the buffer is empty.
-}
-function TOmniRingBuffer.IsEmpty: boolean;
-begin
-  Result := (orbCount = 0);
-end; { TOmniRingBuffer.IsEmpty }
-
-function TOmniRingBuffer.IsFull: boolean;
-begin
-  Result := (orbCount = orbBufferSize);
-end; { TOmniRingBuffer.IsFull }
-
-procedure TOmniRingBuffer.Lock;
-begin
-  orbLock.Acquire;
-end; { TOmniRingBuffer.Lock }
-
-procedure TOmniRingBuffer.RemoveMonitor;
-begin
-  orbMonitorWindow.Value := 0;
-end; { TOmniRingBuffer.RemoveMonitor }
-
-procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLParam:
-  integer);
-begin
-  Lock;
-  try
-    orbMonitorWindow.Value := cardinal(hWindow);
-    orbMonitorMessageWParam := messageWParam;
-    orbMonitorMessageLParam := messageLParam;
-  finally Unlock; end;
-end; { TOmniRingBuffer.SetMonitor }
-
-procedure TOmniRingBuffer.Unlock;
-begin
-  orbLock.Release;
-end; { TOmniRingBuffer.Unlock }
-
-{$ELSE OTL_LockingBuffer}
-
 constructor TOmniRingBuffer.Create(numElements: integer);
 var
   n: Cardinal;
@@ -348,8 +206,8 @@ begin
   orbNewMessageEvt := CreateEvent(nil, false, false, nil);
   Win32Check(orbNewMessageEvt <> 0);
   Assert(SizeOf(THandle) = SizeOf(cardinal));
-  orbMonitorWindow := 0;
-//Format buffer to reczcleChain, init orbRecycleChain and orbPublicChain
+  orbMonitorParams := nil;
+//Format buffer to recycleChain, init orbRecycleChain and orbPublicChain
   orbRecycleChain := @orbBuffer[0];
   for n := 0 to orbBufferSize -1 do
     orbBuffer[n].Next := @orbBuffer[n +1];
@@ -404,6 +262,7 @@ end; { TOmniRingBuffer.DequeueAll }
 function TOmniRingBuffer.Enqueue(value: TOmniMessage): Boolean;
 var
   linkedOmniMessage: PLinkedOmniMessage;
+  monitorParams: IOmniMonitorParams;
 begin
   linkedOmniMessage := PopLink(orbRecycleChain);
   Result := not(linkedOmniMessage = nil);
@@ -412,9 +271,10 @@ begin
   linkedOmniMessage^.OmniMessage := value;;
   PushLink(linkedOmniMessage, orbPublicChain);
   SetEvent(orbNewMessageEvt);
-  if orbMonitorWindow <> 0 then
-    PostMessage(orbMonitorWindow, COmniTaskMsg_NewMessage, orbMonitorMessageWParam,
-      orbMonitorMessageLParam);
+  monitorParams := orbMonitorParams;
+  if Assigned(monitorParams) then
+    PostMessage(monitorParams.Window, COmniTaskMsg_NewMessage, monitorParams.WParam,
+      monitorParams.LParam);
 end; { TOmniRingBuffer.Enqueue }
 
 function TOmniRingBuffer.IsEmpty: boolean;
@@ -452,19 +312,20 @@ asm
   jnz   @Hopla
 end; { TOmniRingBuffer.PushLink }
 
+{:Removes the Monitor
+}
 procedure TOmniRingBuffer.RemoveMonitor;
 begin
-  orbMonitorWindow := 0;
+  orbMonitorParams := nil;
 end; { TOmniRingBuffer.RemoveMonitor }
 
-procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLParam:
-  integer);
+{:Sets the Monitor parameters
+}
+procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
 begin
-  orbMonitorWindow := cardinal(hWindow);
-  orbMonitorMessageWParam := messageWParam;
-  orbMonitorMessageLParam := messageLParam;
+  orbMonitorParams := TOmniMonitorParams.Create(hWindow, messageWParam, messageLParam);
 end; { TOmniRingBuffer.SetMonitor }
-{$ENDIF OTL_LockingBuffer}
+
 
 { TOmniCommunicationEndpoint }
 
@@ -587,37 +448,30 @@ begin
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
 
-{$IFDEF DEBUG}
-procedure RingBufferTest;
-var
-  i  : integer;
-  msg: TOmniMessage;         
-  rb : TOmniRingBuffer;
+{ TOmniMonitorParams }
+
+constructor TOmniMonitorParams.Create(const Window: THandle; const WParam, LParam: integer);
 begin
-  rb := TOmniRingBuffer.Create(100);
-  try
-    if not rb.IsEmpty then
-      raise Exception.Create('Buffer is not empty when created');
-    for i := 1 to 100 do begin
-      msg.MsgID := i;
-      msg.MsgData := -i;
-      if not rb.Enqueue(msg) then
-        raise Exception.CreateFmt('Enqueue failed on element %d', [msg.MsgID]);
-    end;
-    for i := 1 to 100 do begin
-      if rb.IsEmpty then
-        raise Exception.CreateFmt('Buffer is empty on element %d', [i]);
-      msg := rb.Dequeue;
-      if (msg.MsgID <> i) or (msg.MsgData <> -i) then
-        raise Exception.CreateFmt('Retrieved (%d, %d), expected (%d, %d)',
-          [msg.MsgID, integer(msg.MsgData), i, -i]);
-    end;
-    if not rb.IsEmpty then
-      raise Exception.Create('Buffer is not empty at the end');
-  finally FreeAndNil(rb); end;
+  inherited Create;
+  Self.Window := Window;
+  Self.WParam := WParam;
+  Self.LParam := LParam;
 end;
 
-initialization
-  RingBufferTest;
-{$ENDIF DEBUG}
+function TOmniMonitorParams.GetLParam: integer;
+begin
+  Result := LParam;
+end;
+
+function TOmniMonitorParams.GetWindow: THandle;
+begin
+  Result := Window;
+end;
+
+function TOmniMonitorParams.GetWParam: integer;
+begin
+  Result := WParam;
+end;
+
 end.
+

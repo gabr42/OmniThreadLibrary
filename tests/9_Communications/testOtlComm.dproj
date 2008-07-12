@@ -41,14 +41,5 @@
     <DCCReference Include="testOtlComm1.pas">
       <Form>frmTestOtlComm</Form>
     </DCCReference>
-    <None Include="ModelSupport_testOtlComm\default.txaPackage" />
-    <None Include="ModelSupport_testOtlComm\default.txvpck" />
-    <None Include="ModelSupport_testOtlComm\OtlComm\default.txaPackage" />
-    <None Include="ModelSupport_testOtlComm\OtlComm\default.txvpck" />
-    <None Include="ModelSupport_testOtlComm\OtlTask\default.txaPackage" />
-    <None Include="ModelSupport_testOtlComm\OtlTask\default.txvpck" />
-    <None Include="ModelSupport_testOtlComm\testOtlComm1\default.txvpck" />
-    <None Include="ModelSupport_testOtlComm\testOtlComm\default.txaPackage" />
-    <None Include="ModelSupport_testOtlComm\testOtlComm\default.txvpck" />
   </ItemGroup>
 </Project>

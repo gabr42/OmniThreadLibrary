@@ -60,8 +60,6 @@ uses
   OtlComm,
   OtlThreadPool;
 
-{ TODO 1 -oPrimoz Gabrijelcic : Rename SetTimer into SetTimer }  
-
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
@@ -968,6 +966,7 @@ end; { TOmniTaskControl.Run }
 function TOmniTaskControl.Schedule(threadPool: IOmniThreadPool): IOmniTaskControl;
 begin
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniTaskControl.Schedule
+  // automatically create global thread pool if required
   raise Exception.Create('Thread pools are not implemented - yet ...');
 //  Result := Self;
 end; { TOmniTaskControl.Schedule }

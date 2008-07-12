@@ -42,7 +42,35 @@ interface
 
 type
   IOmniThreadPool = interface ['{1FA74554-1866-46DD-AC50-F0403E378682}']
-  end; //yet to be defined
+  //thrown in from my private thread pool unit; to be cleaned up
+  {
+    procedure CancelAll;
+    procedure Cancel(workItemID: int64); <-- task?
+    //function  GetActiveWorkItemDescriptions: string; <-- debugging interface, does not belong here
+    function  IsIdle: boolean;
+    procedure Schedule(workItem: TGpTPWorkItem); <-- task!
+    property CountExecuting: integer read GetExecutingCount;
+    property CountQueued: integer read GetQueuedCount;
+    property IdleWorkerThreadTimeout_sec: integer read tpIdleWorkerThreadTimeout_sec write
+      tpIdleWorkerThreadTimeout_sec default CDefaultIdleWorkerThreadTimeout_sec;
+    property MinWorkers: integer read tpMinWorkers write tpMinWorkers;
+    property MaxExecuting: integer read tpMaxExecuting write tpMaxExecuting
+      (*default <number of CPUs in the thread affinity mask>*);
+    property MaxQueued: integer read tpMaxQueueLength write SetMaxQueueLength;
+    property MaxQueuedTime_sec: integer read tpMaxQueuedTime_sec write SetMaxQueuedTime_sec;
+    property Name: string read tpName write tpName;
+    property WaitOnTerminate_sec: integer read tpWaitOnTerminate_sec write
+      tpWaitOnTerminate_sec default 30;
+    property OnError: TGpTPError read tpOnError write tpOnError;
+    //:Thread created event. Will be called from the context of the worker thread.
+    property OnWorkerThreadCreated_Asy: TGpTPWorkerThreadEvent read tpOnWorkerThreadCreated
+      write tpOnWorkerThreadCreated;
+    //:Thread destroying event. Will be called from the context of the worker thread.
+    property OnWorkerThreadDestroying_Asy: TGpTPWorkerThreadEvent read
+      tpOnWorkerThreadDestroying write tpOnWorkerThreadDestroying;
+    property OnWorkItemDone: TGpTPWorkItemDone read tpOnWorkItemDone write tpOnWorkItemDone;
+  }
+  end;
 
 implementation
 
