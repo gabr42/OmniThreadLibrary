@@ -6,10 +6,16 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002
    Creation date     : 2002-10-09
-   Last modification : 2008-05-30
-   Version           : 1.40
+   Last modification : 2008-07-11
+   Version           : 1.40b
 </pre>*)(*
    History:
+     1.40b: 2008-07-11
+       - Forced {$T-} as the code doesn't compile in {$T+} state.
+     1.40a: 2008-06-23
+       - Added constants FILE_LIST_DIRECTORY, FILE_SHARE_FULL, FILE_ACTION_ADDED,
+         FILE_ACTION_REMOVED, FILE_ACTION_MODIFIED, FILE_ACTION_RENAMED_OLD_NAME,
+         FILE_ACTION_RENAMED_NEW_NAME.
      1.40: 2008-05-30
        - Added function DSiCopyFileAnimated.
      1.39: 2008-05-05
@@ -222,7 +228,7 @@
 
 unit DSiWin32;
 
-{$J+} // required!
+{$J+,T-} // required!
 
 interface 
 
@@ -510,6 +516,15 @@ type
   TShFileOpFlags = set of TShFileOpFlag;
 
 const
+  FILE_LIST_DIRECTORY = $0001;
+  FILE_SHARE_FULL     = FILE_SHARE_DELETE OR FILE_SHARE_READ OR FILE_SHARE_WRITE;
+
+  FILE_ACTION_ADDED            = $00000001;
+  FILE_ACTION_REMOVED          = $00000002;
+  FILE_ACTION_MODIFIED         = $00000003;
+  FILE_ACTION_RENAMED_OLD_NAME = $00000004;
+  FILE_ACTION_RENAMED_NEW_NAME = $00000005;
+
   FOF_NOCONNECTEDELEMENTS = $2000;
   FOF_NORECURSION         = $1000;
   FOF_NORECURSEREPARSE    = $8000;
