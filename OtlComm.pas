@@ -29,7 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
-///   Contributors      : GJ
+///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2008-07-11
 ///   Version           : 0.3
@@ -96,7 +96,7 @@ type
     property Window: THandle read GetWindow;
     property WParam: integer read GetWParam;
     property LParam: integer read GetLParam;
-  end;
+  end; { IOmniMonitorParams }
 
   TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
   protected
@@ -108,7 +108,7 @@ type
     WParam: integer;
     LParam: integer;
     constructor Create(const Window: THandle; const WParam, LParam: integer);
-  end;
+  end; { TOmniMonitorParams }
 
   {:Fixed-size ring buffer of TOmniValues references.
   }
@@ -116,14 +116,14 @@ type
   TLinkedOmniMessage = packed record
     Next: PLinkedOmniMessage;
     OmniMessage: TOmniMessage;
-  end;
+  end; { TLinkedOmniMessage } 
 
   TOmniRingBuffer = class
   strict private
     orbBuffer              : array of TLinkedOmniMessage;
     orbBufferSize          : integer;
     orbDequeuedMessages    : PLinkedOmniMessage;
-    orbMonitorParams: IOmniMonitorParams;
+    orbMonitorParams       : IOmniMonitorParams;
     orbNewMessageEvt       : TDSiEventHandle;
     orbPublicChain         : PLinkedOmniMessage;
     orbRecycleChain        : PLinkedOmniMessage;
@@ -135,7 +135,7 @@ type
     constructor Create(numElements: integer);
     destructor  Destroy; override;
     function  Dequeue: TOmniMessage;
-    function  Enqueue(value: TOmniMessage): Boolean;
+    function  Enqueue(value: TOmniMessage): boolean;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
     procedure RemoveMonitor;
@@ -259,10 +259,10 @@ asm
 @Exit:
 end; { TOmniRingBuffer.DequeueAll }
 
-function TOmniRingBuffer.Enqueue(value: TOmniMessage): Boolean;
+function TOmniRingBuffer.Enqueue(value: TOmniMessage): boolean;
 var
   linkedOmniMessage: PLinkedOmniMessage;
-  monitorParams: IOmniMonitorParams;
+  monitorParams    : IOmniMonitorParams;
 begin
   linkedOmniMessage := PopLink(orbRecycleChain);
   Result := not(linkedOmniMessage = nil);
@@ -325,7 +325,6 @@ procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLPa
 begin
   orbMonitorParams := TOmniMonitorParams.Create(hWindow, messageWParam, messageLParam);
 end; { TOmniRingBuffer.SetMonitor }
-
 
 { TOmniCommunicationEndpoint }
 
@@ -456,22 +455,22 @@ begin
   Self.Window := Window;
   Self.WParam := WParam;
   Self.LParam := LParam;
-end;
+end; { TOmniMonitorParams.Create }
 
 function TOmniMonitorParams.GetLParam: integer;
 begin
   Result := LParam;
-end;
+end; { TOmniMonitorParams.GetLParam }
 
 function TOmniMonitorParams.GetWindow: THandle;
 begin
   Result := Window;
-end;
+end; { TOmniMonitorParams.GetWindow }
 
 function TOmniMonitorParams.GetWParam: integer;
 begin
   Result := WParam;
-end;
+end; { TOmniMonitorParams.GetWParam }
 
 end.
 
