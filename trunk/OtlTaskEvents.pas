@@ -76,21 +76,12 @@ var
   COmniTaskMsg_NewMessage: cardinal;
   COmniTaskMsg_Terminated: cardinal;
 
-  procedure Register;
-
 implementation
 
 uses
   Windows,
   SysUtils,
   DSiWin32;
-
-{ exports }
-
-procedure Register;
-begin
-  RegisterComponents('OmniThreadLibrary', [TOmniTaskEventDispatch]);
-end; { Register }
 
 { TOmniTaskEventDispatch }
 
