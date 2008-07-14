@@ -12,10 +12,12 @@ uses
 
 type
   TfrmTestOtlComm = class(TForm)
-    lbLog: TListBox;
-    btnSendTo1: TButton;
+    btnSendTo1            : TButton;
+    btnSendTo2            : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
-    btnSendTo2: TButton;
+    btnSendObject: TButton;
+    procedure btnSendObjectClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
@@ -88,6 +90,17 @@ end;
 
 { TfrmTestOtlComm }
 
+procedure TfrmTestOtlComm.btnSendObjectClick(Sender: TObject);
+var
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  sl.Add('123');
+  sl.Add('abc');
+  Log('Sending TStringList to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, [sl]);
+end;
+
 procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
 begin
   FClient1.Terminate;
@@ -98,9 +111,9 @@ procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
   FClient1 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))).Run;
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))).FreeOnTerminate.Run;
   FClient2 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))).Run;
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))).FreeOnTerminate.Run;
 end;
 
 procedure TfrmTestOtlComm.btnSendTo1Click(Sender: TObject);
@@ -128,16 +141,26 @@ end;
 
 procedure TfrmTestOtlComm.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
 var
-  msgID  : word;
   msgData: TOmniValue;
+  msgID  : word;
+  sData  : string;
+  sl     : TStringList;
 begin
   task.Comm.Receive(msgID, msgData);
+  if not VarIsArray(msgData) then
+    sData := msgData
+  else begin
+    sl := TStringList(integer(msgData[0]));
+    sData := sl.ClassName + '/' + sl.Text;
+    if msgID = MSG_NOTIFY_RECEPTION then
+      sl.Free;
+  end;
   if msgID = MSG_NOTIFY_FORWARD then
-    Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, msgData]))
+    Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, sData]))
   else if msgID = MSG_NOTIFY_RECEPTION then
-    Log(Format('[%d/%s] Notify reception of %s', [task.UniqueID, task.Name, msgData]))
+    Log(Format('[%d/%s] Notify reception of %s', [task.UniqueID, task.Name, sData]))
   else
-    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msgID, msgData]));
+    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msgID, sData]));
 end;
 
 end.
