@@ -6,10 +6,13 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002
    Creation date     : 2002-10-09
-   Last modification : 2008-07-11
-   Version           : 1.40b
+   Last modification : 2008-07-14
+   Version           : 1.40c
 </pre>*)(*
    History:
+     1.40c: 2008-07-14
+       - Bug fixed: It was not possible to use DSiTimeGetTime64 in parallel from multiple
+         threads
      1.40b: 2008-07-11
        - Forced {$T-} as the code doesn't compile in {$T+} state.
      1.40a: 2008-06-23
@@ -4877,10 +4880,12 @@ var
 
 { Time }
 
-var
+threadvar
   GLastTimeGetTime     : DWORD;
-  GPerformanceFrequency: int64;
   GTimeGetTimeBase     : int64;
+
+var
+  GPerformanceFrequency: int64;
 
   constructor TDSiTimer.Create(enabled: boolean; interval: cardinal; onTimer: TNotifyEvent;
     tag: longint);
