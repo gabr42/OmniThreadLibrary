@@ -110,14 +110,14 @@ type
     constructor Create(const Window: THandle; const WParam, LParam: integer);
   end; { TOmniMonitorParams }
 
-  {:Fixed-size ring buffer of TOmniValues references.
-  }
   PLinkedOmniMessage = ^TLinkedOmniMessage;
   TLinkedOmniMessage = packed record
     Next: PLinkedOmniMessage;
     OmniMessage: TOmniMessage;
-  end; { TLinkedOmniMessage } 
+  end; { TLinkedOmniMessage }
 
+  {:Fixed-size ring buffer of TOmniValues references.
+  }
   TOmniRingBuffer = class
   strict private
     orbBuffer              : array of TLinkedOmniMessage;
@@ -265,7 +265,7 @@ var
   monitorParams    : IOmniMonitorParams;
 begin
   linkedOmniMessage := PopLink(orbRecycleChain);
-  Result := not(linkedOmniMessage = nil);
+  Result := not (linkedOmniMessage = nil);
   if not Result then
     Exit;
   linkedOmniMessage^.OmniMessage := value;;
