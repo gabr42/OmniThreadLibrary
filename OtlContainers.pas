@@ -380,7 +380,7 @@ begin
     Exit;
   Move(linkedData.Data, value, ElementSize);
   PushLink(linkedData, obcRecycleChain);
-end; { TOmniStack.Pop }
+end; { TOmniBaseContainer.Pop }
 
 ///<summary>Removes first element from the chain, atomically.</summary>
 ///<returns>Removed first element. If the chain is empty, returns nil.</returns>
@@ -408,7 +408,7 @@ begin
     Exit;
   Move(value, linkedData.Data, ElementSize);
   PushLink(linkedData, obcPublicChain);
-end; { TOmniStack.Push }
+end; { TOmniBaseContainer.Push }
 
 ///<summary>Inserts element at the beginning of the chain, atomically.</summary>
 procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead:
