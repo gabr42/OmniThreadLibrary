@@ -86,7 +86,7 @@ type
     function  GetNewDataEvent: THandle;
   //
     procedure Signal;
-    property NewData: THandle read GetNewDataEvent;
+    property NewDataEvent: THandle read GetNewDataEvent;
   end; { IOmniNotifySupport }
 
   POmniLinkedData = ^TOmniLinkedData;
@@ -152,6 +152,9 @@ type
     property Options: TOmniContainerOptions read orbOptions write orbOptions;
   end; { TOmniRingBuffer }
 
+  function CreateOmniMonitorParams(window: THandle; msg: cardinal;
+    wParam, lParam: integer): IOmniMonitorParams;
+
 implementation
 
 uses
@@ -172,6 +175,8 @@ type
     function  GetWindow: THandle;
     function  GetWParam: integer;
   public
+    constructor Create(window: THandle; msg: cardinal; wParam, lParam: integer);
+    destructor Destroy; override;
     property LParam: integer read GetLParam;
     property Msg: cardinal read GetMessage;
     property Window: THandle read GetWindow;
@@ -202,7 +207,29 @@ type
     property NewData: THandle read GetNewDataEvent;
   end; { TOmniNotifySupport }
 
+{ exports }
+
+function CreateOmniMonitorParams(window: THandle; msg: cardinal;
+  wParam, lParam: integer): IOmniMonitorParams;
+begin
+  Result := TOmniMonitorParams.Create(window, msg, wParam, lParam);
+end; { CreateOmniMonitorParams }
+
 { TOmniMonitorParams }
+
+constructor TOmniMonitorParams.Create(window: THandle; msg: cardinal; wParam, lParam:
+  integer);
+begin
+  ompMessage := msg;
+  ompLParam := lParam;
+  ompWParam := wParam;
+  ompWindow := window;
+end; { TOmniMonitorParams.Create }
+
+destructor TOmniMonitorParams.Destroy;
+begin
+  inherited Destroy;
+end;
 
 function TOmniMonitorParams.GetLParam: integer;
 begin
@@ -272,7 +299,7 @@ end; { TOmniNotifySupport.GetNewDataEvent }
 
 procedure TOmniNotifySupport.Signal;
 begin
-  SetEvent(onsNewDataEvent);
+  Win32Check(SetEvent(onsNewDataEvent));
 end; { TOmniNotifySupport.Signal }
 
 { TOmniBaseContainer }
@@ -324,7 +351,7 @@ asm
   jz    @Exit
 @Walk:
   xchg  [eax], ecx                        //Turn links
-  and   ecx, ecx
+  and   ecx, ecx          
   jz    @Exit
   xchg  [ecx], eax
   and   eax, eax
@@ -417,9 +444,11 @@ constructor TOmniStack.Create(numElements, elementSize: integer;
 begin
   inherited Create;
   Initialize(numElements, elementSize);
-  osMonitorSupport := TOmniMonitorSupport.Create;
-  osNotifySupport := TOmniNotifySupport.Create;
-  osOptions := options;       
+  osOptions := options;
+  if coEnableMonitor in Options then
+    osMonitorSupport := TOmniMonitorSupport.Create;
+  if coEnableNotify in Options then
+    osNotifySupport := TOmniNotifySupport.Create;
 end; { TOmniStack.Create }
 
 function TOmniStack.Pop(var value): boolean;
@@ -448,9 +477,11 @@ constructor TOmniRingBuffer.Create(numElements, elementSize: integer;
 begin
   inherited Create;
   Initialize(numElements, elementSize);
-  orbMonitorSupport := TOmniMonitorSupport.Create;
-  orbNotifySupport := TOmniNotifySupport.Create;
   orbOptions := options;
+  if coEnableMonitor in Options then
+    orbMonitorSupport := TOmniMonitorSupport.Create;
+  if coEnableNotify in Options then
+    orbNotifySupport := TOmniNotifySupport.Create;
 end; { TOmniRingBuffer.Create }
 
 function TOmniRingBuffer.Dequeue(var value): boolean;

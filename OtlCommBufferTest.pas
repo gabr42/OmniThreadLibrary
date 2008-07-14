@@ -52,9 +52,9 @@ procedure RingBufferTest;
 var
   i  : integer;
   msg: TOmniMessage;
-  rb : TOmniRingBuffer;
+  rb : TOmniMessageQueue;
 begin
-  rb := TOmniRingBuffer.Create(100);
+  rb := TOmniMessageQueue.Create(100);
   try
     if not rb.IsEmpty then
       raise Exception.Create('Buffer is not empty when created');

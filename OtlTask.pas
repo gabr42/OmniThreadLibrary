@@ -984,7 +984,7 @@ begin
   if otcParameters.IsLocked then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
   otcMonitorWindow := hWindow;
-  otcCommChannel.Endpoint2.SetMonitor(hWindow, integer(UniqueID), 0);
+  otcCommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage, integer(UniqueID), 0);
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 
