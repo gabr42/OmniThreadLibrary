@@ -207,9 +207,11 @@ procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(CTestQueueLength);
   FClient1 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, CTestQueueLength))).Run;
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, CTestQueueLength))).
+    FreeOnTerminate.Run;
   FClient2 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, CTestQueueLength))).Run;
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, CTestQueueLength))).
+    FreeOnTerminate.Run;
 end;
 
 procedure TfrmTestOtlComm.btnRunTestsClick(Sender: TObject);

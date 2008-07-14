@@ -41,5 +41,6 @@
     <DCCReference Include="testOtlComm1.pas">
       <Form>frmTestOtlComm</Form>
     </DCCReference>
+    <None Include="ModelSupport_testOtlComm\default.txaPackage" />
   </ItemGroup>
 </Project>
