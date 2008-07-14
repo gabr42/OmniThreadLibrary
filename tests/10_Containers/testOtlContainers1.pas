@@ -127,8 +127,8 @@ procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
 begin
   FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
   FBuffer := OtlContainers.TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
-  FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).Run;
-  FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).Run;
+  FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
+  FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
 end;
 
 procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
