@@ -31,7 +31,7 @@
 ///   Author            : Primoz Gabrijelcic, GJ
 ///   Creation date     : 2008-07-13
 ///   Last modification : 2008-07-14
-///   Version           : 0.0
+///   Version           : 0.1
 ///</para><para>
 ///   History:
 ///</para></remarks>
@@ -128,8 +128,8 @@ type
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
-    function Pop(var value): boolean; inline;
-    function Push(const value): boolean; inline;
+    function Pop(var value): boolean; 
+    function Push(const value): boolean;
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read osNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read osOptions write osOptions;
@@ -144,9 +144,9 @@ type
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
-    function  Enqueue(const value): boolean; inline;
+    function  Enqueue(const value): boolean; 
     function  Dequeue(var value): boolean;
-    function  IsEmpty: boolean; override;
+    function  IsEmpty: boolean; override; 
     property MonitorSupport: IOmniMonitorSupport read orbMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read orbNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read orbOptions write orbOptions;
@@ -298,16 +298,17 @@ begin
   obcElementSize := elementSize;
   // calculate element size, round up to next 4-aligned value
   bufferElementSize := ((SizeOf(POmniLinkedData) + elementSize) + 3) AND NOT 3;
-  GetMem(obcBuffer, bufferElementSize * cardinal(numElements + 1));
+  GetMem(obcBuffer, bufferElementSize * cardinal(numElements));
   Assert(cardinal(obcBuffer) AND 3 = 0);
   //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
   obcRecycleChain := obcBuffer;
   nextElement := nil; // to remove compiler warning in nextElement.Next := nil assignment below
   currElement := obcRecycleChain;
-  for iElement := 0 to obcNumElements - 1 do begin
+  for iElement := 0 to obcNumElements - 2 do begin
     nextElement := POmniLinkedData(cardinal(currElement) + bufferElementSize);
     currElement.Next := nextElement;
+    currElement := nextElement;
   end;
   nextElement.Next := nil; // terminate the chain
   obcPublicChain := nil;
@@ -318,7 +319,7 @@ end; { TOmniBaseContainer.Initialize }
 ///<since>2008-07-13</since>
 function TOmniBaseContainer.InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
 asm
-  mov   eax, [edx]
+  mov   eax, edx
   test  eax, eax
   jz    @Exit
 @Walk:
