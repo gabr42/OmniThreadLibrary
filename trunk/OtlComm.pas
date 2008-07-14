@@ -58,7 +58,8 @@ uses
   SpinLock,
   GpStuff,
   DSiWin32,
-  OtlCommon;
+  OtlCommon,
+  OtlContainers;
 
 type
   {$A4}
@@ -78,7 +79,8 @@ type
     procedure Send(msgID: word; msgData: TOmniValue); overload;
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(const msg: TOmniMessage); overload;
-    procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
+    procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
+      integer); 
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
     function  Receive(var msg: TOmniMessage): boolean; overload;
     property NewMessageEvent: THandle read GetNewMessageEvent;
@@ -89,59 +91,14 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
-  IOmniMonitorParams = interface
-    function GetWindow: THandle;
-    function GetWParam: integer;
-    function GetLParam: integer;
-    property Window: THandle read GetWindow;
-    property WParam: integer read GetWParam;
-    property LParam: integer read GetLParam;
-  end; { IOmniMonitorParams }
-
-  TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
-  protected
-    function GetWindow: THandle;
-    function GetWParam: integer;
-    function GetLParam: integer;
-  public
-    Window: THandle;
-    WParam: integer;
-    LParam: integer;
-    constructor Create(const Window: THandle; const WParam, LParam: integer);
-  end; { TOmniMonitorParams }
-
-  PLinkedOmniMessage = ^TLinkedOmniMessage;
-  TLinkedOmniMessage = packed record
-    Next: PLinkedOmniMessage;
-    OmniMessage: TOmniMessage;
-  end; { TLinkedOmniMessage }
-
   {:Fixed-size ring buffer of TOmniValues references.
   }
-  TOmniRingBuffer = class
-  strict private
-    orbBuffer              : array of TLinkedOmniMessage;
-    orbBufferSize          : integer;
-    orbDequeuedMessages    : PLinkedOmniMessage;
-    orbMonitorParams       : IOmniMonitorParams;
-    orbNewMessageEvt       : TDSiEventHandle;
-    orbPublicChain         : PLinkedOmniMessage;
-    orbRecycleChain        : PLinkedOmniMessage;
-  strict protected
-    function  DequeueAll(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
-    function  PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
-    procedure PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
+  TOmniMessageQueue = class(TOmniRingBuffer)
   public
-    constructor Create(numElements: integer);
-    destructor  Destroy; override;
-    function  Dequeue: TOmniMessage;
-    function  Enqueue(value: TOmniMessage): boolean;
-    function  IsEmpty: boolean; inline;
-    function  IsFull: boolean; inline;
-    procedure RemoveMonitor;
-    procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
-    property NewMessageEvent: TDSiEventHandle read orbNewMessageEvt write orbNewMessageEvt;
-  end; { TOmniRingBuffer }
+    constructor Create(numMessages: integer); reintroduce;
+    function  Dequeue: TOmniMessage; reintroduce;
+    function  Enqueue(value: TOmniMessage): boolean; reintroduce;
+  end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
     IOmniTwoWayChannel;
@@ -157,19 +114,20 @@ uses
 type
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
   strict private
-    ceReader_ref: TOmniRingBuffer;
-    ceWriter_ref: TOmniRingBuffer;
+    ceReader_ref: TOmniMessageQueue;
+    ceWriter_ref: TOmniMessageQueue;
   protected
     function  GetNewMessageEvent: THandle;
   public
-    constructor Create(readQueue, writeQueue: TOmniRingBuffer);
+    constructor Create(readQueue, writeQueue: TOmniMessageQueue);
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
     procedure RemoveMonitor; inline;
     procedure Send(const msg: TOmniMessage); overload; inline;
     procedure Send(msgID: word; msgData: array of const); overload; 
     procedure Send(msgID: word; msgData: TOmniValue); overload; inline;
-    procedure SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer); inline;
+    procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
+      integer); inline;
     property NewMessageEvent: THandle read GetNewMessageEvent;
   end; { TOmniCommunicationEndpoint }
 
@@ -178,7 +136,7 @@ type
     twcEndpoint        : array [1..2] of IOmniCommunicationEndpoint;
     twcLock            : TSynchroObject;
     twcMessageQueueSize: integer;
-    twcUnidirQueue     : array [1..2] of TOmniRingBuffer;
+    twcUnidirQueue     : array [1..2] of TOmniMessageQueue;
   strict protected
     procedure CreateBuffers; inline; 
   public
@@ -188,6 +146,11 @@ type
     function Endpoint2: IOmniCommunicationEndpoint; inline;
   end; { TOmniTwoWayChannel }
 
+  TVariantRec = record
+    v1: int64;
+    v2: int64;
+  end; { TVariantRec }
+
 { exports }
 
 function CreateTwoWayChannel(numElements: integer): IOmniTwoWayChannel;
@@ -195,140 +158,41 @@ begin
   Result := TOmniTwoWayChannel.Create(numElements);
 end; { CreateTwoWayChannel }
 
-{ TOmniRingBuffer }
+{ TOmniMessageQueue }
 
-constructor TOmniRingBuffer.Create(numElements: integer);
+constructor TOmniMessageQueue.Create(numMessages: integer);
+begin
+  inherited Create(numMessages, SizeOf(TOmniMessage));
+end; { TOmniMessageQueue.Create }
+
+function TOmniMessageQueue.Dequeue: TOmniMessage;
 var
-  n: Cardinal;
+  tmp: TOmniMessage;
 begin
-  orbBufferSize := numElements;
-  SetLength(orbBuffer, orbBufferSize + 1);
-  orbNewMessageEvt := CreateEvent(nil, false, false, nil);
-  Win32Check(orbNewMessageEvt <> 0);
-  Assert(SizeOf(THandle) = SizeOf(cardinal));
-  orbMonitorParams := nil;
-//Format buffer to recycleChain, init orbRecycleChain and orbPublicChain
-  orbRecycleChain := @orbBuffer[0];
-  for n := 0 to orbBufferSize -1 do
-    orbBuffer[n].Next := @orbBuffer[n +1];
-  orbBuffer[orbBufferSize].Next := nil;
-//Init orbSubInUseLink and orbTailInUseLink
-  orbPublicChain := nil;
-end; { TOmniRingBuffer.Create }
+  with TVariantRec(tmp.MsgData) do begin
+    v1 := 0;
+    v2 := 0;
+  end;
+  if not inherited Dequeue(tmp) then
+    raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
+  Result := tmp;
+end; { TOmniMessageQueue.Dequeue }
 
-destructor TOmniRingBuffer.Destroy;
-begin
-  DSiCloseHandleAndNull(orbNewMessageEvt);
-  inherited;
-end; { TOmniRingBuffer.Destroy }
-
-function TOmniRingBuffer.Dequeue: TOmniMessage;
+function TOmniMessageQueue.Enqueue(value: TOmniMessage): boolean;
 var
-  linkedOmniMessage: PLinkedOmniMessage;
+  tmp: TOmniMessage;
 begin
-  if orbDequeuedMessages = nil then
-    orbDequeuedMessages := DequeueAll(orbPublicChain);
-  linkedOmniMessage := PopLink(orbDequeuedMessages);
-  if linkedOmniMessage = nil then
-    raise Exception.Create('TOmniRingBuffer.Dequeue: Ring buffer is empty');
-  Result := linkedOmniMessage^.OmniMessage;
-  PushLink(linkedOmniMessage, orbRecycleChain);
-  if linkedOmniMessage <> nil then
-    SetEvent(orbNewMessageEvt);
-end; { TOmniRingBuffer.Dequeue }
-
-function TOmniRingBuffer.DequeueAll(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                        ^------ < AChainHead
-asm
-  xor   ecx, ecx
-  mov   eax, [edx]
-@Spin:
-  lock cmpxchg [edx], ecx                 {Cut ChainHead}
-  jnz   @Spin
-  test  eax,eax
-  jz    @Exit
-@Walk:
-  xchg  [eax], ecx                        {Turn links}
-  and   ecx, ecx
-  jz    @Exit
-  xchg  [ecx], eax
-  and   eax, eax
-  jnz   @Walk
-  mov   eax, ecx
-@Exit:
-end; { TOmniRingBuffer.DequeueAll }
-
-function TOmniRingBuffer.Enqueue(value: TOmniMessage): boolean;
-var
-  linkedOmniMessage: PLinkedOmniMessage;
-  monitorParams    : IOmniMonitorParams;
-begin
-  linkedOmniMessage := PopLink(orbRecycleChain);
-  Result := not (linkedOmniMessage = nil);
-  if not Result then
-    Exit;
-  linkedOmniMessage^.OmniMessage := value;;
-  PushLink(linkedOmniMessage, orbPublicChain);
-  SetEvent(orbNewMessageEvt);
-  monitorParams := orbMonitorParams;
-  if Assigned(monitorParams) then
-    PostMessage(monitorParams.Window, COmniTaskMsg_NewMessage, monitorParams.WParam,
-      monitorParams.LParam);
-end; { TOmniRingBuffer.Enqueue }
-
-function TOmniRingBuffer.IsEmpty: boolean;
-begin
-  Result := (orbPublicChain = nil) and (orbDequeuedMessages = nil);
-end; { TOmniRingBuffer.IsEmpty }
-
-function TOmniRingBuffer.IsFull: boolean;
-begin
-  Result := orbRecycleChain = nil;
-end; { TOmniRingBuffer.IsFull }
-
-function TOmniRingBuffer.PopLink(var AChainHead: PLinkedOmniMessage): PLinkedOmniMessage;
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                         ^------ < AChainHead
-asm
-  mov   eax, [edx]                        //Result := AChainHead
-  test  eax, eax
-  jz    @Exit
-@spin:
-  mov   ecx, [eax]                        //ecx := Result.Next
-  lock cmpxchg [edx], ecx                 //AChainHead := Result.Next
-  jnz   @spin                             //Do spin ???
-@Exit:
-end; { TOmniRingBuffer.PopLink }
-
-procedure TOmniRingBuffer.PushLink(const ALink: PLinkedOmniMessage; var AChainHead: PLinkedOmniMessage);
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                         ^------ < AChainHead
-asm
-  mov   eax, [ecx]                         //ecx := AChainHead
-@Hopla:
-  mov   [edx], eax                         //ALink := AChainHead.Next
-  lock cmpxchg [ecx], edx                  //AChainHead := ALink
-  jnz   @Hopla
-end; { TOmniRingBuffer.PushLink }
-
-{:Removes the Monitor
-}
-procedure TOmniRingBuffer.RemoveMonitor;
-begin
-  orbMonitorParams := nil;
-end; { TOmniRingBuffer.RemoveMonitor }
-
-{:Sets the Monitor parameters
-}
-procedure TOmniRingBuffer.SetMonitor(hWindow: THandle; messageWParam, messageLParam: integer);
-begin
-  orbMonitorParams := TOmniMonitorParams.Create(hWindow, messageWParam, messageLParam);
-end; { TOmniRingBuffer.SetMonitor }
+  tmp := value;
+  Result := inherited Enqueue(tmp);
+  with TVariantRec(tmp.MsgData) do begin
+    v1 := 0;
+    v2 := 0;
+  end;
+end; { TOmniMessageQueue.Enqueue }
 
 { TOmniCommunicationEndpoint }
 
-constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniRingBuffer);
+constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniMessageQueue);
 begin
   inherited Create;
   ceReader_ref := readQueue;
@@ -337,7 +201,7 @@ end; { TOmniCommunicationEndpoint.Create }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
-  Result := ceReader_ref.NewMessageEvent;
+  Result := ceReader_ref.NotifySupport.NewDataEvent;
 end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
 function TOmniCommunicationEndpoint.Receive(var msgID: word; var msgData:
@@ -361,7 +225,7 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 procedure TOmniCommunicationEndpoint.RemoveMonitor;
 begin
-  ceWriter_ref.RemoveMonitor;
+  ceWriter_ref.MonitorSupport.RemoveMonitor;
 end; { TOmniCommunicationEndpoint.RemoveMonitor }
 
 procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
@@ -384,10 +248,11 @@ begin
   Send(msgID, OpenArrayToVarArray(msgData));
 end; { TOmniCommunicationEndpoint.Send }
 
-procedure TOmniCommunicationEndpoint.SetMonitor(hWindow: THandle; messageWParam,
-  messageLParam: integer);
+procedure TOmniCommunicationEndpoint.SetMonitor(hWindow: THandle; msg: cardinal;
+  messageWParam, messageLParam: integer);
 begin
-  ceWriter_ref.SetMonitor(hWindow, messageWParam, messageLParam);
+  ceWriter_ref.MonitorSupport.SetMonitor(CreateOmniMonitorParams(
+    hWindow, msg, messageWParam, messageLParam));
 end; { TOmniCommunicationEndpoint.SetMonitor }
 
 { TOmniTwoWayChannel }
@@ -412,9 +277,9 @@ end; { TOmniTwoWayChannel.Destroy }
 procedure TOmniTwoWayChannel.CreateBuffers;
 begin
   if twcUnidirQueue[1] = nil then
-    twcUnidirQueue[1] := TOmniRingBuffer.Create(twcMessageQueueSize);
+    twcUnidirQueue[1] := TOmniMessageQueue.Create(twcMessageQueueSize);
   if twcUnidirQueue[2] = nil then
-    twcUnidirQueue[2] := TOmniRingBuffer.Create(twcMessageQueueSize);
+    twcUnidirQueue[2] := TOmniMessageQueue.Create(twcMessageQueueSize);
 end; { TOmniTwoWayChannel.CreateBuffers }
 
 function TOmniTwoWayChannel.Endpoint1: IOmniCommunicationEndpoint;
@@ -447,30 +312,7 @@ begin
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
 
-{ TOmniMonitorParams }
-
-constructor TOmniMonitorParams.Create(const Window: THandle; const WParam, LParam: integer);
-begin
-  inherited Create;
-  Self.Window := Window;
-  Self.WParam := WParam;
-  Self.LParam := LParam;
-end; { TOmniMonitorParams.Create }
-
-function TOmniMonitorParams.GetLParam: integer;
-begin
-  Result := LParam;
-end; { TOmniMonitorParams.GetLParam }
-
-function TOmniMonitorParams.GetWindow: THandle;
-begin
-  Result := Window;
-end; { TOmniMonitorParams.GetWindow }
-
-function TOmniMonitorParams.GetWParam: integer;
-begin
-  Result := WParam;
-end; { TOmniMonitorParams.GetWParam }
-
+initialization
+  Assert(SizeOf(TVariantRec) = SizeOf(TOmniValue));
 end.
 
