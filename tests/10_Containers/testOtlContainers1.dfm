@@ -1,8 +1,9 @@
 object frmTestOtlContainers: TfrmTestOtlContainers
   Left = 0
   Top = 0
+  ActiveControl = btnStackStressTest
   Caption = 'OtlContainers tester'
-  ClientHeight = 306
+  ClientHeight = 295
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,15 +20,16 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Left = 143
     Top = 0
     Width = 468
-    Height = 306
+    Height = 295
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 7
+    ExplicitHeight = 306
   end
   object btnStackStressTest: TButton
     Left = 8
-    Top = 8
+    Top = 56
     Width = 129
     Height = 25
     Caption = 'Stack stress test'
@@ -36,7 +38,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBufferStressTest: TButton
     Left = 8
-    Top = 183
+    Top = 231
     Width = 129
     Height = 25
     Caption = 'Ring buffer stress test'
@@ -45,7 +47,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStackCorrectnessTest: TButton
     Left = 8
-    Top = 132
+    Top = 180
     Width = 129
     Height = 25
     Caption = 'Stack correctness test'
@@ -54,7 +56,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBufferCorrectnessTest: TButton
     Left = 8
-    Top = 214
+    Top = 262
     Width = 129
     Height = 25
     Caption = 'Buffer correctness test'
@@ -63,7 +65,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack2to1: TButton
     Left = 72
-    Top = 39
+    Top = 87
     Width = 65
     Height = 25
     Caption = '2 -> 1'
@@ -72,7 +74,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack1to2: TButton
     Left = 72
-    Top = 70
+    Top = 118
     Width = 65
     Height = 25
     Caption = '1 -> 2'
@@ -81,16 +83,25 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack2to2: TButton
     Left = 72
-    Top = 101
+    Top = 149
     Width = 65
     Height = 25
     Caption = '2 -> 2'
     TabOrder = 3
     OnClick = btnStack2to2Click
   end
+  object btnBaseContainerStressTest: TButton
+    Left = 8
+    Top = 8
+    Width = 129
+    Height = 25
+    Caption = 'Base contnr stress test'
+    TabOrder = 8
+    OnClick = btnBaseContainerStressTestClick
+  end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage
     Left = 8
-    Top = 248
+    Top = 144
   end
 end
