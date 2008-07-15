@@ -18,19 +18,27 @@ type
     btnStackStressTest      : TButton;
     lbLog                   : TListBox;
     OmniTaskEventDispatch1  : TOmniTaskEventDispatch;
+    btnStack2to1            : TButton;
+    btnStack1to2            : TButton;
+    btnStack2to2            : TButton;
     procedure btnBufferCorrectnessTestClick(Sender: TObject);
     procedure btnBufferStressTestClick(Sender: TObject);
+    procedure btnStack1to2Click(Sender: TObject);
+    procedure btnStack2to1Click(Sender: TObject);
+    procedure btnStack2to2Click(Sender: TObject);
     procedure btnStackCorrectnessTestClick(Sender: TObject);
     procedure btnStackStressTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   strict private
-    FBuffer: TOmniRingBuffer;
+    FBuffer: OtlContainers.TOmniRingBuffer;
     FStack : TOmniStack;
   private
-    FReader: IOmniTaskControl;
-    FWriter: IOmniTaskControl;
+    FReader : IOmniTaskControl;
+    FReader2: IOmniTaskControl;
+    FWriter : IOmniTaskControl;
+    FWriter2: IOmniTaskControl;
     procedure Log(const msg: string);
   end;
 
@@ -68,13 +76,13 @@ type
 
   TCommTester = class(TOmniWorker)
   strict private
-    ctBuffer: TOmniRingBuffer;
+    ctBuffer: OtlContainers.TOmniRingBuffer;
     ctStack : TOmniStack;
   strict protected
     procedure Fail(const reason: string);
   public
-    constructor Create(stack: TOmniStack; ringBuffer: TOmniRingBuffer);
-    property Buffer: TOmniRingBuffer read ctBuffer;
+    constructor Create(stack: TOmniStack; ringBuffer: OtlContainers.TOmniRingBuffer);
+    property Buffer: OtlContainers.TOmniRingBuffer read ctBuffer;
     property Stack: TOmniStack read ctStack;
   end; { TCommTester }
 
@@ -100,6 +108,7 @@ type
 procedure TfrmTestOtlContainers.btnBufferCorrectnessTestClick(Sender: TObject);
 begin
   Log('Writing to ring buffer');
+  FBuffer.Empty;
   FWriter.Comm.Send(MSG_START_BUFFER_WRITE, CTestQueueLength);
 end;
 
@@ -110,15 +119,45 @@ begin
   FWriter.Comm.Send(MSG_START_BUFFER_STRESS_TEST, 60 {seconds});
 end;
 
+procedure TfrmTestOtlContainers.btnStack1to2Click(Sender: TObject);
+begin
+  Log('Starting 60 second stack stress test, 1 -> 2');
+  FStack.Empty;
+  FReader.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FReader2.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FWriter.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+end;
+
+procedure TfrmTestOtlContainers.btnStack2to1Click(Sender: TObject);
+begin
+  Log('Starting 60 second stack stress test, 2 -> 1');
+  FStack.Empty;
+  FReader.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FWriter.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FWriter2.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+end;
+
+procedure TfrmTestOtlContainers.btnStack2to2Click(Sender: TObject);
+begin
+  Log('Starting 60 second stack stress test, 2 -> 2');
+  FStack.Empty;
+  FReader.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FReader2.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FWriter.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+  FWriter2.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
+end;
+
 procedure TfrmTestOtlContainers.btnStackCorrectnessTestClick(Sender: TObject);
 begin
   Log('Writing to stack');
+  FStack.Empty;
   FWriter.Comm.Send(MSG_START_STACK_WRITE, CTestQueueLength);
 end;
 
 procedure TfrmTestOtlContainers.btnStackStressTestClick(Sender: TObject);
 begin
-  Log('Starting 60 second stack stress test');
+  Log('Starting 60 second stack stress test, 1 -> 1');
+  FStack.Empty;
   FReader.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
   FWriter.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
 end;
@@ -126,15 +165,19 @@ end;
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
   FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
-  FBuffer := TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
+  FBuffer := OtlContainers.TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
   FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
+  FWriter2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
   FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
+  FReader2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
 end;
 
 procedure TfrmTestOtlContainers.FormDestroy(Sender: TObject);
 begin
   FWriter.Terminate;
+  FWriter2.Terminate;
   FReader.Terminate;
+  FReader2.Terminate;
   FreeAndNil(FStack);
   FreeAndNil(FBuffer);
 end;
@@ -175,7 +218,8 @@ end;
 
 { TCommTester }
 
-constructor TCommTester.Create(stack: TOmniStack; ringBuffer: TOmniRingBuffer);
+constructor TCommTester.Create(stack: TOmniStack; ringBuffer:
+  OtlContainers.TOmniRingBuffer);
 begin
   inherited Create;
   ctStack := stack;
@@ -215,26 +259,39 @@ end;
 
 procedure TCommWriter.OMStartBufferWrite(var msg: TOmniMessage);
 var
-  item: integer;
+  iRepeat: integer;
+  item   : integer;
 begin
-  if not Buffer.IsEmpty then
-    Fail('Buffer is not empty at the beginning')
-  else begin
-    for item := 1 to msg.MsgData do
-      if not Buffer.Enqueue(item) then begin
-        Fail(Format('Failed to enqueue item %d', [item]));
-        Exit;
-      end;
-    if not Buffer.IsFull then
-      Fail('Buffer is not full at the end')
+  for iRepeat := 1 to 2 do begin
+    if not Buffer.IsEmpty then begin
+      Fail('Buffer is not empty at the beginning');
+      Exit;
+    end
     else begin
-      item := msg.MsgData + 1;
-      if Buffer.Enqueue(item) then
-        Fail('Managed to enqueue item into a full buffer')
-      else
-        Task.Comm.Send(MSG_BUFFER_WRITE_COMPLETED, 0);
+      for item := 1 to msg.MsgData do
+        if not Buffer.Enqueue(item) then begin
+          Fail(Format('Failed to enqueue item %d', [item]));
+          Exit;
+        end;
+      if not Buffer.IsFull then begin
+        Fail('Buffer is not full at the end');
+        Exit;
+      end
+      else begin
+        item := msg.MsgData + 1;
+        if Buffer.Enqueue(item) then begin
+          Fail('Managed to enqueue item into a full buffer');
+          Exit;
+        end
+        else if iRepeat = 2 then
+          Task.Comm.Send(MSG_BUFFER_WRITE_COMPLETED, 0);
+      end; //for item
     end;
-  end;
+    if iRepeat = 1 then begin
+      Buffer.Dequeue(item);
+      Buffer.Empty;
+    end;
+  end; //for iRepeat
 end;
 
 procedure TCommWriter.OMStartStackStressTest(var msg: TOmniMessage);
@@ -263,26 +320,37 @@ end;
 
 procedure TCommWriter.OMStartStackWrite(var msg: TOmniMessage);
 var
-  item: integer;
+  iRepeat: integer;
+  item   : integer;
 begin
-  if not Stack.IsEmpty then
-    Fail('Stack is not empty at the beginning')
-  else begin
-    for item := 1 to msg.MsgData do
-      if not Stack.Push(item) then begin
-        Fail(Format('Failed to push item %d', [item]));
-        Exit;
-      end;
-    if not Stack.IsFull then
-      Fail('Stack is not full at the end')
+  for iRepeat := 1 to 2 do begin
+    if not Stack.IsEmpty then begin
+      Fail('Stack is not empty at the beginning');
+      Exit;
+    end
     else begin
-      item := msg.MsgData + 1;
-      if Stack.Push(item) then
-        Fail('Managed to push item onto a full stack')
-      else
-        Task.Comm.Send(MSG_STACK_WRITE_COMPLETED, 0);
+      for item := 1 to msg.MsgData do
+        if not Stack.Push(item) then begin
+          Fail(Format('Failed to push item %d', [item]));
+          Exit;
+        end;
+      if not Stack.IsFull then begin
+        Fail('Stack is not full at the end');
+        Exit;
+      end
+      else begin
+        item := msg.MsgData + 1;
+        if Stack.Push(item) then begin
+          Fail('Managed to push item onto a full stack');
+          Exit;
+        end
+        else if iRepeat = 2 then
+          Task.Comm.Send(MSG_STACK_WRITE_COMPLETED, 0);
+      end; //for item
     end;
-  end;
+    if iRepeat = 1 then
+      Stack.Empty;
+  end; //for iRepeat
 end;
 
 { TCommReader }
