@@ -1,4 +1,4 @@
-object frmTestOtlComm: TfrmTestOtlComm
+object frmTestOtlContainers: TfrmTestOtlContainers
   Left = 0
   Top = 0
   Caption = 'OtlContainers tester'
