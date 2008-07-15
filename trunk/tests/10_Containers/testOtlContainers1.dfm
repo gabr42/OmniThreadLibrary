@@ -23,7 +23,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 0
+    TabOrder = 7
   end
   object btnStackStressTest: TButton
     Left = 8
@@ -31,35 +31,62 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Width = 129
     Height = 25
     Caption = 'Stack stress test'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = btnStackStressTestClick
   end
   object btnBufferStressTest: TButton
     Left = 8
-    Top = 87
+    Top = 183
     Width = 129
     Height = 25
     Caption = 'Ring buffer stress test'
-    TabOrder = 2
+    TabOrder = 5
     OnClick = btnBufferStressTestClick
   end
   object btnStackCorrectnessTest: TButton
     Left = 8
-    Top = 39
+    Top = 132
     Width = 129
     Height = 25
     Caption = 'Stack correctness test'
-    TabOrder = 3
+    TabOrder = 4
     OnClick = btnStackCorrectnessTestClick
   end
   object btnBufferCorrectnessTest: TButton
     Left = 8
-    Top = 118
+    Top = 214
     Width = 129
     Height = 25
     Caption = 'Buffer correctness test'
-    TabOrder = 4
+    TabOrder = 6
     OnClick = btnBufferCorrectnessTestClick
+  end
+  object btnStack2to1: TButton
+    Left = 72
+    Top = 39
+    Width = 65
+    Height = 25
+    Caption = '2 -> 1'
+    TabOrder = 1
+    OnClick = btnStack2to1Click
+  end
+  object btnStack1to2: TButton
+    Left = 72
+    Top = 70
+    Width = 65
+    Height = 25
+    Caption = '1 -> 2'
+    TabOrder = 2
+    OnClick = btnStack1to2Click
+  end
+  object btnStack2to2: TButton
+    Left = 72
+    Top = 101
+    Width = 65
+    Height = 25
+    Caption = '2 -> 2'
+    TabOrder = 3
+    OnClick = btnStack2to2Click
   end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage
