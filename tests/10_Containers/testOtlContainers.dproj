@@ -40,7 +40,7 @@
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="testOtlContainers1.pas">
-      <Form>frmTestOtlComm</Form>
+      <Form>frmTestOtlContainers</Form>
     </DCCReference>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@ program testOtlContainers;
 
 uses
   Forms,
-  testOtlContainers1 in 'testOtlContainers1.pas' {frmTestOtlComm},
+  testOtlContainers1 in 'testOtlContainers1.pas' {frmTestOtlContainers},
   OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas';
 
@@ -11,6 +11,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOtlComm, frmTestOtlComm);
+  Application.CreateForm(TfrmTestOtlContainers, frmTestOtlContainers);
   Application.Run;
 end.

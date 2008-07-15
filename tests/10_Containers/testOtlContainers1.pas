@@ -11,7 +11,7 @@ uses
   OtlTaskEvents;
 
 type
-  TfrmTestOtlComm = class(TForm)
+  TfrmTestOtlContainers = class(TForm)
     btnBufferCorrectnessTest: TButton;
     btnBufferStressTest     : TButton;
     btnStackCorrectnessTest : TButton;
@@ -26,7 +26,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   strict private
-    FBuffer: OtlContainers.TOmniRingBuffer;
+    FBuffer: TOmniRingBuffer;
     FStack : TOmniStack;
   private
     FReader: IOmniTaskControl;
@@ -35,7 +35,7 @@ type
   end;
 
 var
-  frmTestOtlComm: TfrmTestOtlComm;
+  frmTestOtlContainers: TfrmTestOtlContainers;
 
 implementation
 
@@ -68,13 +68,13 @@ type
 
   TCommTester = class(TOmniWorker)
   strict private
-    ctBuffer: OtlContainers.TOmniRingBuffer;
+    ctBuffer: TOmniRingBuffer;
     ctStack : TOmniStack;
   strict protected
     procedure Fail(const reason: string);
   public
-    constructor Create(stack: TOmniStack; ringBuffer: OtlContainers.TOmniRingBuffer);
-    property Buffer: OtlContainers.TOmniRingBuffer read ctBuffer;
+    constructor Create(stack: TOmniStack; ringBuffer: TOmniRingBuffer);
+    property Buffer: TOmniRingBuffer read ctBuffer;
     property Stack: TOmniStack read ctStack;
   end; { TCommTester }
 
@@ -97,41 +97,41 @@ type
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestOtlComm.btnBufferCorrectnessTestClick(Sender: TObject);
+procedure TfrmTestOtlContainers.btnBufferCorrectnessTestClick(Sender: TObject);
 begin
   Log('Writing to ring buffer');
   FWriter.Comm.Send(MSG_START_BUFFER_WRITE, CTestQueueLength);
 end;
 
-procedure TfrmTestOtlComm.btnBufferStressTestClick(Sender: TObject);
+procedure TfrmTestOtlContainers.btnBufferStressTestClick(Sender: TObject);
 begin
   Log('Starting 60 second ring buffer stress test');
   FReader.Comm.Send(MSG_START_BUFFER_STRESS_TEST, 60 {seconds});
   FWriter.Comm.Send(MSG_START_BUFFER_STRESS_TEST, 60 {seconds});
 end;
 
-procedure TfrmTestOtlComm.btnStackCorrectnessTestClick(Sender: TObject);
+procedure TfrmTestOtlContainers.btnStackCorrectnessTestClick(Sender: TObject);
 begin
   Log('Writing to stack');
   FWriter.Comm.Send(MSG_START_STACK_WRITE, CTestQueueLength);
 end;
 
-procedure TfrmTestOtlComm.btnStackStressTestClick(Sender: TObject);
+procedure TfrmTestOtlContainers.btnStackStressTestClick(Sender: TObject);
 begin
   Log('Starting 60 second stack stress test');
   FReader.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
   FWriter.Comm.Send(MSG_START_STACK_STRESS_TEST, 60 {seconds});
 end;
 
-procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
+procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
   FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
-  FBuffer := OtlContainers.TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
+  FBuffer := TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
   FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
   FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
 end;
 
-procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+procedure TfrmTestOtlContainers.FormDestroy(Sender: TObject);
 begin
   FWriter.Terminate;
   FReader.Terminate;
@@ -139,12 +139,12 @@ begin
   FreeAndNil(FBuffer);
 end;
 
-procedure TfrmTestOtlComm.Log(const msg: string);
+procedure TfrmTestOtlContainers.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestOtlComm.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOtlContainers.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
 var
   msg: TOmniMessage;
 begin
@@ -175,8 +175,7 @@ end;
 
 { TCommTester }
 
-constructor TCommTester.Create(stack: TOmniStack; ringBuffer:
-  OtlContainers.TOmniRingBuffer);
+constructor TCommTester.Create(stack: TOmniStack; ringBuffer: TOmniRingBuffer);
 begin
   inherited Create;
   ctStack := stack;
