@@ -76,6 +76,7 @@ type
     function  GetNewMessageEvent: THandle;
   //
     procedure RemoveMonitor;
+    procedure Send(msgID: word); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload;
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(const msg: TOmniMessage); overload;
@@ -84,7 +85,7 @@ type
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
     function  Receive(var msg: TOmniMessage): boolean; overload;
     property NewMessageEvent: THandle read GetNewMessageEvent;
-  end; { IOmniTaskCommunication }
+  end; { IOmniCommunicationEndpoint }
 
   IOmniTwoWayChannel = interface ['{3ED1AB88-4209-4E01-AA79-A577AD719520}']
     function Endpoint1: IOmniCommunicationEndpoint;
@@ -108,6 +109,7 @@ implementation
 uses
   Windows,
   SysUtils,
+  Variants,
   {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
   OtlTaskEvents;
 
@@ -123,6 +125,7 @@ type
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
     procedure RemoveMonitor; inline;
+    procedure Send(msgID: word); overload; inline;
     procedure Send(const msg: TOmniMessage); overload; inline;
     procedure Send(msgID: word; msgData: array of const); overload; 
     procedure Send(msgID: word; msgData: TOmniValue); overload; inline;
@@ -246,6 +249,11 @@ end; { TOmniCommunicationEndpoint.Send }
 procedure TOmniCommunicationEndpoint.Send(msgID: word; msgData: array of const);
 begin
   Send(msgID, OpenArrayToVarArray(msgData));
+end; { TOmniCommunicationEndpoint.Send }
+
+procedure TOmniCommunicationEndpoint.Send(msgID: word);
+begin
+  Send(msgID, Null); 
 end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.SetMonitor(hWindow: THandle; msg: cardinal;
