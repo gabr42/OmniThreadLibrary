@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic, GJ
 ///   Creation date     : 2008-07-13
-///   Last modification : 2008-07-14
-///   Version           : 0.1
+///   Last modification : 2008-07-15
+///   Version           : 0.2
 ///</para><para>
 ///   History:
+///     0.2: 2008-07-15
+///       - Fixed a bug in PopLink.
+///       - Implemented Empty method in both containers.
 ///</para></remarks>
 
 unit OtlContainers;
@@ -44,6 +47,7 @@ type
   {:Lock-free, single writer, single reader, size-limited stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
+    procedure Empty; 
     procedure Initialize(numElements, elementSize: integer);
     function  Pop(var value): boolean;
     function  Push(const value): boolean;
@@ -54,6 +58,7 @@ type
   {:Lock-free, single writer, single reader ring buffer.
   }
   IOmniRingBuffer = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
+    procedure Empty; 
     procedure Initialize(numElements, elementSize: integer);
     function  Enqueue(const value): boolean;
     function  Dequeue(var value): boolean;
@@ -103,13 +108,14 @@ type
     obcPublicChain : POmniLinkedData;
     obcRecycleChain: POmniLinkedData;
     function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
-    function  Pop(var value): boolean;
+    function  Pop(var value): boolean; virtual;
     function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
-    function  Push(const value): boolean;
+    function  Push(const value): boolean; virtual;
     procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData);
     function  UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
   public
     destructor  Destroy; override;
+    procedure Empty; virtual;
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; virtual;
     function  IsFull: boolean; virtual;
@@ -128,8 +134,8 @@ type
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
-    function Pop(var value): boolean; 
-    function Push(const value): boolean;
+    function Pop(var value): boolean; override;
+    function Push(const value): boolean; override;
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read osNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read osOptions write osOptions;
@@ -144,9 +150,10 @@ type
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
-    function  Enqueue(const value): boolean; 
+    procedure Empty; override;
+    function  Enqueue(const value): boolean;
     function  Dequeue(var value): boolean;
-    function  IsEmpty: boolean; override; 
+    function  IsEmpty: boolean; override;
     property MonitorSupport: IOmniMonitorSupport read orbMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read orbNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read orbOptions write orbOptions;
@@ -309,6 +316,18 @@ begin
   FreeMem(obcBuffer);
 end; { TOmniBaseContainer.Destroy }
 
+procedure TOmniBaseContainer.Empty;
+var
+  linkedData: POmniLinkedData;
+begin
+  repeat
+    linkedData := PopLink(obcPublicChain);
+    if not assigned(linkedData) then
+      break; //repeat
+    PushLink(linkedData, obcRecycleChain);
+  until false;
+end; { TOmniBaseContainer.Empty }
+
 procedure TOmniBaseContainer.Initialize(numElements, elementSize: integer);
 var
   bufferElementSize: cardinal;
@@ -389,9 +408,9 @@ function TOmniBaseContainer.PopLink(var chainHead: POmniLinkedData): POmniLinked
 //FILO buffer logic                         ^------ < chainHead
 asm
   mov   eax, [edx]                        //Result := chainHead
+@Spin:
   test  eax, eax
   jz    @Exit
-@Spin:
   mov   ecx, [eax]                        //ecx := Result.Next
   lock cmpxchg [edx], ecx                 //chainHead := Result.Next
   jnz   @Spin                             //Do spin ???
@@ -416,8 +435,8 @@ procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 asm
-  mov   eax, [ecx]                         //ecx := chainHead
-@spin:
+  mov   eax, [ecx]                         //ecx = chainHead
+@Spin:
   mov   [edx], eax                         //link := chainHead.Next
   lock cmpxchg [ecx], edx                  //chainHead := link
   jnz   @Spin
@@ -499,6 +518,19 @@ begin
   if coEnableNotify in Options then
     orbNotifySupport.Signal;
 end; { TOmniRingBuffer.Dequeue }
+
+procedure TOmniRingBuffer.Empty;
+var
+  linkedData: POmniLinkedData;
+begin
+  inherited;
+  if assigned(orbDequeuedMessages) then repeat
+    linkedData := PopLink(orbDequeuedMessages);
+    if not assigned(linkedData) then
+      break; //repeat
+    PushLink(linkedData, obcRecycleChain);
+  until false;
+end; { TOmniRingBuffer.Empty }
 
 function TOmniRingBuffer.Enqueue(const value): boolean;
 begin
