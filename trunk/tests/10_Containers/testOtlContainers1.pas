@@ -21,6 +21,8 @@ type
     btnStack2to1            : TButton;
     btnStack1to2            : TButton;
     btnStack2to2            : TButton;
+    btnBaseContainerStressTest: TButton;
+    procedure btnBaseContainerStressTestClick(Sender: TObject);
     procedure btnBufferCorrectnessTestClick(Sender: TObject);
     procedure btnBufferStressTestClick(Sender: TObject);
     procedure btnStack1to2Click(Sender: TObject);
@@ -32,8 +34,9 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   strict private
-    FBuffer: OtlContainers.TOmniRingBuffer;
+    FBuffer: TOmniRingBuffer;
     FStack : TOmniStack;
+    FBaseContainer: TOmniBaseContainer;
   private
     FReader : IOmniTaskControl;
     FReader2: IOmniTaskControl;
@@ -62,6 +65,7 @@ const
   MSG_START_STACK_READ         = 4;
   MSG_START_BUFFER_WRITE       = 5;
   MSG_START_BUFFER_READ        = 6;
+  MSG_START_BASE_STRESS_TEST   = 7;
 
   // thread -> GUI messages
   MSG_TEST_END               = 100;
@@ -76,19 +80,23 @@ type
 
   TCommTester = class(TOmniWorker)
   strict private
-    ctBuffer: OtlContainers.TOmniRingBuffer;
-    ctStack : TOmniStack;
+    ctBaseContainer: TOmniBaseContainer;
+    ctBuffer       : TOmniRingBuffer;
+    ctStack        : TOmniStack;
   strict protected
     procedure Fail(const reason: string);
   public
-    constructor Create(stack: TOmniStack; ringBuffer: OtlContainers.TOmniRingBuffer);
-    property Buffer: OtlContainers.TOmniRingBuffer read ctBuffer;
+    constructor Create(baseContainer: TOmniBaseContainer; stack: TOmniStack;
+      ringBuffer: TOmniRingBuffer);
+    property BaseContainer: TOmniBaseContainer read ctBaseContainer;
+    property Buffer: TOmniRingBuffer read ctBuffer;
     property Stack: TOmniStack read ctStack;
   end; { TCommTester }
 
   TCommWriter = class(TCommTester)
   strict protected
   public
+    procedure OMStartBaseStressTest(var msg: TOmniMessage); message MSG_START_BASE_STRESS_TEST;
     procedure OMStartBufferStressTest(var msg: TOmniMessage); message MSG_START_BUFFER_STRESS_TEST;
     procedure OMStartStackStressTest(var msg: TOmniMessage); message MSG_START_STACK_STRESS_TEST;
     procedure OMStartBufferWrite(var msg: TOmniMessage); message MSG_START_BUFFER_WRITE;
@@ -97,6 +105,7 @@ type
 
   TCommReader = class(TComMTester)
   public
+    procedure OMStartBaseStressTest(var msg: TOmniMessage); message MSG_START_BASE_STRESS_TEST;
     procedure OMStartBufferStressTest(var msg: TOmniMessage); message MSG_START_BUFFER_STRESS_TEST;
     procedure OMStartStackStressTest(var msg: TOmniMessage); message MSG_START_STACK_STRESS_TEST;
     procedure OMStartBufferRead(var msg: TOmniMessage); message MSG_START_BUFFER_READ;
@@ -104,6 +113,14 @@ type
   end;
 
 { TfrmTestOtlComm }
+
+procedure TfrmTestOtlContainers.btnBaseContainerStressTestClick(Sender: TObject);
+begin
+  Log('Starting 60 second base container stress test');
+  FBaseContainer.Empty;
+  FReader.Comm.Send(MSG_START_BASE_STRESS_TEST, 60 {seconds});
+  FWriter.Comm.Send(MSG_START_BASE_STRESS_TEST, 60 {seconds});
+end;
 
 procedure TfrmTestOtlContainers.btnBufferCorrectnessTestClick(Sender: TObject);
 begin
@@ -164,12 +181,14 @@ end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
+  FBaseContainer := TOmniBaseContainer.Create;
+  FBaseContainer.Initialize(CTestQueueLength, SizeOf(integer));
   FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
-  FBuffer := OtlContainers.TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
-  FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
-  FWriter2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FStack, FBuffer))).FreeOnTerminate.Run;
-  FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
-  FReader2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FStack, FBuffer))).FreeOnTerminate.Run;
+  FBuffer := TOmniRingBuffer.Create(CTestQueueLength, SizeOf(integer));
+  FWriter := OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FBaseContainer, FStack, FBuffer))).FreeOnTerminate.Run;
+  FWriter2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommWriter.Create(FBaseContainer, FStack, FBuffer))).FreeOnTerminate.Run;
+  FReader := OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FBaseContainer, FStack, FBuffer))).FreeOnTerminate.Run;
+  FReader2:= OmniTaskEventDispatch1.Monitor(CreateTask(TCommReader.Create(FBaseContainer, FStack, FBuffer))).FreeOnTerminate.Run;
 end;
 
 procedure TfrmTestOtlContainers.FormDestroy(Sender: TObject);
@@ -178,6 +197,7 @@ begin
   FWriter2.Terminate;
   FReader.Terminate;
   FReader2.Terminate;
+  FreeAndNil(FBaseContainer);
   FreeAndNil(FStack);
   FreeAndNil(FBuffer);
 end;
@@ -218,12 +238,13 @@ end;
 
 { TCommTester }
 
-constructor TCommTester.Create(stack: TOmniStack; ringBuffer:
-  OtlContainers.TOmniRingBuffer);
+constructor TCommTester.Create(baseContainer: TOmniBaseContainer; stack: TOmniStack;
+  ringBuffer: TOmniRingBuffer);
 begin
   inherited Create;
   ctStack := stack;
   ctBuffer := ringBuffer;
+  ctBaseContainer := baseContainer;
 end;
 
 procedure TCommTester.Fail(const reason: string);
@@ -232,6 +253,30 @@ begin
 end;
 
 { TCommWriter }
+
+procedure TCommWriter.OMStartBaseStressTest(var msg: TOmniMessage);
+var
+  counter   : integer;
+  endTime   : int64;
+  numPushed : integer;
+  numSkipped: integer;
+  startTime : int64;
+begin
+  startTime := DSiTimeGetTime64;
+  endTime := startTime + msg.MsgData * 1000;
+  counter := 0;
+  numPushed := 0;
+  numSkipped := 0;
+  while DSiTimeGetTime64 < endTime do begin
+    Inc(counter);
+    if BaseContainer.Push(counter) then
+      Inc(numPushed)
+    else
+      Inc(numSkipped);
+  end;
+  Task.Comm.Send(MSG_TEST_END, Format('Writer completed; %d pushed, %d skipped',
+    [numPushed, numSkipped]));
+end;
 
 procedure TCommWriter.OMStartBufferStressTest(var msg: TOmniMessage);
 var
@@ -354,6 +399,29 @@ begin
 end;
 
 { TCommReader }
+
+procedure TCommReader.OMStartBaseStressTest(var msg: TOmniMessage);
+var
+  counter  : integer;
+  endTime  : int64;
+  numEmpty : integer;
+  numPopped: integer;
+  startTime: int64;
+begin
+  startTime := DSiTimeGetTime64;
+  endTime := startTime + msg.MsgData * 1000;
+  counter := 0;
+  numPopped := 0;
+  numEmpty := 0;
+  while DSiTimeGetTime64 < endTime do begin
+    if BaseContainer.Pop(counter) then
+      Inc(numPopped)
+    else
+      Inc(numEmpty);
+  end;
+  Task.Comm.Send(MSG_TEST_END, Format('Reader completed; %d popped, %d empty',
+    [numPopped, numEmpty]));
+end;
 
 procedure TCommReader.OMStartBufferRead(var msg: TOmniMessage);
 var

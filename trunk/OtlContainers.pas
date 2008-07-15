@@ -108,9 +108,7 @@ type
     obcPublicChain : POmniLinkedData;
     obcRecycleChain: POmniLinkedData;
     function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
-    function  Pop(var value): boolean; virtual;
     function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
-    function  Push(const value): boolean; virtual;
     procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData);
     function  UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
   public
@@ -119,6 +117,8 @@ type
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; virtual;
     function  IsFull: boolean; virtual;
+    function  Pop(var value): boolean; virtual;
+    function  Push(const value): boolean; virtual;
     property ElementSize: integer read obcElementSize;
     property NumElements: integer read obcNumElements;
   end; { TOmniBaseContainer }

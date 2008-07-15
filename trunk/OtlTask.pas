@@ -78,7 +78,7 @@ type
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
-    property UniqueID: cardinal read GetUniqueID; 
+    property UniqueID: cardinal read GetUniqueID;
   end; { IOmniTask }
 
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
