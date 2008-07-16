@@ -7,18 +7,19 @@ uses
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 type
   TfrmTestOTL = class(TForm)
-    actChangeMessage: TAction;
-    ActionList      : TActionList;
-    actStartHello   : TAction;
-    actStopHello    : TAction;
-    btnChangeMessage: TButton;
-    btnStartHello   : TButton;
-    btnStopHello    : TButton;
-    lbLog           : TListBox;
+    actChangeMessage      : TAction;
+    ActionList            : TActionList;
+    actStartHello         : TAction;
+    actStopHello          : TAction;
+    btnChangeMessage      : TButton;
+    btnStartHello         : TButton;
+    btnStopHello          : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
     procedure actChangeMessageExecute(Sender: TObject);
     procedure actChangeMessageUpdate(Sender: TObject);

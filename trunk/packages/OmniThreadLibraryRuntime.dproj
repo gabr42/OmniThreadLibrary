@@ -1,11 +1,12 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{88241587-fdfe-4f8e-b2a3-8044d45a3d91}</ProjectGuid>
     <MainSource>OmniThreadLibraryRuntime.dpk</MainSource>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-    <DCC_DependencyCheckOutputName>C:\Users\Lee_Nover\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryRuntime.bpl</DCC_DependencyCheckOutputName>
+    <DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryRuntime.bpl</DCC_DependencyCheckOutputName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Version>7.0</Version>
@@ -33,19 +34,10 @@
     <DelphiCompile Include="OmniThreadLibraryRuntime.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="$(SystemRoot)\system32\rtl.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\vcl.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\vclx.dcp" />
-    <DCCReference Include="..\OtlComm.pas" />
     <DCCReference Include="..\OtlCommon.pas" />
-    <DCCReference Include="..\OtlTask.pas" />
-    <DCCReference Include="..\OtlTaskEvents.pas" />
-    <DCCReference Include="..\OtlThreadPool.pas" />
-    <DCCReference Include="..\src\DSiWin32.pas" />
-    <DCCReference Include="..\src\GpLists.pas" />
-    <DCCReference Include="..\src\GpStuff.pas" />
-    <DCCReference Include="..\src\HVStringBuilder.pas" />
-    <DCCReference Include="..\src\HVStringData.pas" />
-    <DCCReference Include="..\src\SpinLock.pas" />
+    <DCCReference Include="..\OtlContainers.pas" />
+    <DCCReference Include="..\rtl.dcp" />
+    <DCCReference Include="..\vcl.dcp" />
+    <DCCReference Include="..\vclx.dcp" />
   </ItemGroup>
 </Project>

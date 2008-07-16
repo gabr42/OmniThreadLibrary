@@ -7,12 +7,13 @@ uses
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 type
   TfrmTestOTL = class(TForm)
-    btnHello        : TButton;
-    lbLog           : TListBox;
+    btnHello              : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
     procedure btnHelloClick(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);

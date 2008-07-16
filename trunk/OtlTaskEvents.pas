@@ -45,7 +45,7 @@ interface
 uses
   Messages,
   Classes,
-  OtlTask;
+  OtlTaskControl;
 
 type
   TOmniTaskEvent = procedure(task: IOmniTaskControl) of object;

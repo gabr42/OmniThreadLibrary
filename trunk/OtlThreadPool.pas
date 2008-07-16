@@ -40,15 +40,22 @@ unit OtlThreadPool;
 
 interface
 
+uses
+  OtlTask;
+
 type
   IOmniThreadPool = interface ['{1FA74554-1866-46DD-AC50-F0403E378682}']
+    function  GetName: string;
+    procedure SetName(const value: string);
+  //
+    procedure Schedule(task: IOmniTask); 
+    property Name: string read GetName write SetName;
   //thrown in from my private thread pool unit; to be cleaned up
   {
     procedure CancelAll;
     procedure Cancel(workItemID: int64); <-- task?
     //function  GetActiveWorkItemDescriptions: string; <-- debugging interface, does not belong here
     function  IsIdle: boolean;
-    procedure Schedule(workItem: TGpTPWorkItem); <-- task!
     property CountExecuting: integer read GetExecutingCount;
     property CountQueued: integer read GetQueuedCount;
     property IdleWorkerThreadTimeout_sec: integer read tpIdleWorkerThreadTimeout_sec write
@@ -58,7 +65,6 @@ type
       (*default <number of CPUs in the thread affinity mask>*);
     property MaxQueued: integer read tpMaxQueueLength write SetMaxQueueLength;
     property MaxQueuedTime_sec: integer read tpMaxQueuedTime_sec write SetMaxQueuedTime_sec;
-    property Name: string read tpName write tpName;
     property WaitOnTerminate_sec: integer read tpWaitOnTerminate_sec write
       tpWaitOnTerminate_sec default 30;
     property OnError: TGpTPError read tpOnError write tpOnError;
@@ -72,6 +78,64 @@ type
   }
   end;
 
+  function GlobalOmniThreadPool: IOmniThreadPool;
+  function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
+
 implementation
+
+uses
+  SysUtils;
+
+type
+  TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool)
+  strict private
+    otpName: string;
+  protected
+    function  GetName: string;
+    procedure SetName(const value: string);
+  public
+    constructor Create(const name: string);
+    procedure Schedule(task: IOmniTask);
+    property Name: string read GetName write SetName;
+  end; { TOmniThreadPool }
+
+var
+  GOmniThreadPool: IOmniThreadPool = nil;
+
+{ exports }
+
+function GlobalOmniThreadPool: IOmniThreadPool;
+begin
+  if not assigned(GOmniThreadPool) then
+    GOmniThreadPool := CreateThreadPool('GlobalOmniThreadPool');
+  Result := GOmniThreadPool;
+end; { GlobalOmniThreadPool }
+
+function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
+begin
+  Result := TOmniThreadPool.Create(threadPoolName);
+end; { CreateThreadPool }
+
+constructor TOmniThreadPool.Create(const name: string);
+begin
+  inherited Create;
+  otpName := name;
+end; { TOmniThreadPool.Create }
+
+function TOmniThreadPool.GetName: string;
+begin
+  Result := otpName;
+end; { TOmniThreadPool.GetName }
+
+procedure TOmniThreadPool.Schedule(task: IOmniTask);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.Schedule
+  raise Exception.Create('TOmniThreadPool.Schedule: not implemented');
+end; { TOmniThreadPool.Schedule }
+
+procedure TOmniThreadPool.SetName(const value: string);
+begin
+  otpName := value;
+end; { TOmniThreadPool.SetName }
 
 end.

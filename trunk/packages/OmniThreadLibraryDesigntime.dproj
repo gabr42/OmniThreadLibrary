@@ -19,6 +19,7 @@
     <Version>7.0</Version>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
+    <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
@@ -31,10 +32,10 @@
     <DelphiCompile Include="OmniThreadLibraryDesigntime.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <DCCReference Include="..\OmniThreadLibraryRuntime.dcp" />
     <DCCReference Include="..\OtlRegister.pas" />
-    <DCCReference Include="OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="rtl.dcp" />
-    <DCCReference Include="vcl.dcp" />
-    <DCCReference Include="vclx.dcp" />
+    <DCCReference Include="..\rtl.dcp" />
+    <DCCReference Include="..\vcl.dcp" />
+    <DCCReference Include="..\vclx.dcp" />
   </ItemGroup>
 </Project>

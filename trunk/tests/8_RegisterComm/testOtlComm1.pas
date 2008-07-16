@@ -7,28 +7,28 @@ uses
   Dialogs, StdCtrls,
   OtlCommon,
   OtlTask,
+  OtlTaskControl,
   OtlComm,
   OtlTaskEvents;
 
 type
   TfrmTestOtlComm = class(TForm)
+    btnSendObject         : TButton;
     btnSendTo1            : TButton;
     btnSendTo2            : TButton;
     lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
-    btnSendObject: TButton;
     procedure btnSendObjectClick(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   private
-    FClient1: IOmniTaskControl;
-    FClient2: IOmniTaskControl;
+    FClient1    : IOmniTaskControl;
+    FClient2    : IOmniTaskControl;
     FCommChannel: IOmniTwoWayChannel;
     procedure Log(const msg: string);
-  public
   end;
 
 var
@@ -101,21 +101,6 @@ begin
   FClient1.Comm.Send(MSG_FORWARD, [sl]);
 end;
 
-procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
-begin
-  FClient1.Terminate;
-  FClient2.Terminate;
-end;
-
-procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
-begin
-  FCommChannel := CreateTwoWayChannel(1024);
-  FClient1 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))).FreeOnTerminate.Run;
-  FClient2 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))).FreeOnTerminate.Run;
-end;
-
 procedure TfrmTestOtlComm.btnSendTo1Click(Sender: TObject);
 var
   value: integer;
@@ -132,6 +117,21 @@ begin
   value := Random(100);
   Log(Format('Sending %d to task 2', [value]));
   FClient2.Comm.Send(MSG_FORWARD, value);
+end;
+
+procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
+begin
+  FCommChannel := CreateTwoWayChannel(1024);
+  FClient1 := OmniTaskEventDispatch1.Monitor(
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))).FreeOnTerminate.Run;
+  FClient2 := OmniTaskEventDispatch1.Monitor(
+    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))).FreeOnTerminate.Run;
+end;
+
+procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+begin
+  FClient1.Terminate;
+  FClient2.Terminate;
 end;
 
 procedure TfrmTestOtlComm.Log(const msg: string);
