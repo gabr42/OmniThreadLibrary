@@ -8,6 +8,7 @@ uses
   OtlCommon,
   OtlComm,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 const
@@ -25,14 +26,14 @@ type
   end;
 
   TfrmTestOTL = class(TForm)
-    actChangeMessage: TAction;
-    ActionList      : TActionList;
-    actStartHello   : TAction;
-    actStopHello    : TAction;
-    btnChangeMessage: TButton;
-    btnStartHello   : TButton;
-    btnStopHello    : TButton;
-    lbLog           : TListBox;
+    actChangeMessage      : TAction;
+    ActionList            : TActionList;
+    actStartHello         : TAction;
+    actStopHello          : TAction;
+    btnChangeMessage      : TButton;
+    btnStartHello         : TButton;
+    btnStopHello          : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
     procedure actChangeMessageExecute(Sender: TObject);
     procedure actChangeMessageUpdate(Sender: TObject);

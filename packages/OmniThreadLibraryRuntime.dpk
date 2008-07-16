@@ -32,11 +32,13 @@ requires
   vcl;
 
 contains
-  OtlTaskEvents in '..\OtlTaskEvents.pas',
-  OtlTask in '..\OtlTask.pas',
   OtlCommon in '..\OtlCommon.pas',
+  OtlContainers in '..\OtlContainers.pas',
   OtlComm in '..\OtlComm.pas',
+  OtlTask in '..\OtlTask.pas',
+  OtlTaskControl in '..\OtlTaskControl.pas',
   OtlThreadPool in '..\OtlThreadPool.pas',
+  OtlTaskEvents in '..\OtlTaskEvents.pas',
   DSiWin32 in '..\src\DSiWin32.pas',
   GpLists in '..\src\GpLists.pas',
   GpStuff in '..\src\GpStuff.pas',

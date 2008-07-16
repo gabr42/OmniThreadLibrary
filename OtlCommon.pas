@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-06-30
-///   Version           : 0.0
+///   Last modification : 2008-07-15
+///   Version           : 0.1
 ///</para><para>
 ///   History:
+///     0.1: 2008-07-15
+///       - Moved in TOmniValueContainer from OtlTask. 
 ///</para></remarks>
 
 unit OtlCommon;
@@ -41,11 +43,117 @@ unit OtlCommon;
 interface
 
 uses
+  Classes,
   Variants;
 
 type
   TOmniValue = type Variant; // maybe we should use own record type with implicit overloaded for parameters instead of TOmniValue
 
+  TOmniValueContainer = class
+  strict private
+    ovcCanModify: boolean;
+    ovcNames    : TStringList;
+    ovcValues   : array of TOmniValue;
+  strict protected
+    procedure Clear;
+    procedure Grow;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(paramValue: TOmniValue; paramName: string = '');
+    procedure Assign(parameters: array of TOmniValue);
+    function  IsLocked: boolean; inline;
+    procedure Lock; inline;
+    function ParamByIdx(paramIdx: integer): TOmniValue;
+    function ParamByName(const paramName: string): TOmniValue;
+  end; { TOmniValueContainer }
+
 implementation
+
+uses
+  SysUtils;
+
+{ TOmniValueContainer }
+
+constructor TOmniValueContainer.Create;
+begin
+  inherited Create;
+  ovcNames := TStringList.Create;
+  ovcCanModify := true;
+end; { TOmniValueContainer.Create }
+
+destructor TOmniValueContainer.Destroy;
+begin
+  FreeAndNil(ovcNames);
+  inherited Destroy;
+end; { TOmniValueContainer.Destroy }
+
+procedure TOmniValueContainer.Add(paramValue: TOmniValue; paramName: string);
+var
+  idxParam: integer;
+begin
+  if not ovcCanModify then
+    raise Exception.Create('TOmniValueContainer: Already locked');
+  if paramName = '' then
+    paramName := IntToStr(ovcNames.Count);
+  idxParam := ovcNames.IndexOf(paramName); 
+  if idxParam < 0 then begin
+    idxParam := ovcNames.Add(paramName);
+    if ovcNames.Count > Length(ovcValues) then
+      Grow;
+  end;
+  ovcValues[idxParam] := paramValue;
+end; { TOmniValueContainer.Add }
+
+procedure TOmniValueContainer.Assign(parameters: array of TOmniValue);
+var
+  value: TOmniValue;
+begin
+  if not ovcCanModify then
+    raise Exception.Create('TOmniValueContainer: Already locked');
+  Clear;
+  SetLength(ovcValues, Length(parameters));
+  for value in parameters do
+    Add(value);
+end; { TOmniValueContainer.Assign }
+
+procedure TOmniValueContainer.Clear;
+begin
+  SetLength(ovcValues, 0);
+  ovcNames.Clear;
+end; { TOmniValueContainer.Clear }
+
+procedure TOmniValueContainer.Grow;
+var
+  iValue   : integer;
+  tmpValues: array of TOmniValue;
+begin
+  SetLength(tmpValues, Length(ovcValues));
+  for iValue := 0 to High(ovcValues) - 1 do
+    tmpValues[iValue] := ovcValues[iValue];
+  SetLength(ovcValues, 2*Length(ovcValues)+1);
+  for iValue := 0 to High(tmpValues) - 1 do
+    ovcValues[iValue] := tmpValues[iValue];
+end; { TOmniValueContainer.Grow }
+
+function TOmniValueContainer.IsLocked: boolean;
+begin
+  Result := not ovcCanModify;
+end; { TOmniValueContainer.IsLocked }
+
+procedure TOmniValueContainer.Lock;
+begin
+  ovcCanModify := false;
+end; { TOmniValueContainer.Lock }
+
+function TOmniValueContainer.ParamByIdx(paramIdx: integer): TOmniValue;
+begin
+  Result := ovcValues[paramIdx];
+end; { TOmniValueContainer.ParamByIdx }
+
+function TOmniValueContainer.ParamByName(const paramName: string): TOmniValue;
+begin
+  Result := ovcValues[ovcNames.IndexOf(paramName)];
+end; { TOmniValueContainer.ParamByName }
 
 end.

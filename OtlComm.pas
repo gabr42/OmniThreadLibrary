@@ -75,15 +75,15 @@ type
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
     function  GetNewMessageEvent: THandle;
   //
+    function  Receive(var msg: TOmniMessage): boolean; overload;
+    function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
     procedure RemoveMonitor;
-    procedure Send(msgID: word); overload;
-    procedure Send(msgID: word; msgData: TOmniValue); overload;
-    procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(const msg: TOmniMessage); overload;
+    procedure Send(msgID: word); overload;
+    procedure Send(msgID: word; msgData: array of const); overload;
+    procedure Send(msgID: word; msgData: TOmniValue); overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); 
-    function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
-    function  Receive(var msg: TOmniMessage): boolean; overload;
     property NewMessageEvent: THandle read GetNewMessageEvent;
   end; { IOmniCommunicationEndpoint }
 
@@ -126,9 +126,9 @@ type
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
     procedure RemoveMonitor; inline;
     procedure Send(msgID: word); overload; inline;
-    procedure Send(const msg: TOmniMessage); overload; inline;
-    procedure Send(msgID: word; msgData: array of const); overload; 
+    procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload; inline;
+    procedure Send(const msg: TOmniMessage); overload; inline;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); inline;
     property NewMessageEvent: THandle read GetNewMessageEvent;

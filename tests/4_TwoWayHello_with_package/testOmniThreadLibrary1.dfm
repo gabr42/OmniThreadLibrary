@@ -21,7 +21,6 @@ object frmTestOTL: TfrmTestOTL
     Align = alRight
     ItemHeight = 13
     TabOrder = 0
-    ExplicitTop = 8
   end
   object btnStartHello: TButton
     Left = 8

@@ -6,22 +6,23 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
   OtlTask,
+  OtlTaskControl,
   OtlContainers,
   OtlComm,
   OtlTaskEvents;
 
 type
   TfrmTestOtlContainers = class(TForm)
+    btnBaseContainerStressTest: TButton;
     btnBufferCorrectnessTest: TButton;
     btnBufferStressTest     : TButton;
+    btnStack1to2            : TButton;
+    btnStack2to1            : TButton;
+    btnStack2to2            : TButton;
     btnStackCorrectnessTest : TButton;
     btnStackStressTest      : TButton;
     lbLog                   : TListBox;
     OmniTaskEventDispatch1  : TOmniTaskEventDispatch;
-    btnStack2to1            : TButton;
-    btnStack1to2            : TButton;
-    btnStack2to2            : TButton;
-    btnBaseContainerStressTest: TButton;
     procedure btnBaseContainerStressTestClick(Sender: TObject);
     procedure btnBufferCorrectnessTestClick(Sender: TObject);
     procedure btnBufferStressTestClick(Sender: TObject);
@@ -33,15 +34,14 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
-  strict private
-    FBuffer: TOmniRingBuffer;
-    FStack : TOmniStack;
-    FBaseContainer: TOmniBaseContainer;
   private
-    FReader : IOmniTaskControl;
-    FReader2: IOmniTaskControl;
-    FWriter : IOmniTaskControl;
-    FWriter2: IOmniTaskControl;
+    FBaseContainer: TOmniBaseContainer;
+    FBuffer       : TOmniRingBuffer;
+    FStack        : TOmniStack;
+    FReader       : IOmniTaskControl;
+    FReader2      : IOmniTaskControl;
+    FWriter       : IOmniTaskControl;
+    FWriter2      : IOmniTaskControl;
     procedure Log(const msg: string);
   end;
 

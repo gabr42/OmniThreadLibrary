@@ -7,6 +7,7 @@ uses
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 type
@@ -27,7 +28,7 @@ type
     procedure actStopHelloUpdate(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   strict private
-    FHelloTask: IOmniTaskControl;
+    FHelloTask      : IOmniTaskControl;
     FMessageDispatch: TOmniTaskEventDispatch;
   private
     procedure HandleTaskTerminated(task: IOmniTaskControl);

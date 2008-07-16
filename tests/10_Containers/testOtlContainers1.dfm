@@ -25,7 +25,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 7
-    ExplicitHeight = 306
   end
   object btnStackStressTest: TButton
     Left = 8

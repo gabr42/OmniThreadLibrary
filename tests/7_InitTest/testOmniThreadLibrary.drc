@@ -10,10 +10,11 @@
 
 #define Consts_SErrorSettingCount 65312
 #define Consts_SListBoxMustBeVirtual 65313
-#define ComConst_SOleError 65314
-#define ComConst_SNoMethod 65315
-#define ComConst_SVarNotObject 65316
-#define ComConst_STooManyParams 65317
+#define SpinLock_STicketSpinLockNoTryAcquire 65314
+#define ComConst_SOleError 65315
+#define ComConst_SNoMethod 65316
+#define ComConst_SVarNotObject 65317
+#define ComConst_STooManyParams 65318
 #define Consts_SmkcUp 65328
 #define Consts_SmkcRight 65329
 #define Consts_SmkcDown 65330
@@ -226,6 +227,7 @@ STRINGTABLE
 BEGIN
 	Consts_SErrorSettingCount,	"Error setting %s.Count"
 	Consts_SListBoxMustBeVirtual,	"Listbox (%s) style must be virtual in order to set Count"
+	SpinLock_STicketSpinLockNoTryAcquire,	"TicketSpinLock does not support TryAcquire"
 	ComConst_SOleError,	"OLE error %.8x"
 	ComConst_SNoMethod,	"Method '%s' not supported by automation object"
 	ComConst_SVarNotObject,	"Variant does not reference an automation object"
@@ -443,7 +445,7 @@ END
 /* c:\program files\codegear\rad studio\5.0\lib\Controls.res */
 /* c:\program files\codegear\rad studio\5.0\lib\Buttons.res */
 /* c:\program files\codegear\rad studio\5.0\lib\FileCtrl.res */
-/* ..\..\OtlTaskEvents.dcr */
-/* testOmniThreadLibrary1.dfm */
+/* X:\MSTPL\OmniThreadLibrary\OtlTaskEvents.dcr */
+/* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary1.dfm */
 /* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary.res */
 /* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary.drf */

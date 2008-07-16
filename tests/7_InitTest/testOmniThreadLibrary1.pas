@@ -7,6 +7,7 @@ uses
   Dialogs, StdCtrls,
   OtlComm,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 
@@ -20,9 +21,9 @@ type
   end;
 
   TfrmTestOTL = class(TForm)
-    btnTestFailure: TButton;
-    btnTestSuccess: TButton;
-    lbLog         : TListBox;
+    btnTestFailure        : TButton;
+    btnTestSuccess        : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
     procedure btnTestFailureClick(Sender: TObject);
     procedure btnTestSuccessClick(Sender: TObject);

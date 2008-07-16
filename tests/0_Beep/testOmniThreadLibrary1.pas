@@ -5,7 +5,8 @@ interface
 uses
   Windows, SysUtils,
   Classes, Controls, StdCtrls, Forms,
-  OtlTask;
+  OtlTask,
+  OtlTaskControl;
 
 type
   TfrmTestOTL = class(TForm)

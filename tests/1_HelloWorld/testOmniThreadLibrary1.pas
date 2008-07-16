@@ -7,6 +7,7 @@ uses
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
   OtlTask,
+  OtlTaskControl,
   OtlTaskEvents;
 
 type

@@ -6,24 +6,24 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
   OtlTask,
+  OtlTaskControl,
   OtlComm,
   OtlTaskEvents;
 
 type
   TfrmTestOtlComm = class(TForm)
-    lbLog: TListBox;
-    btnRunTests: TButton;
+    btnRunTests           : TButton;
+    lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
-    procedure FormDestroy(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
     procedure btnRunTestsClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   private
-    FClient1: IOmniTaskControl;
-    FClient2: IOmniTaskControl;
+    FClient1    : IOmniTaskControl;
+    FClient2    : IOmniTaskControl;
     FCommChannel: IOmniTwoWayChannel;
     procedure Log(const msg: string);
-  public
   end;
 
 var
@@ -197,10 +197,9 @@ end;
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+procedure TfrmTestOtlComm.btnRunTestsClick(Sender: TObject);
 begin
-  FClient1.Terminate;
-  FClient2.Terminate;
+  FClient1.Comm.Send(MSG_START_TEST, 0);
 end;
 
 procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
@@ -214,9 +213,10 @@ begin
     FreeOnTerminate.Run;
 end;
 
-procedure TfrmTestOtlComm.btnRunTestsClick(Sender: TObject);
+procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
 begin
-  FClient1.Comm.Send(MSG_START_TEST, 0);
+  FClient1.Terminate;
+  FClient2.Terminate;
 end;
 
 procedure TfrmTestOtlComm.Log(const msg: string);
