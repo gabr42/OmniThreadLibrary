@@ -103,6 +103,7 @@ type
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
+    function  WithCounter(counter: IOmniCounter): IOmniTaskControl;
   //
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
@@ -188,6 +189,7 @@ type
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
     otCommChannel    : IOmniTwoWayChannel;
+    otCounter        : IOmniCounter;
     otExecutor_ref   : TOmniTaskExecutor;
     otMonitorWindow  : THandle;
     otParameters_ref : TOmniValueContainer;
@@ -197,6 +199,7 @@ type
     otUniqueID       : cardinal;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
+    function  GetCounter: IOmniCounter;
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
@@ -206,7 +209,7 @@ type
   public
     constructor Create(executor: TOmniTaskExecutor; const taskName: string; parameters:
       TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal; terminateEvent,
-      terminatedEvent: TDSiEventHandle; monitorWindow: THandle);
+      terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter: IOmniCounter);
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
@@ -233,6 +236,7 @@ type
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl)
   strict private
     otcCommChannel    : IOmniTwoWayChannel;
+    otcCounter        : IOmniCounter;
     otcExecutor       : TOmniTaskExecutor;
     otcMonitorWindow  : THandle;
     otcParameters     : TOmniValueContainer;
@@ -273,6 +277,7 @@ type
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
+    function  WithCounter(counter: IOmniCounter): IOmniTaskControl;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -315,7 +320,8 @@ end; { CreateTask }
 
 constructor TOmniTask.Create(executor: TOmniTaskExecutor; const taskName: string;
   parameters: TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal;
-  terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle);
+  terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter:
+  IOmniCounter);
 begin
   inherited Create;
   otExecutor_ref := executor;
@@ -326,6 +332,7 @@ begin
   otMonitorWindow := monitorWindow;
   otTerminateEvent := terminateEvent;
   otTerminatedEvent := terminatedEvent;
+  otCounter := counter;
 end; { TOmniTask.Create }
 
 procedure TOmniTask.Execute;
@@ -340,6 +347,11 @@ function TOmniTask.GetComm: IOmniCommunicationEndpoint;
 begin
   Result := otCommChannel.Endpoint2;
 end; { TOmniTask.GetComm }
+
+function TOmniTask.GetCounter: IOmniCounter;
+begin
+  Result := otCounter;
+end; { TOmniTask.GetCounter }
 
 function TOmniTask.GetName: string;
 begin
@@ -764,7 +776,7 @@ end; { TOmniTaskControl.Alertable }
 function TOmniTaskControl.CreateTask: IOmniTask;
 begin
   Result := TOmniTask.Create(otcExecutor, otcTaskName, otcParameters, otcCommChannel,
-    otcUniqueID, otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow);
+    otcUniqueID, otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow, otcCounter);
 end; { TOmniTaskControl.CreateTask }
 
 function TOmniTaskControl.FreeOnTerminate: IOmniTaskControl;
@@ -907,6 +919,12 @@ function TOmniTaskControl.WaitForInit: boolean;
 begin
   Result := otcExecutor.WaitForInit;
 end; { TOmniTaskControl.WaitForInit }
+
+function TOmniTaskControl.WithCounter(counter: IOmniCounter): IOmniTaskControl;
+begin
+  otcCounter := counter;
+  Result := Self;
+end; { TOmniTaskControl.WithCounter }
 
 { TOmniThread }
 

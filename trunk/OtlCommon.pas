@@ -68,10 +68,42 @@ type
     function ParamByName(const paramName: string): TOmniValue;
   end; { TOmniValueContainer }
 
+  IOmniCounter = interface ['{3A73CCF3-EDC5-484F-8459-532B8C715E3C}']
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  //
+    function  Increment: integer;
+    function  Decrement: integer;
+    property Value: integer read GetValue write SetValue;
+  end; { IOmniCounter }
+
+  function CreateCounter(initialValue: integer = 0): IOmniCounter;
+
 implementation
 
 uses
-  SysUtils;
+  SysUtils, GpStuff;
+
+type
+  TOmniCounter = class(TInterfacedObject, IOmniCounter)
+  strict private
+    ocValue: TGp4AlignedInt;
+  protected
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  public
+    constructor Create(initialValue: integer);
+    function Decrement: integer;
+    function Increment: integer;
+    property Value: integer read GetValue write SetValue;
+  end; { TOmniCounter }
+
+{ exports }
+
+function CreateCounter(initialValue: integer): IOmniCounter;
+begin
+  Result := TOmniCounter.Create(initialValue);
+end; { CreateCounter }
 
 { TOmniValueContainer }
 
@@ -155,5 +187,32 @@ function TOmniValueContainer.ParamByName(const paramName: string): TOmniValue;
 begin
   Result := ovcValues[ovcNames.IndexOf(paramName)];
 end; { TOmniValueContainer.ParamByName }
+
+{ TOmniCounter }
+
+constructor TOmniCounter.Create(initialValue: integer);
+begin
+  Value := initialValue;
+end; { TOmniCounter.Create }
+
+function TOmniCounter.Decrement: integer;
+begin
+  Result := ocValue.Decrement;
+end; { TOmniCounter.Decrement }
+
+function TOmniCounter.GetValue: integer;
+begin
+  Result := ocValue;
+end; { TOmniCounter.GetValue }
+
+function TOmniCounter.Increment: integer;
+begin
+  Result := ocValue.Increment;
+end; { TOmniCounter.Increment }
+
+procedure TOmniCounter.SetValue(const value: integer);
+begin
+  ocValue.Value := value;
+end; { TOmniCounter.SetValue }
 
 end.
