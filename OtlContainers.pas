@@ -52,7 +52,7 @@ type
   {:Lock-free, single writer, single reader, size-limited stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
-    procedure Empty; 
+    procedure Empty;
     procedure Initialize(numElements, elementSize: integer);
     function  Pop(var value): boolean;
     function  Push(const value): boolean;
@@ -63,7 +63,7 @@ type
   {:Lock-free, single writer, single reader ring buffer.
   }
   IOmniRingBuffer = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
-    procedure Empty; 
+    procedure Empty;
     procedure Initialize(numElements, elementSize: integer);
     function  Enqueue(const value): boolean;
     function  Dequeue(var value): boolean;
@@ -86,7 +86,7 @@ type
   IOmniMonitorSupport = interface ['{6D5F1191-9E4A-4DD5-99D8-694C95B0DE90}']
     function  GetMonitor: IOmniMonitorParams;
   //
-    procedure Notify; 
+    procedure Notify;
     procedure RemoveMonitor;
     procedure SetMonitor(monitor: IOmniMonitorParams);
     property Monitor: IOmniMonitorParams read GetMonitor;
@@ -107,15 +107,23 @@ type
 
   TOmniBaseContainer = class abstract(TInterfacedObject)
   strict protected
-    obcBuffer      : pointer;
-    obcElementSize : integer;
-    obcNumElements : integer;
-    obcPublicChain : POmniLinkedData;
-    obcRecycleChain: POmniLinkedData;
-    function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
-    function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
-    procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData);
-    function  UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
+    obcBuffer        : pointer;
+    obcElementSize   : integer;
+    obcNumElements   : integer;
+    obcPublicChain   : packed record
+      Head: POmniLinkedData;
+      SpinReference: POmniLinkedData;
+    end;
+//    obcPSpinReference: POmniLinkedData;
+    obcRecycleChain  : packed record
+      Head: POmniLinkedData;
+      SpinReference: POmniLinkedData;
+    end;
+//    obcRSpinReference: POmniLinkedData;
+    class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
+    class function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData; static;
+    class procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData); static;
+    class function  UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData; static;
   public
     destructor  Destroy; override;
     procedure Empty; virtual;
@@ -147,13 +155,18 @@ type
     function Push(const value): boolean; override; 
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read osNotifySupport implements IOmniNotifySupport;
-    property Options: TOmniContainerOptions read osOptions write osOptions;
+    property Options: TOmniContainerOptions read osOptions;
   end; { TOmniStack }
 
   TOmniBaseQueue = class(TOmniBaseContainer)
   strict protected
-    obqDequeuedMessages: POmniLinkedData;
+    obqDequeuedMessages: packed record
+      Head: POmniLinkedData;
+      SpinReference: POmniLinkedData;
+    end;
+//    obcSpinReference   : POmniLinkedData;
   public
+    constructor Create;
     function  Dequeue(var value): boolean; virtual;
     procedure Empty; override;
     function  Enqueue(const value): boolean; virtual;
@@ -172,7 +185,7 @@ type
     function  Enqueue(const value): boolean; override;
     property MonitorSupport: IOmniMonitorSupport read orbMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read orbNotifySupport implements IOmniNotifySupport;
-    property Options: TOmniContainerOptions read orbOptions write orbOptions;
+    property Options: TOmniContainerOptions read orbOptions;
   end; { TOmniQueue }
 
   function CreateOmniMonitorParams(window: THandle; msg: cardinal;
@@ -337,10 +350,10 @@ var
   linkedData: POmniLinkedData;
 begin
   repeat
-    linkedData := PopLink(obcPublicChain);
+    linkedData := PopLink(obcPublicChain.Head);
     if not assigned(linkedData) then
       break; //repeat
-    PushLink(linkedData, obcRecycleChain);
+    PushLink(linkedData, obcRecycleChain.Head);
   until false;
 end; { TOmniBaseStack.Empty }
 
@@ -352,8 +365,12 @@ var
   nextElement      : POmniLinkedData;
 begin
   Assert(SizeOf(cardinal) = SizeOf(pointer));
-  Assert(cardinal(obcPublicChain) AND 3 = 0);
-  Assert(cardinal(obcRecycleChain) AND 3 = 0);
+  Assert(SizeOf(obcPublicChain) = 8);
+  Assert(SizeOf(obcRecycleChain) = 8);
+  if cardinal(@obcPublicChain) AND 7 <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcPublicChain is not 8-aligned');
+  if cardinal(@obcRecycleChain) AND 7 <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcRecycleChain is not 8-aligned');
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obcNumElements := numElements;
@@ -361,29 +378,29 @@ begin
   // calculate element size, round up to next 4-aligned value
   bufferElementSize := ((SizeOf(POmniLinkedData) + elementSize) + 3) AND NOT 3;
   GetMem(obcBuffer, bufferElementSize * cardinal(numElements));
-  Assert(cardinal(obcBuffer) AND 3 = 0);
+  if cardinal(obcBuffer) AND 3 <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
   //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
-  obcRecycleChain := obcBuffer;
-  nextElement := nil; // to remove compiler warning in nextElement.Next := nil assignment below
-  currElement := obcRecycleChain;
+  obcRecycleChain.Head := obcBuffer;
+  currElement := obcRecycleChain.Head;
   for iElement := 0 to obcNumElements - 2 do begin
     nextElement := POmniLinkedData(cardinal(currElement) + bufferElementSize);
     currElement.Next := nextElement;
     currElement := nextElement;
   end;
   currElement.Next := nil; // terminate the chain
-  obcPublicChain := nil;
+  obcPublicChain.Head := nil;
 end; { TOmniBaseStack.Initialize }
 
 ///<summary>Invert links in a chain.</summary>
 ///<returns>New chain head (previous tail) or nil if chain is empty.</returns>
 ///<since>2008-07-13</since>
-function TOmniBaseContainer.InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
+class function TOmniBaseContainer.InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
 asm
-  mov   eax, edx
   test  eax, eax
   jz    @Exit
+  xor   ecx, ecx
 @Walk:
   xchg  [eax], ecx                        //Turn links
   and   ecx, ecx
@@ -397,51 +414,63 @@ end; { TOmniBaseStack.InvertOrder }
 
 function TOmniBaseContainer.IsEmpty: boolean;
 begin
-  Result := not assigned(obcPublicChain);
+  Result := not assigned(obcPublicChain.Head);
 end; { TOmniBaseStack.IsEmpty }
 
 function TOmniBaseContainer.IsFull: boolean;
 begin
-  Result := not assigned(obcRecycleChain);
+  Result := not assigned(obcRecycleChain.Head);
 end; { TOmniBaseStack.IsFull }
 
 ///<summary>Removes first element from the chain, atomically.</summary>
 ///<returns>Removed first element. If the chain is empty, returns nil.</returns>
-function TOmniBaseContainer.PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
+class function TOmniBaseContainer.PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 asm
-  mov   eax, [edx]                        //Result := chainHead
+  push  edi
+  push  ebx
+  mov   edi, eax                          //edi = chainHead
 @Spin:
+  mov   ecx, 1                            //Increment spin reference for 1
+  lock xadd [edi + 4], ecx                //Get new spin reference to ecx
+  lock cmpxchg8b [edi]                    //Load boath @Link and SpinReference atomic
   test  eax, eax
-  jz    @Exit
-  mov   ecx, [eax]                        //ecx := Result.Next
-  lock cmpxchg [edx], ecx                 //chainHead := Result.Next
+  jz    @Exit                             //Is Empty?
+  inc   ecx                               //Now we are ready to real cmpxchg8b
+  cmp   edx, ecx                          //Is reference the some?
+  jnz   @Spin                             
+  mov   ebx, [eax]                        //ebx := Result.Next
+  lock cmpxchg8b [edi]                    //Now try to xchg
   jnz   @Spin                             //Do spin ???
 @Exit:
-end; { TOmniBaseStack.PopLink }
+  pop   ebx
+  pop   edi
+end;
 
 ///<summary>Inserts element at the beginning of the chain, atomically.</summary>
-procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead:
+class procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead:
   POmniLinkedData);
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 asm
-  mov   eax, [ecx]                         //ecx = chainHead
+  mov   ecx, eax
+  mov   eax, [edx]                         //ecx = chainHead
 @Spin:
-  mov   [edx], eax                         //link.Next := chainHead
-  lock cmpxchg [ecx], edx                  //chainHead := link
+  mov   [ecx], eax                         //link.Next := chainHead
+  lock cmpxchg [edx], ecx                  //chainHead := link
   jnz   @Spin
 end; { TOmniBaseStack.PushLink }
 
 ///<summary>Removes all elements from a chain, atomically.</summary>
 ///<returns>Head of the chain.</returns>
 ///<since>2008-07-13</since>
-function TOmniBaseContainer.UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
+class function TOmniBaseContainer.UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                        ^------ < chainHead
 asm
   xor   ecx, ecx
+  mov   edx, eax
   mov   eax, [edx]
 @Spin:
   lock cmpxchg [edx], ecx                 //Cut ChainHead
@@ -454,24 +483,24 @@ function TOmniBaseStack.Pop(var value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcPublicChain);
+  linkedData := PopLink(obcPublicChain.Head);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain);
+  PushLink(linkedData, obcRecycleChain.Head);
 end; { TOmniBaseStack.Pop }
 
 function TOmniBaseStack.Push(const value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcRecycleChain);
+  linkedData := PopLink(obcRecycleChain.Head);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChain);
+  PushLink(linkedData, obcPublicChain.Head);
 end; { TOmniBaseStack.Push }
 
 { TOmniStack }
@@ -509,18 +538,25 @@ end; { TOmniStack.Push }
 
 { TOmniBaseQueue }
 
+constructor TOmniBaseQueue.Create;
+begin
+  Assert(SizeOf(obqDequeuedMessages) = 8);
+  if cardinal(@obqDequeuedMessages) AND 7 <> 0 then
+    raise Exception.Create('obqDequeuedMessages is not 8-aligned');
+end; { TOmniBaseQueue.create }
+
 function TOmniBaseQueue.Dequeue(var value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  if obqDequeuedMessages = nil then
-    obqDequeuedMessages := InvertOrder(UnlinkAll(obcPublicChain));
-  linkedData := PopLink(obqDequeuedMessages);
+  if obqDequeuedMessages.Head = nil then
+    obqDequeuedMessages.Head := InvertOrder(UnlinkAll(obcPublicChain.Head));
+  linkedData := PopLink(obqDequeuedMessages.Head);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain);
+  PushLink(linkedData, obcRecycleChain.Head);
 end; { TOmniQueue.Dequeue }
 
 procedure TOmniBaseQueue.Empty;
@@ -528,11 +564,11 @@ var
   linkedData: POmniLinkedData;
 begin
   inherited;
-  if assigned(obqDequeuedMessages) then repeat
-    linkedData := PopLink(obqDequeuedMessages);
+  if assigned(obqDequeuedMessages.Head) then repeat
+    linkedData := PopLink(obqDequeuedMessages.Head);
     if not assigned(linkedData) then
       break; //repeat
-    PushLink(linkedData, obcRecycleChain);
+    PushLink(linkedData, obcRecycleChain.Head);
   until false;
 end; { TOmniQueue.Empty }
 
@@ -540,17 +576,17 @@ function TOmniBaseQueue.Enqueue(const value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcRecycleChain);
+  linkedData := PopLink(obcRecycleChain.Head);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChain);
+  PushLink(linkedData, obcPublicChain.Head);
 end; { TOmniQueue.Enqueue }
 
 function TOmniBaseQueue.IsEmpty: boolean;
 begin
-  Result := not (assigned(obcPublicChain) or assigned(obqDequeuedMessages));
+  Result := not (assigned(obcPublicChain.Head) or assigned(obqDequeuedMessages.Head));
 end; { TOmniQueue.IsEmpty }
 
 { TOmniQueue }

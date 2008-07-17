@@ -25,6 +25,7 @@
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_Optimize>False</DCC_Optimize>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

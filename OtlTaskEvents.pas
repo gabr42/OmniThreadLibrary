@@ -45,6 +45,7 @@ interface
 uses
   Messages,
   Classes,
+  GpStuff,
   OtlTaskControl;
 
 type
@@ -56,8 +57,8 @@ type
   strict private
     tedMessageWindow   : THandle;
     tedMonitoredTasks  : TInterfaceList;
-    tedOnTaskTerminated: TOmniTaskEvent;
     tedOnTaskMessage   : TOmniTaskEvent;
+    tedOnTaskTerminated: TOmniTaskEvent;
   strict protected
     function  LocateTask(taskUniqueID: cardinal): IOmniTaskControl;
     procedure WndProc(var msg: TMessage);
