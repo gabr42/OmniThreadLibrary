@@ -32,12 +32,21 @@ type
     OmniTaskEventDispatch1 : TOmniTaskEventDispatch;
     SaveDialog             : TSaveDialog;
     btnBaseStackCorrectnessTest: TButton;
+    btnBaseQueueCorrectnessTest: TButton;
+    btnBaseQueue2to1: TButton;
+    btnBaseQueue4to1: TButton;
+    btnQueue2to1: TButton;
+    btnQueue4to1: TButton;
+    procedure btnBaseQueue2to1Click(Sender: TObject);
+    procedure btnBaseQueue4to1Click(Sender: TObject);
     procedure btnBaseQueueStressTestClick(Sender: TObject);
     procedure btnBaseStack1to2Click(Sender: TObject);
     procedure btnBaseStack2to1Click(Sender: TObject);
     procedure btnBaseStack2to2Click(Sender: TObject);
     procedure btnBaseStack4to1Click(Sender: TObject);
     procedure btnBaseStackStressTestClick(Sender: TObject);
+    procedure btnQueue2to1Click(Sender: TObject);
+    procedure btnQueue4to1Click(Sender: TObject);
     procedure btnQueueCorrectnessTestClick(Sender: TObject);
     procedure btnQueueStressTestClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
@@ -59,8 +68,10 @@ type
     FStack    : TOmniStack;
     FWriters  : array [1..4] of IOmniTaskControl;
     procedure Log(const msg: string);
+    procedure StartBaseQueueStressTest(numWriters, numReaders: integer);
     procedure StartBaseStackStressTest(numWriters, numReaders: integer);
-    procedure StartStackStress(numWriters, numReaders: integer);
+    procedure StartQueueStressTest(numWriters, numReaders: integer);
+    procedure StartStackStressTest(numWriters, numReaders: integer);
   strict protected
     procedure AllocateTasks(numWriters, numReaders: integer);
   end;
@@ -160,12 +171,19 @@ begin
         .Run;
 end;
 
+procedure TfrmTestOtlContainers.btnBaseQueue2to1Click(Sender: TObject);
+begin
+  StartBaseQueueStressTest(2, 1);
+end;
+
+procedure TfrmTestOtlContainers.btnBaseQueue4to1Click(Sender: TObject);
+begin
+  StartBaseQueueStressTest(4, 1);
+end;
+
 procedure TfrmTestOtlContainers.btnBaseQueueStressTestClick(Sender: TObject);
 begin
-  Log('Starting 6 second base container stress test');
-  FBaseQueue.Empty;
-  FReaders[1].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
-  FWriters[1].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
+  StartBaseQueueStressTest(1, 1);
 end;
 
 procedure TfrmTestOtlContainers.btnBaseStack1to2Click(Sender: TObject);
@@ -193,19 +211,32 @@ begin
   StartBaseStackStressTest(1, 1);
 end;
 
+procedure TfrmTestOtlContainers.btnQueue2to1Click(Sender: TObject);
+begin
+  StartQueueStressTest(2, 1);
+end;
+
+procedure TfrmTestOtlContainers.btnQueue4to1Click(Sender: TObject);
+begin
+  StartQueueStressTest(4, 1);
+end;
+
 procedure TfrmTestOtlContainers.btnQueueCorrectnessTestClick(Sender: TObject);
+var
+  container: TOmniBaseQueue;
 begin
   Log('Writing to queue');
-  FQueue.Empty;
-  FWriters[1].Comm.Send(MSG_START_QUEUE_WRITE, CTestQueueLength);
+  if Sender = btnBaseQueueCorrectnessTest then
+    container := FBaseQueue
+  else
+    container := FQueue;
+  container.Empty;
+  FWriters[1].Comm.Send(MSG_START_QUEUE_WRITE, [CTestQueueLength, cardinal(container)]);
 end;
 
 procedure TfrmTestOtlContainers.btnQueueStressTestClick(Sender: TObject);
 begin
-  Log('Starting CTestDuration_sec second queue stress test');
-  FQueue.Empty;
-  FReaders[1].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
-  FWriters[1].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
+  StartQueueStressTest(1, 1);
 end;
 
 procedure TfrmTestOtlContainers.btnSaveLogClick(Sender: TObject);
@@ -216,22 +247,22 @@ end;
 
 procedure TfrmTestOtlContainers.btnStack1to2Click(Sender: TObject);
 begin
-  StartStackStress(1, 2);
+  StartStackStressTest(1, 2);
 end;
 
 procedure TfrmTestOtlContainers.btnStack2to1Click(Sender: TObject);
 begin
-  StartStackStress(2, 1);
+  StartStackStressTest(2, 1);
 end;
 
 procedure TfrmTestOtlContainers.btnStack2to2Click(Sender: TObject);
 begin
-  StartStackStress(2, 2);
+  StartStackStressTest(2, 2);
 end;
 
 procedure TfrmTestOtlContainers.btnStack4to1Click(Sender: TObject);
 begin
-  StartStackStress(4, 1);
+  StartStackStressTest(4, 1);
 end;
 
 procedure TfrmTestOtlContainers.btnStackCorrectnessTestClick(Sender: TObject);
@@ -249,7 +280,7 @@ end;
 
 procedure TfrmTestOtlContainers.btnStackStressTestClick(Sender: TObject);
 begin
-  StartStackStress(1, 1);
+  StartStackStressTest(1, 1);
 end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
@@ -299,10 +330,14 @@ begin
       MSG_FULL_STOP:
         begin
           Log('All tasks stopped');
-          if msg.MsgData = 'base' then
+          if msg.MsgData = 'base stack' then
             btnBaseStackCorrectnessTest.Click
+          else if msg.MsgData = 'stack' then
+            btnStackCorrectnessTest.Click
+          else if msg.MsgData = 'base queue' then
+            btnBaseQueueCorrectnessTest.Click
           else
-            btnStackCorrectnessTest.Click;
+            btnQueueCorrectnessTest.Click;
         end;
       MSG_TEST_END:
         Log(string(msg.MsgData));
@@ -310,14 +345,15 @@ begin
         begin
           Log('Reading from stack');
           FReaders[1].Comm.Send(MSG_START_STACK_READ,
-            [CTestQueueLength, cardinal(msg.MsgData[0])]);
+            [CTestQueueLength, cardinal(msg.MsgData)]);
         end;
       MSG_STACK_READ_COMPLETED:
         Log('Test completed');
       MSG_QUEUE_WRITE_COMPLETED:
         begin
           Log('Reading from queue');
-          FReaders[1].Comm.Send(MSG_START_QUEUE_READ, CTestQueueLength);
+          FReaders[1].Comm.Send(MSG_START_QUEUE_READ,
+            [CTestQueueLength, cardinal(msg.MsgData)]);
         end;
       MSG_QUEUE_READ_COMPLETED:
         Log('Test completed');
@@ -326,6 +362,21 @@ begin
       else
         Log(Format('Unknown message %d', [msg.MsgID]));
     end; //case
+end;
+
+procedure TfrmTestOtlContainers.StartBaseQueueStressTest(numWriters, numReaders: integer);
+var
+  iTask: integer;
+begin
+  Log(Format('Starting %d second base queue stress test, %d -> %d',
+    [CTestDuration_sec, numWriters, numReaders]));
+  AllocateTasks(numWriters, numReaders);
+  FBaseQueue.Empty;
+  FCounter.Value := numReaders + numWriters;
+  for iTask := 1 to numReaders do
+    FReaders[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, CTestDuration_sec);
+  for iTask := 1 to numWriters do
+    FWriters[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, CTestDuration_sec);
 end;
 
 procedure TfrmTestOtlContainers.StartBaseStackStressTest(numWriters, numReaders: integer);
@@ -343,7 +394,22 @@ begin
     FWriters[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
 end;
 
-procedure TfrmTestOtlContainers.StartStackStress(numWriters, numReaders: integer);
+procedure TfrmTestOtlContainers.StartQueueStressTest(numWriters, numReaders: integer);
+var
+  iTask: integer;
+begin
+  Log(Format('Starting %d second queue stress test, %d -> %d',
+    [CTestDuration_sec, numWriters, numReaders]));
+  AllocateTasks(numWriters, numReaders);
+  FQueue.Empty;
+  FCounter.Value := numReaders + numWriters;
+  for iTask := 1 to numReaders do
+    FReaders[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
+  for iTask := 1 to numWriters do
+    FWriters[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
+end;
+
+procedure TfrmTestOtlContainers.StartStackStressTest(numWriters, numReaders: integer);
 var
   iTask: integer;
 begin
@@ -410,6 +476,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d enqueued, %d skipped; %d msg/s',
     [time - startTime, numEnqueued, numSkipped, Round(numEnqueued/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'base queue');
 end;
 
 procedure TCommWriter.OMStartBaseStackStressTest(var msg: TOmniMessage);
@@ -446,7 +514,7 @@ begin
     'Writer completed in %d ms; %d pushed, %d skipped; %d msg/s',
     [time - startTime, numPushed, numSkipped, Round(numPushed/((time - startTime)/1000))]));
   if Task.Counter.Decrement = 0 then
-    Task.Comm.Send(MSG_FULL_STOP, 'base');
+    Task.Comm.Send(MSG_FULL_STOP, 'base stack');
 end;
 
 procedure TCommWriter.OMStartQueueStressTest(var msg: TOmniMessage);
@@ -482,41 +550,47 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d enqueued, %d skipped; %d msg/s',
     [time - startTime, numEnqueued, numSkipped, Round(numEnqueued/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'queue');
 end;
 
 procedure TCommWriter.OMStartQueueWrite(var msg: TOmniMessage);
 var
-  iRepeat: integer;
-  item   : integer;
+  container: TOmniBaseQueue;
+  iRepeat  : integer;
+  item     : integer;
+  numItems : integer;
 begin
+  numItems := msg.MsgData[0];
+  container := TOmniBaseQueue(cardinal(msg.MsgData[1]));
   for iRepeat := 1 to 2 do begin
-    if not Queue.IsEmpty then begin
+    if not container.IsEmpty then begin
       Fail('Queue is not empty at the beginning');
       Exit;
     end
     else begin
-      for item := 1 to msg.MsgData do
-        if not Queue.Enqueue(item) then begin
+      for item := 1 to numItems do
+        if not container.Enqueue(item) then begin
           Fail(Format('Failed to enqueue item %d', [item]));
           Exit;
         end;
-      if not Queue.IsFull then begin
+      if not container.IsFull then begin
         Fail('Queue is not full at the end');
         Exit;
       end
       else begin
-        item := msg.MsgData + 1;
-        if Queue.Enqueue(item) then begin
+        item := numItems + 1;
+        if container.Enqueue(item) then begin
           Fail('Managed to enqueue item into a full Queue');
           Exit;
         end
         else if iRepeat = 2 then
-          Task.Comm.Send(MSG_QUEUE_WRITE_COMPLETED, 0);
+          Task.Comm.Send(MSG_QUEUE_WRITE_COMPLETED, cardinal(container));
       end; //for item
     end;
     if iRepeat = 1 then begin
-      Queue.Dequeue(item);
-      Queue.Empty;
+      container.Dequeue(item);
+      container.Empty;
     end;
   end; //for iRepeat
 end;
@@ -589,7 +663,7 @@ begin
           Exit;
         end
         else if iRepeat = 2 then
-          Task.Comm.Send(MSG_STACK_WRITE_COMPLETED, [container]);
+          Task.Comm.Send(MSG_STACK_WRITE_COMPLETED, cardinal(container));
       end; //for item
     end;
     if iRepeat = 1 then
@@ -631,6 +705,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d dequeued, %d empty; %d msg/s',
     [time - startTime, numDequeued, numEmpty, Round(numDequeued/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'base queue');
 end;
 
 procedure TCommReader.OMStartBaseStackStressTest(var msg: TOmniMessage);
@@ -666,19 +742,23 @@ begin
     'Reader completed in %d ms; %d popped, %d empty; %d msg/s',
     [time - startTime, numPopped, numEmpty, Round(numPopped/((time - startTime)/1000))]));
   if Task.Counter.Decrement = 0 then
-    Task.Comm.Send(MSG_FULL_STOP, 'base');
+    Task.Comm.Send(MSG_FULL_STOP, 'base stack');
 end;
 
 procedure TCommReader.OMStartQueueRead(var msg: TOmniMessage);
 var
-  item  : integer;
-  stItem: integer;
+  container: TOmniBaseQueue;
+  item     : integer;
+  numItems : integer;
+  stItem   : integer;
 begin
-  if not Queue.IsFull then
+  numItems := msg.MsgData[0];
+  container := TOmniBaseQueue(cardinal(msg.MsgData[1]));
+  if not container.IsFull then
     Fail('Queue is not full at the beginning')
   else begin
-    for item := 1 to msg.MsgData do begin
-      if not Queue.Dequeue(stItem) then begin
+    for item := 1 to numItems do begin
+      if not container.Dequeue(stItem) then begin
         Fail(Format('Failed to dequeue item %d', [item]));
         Exit;
       end;
@@ -687,10 +767,10 @@ begin
         Exit;
       end;
     end;
-    if not Queue.IsEmpty then
+    if not container.IsEmpty then
       Fail('Queue is not empty at the end')
     else begin
-      if Queue.Dequeue(item) then
+      if container.Dequeue(item) then
         Fail('Managed to dequeue item from an empty Queue')
       else
         Task.Comm.Send(MSG_QUEUE_READ_COMPLETED, 0);
@@ -730,6 +810,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d dequeued, %d empty; %d msg/s',
     [time - startTime, numDequeued, numEmpty, Round(numDequeued/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'queue');
 end;
 
 procedure TCommReader.OMStartStackRead(var msg: TOmniMessage);

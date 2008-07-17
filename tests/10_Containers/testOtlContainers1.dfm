@@ -3,7 +3,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   Top = 0
   ActiveControl = btnBaseStackStressTest
   Caption = 'OtlContainers tester'
-  ClientHeight = 447
+  ClientHeight = 458
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,22 +16,23 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   OnDestroy = FormDestroy
   DesignSize = (
     611
-    447)
+    458)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 143
     Top = 0
     Width = 468
-    Height = 447
+    Height = 458
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 9
+    ExplicitHeight = 447
   end
   object btnStackStressTest: TButton
     Left = 8
-    Top = 144
+    Top = 128
     Width = 129
     Height = 25
     Caption = 'Stack stress test'
@@ -40,7 +41,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnQueueStressTest: TButton
     Left = 8
-    Top = 306
+    Top = 336
     Width = 129
     Height = 25
     Caption = 'Queue stress test'
@@ -49,7 +50,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStackCorrectnessTest: TButton
     Left = 8
-    Top = 233
+    Top = 209
     Width = 129
     Height = 25
     Caption = 'Stack correctness test'
@@ -58,7 +59,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnQueueCorrectnessTest: TButton
     Left = 8
-    Top = 337
+    Top = 389
     Width = 129
     Height = 25
     Caption = 'Queue correctness test'
@@ -67,7 +68,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack2to1: TButton
     Left = 8
-    Top = 175
+    Top = 155
     Width = 63
     Height = 25
     Caption = '2 -> 1'
@@ -76,7 +77,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack1to2: TButton
     Left = 74
-    Top = 175
+    Top = 155
     Width = 63
     Height = 25
     Caption = '1 -> 2'
@@ -85,7 +86,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnStack2to2: TButton
     Left = 74
-    Top = 202
+    Top = 182
     Width = 63
     Height = 25
     Caption = '2 -> 2'
@@ -103,7 +104,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseQueueStressTest: TButton
     Left = 8
-    Top = 275
+    Top = 247
     Width = 129
     Height = 25
     Caption = 'Base queue stress test'
@@ -112,17 +113,18 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 414
+    Top = 425
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
     TabOrder = 10
     OnClick = btnSaveLogClick
+    ExplicitTop = 414
   end
   object btnStack4to1: TButton
     Left = 8
-    Top = 202
+    Top = 182
     Width = 63
     Height = 25
     Caption = '4 -> 1'
@@ -131,7 +133,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseStack2to1: TButton
     Left = 8
-    Top = 39
+    Top = 35
     Width = 63
     Height = 25
     Caption = '2 -> 1'
@@ -140,7 +142,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseStack1to2: TButton
     Left = 74
-    Top = 39
+    Top = 35
     Width = 63
     Height = 25
     Caption = '1 -> 2'
@@ -149,7 +151,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseStack2to2: TButton
     Left = 74
-    Top = 66
+    Top = 62
     Width = 63
     Height = 25
     Caption = '2 -> 2'
@@ -158,7 +160,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseStack4to1: TButton
     Left = 8
-    Top = 66
+    Top = 62
     Width = 63
     Height = 25
     Caption = '4 -> 1'
@@ -167,21 +169,66 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseStackCorrectnessTest: TButton
     Left = 8
-    Top = 97
+    Top = 89
     Width = 129
     Height = 25
-    Caption = 'Base st. correctness test'
+    Caption = 'Base s. correctness test'
     TabOrder = 16
     OnClick = btnStackCorrectnessTestClick
   end
+  object btnBaseQueueCorrectnessTest: TButton
+    Left = 8
+    Top = 301
+    Width = 129
+    Height = 25
+    Caption = 'Base q. correctness test'
+    TabOrder = 17
+    OnClick = btnQueueCorrectnessTestClick
+  end
+  object btnBaseQueue2to1: TButton
+    Left = 8
+    Top = 274
+    Width = 63
+    Height = 25
+    Caption = '2 -> 1'
+    TabOrder = 18
+    OnClick = btnBaseQueue2to1Click
+  end
+  object btnBaseQueue4to1: TButton
+    Left = 74
+    Top = 274
+    Width = 63
+    Height = 25
+    Caption = '4 -> 1'
+    TabOrder = 19
+    OnClick = btnBaseQueue4to1Click
+  end
+  object btnQueue2to1: TButton
+    Left = 8
+    Top = 363
+    Width = 63
+    Height = 25
+    Caption = '2 -> 1'
+    TabOrder = 20
+    OnClick = btnQueue2to1Click
+  end
+  object btnQueue4to1: TButton
+    Left = 74
+    Top = 363
+    Width = 63
+    Height = 25
+    Caption = '4 -> 1'
+    TabOrder = 21
+    OnClick = btnQueue4to1Click
+  end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage
-    Left = 8
-    Top = 384
+    Left = 152
+    Top = 424
   end
   object SaveDialog: TSaveDialog
     DefaultExt = 'log'
-    Left = 48
-    Top = 384
+    Left = 184
+    Top = 424
   end
 end
