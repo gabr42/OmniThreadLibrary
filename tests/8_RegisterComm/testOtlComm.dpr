@@ -1,6 +1,7 @@
 program testOtlComm;
 
 uses
+  FastMM4,
   Forms,
   testOtlComm1 in 'testOtlComm1.pas' {frmTestOtlComm},
   OtlComm in '..\..\OtlComm.pas',
