@@ -3,7 +3,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   Top = 0
   ActiveControl = btnStackStressTest
   Caption = 'OtlContainers tester'
-  ClientHeight = 295
+  ClientHeight = 447
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,7 +20,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Left = 143
     Top = 0
     Width = 468
-    Height = 295
+    Height = 447
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
@@ -35,14 +35,14 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     TabOrder = 0
     OnClick = btnStackStressTestClick
   end
-  object btnBufferStressTest: TButton
+  object btnQueueStressTest: TButton
     Left = 8
-    Top = 231
+    Top = 271
     Width = 129
     Height = 25
-    Caption = 'Ring buffer stress test'
+    Caption = 'Queue stress test'
     TabOrder = 5
-    OnClick = btnBufferStressTestClick
+    OnClick = btnQueueStressTestClick
   end
   object btnStackCorrectnessTest: TButton
     Left = 8
@@ -53,14 +53,14 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     TabOrder = 4
     OnClick = btnStackCorrectnessTestClick
   end
-  object btnBufferCorrectnessTest: TButton
+  object btnQueueCorrectnessTest: TButton
     Left = 8
-    Top = 262
+    Top = 302
     Width = 129
     Height = 25
-    Caption = 'Buffer correctness test'
+    Caption = 'Queue correctness test'
     TabOrder = 6
-    OnClick = btnBufferCorrectnessTestClick
+    OnClick = btnQueueCorrectnessTestClick
   end
   object btnStack2to1: TButton
     Left = 72
@@ -89,14 +89,23 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     TabOrder = 3
     OnClick = btnStack2to2Click
   end
-  object btnBaseContainerStressTest: TButton
+  object btnBaseStackStressTest: TButton
     Left = 8
     Top = 8
     Width = 129
     Height = 25
-    Caption = 'Base contnr stress test'
+    Caption = 'Base stack stress test'
     TabOrder = 8
-    OnClick = btnBaseContainerStressTestClick
+    OnClick = btnBaseStackStressTestClick
+  end
+  object btnBaseQueueStressTest: TButton
+    Left = 8
+    Top = 224
+    Width = 129
+    Height = 25
+    Caption = 'Base queue stress test'
+    TabOrder = 9
+    OnClick = btnBaseQueueStressTestClick
   end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage

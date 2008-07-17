@@ -32,10 +32,10 @@
     <DelphiCompile Include="OmniThreadLibraryDesigntime.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..\OmniThreadLibraryRuntime.dcp" />
     <DCCReference Include="..\OtlRegister.pas" />
-    <DCCReference Include="..\rtl.dcp" />
-    <DCCReference Include="..\vcl.dcp" />
-    <DCCReference Include="..\vclx.dcp" />
+    <DCCReference Include="OmniThreadLibraryRuntime.dcp" />
+    <DCCReference Include="rtl.dcp" />
+    <DCCReference Include="vcl.dcp" />
+    <DCCReference Include="vclx.dcp" />
   </ItemGroup>
 </Project>
