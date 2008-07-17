@@ -94,7 +94,7 @@ type
 
   {:Fixed-size ring buffer of TOmniValues references.
   }
-  TOmniMessageQueue = class(TOmniRingBuffer)
+  TOmniMessageQueue = class(TOmniQueue)
   public
     constructor Create(numMessages: integer); reintroduce;
     function  Dequeue: TOmniMessage; reintroduce;

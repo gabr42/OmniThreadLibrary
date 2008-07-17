@@ -30,10 +30,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic, GJ
 ///   Creation date     : 2008-07-13
-///   Last modification : 2008-07-15
-///   Version           : 0.2
+///   Last modification : dt
+///   Version           : 0.3
 ///</para><para>
 ///   History:
+///     0.3: 2008-07-16
+///       - TOmniBaseContainer made abstract.
+///       - Added TOmniBaseStack class which encapsulates base stack functionality.
+///       - TOmniQueue renamed to TOmniQueue.
+///       - Added TOmniBaseQueue class which encapsulates base queue functionality.
 ///     0.2: 2008-07-15
 ///       - Fixed a bug in PopLink.
 ///       - Implemented Empty method in both containers.
@@ -100,7 +105,7 @@ type
     Data: byte; //user data, variable size
   end; { TLinkedOmniData }
 
-  TOmniBaseContainer = class(TInterfacedObject)
+  TOmniBaseContainer = class abstract(TInterfacedObject)
   strict protected
     obcBuffer      : pointer;
     obcElementSize : integer;
@@ -117,16 +122,20 @@ type
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; virtual;
     function  IsFull: boolean; virtual;
-    function  Pop(var value): boolean; virtual;
-    function  Push(const value): boolean; virtual;
     property ElementSize: integer read obcElementSize;
     property NumElements: integer read obcNumElements;
   end; { TOmniBaseContainer }
 
+  TOmniBaseStack = class(TOmniBaseContainer)
+  public
+    function  Pop(var value): boolean; virtual;
+    function  Push(const value): boolean; virtual;
+  end; { TOmniBaseStack }
+
   TOmniContainerOption = (coEnableMonitor, coEnableNotify);
   TOmniContainerOptions = set of TOmniContainerOption;
 
-  TOmniStack = class(TOmniBaseContainer, IOmniStack, IOmniNotifySupport, IOmniMonitorSupport)
+  TOmniStack = class(TOmniBaseStack, IOmniStack, IOmniNotifySupport, IOmniMonitorSupport)
   strict private
     osMonitorSupport: IOmniMonitorSupport;
     osNotifySupport : IOmniNotifySupport;
@@ -135,29 +144,36 @@ type
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
     function Pop(var value): boolean; override;
-    function Push(const value): boolean; override;
+    function Push(const value): boolean; override; 
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read osNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read osOptions write osOptions;
   end; { TOmniStack }
 
-  TOmniRingBuffer = class(TOmniBaseContainer, IOmniRingBuffer, IOmniNotifySupport, IOmniMonitorSupport)
+  TOmniBaseQueue = class(TOmniBaseContainer)
+  strict protected
+    obqDequeuedMessages: POmniLinkedData;
+  public
+    function  Dequeue(var value): boolean; virtual;
+    procedure Empty; override;
+    function  Enqueue(const value): boolean; virtual;
+    function  IsEmpty: boolean; override;
+  end; { TOmniBaseQueue }
+
+  TOmniQueue = class(TOmniBaseQueue, IOmniRingBuffer, IOmniNotifySupport, IOmniMonitorSupport)
   strict private
-    orbDequeuedMessages: POmniLinkedData;
-    orbMonitorSupport  : IOmniMonitorSupport;
-    orbNotifySupport   : IOmniNotifySupport;
-    orbOptions         : TOmniContainerOptions;
+    orbMonitorSupport: IOmniMonitorSupport;
+    orbNotifySupport : IOmniNotifySupport;
+    orbOptions       : TOmniContainerOptions;
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
-    procedure Empty; override;
-    function  Enqueue(const value): boolean;
-    function  Dequeue(var value): boolean;
-    function  IsEmpty: boolean; override;
+    function  Dequeue(var value): boolean; override;
+    function  Enqueue(const value): boolean; override;
     property MonitorSupport: IOmniMonitorSupport read orbMonitorSupport implements IOmniMonitorSupport;
     property NotifySupport: IOmniNotifySupport read orbNotifySupport implements IOmniNotifySupport;
     property Options: TOmniContainerOptions read orbOptions write orbOptions;
-  end; { TOmniRingBuffer }
+  end; { TOmniQueue }
 
   function CreateOmniMonitorParams(window: THandle; msg: cardinal;
     wParam, lParam: integer): IOmniMonitorParams;
@@ -314,7 +330,7 @@ end; { TOmniNotifySupport.Signal }
 destructor TOmniBaseContainer.Destroy;
 begin
   FreeMem(obcBuffer);
-end; { TOmniBaseContainer.Destroy }
+end; { TOmniBaseStack.Destroy }
 
 procedure TOmniBaseContainer.Empty;
 var
@@ -326,7 +342,7 @@ begin
       break; //repeat
     PushLink(linkedData, obcRecycleChain);
   until false;
-end; { TOmniBaseContainer.Empty }
+end; { TOmniBaseStack.Empty }
 
 procedure TOmniBaseContainer.Initialize(numElements, elementSize: integer);
 var
@@ -358,7 +374,7 @@ begin
   end;
   nextElement.Next := nil; // terminate the chain
   obcPublicChain := nil;
-end; { TOmniBaseContainer.Initialize }
+end; { TOmniBaseStack.Initialize }
 
 ///<summary>Invert links in a chain.</summary>
 ///<returns>New chain head (previous tail) or nil if chain is empty.</returns>
@@ -370,36 +386,24 @@ asm
   jz    @Exit
 @Walk:
   xchg  [eax], ecx                        //Turn links
-  and   ecx, ecx          
+  and   ecx, ecx
   jz    @Exit
   xchg  [ecx], eax
   and   eax, eax
   jnz   @Walk
   mov   eax, ecx
 @Exit:
-end; { TOmniBaseContainer.InvertOrder }
+end; { TOmniBaseStack.InvertOrder }
 
 function TOmniBaseContainer.IsEmpty: boolean;
 begin
   Result := not assigned(obcPublicChain);
-end; { TOmniBaseContainer.IsEmpty }
+end; { TOmniBaseStack.IsEmpty }
 
 function TOmniBaseContainer.IsFull: boolean;
 begin
   Result := not assigned(obcRecycleChain);
-end; { TOmniBaseContainer.IsFull }
-
-function TOmniBaseContainer.Pop(var value): boolean;
-var
-  linkedData: POmniLinkedData;
-begin
-  linkedData := PopLink(obcPublicChain);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain);
-end; { TOmniBaseContainer.Pop }
+end; { TOmniBaseStack.IsFull }
 
 ///<summary>Removes first element from the chain, atomically.</summary>
 ///<returns>Removed first element. If the chain is empty, returns nil.</returns>
@@ -415,19 +419,7 @@ asm
   lock cmpxchg [edx], ecx                 //chainHead := Result.Next
   jnz   @Spin                             //Do spin ???
 @Exit:
-end; { TOmniBaseContainer.PopLink }
-
-function TOmniBaseContainer.Push(const value): boolean;
-var
-  linkedData: POmniLinkedData;
-begin
-  linkedData := PopLink(obcRecycleChain);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChain);
-end; { TOmniBaseContainer.Push }
+end; { TOmniBaseStack.PopLink }
 
 ///<summary>Inserts element at the beginning of the chain, atomically.</summary>
 procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead:
@@ -437,10 +429,10 @@ procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead
 asm
   mov   eax, [ecx]                         //ecx = chainHead
 @Spin:
-  mov   [edx], eax                         //link := chainHead.Next
+  mov   [edx], eax                         //link.Next := chainHead
   lock cmpxchg [ecx], edx                  //chainHead := link
   jnz   @Spin
-end; { TOmniBaseContainer.PushLink }
+end; { TOmniBaseStack.PushLink }
 
 ///<summary>Removes all elements from a chain, atomically.</summary>
 ///<returns>Head of the chain.</returns>
@@ -454,7 +446,33 @@ asm
 @Spin:
   lock cmpxchg [edx], ecx                 //Cut ChainHead
   jnz   @Spin
-end; { TOmniRingBuffer.UnlinkAll }
+end; { TOmniQueue.UnlinkAll }
+
+{ TOmniBaseStack }
+
+function TOmniBaseStack.Pop(var value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  linkedData := PopLink(obcPublicChain);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(linkedData.Data, value, ElementSize);
+  PushLink(linkedData, obcRecycleChain);
+end; { TOmniBaseStack.Pop }
+
+function TOmniBaseStack.Push(const value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  linkedData := PopLink(obcRecycleChain);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(value, linkedData.Data, ElementSize);
+  PushLink(linkedData, obcPublicChain);
+end; { TOmniBaseStack.Push }
 
 { TOmniStack }
 
@@ -489,9 +507,55 @@ begin
   end;
 end; { TOmniStack.Push }
 
-{ TOmniRingBuffer }
+{ TOmniBaseQueue }
 
-constructor TOmniRingBuffer.Create(numElements, elementSize: integer;
+function TOmniBaseQueue.Dequeue(var value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  if obqDequeuedMessages = nil then
+    obqDequeuedMessages := InvertOrder(UnlinkAll(obcPublicChain));
+  linkedData := PopLink(obqDequeuedMessages);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(linkedData.Data, value, ElementSize);
+  PushLink(linkedData, obcRecycleChain);
+end; { TOmniQueue.Dequeue }
+
+procedure TOmniBaseQueue.Empty;
+var
+  linkedData: POmniLinkedData;
+begin
+  inherited;
+  if assigned(obqDequeuedMessages) then repeat
+    linkedData := PopLink(obqDequeuedMessages);
+    if not assigned(linkedData) then
+      break; //repeat
+    PushLink(linkedData, obcRecycleChain);
+  until false;
+end; { TOmniQueue.Empty }
+
+function TOmniBaseQueue.Enqueue(const value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  linkedData := PopLink(obcRecycleChain);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(value, linkedData.Data, ElementSize);
+  PushLink(linkedData, obcPublicChain);
+end; { TOmniQueue.Enqueue }
+
+function TOmniBaseQueue.IsEmpty: boolean;
+begin
+  Result := not (assigned(obcPublicChain) or assigned(obqDequeuedMessages));
+end; { TOmniQueue.IsEmpty }
+
+{ TOmniQueue }
+
+constructor TOmniQueue.Create(numElements, elementSize: integer;
   options: TOmniContainerOptions);
 begin
   inherited Create;
@@ -501,51 +565,25 @@ begin
     orbMonitorSupport := TOmniMonitorSupport.Create;
   if coEnableNotify in Options then
     orbNotifySupport := TOmniNotifySupport.Create;
-end; { TOmniRingBuffer.Create }
+end; { TOmniQueue.Create }
 
-function TOmniRingBuffer.Dequeue(var value): boolean;
-var
-  linkedData: POmniLinkedData;
+function TOmniQueue.Dequeue(var value): boolean;
 begin
-  if orbDequeuedMessages = nil then
-    orbDequeuedMessages := InvertOrder(UnlinkAll(obcPublicChain));
-  linkedData := PopLink(orbDequeuedMessages);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain);
-  if coEnableNotify in Options then
-    orbNotifySupport.Signal;
-end; { TOmniRingBuffer.Dequeue }
+  Result := inherited Dequeue(value);
+  if Result then
+    if coEnableNotify in Options then
+      orbNotifySupport.Signal;
+end; { TOmniQueue.Dequeue }
 
-procedure TOmniRingBuffer.Empty;
-var
-  linkedData: POmniLinkedData;
+function TOmniQueue.Enqueue(const value): boolean;
 begin
-  inherited;
-  if assigned(orbDequeuedMessages) then repeat
-    linkedData := PopLink(orbDequeuedMessages);
-    if not assigned(linkedData) then
-      break; //repeat
-    PushLink(linkedData, obcRecycleChain);
-  until false;
-end; { TOmniRingBuffer.Empty }
-
-function TOmniRingBuffer.Enqueue(const value): boolean;
-begin
-  Result := inherited Push(value);
+  Result := inherited Enqueue(value);
   if Result then begin
     if coEnableNotify in Options then
       orbNotifySupport.Signal;
     if coEnableMonitor in Options then
       orbMonitorSupport.Notify;
   end;
-end; { TOmniRingBuffer.Enqueue }
-
-function TOmniRingBuffer.IsEmpty: boolean;
-begin
-  Result := not (assigned(obcPublicChain) or assigned(orbDequeuedMessages));
-end; { TOmniRingBuffer.IsEmpty }
+end; { TOmniQueue.Enqueue }
 
 end.
