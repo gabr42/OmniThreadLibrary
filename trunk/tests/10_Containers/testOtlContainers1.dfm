@@ -28,7 +28,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 9
-    ExplicitHeight = 447
   end
   object btnStackStressTest: TButton
     Left = 8
@@ -120,7 +119,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Caption = 'Save log'
     TabOrder = 10
     OnClick = btnSaveLogClick
-    ExplicitTop = 414
   end
   object btnStack4to1: TButton
     Left = 8
