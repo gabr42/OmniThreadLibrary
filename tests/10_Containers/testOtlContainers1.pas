@@ -9,7 +9,7 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlComm,
-  OtlTaskEvents;
+  OtlTaskEvents, OtlCommon;
 
 type
   TfrmTestOtlContainers = class(TForm)
@@ -53,6 +53,7 @@ type
   private
     FBaseQueue: TOmniBaseQueue;
     FBaseStack: TOmniBaseStack;
+    FCounter  : IOmniCounter;
     FQueue    : TOmniQueue;
     FReaders  : array [1..4] of IOmniTaskControl;
     FStack    : TOmniStack;
@@ -95,6 +96,7 @@ const
   MSG_STACK_READ_COMPLETED  = 103;
   MSG_QUEUE_WRITE_COMPLETED = 104;
   MSG_QUEUE_READ_COMPLETED  = 105;
+  MSG_FULL_STOP             = 106;
 
 type
   TTestSuite = (tsDump, tsMessageExchange);
@@ -145,11 +147,17 @@ begin
   for iTask := 1 to numReaders do
     if not assigned(FReaders[iTask]) then
       FReaders[iTask] := OmniTaskEventDispatch1.Monitor(CreateTask(
-        TCommReader.Create(FBaseStack, FBaseQueue, FStack, FQueue))).FreeOnTerminate.Run;
+        TCommReader.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
+        .WithCounter(FCounter)
+        .FreeOnTerminate
+        .Run;
   for iTask := 1 to numWriters do
     if not assigned(FWriters[iTask]) then
       FWriters[iTask] := OmniTaskEventDispatch1.Monitor(CreateTask(
-        TCommWriter.Create(FBaseStack, FBaseQueue, FStack, FQueue))).FreeOnTerminate.Run;
+        TCommWriter.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
+        .WithCounter(FCounter)
+        .FreeOnTerminate
+        .Run;
 end;
 
 procedure TfrmTestOtlContainers.btnBaseQueueStressTestClick(Sender: TObject);
@@ -252,6 +260,7 @@ begin
   FBaseQueue := TOmniBaseQueue.Create;
   FBaseQueue.Initialize(CTestQueueLength, SizeOf(integer));
   FQueue := TOmniQueue.Create(CTestQueueLength, SizeOf(integer), [coEnableNotify]);
+  FCounter := CreateCounter;
   AllocateTasks(1, 1);
 end;
 
@@ -287,6 +296,14 @@ var
 begin
   if task.Comm.Receive(msg) then
     case msg.MsgID of
+      MSG_FULL_STOP:
+        begin
+          Log('All tasks stopped');
+          if msg.MsgData = 'base' then
+            btnBaseStackCorrectnessTest.Click
+          else
+            btnStackCorrectnessTest.Click;
+        end;
       MSG_TEST_END:
         Log(string(msg.MsgData));
       MSG_STACK_WRITE_COMPLETED:
@@ -308,7 +325,7 @@ begin
         Log('Write test failed. ' + msg.MsgData);
       else
         Log(Format('Unknown message %d', [msg.MsgID]));
-    end; //case             
+    end; //case
 end;
 
 procedure TfrmTestOtlContainers.StartBaseStackStressTest(numWriters, numReaders: integer);
@@ -319,6 +336,7 @@ begin
     [CTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FBaseStack.Empty;
+  FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
     FReaders[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
   for iTask := 1 to numWriters do
@@ -333,6 +351,7 @@ begin
     [CTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FStack.Empty;
+  FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
     FReaders[iTask].Comm.Send(MSG_START_STACK_STRESS_TEST, CTestDuration_sec);
   for iTask := 1 to numWriters do
@@ -426,6 +445,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d pushed, %d skipped; %d msg/s',
     [time - startTime, numPushed, numSkipped, Round(numPushed/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'base');
 end;
 
 procedure TCommWriter.OMStartQueueStressTest(var msg: TOmniMessage);
@@ -533,6 +554,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d pushed, %d skipped; %d msg/s',
     [time - startTime, numPushed, numSkipped, Round(numPushed/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'stack');
 end;
 
 procedure TCommWriter.OMStartStackWrite(var msg: TOmniMessage);
@@ -642,6 +665,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d popped, %d empty; %d msg/s',
     [time - startTime, numPopped, numEmpty, Round(numPopped/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'base');
 end;
 
 procedure TCommReader.OMStartQueueRead(var msg: TOmniMessage);
@@ -772,6 +797,8 @@ begin
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d popped, %d empty; %d msg/s',
     [time - startTime, numPopped, numEmpty, Round(numPopped/((time - startTime)/1000))]));
+  if Task.Counter.Decrement = 0 then
+    Task.Comm.Send(MSG_FULL_STOP, 'stack');
 end;
 
 end.
