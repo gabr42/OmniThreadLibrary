@@ -18,7 +18,9 @@ type
     btnSendTo2            : TButton;
     lbLog                 : TListBox;
     OmniTaskEventDispatch1: TOmniTaskEventDispatch;
+    btnSendString: TButton;
     procedure btnSendObjectClick(Sender: TObject);
+    procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -99,6 +101,12 @@ begin
   sl.Add('abc');
   Log('Sending TStringList to task 1');
   FClient1.Comm.Send(MSG_FORWARD, [sl]);
+end;
+
+procedure TfrmTestOtlComm.btnSendStringClick(Sender: TObject);
+begin
+  Log('Sending ''abc'' to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, 'abc');
 end;
 
 procedure TfrmTestOtlComm.btnSendTo1Click(Sender: TObject);

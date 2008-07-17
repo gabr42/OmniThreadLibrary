@@ -17,11 +17,11 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_Define>DEBUG;OTL_LockingBuffer</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\src</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src</DCC_IncludePath>
+    <DCC_Define>DEBUG;MM4FullDebug</DCC_Define>
+    <DCC_UnitSearchPath>..\..;..\..\src;x:\mstpl\gp</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\src;x:\mstpl\gp</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\src;x:\mstpl\gp</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\src;x:\mstpl\gp</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
   </PropertyGroup>
   <ProjectExtensions>

@@ -51,6 +51,15 @@ object frmTestOtlComm: TfrmTestOtlComm
     TabOrder = 3
     OnClick = btnSendObjectClick
   end
+  object btnSendString: TButton
+    Left = 8
+    Top = 127
+    Width = 89
+    Height = 25
+    Caption = 'Send string'
+    TabOrder = 4
+    OnClick = btnSendStringClick
+  end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage
     Left = 8
