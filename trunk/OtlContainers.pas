@@ -372,7 +372,7 @@ begin
     currElement.Next := nextElement;
     currElement := nextElement;
   end;
-  nextElement.Next := nil; // terminate the chain
+  currElement.Next := nil; // terminate the chain
   obcPublicChain := nil;
 end; { TOmniBaseStack.Initialize }
 
