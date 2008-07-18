@@ -85,6 +85,10 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
 
+  IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']
+    procedure Execute;
+  end; { IOmniTaskExecutor }
+
 implementation
 
 { TOmniTask }

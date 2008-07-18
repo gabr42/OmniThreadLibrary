@@ -91,15 +91,39 @@ uses
   Classes,
   Contnrs,
   DSiWin32,
-  SpinLock;
+  SpinLock,
+  OtlCommon;
 
 type
+  ///<enum name='tsUnknownError'>An unknown error has occured.</enum>
+  ///<enum name='tsCompleted'>Work item has completed execution.</enum>
+  ///<enum name='tsException'>Work item's Execute method has raised an exception.</enum>
+  ///<enum name='tsCanceled'>Application called CancelAll.</enum>
+  ///<enum name='tsServerBusy'>Server is too busy.</enum>
+  TOTPTaskStatus = (tsUnknownError, tsCompleted, tsException, tsCanceled, tsServerBusy);
+
   TOTPWorkItem = class
   strict private
-    owiTask: IOmniTask;
+    owiLastError         : string;
+    owiScheduled_ms      : int64;
+    owiStarted_ms        : int64;
+    owiStatus            : TOTPTaskStatus;
+    owiTask              : IOmniTask;
+    owiTerminateExecution: boolean;
+  private
+    function GetUniqueID: int64;
+  protected
+    procedure SetLastError(status: TOTPTaskStatus; const errorMsg: string);
   public
     constructor Create(task: IOmniTask);
-    property Task: IOmniTask read owiTask write owiTask;
+    function  Description: string;
+    property LastError: string read owiLastError;
+    property Scheduled_ms: int64 read owiScheduled_ms;
+    property Started_ms: int64 read owiStarted_ms write owiStarted_ms;
+    property Status: TOTPTaskStatus read owiStatus;
+    property TerminateExecution: boolean read owiTerminateExecution write owiTerminateExecution;
+    property UniqueID: int64 read GetUniqueID;
+    property Task: IOmniTask read owiTask;
   end; { TOTPWorkItem }
 
   TOmniThreadPool = class;
@@ -125,7 +149,7 @@ type
     procedure Execute; override;
     function  GetWorkItemInfo(var scheduled_ms, started_ms: int64;
       var description: string): boolean;
-    function  IsExecuting(workItemID: int64): boolean;
+    function  IsExecuting(taskID: int64): boolean;
     function  WorkItemDescription: string;
     property NewWorkEvent: TDSiEventHandle read owtNewWorkEvent;
     property Owner: TOmniThreadPool read owtOwner;
@@ -146,10 +170,10 @@ type
     otpWorkItemQueue  : TObjectList {of TOTPWorkItem};
   strict protected
     procedure PruneWorkingQueue; protected
+    procedure ScheduleNext(workItem: TOTPWorkItem);
   protected
     function  GetMaxExecuting: integer;
     function  GetName: string;
-    procedure ScheduleNext(workItem: TOTPWorkItem);
     procedure SetMaxExecuting(value: integer);
     procedure SetName(const value: string);
   public
@@ -187,6 +211,23 @@ begin
   owiTask := task;
 end; { TOTPWorkItem.Create }
 
+function TOTPWorkItem.Description: string;
+begin
+  Result := Format('%s:%d', [Task.Name, UniqueID]);
+end; { TOTPWorkItem.Description }
+
+function TOTPWorkItem.GetUniqueID: int64;
+begin
+  Result := Task.UniqueID;
+end; { TOTPWorkItem.GetUniqueID }
+
+procedure TOTPWorkItem.SetLastError(status: TOTPTaskStatus; const errorMsg: string);
+begin
+  owiStatus := status;
+  owiLastError := errorMsg;
+  UniqueString(owiLastError);
+end; { TOTPWorkItem.SetLastError }
+
 { TOTPWorkerThread }
 
 constructor TOTPWorkerThread.Create(owner: TOmniThreadPool);
@@ -216,9 +257,8 @@ begin
   StartStopping_ms := DSiTimeGetTime64;
   owtWorkItemLock.Acquire;
   try
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Asy_Stop
-//    if assigned(WorkItem_ref) then
-//      WorkItem_ref.wiTerminateExecution := true;
+    if assigned(WorkItem_ref) then
+      WorkItem_ref.TerminateExecution := true;
   finally owtWorkItemLock.Release end;
   SetEvent(TerminateEvent);
 end; { TOTPWorkerThread.Asy_Stop }
@@ -236,8 +276,8 @@ begin
       {$IFDEF LogThreadPool}Log('Thread %s has work item', [Description]);{$ENDIF LogThreadPool}
       workItem := WorkItem_ref;
       WorkItem_ref := nil;
+      workItem.SetLastError(tsCanceled, 'Cancelled');
 // TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Asy_TerminateWorkItem
-//      workItem.SetLastError(tpmsCanceled, 'Cancelled');
 //      Owner.Asy_RequestCompleted(workItem, Self);
       Result := true;
     end;
@@ -269,18 +309,19 @@ begin
         try
           {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
           DSiGetThreadTimes(creationTime, startUserTime, startKernelTime);
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Execute
-//          WorkItem_ref.Execute;
+          {$IFNDEF OTL_DontSetThreadName}
+          SetThreadName(WorkItem_ref.Task.Name);
+          {$ENDIF OTL_DontSetThreadName}
+          (WorkItem_ref.Task as IOmniTaskExecutor).Execute;
           DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Execute
-//          WorkItem_ref.SetLastError(tpmsCompleted, '');
+          WorkItem_ref.SetLastError(tsCompleted, '');
           {$IFDEF LogThreadPool}Log('Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms', [Description, WorkItem_ref.Description, Round((stopUserTime - startUserTime)/10000), Round((stopKernelTime - startKernelTime)/10000)]);{$ENDIF LogThreadPool}
         except
           on E: Exception do begin
 // TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Execute
 //            LogSilentException(ClassName+'.Execute');
             {$IFDEF LogThreadPool}Log('Thread %s caught exception %s during exection of %s', [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
-//            WorkItem_ref.SetLastError(tpmsException, E.Message);
+            WorkItem_ref.SetLastError(tsException, E.Message);
             owtRemoveFromPool := true;
           end;
         end;
@@ -308,21 +349,19 @@ begin
     if not assigned(WorkItem_ref) then
       Result := false
     else begin
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.GetWorkItemInfo
-//      scheduled_ms := WorkItem_ref.Scheduled_ms;
-//      started_ms := WorkItem_ref.Started_ms;
-//      description := WorkItem_ref.Description; UniqueString(description);
+      scheduled_ms := WorkItem_ref.Scheduled_ms;
+      started_ms := WorkItem_ref.Started_ms;
+      description := WorkItem_ref.Description; UniqueString(description);
       Result := true;
     end;
   finally owtWorkItemLock.Release; end;
 end; { TOTPWorkerThread.GetWorkItemInfo }
 
-function TOTPWorkerThread.IsExecuting(workItemID: int64): boolean;
+function TOTPWorkerThread.IsExecuting(taskID: int64): boolean;
 begin
   owtWorkItemLock.Acquire;
   try
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.IsExecuting
-//    Result := assigned(WorkItem_ref) and (WorkItem_ref.UniqueID = workItemID);
+    Result := assigned(WorkItem_ref) and (WorkItem_ref.UniqueID = taskID);
   finally owtWorkItemLock.Release; end;
 end; { TOTPWorkerThread.IsExecuting }
 
@@ -337,11 +376,10 @@ function TOTPWorkerThread.WorkItemDescription: string;
 begin
   owtWorkItemLock.Acquire;
   try
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.WorkItemDescription
-//    if assigned(WorkItem_ref) then begin
-//      Result := WorkItem_ref.Description;
-//    end
-//    else
+    if assigned(WorkItem_ref) then begin
+      Result := WorkItem_ref.Description;
+    end
+    else
       Result := '';
   finally owtWorkItemLock.Release; end;
 end; { TOTPWorkerThread.WorkItemDescription }
@@ -407,8 +445,7 @@ begin
   end;
   if assigned(worker) then begin
     {$IFDEF LogThreadPool}Log('Started %s', [workItem.Description]);{$ENDIF LogThreadPool}
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.ScheduleNext
-//    workItem.wiStarted_ms := DSiTimeGetTime64;
+    workItem.Started_ms := DSiTimeGetTime64;
     worker.WorkItem_ref := workItem;
     SetEvent(worker.NewWorkEvent);
   end
