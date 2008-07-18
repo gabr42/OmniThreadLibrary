@@ -47,6 +47,10 @@ const
   CDefaultIdleWorkerThreadTimeout_sec = 10;
   CDefaultWaitOnTerminate_sec         = 30;
 
+  // error codes
+  ERR_EXECUTION_QUEUE_TOO_LONG = -1;
+  ERR_WORK_ITEM_TOO_OLD        = -2;
+
 type
   IOmniThreadPool = interface ['{1FA74554-1866-46DD-AC50-F0403E378682}']
     function  GetIdleWorkerThreadTimeout_sec: integer;
@@ -107,6 +111,7 @@ uses
   Contnrs,
   DSiWin32,
   SpinLock,
+  HVStringBuilder,
   OtlCommon;
 
 const
@@ -122,22 +127,23 @@ type
 
   TOTPWorkItem = class
   strict private
+    owiScheduledAt       : TDateTime;
     owiLastError         : string;
     owiScheduled_ms      : int64;
-    owiStarted_ms        : int64;
+    owiStartedAt         : TDateTime;
     owiStatus            : TOTPTaskStatus;
     owiTask              : IOmniTask;
     owiTerminateExecution: boolean;
-  private
-    function GetUniqueID: int64;
-  protected
-    procedure SetLastError(status: TOTPTaskStatus; const errorMsg: string);
+  strict protected
+    function  GetUniqueID: int64;
   public
     constructor Create(task: IOmniTask);
     function  Description: string;
+    procedure SetLastError(status: TOTPTaskStatus; const errorMsg: string);
     property LastError: string read owiLastError;
+    property ScheduledAt: TDateTime read owiScheduledAt;
     property Scheduled_ms: int64 read owiScheduled_ms;
-    property Started_ms: int64 read owiStarted_ms write owiStarted_ms;
+    property StartedAt: TDateTime read owiStartedAt write owiStartedAt;
     property Status: TOTPTaskStatus read owiStatus;
     property TerminateExecution: boolean read owiTerminateExecution write owiTerminateExecution;
     property UniqueID: int64 read GetUniqueID;
@@ -165,7 +171,7 @@ type
     function  Asy_TerminateWorkItem: boolean;
     function  Description: string;
     procedure Execute; override;
-    function  GetWorkItemInfo(var scheduled_ms, started_ms: int64;
+    function  GetWorkItemInfo(var scheduledAt, startedAt: TDateTime;
       var description: string): boolean;
     function  IsExecuting(taskID: int64): boolean;
     function  WorkItemDescription: string;
@@ -225,6 +231,7 @@ type
   public
     constructor Create(const name: string);
     destructor  Destroy; override;
+    function GetActiveWorkItemDescriptions: string;
     procedure Schedule(task: IOmniTask);
     property IdleWorkerThreadTimeout_sec: integer read GetIdleWorkerThreadTimeout_sec
       write SetIdleWorkerThreadTimeout_sec;
@@ -263,6 +270,9 @@ constructor TOTPWorkItem.Create(task: IOmniTask);
 begin
   inherited Create;
   owiTask := task;
+  owiScheduledAt := Now;
+  owiScheduled_ms := DSiTimeGetTime64;
+  SetLastError(tsUnknownError, 'Scheduled');
 end; { TOTPWorkItem.Create }
 
 function TOTPWorkItem.Description: string;
@@ -331,8 +341,7 @@ begin
       workItem := WorkItem_ref;
       WorkItem_ref := nil;
       workItem.SetLastError(tsCanceled, 'Cancelled');
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Asy_TerminateWorkItem
-//      Owner.Asy_RequestCompleted(workItem, Self);
+      Owner.Asy_RequestCompleted(workItem, Self);
       Result := true;
     end;
   finally owtWorkItemLock.Release end;
@@ -356,8 +365,7 @@ var
   workItem       : TOTPWorkItem;
 begin
   {$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);{$ENDIF LogThreadPool}
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Execute
-//    owtOwner.Asy_ForwardThreadCreated(ThreadID);
+    owtOwner.Asy_ForwardThreadCreated(ThreadID);
     try
       while DSiWaitForTwoObjects(owtNewWorkEvent, TerminateEvent, false, INFINITE) = WAIT_OBJECT_0 do begin
         try
@@ -385,17 +393,15 @@ begin
           WorkItem_ref := nil;
           if assigned(workItem) then begin
             {$IFDEF LogThreadPool}Log('Thread %s sending notification of completed work item %s', [Description, workItem.Description]);{$ENDIF LogThreadPool}
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOTPWorkerThread.Execute
-//            Owner.Asy_RequestCompleted(workItem, Self);
+            Owner.Asy_RequestCompleted(workItem, Self);
           end;
         finally owtWorkItemLock.Release; end;
       end; //while
-// TODO 1Primoz Gabrijelcic : implement: TOTPWorkerThread.Execute
-    finally {owtOwner.Asy_ForwardThreadDestroying(ThreadID);} end;
+    finally owtOwner.Asy_ForwardThreadDestroying(ThreadID); end;
   {$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);{$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Execute }
 
-function TOTPWorkerThread.GetWorkItemInfo(var scheduled_ms, started_ms: int64; var
+function TOTPWorkerThread.GetWorkItemInfo(var scheduledAt, startedAt: TDateTime; var
   description: string): boolean;
 begin
   owtWorkItemLock.Acquire;
@@ -403,8 +409,8 @@ begin
     if not assigned(WorkItem_ref) then
       Result := false
     else begin
-      scheduled_ms := WorkItem_ref.Scheduled_ms;
-      started_ms := WorkItem_ref.Started_ms;
+      scheduledAt := WorkItem_ref.ScheduledAt;
+      startedAt := WorkItem_ref.StartedAt;
       description := WorkItem_ref.Description; UniqueString(description);
       Result := true;
     end;
@@ -472,7 +478,7 @@ end; { TOmniThreadPool.Destroy }
 
 procedure TOmniThreadPool.Asy_ForwardThreadCreated(threadID: DWORD);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.Asy_ForwardThreadCreated
+// TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.Asy_ForwardThreadCreated
 //  if assigned(OnWorkerThreadCreated_Asy) then
 //    OnWorkerThreadCreated_Asy(Self, threadID);
 end; { TOmniThreadPool.Asy_ForwardThreadCreated }
@@ -494,6 +500,30 @@ begin
   else
     PostMessage(otpHWnd, WM_REQUEST_COMPLETED, WParam(workItem), LParam(worker));
 end; { TOmniThreadPool.Asy_RequestCompleted }
+
+function TOmniThreadPool.GetActiveWorkItemDescriptions: string;
+var
+  description   : string;
+  iWorker       : integer;
+  sbDescriptions: StringBuilder;
+  scheduledAt   : TDateTime;
+  startedAt     : TDateTime;
+  worker        : TOTPWorkerThread;
+begin
+  sbDescriptions := StringBuilder.Create;
+  try
+    for iWorker := 0 to otpRunningWorkers.Count - 1 do begin
+      worker := TOTPWorkerThread(otpRunningWorkers[iWorker]);
+      if worker.GetWorkItemInfo(scheduledAt, startedAt, description) then
+        sbDescriptions.
+          Append('[').Append(iWorker+1).Append('] ').
+          Append(FormatDateTime('hh:nn:ss', scheduledAt)).Append(' / ').
+          Append(FormatDateTime('hh:nn:ss', startedAt)).Append(' ').
+          Append(description);
+    end;
+  Result := sbDescriptions.ToString;
+  finally FreeAndNil(sbDescriptions); end;
+end; { TGpThreadPool.GetActiveWorkItemDescriptions }
 
 function TOmniThreadPool.GetIdleWorkerThreadTimeout_sec: integer;
 begin
@@ -570,22 +600,19 @@ begin
 end; { TGpThreadPool.Log }
 
 procedure TOmniThreadPool.MaintainanceTimer(Sender: TObject);
-//var
-//  iWorker: integer;
-//  worker : TOTPWorkerThread;
+var
+  iWorker: integer;
+  worker : TOTPWorkerThread;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.MaintainanceTimer
-  (*
   if IdleWorkerThreadTimeout_sec > 0 then begin
     iWorker := 0;
-    while (tpIdleWorkers.Count > tpMinWorkers) and (iWorker < tpIdleWorkers.Count) do begin
-      worker := TOTPWorkerThread(tpIdleWorkers[iWorker]);
-      if (worker.StartStopping_UTC = 0) and
-         ((worker.StartIdle_UTC + IdleWorkerThreadTimeout_sec/SecsPerDay) < NowUTC) then
+    while (otpIdleWorkers.Count > otpMinWorkers) and (iWorker < otpIdleWorkers.Count) do begin
+      worker := TOTPWorkerThread(otpIdleWorkers[iWorker]);
+      if (worker.StartStopping_ms = 0) and
+         ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec)*1000) < DSiTimeGetTime64) then
       begin
         {$IFDEF LogThreadPool}Log('Destroying idle thread %s because it was idle for more than %d seconds', [worker.Description, IdleWorkerThreadTimeout_sec]);{$ENDIF LogThreadPool}
-        {$IFDEF LogThreadPoolQueues}LogQueues('Stopping idle worker %d', [worker.ThreadID]);{$ENDIF LogThreadPoolQueues}
-        tpIdleWorkers.Delete(iWorker);
+        otpIdleWorkers.Delete(iWorker);
         StopThread(worker);
       end
       else
@@ -593,19 +620,18 @@ begin
     end; //while
   end;
   iWorker := 0;
-  while iWorker < tpStoppingWorkers.Count do begin
-    worker := TOTPWorkerThread(tpStoppingWorkers[iWorker]);
+  while iWorker < otpStoppingWorkers.Count do begin
+    worker := TOTPWorkerThread(otpStoppingWorkers[iWorker]);
     if (not assigned(worker.WorkItem_ref)) or
-       ((worker.StartStopping_UTC + WaitOnTerminate_sec/SecsPerDay) < NowUTC) then
+       ((worker.StartStopping_ms + int64(WaitOnTerminate_sec)*1000) < DSiTimeGetTime64) then
     begin
-      tpStoppingWorkers.Delete(iWorker);
+      otpStoppingWorkers.Delete(iWorker);
       {$IFDEF LogThreadPool}Log('Removing stopped thread %s', [worker.Description]);{$ENDIF LogThreadPool}
       FreeAndNil(worker);
     end
     else
       Inc(iWorker);
   end;
-  *)
 end; { TOmniThreadPool.MaintainanceTimer }
 
 ///<summary>Counts number of threads in the 'stopping' queue that are still doing work.</summary>
@@ -624,50 +650,45 @@ begin
 end; { TOmniThreadPool.NumRunningStoppedThreads }
 
 procedure TOmniThreadPool.PruneWorkingQueue;
-//var
-//  iWorkItem      : integer;
-//  maxWaitTime_UTC: TDateTime;
-//  workItem       : TOTPWorkItem;
+var
+  iWorkItem     : integer;
+  maxWaitTime_ms: int64;
+  workItem      : TOTPWorkItem;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.PruneWorkingQueue
-  (*
-  if tpMaxQueueLength > 0 then begin
-    while tpWorkItemQueue.Count > tpMaxQueueLength do begin
-      workItem := TGpTPWorkItem(tpWorkItemQueue[tpWorkItemQueue.Count - 1]);
+  if otpMaxQueued > 0 then begin
+    while otpWorkItemQueue.Count > otpMaxQueued do begin
+      workItem := TOTPWorkItem(otpWorkItemQueue[otpWorkItemQueue.Count - 1]);
       {$IFDEF LogThreadPool}Log('Removing request %s from work item queue because queue length > %d', [workItem.Description, tpMaxQueueLength]);{$ENDIF LogThreadPool}
-      {$IFDEF LogThreadPoolQueues}LogQueues('Removing work item %s from too long queue', [workItem.Description]);{$ENDIF LogThreadPoolQueues}
-      tpWorkItemQueue.Delete(tpWorkItemQueue.Count - 1);
-      workItem.SetLastError(tpmsServerBusy,
-        Format('Execution queue is too long (%d work items)', [tpWorkItemQueue.Count]));
+      otpWorkItemQueue.Delete(otpWorkItemQueue.Count - 1);
+      workItem.SetLastError(tsServerBusy,
+        Format('Execution queue is too long (%d work items)', [otpWorkItemQueue.Count]));
       ReportError(ERR_EXECUTION_QUEUE_TOO_LONG, workItem.LastError);
       Asy_RequestCompleted(workItem, nil);
     end; //while
   end;
-  if tpMaxQueuedTime_sec > 0 then begin
+  if otpMaxQueuedTime_sec > 0 then begin
     iWorkItem := 0;
-    while iWorkItem < tpWorkItemQueue.Count do begin
-      workItem := TGpTPWorkItem(tpWorkItemQueue[iWorkItem]);
-      maxWaitTime_UTC := workItem.Scheduled_UTC + tpMaxQueuedTime_sec/SecsPerDay;
-      if maxWaitTime_UTC > NowUTC then
+    while iWorkItem < otpWorkItemQueue.Count do begin
+      workItem := TOTPWorkItem(otpWorkItemQueue[iWorkItem]);
+      maxWaitTime_ms := workItem.Scheduled_ms + int64(otpMaxQueuedTime_sec)*1000;
+      if maxWaitTime_ms > DSiTimeGetTime64 then
         Inc(iWorkItem)
       else begin
         {$IFDEF LogThreadPool}Log('Removing request %s from work item queue because it is older than %d seconds', [workItem.Description, tpMaxQueuedTime_sec]);{$ENDIF LogThreadPool}
-        {$IFDEF LogThreadPoolQueues}LogQueues('Removing old work item %s', [workItem.Description]);{$ENDIF LogThreadPoolQueues}
-        tpWorkItemQueue.Delete(iWorkItem);
-        workItem.SetLastError(tpmsServerBusy, Format(
+        otpWorkItemQueue.Delete(iWorkItem);
+        workItem.SetLastError(tsServerBusy, Format(
           'Maximum queued time exceeded.' +
           ' Pool = %0:s, Now = %1:s, Max executing = %2:d,' +
           ' Removed entry queue time = %3:s, Removed entry description = %4:s.' +
           ' Active entries: %5:s',
           [{0}Name, {1}FormatDateTime('hh:nn:ss', Now), {2}MaxExecuting,
-           {3}FormatDateTime('hh:nn:ss', UTCToLocalTime(workItem.Scheduled_UTC)),
+           {3}FormatDateTime('hh:nn:ss', workItem.ScheduledAt),
            {4}workItem.Description, {5}GetActiveWorkItemDescriptions]));
         ReportError(ERR_WORK_ITEM_TOO_OLD, workItem.LastError);
         Asy_RequestCompleted(workItem, nil);
       end;
     end; //while
   end;
-  *)
 end; { TOmniThreadPool.PruneWorkingQueue } 
 
 procedure TOmniThreadPool.ReportError(errorCode: integer; const errorMessage: string);
@@ -701,7 +722,7 @@ begin
   end;
   if assigned(worker) then begin
     {$IFDEF LogThreadPool}Log('Started %s', [workItem.Description]);{$ENDIF LogThreadPool}
-    workItem.Started_ms := DSiTimeGetTime64;
+    workItem.StartedAt := Now;
     worker.WorkItem_ref := workItem;
     SetEvent(worker.NewWorkEvent);
   end
@@ -760,27 +781,24 @@ begin
 end; { TOmniThreadPool.StopThread }
 
 procedure TOmniThreadPool.WndProc(var msg: TMessage);
-//var
-//  worker  : TOTPWorkerThread;
-//  workItem: TOTPWorkItem;
+var
+  worker  : TOTPWorkerThread;
+  workItem: TOTPWorkItem;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.WndProc
-  (*
   if msg.Msg = WM_REQUEST_COMPLETED then begin
     workItem := TOTPWorkItem(msg.WParam);
     worker := TOTPWorkerThread(msg.LParam);
     {$IFDEF LogThreadPool}Log('Thread %s completed request %s with status %s:%s', [worker.Description, workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]);{$ENDIF LogThreadPool}
-    {$IFDEF LogThreadPoolQueues}LogQueues('Request %s completed with status %s:%s',
-      [workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]);{$ENDIF LogThreadPoolQueues}
-    if assigned(tpOnWorkItemDone) and (not tpDestroying) then
-      tpOnWorkItemDone(Self, workItem);
+// TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.WndProc    
+//    if assigned(tpOnWorkItemDone) and (not tpDestroying) then
+//      tpOnWorkItemDone(Self, workItem);
     {$IFDEF LogThreadPool}Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
     FreeAndNil(workItem);
     if assigned(worker) then begin // move it back to the idle queue
-      tpRunningWorkers.Extract(worker);
-      if (not worker.RemoveFromPool) and (tpRunningWorkers.Count < tpMaxExecuting) then begin
-        worker.StartIdle_UTC := NowUTC;
-        tpIdleWorkers.Add(worker);
+      otpRunningWorkers.Extract(worker);
+      if (not worker.RemoveFromPool) and (otpRunningWorkers.Count < otpMaxExecuting) then begin
+        worker.StartIdle_ms := DSiTimeGetTime64;
+        otpIdleWorkers.Add(worker);
         {$IFDEF LogThreadPool}Log('Thread %s moved back to the idle list, num idle = %d, num running = %d[%d]', [worker.Description, tpIdleWorkers.Count, tpRunningWorkers.Count, MaxExecuting]);{$ENDIF LogThreadPool}
       end
       else begin
@@ -788,18 +806,17 @@ begin
         StopThread(worker);
       end;
     end;
-    if (not tpDestroying) and (tpWorkItemQueue.Count > 0) and
-       ((tpIdleWorkers.Count > 0) or (tpRunningWorkers.Count < MaxExecuting)) then
+    if (not otpDestroying) and (otpWorkItemQueue.Count > 0) and
+       ((otpIdleWorkers.Count > 0) or (otpRunningWorkers.Count < MaxExecuting)) then
     begin
-      workItem := TOTPWorkItem(tpWorkItemQueue[0]);
-      tpWorkItemQueue.Delete(0);
+      workItem := TOTPWorkItem(otpWorkItemQueue[0]);
+      otpWorkItemQueue.Delete(0);
       {$IFDEF LogThreadPool}Log('Dequeueing %s ', [workItem.Description]);{$ENDIF LogThreadPool}
       ScheduleNext(workItem);
     end;
   end
   else
-    msg.Result := DefWindowProc(tpHWnd, msg.msg, msg.WParam, Msg.LParam);
-  *)
+    msg.Result := DefWindowProc(otpHWnd, msg.msg, msg.WParam, msg.LParam);
 end; { TOmniThreadPool.WndProc }
 
 initialization
