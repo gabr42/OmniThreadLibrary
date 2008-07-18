@@ -78,8 +78,9 @@ type
   }
   end;
 
-  function GlobalOmniThreadPool: IOmniThreadPool;
   function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
+
+  function GlobalOmniThreadPool: IOmniThreadPool;
 
 implementation
 
@@ -87,9 +88,21 @@ uses
   SysUtils;
 
 type
+  TOTPWorkItem = class
+  strict private
+    owiTask: IOmniTask;
+  public
+    constructor Create(task: IOmniTask);
+    property Task: IOmniTask read owiTask write owiTask;
+  end; { TOTPWorkItem }
+
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool)
   strict private
     otpName: string;
+  strict
+  private
+    procedure PruneWorkingQueue; protected
+    procedure ScheduleNext(workItem: TOTPWorkItem);
   protected
     function  GetName: string;
     procedure SetName(const value: string);
@@ -99,6 +112,9 @@ type
     property Name: string read GetName write SetName;
   end; { TOmniThreadPool }
 
+const
+  CGlobalOmniThreadPoolName = 'GlobalOmniThreadPool';
+
 var
   GOmniThreadPool: IOmniThreadPool = nil;
 
@@ -107,7 +123,7 @@ var
 function GlobalOmniThreadPool: IOmniThreadPool;
 begin
   if not assigned(GOmniThreadPool) then
-    GOmniThreadPool := CreateThreadPool('GlobalOmniThreadPool');
+    GOmniThreadPool := CreateThreadPool(CGlobalOmniThreadPoolName);
   Result := GOmniThreadPool;
 end; { GlobalOmniThreadPool }
 
@@ -115,6 +131,16 @@ function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
 begin
   Result := TOmniThreadPool.Create(threadPoolName);
 end; { CreateThreadPool }
+
+{ TOTPWorkItem }
+
+constructor TOTPWorkItem.Create(task: IOmniTask);
+begin
+  inherited Create;
+  owiTask := task;
+end;
+
+{ TOmniThreadPool }
 
 constructor TOmniThreadPool.Create(const name: string);
 begin
@@ -127,11 +153,21 @@ begin
   Result := otpName;
 end; { TOmniThreadPool.GetName }
 
+procedure TOmniThreadPool.PruneWorkingQueue;
+begin
+  // TODO -cMM: TOmniThreadPool.PruneWorkingQueue default body inserted
+end; { TOmniThreadPool.PruneWorkingQueue } 
+
 procedure TOmniThreadPool.Schedule(task: IOmniTask);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.Schedule
-  raise Exception.Create('TOmniThreadPool.Schedule: not implemented');
+  ScheduleNext(TOTPWorkItem.Create(task));
+  PruneWorkingQueue;
 end; { TOmniThreadPool.Schedule }
+
+procedure TOmniThreadPool.ScheduleNext(workItem: TOTPWorkItem);
+begin
+  // TODO -cMM: TOmniThreadPool.ScheduleNext default body inserted
+end;
 
 procedure TOmniThreadPool.SetName(const value: string);
 begin

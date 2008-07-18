@@ -33,9 +33,9 @@
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <DCCReference Include="..\OtlRegister.pas" />
-    <DCCReference Include="OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="rtl.dcp" />
-    <DCCReference Include="vcl.dcp" />
-    <DCCReference Include="vclx.dcp" />
+    <DCCReference Include="..\tests\11_ThreadPool\OmniThreadLibraryRuntime.dcp" />
+    <DCCReference Include="..\tests\11_ThreadPool\rtl.dcp" />
+    <DCCReference Include="..\tests\11_ThreadPool\vcl.dcp" />
+    <DCCReference Include="..\tests\11_ThreadPool\vclx.dcp" />
   </ItemGroup>
 </Project>
