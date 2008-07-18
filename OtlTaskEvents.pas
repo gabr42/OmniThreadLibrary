@@ -60,7 +60,7 @@ type
     tedOnTaskMessage   : TOmniTaskEvent;
     tedOnTaskTerminated: TOmniTaskEvent;
   strict protected
-    function  LocateTask(taskUniqueID: cardinal): IOmniTaskControl;
+    function  LocateTask(taskUniqueID: int64): IOmniTaskControl;
     procedure WndProc(var msg: TMessage);
   public
     constructor Create(AOwner: TComponent); override;
@@ -112,7 +112,7 @@ begin
   tedMonitoredTasks.Remove(task);
 end; { TOmniTaskEventDispatch.Detach }
 
-function TOmniTaskEventDispatch.LocateTask(taskUniqueID: cardinal): IOmniTaskControl;
+function TOmniTaskEventDispatch.LocateTask(taskUniqueID: int64): IOmniTaskControl;
 var
   intf: IInterface;
 begin
@@ -134,10 +134,13 @@ end; { TOmniTaskEventDispatch.Monitor }
 procedure TOmniTaskEventDispatch.WndProc(var msg: TMessage);
 var
   task: IOmniTaskControl;
+  taskID: int64;
 begin
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
-      task := LocateTask(cardinal(msg.WParam));
+      Int64Rec(taskID).Lo := cardinal(msg.WParam);
+      Int64Rec(taskID).Hi := cardinal(msg.LParam);
+      task := LocateTask(taskID);
       if assigned(task) then
         OnTaskMessage(task);
     end;
@@ -145,7 +148,9 @@ begin
   end
   else if msg.Msg = COmniTaskMsg_Terminated then begin
     if assigned(OnTaskTerminated) then begin
-      task := LocateTask(cardinal(msg.WParam));
+      Int64Rec(taskID).Lo := cardinal(msg.WParam);
+      Int64Rec(taskID).Hi := cardinal(msg.LParam);
+      task := LocateTask(taskID);
       if assigned(task) then
         OnTaskTerminated(task);
     end;
