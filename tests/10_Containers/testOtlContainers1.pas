@@ -4,15 +4,17 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls,
+  Dialogs, StdCtrls, ExtCtrls, Contnrs,
+  OtlCommon,
+  OtlComm,
   OtlTask,
   OtlTaskControl,
   OtlContainers,
-  OtlComm,
-  OtlTaskEvents, OtlCommon;
+  OtlTaskEvents;
 
 type
   TfrmTestOtlContainers = class(TForm)
+    btnAllTests                : TButton;
     btnBaseQueue2to1           : TButton;
     btnBaseQueue4to1           : TButton;
     btnBaseQueueCorrectnessTest: TButton;
@@ -34,9 +36,12 @@ type
     btnStack4to1               : TButton;
     btnStackCorrectnessTest    : TButton;
     btnStackStressTest         : TButton;
+    inpTestDuration_sec        : TLabeledEdit;
     lbLog                      : TListBox;
     OmniTaskEventDispatch1     : TOmniTaskEventDispatch;
     SaveDialog                 : TSaveDialog;
+    btnClearLog: TButton;
+    procedure btnAllTestsClick(Sender: TObject);
     procedure btnBaseQueue2to1Click(Sender: TObject);
     procedure btnBaseQueue4to1Click(Sender: TObject);
     procedure btnBaseQueueStressTestClick(Sender: TObject);
@@ -45,6 +50,7 @@ type
     procedure btnBaseStack2to2Click(Sender: TObject);
     procedure btnBaseStack4to1Click(Sender: TObject);
     procedure btnBaseStackStressTestClick(Sender: TObject);
+    procedure btnClearLogClick(Sender: TObject);
     procedure btnQueue2to1Click(Sender: TObject);
     procedure btnQueue4to1Click(Sender: TObject);
     procedure btnQueueCorrectnessTestClick(Sender: TObject);
@@ -60,13 +66,16 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
   private
-    FBaseQueue: TOmniBaseQueue;
-    FBaseStack: TOmniBaseStack;
-    FCounter  : IOmniCounter;
-    FQueue    : TOmniQueue;
-    FReaders  : array [1..4] of IOmniTaskControl;
-    FStack    : TOmniStack;
-    FWriters  : array [1..4] of IOmniTaskControl;
+    FAllTestsStart: int64;
+    FBaseQueue    : TOmniBaseQueue;
+    FBaseStack    : TOmniBaseStack;
+    FCounter      : IOmniCounter;
+    FQueue        : TOmniQueue;
+    FQueuedTests  : TObjectList;
+    FReaders      : array [1..4] of IOmniTaskControl;
+    FStack        : TOmniStack;
+    FWriters      : array [1..4] of IOmniTaskControl;
+    function  GetTestDuration_sec: integer;
     procedure Log(const msg: string);
     procedure StartBaseQueueStressTest(numWriters, numReaders: integer);
     procedure StartBaseStackStressTest(numWriters, numReaders: integer);
@@ -88,7 +97,6 @@ uses
 
 const
   CTestQueueLength  = 1000;
-  CTestDuration_sec = 10;
 
   // GUI -> thread messages
   MSG_START_STACK_STRESS_TEST      = 1;
@@ -171,6 +179,28 @@ begin
         .Run;
 end;
 
+procedure TfrmTestOtlContainers.btnAllTestsClick(Sender: TObject);
+begin
+  FQueuedTests.Add(btnBaseStackStressTest);
+  FQueuedTests.Add(btnBaseStack2to1);
+  FQueuedTests.Add(btnBaseStack4to1);
+  FQueuedTests.Add(btnBaseStack1to2);
+  FQueuedTests.Add(btnBaseStack2to2);
+  FQueuedTests.Add(btnStackStressTest);
+  FQueuedTests.Add(btnStack2to1);
+  FQueuedTests.Add(btnStack4to1);
+  FQueuedTests.Add(btnStack1to2);
+  FQueuedTests.Add(btnStack2to2);
+  FQueuedTests.Add(btnBaseQueueStressTest);
+  FQueuedTests.Add(btnBaseQueue2to1);
+  FQueuedTests.Add(btnBaseQueue4to1);
+  FQueuedTests.Add(btnQueueStressTest);
+  FQueuedTests.Add(btnQueue2to1);
+  FQueuedTests.Add(btnQueue4to1);
+  FAllTestsStart := DSiTimeGetTime64;
+  (FQueuedTests[0] as TButton).Click;
+end;
+
 procedure TfrmTestOtlContainers.btnBaseQueue2to1Click(Sender: TObject);
 begin
   StartBaseQueueStressTest(2, 1);
@@ -209,6 +239,11 @@ end;
 procedure TfrmTestOtlContainers.btnBaseStackStressTestClick(Sender: TObject);
 begin
   StartBaseStackStressTest(1, 1);
+end;
+
+procedure TfrmTestOtlContainers.btnClearLogClick(Sender: TObject);
+begin
+  lbLog.Clear;
 end;
 
 procedure TfrmTestOtlContainers.btnQueue2to1Click(Sender: TObject);
@@ -292,6 +327,7 @@ begin
   FBaseQueue.Initialize(CTestQueueLength, SizeOf(integer));
   FQueue := TOmniQueue.Create(CTestQueueLength, SizeOf(integer), [coEnableNotify]);
   FCounter := CreateCounter;
+  FQueuedTests := TObjectList.Create(false);
   AllocateTasks(1, 1);
 end;
 
@@ -309,15 +345,25 @@ begin
       FReaders[iTask].Terminate;
       FReaders[iTask] := nil;
     end;
+  FreeAndNil(FQueuedTests);
   FreeAndNil(FBaseStack);
   FreeAndNil(FStack);
   FreeAndNil(FBaseQueue);
   FreeAndNil(FQueue);
 end;
 
+function TfrmTestOtlContainers.GetTestDuration_sec: integer;
+var
+  c: integer;
+begin
+  Val(inpTestDuration_sec.Text, Result, c);
+  if c <> 0 then
+    Result := 10;
+end; { TfrmTestOtlContainers.GetTestDuration_sec }
+
 procedure TfrmTestOtlContainers.Log(const msg: string);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(msg);
+  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn ', Now) + msg);
   Application.ProcessMessages;
 end;
 
@@ -347,16 +393,24 @@ begin
           FReaders[1].Comm.Send(MSG_START_STACK_READ,
             [CTestQueueLength, cardinal(msg.MsgData)]);
         end;
-      MSG_STACK_READ_COMPLETED:
-        Log('Test completed');
+      MSG_STACK_READ_COMPLETED, MSG_QUEUE_READ_COMPLETED:
+        begin
+          Log('Test completed');
+          if FQueuedTests.Count > 0 then begin
+            FQueuedTests.Delete(0);
+            if FQueuedTests.Count = 0 then
+              Log(Format('All tests completed. Total run time = %d seconds',
+                [Round((DSiTimeGetTime64 - FAllTestsStart)/1000)]))
+            else
+              (FQueuedTests[0] as TButton).Click;
+          end;
+        end;
       MSG_QUEUE_WRITE_COMPLETED:
         begin
           Log('Reading from queue');
           FReaders[1].Comm.Send(MSG_START_QUEUE_READ,
             [CTestQueueLength, cardinal(msg.MsgData)]);
         end;
-      MSG_QUEUE_READ_COMPLETED:
-        Log('Test completed');
       MSG_TEST_FAILED:
         Log('Write test failed. ' + msg.MsgData);
       else
@@ -369,14 +423,14 @@ var
   iTask: integer;
 begin
   Log(Format('Starting %d second base queue stress test, %d -> %d',
-    [CTestDuration_sec, numWriters, numReaders]));
+    [GetTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FBaseQueue.Empty;
   FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
-    FReaders[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, CTestDuration_sec);
+    FReaders[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, GetTestDuration_sec);
   for iTask := 1 to numWriters do
-    FWriters[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, CTestDuration_sec);
+    FWriters[iTask].Comm.Send(MSG_START_BASE_QUEUE_STRESS_TEST, GetTestDuration_sec);
 end;
 
 procedure TfrmTestOtlContainers.StartBaseStackStressTest(numWriters, numReaders: integer);
@@ -384,14 +438,14 @@ var
   iTask: integer;
 begin
   Log(Format('Starting %d second base stack stress test, %d -> %d',
-    [CTestDuration_sec, numWriters, numReaders]));
+    [GetTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FBaseStack.Empty;
   FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
-    FReaders[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
+    FReaders[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, GetTestDuration_sec);
   for iTask := 1 to numWriters do
-    FWriters[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, CTestDuration_sec);
+    FWriters[iTask].Comm.Send(MSG_START_BASE_STACK_STRESS_TEST, GetTestDuration_sec);
 end;
 
 procedure TfrmTestOtlContainers.StartQueueStressTest(numWriters, numReaders: integer);
@@ -399,14 +453,14 @@ var
   iTask: integer;
 begin
   Log(Format('Starting %d second queue stress test, %d -> %d',
-    [CTestDuration_sec, numWriters, numReaders]));
+    [GetTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FQueue.Empty;
   FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
-    FReaders[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
+    FReaders[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, GetTestDuration_sec);
   for iTask := 1 to numWriters do
-    FWriters[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, CTestDuration_sec);
+    FWriters[iTask].Comm.Send(MSG_START_QUEUE_STRESS_TEST, GetTestDuration_sec);
 end;
 
 procedure TfrmTestOtlContainers.StartStackStressTest(numWriters, numReaders: integer);
@@ -414,14 +468,14 @@ var
   iTask: integer;
 begin
   Log(Format('Starting %d second stack stress test, %d -> %d',
-    [CTestDuration_sec, numWriters, numReaders]));
+    [GetTestDuration_sec, numWriters, numReaders]));
   AllocateTasks(numWriters, numReaders);
   FStack.Empty;
   FCounter.Value := numReaders + numWriters;
   for iTask := 1 to numReaders do
-    FReaders[iTask].Comm.Send(MSG_START_STACK_STRESS_TEST, CTestDuration_sec);
+    FReaders[iTask].Comm.Send(MSG_START_STACK_STRESS_TEST, GetTestDuration_sec);
   for iTask := 1 to numWriters do
-    FWriters[iTask].Comm.Send(MSG_START_STACK_STRESS_TEST, CTestDuration_sec);
+    FWriters[iTask].Comm.Send(MSG_START_STACK_STRESS_TEST, GetTestDuration_sec);
 end;
 
 { TCommTester }
