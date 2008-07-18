@@ -79,10 +79,14 @@ type
 
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
 
+  procedure SetThreadName(const name: string);
+
 implementation
 
 uses
-  SysUtils, GpStuff;
+  Windows,
+  SysUtils,
+  GpStuff;
 
 type
   TOmniCounter = class(TInterfacedObject, IOmniCounter)
@@ -104,6 +108,26 @@ function CreateCounter(initialValue: integer): IOmniCounter;
 begin
   Result := TOmniCounter.Create(initialValue);
 end; { CreateCounter }
+
+procedure SetThreadName(const name: string);
+type
+  TThreadNameInfo = record
+    FType    : LongWord; // must be 0x1000
+    FName    : PChar;    // pointer to name (in user address space)
+    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
+    FFlags   : LongWord; // reserved for future use, must be zero
+  end; { TThreadNameInfo }
+var
+  ThreadNameInfo: TThreadNameInfo;
+begin
+  ThreadNameInfo.FType := $1000;
+  ThreadNameInfo.FName := PChar(name);
+  ThreadNameInfo.FThreadID := $FFFFFFFF;
+  ThreadNameInfo.FFlags := 0;
+  try
+    RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
+  except {ignore} end;
+end; { SetThreadName }
 
 { TOmniValueContainer }
 

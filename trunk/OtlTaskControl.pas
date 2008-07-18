@@ -182,10 +182,6 @@ type
     property WorkerObj_ref: TOmniWorker read oteWorkerObj_ref;
   end; { TOmniTaskExecutor }
 
-  IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']
-    procedure Execute;
-  end; { IOmniTaskExecutor }
-
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
     otCommChannel    : IOmniTwoWayChannel;
@@ -215,17 +211,18 @@ type
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
     procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
+    property Counter: IOmniCounter read GetCounter;
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
+    property UniqueID: int64 read GetUniqueID;
   end; { TOmniTask }
 
   TOmniThread = class(TThread) // TODO 3 -oPrimoz Gabrijelcic : Factor this class into OtlThread unit?
   strict private
     otTask: IOmniTask;
   strict protected
-    procedure SetThreadName(const name: string);
   protected
     procedure Execute; override;
   public
@@ -340,7 +337,7 @@ begin
   otExecutor_ref.Asy_Execute(Self);
   if otMonitorWindow <> 0 then
     PostMessage(otMonitorWindow, COmniTaskMsg_Terminated,
-      integer(Int64Rec(otUniqueID).Lo), integer(Int64Rec(otUniqueID).Hi));
+      integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
   SetEvent(otTerminatedEvent);
 end; { TOmniTask.Execute }
 
@@ -943,25 +940,5 @@ begin
   {$ENDIF OTL_DontSetThreadName}
   (otTask as IOmniTaskExecutor).Execute;
 end; { TOmniThread.Execute }
-
-procedure TOmniThread.SetThreadName(const name: string);
-type
-  TThreadNameInfo = record
-    FType    : LongWord; // must be 0x1000
-    FName    : PChar;    // pointer to name (in user address space)
-    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
-    FFlags   : LongWord; // reserved for future use, must be zero
-  end; { TThreadNameInfo }
-var
-  ThreadNameInfo: TThreadNameInfo;
-begin
-  ThreadNameInfo.FType := $1000;
-  ThreadNameInfo.FName := PChar(name);
-  ThreadNameInfo.FThreadID := $FFFFFFFF;
-  ThreadNameInfo.FFlags := 0;
-  try
-    RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
-  except {ignore} end;
-end; { TOmniThread.SetThreadName }
 
 end.
