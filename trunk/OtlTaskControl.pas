@@ -86,7 +86,7 @@ type
     function  GetExitCode: integer;
     function  GetExitMessage: string;
     function  GetName: string;
-    function  GetUniqueID: cardinal;
+    function  GetUniqueID: int64;
   //
     function  Alertable: IOmniTaskControl;
     function  FreeOnTerminate: IOmniTaskControl;
@@ -109,7 +109,7 @@ type
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
     property Name: string read GetName;
-    property UniqueID: cardinal read GetUniqueID;
+    property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
   function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
@@ -196,7 +196,7 @@ type
     otTaskName       : string;
     otTerminatedEvent: TDSiEventHandle;
     otTerminateEvent : TDSiEventHandle;
-    otUniqueID       : cardinal;
+    otUniqueID       : int64;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
@@ -204,11 +204,11 @@ type
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
     function  GetTerminateEvent: THandle; inline;
-    function  GetUniqueID: cardinal; inline;
+    function  GetUniqueID: int64; inline;
     procedure Terminate; inline;
   public
     constructor Create(executor: TOmniTaskExecutor; const taskName: string; parameters:
-      TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal; terminateEvent,
+      TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: int64; terminateEvent,
       terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter: IOmniCounter);
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
@@ -244,7 +244,7 @@ type
     otcTerminatedEvent: TDSiEventHandle;
     otcTerminateEvent : TDSiEventHandle;
     otcThread         : TOmniThread;
-    otcUniqueID       : cardinal;
+    otcUniqueID       : int64;
   strict protected
     function  CreateTask: IOmniTask;
     procedure Initialize;
@@ -254,7 +254,7 @@ type
     function  GetExitMessage: string; inline;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
-    function  GetUniqueID: cardinal; inline;
+    function  GetUniqueID: int64; inline;
     procedure SetOptions(const value: TOmniTaskControlOptions);
   public
     constructor Create(worker: IOmniWorker; const taskName: string); overload;
@@ -283,11 +283,11 @@ type
     property ExitMessage: string read GetExitMessage;
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
-    property UniqueID: cardinal read GetUniqueID;
+    property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
 
 var
-  taskUID: TGp4AlignedInt;
+  taskUID: TGp8AlignedInt;
 
 { exports }
 
@@ -319,7 +319,7 @@ end; { CreateTask }
 { TOmniTask }
 
 constructor TOmniTask.Create(executor: TOmniTaskExecutor; const taskName: string;
-  parameters: TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: cardinal;
+  parameters: TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: int64;
   terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter:
   IOmniCounter);
 begin
@@ -339,7 +339,8 @@ procedure TOmniTask.Execute;
 begin
   otExecutor_ref.Asy_Execute(Self);
   if otMonitorWindow <> 0 then
-    PostMessage(otMonitorWindow, COmniTaskMsg_Terminated, integer(otUniqueID), 0);
+    PostMessage(otMonitorWindow, COmniTaskMsg_Terminated,
+      integer(Int64Rec(otUniqueID).Lo), integer(Int64Rec(otUniqueID).Hi));
   SetEvent(otTerminatedEvent);
 end; { TOmniTask.Execute }
 
@@ -373,7 +374,7 @@ begin
   Result := otTerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
 
-function TOmniTask.GetUniqueID: cardinal;
+function TOmniTask.GetUniqueID: int64;
 begin
   Result := otUniqueID;
 end; { TOmniTask.GetUniqueID }
@@ -810,7 +811,7 @@ begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
 
-function TOmniTaskControl.GetUniqueID: cardinal;
+function TOmniTaskControl.GetUniqueID: int64;
 begin
   Result := otcUniqueID;
 end; { TOmniTaskControl.GetUniqueID }
@@ -868,7 +869,8 @@ begin
   if otcParameters.IsLocked then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
   otcMonitorWindow := hWindow;
-  otcCommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage, integer(UniqueID), 0);
+  otcCommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
+    integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 

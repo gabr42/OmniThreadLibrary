@@ -70,7 +70,7 @@ type
     function  GetParam(idxParam: integer): TOmniValue;
     function  GetParamByName(const paramName: string): TOmniValue;
     function  GetTerminateEvent: THandle;
-    function  GetUniqueID: cardinal;
+    function  GetUniqueID: int64;
   //
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
@@ -82,7 +82,7 @@ type
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
-    property UniqueID: cardinal read GetUniqueID;
+    property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
 
 implementation
