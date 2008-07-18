@@ -44,7 +44,8 @@ unit GpStuff;
 interface
 
 uses
-  Windows;
+  Windows,
+  DSiWin32;
 
 {$IFDEF ConditionalExpressions}
   {$IF CompilerVersion >= 17}
@@ -76,6 +77,20 @@ type
     class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal;
     property Value: cardinal read GetValue write SetValue;
   end; { TGp4AlignedInt }
+
+  TGp8AlignedInt = record
+  strict private
+    aiData: packed record
+      DataLo, DataHi: int64;
+    end;
+    function GetValue: int64; inline;
+    procedure SetValue(value: int64); inline;
+  public
+    function Addr: PCardinal; inline;
+    function Decrement: int64;
+    function Increment: int64;
+    property Value: int64 read GetValue write SetValue;
+  end; { TGp8AlignedInt }
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: string; const value: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -339,5 +354,33 @@ class operator TGp4AlignedInt.Subtract(ai: TGp4AlignedInt; i: integer): cardinal
 begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TGp4AlignedInt.Subtract }
+
+{ TGp8AlignedInt }
+
+function TGp8AlignedInt.Addr: PCardinal;
+begin
+  Assert(SizeOf(pointer) = SizeOf(cardinal));
+  Result := PCardinal((cardinal(@aiData) + 7) AND NOT 7);
+end; { TGp8AlignedInt.Addr }
+
+function TGp8AlignedInt.Decrement: int64;
+begin
+  Result := DSiInterlockedDecrement64(PInt64(Addr)^);
+end; { TGp8AlignedInt.Decrement }
+
+function TGp8AlignedInt.GetValue: int64;
+begin
+  Result := Addr^;
+end; { TGp8AlignedInt.GetValue }
+
+function TGp8AlignedInt.Increment: int64;
+begin
+  Result := DSiInterlockedIncrement64(PInt64(Addr)^);
+end; { TGp8AlignedInt.Increment }
+
+procedure TGp8AlignedInt.SetValue(value: int64);
+begin
+  Addr^ := value;
+end; { TGp8AlignedInt.SetValue }
 
 end.
