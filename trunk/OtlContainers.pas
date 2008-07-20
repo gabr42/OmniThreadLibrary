@@ -111,15 +111,13 @@ type
     obcElementSize   : integer;
     obcNumElements   : integer;
     obcPublicChain   : packed record
-      Head: POmniLinkedData;
-      SpinReference: POmniLinkedData;
+      Head         : POmniLinkedData;
+      SpinReference: cardinal;
     end;
-//    obcPSpinReference: POmniLinkedData;
     obcRecycleChain  : packed record
-      Head: POmniLinkedData;
-      SpinReference: POmniLinkedData;
+      Head         : POmniLinkedData;
+      SpinReference: cardinal;
     end;
-//    obcRSpinReference: POmniLinkedData;
     class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
     class function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData; static;
     class procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData); static;
@@ -161,10 +159,9 @@ type
   TOmniBaseQueue = class(TOmniBaseContainer)
   strict protected
     obqDequeuedMessages: packed record
-      Head: POmniLinkedData;
-      SpinReference: POmniLinkedData;
+      Head         : POmniLinkedData;
+      SpinReference: cardinal;
     end;
-//    obcSpinReference   : POmniLinkedData;
   public
     constructor Create;
     function  Dequeue(var value): boolean; virtual;
