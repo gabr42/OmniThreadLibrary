@@ -105,23 +105,22 @@ type
     Data: byte; //user data, variable size
   end; { TLinkedOmniData }
 
+  TOmniHeadAndSpin = packed record
+    Head: POmniLinkedData;
+    Spin: cardinal;
+  end; { TOmniHeadAndSpin }
+
   TOmniBaseContainer = class abstract(TInterfacedObject)
   strict protected
-    obcBuffer        : pointer;
-    obcElementSize   : integer;
-    obcNumElements   : integer;
-    obcPublicChain   : packed record
-      Head         : POmniLinkedData;
-      SpinReference: cardinal;
-    end;
-    obcRecycleChain  : packed record
-      Head         : POmniLinkedData;
-      SpinReference: cardinal;
-    end;
+    obcBuffer      : pointer;
+    obcElementSize : integer;
+    obcNumElements : integer;
+    obcPublicChain : TOmniHeadAndSpin;
+    obcRecycleChain: TOmniHeadAndSpin;
     class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
-    class function  PopLink(var chainHead: POmniLinkedData): POmniLinkedData; static;
-    class procedure PushLink(const link: POmniLinkedData; var chainHead: POmniLinkedData); static;
-    class function  UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData; static;
+    class function  PopLink(var chain: TOmniHeadAndSpin): POmniLinkedData; static;
+    class procedure PushLink(const link: POmniLinkedData; var chain: TOmniHeadAndSpin); static;
+    class function  UnlinkAll(var chain: TOmniHeadAndSpin): POmniLinkedData; static;
   public
     destructor  Destroy; override;
     procedure Empty; virtual;
@@ -158,10 +157,7 @@ type
 
   TOmniBaseQueue = class(TOmniBaseContainer)
   strict protected
-    obqDequeuedMessages: packed record
-      Head         : POmniLinkedData;
-      SpinReference: cardinal;
-    end;
+    obqDequeuedMessages: TOmniHeadAndSpin;
   public
     constructor Create;
     function  Dequeue(var value): boolean; virtual;
@@ -347,10 +343,10 @@ var
   linkedData: POmniLinkedData;
 begin
   repeat
-    linkedData := PopLink(obcPublicChain.Head);
+    linkedData := PopLink(obcPublicChain);
     if not assigned(linkedData) then
       break; //repeat
-    PushLink(linkedData, obcRecycleChain.Head);
+    PushLink(linkedData, obcRecycleChain);
   until false;
 end; { TOmniBaseStack.Empty }
 
@@ -421,13 +417,13 @@ end; { TOmniBaseStack.IsFull }
 
 ///<summary>Removes first element from the chain, atomically.</summary>
 ///<returns>Removed first element. If the chain is empty, returns nil.</returns>
-class function TOmniBaseContainer.PopLink(var chainHead: POmniLinkedData): POmniLinkedData;
+class function TOmniBaseContainer.PopLink(var chain: TOmniHeadAndSpin): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 asm
   push  edi
   push  ebx
-  mov   edi, eax                          //edi = chainHead
+  mov   edi, eax                          //edi = chain.Head
 @Spin:
   mov   ecx, 1                            //Increment spin reference for 1
   lock xadd [edi + 4], ecx                //Get new spin reference to ecx
@@ -446,31 +442,31 @@ asm
 end;
 
 ///<summary>Inserts element at the beginning of the chain, atomically.</summary>
-class procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chainHead:
-  POmniLinkedData);
+class procedure TOmniBaseContainer.PushLink(const link: POmniLinkedData; var chain:
+  TOmniHeadAndSpin);
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 asm
   mov   ecx, eax
-  mov   eax, [edx]                         //ecx = chainHead
+  mov   eax, [edx]                         //edx = chain.Head
 @Spin:
-  mov   [ecx], eax                         //link.Next := chainHead
-  lock cmpxchg [edx], ecx                  //chainHead := link
+  mov   [ecx], eax                         //link.Next := chain.Head
+  lock cmpxchg [edx], ecx                  //chain.Head := link
   jnz   @Spin
 end; { TOmniBaseStack.PushLink }
 
 ///<summary>Removes all elements from a chain, atomically.</summary>
 ///<returns>Head of the chain.</returns>
 ///<since>2008-07-13</since>
-class function TOmniBaseContainer.UnlinkAll(var chainHead: POmniLinkedData): POmniLinkedData;
+class function TOmniBaseContainer.UnlinkAll(var chain: TOmniHeadAndSpin): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                        ^------ < chainHead
+//FILO buffer logic                        ^------ < chain.Head
 asm
   xor   ecx, ecx
   mov   edx, eax
   mov   eax, [edx]
 @Spin:
-  lock cmpxchg [edx], ecx                 //Cut ChainHead
+  lock cmpxchg [edx], ecx                 //Cut Chain.Head
   jnz   @Spin
 end; { TOmniQueue.UnlinkAll }
 
@@ -480,24 +476,24 @@ function TOmniBaseStack.Pop(var value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcPublicChain.Head);
+  linkedData := PopLink(obcPublicChain);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain.Head);
+  PushLink(linkedData, obcRecycleChain);
 end; { TOmniBaseStack.Pop }
 
 function TOmniBaseStack.Push(const value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcRecycleChain.Head);
+  linkedData := PopLink(obcRecycleChain);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChain.Head);
+  PushLink(linkedData, obcPublicChain);
 end; { TOmniBaseStack.Push }
 
 { TOmniStack }
@@ -547,13 +543,13 @@ var
   linkedData: POmniLinkedData;
 begin
   if obqDequeuedMessages.Head = nil then
-    obqDequeuedMessages.Head := InvertOrder(UnlinkAll(obcPublicChain.Head));
-  linkedData := PopLink(obqDequeuedMessages.Head);
+    obqDequeuedMessages.Head := InvertOrder(UnlinkAll(obcPublicChain));
+  linkedData := PopLink(obqDequeuedMessages);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChain.Head);
+  PushLink(linkedData, obcRecycleChain);
 end; { TOmniQueue.Dequeue }
 
 procedure TOmniBaseQueue.Empty;
@@ -562,10 +558,10 @@ var
 begin
   inherited;
   if assigned(obqDequeuedMessages.Head) then repeat
-    linkedData := PopLink(obqDequeuedMessages.Head);
+    linkedData := PopLink(obqDequeuedMessages);
     if not assigned(linkedData) then
       break; //repeat
-    PushLink(linkedData, obcRecycleChain.Head);
+    PushLink(linkedData, obcRecycleChain);
   until false;
 end; { TOmniQueue.Empty }
 
@@ -573,12 +569,12 @@ function TOmniBaseQueue.Enqueue(const value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := PopLink(obcRecycleChain.Head);
+  linkedData := PopLink(obcRecycleChain);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChain.Head);
+  PushLink(linkedData, obcPublicChain);
 end; { TOmniQueue.Enqueue }
 
 function TOmniBaseQueue.IsEmpty: boolean;
