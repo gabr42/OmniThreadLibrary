@@ -55,7 +55,7 @@ function TInitTest.Initialize: boolean;
 begin
   Task.Comm.Send(0, 'pre-init');
   if itSuccess then
-    Task.SetExitStatus(1, 'ok')
+    Task.SetExitStatus(1, Format('ok, thread priority = %d', [GetThreadPriority(GetCurrentThread)]))
   else
     Task.SetExitStatus(-1, 'fail');
   Result := itSuccess;
@@ -90,9 +90,10 @@ procedure TfrmTestOTL.Test(success: boolean);
 var
   task: IOmniTaskControl;
 begin
-  task := OmniTaskEventDispatch1.Monitor(CreateTask(TInitTest.Create(success), 'InitTest')).
-    FreeOnTerminate.
-    Run;
+  task := OmniTaskEventDispatch1.Monitor(CreateTask(TInitTest.Create(success), 'InitTest'))
+    .FreeOnTerminate
+    .SetPriority(tpIdle)
+    .Run;
   if task.WaitForInit then
     lbLog.Items.Add('Init OK')
   else
