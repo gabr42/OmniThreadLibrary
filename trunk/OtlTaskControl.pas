@@ -42,6 +42,9 @@ unit OtlTaskControl;
 
 interface
 
+// TODO 1 -oPrimoz Gabrijelcic : Catch thread exceptions (and add a mechanism to report them)
+// TODO 3 -oPrimoz Gabrijelcic : IOmniTask.Acquire/Release (TTicketSpinLock)
+
 uses
   Windows,
   SysUtils,
@@ -81,6 +84,8 @@ type
   TOmniTaskProcedure = procedure(task: IOmniTask);
   TOmniTaskMethod = procedure(task: IOmniTask) of object;
 
+  TOTLThreadPriority = (tpIdle, tpLowest, tpBelowNormal, tpNormal, tpAboveNormal, tpHighest);
+
   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -99,6 +104,7 @@ type
     function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(parameters: array of TOmniValue): IOmniTaskControl;
+    function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -131,16 +137,17 @@ type
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
 
-  TOmniTaskExecutor = class
+  TOmniTaskExecutor = class 
   strict private
     oteCommList          : TInterfaceList;
     oteCommRebuildHandles: THandle;
+    oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
-    oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
     oteLock              : TTicketSpinLock;
     oteMethod            : TOmniTaskMethod;
     oteOptions           : TOmniTaskControlOptions;
+    otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTimerInterval_ms  : cardinal;
     oteTimerMessage      : integer;
@@ -173,6 +180,7 @@ type
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
     property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
+    property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TimerInterval_ms: cardinal read oteTimerInterval_ms write SetTimerInterval_ms;
     property TimerMessage: integer read oteTimerMessage write SetTimerMessage;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
@@ -253,6 +261,7 @@ type
     function  GetOptions: TOmniTaskControlOptions;
     function  GetUniqueID: int64; inline;
     procedure SetOptions(const value: TOmniTaskControlOptions);
+    function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
   public
     constructor Create(worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniWorker; const taskName: string); overload;
@@ -320,6 +329,7 @@ constructor TOmniTask.Create(executor: TOmniTaskExecutor; const taskName: string
   terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter:
   IOmniCounter);
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : Move taskName etc into the 'executor' object
   inherited Create;
   otExecutor_ref := executor;
   otTaskName := taskName;
@@ -605,7 +615,12 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
 end; { TOmniTaskExecutor.Asy_DispatchMessages }
 
 procedure TOmniTaskExecutor.Asy_Execute(task: IOmniTask);
+const
+  CThreadPriorityNum: array [tpIdle..tpHighest] of integer = (
+    THREAD_PRIORITY_IDLE, THREAD_PRIORITY_LOWEST, THREAD_PRIORITY_BELOW_NORMAL,
+    THREAD_PRIORITY_NORMAL, THREAD_PRIORITY_ABOVE_NORMAL, THREAD_PRIORITY_HIGHEST);
 begin
+  SetThreadPriority(GetCurrentThread, CThreadPriorityNum[Priority]);
   case oteExecutorType of
     etMethod:
       oteMethod(task);
@@ -893,6 +908,13 @@ begin
   otcParameters.Assign(parameters);
   Result := Self;
 end; { TOmniTaskControl.SetParameters }
+
+function TOmniTaskControl.SetPriority(threadPriority: TOTLThreadPriority):
+  IOmniTaskControl;
+begin
+  otcExecutor.Priority := threadPriority;
+  Result := Self;
+end; { TOmniTaskControl.SetPriority }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
