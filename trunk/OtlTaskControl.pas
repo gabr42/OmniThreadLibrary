@@ -50,6 +50,7 @@ uses
   SysUtils,
   Variants,
   Classes,
+  SyncObjs,
   OtlCommon,
   OtlComm,
   OtlTask,
@@ -90,6 +91,7 @@ type
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
+    function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetUniqueID: int64;
   //
@@ -114,6 +116,7 @@ type
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
+    property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
@@ -144,7 +147,7 @@ type
     oteExecutorType      : (etNone, etMethod, etProcedure, etWorkerIntf, etWorkerObj);
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
-    oteLock              : TTicketSpinLock;
+    oteInternalLock      : TTicketSpinLock;
     oteMethod            : TOmniTaskMethod;
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
@@ -190,20 +193,39 @@ type
     property WorkerObj_ref: TOmniWorker read oteWorkerObj_ref;
   end; { TOmniTaskExecutor }
 
+  TOmniSharedTaskInfo = class
+  strict private
+    otcCommChannel    : IOmniTwoWayChannel;
+    otcCounter        : IOmniCounter;
+    otcLock           : TSynchroObject;
+    otcMonitorWindow  : THandle;
+    otcTaskName       : string;
+    otcTerminatedEvent: THandle;
+    otcTerminateEvent : THandle;
+    otcUniqueID       : int64;
+  public
+    constructor Create(const taskName: string; commChannel: IOmniTwoWayChannel; uniqueID:
+      int64; terminateEvent, terminatedEvent, monitorWindow: THandle; counter: IOmniCounter;
+      lock: TSynchroObject);
+    property CommChannel: IOmniTwoWayChannel read otcCommChannel;
+    property Counter: IOmniCounter read otcCounter;
+    property Lock: TSynchroObject read otcLock;
+    property MonitorWindow: THandle read otcMonitorWindow;
+    property TaskName: string read otcTaskName;
+    property TerminatedEvent: THandle read otcTerminatedEvent;
+    property TerminateEvent: THandle read otcTerminateEvent;
+    property UniqueID: int64 read otcUniqueID;
+  end; { TOmniSharedTaskInfo }
+
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
-    otCommChannel    : IOmniTwoWayChannel;
-    otCounter        : IOmniCounter;
-    otExecutor_ref   : TOmniTaskExecutor;
-    otMonitorWindow  : THandle;
-    otParameters_ref : TOmniValueContainer;
-    otTaskName       : string;
-    otTerminatedEvent: TDSiEventHandle;
-    otTerminateEvent : TDSiEventHandle;
-    otUniqueID       : int64;
+    otExecutor_ref  : TOmniTaskExecutor;
+    otParameters_ref: TOmniValueContainer;
+    otSharedInfo    : TOmniSharedTaskInfo;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
+    function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
@@ -211,15 +233,16 @@ type
     function  GetUniqueID: int64; inline;
     procedure Terminate; inline;
   public
-    constructor Create(executor: TOmniTaskExecutor; const taskName: string; parameters:
-      TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: int64; terminateEvent,
-      terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter: IOmniCounter);
+    constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
+      sharedInfo: TOmniSharedTaskInfo);
+    destructor  Destroy; override;
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
     procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
+    property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
@@ -243,6 +266,7 @@ type
     otcCommChannel    : IOmniTwoWayChannel;
     otcCounter        : IOmniCounter;
     otcExecutor       : TOmniTaskExecutor;
+    otcLock           : TSynchroObject;
     otcMonitorWindow  : THandle;
     otcParameters     : TOmniValueContainer;
     otcTaskName       : string;
@@ -257,6 +281,7 @@ type
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
+    function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
     function  GetUniqueID: int64; inline;
@@ -287,6 +312,7 @@ type
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
+    property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property UniqueID: int64 read GetUniqueID;
@@ -322,48 +348,67 @@ begin
     Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
 
+{ TOmniSharedTaskInfo }
+
+constructor TOmniSharedTaskInfo.Create(const taskName: string; commChannel:
+  IOmniTwoWayChannel; uniqueID: int64; terminateEvent, terminatedEvent, monitorWindow:
+  THandle; counter: IOmniCounter; lock: TSynchroObject);
+begin
+  inherited Create;
+  otcMonitorWindow := monitorWindow;
+  otcTerminatedEvent := terminatedEvent;
+  otcLock := lock;
+  otcCounter := counter;
+  otcCommChannel := commChannel;
+  otcTaskName := taskName; UniqueString(otcTaskName);
+  otcTerminateEvent := terminateEvent;
+  otcUniqueID := uniqueID;
+end; { TOmniSharedTaskInfo.Create }
+
 { TOmniTask }
 
-constructor TOmniTask.Create(executor: TOmniTaskExecutor; const taskName: string;
-  parameters: TOmniValueContainer; comm: IOmniTwoWayChannel; uniqueID: int64;
-  terminateEvent, terminatedEvent: TDSiEventHandle; monitorWindow: THandle; counter:
-  IOmniCounter);
+constructor TOmniTask.Create(executor: TOmniTaskExecutor; parameters:
+  TOmniValueContainer; sharedInfo: TOmniSharedTaskInfo);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Move taskName etc into the 'executor' object
   inherited Create;
   otExecutor_ref := executor;
-  otTaskName := taskName;
   otParameters_ref := parameters;
-  otCommChannel := comm;
-  otUniqueID := uniqueID;
-  otMonitorWindow := monitorWindow;
-  otTerminateEvent := terminateEvent;
-  otTerminatedEvent := terminatedEvent;
-  otCounter := counter;
+  otSharedInfo := sharedInfo;
 end; { TOmniTask.Create }
+
+destructor TOmniTask.Destroy;
+begin
+  FreeAndNil(otSharedInfo);
+  inherited;
+end; { TOmniTask.Destroy }
 
 procedure TOmniTask.Execute;
 begin
   otExecutor_ref.Asy_Execute(Self);
-  if otMonitorWindow <> 0 then
-    PostMessage(otMonitorWindow, COmniTaskMsg_Terminated,
+  if otSharedInfo.MonitorWindow <> 0 then
+    PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
       integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-  SetEvent(otTerminatedEvent);
+  SetEvent(otSharedInfo.TerminatedEvent);
 end; { TOmniTask.Execute }
 
 function TOmniTask.GetComm: IOmniCommunicationEndpoint;
 begin
-  Result := otCommChannel.Endpoint2;
+  Result := otSharedInfo.CommChannel.Endpoint2;
 end; { TOmniTask.GetComm }
 
 function TOmniTask.GetCounter: IOmniCounter;
 begin
-  Result := otCounter;
+  Result := otSharedInfo.Counter;
 end; { TOmniTask.GetCounter }
+
+function TOmniTask.GetLock: TSynchroObject;
+begin
+  Result := otSharedInfo.Lock;
+end; { TOmniTask.GetLock }
 
 function TOmniTask.GetName: string;
 begin
-  Result := otTaskName;
+  Result := otSharedInfo.TaskName;
 end; { TOmniTask.GetName }
 
 function TOmniTask.GetParam(idxParam: integer): TOmniValue;
@@ -378,12 +423,12 @@ end; { TOmniTask.GetParamByName }
 
 function TOmniTask.GetTerminateEvent: THandle;
 begin
-  Result := otTerminateEvent;
+  Result := otSharedInfo.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
 
 function TOmniTask.GetUniqueID: int64;
 begin
-  Result := otUniqueID;
+  Result := otSharedInfo.UniqueID;
 end; { TOmniTask.GetUniqueID }
 
 procedure TOmniTask.RegisterComm(comm: IOmniCommunicationEndpoint);
@@ -398,7 +443,7 @@ end; { TOmniTask.SetExitStatus }
 
 procedure TOmniTask.Terminate;
 begin
-  SetEvent(otTerminateEvent);
+  SetEvent(otSharedInfo.TerminateEvent);
 end; { TOmniTask.Terminate }
 
 procedure TOmniTask.UnregisterComm(comm: IOmniCommunicationEndpoint);
@@ -471,11 +516,11 @@ end; { TOmniTaskExecutor.Create }
 
 destructor TOmniTaskExecutor.Destroy;
 begin
-  oteLock.Acquire;
+  oteInternalLock.Acquire;
   try
     FreeAndNil(oteCommList);
-  finally oteLock.Release; end;
-  FreeAndNil(oteLock);
+  finally oteInternalLock.Release; end;
+  FreeAndNil(oteInternalLock);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -491,7 +536,7 @@ var
   var
     intf: IInterface;
   begin
-    oteLock.Acquire;
+    oteInternalLock.Acquire;
     try
       waitHandles[0] := task.TerminateEvent;
       waitHandles[1] := task.Comm.NewMessageEvent;
@@ -504,7 +549,7 @@ var
           waitHandles[numWaitHandles] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
           Inc(numWaitHandles);
         end;
-    finally oteLock.Release; end;
+    finally oteInternalLock.Release; end;
   end; { RebuildWaitHandles }
 
 var
@@ -562,10 +607,10 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
         if awaited = WAIT_OBJECT_1 then
           gotMsg := task.Comm.Receive(msg)
         else begin
-          oteLock.Acquire;
+          oteInternalLock.Acquire;
           try
             gotMsg := (oteCommList[awaited - WAIT_OBJECT_3] as IOmniCommunicationEndpoint).Receive(msg);
-          finally oteLock.Release; end;
+          finally oteInternalLock.Release; end;
         end;
         if gotMsg then begin
           if assigned(WorkerIntf) then
@@ -638,37 +683,37 @@ procedure TOmniTaskExecutor.Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
 begin
   if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.Asy_RegisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
-  oteLock.Acquire;
+  oteInternalLock.Acquire;
   try
     if not assigned(oteCommList) then
       oteCommList := TInterfaceList.Create;
     oteCommList.Add(comm);
     SetEvent(oteCommRebuildHandles);
-  finally oteLock.Release; end;
+  finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
 
 procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
   const exitMessage: string);
 begin
   oteExitCode.Value := cardinal(exitCode);
-  oteLock.Acquire;
+  oteInternalLock.Acquire;
   try
     oteExitMessage := exitMessage;
     UniqueString(oteExitMessage);
-  finally oteLock.Release; end;
+  finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_SetExitStatus } 
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
   if not (oteExecutorType in [etWorkerIntf, etWorkerObj]) then
     raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: Additional communication support is only available when working with an IOmniWorker/TOmniWorker');
-  oteLock.Acquire;
+  oteInternalLock.Acquire;
   try
     oteCommList.Remove(comm);
     if oteCommList.Count = 0 then
       FreeAndNil(oteCommList);
     SetEvent(oteCommRebuildHandles);
-  finally oteLock.Release; end;
+  finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
 function TOmniTaskExecutor.GetExitCode: integer;
@@ -678,17 +723,17 @@ end; { TOmniTaskExecutor.GetExitCode }
 
 function TOmniTaskExecutor.GetExitMessage: string;
 begin
-  oteLock.Acquire;
+  oteInternalLock.Acquire;
   try
     Result := oteExitMessage;
     UniqueString(Result);
-  finally oteLock.Release; end;
+  finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.GetExitMessage }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
-  oteLock := TTicketSpinLock.Create;
+  oteInternalLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
 end; { TOmniTaskExecutor.Initialize }
 
@@ -772,6 +817,7 @@ begin
     Terminate;
     FreeAndNil(otcThread);
   end;
+  FreeAndNil(otcLock);
   FreeAndNil(otcExecutor);
   otcCommChannel := nil;
   DSiCloseHandleAndNull(otcTerminateEvent);
@@ -788,8 +834,9 @@ end; { TOmniTaskControl.Alertable }
 
 function TOmniTaskControl.CreateTask: IOmniTask;
 begin
-  Result := TOmniTask.Create(otcExecutor, otcTaskName, otcParameters, otcCommChannel,
-    otcUniqueID, otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow, otcCounter);
+  Result := TOmniTask.Create(otcExecutor, otcParameters,
+    TOmniSharedTaskInfo.Create(otcTaskName, otcCommChannel, otcUniqueID,
+      otcTerminateEvent, otcTerminatedEvent, otcMonitorWindow, otcCounter, otcLock));
 end; { TOmniTaskControl.CreateTask }
 
 function TOmniTaskControl.FreeOnTerminate: IOmniTaskControl;
@@ -813,6 +860,11 @@ begin
   Result := otcExecutor.ExitMessage;
 end; { TOmniTaskControl.GetExitMessage }
 
+function TOmniTaskControl.GetLock: TSynchroObject;
+begin
+  Result := otcLock;
+end; { TOmniTaskControl.GetLock }
+
 function TOmniTaskControl.GetName: string;
 begin
   Result := otcTaskName;
@@ -830,6 +882,7 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
+  otcLock := TTicketSpinLock.Create;
   otcUniqueID := taskUID.Increment;
   otcCommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
