@@ -35,8 +35,7 @@
 ///</para><para>
 ///   History:
 ///     0.2: 2008-07-22
-///       - Added Lock property and WithLock method. Lock is automatically destroyed when
-///         task exits.
+///       - Added Lock property and WithLock method.
 ///       - Added SetPriority method.
 ///     0.1: 2008-07-15
 ///       - Everything but the IOmniTask interface declaration moved from the OtlTask unit.
@@ -116,7 +115,7 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(counter: IOmniCounter): IOmniTaskControl;
-    function  WithLock(lock: TSynchroObject): IOmniTaskControl;
+    function  WithLock(lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl;
   //
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
@@ -270,6 +269,7 @@ type
   strict private
     otcCommChannel    : IOmniTwoWayChannel;
     otcCounter        : IOmniCounter;
+    otcDestroyLock    : boolean;
     otcExecutor       : TOmniTaskExecutor;
     otcLock           : TSynchroObject;
     otcMonitorWindow  : THandle;
@@ -292,7 +292,8 @@ type
     function  GetUniqueID: int64; inline;
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
-    function  WithLock(lock: TSynchroObject): IOmniTaskControl;
+    function  WithLock(lock: TSynchroObject; autoDestroyLock: boolean = true):
+      IOmniTaskControl;
   public
     constructor Create(worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniWorker; const taskName: string); overload;
@@ -823,7 +824,8 @@ begin
     Terminate;
     FreeAndNil(otcThread);
   end;
-  FreeAndNil(otcLock);
+  if otcDestroyLock then
+    FreeAndNil(otcLock);
   FreeAndNil(otcExecutor);
   otcCommChannel := nil;
   DSiCloseHandleAndNull(otcTerminateEvent);
@@ -1005,9 +1007,11 @@ begin
   Result := Self;
 end; { TOmniTaskControl.WithCounter }
 
-function TOmniTaskControl.WithLock(lock: TSynchroObject): IOmniTaskControl;
+function TOmniTaskControl.WithLock(lock: TSynchroObject;
+  autoDestroyLock: boolean): IOmniTaskControl;
 begin
   otcLock := lock;
+  otcDestroyLock := autoDestroyLock;
 end; { TOmniTaskControl.WithLock }
 
 { TOmniThread }
