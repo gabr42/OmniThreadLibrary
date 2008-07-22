@@ -34,6 +34,10 @@
 ///   Version           : 0.1
 ///</para><para>
 ///   History:
+///     0.2: 2008-07-22
+///       - Added Lock property and WithLock method. Lock is automatically destroyed when
+///         task exits.
+///       - Added SetPriority method.
 ///     0.1: 2008-07-15
 ///       - Everything but the IOmniTask interface declaration moved from the OtlTask unit.
 ///</para></remarks>
@@ -112,6 +116,7 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(counter: IOmniCounter): IOmniTaskControl;
+    function  WithLock(lock: TSynchroObject): IOmniTaskControl;
   //
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
@@ -195,26 +200,26 @@ type
 
   TOmniSharedTaskInfo = class
   strict private
-    otcCommChannel    : IOmniTwoWayChannel;
-    otcCounter        : IOmniCounter;
-    otcLock           : TSynchroObject;
-    otcMonitorWindow  : THandle;
-    otcTaskName       : string;
-    otcTerminatedEvent: THandle;
-    otcTerminateEvent : THandle;
-    otcUniqueID       : int64;
+    ostiCommChannel    : IOmniTwoWayChannel;
+    ostiCounter        : IOmniCounter;
+    ostiLock           : TSynchroObject;
+    ostiMonitorWindow  : THandle;
+    ostiTaskName       : string;
+    ostiTerminatedEvent: THandle;
+    ostiTerminateEvent : THandle;
+    ostiUniqueID       : int64;
   public
     constructor Create(const taskName: string; commChannel: IOmniTwoWayChannel; uniqueID:
       int64; terminateEvent, terminatedEvent, monitorWindow: THandle; counter: IOmniCounter;
       lock: TSynchroObject);
-    property CommChannel: IOmniTwoWayChannel read otcCommChannel;
-    property Counter: IOmniCounter read otcCounter;
-    property Lock: TSynchroObject read otcLock;
-    property MonitorWindow: THandle read otcMonitorWindow;
-    property TaskName: string read otcTaskName;
-    property TerminatedEvent: THandle read otcTerminatedEvent;
-    property TerminateEvent: THandle read otcTerminateEvent;
-    property UniqueID: int64 read otcUniqueID;
+    property CommChannel: IOmniTwoWayChannel read ostiCommChannel;
+    property Counter: IOmniCounter read ostiCounter;
+    property Lock: TSynchroObject read ostiLock;
+    property MonitorWindow: THandle read ostiMonitorWindow;
+    property TaskName: string read ostiTaskName;
+    property TerminatedEvent: THandle read ostiTerminatedEvent;
+    property TerminateEvent: THandle read ostiTerminateEvent;
+    property UniqueID: int64 read ostiUniqueID;
   end; { TOmniSharedTaskInfo }
 
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
@@ -287,6 +292,7 @@ type
     function  GetUniqueID: int64; inline;
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
+    function  WithLock(lock: TSynchroObject): IOmniTaskControl;
   public
     constructor Create(worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniWorker; const taskName: string); overload;
@@ -355,14 +361,14 @@ constructor TOmniSharedTaskInfo.Create(const taskName: string; commChannel:
   THandle; counter: IOmniCounter; lock: TSynchroObject);
 begin
   inherited Create;
-  otcMonitorWindow := monitorWindow;
-  otcTerminatedEvent := terminatedEvent;
-  otcLock := lock;
-  otcCounter := counter;
-  otcCommChannel := commChannel;
-  otcTaskName := taskName; UniqueString(otcTaskName);
-  otcTerminateEvent := terminateEvent;
-  otcUniqueID := uniqueID;
+  ostiMonitorWindow := monitorWindow;
+  ostiTerminatedEvent := terminatedEvent;
+  ostiLock := lock;
+  ostiCounter := counter;
+  ostiCommChannel := commChannel;
+  ostiTaskName := taskName; UniqueString(ostiTaskName);
+  ostiTerminateEvent := terminateEvent;
+  ostiUniqueID := uniqueID;
 end; { TOmniSharedTaskInfo.Create }
 
 { TOmniTask }
@@ -882,7 +888,6 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
-  otcLock := TTicketSpinLock.Create;
   otcUniqueID := taskUID.Increment;
   otcCommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
@@ -999,6 +1004,11 @@ begin
   otcCounter := counter;
   Result := Self;
 end; { TOmniTaskControl.WithCounter }
+
+function TOmniTaskControl.WithLock(lock: TSynchroObject): IOmniTaskControl;
+begin
+  otcLock := lock;
+end; { TOmniTaskControl.WithLock }
 
 { TOmniThread }
 

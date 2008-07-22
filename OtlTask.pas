@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-15
-///   Version           : 0.4
+///   Last modification : 2008-07-22
+///   Version           : 0.5
 ///</para><para>
 ///   History:
+///     0.5: 2008-07-22
+///       - Added Lock property. Lock is only available if WithLock method is run on the
+///         task control object.
 ///     0.4: 2008-07-15
 ///       - Everything but the IOmniTask interface declaration moved into the
 ///         OtlTaskControl unit.
