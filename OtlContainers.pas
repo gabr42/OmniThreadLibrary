@@ -423,11 +423,12 @@ class function TOmniBaseContainer.PopLink(var chain: TOmniHeadAndSpin): POmniLin
 asm
   push  edi
   push  ebx
-  mov   edi, eax                          //edi = chain.Head
+  mov   edi, eax                          //edi = @chain
 @Spin:
   mov   ecx, 1                            //Increment spin reference for 1
   lock xadd [edi + 4], ecx                //Get new spin reference to ecx
-  lock cmpxchg8b [edi]                    //Load boath @Link and SpinReference atomic
+  mov   eax, [edi]                        //eax := chain.Head
+  mov   edx, [edi +4]                     //edx := chain.Spin
   test  eax, eax
   jz    @Exit                             //Is Empty?
   inc   ecx                               //Now we are ready to real cmpxchg8b
