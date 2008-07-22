@@ -59,6 +59,7 @@ uses
   SysUtils,
   Variants,
   Classes,
+  SyncObjs,
   OtlCommon,
   OtlComm;
 
@@ -66,6 +67,7 @@ type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetCounter: IOmniCounter;
+    function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetParam(idxParam: integer): TOmniValue;
     function  GetParamByName(const paramName: string): TOmniValue;
@@ -78,6 +80,7 @@ type
     procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
+    property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
