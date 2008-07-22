@@ -46,7 +46,6 @@ unit OtlTaskControl;
 interface
 
 // TODO 1 -oPrimoz Gabrijelcic : Catch thread exceptions (and add a mechanism to report them)
-// TODO 3 -oPrimoz Gabrijelcic : IOmniTask.Acquire/Release (TTicketSpinLock)
 
 uses
   Windows,
