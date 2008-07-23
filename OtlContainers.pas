@@ -431,7 +431,7 @@ asm
   mov   edx, [edi +4]                     //edx := chain.Spin
   test  eax, eax
   jz    @Exit                             //Is Empty?
-  inc   ecx                               //Now we are ready to real cmpxchg8b
+  inc   ecx                               //Now we are ready to cmpxchg8b
   cmp   edx, ecx                          //Is reference the some?
   jnz   @Spin
   mov   ebx, [eax]                        //ebx := Result.Next
