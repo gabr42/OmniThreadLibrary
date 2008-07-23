@@ -433,7 +433,7 @@ asm
   jz    @Exit                             //Is Empty?
   inc   ecx                               //Now we are ready to real cmpxchg8b
   cmp   edx, ecx                          //Is reference the some?
-  jnz   @Spin                             
+  jnz   @Spin
   mov   ebx, [eax]                        //ebx := Result.Next
   lock cmpxchg8b [edi]                    //Now try to xchg
   jnz   @Spin                             //Do spin ???
