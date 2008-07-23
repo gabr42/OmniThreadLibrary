@@ -41,6 +41,13 @@
 ///       - Everything but the IOmniTask interface declaration moved from the OtlTask unit.
 ///</para></remarks>
 
+///Literature
+///  - Lock my Object… Please!, Allen Bauer,
+///    http://blogs.codegear.com/abauer/2008/02/19/38856
+///  - Threading in C#, Joseph Albahari, http://www.albahari.com/threading/
+///  - Coordination Data Structures Overview, Emad Omara,
+///    http://blogs.msdn.com/pfxteam/archive/2008/06/18/8620615.aspx
+
 unit OtlTaskControl;
 
 interface
