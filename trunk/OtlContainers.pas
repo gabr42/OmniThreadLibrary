@@ -426,7 +426,7 @@ asm
   mov   edi, eax                          //edi = @chain
 @Spin:
   mov   ecx, 1                            //Increment spin reference for 1
-  lock xadd [edi + 4], ecx                //Get new spin reference to ecx
+  lock xadd [edi + 4], ecx                //Get old spin reference to ecx
   mov   eax, [edi]                        //eax := chain.Head
   mov   edx, [edi +4]                     //edx := chain.Spin
   test  eax, eax
