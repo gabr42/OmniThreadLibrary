@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-22
-///   Version           : 0.5
+///   Last modification : 2008-07-23
+///   Version           : 0.6
 ///</para><para>
 ///   History:
+///     0.6: 2008-07-23
+///       - Added reserved exit statuses.
 ///     0.5: 2008-07-22
 ///       - Added Lock property. Lock is only available if WithLock method is run on the
 ///         task control object.
@@ -57,7 +59,6 @@ unit OtlTask;
 
 interface
 
-
 uses
   Windows,
   SysUtils,
@@ -66,6 +67,11 @@ uses
   SyncObjs,
   OtlCommon,
   OtlComm;
+
+const
+  // reserved exit statuses
+  EXIT_OK        = 0;
+  EXIT_EXCEPTION = integer($80000000);
 
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
