@@ -12,7 +12,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
-  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
@@ -24,24 +23,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-  end
-  object btnSchedule: TButton
-    Left = 8
-    Top = 39
-    Width = 129
-    Height = 25
-    Caption = 'Schedule'
-    TabOrder = 1
-    OnClick = btnScheduleClick
-  end
-  object btnRun: TButton
-    Left = 8
-    Top = 8
-    Width = 129
-    Height = 25
-    Caption = 'Run'
-    TabOrder = 2
-    OnClick = btnScheduleClick
   end
   object OmniTED: TOmniTaskEventDispatch
     OnTaskMessage = OmniTEDTaskMessage
