@@ -1,4 +1,4 @@
-unit testRegisterTerminationEvent1;
+unit testTerminateWhen1;
 
 interface
 
@@ -11,7 +11,7 @@ uses
   OtlTaskEvents;
 
 type
-  TfrmTestLock = class(TForm)
+  TfrmTestTerminateWhen = class(TForm)
     btnStartTasks: TButton;
     btnStopTasks : TButton;
     lbLog        : TListBox;
@@ -28,7 +28,7 @@ type
   end;
 
 var
-  frmTestLock: TfrmTestLock;
+  frmTestTerminateWhen: TfrmTestTerminateWhen;
 
 implementation
 
@@ -47,7 +47,7 @@ type
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestLock.btnStartTasksClick(Sender: TObject);
+procedure TfrmTestTerminateWhen.btnStartTasksClick(Sender: TObject);
 var
   i: integer;
 begin
@@ -60,7 +60,7 @@ begin
   end;
 end;
 
-procedure TfrmTestLock.btnStopTasksClick(Sender: TObject);
+procedure TfrmTestTerminateWhen.btnStopTasksClick(Sender: TObject);
 begin
   Win32Check(SetEvent(FTerminate));
   while FCounter.Value > 0 do begin // ugly, I know
@@ -70,12 +70,12 @@ begin
   Log('All stopped');
 end;
 
-procedure TfrmTestLock.Log(const msg: string);
+procedure TfrmTestTerminateWhen.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestLock.OmniTEDTaskTerminated(task: IOmniTaskControl);
+procedure TfrmTestTerminateWhen.OmniTEDTaskTerminated(task: IOmniTaskControl);
 begin
   Log(Format('Task terminated: %d', [task.UniqueID]));
 end;
