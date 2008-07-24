@@ -42,6 +42,7 @@
 ///       - Defined IOmniTaskControlMonitor interface.
 ///       - Added IOmniTaskControl.MonitorWith method.
 ///       - Implemented TOmniTaskControl.TerminateWhen method.
+///       - Added very basic support for task groups.
 ///     0.2: 2008-07-22
 ///       - Added Lock property and WithLock method.
 ///       - Added SetPriority method.
@@ -77,7 +78,7 @@ uses
 type
   IOmniTaskControl = interface;
   
-  IOmniTaskControlMonitor = interface
+  IOmniTaskControlMonitor = interface ['{20CB3AB7-04D8-454B-AEFE-CFCFF8F27301}']
     function  Detach(task: IOmniTaskControl): IOmniTaskControl;
     function  Monitor(task: IOmniTaskControl): IOmniTaskControl;
   end; { IOmniTaskControlMonitor }
@@ -112,6 +113,8 @@ type
 
   TOTLThreadPriority = (tpIdle, tpLowest, tpBelowNormal, tpNormal, tpAboveNormal, tpHighest);
 
+  IOmniTaskGroup = interface;
+
   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -122,6 +125,8 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  FreeOnTerminate: IOmniTaskControl;
+    function  Join(group: IOmniTaskGroup): IOmniTaskControl;
+    function  Leave(group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
@@ -148,10 +153,18 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
+  IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
+    function  Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+  end; { IOmniTaskGroup }
+
   function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: TOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
+
+  function CreateTaskGroup: IOmniTaskGroup;
 
 implementation
 
@@ -290,7 +303,15 @@ type
     property Task: IOmniTask read otTask;
   end; { TOmniThread }
 
-  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl)
+  IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
+    function  GetTerminatedEvent: THandle;
+    function  GetTerminateEvent: THandle;
+  //
+    property TerminatedEvent: THandle read GetTerminatedEvent;
+    property TerminateEvent: THandle read GetTerminateEvent;
+  end; { IOmniTaskControlInternals }
+
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
   strict private
     otcCommChannel    : IOmniTwoWayChannel;
     otcCounter        : IOmniCounter;
@@ -314,6 +335,8 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
+    function  GetTerminatedEvent: THandle;
+    function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64; inline;
     function  MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     procedure SetOptions(const value: TOmniTaskControlOptions);
@@ -328,6 +351,8 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  FreeOnTerminate: IOmniTaskControl;
+    function  Join(group: IOmniTaskGroup): IOmniTaskControl;
+    function  Leave(group: IOmniTaskGroup): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
@@ -350,6 +375,17 @@ type
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
+
+  TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
+  strict private
+    otgTaskList: TInterfaceList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+  end; { TOmniTaskGroup }
 
 var
   taskUID: TGp8AlignedInt;
@@ -380,6 +416,11 @@ begin
   else
     Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
+
+function CreateTaskGroup: IOmniTaskGroup;
+begin
+  Result := TOmniTaskGroup.Create;
+end; { CreateTaskGroup }
 
 { TOmniSharedTaskInfo }
 
@@ -958,6 +999,16 @@ begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
 
+function TOmniTaskControl.GetTerminatedEvent: THandle;
+begin
+  Result := otcTerminatedEvent;
+end; { TOmniTaskControl.GetTerminatedEvent }
+
+function TOmniTaskControl.GetTerminateEvent: THandle;
+begin
+  Result := otcTerminateEvent;
+end; { TOmniTaskControl.GetTerminateEvent }
+
 function TOmniTaskControl.GetUniqueID: int64;
 begin
   Result := otcUniqueID;
@@ -973,6 +1024,18 @@ begin
   otcTerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcTerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
+
+function TOmniTaskControl.Join(group: IOmniTaskGroup): IOmniTaskControl;
+begin
+  group.Add(Self);
+  Result := Self;
+end; { TOmniTaskControl.Join }
+
+function TOmniTaskControl.Leave(group: IOmniTaskGroup): IOmniTaskControl;
+begin
+  group.Remove(Self);
+  Result := Self;
+end; { TOmniTaskControl.Leave }
 
 function TOmniTaskControl.MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
 begin
@@ -1059,11 +1122,12 @@ end; { TOmniTaskControl.SetPriority }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
-{ TODO : 
+{ TODO :
 reset executor and exit immediately if task was not started at all
 or raise exception? }
   SetEvent(otcTerminateEvent);
   Result := WaitFor(maxWait_ms);
+  // TODO 1 -oPrimoz Gabrijelcic : Kill thread if not Result
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
@@ -1107,5 +1171,45 @@ procedure TOmniThread.Execute;
 begin
   (otTask as IOmniTaskExecutor).Execute;
 end; { TOmniThread.Execute }
+
+{ TOmniTaskGroup }
+
+constructor TOmniTaskGroup.Create;
+begin
+  inherited Create;
+  otgTaskList := TInterfaceList.Create;
+end; { TOmniTaskGroup.Create }
+
+destructor TOmniTaskGroup.Destroy;
+begin
+  FreeAndNil(otgTaskList);
+  inherited Destroy;
+end; { TOmniTaskGroup.Destroy }
+
+function TOmniTaskGroup.Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
+begin
+  otgTaskList.Add(taskControl);
+  Result := Self;
+end; { TOmniTaskGroup.Add }
+
+function TOmniTaskGroup.Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
+begin
+  otgTaskList.Remove(taskControl);
+  Result := Self;
+end; { TOmniTaskGroup.Remove }
+
+function TOmniTaskGroup.TerminateAll(maxWait_ms: cardinal): boolean;
+var
+  iIntf      : integer;
+  task       : IOmniTaskControlInternals;
+  waitHandles: array [0..63] of THandle;
+begin
+  for iIntf := 0 to otgTaskList.Count - 1 do begin
+    task := (otgTaskList[iIntf] as IOmniTaskControlInternals);
+    waitHandles[iIntf] := task.TerminatedEvent;
+    SetEvent(task.TerminateEvent);
+  end;
+  Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
+end; { TOmniTaskGroup.TerminateAll }
 
 end.
