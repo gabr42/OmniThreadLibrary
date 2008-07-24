@@ -28,8 +28,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 23
-    ExplicitWidth = 468
-    ExplicitHeight = 458
   end
   object btnStackStressTest: TButton
     Left = 8
@@ -121,7 +119,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Caption = 'Save log'
     TabOrder = 22
     OnClick = btnSaveLogClick
-    ExplicitTop = 533
   end
   object btnStack4to1: TButton
     Left = 8
@@ -233,7 +230,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     EditLabel.Caption = 'Test duration (sec):'
     TabOrder = 21
     Text = '60'
-    ExplicitTop = 506
   end
   object btnAllTests: TButton
     Left = 8
@@ -253,7 +249,6 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Caption = 'Clear log'
     TabOrder = 24
     OnClick = btnClearLogClick
-    ExplicitTop = 564
   end
   object OmniTaskEventDispatch1: TOmniTaskEventDispatch
     OnTaskMessage = OmniTaskEventDispatch1TaskMessage
