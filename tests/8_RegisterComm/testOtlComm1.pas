@@ -54,10 +54,9 @@ const
 type
   TCommTester = class(TOmniWorker)
   strict private
-    ctComm    : IOmniCommunicationEndpoint;
-    ctCommSize: integer;
+    ctComm: IOmniCommunicationEndpoint;
   public
-    constructor Create(commEndpoint: IOmniCommunicationEndpoint; commBufferSize: integer);
+    constructor Create(commEndpoint: IOmniCommunicationEndpoint);
     function  Initialize: boolean; override;
     procedure OMForward(var msg: TOmniMessage); message MSG_FORWARD;
     procedure OMForwarding(var msg: TOmniMessage); message MSG_FORWARDING;
@@ -65,12 +64,10 @@ type
 
 { TCommTester }
 
-constructor TCommTester.Create(commEndpoint: IOmniCommunicationEndpoint; commBufferSize:
-  integer);
+constructor TCommTester.Create(commEndpoint: IOmniCommunicationEndpoint);
 begin
   inherited Create;
   ctComm := commEndpoint;
-  ctCommSize := commBufferSize;
 end;
 
 function TCommTester.Initialize: boolean;
@@ -130,11 +127,11 @@ end;
 procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
-  FClient1 := CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))
+  FClient1 := CreateTask(TCommTester.Create(FCommChannel.Endpoint1))
     .MonitorWith(OmniTED)
     .FreeOnTerminate
     .Run;
-  FClient2 := CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))
+  FClient2 := CreateTask(TCommTester.Create(FCommChannel.Endpoint2))
     .MonitorWith(OmniTED)
     .FreeOnTerminate
     .Run;
