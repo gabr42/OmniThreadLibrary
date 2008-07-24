@@ -1,9 +1,9 @@
-program testRegisterTerminationEvent;
+program testTerminateWhen;
 
 uses
   FastMM4,
   Forms,
-  testRegisterTerminationEvent1 in 'testRegisterTerminationEvent1.pas' {frmTestLock},
+  testTerminateWhen1 in 'testTerminateWhen1.pas' {frmTestTerminateWhen},
   OtlComm in '..\..\OtlComm.pas',
   OtlTaskControl in '..\..\OtlTaskControl.pas';
 
@@ -12,6 +12,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestLock, frmTestLock);
+  Application.CreateForm(TfrmTestTerminateWhen, frmTestTerminateWhen);
   Application.Run;
 end.

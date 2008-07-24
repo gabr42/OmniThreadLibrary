@@ -1,7 +1,7 @@
-object frmTestLock: TfrmTestLock
+object frmTestTerminateWhen: TfrmTestTerminateWhen
   Left = 0
   Top = 0
-  Caption = 'Lock tester'
+  Caption = 'TerminateWhen tester'
   ClientHeight = 306
   ClientWidth = 611
   Color = clBtnFace
