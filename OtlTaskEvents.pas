@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-06-30
-///   Version           : 0.1
+///   Last modification : 2008-07-24
+///   Version           : 0.2
 ///</para><para>
 ///   History:
+///     0.2: 2008-07-24
+///       - Implements IOmniTaskControlMonitor.
 ///</para></remarks>
 
 unit OtlTaskEvents;
@@ -53,7 +55,7 @@ type
 
 // TODO 1 -oPrimoz Gabrijelcic : tedMonitoredTasks list will be too slow, replace it with a sorted list of (task.UniqueID, task) pairs
 
-  TOmniTaskEventDispatch = class(TComponent)
+  TOmniTaskEventDispatch = class(TComponent, IOmniTaskControlMonitor)
   strict private
     tedMessageWindow   : THandle;
     tedMonitoredTasks  : TInterfaceList;

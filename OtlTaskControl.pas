@@ -39,6 +39,8 @@
 ///       - TOmniWorker.Initialize and .Cleanup made protected.
 ///       - Semantic change: (T|I)OmniWorker.Cleanup is called even if Initialize fails
 ///         or raises exception.
+///       - Defined IOmniTaskControlMonitor interface.
+///       - Added TOmniTaskControl.MonitorWith method.
 ///     0.2: 2008-07-22
 ///       - Added Lock property and WithLock method.
 ///       - Added SetPriority method.
@@ -71,6 +73,13 @@ uses
   OtlThreadPool;
 
 type
+  IOmniTaskControl = interface;
+  
+  IOmniTaskControlMonitor = interface
+    function  Detach(task: IOmniTaskControl): IOmniTaskControl;
+    function  Monitor(task: IOmniTaskControl): IOmniTaskControl;
+  end; { IOmniTaskControlMonitor }
+
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
     function  GetTask: IOmniTask;
     procedure SetTask(const value: IOmniTask);
@@ -111,6 +120,7 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  FreeOnTerminate: IOmniTaskControl;
+    function  MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
@@ -301,6 +311,7 @@ type
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
     function  GetUniqueID: int64; inline;
+    function  MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
     function  WithLock(lock: TSynchroObject; autoDestroyLock: boolean = true):
@@ -929,6 +940,12 @@ begin
   otcTerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcTerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
+
+function TOmniTaskControl.MonitorWith(monitor: IOmniTaskControlMonitor): IOmniTaskControl;
+begin
+  monitor.Monitor(Self);
+  Result := Self;
+end; { TOmniTaskControl.MonitorWith }
 
 function TOmniTaskControl.MsgWait(wakeMask: DWORD): IOmniTaskControl;
 begin

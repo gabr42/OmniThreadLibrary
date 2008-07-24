@@ -13,19 +13,19 @@ uses
 
 type
   TfrmTestOtlComm = class(TForm)
-    btnSendObject         : TButton;
-    btnSendTo1            : TButton;
-    btnSendTo2            : TButton;
-    lbLog                 : TListBox;
-    OmniTaskEventDispatch1: TOmniTaskEventDispatch;
+    btnSendObject: TButton;
     btnSendString: TButton;
+    btnSendTo1   : TButton;
+    btnSendTo2   : TButton;
+    lbLog        : TListBox;
+    OmniTED      : TOmniTaskEventDispatch;
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(task: IOmniTaskControl);
   private
     FClient1    : IOmniTaskControl;
     FClient2    : IOmniTaskControl;
@@ -130,10 +130,14 @@ end;
 procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
-  FClient1 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))).FreeOnTerminate.Run;
-  FClient2 := OmniTaskEventDispatch1.Monitor(
-    CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))).FreeOnTerminate.Run;
+  FClient1 := CreateTask(TCommTester.Create(FCommChannel.Endpoint1, 1024))
+    .MonitorWith(OmniTED)
+    .FreeOnTerminate
+    .Run;
+  FClient2 := CreateTask(TCommTester.Create(FCommChannel.Endpoint2, 1024))
+    .MonitorWith(OmniTED)
+    .FreeOnTerminate
+    .Run;
 end;
 
 procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
@@ -147,7 +151,7 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestOtlComm.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOtlComm.OmniTEDTaskMessage(task: IOmniTaskControl);
 var
   msgData: TOmniValue;
   msgID  : word;
