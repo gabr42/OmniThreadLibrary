@@ -1,7 +1,6 @@
 program testTerminateWhen;
 
 uses
-  FastMM4,
   Forms,
   testTerminateWhen1 in 'testTerminateWhen1.pas' {frmTestTerminateWhen},
   OtlComm in '..\..\OtlComm.pas',
