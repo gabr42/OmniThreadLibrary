@@ -40,7 +40,8 @@
 ///       - Semantic change: (T|I)OmniWorker.Cleanup is called even if Initialize fails
 ///         or raises exception.
 ///       - Defined IOmniTaskControlMonitor interface.
-///       - Added TOmniTaskControl.MonitorWith method.
+///       - Added IOmniTaskControl.MonitorWith method.
+///       - Implemented TOmniTaskControl.TerminateWhen method.
 ///     0.2: 2008-07-22
 ///       - Added Lock property and WithLock method.
 ///       - Added SetPriority method.
@@ -60,6 +61,7 @@ unit OtlTaskControl;
 interface
 
 // TODO 1 -oPrimoz Gabrijelcic : Catch thread exceptions (and add a mechanism to report them)
+// TODO 5 -oPrimoz Gabrijelcic : Task group? (Control them at once - terminate all, for example.)
 
 uses
   Windows,
@@ -159,7 +161,7 @@ uses
   DSiWin32,
   GpStuff,
   SpinLock,
-  OtlTaskEvents;
+  OtlTaskEvents, GpLists;
 
 type
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
@@ -177,6 +179,7 @@ type
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
+    oteTerminateHandles  : TGpIntegerList;
     oteTimerInterval_ms  : cardinal;
     oteTimerMessage      : integer;
     oteWakeMask          : DWORD;
@@ -204,6 +207,7 @@ type
     procedure Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Asy_UnregisterComm(comm: IOmniCommunicationEndpoint);
+    procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -564,6 +568,7 @@ begin
     FreeAndNil(oteCommList);
   finally oteInternalLock.Release; end;
   FreeAndNil(oteInternalLock);
+  FreeAndNil(oteTerminateHandles);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -572,26 +577,46 @@ end; { TOmniTaskExecutor.Destroy }
 procedure TOmniTaskExecutor.Asy_DispatchMessages(task: IOmniTask);
 
 var
-  numWaitHandles: cardinal;
-  waitHandles   : array [0..63] of THandle;
+  idxFirstMessage  : cardinal;
+  idxFirstTerminate: cardinal;
+  idxLastMessage   : cardinal;
+  idxLastTerminate : cardinal;
+  idxRebuildHandles: cardinal;
+  numWaitHandles   : cardinal;
+  waitHandles      : array [0..63] of THandle;
 
   procedure RebuildWaitHandles;
   var
-    intf: IInterface;
+    iHandle: integer;
+    intf   : IInterface;
   begin
     oteInternalLock.Acquire;
     try
+      idxFirstTerminate := 0;
       waitHandles[0] := task.TerminateEvent;
-      waitHandles[1] := task.Comm.NewMessageEvent;
-      waitHandles[2] := oteCommRebuildHandles;
-      numWaitHandles := 3;
+      idxLastTerminate := idxFirstTerminate;
+      if assigned(oteTerminateHandles) then
+        for iHandle in oteTerminateHandles do begin
+          Inc(idxLastTerminate);
+          if idxLastTerminate > High(waitHandles) then
+            raise Exception.CreateFmt('TOmniTaskExecutor.Asy_DispatchMessages: ' +
+              'Cannot wait on more than %d handles', [High(waitHandles)]);
+          waitHandles[idxLastTerminate] := THandle(iHandle);
+        end;
+      idxRebuildHandles := idxLastTerminate + 1;
+      waitHandles[idxRebuildHandles] := oteCommRebuildHandles;
+      idxFirstMessage := idxRebuildHandles + 1;
+      waitHandles[idxFirstMessage] := task.Comm.NewMessageEvent;
+      idxLastMessage := idxFirstMessage;
       if assigned(oteCommList) then
         for intf in oteCommList do begin
-          if numWaitHandles > High(waitHandles) then
-            raise Exception.CreateFmt('TOmniTaskExecutor.Asy_DispatchMessages: Cannot wait on more than %d handles', [numWaitHandles]);
-          waitHandles[numWaitHandles] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
-          Inc(numWaitHandles);
+          Inc(idxLastMessage);
+          if idxLastMessage > High(waitHandles) then
+            raise Exception.CreateFmt('TOmniTaskExecutor.Asy_DispatchMessages: ' +
+              'Cannot wait on more than %d handles', [High(waitHandles)]);
+          waitHandles[idxLastMessage] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
         end;
+      numWaitHandles := idxLastMessage + 1;
     finally oteInternalLock.Release; end;
   end; { RebuildWaitHandles }
 
@@ -644,17 +669,17 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
           end;
           awaited := MsgWaitForMultipleObjectsEx(numWaitHandles, waitHandles,
             cardinal(timeout_ms), waitWakeMask, flags);
-          if (awaited = WAIT_OBJECT_0) or (awaited = WAIT_ABANDONED) then
+          if ((awaited >= idxFirstTerminate) and (awaited <= idxLastTerminate)) or
+             (awaited = WAIT_ABANDONED)
+          then
             break //repeat
-          else if (awaited = WAIT_OBJECT_1) or
-                  ((awaited >= WAIT_OBJECT_3) and (awaited <= numWaitHandles)) then
-          begin
-            if awaited = WAIT_OBJECT_1 then
+          else if (awaited >= idxFirstMessage) and (awaited <= idxLastMessage) then begin
+            if awaited = idxFirstMessage then
               gotMsg := task.Comm.Receive(msg)
             else begin
               oteInternalLock.Acquire;
               try
-                gotMsg := (oteCommList[awaited - WAIT_OBJECT_3] as IOmniCommunicationEndpoint).Receive(msg);
+                gotMsg := (oteCommList[awaited - idxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
               finally oteInternalLock.Release; end;
             end;
             if gotMsg then begin
@@ -663,8 +688,8 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
               if assigned(WorkerObj_ref) then
                 WorkerObj_ref.DispatchMessage(msg)
             end;
-          end // WAIT_OBJECT_1, WAIT_OBJECT3 .. numWaitHandles
-          else if awaited = WAIT_OBJECT_2 then
+          end // comm handles
+          else if awaited = idxRebuildHandles then
             RebuildWaitHandles
           else if awaited = (numWaitHandles + 1) then //message
             ProcessThreadMessages
@@ -820,6 +845,14 @@ begin
     raise Exception.Create('TOmniTaskExecutor.SetTimerMessage: Timer support is only available when working with an IOmniWorker/TOmniWorker');
   oteTimerMessage := value;
 end; { TOmniTaskExecutor.SetTimerMessage }
+
+procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
+begin
+  Assert(SizeOf(THandle) = SizeOf(integer));
+  if not assigned(oteTerminateHandles) then
+    oteTerminateHandles := TGpIntegerList.Create;
+  oteTerminateHandles.Add(handle);
+end; { TOmniTaskExecutor.TerminateWhen }
 
 function TOmniTaskExecutor.WaitForInit: boolean;
 begin
@@ -1035,8 +1068,8 @@ end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
 begin
+  otcExecutor.TerminateWhen(event);
   Result := Self;
-  raise Exception.Create('Not implemented: TOmniTaskControl.TerminateWhen');
 end; { TOmniTaskControl.TerminateWhen }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;

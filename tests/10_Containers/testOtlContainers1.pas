@@ -147,7 +147,7 @@ type
     procedure OMStartStackWrite(var msg: TOmniMessage); message MSG_START_STACK_WRITE;
   end;
 
-  TCommReader = class(TComMTester)
+  TCommReader = class(TCommTester)
   public
     procedure OMStartBaseQueueStressTest(var msg: TOmniMessage); message MSG_START_BASE_QUEUE_STRESS_TEST;
     procedure OMStartBaseStackStressTest(var msg: TOmniMessage); message MSG_START_BASE_STACK_STRESS_TEST;
