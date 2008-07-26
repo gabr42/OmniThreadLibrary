@@ -70,6 +70,15 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 5
     OnClick = btnScheduleAndCancelClick
   end
+  object btnCancelAll: TButton
+    Left = 8
+    Top = 163
+    Width = 129
+    Height = 25
+    Caption = 'Cancel all'
+    TabOrder = 6
+    OnClick = btnCancelAllClick
+  end
   object OmniTED: TOmniTaskEventDispatch
     OnTaskTerminated = OmniTEDTaskTerminated
     OnTaskMessage = OmniTEDTaskMessage

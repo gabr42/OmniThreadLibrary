@@ -40,6 +40,9 @@ unit OtlThreadPool;
 
 interface
 
+// TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
+// TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example)
+
 uses
   Windows,
   SysUtils,
@@ -389,25 +392,31 @@ var
   startUserTime  : int64;
   stopKernelTime : int64;
   stopUserTime   : int64;
+  task           : IOmniTask;
   workItem       : TOTPWorkItem;
 begin
   {$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);{$ENDIF LogThreadPool}
     owtOwner.Asy_ForwardThreadCreated(ThreadID);
     try
       while DSiWaitForTwoObjects(owtNewWorkEvent, TerminateEvent, false, INFINITE) = WAIT_OBJECT_0 do begin
+        task := WorkItem_ref.Task;
         try
-          {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
-          DSiGetThreadTimes(creationTime, startUserTime, startKernelTime);
-          (WorkItem_ref.Task as IOmniTaskExecutor).Execute;
-          DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
-          {$IFDEF LogThreadPool}Log('Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms', [Description, WorkItem_ref.Description, Round((stopUserTime - startUserTime)/10000), Round((stopKernelTime - startKernelTime)/10000)]);{$ENDIF LogThreadPool}
-        except
-          on E: Exception do begin
-            {$IFDEF LogThreadPool}Log('Thread %s caught exception %s during exection of %s', [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
-            WorkItem_ref.Task.SetExitStatus(EXIT_EXCEPTION, E.Message);
-            owtRemoveFromPool := true;
+          try
+            {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
+            DSiGetThreadTimes(creationTime, startUserTime, startKernelTime);
+            if assigned(task) then
+              (task as IOmniTaskExecutor).Execute;
+            DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
+            {$IFDEF LogThreadPool}Log('Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms', [Description, WorkItem_ref.Description, Round((stopUserTime - startUserTime)/10000), Round((stopKernelTime - startKernelTime)/10000)]);{$ENDIF LogThreadPool}
+          except
+            on E: Exception do begin
+              {$IFDEF LogThreadPool}Log('Thread %s caught exception %s during exection of %s', [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
+              if assigned(task) then
+                task.SetExitStatus(EXIT_EXCEPTION, E.Message);
+              owtRemoveFromPool := true;
+            end;
           end;
-        end;
+        finally task := nil; end;
         owtWorkItemLock.Acquire;
         try
           workItem := WorkItem_ref;
@@ -555,8 +564,8 @@ end; { TOmniThreadPool.Cancel }
 
 procedure TOmniThreadPool.CancelAll;
 begin
-  // TODO -cMM: TOmniThreadPool.CancelAll default body inserted
-end;
+  InternalStop;
+end; { TOmniThreadPool.CancelAll }
 
 function TOmniThreadPool.CountExecuting: integer;
 begin
@@ -639,12 +648,25 @@ end; { TOmniThreadPool.GetWaitOnTerminate_sec }
 
 procedure TOmniThreadPool.InternalStop;
 var
-  endWait_ms: int64;
-  iWorker   : integer;
-  iWorkItem : integer;
-  worker    : TOTPWorkerThread;
-  workItem  : TOTPWorkItem;
+  endWait_ms : int64;
+  iWorker    : integer;
+  iWorkItem  : integer;
+  queuedItems: TObjectList {of TOTPWorkItem};
+  worker     : TOTPWorkerThread;
+  workItem   : TOTPWorkItem;
 begin
+  {$IFDEF LogThreadPool}Log('Terminating queued tasks', []);{$ENDIF LogThreadPool}
+  queuedItems := TObjectList.Create(false);
+  try
+    for iWorkItem := 0 to otpWorkItemQueue.Count - 1 do
+      queuedItems.Add(otpWorkItemQueue[iWorkItem]);
+    otpWorkItemQueue.Clear;
+    for iWorkItem := 0 to queuedItems.Count - 1 do begin
+      workItem := TOTPWorkItem(queuedItems[iWorkItem]);
+      workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
+      Asy_RequestCompleted(workItem, nil);
+    end; //for iWorkItem
+  finally FreeAndNil(queuedItems); end;
   {$IFDEF LogThreadPool}Log('Stopping all threads', []);{$ENDIF LogThreadPool}
   for iWorker := 0 to otpIdleWorkers.Count - 1 do
     StopThread(TOTPWorkerThread(otpIdleWorkers[iWorker]));
@@ -652,11 +674,6 @@ begin
   for iWorker := 0 to otpRunningWorkers.Count - 1 do
     StopThread(TOTPWorkerThread(otpRunningWorkers[iWorker]));
   otpRunningWorkers.Clear;
-  for iWorkItem := 0 to otpWorkItemQueue.Count - 1 do begin
-    workItem := TOTPWorkItem(otpWorkItemQueue[iWorkItem]);
-    workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
-    Asy_RequestCompleted(workItem, nil);
-  end; //for iWorkItem
   endWait_ms := DSiTimeGetTime64 + int64(WaitOnTerminate_sec)*1000;
   while (endWait_ms > DSiTimeGetTime64) and (NumRunningStoppedThreads > 0) do
     Sleep(100);
