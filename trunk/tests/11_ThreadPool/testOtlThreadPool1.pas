@@ -24,6 +24,7 @@ type
     OmniTED: TOmniTaskEventDispatch;
     btnSchedule6: TButton;
     btnScheduleAndCancel: TButton;
+    btnCancelLong: TButton;
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
@@ -56,10 +57,11 @@ const
 type
   THelloWorker = class(TOmniWorker)
   strict private
+    FDelay_ms: integer;
     FFormHandle: THandle;
     FTaskID    : int64;
   public
-    constructor Create(formHandle: THandle);
+    constructor Create(formHandle: THandle; delay_ms: integer = 1000);
     destructor Destroy; override;
     function  Initialize: boolean; override;
     procedure Cleanup; override;
@@ -93,23 +95,33 @@ end;
 
 procedure TfrmTestOtlThreadPool.btnScheduleAndCancelClick(Sender: TObject);
 var
-  i     : integer;
-  taskID: int64;
+  delay_ms: integer;
+  i       : integer;
+  taskID  : int64;
 begin
-  taskID := OmniTED.Monitor(CreateTask(THelloWorker.Create(Handle))).FreeOnTerminate.Schedule.UniqueID;
+  if Sender = btnScheduleAndCancel then
+    delay_ms := 1000
+  else
+    delay_ms := 20000;
+  GlobalOmniThreadPool.WaitOnTerminate_sec := 3;
+  taskID := CreateTask(THelloWorker.Create(Handle, delay_ms))
+    .MonitorWith(OmniTED).FreeOnTerminate.Schedule.UniqueID;
   for i := 1 to 50 do begin
     Application.ProcessMessages;
     Sleep(10);
   end;
   Log(Format('Cancelling task %d', [taskID]));
-  GlobalOmniThreadPool.Cancel(taskID);
+  if GlobalOmniThreadPool.Cancel(taskID) then
+    Log(Format('Task %d was cancelled', [taskID]))
+  else
+    Log(Format('Task %d was killed', [taskID]));
 end;
 
 procedure TfrmTestOtlThreadPool.btnScheduleClick(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := OmniTED.Monitor(CreateTask(THelloWorker.Create(Handle))).FreeOnTerminate;
+  task := CreateTask(THelloWorker.Create(Handle)).MonitorWith(OmniTED).FreeOnTerminate;
   if Sender = btnScheduleTask then
     task.Schedule
   else
@@ -180,10 +192,11 @@ end;
 
 { THelloWorker }
 
-constructor THelloWorker.Create(formHandle: THandle);
+constructor THelloWorker.Create(formHandle: THandle; delay_ms: integer);
 begin
   inherited Create;
   FFormHandle := formHandle;
+  FDelay_ms := delay_ms;
 end;
 
 destructor THelloWorker.Destroy;
@@ -194,7 +207,7 @@ end;
 
 procedure THelloWorker.Cleanup;
 begin
-  Sleep(1000);
+  Sleep(FDelay_ms);
   task.Comm.Send(MSG_HELLO, Format('Task %d signing off from thread %d', [task.UniqueID, GetCurrentThreadID]));
 end;
 

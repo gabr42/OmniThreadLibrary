@@ -61,6 +61,15 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 4
     OnClick = btnScheduleAndCancelClick
   end
+  object btnCancelLong: TButton
+    Left = 8
+    Top = 132
+    Width = 129
+    Height = 25
+    Caption = 'Cancel long task'
+    TabOrder = 5
+    OnClick = btnScheduleAndCancelClick
+  end
   object OmniTED: TOmniTaskEventDispatch
     OnTaskTerminated = OmniTEDTaskTerminated
     OnTaskMessage = OmniTEDTaskMessage
