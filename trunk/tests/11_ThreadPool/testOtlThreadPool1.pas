@@ -32,11 +32,12 @@ type
     procedure btnScheduleClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
+    procedure OmniTEDPoolThreadCreated(pool: IOmniThreadPool; threadID: integer);
+    procedure OmniTEDPoolThreadDestroying(pool: IOmniThreadPool; threadID: integer);
+    procedure OmniTEDPoolThreadKilled(pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDTaskMessage(task: IOmniTaskControl);
     procedure OmniTEDTaskTerminated(task: IOmniTaskControl);
   private
-    procedure Asy_ReportWorkerThreadCreated(Sender: TObject; threadID: DWORD);
-    procedure Asy_ReportWorkerThreadDestroying(Sender: TObject; threadID: DWORD);
     procedure Log(const msg: string);
     procedure LogPoolStatus;
     procedure WMThreadStateChanged(var msg: TMessage); message WM_THREAD_STATE_CHANGED;
@@ -70,20 +71,6 @@ type
   end;
 
 { TfrmTestOtlComm }
-
-procedure TfrmTestOtlThreadPool.Asy_ReportWorkerThreadCreated(Sender: TObject; threadID:
-  DWORD);
-begin
-  if not (csDestroying in frmTestOtlThreadPool.ComponentState) then
-    PostMessage(frmTestOtlThreadPool.Handle, WM_THREAD_STATE_CHANGED, 1, threadID);
-end;
-
-procedure TfrmTestOtlThreadPool.Asy_ReportWorkerThreadDestroying(Sender: TObject;
-  threadID: DWORD);
-begin
-  if not (csDestroying in frmTestOtlThreadPool.ComponentState) then
-    PostMessage(frmTestOtlThreadPool.Handle, WM_THREAD_STATE_CHANGED, 0, threadID);
-end;
 
 procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
 begin
@@ -145,11 +132,9 @@ end;
 
 procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);
 begin
-//  OmniTED.Monitor(GlobalOmniThreadPool);
+  GlobalOmniThreadPool.MonitorWith(OmniTED);
   GlobalOmniThreadPool.MaxExecuting := 2;
   GlobalOmniThreadPool.MaxQueued := 3;
-  GlobalOmniThreadPool.OnWorkerThreadCreated_Asy := Asy_ReportWorkerThreadCreated;
-  GlobalOmniThreadPool.OnWorkerThreadDestroying_Asy := Asy_ReportWorkerThreadDestroying;
 end;
 
 procedure TfrmTestOtlThreadPool.Log(const msg: string);
@@ -161,6 +146,24 @@ procedure TfrmTestOtlThreadPool.LogPoolStatus;
 begin
   Log(Format('Thread pool status: %d executing / %d queued',
     [GlobalOmniThreadPool.CountExecuting, GlobalOmniThreadPool.CountQueued]));
+end;
+
+procedure TfrmTestOtlThreadPool.OmniTEDPoolThreadCreated(pool: IOmniThreadPool; threadID:
+  integer);
+begin
+  Log(Format('Thread %d created in thread pool %d', [threadID, pool.UniqueID]));
+end;
+
+procedure TfrmTestOtlThreadPool.OmniTEDPoolThreadDestroying(pool: IOmniThreadPool;
+  threadID: integer);
+begin
+  Log(Format('Thread %d destroyed in thread pool %d', [threadID, pool.UniqueID]));
+end;
+
+procedure TfrmTestOtlThreadPool.OmniTEDPoolThreadKilled(pool: IOmniThreadPool; threadID:
+  integer);
+begin
+  Log(Format('Thread %d killed in thread pool %d', [threadID, pool.UniqueID]));
 end;
 
 procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(task: IOmniTaskControl);

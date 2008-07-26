@@ -48,6 +48,9 @@ unit OtlContainers;
 
 interface
 
+uses
+  OtlCommon;
+
 type
   {:Lock-free, single writer, single reader, size-limited stack.
   }
@@ -70,27 +73,6 @@ type
     function  IsEmpty: boolean;
     function  IsFull: boolean;
   end; { IOmniRingBuffer }
-
-  IOmniMonitorParams = interface
-    function  GetLParam: integer;
-    function  GetMessage: cardinal;
-    function  GetWindow: THandle;
-    function  GetWParam: integer;
-  //
-    property Window: THandle read GetWindow;
-    property Msg: cardinal read GetMessage;
-    property WParam: integer read GetWParam;
-    property LParam: integer read GetLParam;
-  end; { IOmniMonitorParams }
-
-  IOmniMonitorSupport = interface ['{6D5F1191-9E4A-4DD5-99D8-694C95B0DE90}']
-    function  GetMonitor: IOmniMonitorParams;
-  //
-    procedure Notify;
-    procedure RemoveMonitor;
-    procedure SetMonitor(monitor: IOmniMonitorParams);
-    property Monitor: IOmniMonitorParams read GetMonitor;
-  end; { IOmniMonitorSupport }
 
   IOmniNotifySupport = interface ['{E5FFC739-669A-4931-B0DC-C5005A94A08B}']
     function  GetNewDataEvent: THandle;
@@ -181,9 +163,6 @@ type
     property Options: TOmniContainerOptions read orbOptions;
   end; { TOmniQueue }
 
-  function CreateOmniMonitorParams(window: THandle; msg: cardinal;
-    wParam, lParam: integer): IOmniMonitorParams;
-
 implementation
 
 uses
@@ -192,38 +171,6 @@ uses
   DSiWin32;
 
 type
-  TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
-  strict private
-    ompLParam : integer;
-    ompMessage: cardinal;
-    ompWindow : THandle;
-    ompWParam : integer;
-  protected
-    function  GetLParam: integer;
-    function  GetMessage: cardinal;
-    function  GetWindow: THandle;
-    function  GetWParam: integer;
-  public
-    constructor Create(window: THandle; msg: cardinal; wParam, lParam: integer);
-    destructor Destroy; override;
-    property LParam: integer read GetLParam;
-    property Msg: cardinal read GetMessage;
-    property Window: THandle read GetWindow;
-    property WParam: integer read GetWParam;
-  end; { TOmniMonitorParams }
-
-  TOmniMonitorSupport = class(TInterfacedObject, IOmniMonitorSupport)
-  strict private
-    omsMonitor: IOmniMonitorParams;
-  protected
-    function GetMonitor: IOmniMonitorParams;
-  public
-    procedure Notify;
-    procedure RemoveMonitor;
-    procedure SetMonitor(monitor: IOmniMonitorParams);
-    property Monitor: IOmniMonitorParams read GetMonitor;
-  end; { TOmniMonitorSupport }
-
   TOmniNotifySupport = class(TInterfacedObject, IOmniNotifySupport)
   strict private
     onsNewDataEvent: TDSiEventHandle;
@@ -236,75 +183,9 @@ type
     property NewData: THandle read GetNewDataEvent;
   end; { TOmniNotifySupport }
 
-{ exports }
-
-function CreateOmniMonitorParams(window: THandle; msg: cardinal;
-  wParam, lParam: integer): IOmniMonitorParams;
-begin
-  Result := TOmniMonitorParams.Create(window, msg, wParam, lParam);
-end; { CreateOmniMonitorParams }
-
 { TOmniMonitorParams }
 
-constructor TOmniMonitorParams.Create(window: THandle; msg: cardinal; wParam, lParam:
-  integer);
-begin
-  ompMessage := msg;
-  ompLParam := lParam;
-  ompWParam := wParam;
-  ompWindow := window;
-end; { TOmniMonitorParams.Create }
-
-destructor TOmniMonitorParams.Destroy;
-begin
-  inherited Destroy;
-end;
-
-function TOmniMonitorParams.GetLParam: integer;
-begin
-  Result := ompLParam;
-end; { TOmniMonitorParams.GetLParam }
-
-function TOmniMonitorParams.GetMessage: cardinal;
-begin
-  Result := ompMessage;
-end; { TOmniMonitorParams.GetMessage }
-
-function TOmniMonitorParams.GetWindow: THandle;
-begin
-  Result := ompWindow;
-end; { TOmniMonitorParams.GetWindow }
-
-function TOmniMonitorParams.GetWParam: integer;
-begin
-  Result := ompWParam;
-end; { TOmniMonitorParams.GetWParam }
-
 { TOmniMonitorSupport }
-
-function TOmniMonitorSupport.GetMonitor: IOmniMonitorParams;
-begin
-  Result := omsMonitor;
-end; { TOmniMonitorSupport.GetMonitor }
-
-procedure TOmniMonitorSupport.Notify;
-var
-  params: IOmniMonitorParams;
-begin
-  params := GetMonitor;
-  if assigned(params) then
-    PostMessage(params.Window, params.Msg, params.WParam, params.LParam);
-end; { TOmniMonitorSupport.Notify }
-
-procedure TOmniMonitorSupport.RemoveMonitor;
-begin
-  omsMonitor := nil;
-end; { TOmniMonitorSupport.RemoveMonitor }
-
-procedure TOmniMonitorSupport.SetMonitor(monitor: IOmniMonitorParams);
-begin
-  omsMonitor := monitor;
-end; { TOmniMonitorSupport.SetMonitor }
 
 { TOmniNotifySupport }
 
@@ -506,7 +387,7 @@ begin
   Initialize(numElements, elementSize);
   osOptions := options;
   if coEnableMonitor in Options then
-    osMonitorSupport := TOmniMonitorSupport.Create;
+    osMonitorSupport := CreateOmniMonitorSupport;
   if coEnableNotify in Options then
     osNotifySupport := TOmniNotifySupport.Create;
 end; { TOmniStack.Create }
@@ -592,7 +473,7 @@ begin
   Initialize(numElements, elementSize);
   orbOptions := options;
   if coEnableMonitor in Options then
-    orbMonitorSupport := TOmniMonitorSupport.Create;
+    orbMonitorSupport := CreateOmniMonitorSupport;
   if coEnableNotify in Options then
     orbNotifySupport := TOmniNotifySupport.Create;
 end; { TOmniQueue.Create }
