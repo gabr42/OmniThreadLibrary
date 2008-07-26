@@ -6,10 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-07-08
-   Version           : 1.10
+   Last modification : 2008-07-20
+   Version           : 1.11
 </pre>*)(*
    History:
+     1.11: 2008-07-20
+       - Implemented 8-aligned integer, TGp8AlignedInt.
+       - TGp4AlignedInt and TGp8AlignedInt ifdef'd to be only available on D2007+.
      1.10: 2008-07-08
        - [GJ] ReverseWord/ReverseDWord rewritten in assembler.
      1.09: 2008-06-19
@@ -48,14 +51,18 @@ uses
   DSiWin32;
 
 {$IFDEF ConditionalExpressions}
-  {$IF CompilerVersion >= 17}
+  {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
+  {$IFEND}
+  {$IF CompilerVersion >= 18.5} //D2007+
+    {$DEFINE GpStuff_AlignedInt}
   {$IFEND}
 {$ENDIF}
 
 const
   MaxInt64 = $7FFFFFFFFFFFFFFF;
 
+{$IFDEF GpStuff_AlignedInt}
 type
   TGp4AlignedInt = record
   strict private
@@ -64,17 +71,17 @@ type
     procedure SetValue(value: cardinal); inline;
   public
     function Addr: PCardinal; inline;
-    function Decrement: cardinal;
-    function Increment: cardinal;
-    class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal;
-    class operator Equal(const ai: TGp4AlignedInt; i: cardinal): boolean;
-    class operator GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean;
-    class operator Implicit(const ai: TGp4AlignedInt): integer;
-    class operator Implicit(const ai: TGp4AlignedInt): cardinal;
-    class operator Implicit(const ai: TGp4AlignedInt): PCardinal;
-    class operator LessThan(const ai: TGp4AlignedInt; i: cardinal): boolean;
-    class operator NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean;
-    class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal;
+    function Decrement: cardinal; inline;
+    function Increment: cardinal; inline;
+    class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
+    class operator Equal(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): integer; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): cardinal; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): PCardinal; inline;
+    class operator LessThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal; inline;
     property Value: cardinal read GetValue write SetValue;
   end; { TGp4AlignedInt }
 
@@ -83,14 +90,15 @@ type
     aiData: packed record
       DataLo, DataHi: int64;
     end;
-    function GetValue: int64; inline;
+    function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
     function Addr: PCardinal; inline;
-    function Decrement: int64;
-    function Increment: int64;
+    function Decrement: int64; inline;
+    function Increment: int64; inline;
     property Value: int64 read GetValue write SetValue;
   end; { TGp8AlignedInt }
+{$ENDIF GpStuff_AlignedInt}
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: string; const value: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -239,6 +247,7 @@ begin
         vtVariant:    Result[i] := VVariant^;
         vtObject:     Result[i] := integer(VObject);
         vtWideString: Result[i] := WideString(VWideString);
+        vtInt64:      Result[i] := VInt64^;
       else
         raise Exception.Create ('OpenArrayToVarArray: invalid data type')
       end; //case
@@ -281,6 +290,8 @@ asm
       DEC   EAX
 @@1:  POP   EDI
 end; { TableFindNE }
+
+{$IFDEF GpStuff_AlignedInt}
 
 { TGpAlignedInt }
 
@@ -382,5 +393,7 @@ procedure TGp8AlignedInt.SetValue(value: int64);
 begin
   Addr^ := value;
 end; { TGp8AlignedInt.SetValue }
+
+{$ENDIF GpStuff_AlignedInt}
 
 end.
