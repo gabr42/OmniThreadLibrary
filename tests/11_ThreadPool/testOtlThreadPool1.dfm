@@ -80,8 +80,11 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     OnClick = btnCancelAllClick
   end
   object OmniTED: TOmniEventMonitor
-    OnTaskTerminated = OmniTEDTaskTerminated
+    OnPoolThreadCreated = OmniTEDPoolThreadCreated
+    OnPoolThreadDestroying = OmniTEDPoolThreadDestroying
+    OnPoolThreadKilled = OmniTEDPoolThreadKilled
     OnTaskMessage = OmniTEDTaskMessage
+    OnTaskTerminated = OmniTEDTaskTerminated
     Left = 8
     Top = 264
   end

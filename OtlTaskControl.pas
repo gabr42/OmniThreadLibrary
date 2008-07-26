@@ -368,7 +368,7 @@ type
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
-    function  Schedule(threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
+    function Schedule(threadPool: IOmniThreadPool): IOmniTaskControl;
     function  SetTimer(interval_ms: cardinal; timerMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; paramValue: TOmniValue): IOmniTaskControl; overload;
@@ -404,9 +404,6 @@ type
     function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
     function WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
-
-var
-  taskUID: TGp8AlignedInt;
 
 { exports }
 
@@ -1045,7 +1042,7 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
-  otcUniqueID := taskUID.Increment;
+  otcUniqueID := OtlUID.Increment;
   otcCommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
   otcTerminateEvent := CreateEvent(nil, true, false, nil);
@@ -1097,7 +1094,7 @@ end; { TOmniTaskControl.Run }
 function TOmniTaskControl.Schedule(threadPool: IOmniThreadPool): IOmniTaskControl;
 begin
   otcParameters.Lock;
-  GlobalOmniThreadPool.Schedule(CreateTask);
+  (GlobalOmniThreadPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
   Result := Self;
 end; { TOmniTaskControl.Schedule }
 
