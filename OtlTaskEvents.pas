@@ -153,8 +153,10 @@ begin
       Int64Rec(taskID).Lo := cardinal(msg.WParam);
       Int64Rec(taskID).Hi := cardinal(msg.LParam);
       task := LocateTask(taskID);
-      if assigned(task) then
+      if assigned(task) then begin
         OnTaskTerminated(task);
+        Detach(task);
+      end;
     end;
     msg.Result := 0;
   end

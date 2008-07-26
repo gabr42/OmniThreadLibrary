@@ -180,9 +180,10 @@ uses
   Messages,
   HVStringBuilder,
   DSiWin32,
+  GpLists,
   GpStuff,
   SpinLock,
-  OtlTaskEvents, GpLists;
+  OtlTaskEvents;
 
 type
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
@@ -209,6 +210,7 @@ type
     oteWorkerIntf        : IOmniWorker;
     oteWorkerObj_ref     : TOmniWorker;
   strict protected
+    procedure Cleanup;
     procedure Initialize;
     procedure ProcessThreadMessages;
     procedure SetOptions(const value: TOmniTaskControlOptions);
@@ -269,6 +271,7 @@ type
 
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
+    otExecuting     : boolean;
     otExecutor_ref  : TOmniTaskExecutor;
     otParameters_ref: TOmniValueContainer;
     otSharedInfo    : TOmniSharedTaskInfo;
@@ -281,7 +284,7 @@ type
     function  GetParamByName(const paramName: string): TOmniValue; inline;
     function  GetTerminateEvent: THandle; inline;
     function  GetUniqueID: int64; inline;
-    procedure Terminate; inline;
+    procedure Terminate; 
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
@@ -289,6 +292,7 @@ type
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
+    function Terminated: boolean;
     procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -472,6 +476,7 @@ end; { TOmniTask.Destroy }
 
 procedure TOmniTask.Execute;
 begin
+  otExecuting := true;
   try
     try
       try
@@ -488,9 +493,7 @@ begin
         PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
           integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
     end;
-  finally
-    SetEvent(otSharedInfo.TerminatedEvent);
-  end;
+  finally SetEvent(otSharedInfo.TerminatedEvent); end;
 end; { TOmniTask.Execute }
 
 function TOmniTask.GetComm: IOmniCommunicationEndpoint;
@@ -546,7 +549,14 @@ end; { TOmniTask.SetExitStatus }
 procedure TOmniTask.Terminate;
 begin
   SetEvent(otSharedInfo.TerminateEvent);
+  if not otExecuting then //for execution so that proper cleanup can occur
+    Execute;
 end; { TOmniTask.Terminate }
+
+function TOmniTask.Terminated: boolean;
+begin
+  Result := WaitForSingleObject(otSharedInfo.TerminatedEvent, 0) <> WAIT_TIMEOUT;
+end; { TOmniTask.Terminated }
 
 procedure TOmniTask.UnregisterComm(comm: IOmniCommunicationEndpoint);
 begin
@@ -686,105 +696,95 @@ var
 
 begin { TOmniTaskExecutor.Asy_DispatchMessages }
   try
+    if assigned(WorkerIntf) and assigned(WorkerObj_ref) then
+      raise Exception.Create('TOmniTaskControl: Internal error, both WorkerIntf and WorkerObj are assigned');
+    oteWorkerInitOK := false;
     try
-      try
-        if assigned(WorkerIntf) and assigned(WorkerObj_ref) then
-          raise Exception.Create('TOmniTaskControl: Internal error, both WorkerIntf and WorkerObj are assigned');
-        oteWorkerInitOK := false;
-        try
-          if assigned(WorkerIntf) then begin
-            WorkerIntf.Task := task;
-            if not WorkerIntf.Initialize then
-              Exit;
-          end;
-          if assigned(WorkerObj_ref) then begin
-            WorkerObj_ref.Task := task;
-            if not WorkerObj_ref.Initialize then
-              Exit;
-          end;
-          oteWorkerInitOK := true;
-        finally SetEvent(WorkerInitialized); end;
-        if tcoMessageWait in Options then
-          waitWakeMask := WakeMask
-        else
-          waitWakeMask := 0;
-        if tcoAlertableWait in Options then
-          flags := MWMO_ALERTABLE
-        else
-          flags := 0;
-        RebuildWaitHandles;
-        lastTimer_ms := DSiTimeGetTime64;
-        repeat
-          if TimerInterval_ms <= 0 then
-            timeout_ms := INFINITE
-          else begin
-            timeout_ms := TimerInterval_ms - (DSiTimeGetTime64 - lastTimer_ms);
-            if timeout_ms < 0 then
-              timeout_ms := 0;
-          end;
-          awaited := MsgWaitForMultipleObjectsEx(numWaitHandles, waitHandles,
-            cardinal(timeout_ms), waitWakeMask, flags);
-          if ((awaited >= idxFirstTerminate) and (awaited <= idxLastTerminate)) or
-             (awaited = WAIT_ABANDONED)
-          then
-            break //repeat
-          else if (awaited >= idxFirstMessage) and (awaited <= idxLastMessage) then begin
-            if awaited = idxFirstMessage then
-              gotMsg := task.Comm.Receive(msg)
-            else begin
-              oteInternalLock.Acquire;
-              try
-                gotMsg := (oteCommList[awaited - idxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
-              finally oteInternalLock.Release; end;
-            end;
-            if gotMsg then begin
-              if assigned(WorkerIntf) then
-                WorkerIntf.DispatchMessage(msg);
-              if assigned(WorkerObj_ref) then
-                WorkerObj_ref.DispatchMessage(msg)
-            end;
-          end // comm handles
-          else if awaited = idxRebuildHandles then
-            RebuildWaitHandles
-          else if awaited = (numWaitHandles + 1) then //message
-            ProcessThreadMessages
-          else if awaited = WAIT_IO_COMPLETION then
-            // do-nothing
-          else if awaited = WAIT_TIMEOUT then begin
-            if TimerMessage >= 0 then begin
-              msg.MsgID := TimerMessage;
-              msg.MsgData := Null;
-              if assigned(WorkerIntf) then
-                WorkerIntf.DispatchMessage(msg);
-              if assigned(WorkerObj_ref) then
-                WorkerObj_ref.DispatchMessage(msg);
-            end
-            else if assigned(WorkerIntf) then
-              WorkerIntf.Timer
-            else if assigned(WorkerObj_ref) then
-              WorkerObj_ref.Timer;
-            lastTimer_ms := DSiTimeGetTime64;
-          end //WAIT_TIMEOUT
-          else //errors
-            RaiseLastOSError;
-        until false;
-      finally
-        if assigned(WorkerIntf) then begin
-          WorkerIntf.Cleanup;
-          WorkerIntf.Task := nil;
-        end;
-        if assigned(WorkerObj_ref) then begin
-          WorkerObj_ref.Cleanup;
-          WorkerObj_ref.Task := nil;
-        end;
+      if assigned(WorkerIntf) then begin
+        WorkerIntf.Task := task;
+        if not WorkerIntf.Initialize then
+          Exit;
       end;
-    finally
-      if tcoFreeOnTerminate in Options then
-        oteWorkerObj_ref.Free;
-    end;
+      if assigned(WorkerObj_ref) then begin
+        WorkerObj_ref.Task := task;
+        if not WorkerObj_ref.Initialize then
+          Exit;
+      end;
+      oteWorkerInitOK := true;
+    finally SetEvent(WorkerInitialized); end;
+    if tcoMessageWait in Options then
+      waitWakeMask := WakeMask
+    else
+      waitWakeMask := 0;
+    if tcoAlertableWait in Options then
+      flags := MWMO_ALERTABLE
+    else
+      flags := 0;
+    RebuildWaitHandles;
+    lastTimer_ms := DSiTimeGetTime64;
+    repeat
+      if TimerInterval_ms <= 0 then
+        timeout_ms := INFINITE
+      else begin
+        timeout_ms := TimerInterval_ms - (DSiTimeGetTime64 - lastTimer_ms);
+        if timeout_ms < 0 then
+          timeout_ms := 0;
+      end;
+      awaited := MsgWaitForMultipleObjectsEx(numWaitHandles, waitHandles,
+        cardinal(timeout_ms), waitWakeMask, flags);
+      if ((awaited >= idxFirstTerminate) and (awaited <= idxLastTerminate)) or
+         (awaited = WAIT_ABANDONED)
+      then
+        break //repeat
+      else if (awaited >= idxFirstMessage) and (awaited <= idxLastMessage) then begin
+        if awaited = idxFirstMessage then
+          gotMsg := task.Comm.Receive(msg)
+        else begin
+          oteInternalLock.Acquire;
+          try
+            gotMsg := (oteCommList[awaited - idxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
+          finally oteInternalLock.Release; end;
+        end;
+        if gotMsg then begin
+          if assigned(WorkerIntf) then
+            WorkerIntf.DispatchMessage(msg);
+          if assigned(WorkerObj_ref) then
+            WorkerObj_ref.DispatchMessage(msg)
+        end;
+      end // comm handles
+      else if awaited = idxRebuildHandles then
+        RebuildWaitHandles
+      else if awaited = (numWaitHandles + 1) then //message
+        ProcessThreadMessages
+      else if awaited = WAIT_IO_COMPLETION then
+        // do-nothing
+      else if awaited = WAIT_TIMEOUT then begin
+        if TimerMessage >= 0 then begin
+          msg.MsgID := TimerMessage;
+          msg.MsgData := Null;
+          if assigned(WorkerIntf) then
+            WorkerIntf.DispatchMessage(msg);
+          if assigned(WorkerObj_ref) then
+            WorkerObj_ref.DispatchMessage(msg);
+        end
+        else if assigned(WorkerIntf) then
+          WorkerIntf.Timer
+        else if assigned(WorkerObj_ref) then
+          WorkerObj_ref.Timer;
+        lastTimer_ms := DSiTimeGetTime64;
+      end //WAIT_TIMEOUT
+      else //errors
+        RaiseLastOSError;
+    until false;
   finally
-    oteWorkerIntf := nil;
-    oteWorkerObj_ref := nil;
+    if assigned(WorkerIntf) then begin
+      WorkerIntf.Cleanup;
+      WorkerIntf.Task := nil;
+    end;
+    if assigned(WorkerObj_ref) then begin
+      WorkerObj_ref.Cleanup;
+      WorkerObj_ref.Task := nil;
+    end;
   end;
 end; { TOmniTaskExecutor.Asy_DispatchMessages }
 
@@ -795,17 +795,21 @@ const
     THREAD_PRIORITY_NORMAL, THREAD_PRIORITY_ABOVE_NORMAL, THREAD_PRIORITY_HIGHEST);
 begin
   SetThreadPriority(GetCurrentThread, CThreadPriorityNum[Priority]);
-  case oteExecutorType of
-    etMethod:
-      oteMethod(task);
-    etProcedure:
-      oteProc(task);
-    etWorkerIntf,
-    etWorkerObj:
-      Asy_DispatchMessages(task);
-    else
-      raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
-  end;
+  try
+    if WaitForSingleObject(task.TerminateEvent, 0) = WAIT_TIMEOUT then begin
+      case oteExecutorType of
+        etMethod:
+          oteMethod(task);
+        etProcedure:
+          oteProc(task);
+        etWorkerIntf,
+        etWorkerObj:
+          Asy_DispatchMessages(task);
+        else
+          raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
+      end; //case oteExecutorType
+    end;
+  finally Cleanup; end;
 end; { TOmniTaskExecutor.Asy_Execute }
 
 procedure TOmniTaskExecutor.Asy_RegisterComm(comm: IOmniCommunicationEndpoint);
@@ -844,6 +848,17 @@ begin
     SetEvent(oteCommRebuildHandles);
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
+
+procedure TOmniTaskExecutor.Cleanup;
+begin
+  try
+    if tcoFreeOnTerminate in Options then
+      oteWorkerObj_ref.Free;
+  finally
+    oteWorkerIntf := nil;
+    oteWorkerObj_ref := nil;
+  end;
+end; { TOmniTaskExecutor.Cleanup }
 
 function TOmniTaskExecutor.GetExitCode: integer;
 begin

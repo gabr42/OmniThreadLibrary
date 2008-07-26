@@ -46,6 +46,15 @@ uses
   Classes,
   Variants;
 
+const
+  // reserved exit statuses
+  EXIT_OK                        = 0;
+  EXIT_EXCEPTION                 = integer($80000000);
+  EXIT_THREADPOOL_QUEUE_TOO_LONG = EXIT_EXCEPTION + 1;
+  EXIT_THREADPOOL_STALE_TASK     = EXIT_EXCEPTION + 2;
+  EXIT_THREADPOOL_CANCELLED      = EXIT_EXCEPTION + 3;
+  EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_EXCEPTION + 4;
+
 type
   TOmniValue = type Variant; // maybe we should use own record type with implicit overloaded for parameters instead of TOmniValue
 

@@ -11,6 +11,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
@@ -42,7 +43,26 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 2
     OnClick = btnScheduleClick
   end
+  object btnSchedule6: TButton
+    Left = 8
+    Top = 70
+    Width = 129
+    Height = 25
+    Caption = 'Schedule 6 tasks'
+    TabOrder = 3
+    OnClick = btnSchedule6Click
+  end
+  object btnScheduleAndCancel: TButton
+    Left = 8
+    Top = 101
+    Width = 129
+    Height = 25
+    Caption = 'Schedule and cancel'
+    TabOrder = 4
+    OnClick = btnScheduleAndCancelClick
+  end
   object OmniTED: TOmniTaskEventDispatch
+    OnTaskTerminated = OmniTEDTaskTerminated
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8
     Top = 264
