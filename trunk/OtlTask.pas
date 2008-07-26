@@ -68,11 +68,6 @@ uses
   OtlCommon,
   OtlComm;
 
-const
-  // reserved exit statuses
-  EXIT_OK        = 0;
-  EXIT_EXCEPTION = integer($80000000);
-
 type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
@@ -87,6 +82,7 @@ type
     procedure RegisterComm(comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Terminate;
+    function  Terminated: boolean;
     procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
