@@ -25,6 +25,8 @@ type
     btnSchedule6: TButton;
     btnScheduleAndCancel: TButton;
     btnCancelLong: TButton;
+    btnCancelAll: TButton;
+    procedure btnCancelAllClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
@@ -81,6 +83,12 @@ procedure TfrmTestOtlThreadPool.Asy_ReportWorkerThreadDestroying(Sender: TObject
 begin
   if not (csDestroying in frmTestOtlThreadPool.ComponentState) then
     PostMessage(frmTestOtlThreadPool.Handle, WM_THREAD_STATE_CHANGED, 0, threadID);
+end;
+
+procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
+begin
+  btnSchedule6.Click;
+  GlobalOmniThreadPool.CancelAll;
 end;
 
 procedure TfrmTestOtlThreadPool.btnSchedule6Click(Sender: TObject);
