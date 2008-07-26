@@ -8,7 +8,7 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 type
   TfrmTestTerminateWhen = class(TForm)

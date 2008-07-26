@@ -10,13 +10,14 @@
 
 #define Consts_SDockZoneHasNoCtl 65312
 #define Consts_SDockZoneVersionConflict 65313
-#define Consts_SErrorSettingCount 65314
-#define Consts_SListBoxMustBeVirtual 65315
-#define ComConst_SOleError 65316
-#define ComConst_SNoMethod 65317
-#define ComConst_SVarNotObject 65318
-#define ComConst_STooManyParams 65319
-#define SpinLock_STicketSpinLockNoTryAcquire 65320
+#define Consts_SDuplicateItem 65314
+#define Consts_SErrorSettingCount 65315
+#define Consts_SListBoxMustBeVirtual 65316
+#define SpinLock_STicketSpinLockNoTryAcquire 65317
+#define ComConst_SOleError 65318
+#define ComConst_SNoMethod 65319
+#define ComConst_SVarNotObject 65320
+#define ComConst_STooManyParams 65321
 #define Consts_SmkcHome 65328
 #define Consts_SmkcLeft 65329
 #define Consts_SmkcUp 65330
@@ -229,13 +230,14 @@ STRINGTABLE
 BEGIN
 	Consts_SDockZoneHasNoCtl,	" - Dock zone has no control"
 	Consts_SDockZoneVersionConflict,	"Error loading dock zone from the stream. Expecting version %d, but found %d."
+	Consts_SDuplicateItem,	"List does not allow duplicates ($0%x)"
 	Consts_SErrorSettingCount,	"Error setting %s.Count"
 	Consts_SListBoxMustBeVirtual,	"Listbox (%s) style must be virtual in order to set Count"
+	SpinLock_STicketSpinLockNoTryAcquire,	"TicketSpinLock does not support TryAcquire"
 	ComConst_SOleError,	"OLE error %.8x"
 	ComConst_SNoMethod,	"Method '%s' not supported by automation object"
 	ComConst_SVarNotObject,	"Variant does not reference an automation object"
 	ComConst_STooManyParams,	"Dispatch methods do not support more than 64 parameters"
-	SpinLock_STicketSpinLockNoTryAcquire,	"TicketSpinLock does not support TryAcquire"
 	Consts_SmkcHome,	"Home"
 	Consts_SmkcLeft,	"Left"
 	Consts_SmkcUp,	"Up"
@@ -449,7 +451,6 @@ END
 /* c:\program files\rad studio\lib\Controls.res */
 /* c:\program files\rad studio\lib\Buttons.res */
 /* c:\program files\rad studio\lib\FileCtrl.res */
-/* ..\..\OtlTaskEvents.dcr */
-/* testOmniThreadLibrary1.dfm */
+/* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary1.dfm */
 /* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary.res */
 /* X:\MSTPL\OmniThreadLibrary\tests\7_InitTest\testOmniThreadLibrary.drf */

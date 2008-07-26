@@ -9,8 +9,7 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlComm,
-  OtlTaskEvents,
-  OtlThreadPool;
+  OtlEventMonitor;
 
 type
   TfrmTestLock = class(TForm)

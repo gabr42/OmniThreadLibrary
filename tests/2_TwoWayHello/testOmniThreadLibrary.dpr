@@ -7,7 +7,7 @@ uses
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
   OtlComm in '..\..\OtlComm.pas',
-  OtlTaskEvents in '..\..\OtlTaskEvents.pas';
+  OtlEventMonitor in '..\..\OtlEventMonitor.pas';
 
 {$R *.res}
 

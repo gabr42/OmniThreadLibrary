@@ -9,8 +9,8 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlComm,
-  OtlTaskEvents,
-  OtlThreadPool;
+  OtlThreadPool,
+  OtlEventMonitor;
 
 const
   WM_THREAD_STATE_CHANGED = WM_USER;

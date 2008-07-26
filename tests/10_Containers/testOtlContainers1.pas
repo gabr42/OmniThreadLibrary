@@ -10,7 +10,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlContainers,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 type
   TfrmTestOtlContainers = class(TForm)

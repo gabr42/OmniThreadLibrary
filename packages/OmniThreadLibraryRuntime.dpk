@@ -38,7 +38,7 @@ contains
   OtlTask in '..\OtlTask.pas',
   OtlTaskControl in '..\OtlTaskControl.pas',
   OtlThreadPool in '..\OtlThreadPool.pas',
-  OtlTaskEvents in '..\OtlTaskEvents.pas',
+  OtlEventMonitor in '..\OtlEventMonitor.pas',
   DSiWin32 in '..\src\DSiWin32.pas',
   GpLists in '..\src\GpLists.pas',
   GpStuff in '..\src\GpStuff.pas',

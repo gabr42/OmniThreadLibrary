@@ -9,7 +9,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlComm,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 type
   TfrmTestOtlComm = class(TForm)

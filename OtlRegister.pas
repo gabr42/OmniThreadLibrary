@@ -42,7 +42,9 @@ interface
 
 uses
   Classes,
-  OtlTaskEvents;
+  OtlEventMonitor;
+
+{$R OtlEventMonitor.dcr}
 
 procedure Register;
 
