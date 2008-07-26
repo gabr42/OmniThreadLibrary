@@ -7,7 +7,6 @@ uses
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
   OtlComm in '..\..\OtlComm.pas',
-  OtlTaskEvents in '..\..\OtlTaskEvents.pas',
   DSiWin32 in '..\..\src\DSiWin32.pas',
   GpLists in '..\..\src\GpLists.pas',
   GpStuff in '..\..\src\GpStuff.pas',

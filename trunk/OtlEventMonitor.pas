@@ -38,11 +38,9 @@
 ///       - Implements IOmniTaskControlMonitor.
 ///</para></remarks>
 
-unit OtlTaskEvents;
+unit OtlEventMonitor;
 
 interface
-
-{$R OtlTaskEvents.dcr}
 
 uses
   Messages,

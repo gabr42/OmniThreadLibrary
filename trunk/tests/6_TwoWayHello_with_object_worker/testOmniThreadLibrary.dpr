@@ -6,8 +6,7 @@ uses
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
-  OtlComm in '..\..\OtlComm.pas',
-  OtlTaskEvents in '..\..\OtlTaskEvents.pas';
+  OtlComm in '..\..\OtlComm.pas';
 
 {$R *.res}
 

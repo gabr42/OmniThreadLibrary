@@ -9,7 +9,7 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 const
   MSG_CHANGE_MESSAGE = 1;

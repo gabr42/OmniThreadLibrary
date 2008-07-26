@@ -9,17 +9,16 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlComm,
-  OtlTaskEvents,
-  OtlThreadPool;
+  OtlEventMonitor;
 
 type
   TfrmTestLock = class(TForm)
-    btnLock    : TButton;
-    btnNoLock  : TButton;
-    btnTestLock: TButton;
-    lbLog      : TListBox;
-    OmniTED    : TOmniTaskEventDispatch;
+    btnLock      : TButton;
+    btnNoLock    : TButton;
+    btnTestLock  : TButton;
     btnTestNoLock: TButton;
+    lbLog        : TListBox;
+    OmniTED      : TOmniTaskEventDispatch;
     procedure btnNoLockClick(Sender: TObject);
     procedure btnTestLockClick(Sender: TObject);
     procedure OmniTEDTaskMessage(task: IOmniTaskControl);

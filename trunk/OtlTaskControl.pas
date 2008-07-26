@@ -183,7 +183,7 @@ uses
   GpLists,
   GpStuff,
   SpinLock,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 type
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);

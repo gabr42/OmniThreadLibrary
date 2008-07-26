@@ -8,7 +8,7 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 
 type

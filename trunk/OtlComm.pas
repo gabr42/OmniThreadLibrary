@@ -111,7 +111,7 @@ uses
   SysUtils,
   Variants,
   {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
-  OtlTaskEvents;
+  OtlEventMonitor;
 
 type
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
