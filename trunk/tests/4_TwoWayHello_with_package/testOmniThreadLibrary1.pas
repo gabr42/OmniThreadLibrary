@@ -20,15 +20,15 @@ type
     btnStartHello         : TButton;
     btnStopHello          : TButton;
     lbLog                 : TListBox;
-    OmniTaskEventDispatch1: TOmniTaskEventDispatch;
+    OmniEventMonitor1: TOmniEventMonitor;
     procedure actChangeMessageExecute(Sender: TObject);
     procedure actChangeMessageUpdate(Sender: TObject);
     procedure actStartHelloExecute(Sender: TObject);
     procedure actStartHelloUpdate(Sender: TObject);
     procedure actStopHelloExecute(Sender: TObject);
     procedure actStopHelloUpdate(Sender: TObject);
-    procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
-    procedure OmniTaskEventDispatch1TaskTerminated(task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskTerminated(task: IOmniTaskControl);
   strict private
     FHelloTask: IOmniTaskControl;
   private
@@ -85,7 +85,7 @@ end;
 procedure TfrmTestOTL.actStartHelloExecute(Sender: TObject);
 begin
   FHelloTask :=
-    OmniTaskEventDispatch1.Monitor(CreateTask(RunHello, 'Hello')).
+    OmniEventMonitor1.Monitor(CreateTask(RunHello, 'Hello')).
     SetParameter('Delay', 1000).
     SetParameter('Message', 'Hello').
     Run;
@@ -107,7 +107,7 @@ begin
   (Sender as TAction).Enabled := assigned(FHelloTask);
 end;
 
-procedure TfrmTestOTL.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOTL.OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
 var
   msgID  : word;
   msgData: TOmniValue;
@@ -116,7 +116,7 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s', [task.UniqueID, task.Name, msgID, msgData]));
 end;
 
-procedure TfrmTestOTL.OmniTaskEventDispatch1TaskTerminated(task: IOmniTaskControl);
+procedure TfrmTestOTL.OmniEventMonitor1TaskTerminated(task: IOmniTaskControl);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated', [task.UniqueID, task.Name]));
 end;

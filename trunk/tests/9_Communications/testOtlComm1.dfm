@@ -33,8 +33,8 @@ object frmTestOtlComm: TfrmTestOtlComm
     TabOrder = 1
     OnClick = btnRunTestsClick
   end
-  object OmniTaskEventDispatch1: TOmniTaskEventDispatch
-    OnTaskMessage = OmniTaskEventDispatch1TaskMessage
+  object OmniEventMonitor1: TOmniEventMonitor
+    OnTaskMessage = OmniEventMonitor1TaskMessage
     Left = 8
     Top = 248
   end

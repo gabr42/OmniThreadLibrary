@@ -21,7 +21,7 @@ type
     btnRunTask: TButton;
     btnScheduleTask: TButton;
     lbLog  : TListBox;
-    OmniTED: TOmniTaskEventDispatch;
+    OmniTED: TOmniEventMonitor;
     btnSchedule6: TButton;
     btnScheduleAndCancel: TButton;
     btnCancelLong: TButton;

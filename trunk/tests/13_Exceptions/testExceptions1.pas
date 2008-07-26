@@ -13,12 +13,12 @@ uses
 
 type
   TfrmTestLock = class(TForm)
-    btnAV             : TButton;
-    btnCustomException: TButton;
-    btnRC             : TButton;
-    lbLog             : TListBox;
-    OmniTED           : TOmniTaskEventDispatch;
-    btnInitException: TButton;
+    btnAV              : TButton;
+    btnCustomException : TButton;
+    btnRC              : TButton;
+    lbLog              : TListBox;
+    OmniTED            : TOmniEventMonitor;
+    btnInitException   : TButton;
     btnCleanupException: TButton;
     procedure OmniTEDTaskMessage(task: IOmniTaskControl);
     procedure RunObjectTest(Sender: TObject);

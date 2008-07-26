@@ -60,7 +60,7 @@ object frmTestOtlComm: TfrmTestOtlComm
     TabOrder = 4
     OnClick = btnSendStringClick
   end
-  object OmniTED: TOmniTaskEventDispatch
+  object OmniTED: TOmniEventMonitor
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8
     Top = 248

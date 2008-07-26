@@ -79,7 +79,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 6
     OnClick = btnCancelAllClick
   end
-  object OmniTED: TOmniTaskEventDispatch
+  object OmniTED: TOmniEventMonitor
     OnTaskTerminated = OmniTEDTaskTerminated
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8

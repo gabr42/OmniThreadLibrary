@@ -41,7 +41,7 @@ object frmTestTaskGroup: TfrmTestTaskGroup
     TabOrder = 2
     OnClick = btnStopTasksClick
   end
-  object OmniTED: TOmniTaskEventDispatch
+  object OmniTED: TOmniEventMonitor
     OnTaskTerminated = OmniTEDTaskTerminated
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8

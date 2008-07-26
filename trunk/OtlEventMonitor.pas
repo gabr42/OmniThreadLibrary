@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-24
-///   Version           : 0.2
+///   Last modification : 2008-07-26
+///   Version           : 0.3
 ///</para><para>
 ///   History:
+///     0.3: 2008-07-26
+///       - Unit renamed to OltEventMonitor.
+///       - Class TOmniTaskEventDispatch renamed to TOmniEventMonitor. 
 ///     0.2: 2008-07-24
 ///       - Implements IOmniTaskControlMonitor.
 ///</para></remarks>
@@ -53,7 +56,7 @@ type
 
 // TODO 1 -oPrimoz Gabrijelcic : tedMonitoredTasks list will be too slow, replace it with a sorted list of (task.UniqueID, task) pairs
 
-  TOmniTaskEventDispatch = class(TComponent, IOmniTaskControlMonitor)
+  TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor)
   strict private
     tedMessageWindow   : THandle;
     tedMonitoredTasks  : TInterfaceList;
@@ -71,7 +74,7 @@ type
     property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
       tedOnTaskTerminated;
     property OnTaskMessage: TOmniTaskEvent read tedOnTaskMessage write tedOnTaskMessage;
-  end; { TOmniTaskEventDispatch }
+  end; { TOmniEventMonitor }
 
 var
   COmniTaskMsg_NewMessage: cardinal;
@@ -84,17 +87,17 @@ uses
   SysUtils,
   DSiWin32;
 
-{ TOmniTaskEventDispatch }
+{ TOmniEventMonitor }
 
-constructor TOmniTaskEventDispatch.Create(AOwner: TComponent);
+constructor TOmniEventMonitor.Create(AOwner: TComponent);
 begin
   inherited;
   tedMessageWindow := DSiAllocateHWnd(WndProc);
   Win32Check(tedMessageWindow <> 0);
   tedMonitoredTasks := TInterfaceList.Create;
-end; { TOmniTaskEventDispatch.Create }
+end; { TOmniEventMonitor.Create }
 
-destructor TOmniTaskEventDispatch.Destroy;
+destructor TOmniEventMonitor.Destroy;
 begin
   while tedMonitoredTasks.Count > 0 do
     Detach(tedMonitoredTasks[tedMonitoredTasks.Count - 1] as IOmniTaskControl);
@@ -104,15 +107,15 @@ begin
     tedMessageWindow := 0;                                
   end;
   inherited;
-end; { TOmniTaskEventDispatch.Destroy }
+end; { TOmniEventMonitor.Destroy }
 
-function TOmniTaskEventDispatch.Detach(task: IOmniTaskControl): IOmniTaskControl;
+function TOmniEventMonitor.Detach(task: IOmniTaskControl): IOmniTaskControl;
 begin
   Result := task.RemoveMonitor;
   tedMonitoredTasks.Remove(task);
-end; { TOmniTaskEventDispatch.Detach }
+end; { TOmniEventMonitor.Detach }
 
-function TOmniTaskEventDispatch.LocateTask(taskUniqueID: int64): IOmniTaskControl;
+function TOmniEventMonitor.LocateTask(taskUniqueID: int64): IOmniTaskControl;
 var
   intf: IInterface;
 begin
@@ -123,15 +126,15 @@ begin
       Exit;
   end;
   Result := nil;
-end; { TOmniTaskEventDispatch.LocateTask }
+end; { TOmniEventMonitor.LocateTask }
 
-function TOmniTaskEventDispatch.Monitor(task: IOmniTaskControl): IOmniTaskControl;
+function TOmniEventMonitor.Monitor(task: IOmniTaskControl): IOmniTaskControl;
 begin
   tedMonitoredTasks.Add(task);
   Result := task.SetMonitor(tedMessageWindow);
-end; { TOmniTaskEventDispatch.Monitor }
+end; { TOmniEventMonitor.Monitor }
 
-procedure TOmniTaskEventDispatch.WndProc(var msg: TMessage);
+procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   task: IOmniTaskControl;
   taskID: int64;
@@ -160,7 +163,7 @@ begin
   end
   else
     msg.Result := DefWindowProc(tedMessageWindow, msg.Msg, msg.WParam, msg.LParam);
-end; { TOmniTaskEventDispatch.WndProc }
+end; { TOmniEventMonitor.WndProc }
 
 initialization
   COmniTaskMsg_NewMessage := RegisterWindowMessage('Gp/OtlTaskEvents/NewMessage');

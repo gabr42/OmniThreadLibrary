@@ -38,7 +38,7 @@ type
     btnStackStressTest         : TButton;
     inpTestDuration_sec        : TLabeledEdit;
     lbLog                      : TListBox;
-    OmniTaskEventDispatch1     : TOmniTaskEventDispatch;
+    OmniEventMonitor1           : TOmniEventMonitor;
     SaveDialog                 : TSaveDialog;
     btnClearLog: TButton;
     procedure btnAllTestsClick(Sender: TObject);
@@ -64,7 +64,7 @@ type
     procedure btnStackStressTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
   private
     FAllTestsStart: int64;
     FBaseQueue    : TOmniBaseQueue;
@@ -165,14 +165,14 @@ var
 begin
   for iTask := 1 to numReaders do
     if not assigned(FReaders[iTask]) then
-      FReaders[iTask] := OmniTaskEventDispatch1.Monitor(CreateTask(
+      FReaders[iTask] := OmniEventMonitor1.Monitor(CreateTask(
         TCommReader.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
         .WithCounter(FCounter)
         .FreeOnTerminate
         .Run;
   for iTask := 1 to numWriters do
     if not assigned(FWriters[iTask]) then
-      FWriters[iTask] := OmniTaskEventDispatch1.Monitor(CreateTask(
+      FWriters[iTask] := OmniEventMonitor1.Monitor(CreateTask(
         TCommWriter.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
         .WithCounter(FCounter)
         .FreeOnTerminate
@@ -367,7 +367,7 @@ begin
   Application.ProcessMessages;
 end;
 
-procedure TfrmTestOtlContainers.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
 var
   msg: TOmniMessage;
 begin

@@ -41,7 +41,7 @@ object frmTestTerminateWhen: TfrmTestTerminateWhen
     TabOrder = 2
     OnClick = btnStopTasksClick
   end
-  object OmniTED: TOmniTaskEventDispatch
+  object OmniTED: TOmniEventMonitor
     OnTaskTerminated = OmniTEDTaskTerminated
     Left = 8
     Top = 264
