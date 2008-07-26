@@ -40,9 +40,9 @@ object frmTestOTL: TfrmTestOTL
     TabOrder = 2
     OnClick = btnTestFailureClick
   end
-  object OmniTaskEventDispatch1: TOmniTaskEventDispatch
-    OnTaskTerminated = OmniTaskEventDispatch1TaskTerminated
-    OnTaskMessage = OmniTaskEventDispatch1TaskMessage
+  object OmniEventMonitor1: TOmniEventMonitor
+    OnTaskTerminated = OmniEventMonitor1TaskTerminated
+    OnTaskMessage = OmniEventMonitor1TaskMessage
     Left = 8
     Top = 248
   end

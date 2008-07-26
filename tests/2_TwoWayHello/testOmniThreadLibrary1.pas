@@ -29,7 +29,7 @@ type
     procedure FormCreate(Sender: TObject);
   strict private
     FHelloTask      : IOmniTaskControl;
-    FMessageDispatch: TOmniTaskEventDispatch;
+    FMessageDispatch: TOmniEventMonitor;
   private
     procedure HandleTaskTerminated(task: IOmniTaskControl);
     procedure HandleTaskMessage(task: IOmniTaskControl);
@@ -110,7 +110,7 @@ end;
 
 procedure TfrmTestOTL.FormCreate(Sender: TObject);
 begin
-  FMessageDispatch := TOmniTaskEventDispatch.Create(Self);
+  FMessageDispatch := TOmniEventMonitor.Create(Self);
   FMessageDispatch.OnTaskMessage := HandleTaskMessage;
   FMessageDispatch.OnTaskTerminated := HandleTaskTerminated;
 end;

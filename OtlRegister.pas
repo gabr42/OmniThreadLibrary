@@ -54,7 +54,7 @@ implementation
 
 procedure Register;
 begin
-  RegisterComponents('OmniThreadLibrary', [TOmniTaskEventDispatch]);
+  RegisterComponents('OmniThreadLibrary', [TOmniEventMonitor]);
 end; { Register }
 
 end.

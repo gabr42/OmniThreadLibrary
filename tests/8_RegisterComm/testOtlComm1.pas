@@ -18,7 +18,7 @@ type
     btnSendTo1   : TButton;
     btnSendTo2   : TButton;
     lbLog        : TListBox;
-    OmniTED      : TOmniTaskEventDispatch;
+    OmniTED      : TOmniEventMonitor;
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);

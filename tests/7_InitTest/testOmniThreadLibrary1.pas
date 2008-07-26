@@ -24,11 +24,11 @@ type
     btnTestFailure        : TButton;
     btnTestSuccess        : TButton;
     lbLog                 : TListBox;
-    OmniTaskEventDispatch1: TOmniTaskEventDispatch;
+    OmniEventMonitor1: TOmniEventMonitor;
     procedure btnTestFailureClick(Sender: TObject);
     procedure btnTestSuccessClick(Sender: TObject);
-    procedure OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
-    procedure OmniTaskEventDispatch1TaskTerminated(task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskTerminated(task: IOmniTaskControl);
   private
   strict protected
     procedure Test(success: boolean);
@@ -73,7 +73,7 @@ begin
   Test(true);
 end;
 
-procedure TfrmTestOTL.OmniTaskEventDispatch1TaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOTL.OmniEventMonitor1TaskMessage(task: IOmniTaskControl);
 var
   msg: TOmniMessage;
 begin
@@ -81,7 +81,7 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('%d: %d %s', [task.UniqueID, msg.msgID, msg.MsgData]));
 end;
 
-procedure TfrmTestOTL.OmniTaskEventDispatch1TaskTerminated(task: IOmniTaskControl);
+procedure TfrmTestOTL.OmniEventMonitor1TaskTerminated(task: IOmniTaskControl);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('~%d', [task.UniqueID]));
 end;
@@ -90,7 +90,7 @@ procedure TfrmTestOTL.Test(success: boolean);
 var
   task: IOmniTaskControl;
 begin
-  task := OmniTaskEventDispatch1.Monitor(CreateTask(TInitTest.Create(success), 'InitTest'))
+  task := OmniEventMonitor1.Monitor(CreateTask(TInitTest.Create(success), 'InitTest'))
     .FreeOnTerminate
     .SetPriority(tpIdle)
     .Run;

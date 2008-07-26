@@ -250,8 +250,8 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     TabOrder = 24
     OnClick = btnClearLogClick
   end
-  object OmniTaskEventDispatch1: TOmniTaskEventDispatch
-    OnTaskMessage = OmniTaskEventDispatch1TaskMessage
+  object OmniEventMonitor1: TOmniEventMonitor
+    OnTaskMessage = OmniEventMonitor1TaskMessage
     Left = 152
     Top = 536
   end

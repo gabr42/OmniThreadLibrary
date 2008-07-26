@@ -18,7 +18,7 @@ type
     btnTestLock  : TButton;
     btnTestNoLock: TButton;
     lbLog        : TListBox;
-    OmniTED      : TOmniTaskEventDispatch;
+    OmniTED      : TOmniEventMonitor;
     procedure btnNoLockClick(Sender: TObject);
     procedure btnTestLockClick(Sender: TObject);
     procedure OmniTEDTaskMessage(task: IOmniTaskControl);

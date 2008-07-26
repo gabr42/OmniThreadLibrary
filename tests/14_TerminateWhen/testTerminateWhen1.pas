@@ -15,7 +15,7 @@ type
     btnStartTasks: TButton;
     btnStopTasks : TButton;
     lbLog        : TListBox;
-    OmniTED      : TOmniTaskEventDispatch;
+    OmniTED      : TOmniEventMonitor;
     procedure btnStartTasksClick(Sender: TObject);
     procedure btnStopTasksClick(Sender: TObject);
     procedure OmniTEDTaskTerminated(task: IOmniTaskControl);
