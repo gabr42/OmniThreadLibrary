@@ -24,6 +24,24 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     ItemHeight = 13
     TabOrder = 0
   end
+  object btnRunTask: TButton
+    Left = 8
+    Top = 8
+    Width = 129
+    Height = 25
+    Caption = 'Run task'
+    TabOrder = 1
+    OnClick = btnScheduleClick
+  end
+  object btnScheduleTask: TButton
+    Left = 8
+    Top = 39
+    Width = 129
+    Height = 25
+    Caption = 'Schedule task'
+    TabOrder = 2
+    OnClick = btnScheduleClick
+  end
   object OmniTED: TOmniTaskEventDispatch
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8

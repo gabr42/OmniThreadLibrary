@@ -124,6 +124,7 @@ type
     function  GetUniqueID: int64;
   //
     function  Alertable: IOmniTaskControl;
+//    function  ChainTo(task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  FreeOnTerminate: IOmniTaskControl;
     function  Join(group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(group: IOmniTaskGroup): IOmniTaskControl;
@@ -154,9 +155,15 @@ type
   end; { IOmniTaskControl }
 
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
-    function  Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
+//v1.1 extensions:
+//  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
+//    function  Sequential: IOmniTaskGroup;
+//    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
     function  Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  RunAll: IOmniTaskGroup;
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { IOmniTaskGroup }
 
   function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
@@ -164,6 +171,7 @@ type
   function CreateTask(worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: TOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
 
+//  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTaskGroup: IOmniTaskGroup;
 
 implementation
@@ -376,15 +384,21 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
 
+//v1.1 extensions:
+//  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
+//    function  Sequential: IOmniTaskGroup;
+//    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
   TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
   strict private
     otgTaskList: TInterfaceList;
   public
     constructor Create;
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
     function Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function RunAll: IOmniTaskGroup;
     function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
 
 var
@@ -1198,18 +1212,31 @@ begin
   Result := Self;
 end; { TOmniTaskGroup.Remove }
 
+function TOmniTaskGroup.RunAll: IOmniTaskGroup;
+var
+  iIntf: IInterface;
+begin
+  for iIntf in otgTaskList do
+    (iIntf as IOMniTaskControl).Run;
+end; { TOmniTaskGroup.RunAll }
+
 function TOmniTaskGroup.TerminateAll(maxWait_ms: cardinal): boolean;
 var
+  intf: IInterface;
+begin
+  for intf in otgTaskList do
+    SetEvent((intf as IOmniTaskControlInternals).TerminateEvent);
+  Result := WaitForAll(maxWait_ms);
+end; { TOmniTaskGroup.TerminateAll }
+
+function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
+var
   iIntf      : integer;
-  task       : IOmniTaskControlInternals;
   waitHandles: array [0..63] of THandle;
 begin
-  for iIntf := 0 to otgTaskList.Count - 1 do begin
-    task := (otgTaskList[iIntf] as IOmniTaskControlInternals);
-    waitHandles[iIntf] := task.TerminatedEvent;
-    SetEvent(task.TerminateEvent);
-  end;
+  for iIntf := 0 to otgTaskList.Count - 1 do
+    waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent;
   Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
-end; { TOmniTaskGroup.TerminateAll }
+end; { TOmniTaskGroup.WaitForAll }
 
 end.

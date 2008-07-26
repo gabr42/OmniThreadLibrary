@@ -19,8 +19,8 @@ type
   TfrmTestOtlThreadPool = class(TForm)
     lbLog  : TListBox;
     OmniTED: TOmniTaskEventDispatch;
-    btnSchedule: TButton;
-    btnRun: TButton;
+    btnRunTask: TButton;
+    btnScheduleTask: TButton;
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
@@ -71,7 +71,7 @@ procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);
 begin
 //  OmniTED.Monitor(GlobalOmniThreadPool);
   GlobalOmniThreadPool.MaxExecuting := 2;
-//  GlobalOmniThreadPool.MaxQueued := 3; <--- 'tis not working yet
+  GlobalOmniThreadPool.MaxQueued := 3; 
   GlobalOmniThreadPool.OnWorkerThreadCreated_Asy := Asy_ReportWorkerThreadCreated;
   GlobalOmniThreadPool.OnWorkerThreadDestroying_Asy := Asy_ReportWorkerThreadDestroying;
 end;
@@ -81,7 +81,7 @@ var
   task: IOmniTaskControl;
 begin
   task := OmniTED.Monitor(CreateTask(HelloWorld));
-  if Sender = btnSchedule then
+  if Sender = btnScheduleTask then
     task.Schedule
   else
     task.Run;
@@ -90,9 +90,9 @@ end;
 procedure TfrmTestOtlThreadPool.HelloWorld(task: IOmniTask);
 begin
   task.Comm.Send(MSG_HELLO,
-    Format('Hello, world! Reporting live from thread %d', [GetCurrentThreadID]));
+    Format('Hello, world! Task %d reporting live from thread %d', [task.UniqueID, GetCurrentThreadID]));
   Sleep(1000);
-  task.Comm.Send(MSG_HELLO, Format('Signing off from thread %d', [GetCurrentThreadID]));
+  task.Comm.Send(MSG_HELLO, Format('Task %d signing off from thread %d', [task.UniqueID, GetCurrentThreadID]));
 end;
 
 procedure TfrmTestOtlThreadPool.Log(const msg: string);

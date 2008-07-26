@@ -43,6 +43,7 @@ object frmTestTaskGroup: TfrmTestTaskGroup
   end
   object OmniTED: TOmniTaskEventDispatch
     OnTaskTerminated = OmniTEDTaskTerminated
+    OnTaskMessage = OmniTEDTaskMessage
     Left = 8
     Top = 264
   end

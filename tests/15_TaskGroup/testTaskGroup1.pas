@@ -6,6 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
   OtlCommon,
+  OtlComm,
   OtlTask,
   OtlTaskControl,
   OtlTaskEvents;
@@ -18,6 +19,7 @@ type
     OmniTED      : TOmniTaskEventDispatch;
     procedure btnStartTasksClick(Sender: TObject);
     procedure btnStopTasksClick(Sender: TObject);
+    procedure OmniTEDTaskMessage(task: IOmniTaskControl);
     procedure OmniTEDTaskTerminated(task: IOmniTaskControl);
   strict private
     FTaskGroup: IOmniTaskGroup;
@@ -38,6 +40,15 @@ uses
 
 {$R *.dfm}
 
+const
+  MSG_INITIALIZING = 1;
+
+type
+  TMyWorker = class(TOmniWorker)
+  public
+    function Initialize: boolean; override;
+  end;
+
 { TfrmTestOtlComm }
 
 procedure TfrmTestTaskGroup.btnStartTasksClick(Sender: TObject);
@@ -45,10 +56,10 @@ var
   i: integer;
 begin
   FTaskGroup := CreateTaskGroup;
-  for i := 1 to 10 do begin
-    Log(Format('Task started: %d',
-      [CreateTask(TOmniWorker.Create()).MonitorWith(OmniTED).FreeOnTerminate.Join(FTaskGroup).Run.UniqueID]));
-  end;
+  for i := 1 to 10 do 
+    CreateTask(TMyWorker.Create()).MonitorWith(OmniTED).FreeOnTerminate.Join(FTaskGroup);
+  Log('Starting all tasks');
+  FTaskGroup.RunAll;
 end;
 
 procedure TfrmTestTaskGroup.btnStopTasksClick(Sender: TObject);
@@ -63,11 +74,25 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
+procedure TfrmTestTaskGroup.OmniTEDTaskMessage(task: IOmniTaskControl);
+var
+  msg: TOmniMessage;
+begin
+  task.Comm.Receive(msg);
+  Log(Format('Initializing task %d on thread %d', [integer(msg.MsgData[0]), integer(msg.MsgData[1])]));
+end; 
+
 procedure TfrmTestTaskGroup.OmniTEDTaskTerminated(task: IOmniTaskControl);
 begin
   Log(Format('Task terminated: %d', [task.UniqueID]));
 end;
 
 { TMyWorker }
+
+function TMyWorker.Initialize: boolean;
+begin
+  Task.Comm.Send(MSG_INITIALIZING, [Task.UniqueID, GetCurrentThreadID]); 
+  Result := true;
+end;
 
 end.

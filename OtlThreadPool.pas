@@ -824,6 +824,7 @@ begin
     workItem := TOTPWorkItem(msg.WParam);
     worker := TOTPWorkerThread(msg.LParam);
     {$IFDEF LogThreadPool}Log('Thread %s completed request %s with status %s:%s', [worker.Description, workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]);{$ENDIF LogThreadPool}
+//' map errors into task error codes?    
 // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniThreadPool.WndProc    
 //    if assigned(tpOnWorkItemDone) and (not tpDestroying) then
 //      tpOnWorkItemDone(Self, workItem);
