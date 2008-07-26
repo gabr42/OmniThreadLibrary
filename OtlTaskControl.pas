@@ -154,11 +154,11 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
-  IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
 //v1.1 extensions:
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
+  IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Remove(taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  Add(taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
