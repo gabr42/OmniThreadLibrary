@@ -30,7 +30,6 @@ type
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure OmniTEDPoolThreadCreated(pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadDestroying(pool: IOmniThreadPool; threadID: integer);
@@ -123,13 +122,6 @@ begin
     task.Run;
 end;
 
-procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);
-begin
-  GlobalOmniThreadPool.OnWorkerThreadCreated_Asy := nil;
-  GlobalOmniThreadPool.OnWorkerThreadDestroying_Asy := nil;
-  CanClose := true;
-end;
-
 procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);
 begin
   GlobalOmniThreadPool.MonitorWith(OmniTED);
@@ -139,7 +131,7 @@ end;
 
 procedure TfrmTestOtlThreadPool.Log(const msg: string);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(msg);
+  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn ', Now) + msg);
 end;
 
 procedure TfrmTestOtlThreadPool.LogPoolStatus;
