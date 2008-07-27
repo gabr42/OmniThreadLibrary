@@ -31,8 +31,8 @@ type
     FHelloTask      : IOmniTaskControl;
     FMessageDispatch: TOmniEventMonitor;
   private
-    procedure HandleTaskTerminated(task: IOmniTaskControl);
-    procedure HandleTaskMessage(task: IOmniTaskControl);
+    procedure HandleTaskTerminated(const task: IOmniTaskControl);
+    procedure HandleTaskMessage(const task: IOmniTaskControl);
   end;
 
 var
@@ -48,7 +48,7 @@ uses
 const
   MSG_CHANGE_MESSAGE = 1;
 
-procedure RunHello(task: IOmniTask);
+procedure RunHello(const task: IOmniTask);
 var
   msg    : string;
   msgData: TOmniValue;
@@ -115,12 +115,12 @@ begin
   FMessageDispatch.OnTaskTerminated := HandleTaskTerminated;
 end;
 
-procedure TfrmTestOTL.HandleTaskTerminated(task: IOmniTaskControl);
+procedure TfrmTestOTL.HandleTaskTerminated(const task: IOmniTaskControl);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated', [task.UniqueID, task.Name]));
 end; { TfrmTestOTL.HandleTaskTerminated }
 
-procedure TfrmTestOTL.HandleTaskMessage(task: IOmniTaskControl);
+procedure TfrmTestOTL.HandleTaskMessage(const task: IOmniTaskControl);
 var
   msgID  : word;
   msgData: TOmniValue;
