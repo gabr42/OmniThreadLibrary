@@ -39,66 +39,6 @@
     </DelphiCompile>
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlTaskControl.pas" />
-    <DCCReference Include="testOtl1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlainers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlContainers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtliners1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlners1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlntainers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlontainers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlrs1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtls1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlT1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtltainers1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlTh1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThr1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThre1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThrea1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThread1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThreadP1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThreadPo1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
-    <DCCReference Include="testOtlThreadPoo1.pas">
-      <Form>frmTestOtlComm</Form>
-    </DCCReference>
     <DCCReference Include="testOtlThreadPool1.pas">
       <Form>frmTestOtlThreadPool</Form>
     </DCCReference>
