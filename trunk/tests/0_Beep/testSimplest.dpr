@@ -1,8 +1,8 @@
-program testOmniThreadLibrary;
+program testSimplest;
 
 uses
   Forms,
-  testOmniThreadLibrary1 in 'testOmniThreadLibrary1.pas' {frmTestOTL},
+  testSimplest1 in 'testSimplest1.pas' {frmTestOTL},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',

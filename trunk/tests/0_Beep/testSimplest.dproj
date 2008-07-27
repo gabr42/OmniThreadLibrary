@@ -95,6 +95,174 @@
       
       
       
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       <Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxGDIPlusD10.bpl">ExpressGDI+ Library by Developer Express Inc.</Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\cxLibraryD10.bpl">Express Cross Platform Library by Developer Express Inc.</Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxThemeD10.bpl">Express XP Theme Manager by Developer Express Inc.</Excluded_Packages>
@@ -158,18 +326,9 @@
     <DelphiCompile Include="testOmniThreadLibrary.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..OtlCommon.pas" />
-    <DCCReference Include="..OtlThreadPool.pas" />
-    <DCCReference Include="..\..OtlComm.pas" />
-    <DCCReference Include="..\..OtlCommon.pas" />
-    <DCCReference Include="..\..OtlTask.pas" />
-    <DCCReference Include="..\..OtlTaskEvents.pas" />
-    <DCCReference Include="..\..OtlThreadPool.pas" />
-    <DCCReference Include="..\..qOtlCommon.pas" />
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
-    <DCCReference Include="..\..\OtlTaskEvents.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
     <DCCReference Include="..\..\src\DSiWin32.pas" />
     <DCCReference Include="..\..\src\GpLists.pas" />
@@ -177,28 +336,8 @@
     <DCCReference Include="..\..\src\HVStringBuilder.pas" />
     <DCCReference Include="..\..\src\HVStringData.pas" />
     <DCCReference Include="..\..\src\SpinLock.pas" />
-    <DCCReference Include="..\.OtlComm.pas" />
-    <DCCReference Include="..\.OtlCommon.pas" />
-    <DCCReference Include="..\.OtlTask.pas" />
-    <DCCReference Include="..\.OtlTaskEvents.pas" />
-    <DCCReference Include="..\.OtlThreadPool.pas" />
-    <DCCReference Include="..\Otl.pas" />
-    <DCCReference Include="..\OtlC.pas" />
-    <DCCReference Include="..\OtlCo.pas" />
-    <DCCReference Include="..\OtlCom.pas" />
-    <DCCReference Include="..\OtlComm.pas" />
-    <DCCReference Include="..\OtlCommon.pas" />
-    <DCCReference Include="..\OtlTask.pas" />
-    <DCCReference Include="..\OtlTaskEvents.pas" />
-    <DCCReference Include="..\OtlThreadPool.pas" />
-    <DCCReference Include=".OtlCommon.pas" />
-    <DCCReference Include=".OtlThreadPool.pas" />
-    <DCCReference Include="OtlCommon.pas" />
-    <DCCReference Include="OtlThreadPool.pas" />
     <DCCReference Include="testOmniThreadLibrary1.pas">
       <Form>frmTestOTL</Form>
     </DCCReference>
-    <DCCReference Include="X:\OtlCommon.pas" />
-    <DCCReference Include="\\OtlCommon.pas" />
   </ItemGroup>
 </Project>

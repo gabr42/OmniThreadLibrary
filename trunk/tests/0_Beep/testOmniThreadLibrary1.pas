@@ -13,7 +13,7 @@ type
     btnBeep: TButton;
     procedure btnBeepClick(Sender: TObject);
   private
-    procedure Beep(task: IOmniTask);
+    procedure Beep(const task: IOmniTask);
   end;
 
 var
@@ -33,7 +33,7 @@ begin
   CreateTask(Beep, 'Beep').Run;
 end;
 
-procedure TfrmTestOTL.Beep(task: IOmniTask);
+procedure TfrmTestOTL.Beep(const task: IOmniTask);
 begin
   //Executed in a background thread
   MessageBeep(MB_ICONEXCLAMATION);
