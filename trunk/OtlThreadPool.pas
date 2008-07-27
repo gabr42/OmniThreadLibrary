@@ -56,8 +56,8 @@ type
   IOmniThreadPool = interface;
 
   IOmniThreadPoolMonitor = interface ['{09EFADE8-3F14-4184-87CA-131100EC57E4}']
-    function  Detach(task: IOmniThreadPool): IOmniThreadPool;
-    function  Monitor(task: IOmniThreadPool): IOmniThreadPool;
+    function  Detach(const task: IOmniThreadPool): IOmniThreadPool;
+    function  Monitor(const task: IOmniThreadPool): IOmniThreadPool;
   end; { IOmniThreadPoolMonitor }
 
   TThreadPoolOperation = (tpoCreateThread, tpoDestroyThread, tpoKillThread,
@@ -108,7 +108,7 @@ type
     function  CountExecuting: integer;
     function  CountQueued: integer;
     function  IsIdle: boolean;
-    function  MonitorWith(monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
+    function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
     function  SetMonitor(hWindow: THandle): IOmniThreadPool;
     property IdleWorkerThreadTimeout_sec: integer read GetIdleWorkerThreadTimeout_sec
@@ -127,7 +127,7 @@ type
   end; { IOmniThreadPool }
 
   IOmniThreadPoolScheduler = interface ['{B7F5FFEF-2704-4CE0-ABF1-B20493E73650}']
-    procedure Schedule(task: IOmniTask);
+    procedure Schedule(const task: IOmniTask);
   end; { IOmniThreadPoolScheduler }
 
   function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
@@ -159,7 +159,7 @@ type
   strict protected
     function  GetUniqueID: int64;
   public
-    constructor Create(task: IOmniTask);
+    constructor Create(const task: IOmniTask);
     function  Description: string;
     procedure TerminateTask(exitCode: integer; const exitMessage: string);
     property ScheduledAt: TDateTime read owiScheduledAt;
@@ -227,7 +227,7 @@ type
   strict protected
     function  GetActiveWorkItemDescriptions: string;
     procedure InternalStop;
-    procedure Log(const msg: string; params: array of const);
+    procedure Log(const msg: string; const params: array of const);
     procedure MaintainanceTimer(Sender: TObject);
     function  NumRunningStoppedThreads: integer;
     procedure PruneWorkingQueue;
@@ -265,9 +265,9 @@ type
     function  CountExecuting: integer;
     function  CountQueued: integer;
     function  IsIdle: boolean;
-    function  MonitorWith(monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
+    function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
-    procedure Schedule(task: IOmniTask);
+    procedure Schedule(const task: IOmniTask);
     function  SetMonitor(hWindow: THandle): IOmniThreadPool;
     property IdleWorkerThreadTimeout_sec: integer read GetIdleWorkerThreadTimeout_sec
       write SetIdleWorkerThreadTimeout_sec;
@@ -324,7 +324,7 @@ end; { TOmniThreadPoolMonitorInfo.Create }
 
 { TOTPWorkItem }
 
-constructor TOTPWorkItem.Create(task: IOmniTask);
+constructor TOTPWorkItem.Create(const task: IOmniTask);
 begin
   inherited Create;
   owiTask := task;
@@ -764,7 +764,7 @@ begin
   Result := (CountExecuting + CountQueued) = 0;
 end; { TOmniThreadPool.IsIdle }
 
-procedure TOmniThreadPool.Log(const msg: string; params: array of const);
+procedure TOmniThreadPool.Log(const msg: string; const params: array of const);
 begin
   {$IFDEF LogThreadPool}
   // use whatever logger you want
@@ -807,7 +807,7 @@ begin
   end;
 end; { TOmniThreadPool.MaintainanceTimer }
 
-function TOmniThreadPool.MonitorWith(monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
+function TOmniThreadPool.MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
 begin
   monitor.Monitor(Self);
   Result := Self;
@@ -874,7 +874,7 @@ begin
   otpMonitorSupport.RemoveMonitor;
 end; { TOmniThreadPool.RemoveMonitor }
 
-procedure TOmniThreadPool.Schedule(task: IOmniTask);
+procedure TOmniThreadPool.Schedule(const task: IOmniTask);
 begin
   ScheduleNext(TOTPWorkItem.Create(task));
   PruneWorkingQueue;

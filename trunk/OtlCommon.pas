@@ -70,8 +70,8 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(paramValue: TOmniValue; paramName: string = '');
-    procedure Assign(parameters: array of TOmniValue);
+    procedure Add(const paramValue: TOmniValue; paramName: string = '');
+    procedure Assign(const parameters: array of TOmniValue);
     function  IsLocked: boolean; inline;
     procedure Lock; inline;
     function ParamByIdx(paramIdx: integer): TOmniValue;
@@ -96,7 +96,7 @@ type
     procedure Notify; overload;
     procedure Notify(obj: TObject); overload; 
     procedure RemoveMonitor;
-    procedure SetMonitor(monitor: IOmniMonitorParams);
+    procedure SetMonitor(const monitor: IOmniMonitorParams);
     property Monitor: IOmniMonitorParams read GetMonitor;
   end; { IOmniMonitorSupport }
 
@@ -169,7 +169,7 @@ type
     procedure Notify; overload;
     procedure Notify(obj: TObject); overload;
     procedure RemoveMonitor;
-    procedure SetMonitor(monitor: IOmniMonitorParams);
+    procedure SetMonitor(const monitor: IOmniMonitorParams);
     property Monitor: IOmniMonitorParams read GetMonitor;
   end; { TOmniMonitorSupport }
 
@@ -226,7 +226,7 @@ begin
   inherited Destroy;
 end; { TOmniValueContainer.Destroy }
 
-procedure TOmniValueContainer.Add(paramValue: TOmniValue; paramName: string);
+procedure TOmniValueContainer.Add(const paramValue: TOmniValue; paramName: string = '');
 var
   idxParam: integer;
 begin
@@ -243,7 +243,7 @@ begin
   ovcValues[idxParam] := paramValue;
 end; { TOmniValueContainer.Add }
 
-procedure TOmniValueContainer.Assign(parameters: array of TOmniValue);
+procedure TOmniValueContainer.Assign(const parameters: array of TOmniValue);
 var
   value: TOmniValue;
 begin
@@ -351,7 +351,7 @@ begin
   omsMonitor := nil;
 end; { TOmniMonitorSupport.RemoveMonitor }
 
-procedure TOmniMonitorSupport.SetMonitor(monitor: IOmniMonitorParams);
+procedure TOmniMonitorSupport.SetMonitor(const monitor: IOmniMonitorParams);
 begin
   omsMonitor := monitor;
 end; { TOmniMonitorSupport.SetMonitor }

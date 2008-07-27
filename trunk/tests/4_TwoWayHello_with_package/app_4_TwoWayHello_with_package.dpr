@@ -1,0 +1,18 @@
+program app_4_TwoWayHello_with_package;
+
+uses
+  Forms,
+  test_4_TwoWayHello_with_package in 'test_4_TwoWayHello_with_package.pas' {frmTestOTL},
+  OtlCommon in '..\..\OtlCommon.pas',
+  OtlTask in '..\..\OtlTask.pas',
+  OtlThreadPool in '..\..\OtlThreadPool.pas',
+  OtlComm in '..\..\OtlComm.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TfrmTestOTL, frmTestOTL);
+  Application.Run;
+end.

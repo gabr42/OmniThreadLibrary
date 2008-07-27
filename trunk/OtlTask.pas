@@ -46,7 +46,7 @@
 ///       - Implemented ExitCode/ExitMessage/SetExitStatus.
 ///     0.2: 2008-07-09
 ///       - TOmniTaskExcecutor changed from a record to a class.
-///       - IOmniWorker/TOmniWorker message dispatcher extracted into the
+///       - IOmniWorker message dispatcher extracted into the
 ///         TOmniTaskExecutor class.
 ///       - Added support for dispatching additional communication channel
 ///         messages.
@@ -79,11 +79,11 @@ type
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64;
   //
-    procedure RegisterComm(comm: IOmniCommunicationEndpoint);
+    procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Terminate;
     function  Terminated: boolean;
-    procedure UnregisterComm(comm: IOmniCommunicationEndpoint);
+    procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
     property Lock: TSynchroObject read GetLock;

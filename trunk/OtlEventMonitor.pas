@@ -54,9 +54,9 @@ uses
   OtlThreadPool;
 
 type
-  TOmniTaskEvent = procedure(task: IOmniTaskControl) of object;
-  TOmniPoolThreadEvent = procedure(pool: IOmniThreadPool; threadID: integer) of object;
-  TOmniPoolWorkItemEvent = procedure(pool: IOmniThreadPool; taskID: int64) of object;
+  TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
+  TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
+  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
 // TODO 1 -oPrimoz Gabrijelcic : tedMonitoredTasks list will be too slow, replace it with a sorted list of (task.UniqueID, task) pairs; same goes for tedMonitoredPools
 
@@ -78,10 +78,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
-    function  Detach(task: IOmniTaskControl): IOmniTaskControl; overload;
-    function  Detach(pool: IOmniThreadPool): IOmniThreadPool; overload;
-    function  Monitor(task: IOmniTaskControl): IOmniTaskControl; overload;
-    function  Monitor(pool: IOmniThreadPool): IOmniThreadPool; overload;
+    function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
+    function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
+    function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
   published
     property OnPoolThreadCreated: TOmniPoolThreadEvent read tedOnPoolThreadCreated
       write tedOnPoolThreadCreated;
@@ -123,24 +123,24 @@ destructor TOmniEventMonitor.Destroy;
 begin
   while tedMonitoredTasks.Count > 0 do
     Detach(tedMonitoredTasks[tedMonitoredTasks.Count - 1] as IOmniTaskControl);
-  FreeAndNil(tedMonitoredTasks);
   while tedMonitoredPools.Count > 0 do
     Detach(tedMonitoredPools[tedMonitoredPools.Count - 1] as IOmniThreadPool);
-  FreeAndNil(tedMonitoredPools);
   if tedMessageWindow <> 0 then begin
     DSiDeallocateHWnd(tedMessageWindow);
     tedMessageWindow := 0;
   end;
+  FreeAndNil(tedMonitoredTasks);
+  FreeAndNil(tedMonitoredPools);
   inherited;
 end; { TOmniEventMonitor.Destroy }
 
-function TOmniEventMonitor.Detach(task: IOmniTaskControl): IOmniTaskControl;
+function TOmniEventMonitor.Detach(const task: IOmniTaskControl): IOmniTaskControl;
 begin
   Result := task.RemoveMonitor;
   tedMonitoredTasks.Remove(task);
 end; { TOmniEventMonitor.Detach }
 
-function TOmniEventMonitor.Detach(pool: IOmniThreadPool): IOmniThreadPool;
+function TOmniEventMonitor.Detach(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
   Result := pool.RemoveMonitor;
   tedMonitoredPools.Remove(pool);
@@ -172,13 +172,13 @@ begin
   Result := nil;
 end; { TOmniEventMonitor.LocateTask }
 
-function TOmniEventMonitor.Monitor(task: IOmniTaskControl): IOmniTaskControl;
+function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
   tedMonitoredTasks.Add(task);
   Result := task.SetMonitor(tedMessageWindow);
 end; { TOmniEventMonitor.Monitor }
 
-function TOmniEventMonitor.Monitor(pool: IOmniThreadPool): IOmniThreadPool;
+function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
   tedMonitoredPools.Add(pool);
   Result := pool.SetMonitor(tedMessageWindow);
