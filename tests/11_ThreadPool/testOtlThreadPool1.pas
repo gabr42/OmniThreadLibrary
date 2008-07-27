@@ -82,7 +82,7 @@ var
   iTask: integer;
 begin
   Log('Scheduling 6 tasks. Two should execute immediately, ');
-  Log('three should enter thread queue, one should be rejected (thread too long).');
+  Log('three should enter thread queue, one should be rejected (queue too long).');
   for iTask := 1 to 6 do 
     CreateTask(THelloWorker.Create(Handle)).MonitorWith(OmniTED).FreeOnTerminate.Schedule;
 end;
