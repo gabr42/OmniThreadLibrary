@@ -183,10 +183,6 @@ type
     property NewData: THandle read GetNewDataEvent;
   end; { TOmniNotifySupport }
 
-{ TOmniMonitorParams }
-
-{ TOmniMonitorSupport }
-
 { TOmniNotifySupport }
 
 constructor TOmniNotifySupport.Create;
