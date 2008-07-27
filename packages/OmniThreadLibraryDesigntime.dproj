@@ -6,7 +6,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-    <DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryDesigntime.bpl</DCC_DependencyCheckOutputName>
+    <DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryDesigntime.bpl</DCC_DependencyCheckOutputName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Version>7.0</Version>
@@ -33,9 +33,9 @@
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <DCCReference Include="..\OtlRegister.pas" />
-    <DCCReference Include="..\tests\15_TaskGroup\OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="..\tests\15_TaskGroup\rtl.dcp" />
-    <DCCReference Include="..\tests\15_TaskGroup\vcl.dcp" />
-    <DCCReference Include="..\tests\15_TaskGroup\vclx.dcp" />
+    <DCCReference Include="C:\Documents and Settings\gabr\OmniThreadLibraryRuntime.dcp" />
+    <DCCReference Include="C:\Documents and Settings\gabr\rtl.dcp" />
+    <DCCReference Include="C:\Documents and Settings\gabr\vcl.dcp" />
+    <DCCReference Include="C:\Documents and Settings\gabr\vclx.dcp" />
   </ItemGroup>
 </Project>

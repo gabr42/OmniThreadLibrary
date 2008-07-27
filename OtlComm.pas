@@ -98,7 +98,7 @@ type
   public
     constructor Create(numMessages: integer); reintroduce;
     function  Dequeue: TOmniMessage; reintroduce;
-    function  Enqueue(value: TOmniMessage): boolean; reintroduce;
+    function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
@@ -181,7 +181,7 @@ begin
   Result := tmp;
 end; { TOmniMessageQueue.Dequeue }
 
-function TOmniMessageQueue.Enqueue(value: TOmniMessage): boolean;
+function TOmniMessageQueue.Enqueue(const value: TOmniMessage): boolean;
 var
   tmp: TOmniMessage;
 begin

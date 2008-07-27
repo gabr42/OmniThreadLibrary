@@ -1,0 +1,194 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{2cfa204c-720f-4819-bccc-25de980ec6fc}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Projects Include="0_Beep\app_0_Beep.dproj" />
+    <Projects Include="10_Containers\app_10_Containers.dproj" />
+    <Projects Include="11_ThreadPool\app_11_ThreadPool.dproj" />
+    <Projects Include="12_Lock\app_12_Lock.dproj" />
+    <Projects Include="13_Exceptions\app_13_Exceptions.dproj" />
+    <Projects Include="14_TerminateWhen\app_14_TerminateWhen.dproj" />
+    <Projects Include="15_TaskGroup\app_15_TaskGroup.dproj" />
+    <Projects Include="16_ChainTo\app_16_ChainTo.dproj" />
+    <Projects Include="1_HelloWorld\app_1_HelloWorld.dproj" />
+    <Projects Include="2_TwoWayHello\app_2_TwoWayHello.dproj" />
+    <Projects Include="3_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" />
+    <Projects Include="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" />
+    <Projects Include="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" />
+    <Projects Include="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" />
+    <Projects Include="7_InitTest\app_7_InitTest.dproj" />
+    <Projects Include="8_RegisterComm\app_8_RegisterComm.dproj" />
+    <Projects Include="9_Communications\app_9_Communications.dproj" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Default.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+<BorlandProject xmlns=""><Default.Personality></Default.Personality></BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Target Name="app_0_Beep">
+    <MSBuild Projects="0_Beep\app_0_Beep.dproj" Targets="" />
+  </Target>
+  <Target Name="app_0_Beep:Clean">
+    <MSBuild Projects="0_Beep\app_0_Beep.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_0_Beep:Make">
+    <MSBuild Projects="0_Beep\app_0_Beep.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_1_HelloWorld">
+    <MSBuild Projects="1_HelloWorld\app_1_HelloWorld.dproj" Targets="" />
+  </Target>
+  <Target Name="app_1_HelloWorld:Clean">
+    <MSBuild Projects="1_HelloWorld\app_1_HelloWorld.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_1_HelloWorld:Make">
+    <MSBuild Projects="1_HelloWorld\app_1_HelloWorld.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_2_TwoWayHello">
+    <MSBuild Projects="2_TwoWayHello\app_2_TwoWayHello.dproj" Targets="" />
+  </Target>
+  <Target Name="app_2_TwoWayHello:Clean">
+    <MSBuild Projects="2_TwoWayHello\app_2_TwoWayHello.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_2_TwoWayHello:Make">
+    <MSBuild Projects="2_TwoWayHello\app_2_TwoWayHello.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_3_HelloWorld_with_package">
+    <MSBuild Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="" />
+  </Target>
+  <Target Name="app_3_HelloWorld_with_package:Clean">
+    <MSBuild Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_3_HelloWorld_with_package:Make">
+    <MSBuild Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_4_TwoWayHello_with_package">
+    <MSBuild Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="" />
+  </Target>
+  <Target Name="app_4_TwoWayHello_with_package:Clean">
+    <MSBuild Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_4_TwoWayHello_with_package:Make">
+    <MSBuild Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_5_TwoWayHello_without_loop">
+    <MSBuild Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="" />
+  </Target>
+  <Target Name="app_5_TwoWayHello_without_loop:Clean">
+    <MSBuild Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_5_TwoWayHello_without_loop:Make">
+    <MSBuild Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_6_TwoWayHello_with_object_worker">
+    <MSBuild Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="" />
+  </Target>
+  <Target Name="app_6_TwoWayHello_with_object_worker:Clean">
+    <MSBuild Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_6_TwoWayHello_with_object_worker:Make">
+    <MSBuild Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_7_InitTest">
+    <MSBuild Projects="7_InitTest\app_7_InitTest.dproj" Targets="" />
+  </Target>
+  <Target Name="app_7_InitTest:Clean">
+    <MSBuild Projects="7_InitTest\app_7_InitTest.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_7_InitTest:Make">
+    <MSBuild Projects="7_InitTest\app_7_InitTest.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_8_RegisterComm">
+    <MSBuild Projects="8_RegisterComm\app_8_RegisterComm.dproj" Targets="" />
+  </Target>
+  <Target Name="app_8_RegisterComm:Clean">
+    <MSBuild Projects="8_RegisterComm\app_8_RegisterComm.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_8_RegisterComm:Make">
+    <MSBuild Projects="8_RegisterComm\app_8_RegisterComm.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_9_Communications">
+    <MSBuild Projects="9_Communications\app_9_Communications.dproj" Targets="" />
+  </Target>
+  <Target Name="app_9_Communications:Clean">
+    <MSBuild Projects="9_Communications\app_9_Communications.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_9_Communications:Make">
+    <MSBuild Projects="9_Communications\app_9_Communications.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_10_Containers">
+    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="" />
+  </Target>
+  <Target Name="app_10_Containers:Clean">
+    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_10_Containers:Make">
+    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_11_ThreadPool">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="" />
+  </Target>
+  <Target Name="app_11_ThreadPool:Clean">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_11_ThreadPool:Make">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_12_Lock">
+    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="" />
+  </Target>
+  <Target Name="app_12_Lock:Clean">
+    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_12_Lock:Make">
+    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_13_Exceptions">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="" />
+  </Target>
+  <Target Name="app_13_Exceptions:Clean">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_13_Exceptions:Make">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_14_TerminateWhen">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="" />
+  </Target>
+  <Target Name="app_14_TerminateWhen:Clean">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_14_TerminateWhen:Make">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_15_TaskGroup">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="" />
+  </Target>
+  <Target Name="app_15_TaskGroup:Clean">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_15_TaskGroup:Make">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_16_ChainTo">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="" />
+  </Target>
+  <Target Name="app_16_ChainTo:Clean">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_16_ChainTo:Make">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Build">
+    <CallTarget Targets="app_0_Beep;app_1_HelloWorld;app_2_TwoWayHello;app_3_HelloWorld_with_package;app_4_TwoWayHello_with_package;app_5_TwoWayHello_without_loop;app_6_TwoWayHello_with_object_worker;app_7_InitTest;app_8_RegisterComm;app_9_Communications;app_10_Containers;app_11_ThreadPool;app_12_Lock;app_13_Exceptions;app_14_TerminateWhen;app_15_TaskGroup;app_16_ChainTo" />
+  </Target>
+  <Target Name="Clean">
+    <CallTarget Targets="app_0_Beep:Clean;app_1_HelloWorld:Clean;app_2_TwoWayHello:Clean;app_3_HelloWorld_with_package:Clean;app_4_TwoWayHello_with_package:Clean;app_5_TwoWayHello_without_loop:Clean;app_6_TwoWayHello_with_object_worker:Clean;app_7_InitTest:Clean;app_8_RegisterComm:Clean;app_9_Communications:Clean;app_10_Containers:Clean;app_11_ThreadPool:Clean;app_12_Lock:Clean;app_13_Exceptions:Clean;app_14_TerminateWhen:Clean;app_15_TaskGroup:Clean;app_16_ChainTo:Clean" />
+  </Target>
+  <Target Name="Make">
+    <CallTarget Targets="app_0_Beep:Make;app_1_HelloWorld:Make;app_2_TwoWayHello:Make;app_3_HelloWorld_with_package:Make;app_4_TwoWayHello_with_package:Make;app_5_TwoWayHello_without_loop:Make;app_6_TwoWayHello_with_object_worker:Make;app_7_InitTest:Make;app_8_RegisterComm:Make;app_9_Communications:Make;app_10_Containers:Make;app_11_ThreadPool:Make;app_12_Lock:Make;app_13_Exceptions:Make;app_14_TerminateWhen:Make;app_15_TaskGroup:Make;app_16_ChainTo:Make" />
+  </Target>
+  <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
+</Project>
