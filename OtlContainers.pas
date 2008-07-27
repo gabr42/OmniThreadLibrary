@@ -65,14 +65,14 @@ type
 
   {:Lock-free, single writer, single reader ring buffer.
   }
-  IOmniRingBuffer = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
+  IOmniQueue = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
     procedure Empty;
     procedure Initialize(numElements, elementSize: integer);
     function  Enqueue(const value): boolean;
     function  Dequeue(var value): boolean;
     function  IsEmpty: boolean;
     function  IsFull: boolean;
-  end; { IOmniRingBuffer }
+  end; { IOmniQueue }
 
   IOmniNotifySupport = interface ['{E5FFC739-669A-4931-B0DC-C5005A94A08B}']
     function  GetNewDataEvent: THandle;
@@ -148,7 +148,7 @@ type
     function  IsEmpty: boolean; override;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, IOmniRingBuffer, IOmniNotifySupport, IOmniMonitorSupport)
+  TOmniQueue = class(TOmniBaseQueue, IOmniQueue, IOmniNotifySupport, IOmniMonitorSupport)
   strict private
     orbMonitorSupport: IOmniMonitorSupport;
     orbNotifySupport : IOmniNotifySupport;
