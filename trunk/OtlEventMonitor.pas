@@ -126,6 +126,7 @@ begin
   FreeAndNil(tedMonitoredTasks);
   while tedMonitoredPools.Count > 0 do
     Detach(tedMonitoredPools[tedMonitoredPools.Count - 1] as IOmniThreadPool);
+  FreeAndNil(tedMonitoredPools);
   if tedMessageWindow <> 0 then begin
     DSiDeallocateHWnd(tedMessageWindow);
     tedMessageWindow := 0;
