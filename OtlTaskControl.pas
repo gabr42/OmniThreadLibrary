@@ -663,11 +663,6 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
         if not WorkerIntf.Initialize then
           Exit;
       end;
-      {if assigned(WorkerObj_ref) then begin
-        WorkerObj_ref.Task := task;
-        if not WorkerObj_ref.Initialize then
-          Exit;
-      end;}
       oteWorkerInitOK := true;
     finally SetEvent(WorkerInitialized); end;
     if tcoMessageWait in Options then
@@ -706,8 +701,6 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
         if gotMsg then begin
           if assigned(WorkerIntf) then
             WorkerIntf.DispatchMessage(msg);
-          {if assigned(WorkerObj_ref) then
-            WorkerObj_ref.DispatchMessage(msg)}
         end;
       end // comm handles
       else if awaited = idxRebuildHandles then
@@ -722,13 +715,9 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
           msg.MsgData := Null;
           if assigned(WorkerIntf) then
             WorkerIntf.DispatchMessage(msg);
-          {if assigned(WorkerObj_ref) then
-            WorkerObj_ref.DispatchMessage(msg);}
         end
         else if assigned(WorkerIntf) then
           WorkerIntf.Timer
-        {else if assigned(WorkerObj_ref) then
-          WorkerObj_ref.Timer};
         lastTimer_ms := DSiTimeGetTime64;
       end //WAIT_TIMEOUT
       else //errors
@@ -739,10 +728,6 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
       WorkerIntf.Cleanup;
       WorkerIntf.Task := nil;
     end;
-    {if assigned(WorkerObj_ref) then begin
-      WorkerObj_ref.Cleanup;
-      WorkerObj_ref.Task := nil;
-    end;}
   end;
 end; { TOmniTaskExecutor.Asy_DispatchMessages }
 
