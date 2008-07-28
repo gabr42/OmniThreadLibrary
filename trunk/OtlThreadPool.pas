@@ -36,6 +36,10 @@
 ///   History:
 ///</para></remarks>
 
+/// WARNING Owner thread must process Windows messages!    WARNING
+/// WARNING Tasks must be scheduled from the owner thread! WARNING
+/// (access to task queues is not synchronised)
+
 unit OtlThreadPool;
 
 interface
@@ -770,6 +774,7 @@ begin
   // use whatever logger you want
   {$ENDIF LogThreadPool}
 end; { TGpThreadPool.Log }
+
 
 procedure TOmniThreadPool.MaintainanceTimer(Sender: TObject);
 var
