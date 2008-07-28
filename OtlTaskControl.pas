@@ -85,6 +85,7 @@ type
   end; { IOmniTaskControlMonitor }
 
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
+    function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     procedure SetTask(const value: IOmniTask);
   //
@@ -93,6 +94,7 @@ type
     procedure Timer;
     function  Initialize: boolean;
     property Task: IOmniTask read GetTask write SetTask;
+    property Implementor: TObject read GetImplementor;
   end; { IOmniWorker }
 
   TOmniWorker = class(TInterfacedObject, IOmniWorker)
@@ -101,12 +103,14 @@ type
   protected
     procedure Cleanup; virtual;
     procedure DispatchMessage(var msg: TOmniMessage); virtual;
+    function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     function  Initialize: boolean; virtual;
     procedure SetTask(const value: IOmniTask);
   public
     procedure Timer; virtual;
     property Task: IOmniTask read GetTask write SetTask;
+    property Implementor: TObject read GetImplementor;
   end; { TOmniWorker }
 
   TOmniTaskProcedure = procedure(const task: IOmniTask);
@@ -532,6 +536,11 @@ procedure TOmniWorker.DispatchMessage(var msg: TOmniMessage);
 begin
   Dispatch(msg);
 end; { TOmniWorker.DispatchMessage }
+
+function TOmniWorker.GetImplementor: TObject;
+begin
+  Result := Self;
+end; { TOmniWorker.GetImplementor }
 
 function TOmniWorker.GetTask: IOmniTask;
 begin
