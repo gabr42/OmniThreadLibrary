@@ -717,7 +717,7 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
             WorkerIntf.DispatchMessage(msg);
         end
         else if assigned(WorkerIntf) then
-          WorkerIntf.Timer
+          WorkerIntf.Timer;
         lastTimer_ms := DSiTimeGetTime64;
       end //WAIT_TIMEOUT
       else //errors
