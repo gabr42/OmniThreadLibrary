@@ -853,10 +853,10 @@ type
     reserved: word): integer; stdcall;
   function  DSiCloseServiceHandle(hSCObject: SC_HANDLE): BOOL; stdcall;
   function  DSiCreateProcessAsUser(hToken: THandle;
-    lpApplicationName: PAnsiChar; lpCommandLine: PAnsiChar; lpProcessAttributes,
+    lpApplicationName, lpCommandLine: PChar; lpProcessAttributes,
     lpThreadAttributes: PSecurityAttributes; bInheritHandles: BOOL;
     dwCreationFlags: DWORD; lpEnvironment: pointer;
-    lpCurrentDirectory: PAnsiChar; const lpStartupInfo: TStartupInfo;
+    lpCurrentDirectory: PChar; const lpStartupInfo: TStartupInfo;
     var lpProcessInformation: TProcessInformation): BOOL; stdcall;
   function  DSiDwmEnableComposition(uCompositionAction: UINT): HRESULT; stdcall;
   function  DSiDwmIsCompositionEnabled(var pfEnabled: BOOL): HRESULT; stdcall;
@@ -870,7 +870,7 @@ type
     cb: DWORD): boolean; stdcall;
   function  DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   function  DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
-  function  DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: LPCSTR;
+  function  DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: PChar;
     dwLogonType, dwLogonProvider: DWORD; var phToken: THandle): BOOL; stdcall;
   function  DSiNetApiBufferFree(buffer: pointer): cardinal; stdcall;
   function  DSiNetWkstaGetInfo(servername: PChar; level: cardinal;
@@ -1501,7 +1501,11 @@ const
       varInteger: Result := ReadInteger(name,defval);
       varBoolean: Result := ReadBool(name,defval);
       varString : Result := ReadString(name,defval);
-      varOleStr : Result := UTF8Decode(ReadString(name,UTF8Encode(defval)));
+      {$IFDEF Unicode}
+      varOleStr : Result := ReadString(name, defval);
+      {$ELSE}
+      varOleStr : Result := UTF8Decode(ReadString(name, UTF8Encode(defval)));
+      {$ENDIF Unicode}
       varDate   : Result := ReadDate(name,defval);
       else raise Exception.Create('TDSiRegistry.ReadVariant: Invalid value type!');
     end;
@@ -1554,7 +1558,11 @@ const
       varInteger: WriteInteger(name,value);
       varBoolean: WriteBool(name,value);
       varString : WriteString(name,value);
+      {$IFDEF Unicode}
+      varOleStr : WriteString(name, value);
+      {$ELSE}
       varOleStr : WriteString(name,UTF8Encode(value));
+      {$ENDIF Unicode}
       varDate   : WriteDate(name,value);
       else raise Exception.Create('TDSiRegistry.WriteVariant: Invalid value type!');
     end;
@@ -2734,7 +2742,7 @@ const
     WritePipe           : THandle;
     start               : TStartUpInfo;
     ProcessInfo         : TProcessInformation;
-    Buffer              : Pchar;
+    Buffer              : PAnsiChar;
     TotalBytesRead      : DWORD;
     BytesRead           : DWORD;
     AppRunning          : integer;
@@ -2779,8 +2787,12 @@ const
           TotalBytesRead := TotalBytesRead + BytesRead;
         until (AppRunning <> WAIT_TIMEOUT) or (n > 150);
         Buffer[TotalBytesRead] := #0;
-        OemToChar(Buffer,Buffer);
+        OemToCharA(Buffer, Buffer);
+        {$IFDEF Unicode}
+        output.Text := UnicodeString(StrPas(Buffer));
+        {$ELSE}
         output.Text := StrPas(Buffer);
+        {$ENDIF Unicode}
       end;
       FreeMem(Buffer);
       GetExitCodeProcess(ProcessInfo.hProcess, exitCode);
@@ -4707,10 +4719,12 @@ var
     folder: integer; const workDir: string);
   var
     fileDestPath: array [0..MAX_PATH] of char;
-    fileNameW   : array [0..MAX_PATH] of WideChar;
     itemIDList  : PItemIDList;
     persistFile : IPersistFile;
     shellLink   : IShellLink;
+    {$IFNDEF Unicode}
+    fileNameW   : array [0..MAX_PATH] of WideChar;
+    {$ENDIF}
   begin
     CoInitialize(nil);
     try
@@ -4724,8 +4738,12 @@ var
       shellLink.SetIconLocation(PChar(fileName), 0);
       shellLink.SetWorkingDirectory(PChar(workDir));
       shellLink.SetArguments(PChar(parameters));
-      MultiByteToWideChar(CP_ACP, 0, fileDestPath, -1, fileNameW, MAX_PATH);
-      OleCheck(persistFile.Save(fileNameW, true));
+      {$IFDEF Unicode}
+        OleCheck(persistFile.Save(fileDestPath, true));
+      {$ELSE}
+        MultiByteToWideChar(CP_ACP, 0, fileDestPath, -1, fileNameW, MAX_PATH);
+        OleCheck(persistFile.Save(fileNameW, true));
+      {$ENDIF Unicode}
     finally CoUninitialize; end;
   end; { DSiCreateShortcut }
 
@@ -4748,9 +4766,11 @@ var
   }
   procedure DSiEditShortcut(const lnkName, fileName, workDir, parameters: string);
   var
-    fileNameW  : array [0..MAX_PATH] of WideChar;
     persistFile: IPersistFile;
     shellLink  : IShellLink;
+    {$IFNDEF Unicode}
+    fileNameW  : array [0..MAX_PATH] of WideChar;
+    {$ENDIF}
   begin
     CoInitialize(nil);
     try
@@ -4761,8 +4781,12 @@ var
         shellLink.SetPath(PChar(fileName));
         shellLink.SetWorkingDirectory(PChar(workDir));
         shellLink.SetArguments(PChar(parameters));
-        MultiByteToWideChar(CP_ACP, 0, PChar(lnkName), -1, fileNameW, MAX_PATH);
-        OleCheck(persistFile.Save(fileNameW, true));
+        {$IFDEF Unicode}
+          OleCheck(persistFile.Save(PChar(lnkName), true));
+        {$ELSE}
+          MultiByteToWideChar(CP_ACP, 0, PChar(lnkName), -1, fileNameW, MAX_PATH);
+          OleCheck(persistFile.Save(fileNameW, true));
+        {$ENDIF Unicode}
       end;
     finally CoUninitialize; end;
   end; { DSiEditShortcut }
@@ -5332,24 +5356,31 @@ var
   end; { DSiCloseServiceHandle }
 
   function DSiCreateProcessAsUser(hToken: THandle;
-    lpApplicationName: PAnsiChar; lpCommandLine: PAnsiChar; lpProcessAttributes,
+    lpApplicationName, lpCommandLine: PChar; lpProcessAttributes,
     lpThreadAttributes: PSecurityAttributes; bInheritHandles: BOOL;
     dwCreationFlags: DWORD; lpEnvironment: pointer;
-    lpCurrentDirectory: PAnsiChar; const lpStartupInfo: TStartupInfo;
+    lpCurrentDirectory: PChar; const lpStartupInfo: TStartupInfo;
     var lpProcessInformation: TProcessInformation): BOOL;
   begin
-    if not assigned(GCreateProcessAsUser) then
-      GCreateProcessAsUser := DSiGetProcAddress('advapi32.dll',
-        'CreateProcessAsUserA');
-    if assigned(GCreateProcessAsUser) then
-      Result := GCreateProcessAsUser(hToken, lpApplicationName, lpCommandLine,
+    {$IFDEF Unicode} //Tiburon defines CreateProcessAsUser
+      Result := CreateProcessAsUser(hToken, lpApplicationName, lpCommandLine,
         lpProcessAttributes, lpThreadAttributes, bInheritHandles,
         dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
-        lpProcessInformation)
-    else begin
-      SetLastError(ERROR_NOT_SUPPORTED);
-      Result := false;
-    end;
+        lpProcessInformation);
+    {$ELSE}
+      if not assigned(GCreateProcessAsUser) then
+        GCreateProcessAsUser := DSiGetProcAddress('advapi32.dll',
+          'CreateProcessAsUserA');
+      if assigned(GCreateProcessAsUser) then
+        Result := GCreateProcessAsUser(hToken, lpApplicationName, lpCommandLine,
+          lpProcessAttributes, lpThreadAttributes, bInheritHandles,
+          dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
+          lpProcessInformation)
+      else begin
+        SetLastError(ERROR_NOT_SUPPORTED);
+        Result := false;
+      end;
+    {$ENDIF Unicode}
   end; { DSiCreateProcessAsUser }
 
   //http://msdn2.microsoft.com/en-us/library/aa969510.aspx
@@ -5459,21 +5490,26 @@ var
     end;
   end; { DSiIsWow64Process }
 
-  function DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: LPCSTR;
+  function DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: PChar;
     dwLogonType, dwLogonProvider: DWORD; var phToken: THandle): BOOL;
   begin
-    Result := false;
-    if not assigned(GLogonUser) then
-      GLogonUser := DSiGetProcAddress('advapi32.dll', 'LogonUserA');
-    if assigned(GLogonUser) then begin
-      if not DSiEnablePrivilege('SeTcbName') and DSiEnablePrivilege('SeChangeNotifyName')
-      then
-        Exit;
-      Result := GLogonUser(lpszUsername, lpszDomain, lpszPassword, dwLogonType,
-        dwLogonProvider, phToken)
-    end
-    else
-      SetLastError(ERROR_NOT_SUPPORTED);
+    {$IFDEF Unicode} //Tiburon defines LogonUser
+      Result := LogonUser(lpszUsername, lpszDomain, lpszPassword, dwLogonType,
+        dwLogonProvider, phToken);
+    {$ELSE}
+      Result := false;
+      if not assigned(GLogonUser) then
+        GLogonUser := DSiGetProcAddress('advapi32.dll', 'LogonUserA');
+      if assigned(GLogonUser) then begin
+        if not DSiEnablePrivilege('SeTcbName') and DSiEnablePrivilege('SeChangeNotifyName')
+        then
+          Exit;
+        Result := GLogonUser(lpszUsername, lpszDomain, lpszPassword, dwLogonType,
+          dwLogonProvider, phToken)
+      end
+      else
+        SetLastError(ERROR_NOT_SUPPORTED);
+    {$ENDIF Unicode}
   end; { DSiLogonUser }
 
   function DSiNetApiBufferFree(buffer: pointer): cardinal; stdcall;

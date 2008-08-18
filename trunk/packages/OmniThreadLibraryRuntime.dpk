@@ -42,8 +42,10 @@ contains
   DSiWin32 in '..\src\DSiWin32.pas',
   GpLists in '..\src\GpLists.pas',
   GpStuff in '..\src\GpStuff.pas',
+{$IFNDEF Unicode}
   HVStringBuilder in '..\src\HVStringBuilder.pas',
   HVStringData in '..\src\HVStringData.pas',
+{$ENDIF}
   SpinLock in '..\src\SpinLock.pas';
 
 end.

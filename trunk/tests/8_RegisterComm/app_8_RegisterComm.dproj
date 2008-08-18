@@ -23,6 +23,9 @@
     <DCC_ObjPath>..\..;..\..\src</DCC_ObjPath>
     <DCC_IncludePath>..\..;..\..\src</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
+    <DCC_Optimize>False</DCC_Optimize>
+    <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

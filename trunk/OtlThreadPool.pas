@@ -146,7 +146,9 @@ uses
   Contnrs,
   DSiWin32,
   SpinLock,
+  {$IFNDEF Unicode} //Tiburon provides own TStringBuilder class
   HVStringBuilder,
+  {$ENDIF}
   OtlCommon,
   OtlEventMonitor;
 
@@ -154,6 +156,10 @@ const
   WM_REQUEST_COMPLETED = WM_USER;
 
 type
+  {$IFNDEF Unicode}
+  TStringBuilder = HVStringBuilder.StringBuilder;
+  {$ENDIF}
+
   TOTPWorkItem = class
   strict private
     owiScheduledAt : TDateTime;
@@ -654,12 +660,12 @@ function TOmniThreadPool.GetActiveWorkItemDescriptions: string;
 var
   description   : string;
   iWorker       : integer;
-  sbDescriptions: StringBuilder;
+  sbDescriptions: TStringBuilder;
   scheduledAt   : TDateTime;
   startedAt     : TDateTime;
   worker        : TOTPWorkerThread;
 begin
-  sbDescriptions := StringBuilder.Create;
+  sbDescriptions := TStringBuilder.Create;
   try
     for iWorker := 0 to otpRunningWorkers.Count - 1 do begin
       worker := TOTPWorkerThread(otpRunningWorkers[iWorker]);

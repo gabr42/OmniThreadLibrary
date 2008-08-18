@@ -57,7 +57,7 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_EXCEPTION + 4;
 
 type
-  TOmniValue = type Variant; // maybe we should use own record type with implicit overloaded for parameters instead of TOmniValue
+  TOmniValue = type Variant; // maybe we should use own record type instead of TOmniValue
 
   TOmniValueContainer = class
   strict private
