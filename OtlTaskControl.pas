@@ -180,7 +180,6 @@ implementation
 
 uses
   Messages,
-  HVStringBuilder,
   DSiWin32,
   GpLists,
   GpStuff,

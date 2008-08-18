@@ -82,7 +82,7 @@ type
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Terminate;
-    function  Terminated: boolean;
+    function  Terminated: boolean; // TODO 1 -oPrimoz Gabrijelcic : Possibly bad name choice!
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
