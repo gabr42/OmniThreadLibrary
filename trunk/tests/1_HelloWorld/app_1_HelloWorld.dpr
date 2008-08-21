@@ -1,7 +1,6 @@
 program app_1_HelloWorld;
 
 uses
-  FastMM4,
   Forms,
   test_1_HelloWorld in 'test_1_HelloWorld.pas' {frmTestOTL},
   OtlCommon in '..\..\OtlCommon.pas',
