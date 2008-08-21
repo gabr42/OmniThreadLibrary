@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-15
-///   Version           : 0.1
+///   Last modification : 2008-08-21
+///   Version           : 0.2
 ///</para><para>
 ///   History:
+///     0.2: 2008-08-21
+///       - Implemented (int64, IInterface) dictionary, based on code by Lee_Nover.
 ///     0.1: 2008-07-15
 ///       - Moved in TOmniValueContainer from OtlTask. 
 ///</para></remarks>
@@ -109,11 +111,39 @@ type
     property Value: integer read GetValue write SetValue;
   end; { IOmniCounter }
 
+  TInterfaceDictionaryPair = class
+  strict private
+    idpKey  : int64;
+    idpValue: IInterface;
+  protected
+    procedure SetKeyValue(const key: int64; const value: IInterface);
+  public
+    property Key: int64 read idpKey;
+    property Value: IInterface read idpValue;
+  end; { TInterfaceDictionaryPair }
+
+  IInterfaceDictionaryEnumerator = interface
+    function  GetCurrent: TInterfaceDictionaryPair;
+    function  MoveNext: boolean;
+    property Current: TInterfaceDictionaryPair read GetCurrent;
+  end; { IInterfaceDictionaryEnumerator }
+
+  IInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
+    function  GetEnumerator: IInterfaceDictionaryEnumerator;
+  //
+    procedure Add(const key: int64; const value: IInterface);
+    procedure Clear;
+    procedure Remove(const key: int64);
+    function  ValueOf(const key: int64): IInterface;
+  end; { IInterfaceHash }
+
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
 
   function CreateOmniMonitorParams(window: THandle; msg: cardinal;
     wParam, lParam: integer): IOmniMonitorParams;
   function CreateOmniMonitorSupport: IOmniMonitorSupport;
+
+  function CreateInterfaceDictionary: IInterfaceDictionary;
 
   procedure SetThreadName(const name: string);
 
@@ -125,6 +155,13 @@ implementation
 uses
   Windows,
   SysUtils;
+
+const
+  //List of good hash table sizes, taken from
+  //http://planetmath.org/encyclopedia/GoodHashTablePrimes.html
+  CGpGoodHashSizes: array [5..30] of cardinal = (53, 97, 193, 389, 769, 1543, 3079, 6151,
+    12289, 24593, 49157, 98317, 196613, 393241, 786433, 1572869, 3145739, 6291469,
+    12582917, 25165843, 50331653, 100663319, 201326611, 402653189, 805306457, 1610612741);
 
 type
   TOmniCounter = class(TInterfacedObject, IOmniCounter)
@@ -173,6 +210,50 @@ type
     property Monitor: IOmniMonitorParams read GetMonitor;
   end; { TOmniMonitorSupport }
 
+  PPHashItem = ^PHashItem;
+  PHashItem = ^THashItem;
+  THashItem = record
+    Next : PHashItem;
+    Key  : int64;
+    Value: IInterface;
+  end; { THashItem }
+
+  TBucketArray = array of PHashItem;
+  PBucketArray = ^TBucketArray;
+
+  TInterfaceDictionaryEnumerator = class(TInterfacedObject, IInterfaceDictionaryEnumerator)
+  strict private
+    ideBuckets  : PBucketArray;
+    ideBucketIdx: integer;
+    ideCurrent  : PHashItem;
+    ideItem     : PHashItem;
+    idePair     : TInterfaceDictionaryPair;
+  public
+    constructor Create(buckets: PBucketArray);
+    destructor  Destroy; override;
+    function  GetCurrent: TInterfaceDictionaryPair;
+    function  MoveNext: boolean;
+    property Current: TInterfaceDictionaryPair read GetCurrent;
+  end; { IInterfaceDictionaryEnumerator }
+
+  TInterfaceDictionary = class(TInterfacedObject, IInterfaceDictionary)
+  strict private
+    idBuckets: TBucketArray;
+    idCount  : int64;
+  strict protected
+    function  Find(const key: int64): PPHashItem;
+    function  HashOf(const key: int64): integer; inline;
+    procedure Resize(size: Cardinal);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(const key: int64; const value: IInterface);
+    procedure Clear;
+    function  GetEnumerator: IInterfaceDictionaryEnumerator;
+    procedure Remove(const key: int64);
+    function  ValueOf(const key: int64): IInterface;
+  end; { TInterfaceDictionary }
+
 { exports }
 
 function CreateCounter(initialValue: integer): IOmniCounter;
@@ -190,6 +271,11 @@ function CreateOmniMonitorSupport: IOmniMonitorSupport;
 begin
   Result := TOmniMonitorSupport.Create;
 end; { CreateOmniMonitorSupport }
+
+function CreateInterfaceDictionary: IInterfaceDictionary;
+begin
+  Result := TInterfaceDictionary.Create;
+end; { CreateInterfaceDictionary }
 
 procedure SetThreadName(const name: string);
 type
@@ -210,6 +296,24 @@ begin
     RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
   except {ignore} end;
 end; { SetThreadName }
+
+{ globals }
+
+function GetGoodHashSize(dataSize: cardinal): cardinal;
+var
+  iHashSize: integer;
+  upper    : cardinal;
+begin
+  upper := 1 SHL Low(CGpGoodHashSizes);
+  for iHashSize := Low(CGpGoodHashSizes) to High(CGpGoodHashSizes) do begin
+    Result := CGpGoodHashSizes[iHashSize];
+    if dataSize <= upper then
+      Exit;
+    upper := 2*upper;
+  end;
+  raise Exception.CreateFmt('GetGoodHashSize: Only data sizes up to %d are supported',
+    [upper div 2]);
+end; { GetGoodHashSize }
 
 { TOmniValueContainer }
 
@@ -390,4 +494,166 @@ begin
   Result := ompWParam;
 end; { TOmniMonitorParams.GetWParam }
 
+{ TInterfaceDictionaryPair }
+
+procedure TInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
+begin
+  idpKey := key;
+  idpValue := value;
+end; { TInterfaceDictionaryPair.SetKeyValue }
+
+{ TInterfaceDictionaryEnumerator }
+
+constructor TInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
+begin
+  ideBuckets := buckets;
+  ideBucketIdx := Low(ideBuckets^) + 1;
+  ideItem := nil;
+  idePair := TInterfaceDictionaryPair.Create;
+end; { TInterfaceDictionaryEnumerator.Create }
+
+destructor TInterfaceDictionaryEnumerator.Destroy;
+begin
+  FreeAndNil(idePair);
+  inherited Destroy;
+end; { TInterfaceDictionaryEnumerator.Destroy }
+
+function TInterfaceDictionaryEnumerator.GetCurrent: TInterfaceDictionaryPair;
+begin
+  idePair.SetKeyValue(ideCurrent^.Key, ideCurrent^.Value);
+  Result := idePair;
+end; { TInterfaceDictionaryEnumerator.GetCurrent }
+
+function TInterfaceDictionaryEnumerator.MoveNext: boolean;
+begin
+  Result := false;
+  while not assigned(ideItem) do begin
+    Inc(ideBucketIdx);
+    if ideBucketIdx > High(ideBuckets^) then
+      Exit;
+    ideItem := ideBuckets^[ideBucketIdx];
+  end;
+  ideCurrent := ideItem;
+  ideItem := ideItem^.Next;
+  Result := true;
+end; { TInterfaceDictionaryEnumerator.MoveNext }
+
+{ TInterfaceHash }
+
+constructor TInterfaceDictionary.Create;
+begin
+  inherited Create;
+  Resize(1);
+end; { TInterfaceDictionary.Create }
+
+destructor TInterfaceDictionary.Destroy;
+begin
+  Clear;
+  inherited Destroy;
+end; { TInterfaceDictionary.Destroy }
+
+procedure TInterfaceDictionary.Add(const key: int64; const value: IInterface);
+var
+  bucket: PHashItem;
+  hash  : integer;
+begin
+  hash := HashOf(key);
+  New(bucket);
+  bucket^.Key := key;
+  bucket^.Value := value;
+  bucket^.Next := idBuckets[hash];
+  idBuckets[hash] := bucket;
+  Inc(idCount);
+  if idCount > (1.5 * Length(idBuckets)) then
+    Resize(idCount * 2);
+end; { TInterfaceDictionary.Add }
+
+procedure TInterfaceDictionary.Clear;
+var
+  bucket : PHashItem;
+  iBucket: integer;
+  next   : PHashItem;
+begin
+  for iBucket := 0 to Length(idBuckets) - 1 do begin
+    bucket := idBuckets[iBucket];
+    while bucket <> nil do begin
+      next := bucket^.Next;
+      Dispose(bucket);
+      bucket := next;
+    end;
+    idBuckets[iBucket] := nil;
+  end;
+  idCount := 0;
+end; { TInterfaceDictionary.Clear }
+
+function TInterfaceDictionary.Find(const key: int64): PPHashItem;
+var
+  hash: integer;
+begin
+  hash := HashOf(key);
+  Result := @idBuckets[hash];
+  while Result^ <> nil do begin
+    if Result^.key = key then
+      Exit
+    else
+      Result := @Result^.Next;
+  end;
+end; { TInterfaceDictionary.Find }
+
+function TInterfaceDictionary.GetEnumerator: IInterfaceDictionaryEnumerator;
+begin
+  Result := TInterfaceDictionaryEnumerator.Create(@idBuckets);
+end; { TInterfaceDictionary.GetEnumerator }
+
+function TInterfaceDictionary.HashOf(const key: int64): integer;
+begin
+  Result := key mod Length(idBuckets);
+end; { TInterfaceDictionary.HashOf }
+
+procedure TInterfaceDictionary.Remove(const key: int64);
+var
+  bucket    : PHashItem;
+  bucketHead: PPHashItem;
+begin
+  bucketHead := Find(key);
+  bucket := bucketHead^;
+  if assigned(bucket) then begin
+    bucketHead^ := bucket^.Next;
+    Dispose(bucket);
+    Dec(idCount);
+  end;
+end; { TInterfaceDictionary.Remove }
+
+procedure TInterfaceDictionary.Resize(size: Cardinal);
+var
+  bucket    : PHashItem;
+  iBucket   : integer;
+  oldBuckets: TBucketArray;
+begin
+  if Cardinal(Length(idBuckets)) >= size then
+    Exit;
+  oldBuckets := idBuckets;
+  idBuckets := nil;
+  SetLength(idBuckets, GetGoodHashSize(size));
+  for iBucket := 0 to High(oldBuckets) do begin
+    bucket := oldBuckets[iBucket];
+    while assigned(bucket) do begin
+       Add(bucket.Key, bucket.Value);
+       bucket := bucket.Next;
+    end;
+  end;
+end; { TInterfaceDictionary.Resize }
+
+function TInterfaceDictionary.ValueOf(const key: int64): IInterface;
+var
+  bucketHead: PHashItem;
+begin
+  bucketHead := Find(key)^;
+  if bucketHead <> nil then
+    Result := bucketHead^.Value
+  else
+    Result := nil;
+end; { TInterfaceDictionary.ValueOf }
+
 end.
+
