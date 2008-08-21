@@ -738,7 +738,8 @@ const
 begin
   SetThreadPriority(GetCurrentThread, CThreadPriorityNum[Priority]);
   try
-    if WaitForSingleObject(task.TerminateEvent, 0) = WAIT_TIMEOUT then begin
+    // TODO 1 -oPrimoz Gabrijelcic : Is this OK? Do we really want to skip workers that were scheduled?
+//    if WaitForSingleObject(task.TerminateEvent, 0) = WAIT_TIMEOUT then begin
       case oteExecutorType of
         etMethod:
           oteMethod(task);
@@ -748,7 +749,7 @@ begin
           Asy_DispatchMessages(task);
         else
           raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
-      end; //case oteExecutorType
+//      end; //case oteExecutorType
     end;
   finally Cleanup; end;
 end; { TOmniTaskExecutor.Asy_Execute }
