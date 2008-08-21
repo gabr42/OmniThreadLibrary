@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-26
-///   Version           : 0.3
+///   Last modification : 2008-08-21
+///   Version           : 0.4
 ///</para><para>
 ///   History:
+///     0.4: 2008-08-21
+///       - Uses IInterfaceDictionary instead of TInterfaceList for speedier task/pool
+///         lookup.
 ///     0.3: 2008-07-26
 ///       - Unit renamed to OltEventMonitor.
 ///       - Class TOmniTaskEventDispatch renamed to TOmniEventMonitor.
@@ -50,6 +53,8 @@ uses
   Messages,
   Classes,
   GpStuff,
+  GpLists,
+  OtlCommon,
   OtlTaskControl,
   OtlThreadPool;
 
@@ -58,13 +63,11 @@ type
   TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
   TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
-// TODO 1 -oPrimoz Gabrijelcic : tedMonitoredTasks list will be too slow, replace it with a sorted list of (task.UniqueID, task) pairs; same goes for tedMonitoredPools
-
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
     tedMessageWindow         : THandle;
-    tedMonitoredPools        : TInterfaceList;
-    tedMonitoredTasks        : TInterfaceList;
+    tedMonitoredPools        : IInterfaceDictionary;
+    tedMonitoredTasks        : IInterfaceDictionary;
     tedOnPoolThreadCreated   : TOmniPoolThreadEvent;
     tedOnPoolThreadDestroying: TOmniPoolThreadEvent;
     tedOnPoolThreadKilled    : TOmniPoolThreadEvent;
@@ -72,8 +75,6 @@ type
     tedOnTaskMessage         : TOmniTaskEvent;
     tedOnTaskTerminated      : TOmniTaskEvent;
   strict protected
-    function  LocatePool(poolUniqueID: int64): IOmniThreadPool;
-    function  LocateTask(taskUniqueID: int64): IOmniTaskControl;
     procedure WndProc(var msg: TMessage);
   public
     constructor Create(AOwner: TComponent); override;
@@ -81,7 +82,7 @@ type
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
-    function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    function Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
   published
     property OnPoolThreadCreated: TOmniPoolThreadEvent read tedOnPoolThreadCreated
       write tedOnPoolThreadCreated;
@@ -115,72 +116,48 @@ begin
   inherited;
   tedMessageWindow := DSiAllocateHWnd(WndProc);
   Win32Check(tedMessageWindow <> 0);
-  tedMonitoredTasks := TInterfaceList.Create;
-  tedMonitoredPools := TInterfaceList.Create;
+  tedMonitoredTasks := CreateInterfaceDictionary;
+  tedMonitoredPools := CreateInterfaceDictionary;
 end; { TOmniEventMonitor.Create }
 
 destructor TOmniEventMonitor.Destroy;
+var
+  intfKV: TInterfaceDictionaryPair;
 begin
-  while tedMonitoredTasks.Count > 0 do
-    Detach(tedMonitoredTasks[tedMonitoredTasks.Count - 1] as IOmniTaskControl);
-  while tedMonitoredPools.Count > 0 do
-    Detach(tedMonitoredPools[tedMonitoredPools.Count - 1] as IOmniThreadPool);
+  for intfKV in tedMonitoredTasks do
+    (intfKV.Value as IOmniTaskControl).RemoveMonitor;
+  tedMonitoredTasks.Clear;
+  for intfKV in tedMonitoredPools do
+    (intfKV.Value as IOmniThreadPool).RemoveMonitor;
+  tedMonitoredPools.Clear;
   if tedMessageWindow <> 0 then begin
     DSiDeallocateHWnd(tedMessageWindow);
     tedMessageWindow := 0;
   end;
-  FreeAndNil(tedMonitoredTasks);
-  FreeAndNil(tedMonitoredPools);
   inherited;
 end; { TOmniEventMonitor.Destroy }
 
 function TOmniEventMonitor.Detach(const task: IOmniTaskControl): IOmniTaskControl;
 begin
   Result := task.RemoveMonitor;
-  tedMonitoredTasks.Remove(task);
+  tedMonitoredTasks.Remove(task.UniqueID);
 end; { TOmniEventMonitor.Detach }
 
 function TOmniEventMonitor.Detach(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
   Result := pool.RemoveMonitor;
-  tedMonitoredPools.Remove(pool);
+  tedMonitoredPools.Remove(pool.UniqueID);
 end; { TOmniEventMonitor.Detach }
-
-function TOmniEventMonitor.LocatePool(poolUniqueID: int64): IOmniThreadPool;
-var
-  intf: IInterface;
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : This is too slow!
-  for intf in tedMonitoredPools do begin
-    Result := intf as IOmniThreadPool;
-    if Result.UniqueID = poolUniqueID then
-      Exit;
-  end;
-  Result := nil;
-end; { TOmniEventMonitor.LocatePool }
-
-function TOmniEventMonitor.LocateTask(taskUniqueID: int64): IOmniTaskControl;
-var
-  intf: IInterface;
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : This is too slow!
-  for intf in tedMonitoredTasks do begin
-    Result := intf as IOmniTaskControl;
-    if Result.UniqueID = taskUniqueID then
-      Exit;
-  end;
-  Result := nil;
-end; { TOmniEventMonitor.LocateTask }
 
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
-  tedMonitoredTasks.Add(task);
+  tedMonitoredTasks.Add(task.UniqueID, task);
   Result := task.SetMonitor(tedMessageWindow);
 end; { TOmniEventMonitor.Monitor }
 
 function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
-  tedMonitoredPools.Add(pool);
+  tedMonitoredPools.Add(pool.UniqueID, pool);
   Result := pool.SetMonitor(tedMessageWindow);
 end; { TOmniEventMonitor.Monitor }
 
@@ -195,7 +172,7 @@ begin
     if assigned(OnTaskMessage) then begin
       Int64Rec(taskID).Lo := cardinal(msg.WParam);
       Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := LocateTask(taskID);
+      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
       if assigned(task) then
         OnTaskMessage(task);
     end;
@@ -205,7 +182,7 @@ begin
     if assigned(OnTaskTerminated) then begin
       Int64Rec(taskID).Lo := cardinal(msg.WParam);
       Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := LocateTask(taskID);
+      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
       if assigned(task) then begin
         OnTaskTerminated(task);
         Detach(task);
@@ -216,7 +193,7 @@ begin
   else if msg.Msg = COmniPoolMsg then begin
     tpMonitorInfo := TOmniThreadPoolMonitorInfo(msg.LParam);
     try
-      pool := LocatePool(tpMonitorInfo.UniqueID);
+      pool := tedMonitoredPools.ValueOf(tpMonitorInfo.UniqueID) as IOmniThreadPool;
       if assigned(pool) then begin
         if tpMonitorInfo.ThreadPoolOperation = tpoCreateThread then begin
           if assigned(OnPoolThreadCreated) then
