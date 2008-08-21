@@ -100,7 +100,7 @@ var
   task: IOmniTaskControl;
 begin
   task := CreateTask(TExceptionTest.Create(Sender = btnInitException)).Run;
-  task.WaitFor(100);
+  task.WaitFor(1000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 
@@ -115,7 +115,7 @@ begin
     task.Comm.Send(EXC_RC)
   else
     task.Comm.Send(EXC_CUSTOM);
-  task.WaitFor(100);
+  task.WaitFor(1000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 
