@@ -2,7 +2,7 @@ program app_0_Beep;
 
 uses
   Forms,
-  test_0_Beep in 'test_0_Beep.pas' {frmTestOTL},
+  test_0_Beep in 'test_0_Beep.pas' {frmTestSimple},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
@@ -19,6 +19,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOTL, frmTestOTL);
+  Application.CreateForm(TfrmTestSimple, frmTestSimple);
   Application.Run;
 end.

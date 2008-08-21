@@ -2,7 +2,7 @@ program app_2_TwoWayHello;
 
 uses
   Forms,
-  test_2_TwoWayHello in 'test_2_TwoWayHello.pas' {frmTestOTL},
+  test_2_TwoWayHello in 'test_2_TwoWayHello.pas' {frmTestTwoWayHello},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
@@ -14,6 +14,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOTL, frmTestOTL);
+  Application.CreateForm(TfrmTestTwoWayHello, frmTestTwoWayHello);
   Application.Run;
 end.

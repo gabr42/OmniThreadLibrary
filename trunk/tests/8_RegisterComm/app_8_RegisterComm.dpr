@@ -2,7 +2,7 @@ program app_8_RegisterComm;
 
 uses
   Forms,
-  test_8_RegisterComm in 'test_8_RegisterComm.pas' {frmTestOtlComm},
+  test_8_RegisterComm in 'test_8_RegisterComm.pas' {frmTestRegisterComm},
   OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas';
 
@@ -11,6 +11,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOtlComm, frmTestOtlComm);
+  Application.CreateForm(TfrmTestRegisterComm, frmTestRegisterComm);
   Application.Run;
 end.

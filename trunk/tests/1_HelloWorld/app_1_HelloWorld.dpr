@@ -2,7 +2,7 @@ program app_1_HelloWorld;
 
 uses
   Forms,
-  test_1_HelloWorld in 'test_1_HelloWorld.pas' {frmTestOTL},
+  test_1_HelloWorld in 'test_1_HelloWorld.pas' {frmTestHelloWorld},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
@@ -23,6 +23,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOTL, frmTestOTL);
+  Application.CreateForm(TfrmTestHelloWorld, frmTestHelloWorld);
   Application.Run;
 end.

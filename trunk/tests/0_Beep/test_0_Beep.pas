@@ -9,7 +9,7 @@ uses
   OtlTaskControl;
 
 type
-  TfrmTestOTL = class(TForm)
+  TfrmTestSimple = class(TForm)
     btnBeep: TButton;
     procedure btnBeepClick(Sender: TObject);
   private
@@ -17,7 +17,7 @@ type
   end;
 
 var
-  frmTestOTL: TfrmTestOTL;
+  frmTestSimple: TfrmTestSimple;
 
 implementation
 
@@ -28,12 +28,12 @@ uses
 
 { TfrmTestOTL }
 
-procedure TfrmTestOTL.btnBeepClick(Sender: TObject);
+procedure TfrmTestSimple.btnBeepClick(Sender: TObject);
 begin
   CreateTask(Beep, 'Beep').Run;
 end;
 
-procedure TfrmTestOTL.Beep(const task: IOmniTask);
+procedure TfrmTestSimple.Beep(const task: IOmniTask);
 begin
   //Executed in a background thread
   MessageBeep(MB_ICONEXCLAMATION);
