@@ -612,6 +612,7 @@ var
   procedure RebuildWaitHandles;
   var
     iHandle: integer;
+    iIntf  : integer;
     intf   : IInterface;
   begin
     oteInternalLock.Acquire;
@@ -633,7 +634,8 @@ var
       waitHandles[idxFirstMessage] := task.Comm.NewMessageEvent;
       idxLastMessage := idxFirstMessage;
       if assigned(oteCommList) then
-        for intf in oteCommList do begin
+        for iIntf := 0 to oteCommList.Count - 1 do begin
+          intf := oteCommList[iIntf];
           Inc(idxLastMessage);
           if idxLastMessage > High(waitHandles) then
             raise Exception.CreateFmt('TOmniTaskExecutor.Asy_DispatchMessages: ' +
@@ -1162,18 +1164,18 @@ end; { TOmniTaskGroup.Remove }
 
 function TOmniTaskGroup.RunAll: IOmniTaskGroup;
 var
-  iIntf: IInterface;
+  iIntf: integer;
 begin
-  for iIntf in otgTaskList do
-    (iIntf as IOMniTaskControl).Run;
+  for iIntf := 0 to otgTaskList.Count - 1 do
+    (otgTaskList[iIntf] as IOMniTaskControl).Run;
 end; { TOmniTaskGroup.RunAll }
 
 function TOmniTaskGroup.TerminateAll(maxWait_ms: cardinal): boolean;
 var
-  intf: IInterface;
+  iIntf: integer;
 begin
-  for intf in otgTaskList do
-    SetEvent((intf as IOmniTaskControlInternals).TerminateEvent);
+  for iIntf := 0 to otgTaskList.Count - 1 do
+    SetEvent((otgTaskList[iIntf] as IOmniTaskControlInternals).TerminateEvent);
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
 
