@@ -1,7 +1,7 @@
-object frmTestOTL: TfrmTestOTL
+object frmTestHelloWorld: TfrmTestHelloWorld
   Left = 0
   Top = 0
-  Caption = 'OmniThreadLibrary tester'
+  Caption = 'Hello World w/ package'
   ClientHeight = 286
   ClientWidth = 426
   Color = clBtnFace
@@ -32,8 +32,8 @@ object frmTestOTL: TfrmTestOTL
     OnClick = btnHelloClick
   end
   object OmniEventMonitor1: TOmniEventMonitor
-    OnTaskTerminated = OmniEventMonitor1TaskTerminated
     OnTaskMessage = OmniEventMonitor1TaskMessage
+    OnTaskTerminated = OmniEventMonitor1TaskTerminated
     Left = 16
     Top = 48
   end

@@ -168,7 +168,7 @@
     <DCCReference Include="..\..\src\HVStringData.pas" />
     <DCCReference Include="..\..\src\SpinLock.pas" />
     <DCCReference Include="test_3_HelloWorld_with_package.pas">
-      <Form>frmTestOTL</Form>
+      <Form>frmTestHelloWorld</Form>
     </DCCReference>
   </ItemGroup>
 </Project>

@@ -12,7 +12,7 @@ uses
   OtlEventMonitor;
 
 type
-  TfrmTestOtlComm = class(TForm)
+  TfrmTestRegisterComm = class(TForm)
     btnSendObject: TButton;
     btnSendString: TButton;
     btnSendTo1   : TButton;
@@ -34,7 +34,7 @@ type
   end;
 
 var
-  frmTestOtlComm: TfrmTestOtlComm;
+  frmTestRegisterComm: TfrmTestRegisterComm;
 
 implementation
 
@@ -89,7 +89,7 @@ end;
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestOtlComm.btnSendObjectClick(Sender: TObject);
+procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
 var
   sl: TStringList;
 begin
@@ -100,13 +100,13 @@ begin
   FClient1.Comm.Send(MSG_FORWARD, [sl]);
 end;
 
-procedure TfrmTestOtlComm.btnSendStringClick(Sender: TObject);
+procedure TfrmTestRegisterComm.btnSendStringClick(Sender: TObject);
 begin
   Log('Sending ''abc'' to task 1');
   FClient1.Comm.Send(MSG_FORWARD, 'abc');
 end;
 
-procedure TfrmTestOtlComm.btnSendTo1Click(Sender: TObject);
+procedure TfrmTestRegisterComm.btnSendTo1Click(Sender: TObject);
 var
   value: integer;
 begin
@@ -115,7 +115,7 @@ begin
   FClient1.Comm.Send(MSG_FORWARD, value);
 end;
 
-procedure TfrmTestOtlComm.btnSendTo2Click(Sender: TObject);
+procedure TfrmTestRegisterComm.btnSendTo2Click(Sender: TObject);
 var
   value: integer;
 begin
@@ -124,7 +124,7 @@ begin
   FClient2.Comm.Send(MSG_FORWARD, value);
 end;
 
-procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
+procedure TfrmTestRegisterComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
   FClient1 := CreateTask(TCommTester.Create(FCommChannel.Endpoint1))
@@ -135,18 +135,18 @@ begin
     .Run;
 end;
 
-procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+procedure TfrmTestRegisterComm.FormDestroy(Sender: TObject);
 begin
   FClient1.Terminate;
   FClient2.Terminate;
 end;
 
-procedure TfrmTestOtlComm.Log(const msg: string);
+procedure TfrmTestRegisterComm.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestOtlComm.OmniTEDTaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestRegisterComm.OmniTEDTaskMessage(const task: IOmniTaskControl);
 var
   msgData: TOmniValue;
   msgID  : word;

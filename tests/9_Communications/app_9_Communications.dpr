@@ -2,7 +2,7 @@ program app_9_Communications;
 
 uses
   Forms,
-  test_9_Communications in 'test_9_Communications.pas' {frmTestOtlComm},
+  test_9_Communications in 'test_9_Communications.pas' {frmTestCommunications},
   OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas';
 
@@ -11,6 +11,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOtlComm, frmTestOtlComm);
+  Application.CreateForm(TfrmTestCommunications, frmTestCommunications);
   Application.Run;
 end.

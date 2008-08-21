@@ -169,7 +169,7 @@
     </DCCReference>
     <DCCReference Include="..\..\OtlThreadPool.pas" />
     <DCCReference Include="test_7_InitTest.pas">
-      <Form>frmTestOTL</Form>
+      <Form>frmTestInit</Form>
     </DCCReference>
   </ItemGroup>
 </Project>

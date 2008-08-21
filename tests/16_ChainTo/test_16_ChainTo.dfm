@@ -1,7 +1,7 @@
-object frmTestTaskGroup: TfrmTestTaskGroup
+object frmTestChainTo: TfrmTestChainTo
   Left = 0
   Top = 0
-  Caption = 'TaskGroup tester'
+  Caption = 'ChainTo tester'
   ClientHeight = 306
   ClientWidth = 611
   Color = clBtnFace

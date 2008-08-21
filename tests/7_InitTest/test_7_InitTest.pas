@@ -20,7 +20,7 @@ type
     function  Initialize: boolean; override;
   end;
 
-  TfrmTestOTL = class(TForm)
+  TfrmTestInit = class(TForm)
     btnTestFailure        : TButton;
     btnTestSuccess        : TButton;
     lbLog                 : TListBox;
@@ -35,7 +35,7 @@ type
   end;
 
 var
-  frmTestOTL: TfrmTestOTL;
+  frmTestInit: TfrmTestInit;
 
 implementation
 
@@ -63,17 +63,17 @@ end;
 
 { TfrmTestOTL }
 
-procedure TfrmTestOTL.btnTestFailureClick(Sender: TObject);
+procedure TfrmTestInit.btnTestFailureClick(Sender: TObject);
 begin
   Test(false);
 end;
 
-procedure TfrmTestOTL.btnTestSuccessClick(Sender: TObject);
+procedure TfrmTestInit.btnTestSuccessClick(Sender: TObject);
 begin
   Test(true);
 end;
 
-procedure TfrmTestOTL.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestInit.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
 var
   msg: TOmniMessage;
 begin
@@ -81,12 +81,12 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('%d: %d %s', [task.UniqueID, msg.msgID, msg.MsgData]));
 end;
 
-procedure TfrmTestOTL.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
+procedure TfrmTestInit.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('~%d', [task.UniqueID]));
 end;
 
-procedure TfrmTestOTL.Test(success: boolean);
+procedure TfrmTestInit.Test(success: boolean);
 var
   task: IOmniTaskControl;
 begin

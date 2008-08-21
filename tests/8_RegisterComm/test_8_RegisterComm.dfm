@@ -1,7 +1,7 @@
-object frmTestOtlComm: TfrmTestOtlComm
+object frmTestRegisterComm: TfrmTestRegisterComm
   Left = 0
   Top = 0
-  Caption = 'OtlComm tester'
+  Caption = 'RegisterComm tester'
   ClientHeight = 286
   ClientWidth = 426
   Color = clBtnFace

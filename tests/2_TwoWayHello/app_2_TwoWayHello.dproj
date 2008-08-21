@@ -107,7 +107,7 @@
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
     <DCCReference Include="test_2_TwoWayHello.pas">
-      <Form>frmTestOTL</Form>
+      <Form>frmTestTwoWayHello</Form>
     </DCCReference>
   </ItemGroup>
 </Project>

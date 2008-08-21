@@ -1,7 +1,7 @@
-object frmTestOTL: TfrmTestOTL
+object frmTestTwoWayHello: TfrmTestTwoWayHello
   Left = 0
   Top = 0
-  Caption = 'OmniThreadLibrary tester'
+  Caption = 'Two way hello w/ package'
   ClientHeight = 286
   ClientWidth = 426
   Color = clBtnFace

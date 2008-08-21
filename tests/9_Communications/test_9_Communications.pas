@@ -11,7 +11,7 @@ uses
   OtlEventMonitor;
 
 type
-  TfrmTestOtlComm = class(TForm)
+  TfrmTestCommunications = class(TForm)
     btnRunTests           : TButton;
     lbLog                 : TListBox;
     OmniEventMonitor1: TOmniEventMonitor;
@@ -27,7 +27,7 @@ type
   end;
 
 var
-  frmTestOtlComm: TfrmTestOtlComm;
+  frmTestCommunications: TfrmTestCommunications;
 
 implementation
 
@@ -197,12 +197,12 @@ end;
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestOtlComm.btnRunTestsClick(Sender: TObject);
+procedure TfrmTestCommunications.btnRunTestsClick(Sender: TObject);
 begin
   FClient1.Comm.Send(MSG_START_TEST, 0);
 end;
 
-procedure TfrmTestOtlComm.FormCreate(Sender: TObject);
+procedure TfrmTestCommunications.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(CTestQueueLength);
   FClient1 := OmniEventMonitor1.Monitor(
@@ -211,18 +211,18 @@ begin
     CreateTask(TCommTester.Create(FCommChannel.Endpoint2, CTestQueueLength))).Run;
 end;
 
-procedure TfrmTestOtlComm.FormDestroy(Sender: TObject);
+procedure TfrmTestCommunications.FormDestroy(Sender: TObject);
 begin
   FClient1.Terminate;
   FClient2.Terminate;
 end;
 
-procedure TfrmTestOtlComm.Log(const msg: string);
+procedure TfrmTestCommunications.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestOtlComm.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestCommunications.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
 var
   msg            : TOmniMessage;
   testDuration_ms: int64;

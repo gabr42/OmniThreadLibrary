@@ -2,7 +2,7 @@ program app_3_HelloWorld_with_package;
 
 uses
   Forms,
-  test_3_HelloWorld_with_package in 'test_3_HelloWorld_with_package.pas' {frmTestOTL},
+  test_3_HelloWorld_with_package in 'test_3_HelloWorld_with_package.pas' {frmTestHelloWorld},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
@@ -19,6 +19,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmTestOTL, frmTestOTL);
+  Application.CreateForm(TfrmTestHelloWorld, frmTestHelloWorld);
   Application.Run;
 end.

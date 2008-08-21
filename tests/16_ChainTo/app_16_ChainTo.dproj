@@ -53,7 +53,7 @@
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlTaskControl.pas" />
     <DCCReference Include="test_16_ChainTo.pas">
-      <Form>frmTestTaskGroup</Form>
+      <Form>frmTestChainTo</Form>
     </DCCReference>
   </ItemGroup>
 </Project>

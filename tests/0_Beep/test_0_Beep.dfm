@@ -1,7 +1,7 @@
-object frmTestOTL: TfrmTestOTL
+object frmTestSimple: TfrmTestSimple
   Left = 0
   Top = 0
-  Caption = 'OmniThreadLibrary tester'
+  Caption = 'Simple test'
   ClientHeight = 77
   ClientWidth = 286
   Color = clBtnFace

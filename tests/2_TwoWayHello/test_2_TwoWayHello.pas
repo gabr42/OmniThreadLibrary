@@ -11,7 +11,7 @@ uses
   OtlEventMonitor;
 
 type
-  TfrmTestOTL = class(TForm)
+  TfrmTestTwoWayHello = class(TForm)
     actChangeMessage: TAction;
     ActionList      : TActionList;
     actStartHello   : TAction;
@@ -36,7 +36,7 @@ type
   end;
 
 var
-  frmTestOTL: TfrmTestOTL;
+  frmTestTwoWayHello: TfrmTestTwoWayHello;
 
 implementation
 
@@ -73,17 +73,17 @@ end;
 
 { TfrmTestOTL }
 
-procedure TfrmTestOTL.actChangeMessageExecute(Sender: TObject);
+procedure TfrmTestTwoWayHello.actChangeMessageExecute(Sender: TObject);
 begin
   FHelloTask.Comm.Send(MSG_CHANGE_MESSAGE, 'Random ' + IntToStr(Random(1234)));
 end;
 
-procedure TfrmTestOTL.actChangeMessageUpdate(Sender: TObject);
+procedure TfrmTestTwoWayHello.actChangeMessageUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := assigned(FHelloTask);
 end;
 
-procedure TfrmTestOTL.actStartHelloExecute(Sender: TObject);
+procedure TfrmTestTwoWayHello.actStartHelloExecute(Sender: TObject);
 begin
   FHelloTask :=
     FMessageDispatch.Monitor(CreateTask(RunHello, 'Hello'))
@@ -92,35 +92,35 @@ begin
     .Run;
 end;
 
-procedure TfrmTestOTL.actStartHelloUpdate(Sender: TObject);
+procedure TfrmTestTwoWayHello.actStartHelloUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := not assigned(FHelloTask);
 end;
 
-procedure TfrmTestOTL.actStopHelloExecute(Sender: TObject);
+procedure TfrmTestTwoWayHello.actStopHelloExecute(Sender: TObject);
 begin
   FHelloTask.Terminate;
   FHelloTask := nil;
 end;
 
-procedure TfrmTestOTL.actStopHelloUpdate(Sender: TObject);
+procedure TfrmTestTwoWayHello.actStopHelloUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := assigned(FHelloTask);
 end;
 
-procedure TfrmTestOTL.FormCreate(Sender: TObject);
+procedure TfrmTestTwoWayHello.FormCreate(Sender: TObject);
 begin
   FMessageDispatch := TOmniEventMonitor.Create(Self);
   FMessageDispatch.OnTaskMessage := HandleTaskMessage;
   FMessageDispatch.OnTaskTerminated := HandleTaskTerminated;
 end;
 
-procedure TfrmTestOTL.HandleTaskTerminated(const task: IOmniTaskControl);
+procedure TfrmTestTwoWayHello.HandleTaskTerminated(const task: IOmniTaskControl);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated', [task.UniqueID, task.Name]));
 end; { TfrmTestOTL.HandleTaskTerminated }
 
-procedure TfrmTestOTL.HandleTaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl);
 var
   msgID  : word;
   msgData: TOmniValue;

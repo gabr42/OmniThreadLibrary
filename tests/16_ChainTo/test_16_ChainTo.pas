@@ -12,7 +12,7 @@ uses
   OtlEventMonitor;
 
 type
-  TfrmTestTaskGroup = class(TForm)
+  TfrmTestChainTo = class(TForm)
     btnStartTasks: TButton;
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
@@ -26,7 +26,7 @@ type
   end;
 
 var
-  frmTestTaskGroup: TfrmTestTaskGroup;
+  frmTestChainTo: TfrmTestChainTo;
 
 implementation
 
@@ -42,7 +42,7 @@ const
 
 { TfrmTestOtlComm }
 
-procedure TfrmTestTaskGroup.BgTask(const task: IOmniTask);
+procedure TfrmTestChainTo.BgTask(const task: IOmniTask);
 var
   a: real;
   i: integer;
@@ -53,7 +53,7 @@ begin
     a := Sqr(Sqrt(a));
 end;
 
-procedure TfrmTestTaskGroup.btnStartTasksClick(Sender: TObject);
+procedure TfrmTestChainTo.btnStartTasksClick(Sender: TObject);
 var
   task1: IOmniTaskControl;
   task2: IOmniTaskControl;
@@ -70,12 +70,12 @@ begin
   task1.Run; taskA.Run;
 end;
 
-procedure TfrmTestTaskGroup.Log(const msg: string);
+procedure TfrmTestChainTo.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestTaskGroup.OmniTEDTaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestChainTo.OmniTEDTaskMessage(const task: IOmniTaskControl);
 var
   msg: TOmniMessage;
 begin
@@ -83,7 +83,7 @@ begin
   Log(string(msg.MsgData));
 end;
 
-procedure TfrmTestTaskGroup.OmniTEDTaskTerminated(const task: IOmniTaskControl);
+procedure TfrmTestChainTo.OmniTEDTaskTerminated(const task: IOmniTaskControl);
 begin
   Log(Format('Task terminated: %s', [task.Name]));
 end;
