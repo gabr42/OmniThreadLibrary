@@ -13,12 +13,14 @@ uses
 
 type
   TfrmTestRegisterComm = class(TForm)
+    btnSendFloat : TButton;
     btnSendObject: TButton;
     btnSendString: TButton;
     btnSendTo1   : TButton;
     btnSendTo2   : TButton;
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
+    procedure btnSendFloatClick(Sender: TObject);
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
@@ -88,6 +90,19 @@ begin
 end;
 
 { TfrmTestOtlComm }
+
+procedure TfrmTestRegisterComm.btnSendFloatClick(Sender: TObject);
+var
+  d: Double;
+  e: Extended;
+begin
+  Log('Sending ''3.1415'' to task 1');
+  d := 3.1415;
+  FClient1.Comm.Send(MSG_FORWARD, d);
+  Log('Sending ''2.7182'' to task 1');
+  e := 2.7182;
+  FClient1.Comm.Send(MSG_FORWARD, e);
+end;
 
 procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
 var

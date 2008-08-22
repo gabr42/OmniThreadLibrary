@@ -60,6 +60,15 @@ object frmTestRegisterComm: TfrmTestRegisterComm
     TabOrder = 4
     OnClick = btnSendStringClick
   end
+  object btnSendFloat: TButton
+    Left = 8
+    Top = 158
+    Width = 89
+    Height = 25
+    Caption = 'Send float'
+    TabOrder = 5
+    OnClick = btnSendFloatClick
+  end
   object OmniTED: TOmniEventMonitor
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8

@@ -66,32 +66,40 @@ type
   private
     ovData: int64;
     ovIntf: IInterface;
-    ovType: (ovtNull, ovtInteger, ovtString, ovtObject, ovtInterface, ovtVariant);
+    ovType: (ovtNull, ovtInteger, ovtDouble, ovtExtended, ovtString, ovtObject,
+             ovtInterface, ovtVariant);
     function  GetAsCardinal: cardinal; inline;
+    function  GetAsDouble: Double;
+    function  GetAsExtended: Extended;
     function  GetAsInt64: int64; inline;
     function  GetAsInteger: integer; inline;
     function  GetAsInterface: IInterface; inline;
     function  GetAsObject: TObject; inline;
-    function  GetAsString: string; 
-    function  GetAsVariant: Variant; 
+    function  GetAsString: string;
+    function  GetAsVariant: Variant;
     function  GetAsVariantArr(idx: integer): Variant;
     procedure SetAsCardinal(const value: cardinal); inline;
+    procedure SetAsDouble(value: Double); inline;
+    procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
     procedure SetAsInteger(const value: integer); inline;
     procedure SetAsInterface(const value: IInterface); inline;
     procedure SetAsObject(const value: TObject); inline;
     procedure SetAsString(const value: string);
-    procedure SetAsVariant(const value: Variant); 
+    procedure SetAsVariant(const value: Variant);
   public
-    class function Null: TOmniValue; static;
     procedure Clear; inline;
     function IsEmpty: boolean; inline;
+    function IsFloating: boolean; inline;
     function IsInterface: boolean; inline;
     function IsObject: boolean; inline;
     function IsString: boolean; inline;
-    function IsVariant: boolean; inline;
+    function IsVariant: boolean; inline;        
+    class function Null: TOmniValue; static;
     function RawData: PInt64; inline;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
+    class operator Implicit(const a: Double): TOmniValue; inline;
+    class operator Implicit(const a: Extended): TOmniValue;
     class operator Implicit(const a: integer): TOmniValue; inline;
     class operator Implicit(const a: int64): TOmniValue; inline;
     class operator Implicit(const a: string): TOmniValue;
@@ -101,9 +109,13 @@ type
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): string;
+    class operator Implicit(const a: TOmniValue): Double; inline;
+    class operator Implicit(const a: TOmniValue): Extended;
     class operator Implicit(const a: TOmniValue): IInterface;
     class operator Implicit(const a: Variant): TOmniValue; inline;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
+    property AsDouble: Double read GetAsDouble write SetAsDouble;
+    property AsExtended: Extended read GetAsExtended write SetAsExtended;
     property AsInt64: int64 read GetAsInt64 write SetAsInt64;
     property AsInteger: integer read GetAsInteger write SetAsInteger;
     property AsInterface: IInterface read GetAsInterface write SetAsInterface;
@@ -247,6 +259,22 @@ type
     procedure SetValue(const value: Variant);
     property Value: Variant read GetValue write SetValue;
   end; { TOmniVariantData }
+
+  IOmniExtendedData = interface ['{B6CD371F-A461-436A-8767-9BCA194B1D0E}']
+    function  GetValue: Extended;
+    procedure SetValue(const value: Extended);
+    property Value: Extended read GetValue write SetValue;
+  end; { IOmniExtendedData }
+
+  TOmniExtendedData = class(TInterfacedObject, IOmniExtendedData)
+  strict private
+    oedValue: Extended;
+  public
+    constructor Create(const value: Extended);
+    function  GetValue: Extended;
+    procedure SetValue(const value: Extended);
+    property Value: Extended read GetValue write SetValue;
+  end; { TOmniExtendedData }
 
   TOmniCounter = class(TInterfacedObject, IOmniCounter)
   strict private
@@ -419,7 +447,7 @@ var
   idxParam: integer;
 begin
   if not ovcCanModify then
-    raise Exception.Create('TOmniValueContainer: Already locked');
+    raise Exception.Create('TOmniValueContainer: Locked');
   if paramName = '' then
     paramName := IntToStr(ovcNames.Count);
   idxParam := ovcNames.IndexOf(paramName); 
@@ -753,6 +781,24 @@ begin
   Result := AsInt64;
 end; { TOmniValue.GetAsCardinal }
 
+function TOmniValue.GetAsDouble: Double;
+begin
+  case ovType of
+    ovtDouble:   Result := PDouble(RawData)^;
+    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
+    else raise Exception.Create('TOmniValue cannot be converted to double');
+  end;
+end; { TOmniValue.GetAsDouble }
+
+function TOmniValue.GetAsExtended: Extended;
+begin
+  case ovType of
+    ovtDouble:   Result := PDouble(RawData)^;
+    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
+    else raise Exception.Create('TOmniValue cannot be converted to extended');
+  end;
+end; { TOmniValue.GetAsExtended }
+
 function TOmniValue.GetAsInt64: int64;
 begin
   if ovType <> ovtInteger then
@@ -782,9 +828,11 @@ end; { TOmniValue.GetAsObject }
 function TOmniValue.GetAsString: string;
 begin
   case ovType of
-    ovtNull:    Result := '';
-    ovtInteger: Result := IntToStr(ovData);
-    ovtString:  Result := (ovIntf as IOmniStringData).Value;
+    ovtNull:     Result := '';
+    ovtInteger:  Result := IntToStr(ovData);
+    ovtDouble,
+    ovtExtended: Result := FloatToStr(AsExtended);
+    ovtString:   Result := (ovIntf as IOmniStringData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
 end; { TOmniValue.GetAsString }
@@ -805,6 +853,11 @@ function TOmniValue.IsEmpty: boolean;
 begin
   Result := (ovType = ovtNull);
 end; { TOmniValue.IsEmpty }
+
+function TOmniValue.IsFloating: boolean;
+begin
+  Result := (ovType in [ovtDouble, ovtExtended]);
+end; { TOmniValue.IsFloating }
 
 function TOmniValue.IsInterface: boolean;
 begin
@@ -840,6 +893,18 @@ procedure TOmniValue.SetAsCardinal(const value: cardinal);
 begin
   AsInt64 := value;
 end; { TOmniValue.SetAsCardinal }
+
+procedure TOmniValue.SetAsDouble(value: Double);
+begin
+  PDouble(RawData)^ := value;
+  ovType := ovtDouble;
+end; { TOmniValue.SetAsDouble }
+
+procedure TOmniValue.SetAsExtended(value: Extended);
+begin
+  ovIntf := TOmniExtendedData.Create(value);
+  ovType := ovtExtended;
+end; { TOmniValue.SetAsExtended }
 
 procedure TOmniValue.SetAsInt64(const value: int64);
 begin
@@ -881,6 +946,16 @@ begin
   Result := (a.AsInteger = i);
 end; { TOmniValue.Equal }
 
+class operator TOmniValue.Implicit(const a: Double): TOmniValue;
+begin
+  Result.AsDouble := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: Extended): TOmniValue;
+begin
+  Result.AsExtended := a;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: integer): TOmniValue;
 begin
   Result.AsInteger := a;
@@ -906,9 +981,14 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): string;
+class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
 begin
-  Result := a.AsString;
+  Result := a.AsExtended;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
+begin
+  Result := a.AsDouble;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): int64;
@@ -916,9 +996,9 @@ begin
   Result := a.AsInt64;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): integer;
+class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
 begin
-  Result := a.AsInteger;
+  Result := a.AsObject;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
@@ -926,9 +1006,14 @@ begin
   Result := a.AsInterface;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
+class operator TOmniValue.Implicit(const a: TOmniValue): integer;
 begin
-  Result := a.AsObject;
+  Result := a.AsInteger;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): string;
+begin
+  Result := a.AsString;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
@@ -971,6 +1056,24 @@ procedure TOmniVariantData.SetValue(const value: Variant);
 begin
   ovdValue := value;
 end; { TOmniVariantData.SetValue }
+
+{ TOmniExtendedData }
+
+constructor TOmniExtendedData.Create(const value: Extended);
+begin
+  inherited Create;
+  oedValue := value;
+end; { TOmniExtendedData.Create }
+
+function TOmniExtendedData.GetValue: Extended;
+begin
+  Result := oedValue;
+end; { TOmniExtendedData.GetValue }
+
+procedure TOmniExtendedData.SetValue(const value: Extended);
+begin
+  oedValue := value;
+end; { TOmniExtendedData.SetValue }
 
 end.
 
