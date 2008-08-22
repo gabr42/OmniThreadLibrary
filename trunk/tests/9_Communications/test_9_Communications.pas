@@ -114,8 +114,8 @@ end;
 
 procedure TCommTester.OMAck(var msg: TOmniMessage);
 begin
-  if msg.MsgData < ctCommSize then
-    ctComm.Send(MSG_REQ, msg.MsgData + 1)
+  if msg.MsgData.AsInteger < ctCommSize then
+    ctComm.Send(MSG_REQ, msg.MsgData.AsInteger + 1)
   else
     ctComm.Send(MSG_END_TIMING, 0);
 end;
@@ -123,9 +123,9 @@ end;
 procedure TCommTester.OMDumpTest(var msg: TOmniMessage);
 begin
   Assert(ctTestSuite = tsDump);
-  if msg.MsgData <> ctExpectedValue then
+  if msg.MsgData.AsInteger <> ctExpectedValue then
     raise Exception.CreateFmt('Invalid value received (%d, expected %d)',
-      [integer(msg.MsgData), ctExpectedValue]);
+      [msg.MsgData.AsInteger, ctExpectedValue]);
   Inc(ctExpectedValue);
 end;
 
@@ -140,7 +140,7 @@ end;
 
 procedure TCommTester.OMNotifyTestEnd(var msg: TOmniMessage);
 begin
-  Assert(TTestSuite(msg.MsgData) = ctTestSuite);
+  Assert(TTestSuite(msg.MsgData.AsInteger) = ctTestSuite);
   if ctTestSuite = tsMessageExchange then begin
     Inc(ctTestRepetition);
     if ctTestRepetition <= 10 then
@@ -158,9 +158,9 @@ end;
 procedure TCommTester.OMReq(var msg: TOmniMessage);
 begin
   Assert(ctTestSuite = tsMessageExchange);
-  if msg.MsgData <> ctExpectedValue then
+  if msg.MsgData.AsInteger <> ctExpectedValue then
     raise Exception.CreateFmt('Invalid value received (%d, expected %d)',
-      [integer(msg.MsgData), ctExpectedValue]);
+      [msg.MsgData.AsInteger, ctExpectedValue]);
   ctComm.Send(MSG_ACK, msg.MsgData);
   Inc(ctExpectedValue);
 end;
@@ -173,7 +173,7 @@ end;
 procedure TCommTester.OMStartTiming(var msg: TOmniMessage);
 begin
   ctTestStart_ms := DSiTimeGetTime64;
-  ctTestSuite := TTestSuite(msg.MsgData);
+  ctTestSuite := TTestSuite(msg.MsgData.AsInteger);
   ctExpectedValue := 1;
 end;
 
@@ -230,7 +230,7 @@ begin
   task.Comm.Receive(msg);
   case msg.MsgID of
     MSG_NOTIFY_TEST_START:
-      Log(Format('Running test %s; %d messages', [msg.MsgData, CTestQueueLength]));
+      Log(Format('Running test %s; %d messages', [string(msg.MsgData), CTestQueueLength]));
     MSG_NOTIFY_TEST_END:
       begin
         testDuration_ms := msg.MsgData;

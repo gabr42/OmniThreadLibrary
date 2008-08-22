@@ -713,7 +713,7 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
       else if awaited = WAIT_TIMEOUT then begin
         if TimerMessage >= 0 then begin
           msg.MsgID := TimerMessage;
-          msg.MsgData := Null;
+          msg.MsgData := 0;
           if assigned(WorkerIntf) then
             WorkerIntf.DispatchMessage(msg);
         end

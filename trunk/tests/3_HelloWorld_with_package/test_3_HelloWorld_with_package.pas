@@ -46,7 +46,8 @@ var
   msgData: TOmniValue;
 begin
   task.Comm.Receive(msgID, msgData);
-  lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s', [task.UniqueID, task.Name, msgID, msgData]));
+  lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
+    [task.UniqueID, task.Name, msgID, msgData.AsString]));
 end;
 
 procedure TfrmTestHelloWorld.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);

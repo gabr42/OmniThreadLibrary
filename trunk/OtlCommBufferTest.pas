@@ -68,9 +68,9 @@ begin
       if rb.IsEmpty then
         raise Exception.CreateFmt('Buffer is empty on element %d', [i]);
       msg := rb.Dequeue;
-      if (msg.MsgID <> i) or (msg.MsgData <> -i) then
+      if (msg.MsgID <> i) or (msg.MsgData.AsInteger <> -i) then
         raise Exception.CreateFmt('Retrieved (%d, %d), expected (%d, %d)',
-          [msg.MsgID, integer(msg.MsgData), i, -i]);
+          [msg.MsgID, msg.MsgData.AsInteger, i, -i]);
     end;
     if not rb.IsEmpty then
       raise Exception.Create('Buffer is not empty at the end');

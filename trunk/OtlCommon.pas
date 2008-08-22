@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-21
-///   Version           : 0.2
+///   Last modification : 2008-08-22
+///   Version           : 0.3
 ///</para><para>
 ///   History:
+///     0.3: 2008-08-22
+///       - New TOmniValue, not based on Variant. Slightly faster, slightly smaller and
+///         much more flexible.
 ///     0.2: 2008-08-21
 ///       - Implemented (int64, IInterface) dictionary, based on code by Lee_Nover.
 ///     0.1: 2008-07-15
@@ -59,7 +62,56 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_EXCEPTION + 4;
 
 type
-  TOmniValue = type Variant; // maybe we should use own record type instead of TOmniValue
+  TOmniValue = packed record
+  private
+    ovData: int64;
+    ovIntf: IInterface;
+    ovType: (ovtNull, ovtInteger, ovtString, ovtObject, ovtInterface, ovtVariant);
+    function  GetAsCardinal: cardinal; inline;
+    function  GetAsInt64: int64; inline;
+    function  GetAsInteger: integer; inline;
+    function  GetAsInterface: IInterface; inline;
+    function  GetAsObject: TObject; inline;
+    function  GetAsString: string; 
+    function  GetAsVariant: Variant; 
+    function  GetAsVariantArr(idx: integer): Variant;
+    procedure SetAsCardinal(const value: cardinal); inline;
+    procedure SetAsInt64(const value: int64); inline;
+    procedure SetAsInteger(const value: integer); inline;
+    procedure SetAsInterface(const value: IInterface); inline;
+    procedure SetAsObject(const value: TObject); inline;
+    procedure SetAsString(const value: string);
+    procedure SetAsVariant(const value: Variant); 
+  public
+    class function Null: TOmniValue; static;
+    procedure Clear; inline;
+    function IsEmpty: boolean; inline;
+    function IsInterface: boolean; inline;
+    function IsObject: boolean; inline;
+    function IsString: boolean; inline;
+    function IsVariant: boolean; inline;
+    function RawData: PInt64; inline;
+    class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
+    class operator Implicit(const a: integer): TOmniValue; inline;
+    class operator Implicit(const a: int64): TOmniValue; inline;
+    class operator Implicit(const a: string): TOmniValue;
+    class operator Implicit(const a: IInterface): TOmniValue;
+    class operator Implicit(const a: TObject): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): integer; inline;
+    class operator Implicit(const a: TOmniValue): int64; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
+    class operator Implicit(const a: TOmniValue): string;
+    class operator Implicit(const a: TOmniValue): IInterface;
+    class operator Implicit(const a: Variant): TOmniValue; inline;
+    property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
+    property AsInt64: int64 read GetAsInt64 write SetAsInt64;
+    property AsInteger: integer read GetAsInteger write SetAsInteger;
+    property AsInterface: IInterface read GetAsInterface write SetAsInterface;
+    property AsObject: TObject read GetAsObject write SetAsObject;
+    property AsString: string read GetAsString write SetAsString;
+    property AsVariant: Variant read GetAsVariant write SetAsVariant;
+    property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
+  end; { TOmniValue }
 
   TOmniValueContainer = class
   strict private
@@ -164,6 +216,38 @@ const
     12582917, 25165843, 50331653, 100663319, 201326611, 402653189, 805306457, 1610612741);
 
 type
+  IOmniStringData = interface ['{21E52E56-390C-4066-B9FC-83862FFBCBF3}']
+    function  GetValue: string; 
+    procedure SetValue(const value: string);
+    property Value: string read GetValue write SetValue;
+  end; { IOmniStringData }            
+  
+  TOmniStringData = class(TInterfacedObject, IOmniStringData)
+  strict private
+    osdValue: string;
+  public
+    constructor Create(const value: string);
+    function  GetValue: string; 
+    procedure SetValue(const value: string);
+    property Value: string read GetValue write SetValue;
+  end; { TOmniStringData }
+
+  IOmniVariantData = interface ['{65311D7D-67F1-452E-A0BD-C90596671FC8}']
+    function  GetValue: Variant;
+    procedure SetValue(const value: Variant);
+    property Value: Variant read GetValue write SetValue;
+  end; { IOmniVariantData }
+
+  TOmniVariantData = class(TInterfacedObject, IOmniVariantData)
+  strict private
+    ovdValue: Variant;
+  public
+    constructor Create(const value: Variant);
+    function  GetValue: Variant;
+    procedure SetValue(const value: Variant);
+    property Value: Variant read GetValue write SetValue;
+  end; { TOmniVariantData }
+
   TOmniCounter = class(TInterfacedObject, IOmniCounter)
   strict private
     ocValue: TGp4AlignedInt;
@@ -654,6 +738,239 @@ begin
   else
     Result := nil;
 end; { TInterfaceDictionary.ValueOf }
+
+{ TOmniValue }
+
+procedure TOmniValue.Clear;
+begin
+  ovData := 0;
+  pointer(ovIntf) := nil;
+  ovType := ovtNull;
+end; { TOmniValue.Clear }
+
+function TOmniValue.GetAsCardinal: cardinal;
+begin
+  Result := AsInt64;
+end; { TOmniValue.GetAsCardinal }
+
+function TOmniValue.GetAsInt64: int64;
+begin
+  if ovType <> ovtInteger then
+    Exception.Create('TOmniValue cannot be converted to int64');
+  Result := ovData;
+end; { TOmniValue.GetAsInt64 }
+
+function TOmniValue.GetAsInteger: integer;
+begin
+  Result := AsInt64;
+end; { TOmniValue.GetAsInteger }
+
+function TOmniValue.GetAsInterface: IInterface;
+begin
+  if ovType <> ovtInterface then
+    Exception.Create('TOmniValue cannot be converted to interface');
+  Result := ovIntf;
+end; { TOmniValue.GetAsInterface }
+
+function TOmniValue.GetAsObject: TObject;
+begin
+  if ovType <> ovtObject then
+    Exception.Create('TOmniValue cannot be converted to object');
+  Result := TObject(RawData^);
+end; { TOmniValue.GetAsObject }
+
+function TOmniValue.GetAsString: string;
+begin
+  case ovType of
+    ovtNull:    Result := '';
+    ovtInteger: Result := IntToStr(ovData);
+    ovtString:  Result := (ovIntf as IOmniStringData).Value;
+    else raise Exception.Create('TOmniValue cannot be converted to string');
+  end;
+end; { TOmniValue.GetAsString }
+
+function TOmniValue.GetAsVariant: Variant;
+begin
+  if ovType <> ovtVariant then
+    Exception.Create('TOmniValue cannot be converted to variant');
+  Result := (ovIntf as IOmniVariantData).Value;
+end; { TOmniValue.GetAsVariant }
+
+function TOmniValue.GetAsVariantArr(idx: integer): Variant;
+begin
+  Result := AsVariant[idx];
+end; { TOmniValue.GetAsVariantArr }
+
+function TOmniValue.IsEmpty: boolean;
+begin
+  Result := (ovType = ovtNull);
+end; { TOmniValue.IsEmpty }
+
+function TOmniValue.IsInterface: boolean;
+begin
+  Result := (ovType = ovtInterface);
+end; { TOmniValue.IsInterface }
+
+function TOmniValue.IsObject: boolean;
+begin
+  Result := (ovType = ovtObject);
+end; { TOmniValue.IsObject }
+
+function TOmniValue.IsString: boolean;
+begin
+  Result := (ovType = ovtString);
+end; { TOmniValue.IsString }
+
+function TOmniValue.IsVariant: boolean;
+begin
+  Result := (ovType = ovtVariant);
+end; { TOmniValue.IsVariant }
+
+class function TOmniValue.Null: TOmniValue;
+begin
+  Result.Clear;
+end; { TOmniValue.Null }
+
+function TOmniValue.RawData: PInt64;
+begin
+  Result := @ovData;
+end; { TOmniValue.RawData }
+
+procedure TOmniValue.SetAsCardinal(const value: cardinal);
+begin
+  AsInt64 := value;
+end; { TOmniValue.SetAsCardinal }
+
+procedure TOmniValue.SetAsInt64(const value: int64);
+begin
+  ovData := value;
+  ovType := ovtInteger;
+end; { TOmniValue.SetAsInt64 }
+
+procedure TOmniValue.SetAsInteger(const value: integer);
+begin
+  AsInt64 := value;
+end; { TOmniValue.SetAsInteger }
+
+procedure TOmniValue.SetAsInterface(const value: IInterface);
+begin
+  ovIntf := value;
+  ovType := ovtInterface;
+end; { TOmniValue.SetAsInterface }
+
+procedure TOmniValue.SetAsObject(const value: TObject);
+begin
+  RawData^ := int64(value);
+  ovType := ovtObject;
+end; { TOmniValue.SetAsObject }
+
+procedure TOmniValue.SetAsString(const value: string);
+begin
+  ovIntf := TOmniStringData.Create(value);
+  ovType := ovtString;
+end; { TOmniValue.SetAsString }
+
+procedure TOmniValue.SetAsVariant(const value: Variant);
+begin
+  ovIntf := TOmniVariantData.Create(value);
+  ovType := ovtVariant;
+end; { TOmniValue.SetAsVariant }
+
+class operator TOmniValue.Equal(const a: TOmniValue; i: integer): boolean;
+begin
+  Result := (a.AsInteger = i);
+end; { TOmniValue.Equal }
+
+class operator TOmniValue.Implicit(const a: integer): TOmniValue;
+begin
+  Result.AsInteger := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: int64): TOmniValue;
+begin
+  Result.AsInt64 := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: string): TOmniValue;
+begin
+  Result.AsString := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: IInterface): TOmniValue;
+begin
+  Result.AsInterface := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TObject): TOmniValue;
+begin
+  Result.AsObject := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): string;
+begin
+  Result := a.AsString;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+begin
+  Result := a.AsInt64;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): integer;
+begin
+  Result := a.AsInteger;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
+begin
+  Result := a.AsInterface;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
+begin
+  Result := a.AsObject;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
+begin
+  Result.AsVariant := a;
+end; { TOmniValue.Implicit }
+
+{ TOmniStringData }
+
+constructor TOmniStringData.Create(const value: string);
+begin
+  inherited Create;
+  osdValue := value;
+end; { TOmniStringData.Create }
+
+function TOmniStringData.GetValue: string;
+begin
+  Result := osdValue;
+end; { TOmniStringData.GetValue }
+
+procedure TOmniStringData.SetValue(const value: string);
+begin
+  osdValue := value;
+end; { TOmniStringData.SetValue }
+
+{ TOmniVariantData }
+
+constructor TOmniVariantData.Create(const value: Variant);
+begin
+  inherited Create;
+  ovdValue := value;
+end; { TOmniVariantData.Create }
+
+function TOmniVariantData.GetValue: Variant;
+begin
+  Result := ovdValue;
+end; { TOmniVariantData.GetValue }
+
+procedure TOmniVariantData.SetValue(const value: Variant);
+begin
+  ovdValue := value;
+end; { TOmniVariantData.SetValue }
 
 end.
 
