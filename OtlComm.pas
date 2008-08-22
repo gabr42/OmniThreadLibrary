@@ -69,7 +69,7 @@ type
   end; { TOmniMessage }
 
 const
-  CDefaultQueueSize = 65520 div SizeOf(TOmniMessage); {3276 entries}
+  CDefaultQueueSize = 65520 div SizeOf(TOmniMessage); {4095 entries}
 
 type
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
@@ -149,11 +149,6 @@ type
     function Endpoint2: IOmniCommunicationEndpoint; inline;
   end; { TOmniTwoWayChannel }
 
-  TVariantRec = record
-    v1: int64;
-    v2: int64;
-  end; { TVariantRec }
-
 { exports }
 
 function CreateTwoWayChannel(numElements: integer): IOmniTwoWayChannel;
@@ -172,10 +167,7 @@ function TOmniMessageQueue.Dequeue: TOmniMessage;
 var
   tmp: TOmniMessage;
 begin
-  with TVariantRec(tmp.MsgData) do begin
-    v1 := 0;
-    v2 := 0;
-  end;
+  tmp.MsgData.Clear;
   if not inherited Dequeue(tmp) then
     raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
   Result := tmp;
@@ -187,10 +179,7 @@ var
 begin
   tmp := value;
   Result := inherited Enqueue(tmp);
-  with TVariantRec(tmp.MsgData) do begin
-    v1 := 0;
-    v2 := 0;
-  end;
+  tmp.MsgData.Clear;
 end; { TOmniMessageQueue.Enqueue }
 
 { TOmniCommunicationEndpoint }
@@ -253,7 +242,7 @@ end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word);
 begin
-  Send(msgID, Null); 
+  Send(msgID, TOmniValue.Null); 
 end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.SetMonitor(hWindow: THandle; msg: cardinal;
@@ -320,7 +309,5 @@ begin
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
 
-initialization
-  Assert(SizeOf(TVariantRec) = SizeOf(TOmniValue));
 end.
 

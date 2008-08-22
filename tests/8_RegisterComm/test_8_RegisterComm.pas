@@ -97,7 +97,7 @@ begin
   sl.Add('123');
   sl.Add('abc');
   Log('Sending TStringList to task 1');
-  FClient1.Comm.Send(MSG_FORWARD, [sl]);
+  FClient1.Comm.Send(MSG_FORWARD, sl);
 end;
 
 procedure TfrmTestRegisterComm.btnSendStringClick(Sender: TObject);
@@ -154,10 +154,10 @@ var
   sl     : TStringList;
 begin
   task.Comm.Receive(msgID, msgData);
-  if not VarIsArray(msgData) then
+  if not msgData.IsObject then
     sData := msgData
   else begin
-    sl := TStringList(integer(msgData[0]));
+    sl := TStringList(msgData.AsObject);
     sData := sl.ClassName + '/' + sl.Text;
     if msgID = MSG_NOTIFY_RECEPTION then
       sl.Free;

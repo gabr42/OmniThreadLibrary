@@ -507,7 +507,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numEnqueued := 0;
   numSkipped := 0;
@@ -544,7 +544,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numPushed := 0;
   numSkipped := 0;
@@ -581,7 +581,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numEnqueued := 0;
   numSkipped := 0;
@@ -659,7 +659,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numPushed := 0;
   numSkipped := 0;
@@ -737,7 +737,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numDequeued := 0;
   numEmpty := 0;
@@ -773,7 +773,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numPopped := 0;
   numEmpty := 0;
@@ -842,7 +842,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numDequeued := 0;
   numEmpty := 0;
@@ -911,7 +911,7 @@ var
 begin
   startTime := DSiTimeGetTime64;
   time := startTime;
-  endTime := startTime + msg.MsgData * 1000;
+  endTime := startTime + msg.MsgData.AsInt64 * 1000;
   counter := 0;
   numPopped := 0;
   numEmpty := 0;

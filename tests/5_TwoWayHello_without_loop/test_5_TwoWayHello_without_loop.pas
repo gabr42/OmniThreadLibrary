@@ -105,7 +105,7 @@ var
 begin
   task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msg.msgID, msg.msgData]));
+    [task.UniqueID, task.Name, msg.msgID, msg.msgData.AsString]));
 end;
 
 procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
