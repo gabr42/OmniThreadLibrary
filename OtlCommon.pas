@@ -393,19 +393,21 @@ procedure SetThreadName(const name: string);
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
-    FName    : PChar;    // pointer to name (in user address space)
+    FName    : PAnsiChar;// pointer to name (in user address space)
     FThreadID: LongWord; // thread ID (-1 indicates caller thread)
     FFlags   : LongWord; // reserved for future use, must be zero
   end; { TThreadNameInfo }
 var
-  ThreadNameInfo: TThreadNameInfo;
+  ansiName      : AnsiString;
+  threadNameInfo: TThreadNameInfo;
 begin
-  ThreadNameInfo.FType := $1000;
-  ThreadNameInfo.FName := PChar(name);
-  ThreadNameInfo.FThreadID := $FFFFFFFF;
-  ThreadNameInfo.FFlags := 0;
+  ansiName := AnsiString(name);
+  threadNameInfo.FType := $1000;
+  threadNameInfo.FName := PAnsiChar(ansiName);
+  threadNameInfo.FThreadID := $FFFFFFFF;
+  threadNameInfo.FFlags := 0;
   try
-    RaiseException($406D1388, 0, SizeOf(ThreadNameInfo) div SizeOf(LongWord), @ThreadNameInfo);
+    RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
   except {ignore} end;
 end; { SetThreadName }
 
