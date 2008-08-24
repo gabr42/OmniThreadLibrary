@@ -66,8 +66,9 @@ type
   private
     ovData: int64;
     ovIntf: IInterface;
-    ovType: (ovtNull, ovtInteger, ovtDouble, ovtExtended, ovtString, ovtObject,
-             ovtInterface, ovtVariant);
+    ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
+             ovtObject, ovtInterface, ovtVariant);
+    function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
     function  GetAsExtended: Extended;
@@ -78,6 +79,7 @@ type
     function  GetAsString: string;
     function  GetAsVariant: Variant;
     function  GetAsVariantArr(idx: integer): Variant;
+    procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
     procedure SetAsExtended(value: Extended);
@@ -89,6 +91,7 @@ type
     procedure SetAsVariant(const value: Variant);
   public
     procedure Clear; inline;
+    function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFloating: boolean; inline;
     function  IsInterface: boolean; inline;
@@ -99,6 +102,8 @@ type
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
+    class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
+    class operator Implicit(const a: boolean): TOmniValue; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue;
     class operator Implicit(const a: integer): TOmniValue; inline;
@@ -106,14 +111,16 @@ type
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): int64; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
     class operator Implicit(const a: TOmniValue): Extended;
     class operator Implicit(const a: TOmniValue): IInterface;
-    class operator Implicit(const a: TOmniValue): string;
     class operator Implicit(const a: TOmniValue): integer; inline;
-    class operator Implicit(const a: TOmniValue): int64; inline;
-    class operator Implicit(const a: TOmniValue): TObject; inline;
+    class operator Implicit(const a: TOmniValue): string;
+    class operator Implicit(const a: TOmniValue): boolean; inline;
     class operator Implicit(const a: Variant): TOmniValue; inline;
+    property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
     property AsExtended: Extended read GetAsExtended write SetAsExtended;
@@ -779,6 +786,13 @@ begin
   ovType := ovtNull;
 end; { TOmniValue.Clear }
 
+function TOmniValue.GetAsBoolean: boolean;
+begin
+  if ovType <> ovtBoolean then
+    Exception.Create('TOmniValue cannot be converted to boolean');
+  Result := PByte(RawData)^ <> 0;
+end; { TOmniValue.GetAsBoolean }
+
 function TOmniValue.GetAsCardinal: cardinal;
 begin
   Result := AsInt64;
@@ -834,6 +848,7 @@ function TOmniValue.GetAsString: string;
 begin
   case ovType of
     ovtNull:     Result := '';
+    ovtBoolean:  Result := BoolToStr(AsBoolean, true);
     ovtInteger:  Result := IntToStr(ovData);
     ovtDouble,
     ovtExtended: Result := FloatToStr(AsExtended);
@@ -853,6 +868,11 @@ function TOmniValue.GetAsVariantArr(idx: integer): Variant;
 begin
   Result := AsVariant[idx];
 end; { TOmniValue.GetAsVariantArr }
+
+function TOmniValue.IsBoolean: boolean;
+begin
+  Result := (ovType = ovtBoolean);
+end; { TOmniValue.IsBoolean }
 
 function TOmniValue.IsEmpty: boolean;
 begin
@@ -899,6 +919,12 @@ begin
   pointer(ovIntf) := nil;
   ovType := ovtNull;
 end; { TOmniValue.RawZero }
+
+procedure TOmniValue.SetAsBoolean(const value: boolean);
+begin
+  PByte(RawData)^ := Ord(value);
+  ovType := ovtBoolean;
+end; { TOmniValue.SetAsBoolean }
 
 procedure TOmniValue.SetAsCardinal(const value: cardinal);
 begin
@@ -957,6 +983,16 @@ begin
   Result := (a.AsInteger = i);
 end; { TOmniValue.Equal }
 
+class operator TOmniValue.Equal(const a: TOmniValue; const s: string): boolean;
+begin
+  Result := (a.AsString = s);
+end; { TOmniValue.Equal }
+
+class operator TOmniValue.Implicit(const a: boolean): TOmniValue;
+begin
+  Result.AsBoolean := a;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: Double): TOmniValue;
 begin
   Result.AsDouble := a;
@@ -992,6 +1028,26 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
+begin
+  Result := a.AsDouble;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+begin
+  Result := a.AsInt64;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): boolean;
+begin
+  Result := a.AsBoolean;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
+begin
+  Result := a.AsExtended;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
 begin
   Result := a.AsInterface;
@@ -1002,29 +1058,14 @@ begin
   Result := a.AsInteger;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): string;
-begin
-  Result := a.AsString;
-end; { TOmniValue.Implicit }
-
 class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
 begin
   Result := a.AsObject;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
+class operator TOmniValue.Implicit(const a: TOmniValue): string;
 begin
-  Result := a.AsExtended;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): Double;
-begin
-  Result := a.AsDouble;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): int64;
-begin
-  Result := a.AsInt64;
+  Result := a.AsString;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;

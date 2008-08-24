@@ -20,6 +20,8 @@ type
     btnSendTo2   : TButton;
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
+    btnSendBool: TButton;
+    procedure btnSendBoolClick(Sender: TObject);
     procedure btnSendFloatClick(Sender: TObject);
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
@@ -90,6 +92,14 @@ begin
 end;
 
 { TfrmTestOtlComm }
+
+procedure TfrmTestRegisterComm.btnSendBoolClick(Sender: TObject);
+begin
+  Log('Sending ''true'' to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, true);
+  Log('Sending ''false'' to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, false);
+end;
 
 procedure TfrmTestRegisterComm.btnSendFloatClick(Sender: TObject);
 var
