@@ -167,7 +167,7 @@ function TOmniMessageQueue.Dequeue: TOmniMessage;
 var
   tmp: TOmniMessage;
 begin
-  tmp.MsgData.Clear;
+  tmp.MsgData.RawZero;
   if not inherited Dequeue(tmp) then
     raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
   Result := tmp;
@@ -179,7 +179,7 @@ var
 begin
   tmp := value;
   Result := inherited Enqueue(tmp);
-  tmp.MsgData.Clear;
+  tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
 
 { TOmniCommunicationEndpoint }

@@ -88,7 +88,7 @@ type
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
   public
-    procedure Clear; inline;
+    procedure Clear;
     function IsEmpty: boolean; inline;
     function IsFloating: boolean; inline;
     function IsInterface: boolean; inline;
@@ -97,6 +97,7 @@ type
     function IsVariant: boolean; inline;        
     class function Null: TOmniValue; static;
     function RawData: PInt64; inline;
+    procedure RawZero; inline;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue;
@@ -105,13 +106,13 @@ type
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
-    class operator Implicit(const a: TOmniValue): integer; inline;
-    class operator Implicit(const a: TOmniValue): int64; inline;
-    class operator Implicit(const a: TOmniValue): TObject; inline;
-    class operator Implicit(const a: TOmniValue): string;
     class operator Implicit(const a: TOmniValue): Double; inline;
     class operator Implicit(const a: TOmniValue): Extended;
     class operator Implicit(const a: TOmniValue): IInterface;
+    class operator Implicit(const a: TOmniValue): string;
+    class operator Implicit(const a: TOmniValue): integer; inline;
+    class operator Implicit(const a: TOmniValue): int64; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: Variant): TOmniValue; inline;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
@@ -774,7 +775,7 @@ end; { TInterfaceDictionary.ValueOf }
 procedure TOmniValue.Clear;
 begin
   ovData := 0;
-  pointer(ovIntf) := nil;
+  ovIntf := nil;
   ovType := ovtNull;
 end; { TOmniValue.Clear }
 
@@ -885,13 +886,19 @@ end; { TOmniValue.IsVariant }
 
 class function TOmniValue.Null: TOmniValue;
 begin
-  Result.Clear;
 end; { TOmniValue.Null }
 
 function TOmniValue.RawData: PInt64;
 begin
   Result := @ovData;
 end; { TOmniValue.RawData }
+
+procedure TOmniValue.RawZero;
+begin
+  ovData := 0;
+  pointer(ovIntf) := nil;
+  ovType := ovtNull;
+end; { TOmniValue.RawZero }
 
 procedure TOmniValue.SetAsCardinal(const value: cardinal);
 begin
@@ -985,26 +992,6 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
-begin
-  Result := a.AsExtended;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): Double;
-begin
-  Result := a.AsDouble;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): int64;
-begin
-  Result := a.AsInt64;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
-begin
-  Result := a.AsObject;
-end; { TOmniValue.Implicit }
-
 class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
 begin
   Result := a.AsInterface;
@@ -1018,6 +1005,26 @@ end; { TOmniValue.Implicit }
 class operator TOmniValue.Implicit(const a: TOmniValue): string;
 begin
   Result := a.AsString;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
+begin
+  Result := a.AsObject;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
+begin
+  Result := a.AsExtended;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
+begin
+  Result := a.AsDouble;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+begin
+  Result := a.AsInt64;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
