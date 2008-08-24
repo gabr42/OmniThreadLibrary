@@ -786,6 +786,7 @@ end; { TOmniValue.GetAsCardinal }
 function TOmniValue.GetAsDouble: Double;
 begin
   case ovType of
+    ovtInteger:  Result := AsInt64;
     ovtDouble:   Result := PDouble(RawData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to double');
