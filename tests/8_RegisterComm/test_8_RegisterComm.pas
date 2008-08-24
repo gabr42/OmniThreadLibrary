@@ -93,6 +93,7 @@ end;
 
 procedure TfrmTestRegisterComm.btnSendFloatClick(Sender: TObject);
 var
+  a: TOmniValue;
   d: Double;
   e: Extended;
 begin
@@ -102,6 +103,9 @@ begin
   Log('Sending ''2.7182'' to task 1');
   e := 2.7182;
   FClient1.Comm.Send(MSG_FORWARD, e);
+  //test - integer->float conversion must be automatic
+  a := 1;
+  e := a;
 end;
 
 procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
