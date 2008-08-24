@@ -105,6 +105,7 @@ begin
   FClient1.Comm.Send(MSG_FORWARD, e);
   //test - integer->float conversion must be automatic
   a := 1;
+  d := a;
   e := a;
 end;
 
