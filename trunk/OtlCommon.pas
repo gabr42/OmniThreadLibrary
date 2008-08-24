@@ -88,15 +88,15 @@ type
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
   public
-    procedure Clear;
+    procedure Clear; inline;
     function IsEmpty: boolean; inline;
     function IsFloating: boolean; inline;
     function IsInterface: boolean; inline;
     function IsObject: boolean; inline;
     function IsString: boolean; inline;
-    function IsVariant: boolean; inline;        
+    function IsVariant: boolean; inline;
     class function Null: TOmniValue; static;
-    function RawData: PInt64; inline;
+    function  RawData: PInt64; inline;
     procedure RawZero; inline;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
