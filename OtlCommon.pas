@@ -89,12 +89,12 @@ type
     procedure SetAsVariant(const value: Variant);
   public
     procedure Clear; inline;
-    function IsEmpty: boolean; inline;
-    function IsFloating: boolean; inline;
-    function IsInterface: boolean; inline;
-    function IsObject: boolean; inline;
-    function IsString: boolean; inline;
-    function IsVariant: boolean; inline;
+    function  IsEmpty: boolean; inline;
+    function  IsFloating: boolean; inline;
+    function  IsInterface: boolean; inline;
+    function  IsObject: boolean; inline;
+    function  IsString: boolean; inline;
+    function  IsVariant: boolean; inline;
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
