@@ -166,13 +166,13 @@ begin
   for iTask := 1 to numReaders do
     if not assigned(FReaders[iTask]) then
       FReaders[iTask] := OmniEventMonitor1.Monitor(CreateTask(
-        TCommReader.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
+        TCommReader.Create(FBaseStack, FBaseQueue, FStack, FQueue), 'reader'))
         .WithCounter(FCounter)
         .Run;
   for iTask := 1 to numWriters do
     if not assigned(FWriters[iTask]) then
       FWriters[iTask] := OmniEventMonitor1.Monitor(CreateTask(
-        TCommWriter.Create(FBaseStack, FBaseQueue, FStack, FQueue)))
+        TCommWriter.Create(FBaseStack, FBaseQueue, FStack, FQueue), 'writer'))
         .WithCounter(FCounter)
         .Run;
 end;

@@ -62,9 +62,6 @@ unit OtlTaskControl;
 
 interface
 
-// TODO 1 -oPrimoz Gabrijelcic : Catch thread exceptions (and add a mechanism to report them)
-// TODO 5 -oPrimoz Gabrijelcic : Task group? (Control them at once - terminate all, for example.)
-
 uses
   Windows,
   SysUtils,
