@@ -28,31 +28,21 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://otl.17slon.com
+///   Support           : http://otl.17slon.com/forum/
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///     Web             : http://gp.17slon.com
+///   Contributors      : GJ, Lee_Nover
+///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-23
-///   Version           : 0.6
+///   Last modification : 2008-08-26
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.6: 2008-07-23
-///       - Added reserved exit statuses.
-///     0.5: 2008-07-22
-///       - Added Lock property. Lock is only available if WithLock method is run on the
-///         task control object.
-///     0.4: 2008-07-15
-///       - Everything but the IOmniTask interface declaration moved into the
-///         OtlTaskControl unit.
-///     0.3: 2008-07-10
-///       - Implemented ExitCode/ExitMessage/SetExitStatus.
-///     0.2: 2008-07-09
-///       - TOmniTaskExcecutor changed from a record to a class.
-///       - IOmniWorker message dispatcher extracted into the
-///         TOmniTaskExecutor class.
-///       - Added support for dispatching additional communication channel
-///         messages.
-///       - Replaced spinlocks with ticket spinlocks. There seems to be a
-///         problem with the SpinLock code and ticket spinlocks should be faster
-///         in our scenario anyway.
+///     1.0: 2008-08-26
+///       - First official release.
 ///</para></remarks>
 
 unit OtlTask;

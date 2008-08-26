@@ -28,21 +28,21 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://otl.17slon.com
+///   Support           : http://otl.17slon.com/forum/
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///     Web             : http://gp.17slon.com
+///   Contributors      : GJ, Lee_Nover
+///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-21
-///   Version           : 0.4
+///   Last modification : 2008-08-26
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.4: 2008-08-21
-///       - Uses IInterfaceDictionary instead of TInterfaceList for speedier task/pool
-///         lookup.
-///     0.3: 2008-07-26
-///       - Unit renamed to OltEventMonitor.
-///       - Class TOmniTaskEventDispatch renamed to TOmniEventMonitor.
-///       - Added support for thread pool monitoring. 
-///     0.2: 2008-07-24
-///       - Implements IOmniTaskControlMonitor.
+///     1.0: 2008-08-26
+///       - First official release.
 ///</para></remarks>
 
 unit OtlEventMonitor;
