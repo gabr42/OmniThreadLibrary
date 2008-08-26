@@ -28,19 +28,21 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://otl.17slon.com
+///   Support           : http://otl.17slon.com/forum/
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///     Web             : http://gp.17slon.com
+///   Contributors      : GJ, Lee_Nover
+///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-22
-///   Version           : 0.3
+///   Last modification : 2008-08-26
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.3: 2008-08-22
-///       - New TOmniValue, not based on Variant. Slightly faster, slightly smaller and
-///         much more flexible.
-///     0.2: 2008-08-21
-///       - Implemented (int64, IInterface) dictionary, based on code by Lee_Nover.
-///     0.1: 2008-07-15
-///       - Moved in TOmniValueContainer from OtlTask. 
+///     1.0: 2008-08-26
+///       - First official release.
 ///</para></remarks>
 
 unit OtlCommon;
