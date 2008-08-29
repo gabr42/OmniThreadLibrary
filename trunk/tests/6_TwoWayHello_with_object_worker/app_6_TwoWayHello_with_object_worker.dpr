@@ -1,14 +1,13 @@
 program app_6_TwoWayHello_with_object_worker;
 
 uses
+  FastMM4,
   Forms,
   test_6_TwoWayHello_with_object_worker in 'test_6_TwoWayHello_with_object_worker.pas' {frmTestTwoWayHello},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
-  OtlComm in '..\..\OtlComm.pas' {;
-
-{$R *.res};
+  OtlComm in '..\..\OtlComm.pas';
 
 {$R *.res}
 
