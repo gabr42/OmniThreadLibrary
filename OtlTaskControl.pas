@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2008-08-29
+///   Version           : 1.0a
 ///</para><para>
 ///   History:
+///     1.0a: 2008-08-29
+///       - Bug fixed: .MsgWait was not functional.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -400,7 +402,7 @@ begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
 
-function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl; overload;
+function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl; 
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -697,7 +699,7 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
       end // comm handles
       else if awaited = idxRebuildHandles then
         RebuildWaitHandles
-      else if awaited = (numWaitHandles + 1) then //message
+      else if awaited = (WAIT_OBJECT_0 + numWaitHandles) then //message
         ProcessThreadMessages
       else if awaited = WAIT_IO_COMPLETION then
         // do-nothing
