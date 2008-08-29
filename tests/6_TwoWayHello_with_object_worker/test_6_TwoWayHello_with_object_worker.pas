@@ -18,11 +18,13 @@ const
 type
   TAsyncHello = class(TOmniWorker)
   strict private
+    aiCount  : integer;
     aiMessage: string;
   public
     constructor Create(const initialMessage: string);
     procedure OMChangeMessage(var msg: TOmniMessage); message MSG_CHANGE_MESSAGE;
     procedure OMSendMessage(var msg: TOmniMessage); message MSG_SEND_MESSAGE;
+    property Count: integer read aiCount;
   end;
 
   TfrmTestTwoWayHello = class(TForm)
@@ -34,7 +36,7 @@ type
     btnStartHello         : TButton;
     btnStopHello          : TButton;
     lbLog                 : TListBox;
-    OmniEventMonitor1: TOmniEventMonitor;
+    OmniEventMonitor1     : TOmniEventMonitor;
     procedure actChangeMessageExecute(Sender: TObject);
     procedure actChangeMessageUpdate(Sender: TObject);
     procedure actStartHelloExecute(Sender: TObject);
@@ -46,6 +48,7 @@ type
   strict private
     FHelloTask: IOmniTaskControl;
   private
+    FWorker: IOmniWorker;
   end;
 
 var
@@ -72,8 +75,9 @@ end;
 
 procedure TfrmTestTwoWayHello.actStartHelloExecute(Sender: TObject);
 begin
+  FWorker := TAsyncHello.Create('Hello');
   FHelloTask :=
-    OmniEventMonitor1.Monitor(CreateTask(TAsyncHello.Create('Hello'), 'Hello'))
+    OmniEventMonitor1.Monitor(CreateTask(FWorker, 'Hello'))
     .SetTimer(1000, MSG_SEND_MESSAGE)
     .SetParameter('Delay', 1000)
     .Run;
@@ -88,6 +92,8 @@ procedure TfrmTestTwoWayHello.actStopHelloExecute(Sender: TObject);
 begin
   FHelloTask.Terminate;
   FHelloTask := nil;
+  lbLog.ItemIndex := lbLog.Items.Add(Format('%d Hello World''s sent',
+    [TAsyncHello(FWorker.Implementor).Count]));
 end;
 
 procedure TfrmTestTwoWayHello.actStopHelloUpdate(Sender: TObject);
@@ -124,6 +130,7 @@ end;
 procedure TAsyncHello.OMSendMessage(var msg: TOmniMessage);
 begin
   Task.Comm.Send(0, aiMessage);
+  Inc(aiCount);
 end;
 
 initialization
