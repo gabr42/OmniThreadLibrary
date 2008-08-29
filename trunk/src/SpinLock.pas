@@ -163,9 +163,9 @@ type
   end;
 
   TTicketSpinLock = class(TSpinLock)
-  private
-    const COwnerOffset = SizeOf(TLockMap);
-    const CNextOffset  = COwnerOffset + SizeOf(Word);
+//  private
+//    const COwnerOffset = SizeOf(TLockMap);
+//    const CNextOffset  = COwnerOffset + SizeOf(Word);
   protected
     procedure InitLockMap; override;
     procedure ReleaseLockMap; override;
@@ -181,6 +181,9 @@ uses SysUtils;
 
 const
   SGlobalTSharedSpinLockMapping = 'Global\$$TSharedSpinLockMapping$$'; // DO NOT LOCALIZE
+  COwnerOffset = SizeOf(TLockMap);
+  CNextOffset  = COwnerOffset + SizeOf(Word);
+
 
 resourcestring
   STicketSpinLockNoTryAcquire = 'TicketSpinLock does not support TryAcquire';
