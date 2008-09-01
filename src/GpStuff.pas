@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-07-20
-   Version           : 1.11
+   Last modification : 2008-07-28
+   Version           : 1.12
 </pre>*)(*
    History:
+     1.12: 2008-07-28
+       - Added int64 support to the OpenArrayToVarArray.
      1.11: 2008-07-20
        - Implemented 8-aligned integer, TGp8AlignedInt.
        - TGp4AlignedInt and TGp8AlignedInt ifdef'd to be only available on D2007+.
@@ -53,8 +55,6 @@ uses
 {$IFDEF ConditionalExpressions}
   {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
-  {$IFEND}
-  {$IF CompilerVersion >= 18.5} //D2007+
     {$DEFINE GpStuff_AlignedInt}
   {$IFEND}
 {$ENDIF}
@@ -133,7 +133,8 @@ function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; asse
 ///<summary>Converts open variant array to COM variant array.<para>
 ///  Written by Thomas Schubbauer and published in borland.public.delphi.objectpascal on
 ///  Thu, 7 May 1998 09:53:33 +0200. Original function name was MakeVariant.</para><para>
-///  2008-03-31, Gp: Extended to support vtObject type.</para></summary>
+///  2008-03-31, Gp: Extended to support vtObject type.
+///  2008-07-28, Gp: Extended to support vtInt64 type.</para></summary>
 function  OpenArrayToVarArray(aValues: array of const): Variant;
 
 implementation
