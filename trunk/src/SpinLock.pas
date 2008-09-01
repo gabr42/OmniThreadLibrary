@@ -5,8 +5,8 @@ unit SpinLock;
 # Name:        SpinLock.pas
 # Author:      Istvan Agoston <Lee_Nover@delphi-si.com>
 # Created:     2007-03-25
-# Last Change: 2008-07-11
-# Version:     1.1.9
+# Last Change: 2008-08-29
+# Version:     1.1.10
 
 # Description:
 
@@ -16,6 +16,10 @@ unit SpinLock;
 
 
 # Warnings and/or special considerations:
+
+  Currently the SharedSpinLock does not work across user(logon) sessions.
+  Vista does not allow \Global objects to be created in sessions other than 0 (Services),
+  but can be consumed by them. A workaround is in progress using \Session\ mapping.
 
   Source code in this file is subject to the license specified below.
 
@@ -44,6 +48,9 @@ unit SpinLock;
 
 
 # History:
+
+  2008-08-29
+    * moved constants out of classes for D7 compatibility
 
   2008-07-11
     ! fixed a critical bug that in some cases let the SpinLock through
@@ -106,6 +113,8 @@ type
 const
   PageSize = MAXWORD + 1;
   MaxLocks = PageSize div SizeOf(TLockMap);
+  TSLOwnerOffset = SizeOf(TLockMap);
+  TSLNextOffset  = TSLOwnerOffset + SizeOf(Word);
 
 type
   TSpinLock = class(TSynchroObject)
@@ -117,10 +126,10 @@ type
     procedure InitNoSleepCount(const NoSleepCount: Cardinal); virtual;
     procedure ReleaseLockMap; virtual;
   public
-    constructor Create(const SleepAmount: Cardinal = 1;
-      const NoSleepCount: Cardinal = 3000); virtual;
+    constructor Create(const SleepAmount: Cardinal = 0;
+      const NoSleepCount: Cardinal = 0); virtual;
     destructor Destroy; override;
-    procedure Acquire; overload; override; 
+    procedure Acquire; overload; override;
     function Acquire(TryCount: Cardinal): Boolean; reintroduce; overload; virtual;
     procedure Release; override;
   end;
@@ -140,7 +149,7 @@ type
     procedure ReleaseLockMap; override;
   public
     constructor Create(const GroupName: WideString; const Index: TSpinIndex;
-      const SleepAmount: Cardinal = 1; const NoSleepCount: Cardinal = 3000); reintroduce;
+      const SleepAmount: Cardinal = 0; const NoSleepCount: Cardinal = 0); reintroduce;
   end;
 
   TTicketInfo = packed record
@@ -163,9 +172,6 @@ type
   end;
 
   TTicketSpinLock = class(TSpinLock)
-//  private
-//    const COwnerOffset = SizeOf(TLockMap);
-//    const CNextOffset  = COwnerOffset + SizeOf(Word);
   protected
     procedure InitLockMap; override;
     procedure ReleaseLockMap; override;
@@ -175,15 +181,14 @@ type
     procedure Release; override;
   end;
 
+function ProcessIdToSessionId(const dwProcessId: DWORD; out pSessionId: DWORD): BOOL; stdcall; external kernel32;
+
 implementation
 
 uses SysUtils;
 
 const
-  SGlobalTSharedSpinLockMapping = 'Global\$$TSharedSpinLockMapping$$'; // DO NOT LOCALIZE
-  COwnerOffset = SizeOf(TLockMap);
-  CNextOffset  = COwnerOffset + SizeOf(Word);
-
+  SGlobalSharedSpinLockMapping = '';//'\Session\%d\$$SharedSpinLockMapping$$'; // DO NOT LOCALIZE
 
 resourcestring
   STicketSpinLockNoTryAcquire = 'TicketSpinLock does not support TryAcquire';
@@ -209,8 +214,8 @@ asm
   lock xadd [edx], eax
 end;
 
-constructor TSpinLock.Create(const SleepAmount: Cardinal = 1;
-  const NoSleepCount: Cardinal = 3000);
+constructor TSpinLock.Create(const SleepAmount: Cardinal = 0;
+  const NoSleepCount: Cardinal = 0);
 begin
   inherited Create;
   FSleepAmount := SleepAmount;
@@ -514,8 +519,8 @@ begin
 end;
 
 constructor TSharedSpinLock.Create(const GroupName: WideString;
-  const Index: TSpinIndex; const SleepAmount: Cardinal = 1;
-  const NoSleepCount: Cardinal = 3000);
+  const Index: TSpinIndex; const SleepAmount: Cardinal = 0;
+  const NoSleepCount: Cardinal = 0);
 begin
   Assert(Index < MaxLocks);
   FGroupName := GroupName;
@@ -526,6 +531,7 @@ end;
 procedure TSharedSpinLock.InitLockMap;
 var
   LLockClassName: WideString;
+  LSessionId: Cardinal;
 begin
   // null SA needed to access from processes' running as different users
   if not InitializeSecurityDescriptor(@FDescriptor, SECURITY_DESCRIPTOR_REVISION) then
@@ -536,7 +542,8 @@ begin
   FAttributes.bInheritHandle := True;
   FAttributes.lpSecurityDescriptor := @FDescriptor;
 
-  LLockClassName := SGlobalTSharedSpinLockMapping + FGroupName;
+  ProcessIdToSessionId(GetCurrentProcessId, LSessionId);
+  LLockClassName := WideFormat(SGlobalSharedSpinLockMapping, [LSessionId]) + FGroupName;
 
   FHandle := CreateFileMappingW($FFFFFFFF, @FAttributes, PAGE_READWRITE, 0, PageSize, PWideChar(LLockClassName));
   if FHandle = 0 then
@@ -649,7 +656,7 @@ asm
   mov LLock, ecx                // store ThreadID in local variable
   mov LOwnerPtr, edx            // store Owner record in local variable
   mov ecx, CInc
-  lock xadd [edx+COwnerOffset], ecx // increment the Ticket number and get the owner|ticket in ecx
+  lock xadd [edx+TSLOwnerOffset], ecx // increment the Ticket number and get the owner|ticket in ecx
   movzx edx, cx                 // copy the owner to edx
   shr ecx, 16                   // shift to get only the ticket number
   cmp cx, dx                    // compare ticket and owner
@@ -667,7 +674,7 @@ asm
 @@noSleepLoop:
   pause
   mov eax, LOwnerPtr
-  mov eax, [eax + COwnerOffset] // copy the owner
+  mov eax, [eax + TSLOwnerOffset] // copy the owner
   cmp LTicket, ax               // compare ticket and owner
   je @@setOwnerThreadId         // if it's owned then set owner and exit
   dec LSleepCounter             // decrement NoSleepCount
@@ -687,7 +694,7 @@ asm
 {$ENDIF}
   call Windows.Sleep
   mov eax, LOwnerPtr
-  mov eax, [eax + COwnerOffset] // copy the owner
+  mov eax, [eax + TSLOwnerOffset] // copy the owner
   cmp LTicket, ax               // compare ticket and owner
   jne @@waitLoop                // if not equal we repeat the loop
 
@@ -745,7 +752,7 @@ asm
   cmovnz ecx, [edx]             // if not reached 0 we copy the old owner
   setz al                       // if reached 0, set eax to 1
   mov [edx], ecx                // set the new owner threadId
-  lock add [edx + COwnerOffset], ax   // increment Owner and thus release the lock
+  lock add [edx + TSLOwnerOffset], ax   // increment Owner and thus release the lock
 @@exit:
   db $F3, $C3                   // Two-Byte Near-Return RET
 {$ENDIF}
