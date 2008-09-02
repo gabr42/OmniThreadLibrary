@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2008-09-02
+///   Version           : 1.0a
 ///</para><para>
 ///   History:
+///     1.0a: 2008-09-02
+///       - Fixed memory leak that could occur in TOmniMonitorSupport.Notify (in fact it
+///         was possible to cause it in demo 11).
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -570,8 +573,10 @@ var
   params: IOmniMonitorParams;
 begin
   params := GetMonitor;
-  if assigned(params) then
-    PostMessage(params.Window, params.Msg, params.WParam, LParam(obj));
+  if not (assigned(params) and
+          PostMessage(params.Window, params.Msg, params.WParam, LParam(obj)))
+  then
+    FreeAndNil(obj);
 end; { TOmniMonitorSupport.Notify }
 
 procedure TOmniMonitorSupport.RemoveMonitor;
