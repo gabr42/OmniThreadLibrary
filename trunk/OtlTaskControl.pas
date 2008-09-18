@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-29
-///   Version           : 1.0a
+///   Last modification : 2008-09-18
+///   Version           : 1.0b
 ///</para><para>
 ///   History:
+///     1.0b: 2008-09-18
+///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
 ///     1.0a: 2008-08-29
 ///       - Bug fixed: .MsgWait was not functional.
 ///     1.0: 2008-08-26
@@ -1161,6 +1163,7 @@ var
 begin
   for iIntf := 0 to otgTaskList.Count - 1 do
     (otgTaskList[iIntf] as IOMniTaskControl).Run;
+  Result := Self;
 end; { TOmniTaskGroup.RunAll }
 
 function TOmniTaskGroup.TerminateAll(maxWait_ms: cardinal): boolean;
