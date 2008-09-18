@@ -38,10 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2008-09-18
-///   Version           : 1.0b
+///   Version           : 1.01
 ///</para><para>
 ///   History:
 ///     1.0b: 2008-09-18
+///       - Implemented SetTimer on the IOmniTask side.
 ///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
 ///     1.0a: 2008-08-29
 ///       - Bug fixed: .MsgWait was not functional.
@@ -199,22 +200,23 @@ type
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
-    oteTimerInterval_ms  : cardinal;
-    oteTimerMessage      : integer;
+    oteTimerInterval_ms  : TGp4AlignedInt;
+    oteTimerMessage      : TGp4AlignedInt;
     oteWakeMask          : DWORD;
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
   strict protected
     procedure Cleanup;
+    function  GetExitCode: integer; inline;
+    function  GetExitMessage: string;
+    function  GetTimerInterval_ms: cardinal; inline;
+    function  GetTimerMessage: integer; inline;
     procedure Initialize;
     procedure ProcessThreadMessages;
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInterval_ms(const value: cardinal);
     procedure SetTimerMessage(const value: integer);
-  protected
-    function GetExitCode: integer; inline;
-    function GetExitMessage: string;
   public
     constructor Create(const workerIntf: IOmniWorker); overload;
     constructor Create(method: TOmniTaskMethod); overload;
@@ -224,6 +226,7 @@ type
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
+    procedure Asy_SetTimer(interval_ms: cardinal; timerMsg: integer);
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
@@ -231,8 +234,8 @@ type
     property ExitMessage: string read GetExitMessage;
     property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
-    property TimerInterval_ms: cardinal read oteTimerInterval_ms write SetTimerInterval_ms;
-    property TimerMessage: integer read oteTimerMessage write SetTimerMessage;
+    property TimerInterval_ms: cardinal read GetTimerInterval_ms write SetTimerInterval_ms;
+    property TimerMessage: integer read GetTimerMessage write SetTimerMessage;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
     property WorkerInitialized: THandle read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
@@ -285,6 +288,8 @@ type
       sharedInfo: TOmniSharedTaskInfo);
     procedure Execute;
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
+    procedure SetTimer(interval_ms: cardinal; timerMessage: integer = -1);
+    procedure StopTimer;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
@@ -501,6 +506,16 @@ procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
 begin
   otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
 end; { TOmniTask.SetExitStatus }
+
+procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessage: integer);
+begin
+  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessage);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.StopTimer;
+begin
+  SetTimer(0);
+end; { TOmniTask.StopTimer }
 
 procedure TOmniTask.Terminate;
 begin
@@ -773,7 +788,14 @@ begin
     oteExitMessage := exitMessage;
     UniqueString(oteExitMessage);
   finally oteInternalLock.Release; end;
-end; { TOmniTaskExecutor.Asy_SetExitStatus } 
+end; { TOmniTaskExecutor.Asy_SetExitStatus }
+
+procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsg: integer);
+begin
+  TimerInterval_ms := interval_ms;
+  TimerMessage := timerMsg;
+  SetEvent(oteCommRebuildHandles);
+end; { TOmniTaskExecutor.Asy_SetTimer }
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
 begin
@@ -807,6 +829,16 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.GetExitMessage }
 
+function TOmniTaskExecutor.GetTimerInterval_ms: cardinal;
+begin
+  Result := oteTimerInterval_ms.Value;
+end; { TOmniTaskExecutor.GetTimerInterval_ms }
+
+function TOmniTaskExecutor.GetTimerMessage: integer;
+begin
+  Result := integer(oteTimerMessage.Value);
+end; { TOmniTaskExecutor.GetTimerMessage }
+
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
@@ -837,14 +869,14 @@ procedure TOmniTaskExecutor.SetTimerInterval_ms(const value: cardinal);
 begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.SetTimerInterval_ms: Timer support is only available when working with an IOmniWorker');
-  oteTimerInterval_ms := value;
+  oteTimerInterval_ms.Value := value;
 end; { TOmniTaskExecutor.SetTimerInterval_ms }
 
 procedure TOmniTaskExecutor.SetTimerMessage(const value: integer);
 begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.SetTimerMessage: Timer support is only available when working with an IOmniWorker');
-  oteTimerMessage := value;
+  oteTimerMessage.Value := cardinal(value);
 end; { TOmniTaskExecutor.SetTimerMessage }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);

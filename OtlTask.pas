@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2008-09-18
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2008-09-18
+///       - Exposed SetTimer interface.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -71,6 +73,8 @@ type
   //
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
+    procedure SetTimer(interval_ms: cardinal; timerMessage: integer = -1);
+    procedure StopTimer;
     procedure Terminate;
     function  Terminated: boolean; // TODO 1 -oPrimoz Gabrijelcic : Possibly bad name choice!
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
