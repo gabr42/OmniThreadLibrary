@@ -43,7 +43,9 @@
 ///   History:
 ///     1.02: 2008-09-19
 ///       - Added enumerator to the IOmniTaskGroup interface.
-///       - Implemented IOmniTaskGroup.RegisterAllWithTask and .UnregisterAllFromTask. 
+///       - Implemented IOmniTaskGroup.RegisterAllCommWith and .UnregisterAllCommFrom.
+///       - Bug fixed in TOmniTaskExecutor.Asy_DispatchMessages - program crashed if
+///         communications unregistered inside task's own timer method.
 ///     1.01: 2008-09-18
 ///       - Implemented SetTimer on the IOmniTask side.
 ///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
@@ -171,11 +173,11 @@ type
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskGroupEnumerator;
-    function  RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
+    function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
-    function  UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
+    function  UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { IOmniTaskGroup }
 
@@ -404,17 +406,21 @@ type
 
   TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
   strict private
-    otgTaskList: TInterfaceList;
+    otgRegisteredWith: IOmniTask;
+    otgTaskList      : TInterfaceList;
+  strict protected
+    procedure AutoUnregisterComms;
+    procedure InternalUnregisterAllCommFrom(const task: IOmniTask);
   public
     constructor Create;
     destructor  Destroy; override;
     function Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function GetEnumerator: IOmniTaskGroupEnumerator;
-    function RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
+    function RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function RunAll: IOmniTaskGroup;
     function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
-    function UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
+    function UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
     function WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
 
@@ -710,6 +716,8 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
     RebuildWaitHandles;
     lastTimer_ms := DSiTimeGetTime64;
     repeat
+      if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
+        RebuildWaitHandles;      
       if TimerInterval_ms <= 0 then
         timeout_ms := INFINITE
       else begin
@@ -1213,6 +1221,7 @@ end; { TOmniTaskGroup.Create }
 
 destructor TOmniTaskGroup.Destroy;
 begin
+  AutoUnregisterComms;
   FreeAndNil(otgTaskList);
   inherited Destroy;
 end; { TOmniTaskGroup.Destroy }
@@ -1223,17 +1232,34 @@ begin
   Result := Self;
 end; { TOmniTaskGroup.Add }
 
+procedure TOmniTaskGroup.AutoUnregisterComms;
+begin
+  if assigned(otgRegisteredWith) then
+    InternalUnregisterAllCommFrom(otgRegisteredWith);
+end; { TOmniTaskGroup.AutoUnregisterComms }
+
 function TOmniTaskGroup.GetEnumerator: IOmniTaskGroupEnumerator;
 begin
   Result := TOmniTaskGroupEnumerator.Create(otgTaskList);
 end; { TOmniTaskGroup.GetEnumerator }
 
-function TOmniTaskGroup.RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
+procedure TOmniTaskGroup.InternalUnregisterAllCommFrom(const task: IOmniTask);
 var
   groupTask: IOmniTaskControl;
 begin
   for groupTask in Self do
+    task.UnregisterComm(groupTask.Comm);
+  otgRegisteredWith := nil;
+end; { TOmniTaskGroup.InternalUnregisterAllCommFrom }
+
+function TOmniTaskGroup.RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
+var
+  groupTask: IOmniTaskControl;
+begin
+  AutoUnregisterComms;
+  for groupTask in Self do
     task.RegisterComm(groupTask.Comm);
+  otgRegisteredWith := task;
   Result := Self;
 end; { TOmniTaskGroup.RegisterAllCommWith }
 
@@ -1261,12 +1287,9 @@ begin
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
 
-function TOmniTaskGroup.UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
-var
-  groupTask: IOmniTaskControl;
+function TOmniTaskGroup.UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
 begin
-  for groupTask in Self do
-    task.UnregisterComm(groupTask.Comm);
+  InternalUnregisterAllCommFrom(task);
   Result := Self;
 end; { TOmniTaskGroup.UnregisterAllCommFrom }
 
