@@ -37,11 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-18
-///   Version           : 1.01
+///   Last modification : 2008-09-19
+///   Version           : 1.02
 ///</para><para>
 ///   History:
-///     1.0b: 2008-09-18
+///     1.02: 2008-09-19
+///       - Added enumerator to the IOmniTaskGroup interface.
+///       - Implemented IOmniTaskGroup.RegisterAllWithTask and .UnregisterAllFromTask. 
+///     1.01: 2008-09-18
 ///       - Implemented SetTimer on the IOmniTask side.
 ///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
 ///     1.0a: 2008-08-29
@@ -67,6 +70,7 @@ uses
   Variants,
   Classes,
   SyncObjs,
+  GpStuff,
   OtlCommon,
   OtlComm,
   OtlTask,
@@ -154,15 +158,24 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
+  IOmniTaskGroupEnumerator = interface
+    function GetCurrent: IOmniTaskControl;
+    function MoveNext: boolean;
+    property Current: IOmniTaskControl read GetCurrent;
+  end; { IOmniTaskGroupEnumerator }
+
 //v1.1 extensions:
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
-    function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  GetEnumerator: IOmniTaskGroupEnumerator;
+    function  RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
+    function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function  UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { IOmniTaskGroup }
 
@@ -178,7 +191,6 @@ uses
   Messages,
   DSiWin32,
   GpLists,
-  GpStuff,
   SpinLock,
   OtlEventMonitor;
 
@@ -378,10 +390,18 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
 
-//v1.1 extensions:
-//  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
-//    function  Sequential: IOmniTaskGroup;
-//    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
+  TOmniTaskGroup = class;
+  
+  TOmniTaskGroupEnumerator = class(TInterfacedObject, IOmniTaskGroupEnumerator)
+  strict private
+    otgeTaskEnum: TInterfaceListEnumerator;
+  protected
+    function GetCurrent: IOmniTaskControl;
+    function MoveNext: boolean;
+  public
+    constructor Create(taskList: TInterfaceList);
+  end; { TOmniTaskGroupEnumerator }
+
   TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
   strict private
     otgTaskList: TInterfaceList;
@@ -389,9 +409,12 @@ type
     constructor Create;
     destructor  Destroy; override;
     function Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function GetEnumerator: IOmniTaskGroupEnumerator;
+    function RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
     function Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function RunAll: IOmniTaskGroup;
     function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
     function WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
 
@@ -1163,6 +1186,23 @@ begin
   (otTask as IOmniTaskExecutor).Execute;
 end; { TOmniThread.Execute }
 
+{ TOmniTaskGroupEnumerator }
+
+constructor TOmniTaskGroupEnumerator.Create(taskList: TInterfaceList);
+begin
+  otgeTaskEnum := taskList.GetEnumerator;
+end; { TOmniTaskGroupEnumerator.Create }
+
+function TOmniTaskGroupEnumerator.GetCurrent: IOmniTaskControl;
+begin
+  Result := otgeTaskEnum.GetCurrent as IOmniTaskControl;
+end; { TOmniTaskGroupEnumerator.GetCurrent }
+
+function TOmniTaskGroupEnumerator.MoveNext: boolean;
+begin
+  Result := otgeTaskEnum.MoveNext;
+end; { TOmniTaskGroupEnumerator.MoveNext }
+
 { TOmniTaskGroup }
 
 constructor TOmniTaskGroup.Create;
@@ -1182,6 +1222,20 @@ begin
   otgTaskList.Add(taskControl);
   Result := Self;
 end; { TOmniTaskGroup.Add }
+
+function TOmniTaskGroup.GetEnumerator: IOmniTaskGroupEnumerator;
+begin
+  Result := TOmniTaskGroupEnumerator.Create(otgTaskList);
+end; { TOmniTaskGroup.GetEnumerator }
+
+function TOmniTaskGroup.RegisterAllCommWith(task: IOmniTask): IOmniTaskGroup;
+var
+  groupTask: IOmniTaskControl;
+begin
+  for groupTask in Self do
+    task.RegisterComm(groupTask.Comm);
+  Result := Self;
+end; { TOmniTaskGroup.RegisterAllCommWith }
 
 function TOmniTaskGroup.Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
 begin
@@ -1206,6 +1260,15 @@ begin
     SetEvent((otgTaskList[iIntf] as IOmniTaskControlInternals).TerminateEvent);
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
+
+function TOmniTaskGroup.UnregisterAllCommFrom(task: IOmniTask): IOmniTaskGroup;
+var
+  groupTask: IOmniTaskControl;
+begin
+  for groupTask in Self do
+    task.UnregisterComm(groupTask.Comm);
+  Result := Self;
+end; { TOmniTaskGroup.UnregisterAllCommFrom }
 
 function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
 var
