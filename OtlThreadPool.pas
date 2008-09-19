@@ -127,7 +127,8 @@ type
     property IdleWorkerThreadTimeout_sec: integer read GetIdleWorkerThreadTimeout_sec
       write SetIdleWorkerThreadTimeout_sec;
     property MaxExecuting: integer read GetMaxExecuting write SetMaxExecuting;
-    property MaxQueued: integer read GetMaxQueued write SetMaxQueued;    property MaxQueuedTime_sec: integer read GetMaxQueuedTime_sec write SetMaxQueuedTime_sec;
+    property MaxQueued: integer read GetMaxQueued write SetMaxQueued;
+    property MaxQueuedTime_sec: integer read GetMaxQueuedTime_sec write SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
     property UniqueID: int64 read GetUniqueID;
