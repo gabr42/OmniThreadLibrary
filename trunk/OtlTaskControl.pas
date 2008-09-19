@@ -170,6 +170,8 @@ type
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
+//  we need a way for a group to signal that all tasks have stopped; don't yet know how
+//  - maybe a group could use internal pool? 
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskGroupEnumerator;
@@ -781,18 +783,15 @@ const
 begin
   SetThreadPriority(GetCurrentThread, CThreadPriorityNum[Priority]);
   try
-    // TODO 1 -oPrimoz Gabrijelcic : Is this OK? Do we really want to skip workers that were scheduled?
-//    if WaitForSingleObject(task.TerminateEvent, 0) = WAIT_TIMEOUT then begin
-      case oteExecutorType of
-        etMethod:
-          oteMethod(task);
-        etProcedure:
-          oteProc(task);
-        etWorker:
-          Asy_DispatchMessages(task);
-        else
-          raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
-//      end; //case oteExecutorType
+    case oteExecutorType of
+      etMethod:
+        oteMethod(task);
+      etProcedure:
+        oteProc(task);
+      etWorker:
+        Asy_DispatchMessages(task);
+      else
+        raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
     end;
   finally Cleanup; end;
 end; { TOmniTaskExecutor.Asy_Execute }
