@@ -46,6 +46,7 @@
 ///       - Implemented IOmniTaskGroup.RegisterAllCommWith and .UnregisterAllCommFrom.
 ///       - Bug fixed in TOmniTaskExecutor.Asy_DispatchMessages - program crashed if
 ///         communications unregistered inside task's own timer method.
+///       - Setting timer interval resets timer countdown.
 ///     1.01: 2008-09-18
 ///       - Implemented SetTimer on the IOmniTask side.
 ///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
@@ -211,6 +212,7 @@ type
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
     oteInternalLock      : TSynchroObject;
+    oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
@@ -691,7 +693,6 @@ var
   awaited     : DWORD;
   flags       : DWORD;
   gotMsg      : boolean;
-  lastTimer_ms: int64;
   msg         : TOmniMessage;
   timeout_ms  : int64;
   waitWakeMask: DWORD;
@@ -716,14 +717,14 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
     else
       flags := 0;
     RebuildWaitHandles;
-    lastTimer_ms := DSiTimeGetTime64;
+    oteLastTimer_ms := DSiTimeGetTime64;
     repeat
       if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
         RebuildWaitHandles;      
       if TimerInterval_ms <= 0 then
         timeout_ms := INFINITE
       else begin
-        timeout_ms := TimerInterval_ms - (DSiTimeGetTime64 - lastTimer_ms);
+        timeout_ms := TimerInterval_ms - (DSiTimeGetTime64 - oteLastTimer_ms);
         if timeout_ms < 0 then
           timeout_ms := 0;
       end;
@@ -762,7 +763,7 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
         end
         else if assigned(WorkerIntf) then
           WorkerIntf.Timer;
-        lastTimer_ms := DSiTimeGetTime64;
+        oteLastTimer_ms := DSiTimeGetTime64;
       end //WAIT_TIMEOUT
       else //errors
         RaiseLastOSError;
@@ -824,6 +825,7 @@ procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsg: intege
 begin
   TimerInterval_ms := interval_ms;
   TimerMessage := timerMsg;
+  oteLastTimer_ms := DSiTimeGetTime64;
   SetEvent(oteCommRebuildHandles);
 end; { TOmniTaskExecutor.Asy_SetTimer }
 
