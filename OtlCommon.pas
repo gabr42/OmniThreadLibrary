@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-02
-///   Version           : 1.0a
+///   Last modification : 2008-09-19
+///   Version           : 1.0b
 ///</para><para>
 ///   History:
+///     1.0b: 2008-09-19
+///       - Bug fixed: TOmniValue.Null was not really initialized to Null.
 ///     1.0a: 2008-09-02
 ///       - Fixed memory leak that could occur in TOmniMonitorSupport.Notify (in fact it
 ///         was possible to cause it in demo 11).
@@ -913,6 +915,7 @@ end; { TOmniValue.IsVariant }
 
 class function TOmniValue.Null: TOmniValue;
 begin
+  Result.ovType := ovtNull;
 end; { TOmniValue.Null }
 
 function TOmniValue.RawData: PInt64;
