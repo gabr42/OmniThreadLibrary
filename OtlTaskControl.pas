@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-19
-///   Version           : 1.02
+///   Last modification : 2008-09-20
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2008-09-20
+///       - Implemented IOmniTaskGroup.SendToAll. This should be looked at as a temporary
+///         solution. IOmniTaskGroup should expose communication interface (just like
+///         IOmniTask and IOmniTaskControl) but in this case it should be one-to-many
+///         queue connecting IOmniTaskGroup's Comm to all tasks inside the group.
 ///     1.02: 2008-09-19
 ///       - Added enumerator to the IOmniTaskGroup interface.
 ///       - Implemented IOmniTaskGroup.RegisterAllCommWith and .UnregisterAllCommFrom.
@@ -171,14 +176,13 @@ type
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
-//  we need a way for a group to signal that all tasks have stopped; don't yet know how
-//  - maybe a group could use internal pool? 
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskGroupEnumerator;
     function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
+    procedure SendToAll(const msg: TOmniMessage); 
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
     function  UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
@@ -418,14 +422,15 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    function Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
-    function GetEnumerator: IOmniTaskGroupEnumerator;
-    function RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
-    function Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
-    function RunAll: IOmniTaskGroup;
-    function TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
-    function UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
-    function WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  GetEnumerator: IOmniTaskGroupEnumerator;
+    function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
+    function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
+    function  RunAll: IOmniTaskGroup;
+    procedure SendToAll(const msg: TOmniMessage);
+    function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
+    function  UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
+    function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
 
 { exports }
@@ -1151,7 +1156,7 @@ reset executor and exit immediately if task was not started at all
 or raise exception? }
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
-  // TODO 1 -oPrimoz Gabrijelcic : Kill thread if not Result
+  // TODO 1 -oPrimoz Gabrijelcic : Kill thread if not Result?
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
@@ -1278,6 +1283,14 @@ begin
     (otgTaskList[iIntf] as IOMniTaskControl).Run;
   Result := Self;
 end; { TOmniTaskGroup.RunAll }
+
+procedure TOmniTaskGroup.SendToAll(const msg: TOmniMessage);
+var
+  groupTask: IOmniTaskControl;
+begin
+  for groupTask in Self do
+    groupTask.Comm.Send(msg);
+end; { TOmniTaskGroup.SendToAll }
 
 function TOmniTaskGroup.TerminateAll(maxWait_ms: cardinal): boolean;
 var
