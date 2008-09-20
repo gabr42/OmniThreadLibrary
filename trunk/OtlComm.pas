@@ -31,22 +31,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-07-11
-///   Version           : 0.3
+///   Last modification : 2008-09-20
+///   Version           : 1.01
 ///</para><para>
 ///   History:
-///     0.3: 2008-07-11
-///       - Lock-free buffer is functional again and is switched on as default.
-///         To compile with locking buffer, define OTL_LockingBuffer.        
-///     0.2b: 2008-07-10
-///       - Disabled lock-free buffer as it turned out to be a stack, not a queue.
-///     0.2a: 2008-07-09
-///       - Replaced spinlocks with ticket spinlocks. There seems to be a
-///         problem with the SpinLock code and ticket spinlocks should be faster
-///         in our scenario anyway.
-///     0.2: 2008-07-07
-///       - Included experimenal lock-free buffer, donated by GJ.
-///         To enable this code, compile with /dOTL_LockFreeBuffer.
+///     1.01: 2008-09-20
+///       - Added two TOmniMessage constructors.
 ///</para></remarks>
 
 unit OtlComm;
@@ -66,6 +56,8 @@ type
   TOmniMessage = record
     MsgID  : word;
     MsgData: TOmniValue;
+    constructor Create(aMsgID: word; aMsgData: TOmniValue); overload;
+    constructor Create(aMsgID: word); overload;
   end; { TOmniMessage }
 
 const
@@ -308,6 +300,20 @@ begin
   end;
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
+
+{ TOmniMessage }
+
+constructor TOmniMessage.Create(aMsgID: word; aMsgData: TOmniValue);
+begin
+  MsgID := aMsgID;
+  MsgData := aMsgData;
+end; { TOmniMessage.Create }
+
+constructor TOmniMessage.Create(aMsgID: word);
+begin
+  MsgID := aMsgID;
+  MsgData := TOmniValue.Null;
+end; { TOmniMessage.Create }
 
 end.
 
