@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-20
-///   Version           : 1.03
+///   Last modification : 2008-09-25
+///   Version           : 1.03a
 ///</para><para>
 ///   History:
+///     1.03a: 2008-09-25
+///       - Bug fixed: TOmniTaskControl.Schedule always scheduled task to the global
+///         thread pool.
 ///     1.03: 2008-09-20
 ///       - Implemented IOmniTaskGroup.SendToAll. This should be looked at as a temporary
 ///         solution. IOmniTaskGroup should expose communication interface (just like
@@ -1098,7 +1101,10 @@ end; { TOmniTaskControl.Run }
 function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
 begin
   otcParameters.Lock;
-  (GlobalOmniThreadPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
+  if assigned(threadPool) then
+    (threadPool as IOmniThreadPoolScheduler).Schedule(CreateTask)
+  else
+    (GlobalOmniThreadPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
   Result := Self;
 end; { TOmniTaskControl.Schedule }
 
