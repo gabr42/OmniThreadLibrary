@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-19
-///   Version           : 1.0b
+///   Last modification : 2008-09-26
+///   Version           : 1.0c
 ///</para><para>
 ///   History:
+///     1.0c: 2008-09-26
+///       - Check PostMessage result.
 ///     1.0b: 2008-09-19
 ///       - Bug fixed: TOmniValue.Null was not really initialized to Null.
 ///     1.0a: 2008-09-02
@@ -567,7 +569,7 @@ var
 begin
   params := GetMonitor;
   if assigned(params) then
-    PostMessage(params.Window, params.Msg, params.WParam, params.LParam);
+    Win32Check(PostMessage(params.Window, params.Msg, params.WParam, params.LParam));
 end; { TOmniMonitorSupport.Notify }
 
 procedure TOmniMonitorSupport.Notify(obj: TObject);
