@@ -960,8 +960,7 @@ end; { TOmniThreadPool.SetMinWorkers }
 
 function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
 begin
-  otpMonitorSupport.SetMonitor(CreateOmniMonitorParams(
-    hWindow, COmniPoolMsg, 0, 0));
+  otpMonitorSupport.SetMonitor(CreateOmniMonitorParams(hWindow, COmniPoolMsg, 0, 0));
 end; { TOmniThreadPool.SetMonitor }
 
 procedure TOmniThreadPool.SetName(const value: string);
