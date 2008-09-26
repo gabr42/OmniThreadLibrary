@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-20
-///   Version           : 1.01
+///   Last modification : 2008-09-26
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2008-09-26
+///       - Better default queue calculation that takes into account OtlContainers
+///         overhead and FastMM4 granulation.
 ///     1.01: 2008-09-20
 ///       - Added two TOmniMessage constructors.
 ///</para></remarks>
@@ -61,7 +64,7 @@ type
   end; { TOmniMessage }
 
 const
-  CDefaultQueueSize = 65520 div SizeOf(TOmniMessage); {4095 entries}
+  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
 
 type
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
