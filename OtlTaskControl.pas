@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-25
-///   Version           : 1.03a
+///   Last modification : 2008-09-26
+///   Version           : 1.03b
 ///</para><para>
 ///   History:
+///     1.03b: 2008-09-26
+///       - More stringent Win32 API result checking.
 ///     1.03a: 2008-09-25
 ///       - Bug fixed: TOmniTaskControl.Schedule always scheduled task to the global
 ///         thread pool.
@@ -487,8 +489,8 @@ begin
       end;
     finally
       if otSharedInfo.MonitorWindow <> 0 then
-        PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
-          integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+        Win32Check(PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
+          integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
     end;
   finally SetEvent(otSharedInfo.TerminatedEvent); end;
   if assigned(otSharedInfo.ChainTo) and
@@ -882,8 +884,10 @@ end; { TOmniTaskExecutor.GetTimerMessage }
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
+  Win32Check(oteWorkerInitialized <> 0); 
   oteInternalLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
+  Win32Check(oteCommRebuildHandles <> 0);
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
