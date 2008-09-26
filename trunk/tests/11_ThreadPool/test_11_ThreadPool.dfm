@@ -53,7 +53,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnScheduleAndCancel: TButton
     Left = 8
-    Top = 101
+    Top = 133
     Width = 129
     Height = 25
     Caption = 'Schedule and cancel'
@@ -62,7 +62,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnCancelLong: TButton
     Left = 8
-    Top = 132
+    Top = 164
     Width = 129
     Height = 25
     Caption = 'Cancel long task'
@@ -71,12 +71,21 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnCancelAll: TButton
     Left = 8
-    Top = 163
+    Top = 195
     Width = 129
     Height = 25
     Caption = 'Cancel all'
     TabOrder = 6
     OnClick = btnCancelAllClick
+  end
+  object btnSchedule80: TButton
+    Left = 8
+    Top = 101
+    Width = 129
+    Height = 25
+    Caption = 'Schedule 80 tasks'
+    TabOrder = 7
+    OnClick = btnSchedule6Click
   end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
