@@ -45,14 +45,10 @@
 ///</para></remarks>
 
 //{$DEFINE PurePascal}
-
 //{$DEFINE SimpleStack}
-
-//{$DEFINE StackStaticReference}
-
+{$DEFINE StackStaticReference}
 {$DEFINE PureQueue}
-
-//{$DEFINE QueueStaticReference}
+{$DEFINE QueueStaticReference}
 
 unit OtlContainers;
 
@@ -184,14 +180,14 @@ type
     class procedure Push(const data: pointer; const ringBuffer: POmniRingBuffer); static;
   public
     destructor  Destroy; override;
+    function  Dequeue(var value): boolean; virtual;
     procedure Empty; virtual;
+    function  Enqueue(const value): boolean; virtual;
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; virtual;
     function  IsFull: boolean; virtual;
     property ElementSize: integer read obcElementSize;
     property NumElements: integer read obcNumElements;
-    function  Dequeue(var value): boolean; virtual;
-    function  Enqueue(const value): boolean; virtual;
   end; { TOmniBaseQueue }
 
 {$ELSE PureQueue}
