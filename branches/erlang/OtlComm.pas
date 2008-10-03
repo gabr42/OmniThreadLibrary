@@ -54,6 +54,10 @@ uses
   OtlCommon,
   OtlContainers;
 
+const
+  //reserved for internal OTL messaging
+  COtlReservedMsgID = $FFFF;
+
 type
   {$A4}
   TOmniMessage = record
@@ -61,9 +65,13 @@ type
     MsgData: TOmniValue;
     constructor Create(aMsgID: word; aMsgData: TOmniValue); overload;
     constructor Create(aMsgID: word); overload;
+    constructor CreateStringMessage(const aMsgName: string; aMsgData: TOmniValue);
+    function  IsStringMessage: boolean;
+    procedure UnpackStringMessage(var aMsgName: string; var aMsgData: TOmniValue);
   end; { TOmniMessage }
 
 const
+  //calculate default queue size so that the queue memory gets as close to 64 KB as possible
   CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
 
 type
@@ -77,6 +85,9 @@ type
     procedure Send(msgID: word); overload;
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload;
+    procedure Send(const msgName: string); overload;
+    procedure Send(const msgName: string; msgData: array of const); overload;
+    procedure Send(const msgName: string; msgData: TOmniValue); overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); 
     property NewMessageEvent: THandle read GetNewMessageEvent;
@@ -109,6 +120,26 @@ uses
   OtlEventMonitor;
 
 type
+  TOmniInternalMessageType = (imtStringMsg);
+
+  TOmniInternalMessage = class
+  strict private
+    imInternalMessageType: TOmniInternalMessageType;
+  public
+    constructor Create(internalMessageType: TOmniInternalMessageType);
+    property InternalMessageType: TOmniInternalMessageType read imInternalMessageType;
+  end; { TOmniInternalMessage }
+
+  TOmniInternalStringMsg = class(TOmniInternalMessage)
+  strict private
+    ismMsgData: TOmniValue;
+    ismMsgName: string;
+  public
+    constructor Create(const msgName: string; const msgData: TOmniValue);
+    property MsgData: TOmniValue read ismMsgData;
+    property MsgName: string read ismMsgName;
+  end; { TOmniInternalStringMsg }
+
   TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
   strict private
     ceReader_ref: TOmniMessageQueue;
@@ -123,6 +154,9 @@ type
     procedure Send(msgID: word); overload; inline;
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload; inline;
+    procedure Send(const msgName: string); overload;
+    procedure Send(const msgName: string; msgData: array of const); overload;
+    procedure Send(const msgName: string; msgData: TOmniValue); overload;
     procedure Send(const msg: TOmniMessage); overload; inline;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); inline;
@@ -150,6 +184,61 @@ function CreateTwoWayChannel(numElements: integer): IOmniTwoWayChannel;
 begin
   Result := TOmniTwoWayChannel.Create(numElements);
 end; { CreateTwoWayChannel }
+
+{ TOmniInternalMessage }
+
+constructor TOmniInternalMessage.Create(internalMessageType: TOmniInternalMessageType);
+begin
+  imInternalMessageType := internalMessageType;
+end; { TOmniInternalMessage.Create }
+
+{ TOmniInternalStringMsg }
+
+constructor TOmniInternalStringMsg.Create(const msgName: string;
+  const msgData: TOmniValue);
+begin
+  inherited Create(imtStringMsg);
+  ismMsgName := msgName;
+  ismMsgData := msgData;
+end; { TOmniInternalStringMsg.Create }
+
+{ TOmniMessage }
+
+constructor TOmniMessage.Create(aMsgID: word; aMsgData: TOmniValue);
+begin
+  MsgID := aMsgID;
+  MsgData := aMsgData;
+end; { TOmniMessage.Create }
+
+constructor TOmniMessage.Create(aMsgID: word);
+begin
+  MsgID := aMsgID;
+  MsgData := TOmniValue.Null;
+end; { TOmniMessage.Create }
+
+constructor TOmniMessage.CreateStringMessage(const aMsgName: string;
+  aMsgData: TOmniValue);
+begin
+  MsgID := COtlReservedMsgID;
+  MsgData := TOmniInternalStringMsg.Create(aMsgName, aMsgData);
+end; { TOmniMessage.CreateStringMessage }
+
+function TOmniMessage.IsStringMessage: boolean;
+begin
+  Result := (MsgID = COtlReservedMsgID) and
+    (TOmniInternalMessage(MsgData.AsObject).InternalMessageType = imtStringMsg);
+end; { TOmniMessage.IsStringMessage }
+
+procedure TOmniMessage.UnpackStringMessage(var aMsgName: string;
+  var aMsgData: TOmniValue);
+var
+  stringMsg: TOmniInternalStringMsg;
+begin
+  stringMsg := TOmniInternalStringMsg(MsgData.AsObject);
+  aMsgName := stringMsg.MsgName;
+  aMsgData := stringMsg.MsgData;
+  FreeAndNil(stringMsg);
+end; { TOmniMessage.UnpackStringMessage }
 
 { TOmniMessageQueue }
 
@@ -219,6 +308,21 @@ procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
 begin
   if not ceWriter_ref.Enqueue(msg) then
     raise Exception.Create('TOmniCommunicationEndpoint.Send: Queue is full');
+end; { TOmniCommunicationEndpoint.Send }
+
+procedure TOmniCommunicationEndpoint.Send(const msgName: string);
+begin
+  Send(msgName, TOmniValue.Null);
+end; { TOmniCommunicationEndpoint.Send }
+
+procedure TOmniCommunicationEndpoint.Send(const msgName: string; msgData: array of const);
+begin
+  Send(msgName, OpenArrayToVarArray(msgData));
+end; { TOmniCommunicationEndpoint.Send }
+
+procedure TOmniCommunicationEndpoint.Send(const msgName: string; msgData: TOmniValue);
+begin
+  Send(TOmniMessage.CreateStringMessage(msgName, msgData));
 end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word; msgData: TOmniValue);
@@ -303,20 +407,6 @@ begin
   end;
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
-
-{ TOmniMessage }
-
-constructor TOmniMessage.Create(aMsgID: word; aMsgData: TOmniValue);
-begin
-  MsgID := aMsgID;
-  MsgData := aMsgData;
-end; { TOmniMessage.Create }
-
-constructor TOmniMessage.Create(aMsgID: word);
-begin
-  MsgID := aMsgID;
-  MsgData := TOmniValue.Null;
-end; { TOmniMessage.Create }
 
 end.
 

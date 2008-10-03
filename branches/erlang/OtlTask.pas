@@ -73,7 +73,8 @@ type
   //
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure SetTimer(interval_ms: cardinal; timerMessage: integer = -1);
+    procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
     procedure StopTimer;
     procedure Terminate;
     function  Terminated: boolean; // TODO 1 -oPrimoz Gabrijelcic : Possibly bad name choice!
