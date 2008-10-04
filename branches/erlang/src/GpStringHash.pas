@@ -1,7 +1,7 @@
 (*:Preallocated hasher.
    @author Primoz Gabrijelcic
    @desc <pre>
-Copyright (c) 2007, Primoz Gabrijelcic
+Copyright (c) 2008, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2007-12-06
-   Version           : 1.02
+   Last modification : 2008-10-04
+   Version           : 1.03
 </pre>*)(*
    History:
+     1.03: 2008-10-04
+       - Added support for growing.
      1.02: 2007-12-06
        - Much enhanced TGpStringHash.
        - TGpStringObjectHash class added.
@@ -81,6 +83,7 @@ type
   TGpStringHash = class
   strict private
     shBuckets   : array of cardinal;
+    shCanGrow   : boolean;
     shNumBuckets: cardinal;
     shSize      : cardinal;
   private //enumerator needs them
@@ -90,11 +93,12 @@ type
     function  FindBucket(const key: string): cardinal;
     function  GetHashItem(idxHashItem: cardinal): PGpHashItem;   {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  GetItems(const key: string): integer;              {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure Grow;
     procedure SetItems(const key: string; const value: integer); {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpHashItem read GetHashItem;
   public
-    constructor Create(numItems: cardinal); overload;
-    constructor Create(numBuckets, numItems: cardinal); overload;
+    constructor Create(numItems: cardinal; canGrow: boolean = false); overload;
+    constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
     destructor  Destroy; override;
     procedure Add(const key: string; value: integer);
     function  Find(const key: string; var value: integer): boolean;
@@ -131,8 +135,8 @@ type
     function  GetObjects(const key: string): TObject;
     procedure SetObjects(const key: string; const value: TObject);  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
   public
-    constructor Create(numItems: cardinal; ownsObjects: boolean = true); overload;
-    constructor Create(numBuckets, numItems: cardinal; ownsObjects: boolean = true); overload;
+    constructor Create(numItems: cardinal; ownsObjects: boolean = true; canGrow: boolean = false); overload;
+    constructor Create(numBuckets, numItems: cardinal; ownsObjects: boolean = true; canGrow: boolean = false); overload;
     destructor  Destroy; override;
     procedure Add(const key: string; value: TObject);               {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Find(const key: string; var value: TObject): boolean; {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
@@ -215,12 +219,12 @@ end; { TGpStringHashEnumerator.MoveNext }
 
 { TGpStringHash }
 
-constructor TGpStringHash.Create(numItems: cardinal);
+constructor TGpStringHash.Create(numItems: cardinal; canGrow: boolean);
 begin
-  Create(GetGoodHashSize(numItems), numItems);
+  Create(GetGoodHashSize(numItems), numItems, canGrow);
 end; { TGpStringHash.Create }
 
-constructor TGpStringHash.Create(numBuckets, numItems: cardinal);
+constructor TGpStringHash.Create(numBuckets, numItems: cardinal; canGrow: boolean);
 begin
   inherited Create;
   SetLength(shBuckets, numBuckets);
@@ -229,6 +233,7 @@ begin
   shSize := numItems;
   shNumBuckets := numBuckets;
   shFirstEmpty := 1;
+  shCanGrow := canGrow;
 end; { TGpStringHash.Create }
 
 destructor TGpStringHash.Destroy;
@@ -245,7 +250,10 @@ var
 begin
   hash := HashOf(key) mod shNumBuckets;
   if shFirstEmpty > shSize then
-    raise Exception.Create('TGpStringHash.Add: Maximum size reached'); // growable hash could grow here
+    if shCanGrow then
+      Grow
+    else
+      raise Exception.Create('TGpStringHash.Add: Maximum size reached');
   bucket := @(shItems[shFirstEmpty]); // point to an empty slot in the pre-allocated array
   bucket^.Key := key;
   bucket^.Value := value;
@@ -293,6 +301,42 @@ function TGpStringHash.GetItems(const key: string): integer;
 begin
   Result := ValueOf(key);
 end; { TGpStringHash.GetItems }
+
+procedure TGpStringHash.Grow;
+var
+  bucket      : PGpHashItem;
+  hash        : cardinal;
+  oldBucket   : PGpHashItem;
+  oldIndex    : integer;
+  shOldBuckets: array of cardinal;
+  shOldItems  : array of TGpHashItem;
+begin
+  SetLength(shOldBuckets, Length(shBuckets));
+  Move(shBuckets[0], shOldBuckets[0], Length(shBuckets) * SizeOf(shBuckets[0]));
+  SetLength(shOldItems, Length(shItems));
+  for oldIndex := 0 to Length(shItems) - 1 do  begin
+    shOldItems[oldIndex] := shItems[oldIndex];
+    shItems[oldIndex].Key := '';
+    shItems[oldIndex].Next := 0;
+  end;
+  SetLength(shItems, 2*Length(shItems) + 1);
+  SetLength(shBuckets, GetGoodHashSize(Length(shItems)));
+  FillChar(shBuckets[0], Length(shBuckets) * SizeOf(shBuckets[0]), 0);
+  shItems[0].Value := -1; // sentinel for the ValueOf operation
+  shSize := Length(shItems);
+  shNumBuckets := Length(shBuckets);
+  shFirstEmpty := 1;
+  for oldIndex := 1 to Length(shOldItems) - 1 do begin
+    oldBucket := @(shOldItems[oldIndex]);
+    hash := HashOf(oldBucket.Key) mod shNumBuckets;
+    bucket := @(shItems[shFirstEmpty]); // point to an empty slot in the pre-allocated array
+    Move(oldBucket^, bucket^, SizeOf(bucket^) - SizeOf(bucket^.Next));
+    bucket^.Next := shBuckets[hash];
+    shBuckets[hash] := shFirstEmpty;
+    Inc(shFirstEmpty);
+  end;
+  FillChar(shOldItems[0], Length(shOldItems) * SizeOf(shOldItems[0]), 0); //prevent string refcount problems
+end; { TGpStringHash.Grow }
 
 function TGpStringHash.HasKey(const key: string): boolean;
 begin
@@ -351,18 +395,19 @@ end; { TGpStringObjectHashEnumerator.MoveNext }
 
 { TGpStringObjectHash }
 
-constructor TGpStringObjectHash.Create(numItems: cardinal; ownsObjects: boolean);
+constructor TGpStringObjectHash.Create(numItems: cardinal; ownsObjects, canGrow: boolean);
 begin
   inherited Create;
   sohOwnsObjects := ownsObjects;
-  sohHash := TGpStringHash.Create(numItems);
+  sohHash := TGpStringHash.Create(numItems, canGrow);
 end; { TGpStringObjectHash.Create }
 
-constructor TGpStringObjectHash.Create(numBuckets, numItems: cardinal; ownsObjects: boolean);
+constructor TGpStringObjectHash.Create(numBuckets, numItems: cardinal; ownsObjects,
+  canGrow: boolean);
 begin
   inherited Create;
   sohOwnsObjects := ownsObjects;
-  sohHash := TGpStringHash.Create(numBuckets, numItems);
+  sohHash := TGpStringHash.Create(numBuckets, numItems, canGrow);
 end; { TGpStringObjectHash.Create }
 
 destructor TGpStringObjectHash.Destroy;
