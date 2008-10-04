@@ -57,7 +57,7 @@ uses
 
 procedure TfrmTestStringMsgDispatch.btnChangeMessageClick(Sender: TObject);
 begin
-  FHelloTask.Comm.Send('Change', 'Random ' + IntToStr(Random(1234)));
+  FHelloTask.Invoke('Change', 'Random ' + IntToStr(Random(1234)));
 end;
 
 procedure TfrmTestStringMsgDispatch.btnSendObjectClick(Sender: TObject);
@@ -66,7 +66,7 @@ var
 begin
   sl := TStringList.Create;
   sl.Text := '42';
-  FHelloTask.Comm.Send('TheAnswer', sl);
+  FHelloTask.Invoke('TheAnswer', sl);
 end;
 
 procedure TfrmTestStringMsgDispatch.btnStartHelloClick(Sender: TObject);
@@ -95,7 +95,7 @@ end;
 
 procedure TfrmTestStringMsgDispatch.btnTestInvalidMsgClick(Sender: TObject);
 begin
-  FHelloTask.Comm.Send('FooBar');
+  FHelloTask.Invoke('FooBar');
 end;
 
 procedure TfrmTestStringMsgDispatch.FormCloseQuery(Sender: TObject; var CanClose:

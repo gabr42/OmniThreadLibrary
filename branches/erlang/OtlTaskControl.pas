@@ -146,6 +146,9 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    procedure Invoke(const msgName: string); overload;
+    procedure Invoke(const msgName: string; msgData: array of const); overload;
+    procedure Invoke(const msgName: string; msgData: TOmniValue); overload;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
@@ -216,6 +219,26 @@ uses
   OtlEventMonitor;
 
 type
+  TOmniInternalMessageType = (imtStringMsg);
+
+  TOmniInternalMessage = class
+  strict private
+    imInternalMessageType: TOmniInternalMessageType;
+  public
+    constructor Create(internalMessageType: TOmniInternalMessageType);
+    property InternalMessageType: TOmniInternalMessageType read imInternalMessageType;
+  end; { TOmniInternalMessage }
+
+  TOmniInternalStringMsg = class(TOmniInternalMessage)
+  strict private
+    ismMsgData: TOmniValue;
+    ismMsgName: string;
+  public
+    constructor Create(const msgName: string; const msgData: TOmniValue);
+    property MsgData: TOmniValue read ismMsgData;
+    property MsgName: string read ismMsgName;
+  end; { TOmniInternalStringMsg }
+
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker);
@@ -393,6 +416,9 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    procedure Invoke(const msgName: string); overload;
+    procedure Invoke(const msgName: string; msgData: array of const); overload;
+    procedure Invoke(const msgName: string; msgData: TOmniValue); overload;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
@@ -400,12 +426,12 @@ type
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
-    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
-    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
+    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -468,7 +494,7 @@ begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
 
-function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl; 
+function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl;
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -477,6 +503,48 @@ function CreateTaskGroup: IOmniTaskGroup;
 begin
   Result := TOmniTaskGroup.Create;
 end; { CreateTaskGroup }
+
+{ globals }
+
+function CreateStringMessage(const aMsgName: string; aMsgData: TOmniValue): TOmniMessage;
+begin
+  Result := TOmniMessage.Create(COtlReservedMsgID,
+    TOmniInternalStringMsg.Create(aMsgName, aMsgData));
+end; { CreateStringMessage }
+
+function IsStringMessage(const msg: TOmniMessage): boolean;
+begin
+  Result := (msg.MsgID = COtlReservedMsgID) and
+    (TOmniInternalMessage(msg.MsgData.AsObject).InternalMessageType = imtStringMsg);
+end; { TOmniMessage.IsStringMessage }
+
+procedure UnpackStringMessage(const msg: TOmniMessage; var aMsgName: string;
+  var aMsgData: TOmniValue);
+var
+  stringMsg: TOmniInternalStringMsg;
+begin
+  stringMsg := TOmniInternalStringMsg(msg.MsgData.AsObject);
+  aMsgName := stringMsg.MsgName;
+  aMsgData := stringMsg.MsgData;
+  FreeAndNil(stringMsg);
+end; { UnpackStringMessage }
+
+{ TOmniInternalMessage }
+
+constructor TOmniInternalMessage.Create(internalMessageType: TOmniInternalMessageType);
+begin
+  imInternalMessageType := internalMessageType;
+end; { TOmniInternalMessage.Create }
+
+{ TOmniInternalStringMsg }
+
+constructor TOmniInternalStringMsg.Create(const msgName: string;
+  const msgData: TOmniValue);
+begin
+  inherited Create(imtStringMsg);
+  ismMsgName := msgName;
+  ismMsgData := msgData;
+end; { TOmniInternalStringMsg.Create }
 
 { TOmniTask }
 
@@ -886,7 +954,7 @@ begin
       msg.MsgData := TOmniValue.Null;
     end
     else 
-      msg := TOmniMessage.CreateStringMessage(timerMsgName, TOmniValue.Null);
+      msg := CreateStringMessage(timerMsgName, TOmniValue.Null);
     DispatchOmniMessage(msg);
   end
   else if assigned(WorkerIntf) then
@@ -929,8 +997,8 @@ var
   params          : PParamInfo;
   paramType       : PTypeInfo;
 begin { TOmnITaskExecutor.DispatchOmniMessage }
-  if msg.IsStringMessage then begin
-    msg.UnpackStringMessage(msgName, msgData);
+  if IsStringMessage(msg) then begin
+    UnpackStringMessage(msg, msgName, msgData);
 
     (* TODO 1 -oPrimoz Gabrijelcic : All this charade must only happen once! We will then
       store (message, address, type) into a hash table. Or better - caller can already
@@ -1227,6 +1295,21 @@ begin
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
+
+procedure TOmniTaskControl.Invoke(const msgName: string);
+begin
+  Invoke(msgName, TOmniValue.Null);
+end; { TOmniCommunicationEndpoint.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgName: string; msgData: array of const);
+begin
+  Invoke(msgName, OpenArrayToVarArray(msgData));
+end; { TOmniCommunicationEndpoint.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgName: string; msgData: TOmniValue);
+begin
+  Comm.Send(CreateStringMessage(msgName, msgData));
+end; { TOmniCommunicationEndpoint.Invoke }
 
 function TOmniTaskControl.Join(const group: IOmniTaskGroup): IOmniTaskControl;
 begin
