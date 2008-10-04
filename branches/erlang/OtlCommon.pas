@@ -235,7 +235,8 @@ implementation
 
 uses
   Windows,
-  SysUtils;
+  SysUtils,
+  GpStringHash;
 
 const
   //List of good hash table sizes, taken from
@@ -427,24 +428,6 @@ begin
     RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
   except {ignore} end;
 end; { SetThreadName }
-
-{ globals }
-
-function GetGoodHashSize(dataSize: cardinal): cardinal;
-var
-  iHashSize: integer;
-  upper    : cardinal;
-begin
-  upper := 1 SHL Low(CGpGoodHashSizes);
-  for iHashSize := Low(CGpGoodHashSizes) to High(CGpGoodHashSizes) do begin
-    Result := CGpGoodHashSizes[iHashSize];
-    if dataSize <= upper then
-      Exit;
-    upper := 2*upper;
-  end;
-  raise Exception.CreateFmt('GetGoodHashSize: Only data sizes up to %d are supported',
-    [upper div 2]);
-end; { GetGoodHashSize }
 
 { TOmniValueContainer }
 

@@ -57,8 +57,8 @@ uses
 
 procedure TfrmTestStringMsgDispatch.btnChangeMessageClick(Sender: TObject);
 begin
-//  FHelloTask.Invoke('Change', 'Random ' + IntToStr(Random(1234)));
-  FHelloTask.Invoke(@TAsyncHello.Change, 'Random ' + IntToStr(Random(1234)));
+  FHelloTask.Invoke('Change', 'Random ' + IntToStr(Random(1234)));
+//  FHelloTask.Invoke(@TAsyncHello.Change, 'Random ' + IntToStr(Random(1234)));
 end;
 
 procedure TfrmTestStringMsgDispatch.btnSendObjectClick(Sender: TObject);
@@ -67,7 +67,8 @@ var
 begin
   sl := TStringList.Create;
   sl.Text := '42';
-  FHelloTask.Invoke(@TAsyncHello.TheAnswer, sl);
+//  FHelloTask.Invoke(@TAsyncHello.TheAnswer, sl);
+  FHelloTask.Invoke('TheAnswer', sl);
 end;
 
 procedure TfrmTestStringMsgDispatch.btnStartHelloClick(Sender: TObject);
@@ -77,8 +78,8 @@ begin
   worker := TAsyncHello.Create;
   FHelloTask :=
     OmniEventMonitor1.Monitor(CreateTask(worker, 'Hello')).
-//    SetTimer(1000, 'SendMessage').
-    SetTimer(1000, @TAsyncHello.SendMessage).
+    SetTimer(1000, 'SendMessage').
+//    SetTimer(1000, @TAsyncHello.SendMessage).
     SetParameter('Delay', 1000).
     SetParameter('Message', 'Hello').
     Run;
@@ -97,7 +98,8 @@ end;
 
 procedure TfrmTestStringMsgDispatch.btnTestInvalidMsgClick(Sender: TObject);
 begin
-  FHelloTask.Invoke('FooBar'); // will fail, FooBar method is not defined
+//  FHelloTask.Invoke('FooBar'); // will fail, FooBar method is not defined
+  FHelloTask.Invoke(@Self.btnTestInvalidMsg); // will fail, can only invoke methods from the task's class
 end;
 
 procedure TfrmTestStringMsgDispatch.FormCloseQuery(Sender: TObject; var CanClose:

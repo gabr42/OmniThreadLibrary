@@ -219,6 +219,7 @@ uses
   DetailedRTTI,
   DSiWin32,
   GpLists,
+  GpStringHash,
   SpinLock,
   OtlEventMonitor;
 
@@ -261,6 +262,21 @@ type
     property MsgMethod: pointer read ismMsgMethod;
   end; { TOmniInternalAddressMsg }
 
+  TOmniInvokeType = (itUnknown, itSelf, itSelfAndOmniValue, itSelfAndObject);
+  TOmniInvokeSignature_Self           = procedure(Self: TObject);
+  TOmniInvokeSignature_Self_OmniValue = procedure(Self: TObject; var value: TOmniValue);
+  TOmniInvokeSignature_Self_Object    = procedure(Self: TObject; var obj: TObject);
+
+  TOmniInvokeInfo = class
+  strict private
+    oiiAddress: pointer;
+    oiiSignature: TOmniInvokeType;
+  public
+    constructor Create(methodAddr: pointer; methodSignature: TOmniInvokeType);
+    property Address: pointer read oiiAddress;
+    property Signature: TOmniInvokeType read oiiSignature;
+  end; { TOmniInvokeInfo }
+
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker);
@@ -275,6 +291,7 @@ type
     oteInternalLock      : TSynchroObject;
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
+    oteMethodHash        : TGpStringObjectHash;
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
@@ -295,12 +312,17 @@ type
     procedure DispatchOmniMessage(msg: TOmniMessage);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
+    procedure GetMethodAddrAndSignature(const methodName: string;
+      var methodAddress: pointer; var methodSignature: TOmniInvokeType);
+    procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
+      var msgName: string; var msgData: TOmniValue);
     function  GetTimerInterval_ms: cardinal; inline;
     function  GetTimerMessageID: integer; inline;
     function  GetTimerMessageMethod: pointer;
     function  GetTimerMessageName: string;
     procedure Initialize;
     procedure ProcessThreadMessages;
+    procedure RaiseInvalidSignature(const methodName: string);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInterval_ms(const value: cardinal);
     procedure SetTimerMessageID(const value: integer);
@@ -316,8 +338,8 @@ type
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer); overload;
-    procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
     procedure Asy_SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
+    procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
@@ -772,6 +794,15 @@ begin
   //do-nothing
 end; { TOmniWorker.Timer }
 
+{ TOmniInvokeInfo }
+
+constructor TOmniInvokeInfo.Create(methodAddr: pointer; methodSignature: TOmniInvokeType);
+begin
+  inherited Create;
+  oiiAddress := methodAddr;
+  oiiSignature := methodSignature;
+end; { TOmniInvokeInfo.Create }
+
 { TOmniTaskExecutor }
 
 constructor TOmniTaskExecutor.Create(const workerIntf: IOmniWorker);
@@ -803,6 +834,7 @@ begin
   finally oteInternalLock.Release; end;
   FreeAndNil(oteInternalLock);
   FreeAndNil(oteTerminateHandles);
+  FreeAndNil(oteMethodHash);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -979,15 +1011,15 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_SetExitStatus }
 
+procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer);
+begin
+  Asy_SetTimerInt(interval_ms, timerMsgID, '', nil);
+end; { TOmniTaskExecutor.Asy_SetTimer }
+
 procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal;
   const timerMethod: pointer);
 begin
   Asy_SetTimerInt(interval_ms, -1, '', timerMethod);
-end; { TOmniTaskExecutor.Asy_SetTimer }
-
-procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer);
-begin
-  Asy_SetTimerInt(interval_ms, timerMsgID, '', nil);
 end; { TOmniTaskExecutor.Asy_SetTimer }
 
 procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string);
@@ -1057,123 +1089,40 @@ begin
 end; { TOmniTaskExecutor.Cleanup }
 
 procedure TOmniTaskExecutor.DispatchOmniMessage(msg: TOmniMessage);
-
-  procedure RaiseInvalidSignature(const methodName: string);
-  begin
-    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                              'Method %s.%s has invalid signature. Only following ' +
-                              'signatures are supported: (Self), ' +
-                              '(Self, const TOmniValue), (Self, var TObject)',
-                              [WorkerIntf.Implementor.ClassName, methodName]);
-  end; { RaiseInvalidSignature }
-
-const
-  CShortLen = SizeOf(ShortString) - 1;
-type
-  TCallbackType = (ctUnknown, ctSelf, ctSelfAndOmniValue, ctSelfAndObject);
-  TCallbackSignature_Self           = procedure(Self: TObject);
-  TCallbackSignature_Self_OmniValue = procedure(Self: TObject; var value: TOmniValue);
-  TCallbackSignature_Self_Object    = procedure(Self: TObject; var obj: TObject);
 var
-  callbackType    : TCallbackType;
-  headerEnd       : cardinal;
-  internalType    : TOmniInternalMessageType;
-  method          : pointer;
-  methodInfoHeader: PMethodInfoHeader;
-  methodName      : string;
-  msgData         : TOmniValue;
-  msgMethodAddr   : pointer;
-  msgName         : string;
-  obj             : TObject;
-  paramNum        : integer;
-  params          : PParamInfo;
-  paramType       : PTypeInfo;
-begin { TOmniTaskExecutor.DispatchOmniMessage }
+  methodAddr     : pointer;
+  methodInfoObj  : TObject;
+  methodInfo     : TOmniInvokeInfo absolute methodInfoObj;
+  methodName     : string;
+  methodSignature: TOmniInvokeType;
+  msgData        : TOmniValue;
+  obj            : TObject;
+begin
   if msg.MsgID = COtlReservedMsgID then begin
     Assert(assigned(WorkerIntf));
-    internalType := TOmniInternalMessage.InternalType(msg);
-    case internalType of
-      imtStringMsg: 
-        begin
-          TOmniInternalStringMsg.UnpackMessage(msg, msgName, msgData);
-          methodName := msgName;
-        end;
-      imtAddressMsg:
-        begin
-          TOmniInternalAddressMsg.UnpackMessage(msg, method, msgData);
-          methodName := WorkerIntf.Implementor.MethodName(method);
-        end
-      else raise Exception.CreateFmt('TOmniTaskExecutor.DispatchOmniMessage: ' +
-                   'internal message type %s',
-                   [GetEnumName(TypeInfo(TOmniInternalMessageType), Ord(internalType))]);
-    end; //case internal type
-
-    (* TODO 1 -oPrimoz Gabrijelcic : All this charade must only happen once! We will then
-      store (message, address, type) into a hash table. Or better - caller can already
-      hash the message name/method and provide us with the hash ID. *)
-
-    // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
-    // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
-    methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, methodName);
-    msgMethodAddr := WorkerIntf.Implementor.MethodAddress(methodName);
-    // find the method info
-    if not (assigned(methodInfoHeader) and assigned(msgMethodAddr)) then
-      raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                                'Cannot find message method %s.%s',
-                                [WorkerIntf.Implementor.ClassName, methodName]);
-    // check the RTTI sanity
-    if methodInfoHeader.Len <= (SizeOf(TMethodInfoHeader) - CShortLen + Length(methodInfoHeader.Name)) then
-      raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                                'Class %d was compiled without RTTI',
-                                [WorkerIntf.Implementor.ClassName]);
-    // we can only process procedures
-    if assigned(methodInfoHeader.ReturnInfo.ReturnType) then
-      raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                                'Method %s.%s must not return result',
-                                [WorkerIntf.Implementor.ClassName, methodName]);
-    // only limited subset of method signatures is allowed:
-    // (Self), (Self, const TOmniValue), (Self, var TObject)
-    headerEnd := cardinal(methodInfoHeader) + methodInfoHeader^.Len;
-    params := PParamInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
-              - CShortLen + SizeOf(TReturnInfo) + Length(methodInfoHeader^.Name));
-    paramNum := 0;
-    callbackType := ctUnknown;
-    // Loop over the parameters
-    while cardinal(params) < headerEnd do begin
-      Inc(paramNum);
-      paramType := params.ParamType^;
-      if paramNum = 1 then
-        if (params^.Flags <> []) or (paramType^.Kind <> tkClass) then
-          RaiseInvalidSignature(methodName)
-        else
-          callbackType := ctSelf
-      else if paramNum = 2 then
-        //code says 'const' but GetMethodInfo says 'pfVar' :(
-        if (params^.Flags * [pfConst, pfVar] <> []) and (paramType^.Kind = tkRecord) and
-           (SameText(paramType^.Name, 'TOmniValue'))
-        then
-          callbackType := ctSelfAndOmniValue
-        else if (params^.Flags = [pfVar]) and (paramType^.Kind = tkClass) then
-          callbackType := ctSelfAndObject
-        else
-          RaiseInvalidSignature(methodName)
-      else
-        RaiseInvalidSignature(methodName);
-      params := params.NextParam;
+    GetMethodNameFromInternalMessage(msg, methodName, msgData);
+    if methodName = '' then
+      raise Exception.Create('TOmniTaskExecutor.DispatchOmniMessage: Method name not set');
+    if not assigned(oteMethodHash) then
+      oteMethodHash := TGpStringObjectHash.Create(17, true); //usually there won't be many methods
+    if not oteMethodHash.Find(methodName, methodInfoObj) then begin
+      GetMethodAddrAndSignature(methodName, methodAddr, methodSignature);
+      methodInfo := TOmniInvokeInfo.Create(methodAddr, methodSignature);
+      oteMethodHash.Add(methodName, methodInfo);
     end;
-    case callbackType of
-      ctSelf:
-        TCallbackSignature_Self(msgMethodAddr)(WorkerIntf.Implementor);
-      ctSelfAndOmniValue:
-        TCallbackSignature_Self_OmniValue(msgMethodAddr)(WorkerIntf.Implementor, msgData);
-      ctSelfAndObject:
+    case methodInfo.Signature of
+      itSelf:
+        TOmniInvokeSignature_Self(methodInfo.Address)(WorkerIntf.Implementor);
+      itSelfAndOmniValue:
+        TOmniInvokeSignature_Self_OmniValue(methodInfo.Address)(WorkerIntf.Implementor, msgData);
+      itSelfAndObject:
         begin
           obj := msgData.AsObject;
-          TCallbackSignature_Self_Object(msgMethodAddr)(WorkerIntf.Implementor, obj);
+          TOmniInvokeSignature_Self_Object(methodInfo.Address)(WorkerIntf.Implementor, obj);
         end
       else
         RaiseInvalidSignature(methodName);
-    end; //case callbackType
+    end; //case methodSignature
   end
   else
     WorkerIntf.DispatchMessage(msg);
@@ -1192,6 +1141,93 @@ begin
     UniqueString(Result);
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.GetExitMessage }
+
+procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
+  methodAddress: pointer; var methodSignature: TOmniInvokeType);
+const
+  CShortLen = SizeOf(ShortString) - 1;
+var
+  headerEnd       : cardinal;
+  methodInfoHeader: PMethodInfoHeader;
+  paramNum        : integer;
+  params          : PParamInfo;
+  paramType       : PTypeInfo;
+begin
+  // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
+  // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
+  methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, methodName);
+  methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
+  // find the method info
+  if not (assigned(methodInfoHeader) and assigned(methodAddress)) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Cannot find message method %s.%s',
+                              [WorkerIntf.Implementor.ClassName, methodName]);
+  // check the RTTI sanity
+  if methodInfoHeader.Len <= (SizeOf(TMethodInfoHeader) - CShortLen + Length(methodInfoHeader.Name)) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Class %d was compiled without RTTI',
+                              [WorkerIntf.Implementor.ClassName]);
+  // we can only process procedures
+  if assigned(methodInfoHeader.ReturnInfo.ReturnType) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Method %s.%s must not return result',
+                              [WorkerIntf.Implementor.ClassName, methodName]);
+  // only limited subset of method signatures is allowed:
+  // (Self), (Self, const TOmniValue), (Self, var TObject)
+  headerEnd := cardinal(methodInfoHeader) + methodInfoHeader^.Len;
+  params := PParamInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
+            - CShortLen + SizeOf(TReturnInfo) + Length(methodInfoHeader^.Name));
+  paramNum := 0;
+  methodSignature := itUnknown;
+  // Loop over the parameters
+  while cardinal(params) < headerEnd do begin
+    Inc(paramNum);
+    paramType := params.ParamType^;
+    if paramNum = 1 then
+      if (params^.Flags <> []) or (paramType^.Kind <> tkClass) then
+        RaiseInvalidSignature(methodName)
+      else
+        methodSignature := itSelf
+    else if paramNum = 2 then
+      //code says 'const' but GetMethodInfo says 'pfVar' :(
+      if (params^.Flags * [pfConst, pfVar] <> []) and (paramType^.Kind = tkRecord) and
+         (SameText(paramType^.Name, 'TOmniValue'))
+      then
+        methodSignature := itSelfAndOmniValue
+      else if (params^.Flags = [pfVar]) and (paramType^.Kind = tkClass) then
+        methodSignature := itSelfAndObject
+      else
+        RaiseInvalidSignature(methodName)
+    else
+      RaiseInvalidSignature(methodName);
+    params := params.NextParam;
+  end;
+end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
+
+procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage; var
+  msgName: string; var msgData: TOmniValue);
+var
+  internalType: TOmniInternalMessageType;
+  method      : pointer;
+begin
+  internalType := TOmniInternalMessage.InternalType(msg);
+  case internalType of
+    imtStringMsg:
+      TOmniInternalStringMsg.UnpackMessage(msg, msgName, msgData);
+    imtAddressMsg:
+      begin
+        TOmniInternalAddressMsg.UnpackMessage(msg, method, msgData);
+        msgName := WorkerIntf.Implementor.MethodName(method);
+        if msgName = '' then
+          raise Exception.CreateFmt('TOmniTaskExecutor.GetMethodNameFromInternalMessage: ' +
+                  'Cannot find method name for method %p', [method]);
+      end
+    else
+      raise Exception.CreateFmt('TOmniTaskExecutor.GetMethodNameFromInternalMessage: ' +
+              'Internal message type %s is not supported',
+              [GetEnumName(TypeInfo(TOmniInternalMessageType), Ord(internalType))]);
+  end; //case internalType
+end; { TOmniTaskExecutor.GetMethodNameFromInternalMessage }
 
 function TOmniTaskExecutor.GetTimerInterval_ms: cardinal;
 begin
@@ -1236,6 +1272,15 @@ begin
     DispatchMessage(Msg);
   end;
 end; { TOmniTaskControl.ProcessThreadMessages }
+
+procedure TOmniTaskExecutor.RaiseInvalidSignature(const methodName: string);
+begin
+  raise Exception.CreateFmt('TOmniTaskExecutor: ' +
+                            'Method %s.%s has invalid signature. Only following ' +
+                            'signatures are supported: (Self), ' +
+                            '(Self, const TOmniValue), (Self, var TObject)',
+                            [WorkerIntf.Implementor.ClassName, methodName]);
+end; { TOmniTaskExecutor.RaiseInvalidSignature }
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
 begin
