@@ -26,7 +26,7 @@ object frmTestStringMsgDispatch: TfrmTestStringMsgDispatch
   end
   object btnStartHello: TButton
     Left = 8
-    Top = 7
+    Top = 8
     Width = 90
     Height = 25
     Caption = 'Start "Hello"'
