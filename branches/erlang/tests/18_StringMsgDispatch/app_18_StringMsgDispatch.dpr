@@ -1,6 +1,7 @@
 program app_18_StringMsgDispatch;
 
 uses
+  FastMM4,
   Forms,
   test_18_StringMsgDispatch in 'test_18_StringMsgDispatch.pas' {frmTestStringMsgDispatch},
   OtlCommon in '..\..\OtlCommon.pas',

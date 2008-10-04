@@ -74,9 +74,6 @@
 ///    http://blogs.msdn.com/pfxteam/archive/2008/06/18/8620615.aspx
 ///  - Erlang, http://en.wikipedia.org/wiki/Erlang_(programming_language)
 
-' test sending object
-' test with fastmm4
-
 unit OtlTaskControl;
 
 interface
@@ -934,6 +931,11 @@ var
 begin { TOmnITaskExecutor.DispatchOmniMessage }
   if msg.IsStringMessage then begin
     msg.UnpackStringMessage(msgName, msgData);
+
+    (* TODO 1 -oPrimoz Gabrijelcic : All this charade must only happen once! We will then
+      store (message, address, type) into a hash table. Or better - caller can already
+      hash the message name and provide us with the hash ID. *)
+
     methodName := {'Msg_' +} msgName; //2008-10-03, Gp: can't decide :(
     // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
     // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]

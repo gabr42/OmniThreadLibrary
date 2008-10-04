@@ -26,60 +26,57 @@ object frmTestStringMsgDispatch: TfrmTestStringMsgDispatch
   end
   object btnStartHello: TButton
     Left = 8
-    Top = 8
+    Top = 7
     Width = 90
     Height = 25
-    Action = actStartHello
+    Caption = 'Start "Hello"'
     TabOrder = 1
+    OnClick = btnStartHelloClick
   end
   object btnStopHello: TButton
     Left = 8
-    Top = 70
+    Top = 132
     Width = 90
     Height = 25
-    Action = actStopHello
+    Caption = 'Stop "Hello"'
+    Enabled = False
     TabOrder = 2
+    OnClick = btnStopHelloClick
   end
   object btnChangeMessage: TButton
     Left = 8
     Top = 39
     Width = 90
     Height = 25
-    Action = actChangeMessage
+    Caption = 'Change message'
+    Enabled = False
     TabOrder = 3
+    OnClick = btnChangeMessageClick
   end
   object btnTestInvalidMsg: TButton
     Left = 8
-    Top = 253
+    Top = 70
     Width = 90
     Height = 25
     Caption = 'Invalid message'
+    Enabled = False
     TabOrder = 4
     OnClick = btnTestInvalidMsgClick
   end
-  object ActionList: TActionList
+  object btnSendObject: TButton
     Left = 8
-    Top = 224
-    object actStartHello: TAction
-      Caption = 'Start "Hello"'
-      OnExecute = actStartHelloExecute
-      OnUpdate = actStartHelloUpdate
-    end
-    object actStopHello: TAction
-      Caption = 'Stop "Hello"'
-      OnExecute = actStopHelloExecute
-      OnUpdate = actStopHelloUpdate
-    end
-    object actChangeMessage: TAction
-      Caption = 'Change message'
-      OnExecute = actChangeMessageExecute
-      OnUpdate = actChangeMessageUpdate
-    end
+    Top = 101
+    Width = 90
+    Height = 25
+    Caption = 'Send object'
+    Enabled = False
+    TabOrder = 5
+    OnClick = btnSendObjectClick
   end
   object OmniEventMonitor1: TOmniEventMonitor
     OnTaskMessage = OmniEventMonitor1TaskMessage
     OnTaskTerminated = OmniEventMonitor1TaskTerminated
-    Left = 40
-    Top = 224
+    Left = 8
+    Top = 248
   end
 end

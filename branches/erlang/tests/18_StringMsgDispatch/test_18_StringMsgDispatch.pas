@@ -20,32 +20,27 @@ type
   published
     procedure Change(const data: TOmniValue);
     procedure SendMessage;
+    procedure TheAnswer(var sl: TStringList);
   end;
 
   TfrmTestStringMsgDispatch = class(TForm)
-    actChangeMessage      : TAction;
-    ActionList            : TActionList;
-    actStartHello         : TAction;
-    actStopHello          : TAction;
-    btnChangeMessage      : TButton;
-    btnStartHello         : TButton;
-    btnStopHello          : TButton;
-    lbLog                 : TListBox;
-    OmniEventMonitor1: TOmniEventMonitor;
+    btnChangeMessage : TButton;
+    btnSendObject    : TButton;
+    btnStartHello    : TButton;
+    btnStopHello     : TButton;
     btnTestInvalidMsg: TButton;
-    procedure actChangeMessageExecute(Sender: TObject);
-    procedure actChangeMessageUpdate(Sender: TObject);
-    procedure actStartHelloExecute(Sender: TObject);
-    procedure actStartHelloUpdate(Sender: TObject);
-    procedure actStopHelloExecute(Sender: TObject);
-    procedure actStopHelloUpdate(Sender: TObject);
+    lbLog            : TListBox;
+    OmniEventMonitor1: TOmniEventMonitor;
+    procedure btnChangeMessageClick(Sender: TObject);
+    procedure btnSendObjectClick(Sender: TObject);
+    procedure btnStartHelloClick(Sender: TObject);
+    procedure btnStopHelloClick(Sender: TObject);
     procedure btnTestInvalidMsgClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   strict private
     FHelloTask: IOmniTaskControl;
-  private
   end;
 
 var
@@ -60,17 +55,21 @@ uses
 
 { TfrmTestOTL }
 
-procedure TfrmTestStringMsgDispatch.actChangeMessageExecute(Sender: TObject);
+procedure TfrmTestStringMsgDispatch.btnChangeMessageClick(Sender: TObject);
 begin
   FHelloTask.Comm.Send('Change', 'Random ' + IntToStr(Random(1234)));
 end;
 
-procedure TfrmTestStringMsgDispatch.actChangeMessageUpdate(Sender: TObject);
+procedure TfrmTestStringMsgDispatch.btnSendObjectClick(Sender: TObject);
+var
+  sl: TStringList;
 begin
-  (Sender as TAction).Enabled := assigned(FHelloTask);
+  sl := TStringList.Create;
+  sl.Text := '42';
+  FHelloTask.Comm.Send('TheAnswer', sl);
 end;
 
-procedure TfrmTestStringMsgDispatch.actStartHelloExecute(Sender: TObject);
+procedure TfrmTestStringMsgDispatch.btnStartHelloClick(Sender: TObject);
 var
   worker: IOmniWorker;
 begin
@@ -81,22 +80,17 @@ begin
     SetParameter('Delay', 1000).
     SetParameter('Message', 'Hello').
     Run;
+  btnStartHello.Enabled := false;
+  btnChangeMessage.Enabled := true;
+  btnSendObject.Enabled := true;
+  btnTestInvalidMsg.Enabled := true;
+  btnStopHello.Enabled := true;
 end;
 
-procedure TfrmTestStringMsgDispatch.actStartHelloUpdate(Sender: TObject);
-begin
-  (Sender as TAction).Enabled := not assigned(FHelloTask);
-end;
-
-procedure TfrmTestStringMsgDispatch.actStopHelloExecute(Sender: TObject);
+procedure TfrmTestStringMsgDispatch.btnStopHelloClick(Sender: TObject);
 begin
   FHelloTask.Terminate;
   FHelloTask := nil;
-end;
-
-procedure TfrmTestStringMsgDispatch.actStopHelloUpdate(Sender: TObject);
-begin
-  (Sender as TAction).Enabled := assigned(FHelloTask);
 end;
 
 procedure TfrmTestStringMsgDispatch.btnTestInvalidMsgClick(Sender: TObject);
@@ -107,8 +101,8 @@ end;
 procedure TfrmTestStringMsgDispatch.FormCloseQuery(Sender: TObject; var CanClose:
   boolean);
 begin
-  if actStopHello.Enabled then
-    actStopHello.Execute;
+  if btnStopHello.Enabled then
+    btnStopHello.Click;
 end;
 
 procedure TfrmTestStringMsgDispatch.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
@@ -124,6 +118,11 @@ procedure TfrmTestStringMsgDispatch.OmniEventMonitor1TaskTerminated(const task: 
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated %s',
     [task.UniqueID, task.Name, task.ExitMessage]));
+  btnStartHello.Enabled := true;
+  btnChangeMessage.Enabled := false;
+  btnSendObject.Enabled := false;
+  btnTestInvalidMsg.Enabled := false;
+  btnStopHello.Enabled := false;
 end;
 
 { TAsyncHello }
@@ -142,6 +141,12 @@ end;
 procedure TAsyncHello.SendMessage;
 begin
   Task.Comm.Send(0, aiMessage);
+end;
+
+procedure TAsyncHello.TheAnswer(var sl: TStringList);
+begin
+  Task.Comm.Send(0, Format('Received %s: %s', [sl.ClassName, sl.Text]));
+  FreeAndNil(sl);
 end;
 
 initialization
