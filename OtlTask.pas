@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-18
-///   Version           : 1.01
+///   Last modification : 2008-10-05
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2008-10-05
+///       - Added two overloaded SetTimer methods using string/pointer invocation.
 ///     1.01: 2008-09-18
 ///       - Exposed SetTimer interface.
 ///     1.0: 2008-08-26
@@ -73,7 +75,9 @@ type
   //
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure SetTimer(interval_ms: cardinal; timerMessage: integer = -1);
+    procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
     procedure StopTimer;
     procedure Terminate;
     function  Terminated: boolean; // TODO 1 -oPrimoz Gabrijelcic : Possibly bad name choice!

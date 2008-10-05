@@ -86,7 +86,7 @@ var
 begin
   if Sender = btnSchedule6 then begin
     numTasks := 6;
-    delay_ms := 1000;    
+    delay_ms := 1000;
   end
   else begin
     numTasks := 80;
