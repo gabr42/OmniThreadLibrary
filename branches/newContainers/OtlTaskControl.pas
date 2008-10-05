@@ -37,10 +37,19 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-26
-///   Version           : 1.03b
+///   Last modification : 2008-10-05
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2008-10-05
+///       - Implemented IOmniTaskContro.Invoke (six overloads), used for string- and
+///         pointer-based method dispatch (see demo 18 for more details and demo 19
+///         for benchmarks).
+///       - Implemented two SetTimer overloads using new invocation methods.
+///       - Implemented IOmniTaskControl.SetQueue, which can be used to increase (or
+///         reduce) the size of the IOmniTaskControl<->IOmniTask communication queue.
+///         This function must be called before .SetMonitor, .RemoveMonitor, .Run or
+///         .Schedule.
 ///     1.03b: 2008-09-26
 ///       - More stringent Win32 API result checking.
 ///     1.03a: 2008-09-25
@@ -72,6 +81,7 @@
 ///  - Threading in C#, Joseph Albahari, http://www.albahari.com/threading/
 ///  - Coordination Data Structures Overview, Emad Omara,
 ///    http://blogs.msdn.com/pfxteam/archive/2008/06/18/8620615.aspx
+///  - Erlang, http://en.wikipedia.org/wiki/Erlang_(programming_language)
 
 unit OtlTaskControl;
 
@@ -97,6 +107,7 @@ type
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl;
   end; { IOmniTaskControlMonitor }
 
+  {$TYPEINFO ON} {$METHODINFO ON}
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
@@ -125,6 +136,7 @@ type
     property Task: IOmniTask read GetTask write SetTask;
     property Implementor: TObject read GetImplementor;
   end; { TOmniWorker }
+  {$TYPEINFO OFF} {$METHODINFO OFF}
 
   TOmniTaskProcedure = procedure(const task: IOmniTask);
   TOmniTaskMethod = procedure(const task: IOmniTask) of object;
@@ -143,6 +155,12 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    procedure Invoke(const msgMethod: pointer); overload;
+    procedure Invoke(const msgMethod: pointer; msgData: array of const); overload;
+    procedure Invoke(const msgMethod: pointer; msgData: TOmniValue); overload;
+    procedure Invoke(const msgName: string); overload;
+    procedure Invoke(const msgName: string; msgData: array of const); overload;
+    procedure Invoke(const msgName: string; msgData: TOmniValue); overload;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
@@ -150,12 +168,15 @@ type
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
-    function  SetTimer(interval_ms: cardinal; timerMessage: integer = -1): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
+    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
+    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -181,6 +202,7 @@ type
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
+//  maybe: if one of group processes dies, TerminateAll should automatically happen?
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskGroupEnumerator;
@@ -203,12 +225,69 @@ implementation
 
 uses
   Messages,
+  TypInfo,
+  ObjAuto,
+  DetailedRTTI,
   DSiWin32,
   GpLists,
+  GpStringHash,
   SpinLock,
   OtlEventMonitor;
 
 type
+  TOmniInternalMessageType = (imtStringMsg, imtAddressMsg);
+
+  TOmniInternalMessage = class
+  strict private
+    imInternalMessageType: TOmniInternalMessageType;
+  public
+    class function InternalType(const msg: TOmniMessage): TOmniInternalMessageType; 
+    constructor Create(internalMessageType: TOmniInternalMessageType);
+    property InternalMessageType: TOmniInternalMessageType read imInternalMessageType;
+  end; { TOmniInternalMessage }
+
+  TOmniInternalStringMsg = class(TOmniInternalMessage)
+  strict private
+    ismMsgData: TOmniValue;
+    ismMsgName: string;
+  public
+    class function  CreateMessage(const msgName: string; msgData: TOmniValue): TOmniMessage; inline;
+    class procedure UnpackMessage(const msg: TOmniMessage; var msgName: string;
+      var msgData: TOmniValue); inline;
+    constructor Create(const msgName: string; const msgData: TOmniValue);
+    property MsgData: TOmniValue read ismMsgData;
+    property MsgName: string read ismMsgName;
+  end; { TOmniInternalStringMsg }
+
+  TOmniInternalAddressMsg = class(TOmniInternalMessage)
+  strict private
+    ismMsgData  : TOmniValue;
+    ismMsgMethod: pointer;
+  public
+    class function CreateMessage(const msgMethod: pointer; msgData: TOmniValue):
+      TOmniMessage; inline;
+    class procedure UnpackMessage(const msg: TOmniMessage; var msgMethod: pointer; var
+      msgData: TOmniValue); inline;
+    constructor Create(const msgMethod: pointer; const msgData: TOmniValue);
+    property MsgData: TOmniValue read ismMsgData;
+    property MsgMethod: pointer read ismMsgMethod;
+  end; { TOmniInternalAddressMsg }
+
+  TOmniInvokeType = (itUnknown, itSelf, itSelfAndOmniValue, itSelfAndObject);
+  TOmniInvokeSignature_Self           = procedure(Self: TObject);
+  TOmniInvokeSignature_Self_OmniValue = procedure(Self: TObject; var value: TOmniValue);
+  TOmniInvokeSignature_Self_Object    = procedure(Self: TObject; var obj: TObject);
+
+  TOmniInvokeInfo = class
+  strict private
+    oiiAddress: pointer;
+    oiiSignature: TOmniInvokeType;
+  public
+    constructor Create(methodAddr: pointer; methodSignature: TOmniInvokeType);
+    property Address: pointer read oiiAddress;
+    property Signature: TOmniInvokeType read oiiSignature;
+  end; { TOmniInvokeInfo }
+
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker);
@@ -223,27 +302,43 @@ type
     oteInternalLock      : TSynchroObject;
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
+    oteMethodHash        : TGpStringObjectHash;
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
     oteTimerInterval_ms  : TGp4AlignedInt;
-    oteTimerMessage      : TGp4AlignedInt;
+    oteTimerMessageID    : TGp4AlignedInt;
+    oteTimerMessageMethod: TGp4AlignedInt;
+    oteTimerMessageName  : string;
     oteWakeMask          : DWORD;
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
   strict protected
+    procedure Asy_SetTimerInt(interval_ms: cardinal; timerMsgID: integer;
+      const timerMsgName: string; const timerMsgMethod: pointer);
+    procedure CallOmniTimer;
     procedure Cleanup;
+    procedure DispatchOmniMessage(msg: TOmniMessage);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
+    procedure GetMethodAddrAndSignature(const methodName: string;
+      var methodAddress: pointer; var methodSignature: TOmniInvokeType);
+    procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
+      var msgName: string; var msgData: TOmniValue);
     function  GetTimerInterval_ms: cardinal; inline;
-    function  GetTimerMessage: integer; inline;
+    function  GetTimerMessageID: integer; inline;
+    function  GetTimerMessageMethod: pointer;
+    function  GetTimerMessageName: string;
     procedure Initialize;
     procedure ProcessThreadMessages;
+    procedure RaiseInvalidSignature(const methodName: string);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInterval_ms(const value: cardinal);
-    procedure SetTimerMessage(const value: integer);
+    procedure SetTimerMessageID(const value: integer);
+    procedure SetTimerMessageMethod(const value: pointer);
+    procedure SetTimerMessageName(const value: string);
   public
     constructor Create(const workerIntf: IOmniWorker); overload;
     constructor Create(method: TOmniTaskMethod); overload;
@@ -253,7 +348,9 @@ type
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure Asy_SetTimer(interval_ms: cardinal; timerMsg: integer);
+    procedure Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer); overload;
+    procedure Asy_SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
+    procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
@@ -262,7 +359,10 @@ type
     property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TimerInterval_ms: cardinal read GetTimerInterval_ms write SetTimerInterval_ms;
-    property TimerMessage: integer read GetTimerMessage write SetTimerMessage;
+    property TimerMessageID: integer read GetTimerMessageID write SetTimerMessageID;
+    property TimerMessageMethod: pointer read GetTimerMessageMethod write
+      SetTimerMessageMethod;
+    property TimerMessageName: string read GetTimerMessageName write SetTimerMessageName;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
     property WorkerInitialized: THandle read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
@@ -314,10 +414,12 @@ type
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
     procedure Execute;
-    procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure SetTimer(interval_ms: cardinal; timerMessage: integer = -1);
-    procedure StopTimer;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure SetExitStatus(exitCode: integer; const exitMessage: string);
+    procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
+    procedure StopTimer;
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -354,10 +456,12 @@ type
     otcDestroyLock: boolean;
     otcExecutor   : TOmniTaskExecutor;
     otcParameters : TOmniValueContainer;
+    otcQueueLength: integer;
     otcSharedInfo : TOmniSharedTaskInfo;
     otcThread     : TOmniThread;
   strict protected
     function  CreateTask: IOmniTask;
+    procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -378,18 +482,28 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    procedure Invoke(const msgMethod: pointer); overload; inline;
+    procedure Invoke(const msgMethod: pointer; msgData: array of const); overload;
+    procedure Invoke(const msgMethod: pointer; msgData: TOmniValue); overload; inline;
+    procedure Invoke(const msgName: string); overload; inline;
+    procedure Invoke(const msgName: string; msgData: array of const); overload; 
+    procedure Invoke(const msgName: string; msgData: TOmniValue); overload; inline;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
-    function  Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
-    function  SetTimer(interval_ms: cardinal; timerMessage: integer = -1): IOmniTaskControl;
+    function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
+      IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
+    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
+    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -452,7 +566,7 @@ begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
 
-function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl; 
+function CreateTask(const worker: IOmniWorker; const taskName: string): IOmniTaskControl;
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -461,6 +575,76 @@ function CreateTaskGroup: IOmniTaskGroup;
 begin
   Result := TOmniTaskGroup.Create;
 end; { CreateTaskGroup }
+
+{ TOmniInternalMessage }
+
+constructor TOmniInternalMessage.Create(internalMessageType: TOmniInternalMessageType);
+begin
+  imInternalMessageType := internalMessageType;
+end; { TOmniInternalMessage.Create }
+
+class function TOmniInternalMessage.InternalType(
+  const msg: TOmniMessage): TOmniInternalMessageType;
+begin
+  Assert(msg.MsgID = COtlReservedMsgID);
+  Result := TOmniInternalMessage(msg.MsgData.AsObject).InternalMessageType;
+end; { TOmniInternalMessage.InternalType }
+
+{ TOmniInternalStringMsg }
+
+constructor TOmniInternalStringMsg.Create(const msgName: string;
+  const msgData: TOmniValue);
+begin
+  inherited Create(imtStringMsg);
+  ismMsgName := msgName;
+  ismMsgData := msgData;
+end; { TOmniInternalStringMsg.Create }
+
+class function TOmniInternalStringMsg.CreateMessage(const msgName: string; msgData:
+  TOmniValue): TOmniMessage;
+begin
+  Result := TOmniMessage.Create(COtlReservedMsgID,
+    TOmniInternalStringMsg.Create(msgName, msgData));
+end; { TOmniInternalStringMsg.CreateMessage }
+
+class procedure TOmniInternalStringMsg.UnpackMessage(const msg: TOmniMessage; var
+  msgName: string; var msgData: TOmniValue);
+var
+  stringMsg: TOmniInternalStringMsg;
+begin
+  stringMsg := TOmniInternalStringMsg(msg.MsgData.AsObject);
+  msgName := stringMsg.MsgName;
+  msgData := stringMsg.MsgData;
+  FreeAndNil(stringMsg)
+end; { TOmniInternalStringMsg.UnpackMessage }
+
+{ TOmniInternalAddressMsg }
+
+constructor TOmniInternalAddressMsg.Create(const msgMethod: pointer; const msgData:
+  TOmniValue);
+begin
+  inherited Create(imtAddressMsg);
+  ismMsgMethod := msgMethod;
+  ismMsgData := msgData;
+end; { TOmniInternalAddressMsg.Create }
+
+class function TOmniInternalAddressMsg.CreateMessage(const msgMethod: pointer; msgData:
+  TOmniValue): TOmniMessage;
+begin
+  Result := TOmniMessage.Create(COtlReservedMsgID,
+    TOmniInternalAddressMsg.Create(msgMethod, msgData));
+end; { TOmniInternalAddressMsg.CreateMessage }
+
+class procedure TOmniInternalAddressMsg.UnpackMessage(const msg: TOmniMessage; var
+  msgMethod: pointer; var msgData: TOmniValue);
+var
+  addr: TOmniInternalAddressMsg;
+begin
+  addr := TOmniInternalAddressMsg(msg.MsgData.AsObject);
+  msgMethod := addr.MsgMethod;
+  msgData := addr.MsgData;
+  FreeAndNil(addr)
+end; { TOmniInternalAddressMsg.UnpackMessage }
 
 { TOmniTask }
 
@@ -550,9 +734,19 @@ begin
   otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
 end; { TOmniTask.SetExitStatus }
 
-procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessage: integer);
+procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessageID: integer);
 begin
-  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessage);
+  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageID);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMethod: pointer);
+begin
+  otExecutor_ref.Asy_SetTimer(interval_ms, timerMethod);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMessageName: string);
+begin
+  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageName);
 end; { TOmniTask.SetTimer }
 
 procedure TOmniTask.StopTimer;
@@ -615,6 +809,15 @@ begin
   //do-nothing
 end; { TOmniWorker.Timer }
 
+{ TOmniInvokeInfo }
+
+constructor TOmniInvokeInfo.Create(methodAddr: pointer; methodSignature: TOmniInvokeType);
+begin
+  inherited Create;
+  oiiAddress := methodAddr;
+  oiiSignature := methodSignature;
+end; { TOmniInvokeInfo.Create }
+
 { TOmniTaskExecutor }
 
 constructor TOmniTaskExecutor.Create(const workerIntf: IOmniWorker);
@@ -646,6 +849,7 @@ begin
   finally oteInternalLock.Release; end;
   FreeAndNil(oteInternalLock);
   FreeAndNil(oteTerminateHandles);
+  FreeAndNil(oteMethodHash);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -753,10 +957,8 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
             gotMsg := (oteCommList[awaited - idxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
           finally oteInternalLock.Release; end;
         end;
-        if gotMsg then begin
-          if assigned(WorkerIntf) then
-            WorkerIntf.DispatchMessage(msg);
-        end;
+        if gotMsg and assigned(WorkerIntf) then 
+          DispatchOmniMessage(msg);
       end // comm handles
       else if awaited = idxRebuildHandles then
         RebuildWaitHandles
@@ -765,14 +967,7 @@ begin { TOmniTaskExecutor.Asy_DispatchMessages }
       else if awaited = WAIT_IO_COMPLETION then
         // do-nothing
       else if awaited = WAIT_TIMEOUT then begin
-        if TimerMessage >= 0 then begin
-          msg.MsgID := TimerMessage;
-          msg.MsgData := 0;
-          if assigned(WorkerIntf) then
-            WorkerIntf.DispatchMessage(msg);
-        end
-        else if assigned(WorkerIntf) then
-          WorkerIntf.Timer;
+        CallOmniTimer;
         oteLastTimer_ms := DSiTimeGetTime64;
       end //WAIT_TIMEOUT
       else //errors
@@ -831,13 +1026,35 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_SetExitStatus }
 
-procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsg: integer);
+procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer);
 begin
-  TimerInterval_ms := interval_ms;
-  TimerMessage := timerMsg;
-  oteLastTimer_ms := DSiTimeGetTime64;
-  SetEvent(oteCommRebuildHandles);
+  Asy_SetTimerInt(interval_ms, timerMsgID, '', nil);
 end; { TOmniTaskExecutor.Asy_SetTimer }
+
+procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal;
+  const timerMethod: pointer);
+begin
+  Asy_SetTimerInt(interval_ms, -1, '', timerMethod);
+end; { TOmniTaskExecutor.Asy_SetTimer }
+
+procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string);
+begin
+  Asy_SetTimerInt(interval_ms, -1, timerMsgName, nil);
+end; { TOmniTaskExecutor.Asy_SetTimer }
+
+procedure TOmniTaskExecutor.Asy_SetTimerInt(interval_ms: cardinal; timerMsgID: integer;
+  const timerMsgName: string; const timerMsgMethod: pointer);
+begin
+  oteInternalLock.Acquire;
+  try
+    oteTimerInterval_ms.Value := cardinal(interval_ms);
+    oteTimerMessageMethod.Value := cardinal(timerMsgMethod);
+    oteTimerMessageName := timerMsgName;
+    UniqueString(oteTimerMessageName);
+    oteLastTimer_ms := DSiTimeGetTime64;
+  finally oteInternalLock.Release; end;
+  SetEvent(oteCommRebuildHandles);
+end; { TOmniTaskExecutor.Asy_SetTimerInt }
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
 begin
@@ -852,10 +1069,79 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
+procedure TOmniTaskExecutor.CallOmniTimer;
+var
+  msg           : TOmniMessage;
+  timerMsgID    : integer;
+  timerMsgMethod: pointer;
+  timerMsgName  : string;
+begin
+  oteInternalLock.Acquire;
+  try
+    timerMsgName := oteTimerMessageName;
+    UniqueString(timerMsgName);
+    timerMsgID := integer(oteTimerMessageID.Value);
+    timerMsgMethod := pointer(oteTimerMessageMethod.Value);
+  finally oteInternalLock.Release; end;
+  if (timerMsgID >= 0) or (timerMsgName <> '') or (timerMsgMethod <> nil) then begin
+    if timerMsgID >= 0 then begin
+      msg.MsgID := timerMsgID;
+      msg.MsgData := TOmniValue.Null;
+    end
+    else if timerMsgName <> '' then
+      msg := TOmniInternalStringMsg.CreateMessage(timerMsgName, TOmniValue.Null)
+    else
+      msg := TOmniInternalAddressMsg.CreateMessage(timerMsgMethod, TOmniValue.Null);
+    DispatchOmniMessage(msg);
+  end
+  else if assigned(WorkerIntf) then
+    WorkerIntf.Timer;
+end; { TOmniTaskExecutor.CallOmniTimer }
+
 procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
 end; { TOmniTaskExecutor.Cleanup }
+
+procedure TOmniTaskExecutor.DispatchOmniMessage(msg: TOmniMessage);
+var
+  methodAddr     : pointer;
+  methodInfoObj  : TObject;
+  methodInfo     : TOmniInvokeInfo absolute methodInfoObj;
+  methodName     : string;
+  methodSignature: TOmniInvokeType;
+  msgData        : TOmniValue;
+  obj            : TObject;
+begin
+  if msg.MsgID = COtlReservedMsgID then begin
+    Assert(assigned(WorkerIntf));
+    GetMethodNameFromInternalMessage(msg, methodName, msgData);
+    if methodName = '' then
+      raise Exception.Create('TOmniTaskExecutor.DispatchOmniMessage: Method name not set');
+    if not assigned(oteMethodHash) then
+      oteMethodHash := TGpStringObjectHash.Create(17, true); //usually there won't be many methods
+    if not oteMethodHash.Find(methodName, methodInfoObj) then begin
+      GetMethodAddrAndSignature(methodName, methodAddr, methodSignature);
+      methodInfo := TOmniInvokeInfo.Create(methodAddr, methodSignature);
+      oteMethodHash.Add(methodName, methodInfo);
+    end;
+    case methodInfo.Signature of
+      itSelf:
+        TOmniInvokeSignature_Self(methodInfo.Address)(WorkerIntf.Implementor);
+      itSelfAndOmniValue:
+        TOmniInvokeSignature_Self_OmniValue(methodInfo.Address)(WorkerIntf.Implementor, msgData);
+      itSelfAndObject:
+        begin
+          obj := msgData.AsObject;
+          TOmniInvokeSignature_Self_Object(methodInfo.Address)(WorkerIntf.Implementor, obj);
+        end
+      else
+        RaiseInvalidSignature(methodName);
+    end; //case methodSignature
+  end
+  else
+    WorkerIntf.DispatchMessage(msg);
+end; { TOmniTaskExecutor.DispatchMessage }
 
 function TOmniTaskExecutor.GetExitCode: integer;
 begin
@@ -871,23 +1157,125 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.GetExitMessage }
 
+procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
+  methodAddress: pointer; var methodSignature: TOmniInvokeType);
+const
+  CShortLen = SizeOf(ShortString) - 1;
+var
+  headerEnd       : cardinal;
+  methodInfoHeader: PMethodInfoHeader;
+  paramNum        : integer;
+  params          : PParamInfo;
+  paramType       : PTypeInfo;
+begin
+  // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
+  // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
+  methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, methodName);
+  methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
+  // find the method info
+  if not (assigned(methodInfoHeader) and assigned(methodAddress)) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Cannot find message method %s.%s',
+                              [WorkerIntf.Implementor.ClassName, methodName]);
+  // check the RTTI sanity
+  if methodInfoHeader.Len <= (SizeOf(TMethodInfoHeader) - CShortLen + Length(methodInfoHeader.Name)) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Class %d was compiled without RTTI',
+                              [WorkerIntf.Implementor.ClassName]);
+  // we can only process procedures
+  if assigned(methodInfoHeader.ReturnInfo.ReturnType) then
+    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
+                              'Method %s.%s must not return result',
+                              [WorkerIntf.Implementor.ClassName, methodName]);
+  // only limited subset of method signatures is allowed:
+  // (Self), (Self, const TOmniValue), (Self, var TObject)
+  headerEnd := cardinal(methodInfoHeader) + methodInfoHeader^.Len;
+  params := PParamInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
+            - CShortLen + SizeOf(TReturnInfo) + Length(methodInfoHeader^.Name));
+  paramNum := 0;
+  methodSignature := itUnknown;
+  // Loop over the parameters
+  while cardinal(params) < headerEnd do begin
+    Inc(paramNum);
+    paramType := params.ParamType^;
+    if paramNum = 1 then
+      if (params^.Flags <> []) or (paramType^.Kind <> tkClass) then
+        RaiseInvalidSignature(methodName)
+      else
+        methodSignature := itSelf
+    else if paramNum = 2 then
+      //code says 'const' but GetMethodInfo says 'pfVar' :(
+      if (params^.Flags * [pfConst, pfVar] <> []) and (paramType^.Kind = tkRecord) and
+         (SameText(paramType^.Name, 'TOmniValue'))
+      then
+        methodSignature := itSelfAndOmniValue
+      else if (params^.Flags = [pfVar]) and (paramType^.Kind = tkClass) then
+        methodSignature := itSelfAndObject
+      else
+        RaiseInvalidSignature(methodName)
+    else
+      RaiseInvalidSignature(methodName);
+    params := params.NextParam;
+  end;
+end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
+
+procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage; var
+  msgName: string; var msgData: TOmniValue);
+var
+  internalType: TOmniInternalMessageType;
+  method      : pointer;
+begin
+  internalType := TOmniInternalMessage.InternalType(msg);
+  case internalType of
+    imtStringMsg:
+      TOmniInternalStringMsg.UnpackMessage(msg, msgName, msgData);
+    imtAddressMsg:
+      begin
+        TOmniInternalAddressMsg.UnpackMessage(msg, method, msgData);
+        msgName := WorkerIntf.Implementor.MethodName(method);
+        if msgName = '' then
+          raise Exception.CreateFmt('TOmniTaskExecutor.GetMethodNameFromInternalMessage: ' +
+                  'Cannot find method name for method %p', [method]);
+      end
+    else
+      raise Exception.CreateFmt('TOmniTaskExecutor.GetMethodNameFromInternalMessage: ' +
+              'Internal message type %s is not supported',
+              [GetEnumName(TypeInfo(TOmniInternalMessageType), Ord(internalType))]);
+  end; //case internalType
+end; { TOmniTaskExecutor.GetMethodNameFromInternalMessage }
+
 function TOmniTaskExecutor.GetTimerInterval_ms: cardinal;
 begin
   Result := oteTimerInterval_ms.Value;
 end; { TOmniTaskExecutor.GetTimerInterval_ms }
 
-function TOmniTaskExecutor.GetTimerMessage: integer;
+function TOmniTaskExecutor.GetTimerMessageID: integer;
 begin
-  Result := integer(oteTimerMessage.Value);
-end; { TOmniTaskExecutor.GetTimerMessage }
+  Result := integer(oteTimerMessageID.Value);
+end; { TOmniTaskExecutor.GetTimerMessageID }
+
+function TOmniTaskExecutor.GetTimerMessageMethod: pointer;
+begin
+  Result := pointer(oteTimerMessageMethod.Value);
+end; { TOmniTaskExecutor.GetTimerMessageMethod }
+
+function TOmniTaskExecutor.GetTimerMessageName: string;
+begin
+  oteInternalLock.Acquire;
+  try
+    Result := oteTimerMessageName;
+    UniqueString(Result);
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.GetTimerMessageName }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
-  Win32Check(oteWorkerInitialized <> 0); 
+  Win32Check(oteWorkerInitialized <> 0);
   oteInternalLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
+  TimerMessageID := -1;
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
@@ -899,6 +1287,15 @@ begin
     DispatchMessage(Msg);
   end;
 end; { TOmniTaskControl.ProcessThreadMessages }
+
+procedure TOmniTaskExecutor.RaiseInvalidSignature(const methodName: string);
+begin
+  raise Exception.CreateFmt('TOmniTaskExecutor: ' +
+                            'Method %s.%s has invalid signature. Only following ' +
+                            'signatures are supported: (Self), ' +
+                            '(Self, const TOmniValue), (Self, var TObject)',
+                            [WorkerIntf.Implementor.ClassName, methodName]);
+end; { TOmniTaskExecutor.RaiseInvalidSignature }
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
 begin
@@ -916,12 +1313,30 @@ begin
   oteTimerInterval_ms.Value := value;
 end; { TOmniTaskExecutor.SetTimerInterval_ms }
 
-procedure TOmniTaskExecutor.SetTimerMessage(const value: integer);
+procedure TOmniTaskExecutor.SetTimerMessageID(const value: integer);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessage: Timer support is only available when working with an IOmniWorker');
-  oteTimerMessage.Value := cardinal(value);
-end; { TOmniTaskExecutor.SetTimerMessage }
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
+  oteTimerMessageID.Value := cardinal(value);
+end; { TOmniTaskExecutor.SetTimerMessageID }
+
+procedure TOmniTaskExecutor.SetTimerMessageMethod(const value: pointer);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
+  oteTimerMessageMethod.Value := cardinal(value);
+end; { TOmniTaskExecutor.SetTimerMessageMethod }
+
+procedure TOmniTaskExecutor.SetTimerMessageName(const value: string);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
+//  oteInternalLock.Acquire;
+//  try
+    oteTimerMessageName := value;
+    UniqueString(oteTimerMessageName);
+//  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.SetTimerMessageName }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
 begin
@@ -1004,8 +1419,15 @@ begin
   Result := TOmniTask.Create(otcExecutor, otcParameters, otcSharedInfo);
 end; { TOmniTaskControl.CreateTask }
 
+procedure TOmniTaskControl.EnsureCommChannel;
+begin
+  if not assigned(otcSharedInfo.CommChannel) then
+    otcSharedInfo.CommChannel := CreateTwoWayChannel(otcQueueLength);
+end; { TOmniTaskControl.EnsureCommChannel }
+
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
 begin
+  EnsureCommChannel;
   Result := otcSharedInfo.CommChannel.Endpoint1;
 end; { TOmniTaskControl.GetComm }
 
@@ -1051,16 +1473,46 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
+  otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
   otcSharedInfo.TaskName := taskName;
   otcSharedInfo.UniqueID := OtlUID.Increment;
-  otcSharedInfo.CommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
   otcSharedInfo.TerminateEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
+
+procedure TOmniTaskControl.Invoke(const msgMethod: pointer);
+begin
+  Invoke(msgMethod, TOmniValue.Null);
+end; { TOmniTaskControl.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: array of const);
+begin
+  Invoke(msgMethod, OpenArrayToVarArray(msgData));
+end; { TOmniTaskControl.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: TOmniValue);
+begin
+  Comm.Send(TOmniInternalAddressMsg.CreateMessage(msgMethod, msgData));
+end; { TOmniTaskControl.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgName: string);
+begin
+  Invoke(msgName, TOmniValue.Null);
+end; { TOmniCommunicationEndpoint.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgName: string; msgData: array of const);
+begin
+  Invoke(msgName, OpenArrayToVarArray(msgData));
+end; { TOmniCommunicationEndpoint.Invoke }
+
+procedure TOmniTaskControl.Invoke(const msgName: string; msgData: TOmniValue);
+begin
+  Comm.Send(TOmniInternalStringMsg.CreateMessage(msgName, msgData));
+end; { TOmniCommunicationEndpoint.Invoke }
 
 function TOmniTaskControl.Join(const group: IOmniTaskGroup): IOmniTaskControl;
 begin
@@ -1090,6 +1542,7 @@ end; { TOmniTaskControl.MsgWait }
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
   otcSharedInfo.MonitorWindow := 0;
+  EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.RemoveMonitor;
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
@@ -1102,7 +1555,8 @@ begin
   Result := Self;
 end; { TOmniTaskControl.Run }
 
-function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
+function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool = nil
+  {default pool}): IOmniTaskControl;
 begin
   otcParameters.Lock;
   if assigned(threadPool) then
@@ -1112,19 +1566,12 @@ begin
   Result := Self;
 end; { TOmniTaskControl.Schedule }
 
-function TOmniTaskControl.SetTimer(interval_ms: cardinal; timerMessage: integer):
-  IOmniTaskControl;
-begin
-  otcExecutor.TimerInterval_ms := interval_ms;
-  otcExecutor.TimerMessage := timerMessage;
-  Result := Self;
-end; { TOmniTaskControl.SetTimer }
-
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
   if otcParameters.IsLocked then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
   otcSharedInfo.MonitorWindow := hWindow;
+  EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
     integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
   Result := Self;
@@ -1158,6 +1605,36 @@ begin
   otcExecutor.Priority := threadPriority;
   Result := Self;
 end; { TOmniTaskControl.SetPriority }
+
+function TOmniTaskControl.SetQueueSize(numMessages: integer): IOmniTaskControl;
+begin
+  if assigned(otcSharedInfo.CommChannel) then
+    raise Exception.Create('TOmniTaskControl.SetQueueSize: Cannot set queue size. ' +
+                           'Queue already exists');
+  otcQueueLength := numMessages;
+  Result := Self;
+end; { TOmniTaskControl.SetQueueSize }
+
+function TOmniTaskControl.SetTimer(interval_ms: cardinal; timerMessageID: integer):
+  IOmniTaskControl;
+begin
+  otcExecutor.Asy_SetTimer(interval_ms, timerMessageID);
+  Result := Self;
+end; { TOmniTaskControl.SetTimer }
+
+function TOmniTaskControl.SetTimer(interval_ms: cardinal; const timerMethod: pointer):
+  IOmniTaskControl;
+begin
+  otcExecutor.Asy_SetTimer(interval_ms, timerMethod);
+  Result := Self;
+end; { TOmniTaskControl.SetTimer }
+
+function TOmniTaskControl.SetTimer(interval_ms: cardinal; const timerMessageName: string):
+  IOmniTaskControl;
+begin
+  otcExecutor.Asy_SetTimer(interval_ms, timerMessageName);
+  Result := Self;
+end; { TOmniTaskControl.SetTimer }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin

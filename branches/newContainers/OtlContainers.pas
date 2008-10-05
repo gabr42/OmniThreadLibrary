@@ -820,7 +820,7 @@ begin
   begin
 TryAgain:
     TaskPopUnderflowCounter := TaskPopUnderflow;
-    AtStartReference := FirstIn.Reference OR 1; //...Reference.bit0 := 1
+    AtStartReference := FirstIn.Reference OR 1; //Reference.bit0 := 1
     repeat
       CurrentReference := FirstIn.Reference;
       dec(TaskPopUnderflowCounter);
@@ -828,7 +828,7 @@ TryAgain:
     if (Byte(CurrentReference) AND 1 <> 0) and (AtStartReference <> CurrentReference) then
       goto TryAgain;
 {$IFNDEF QueueStaticReference}
-    NewReference := CurrentReference OR 1 + 2; //...Reference.bit0 := 1
+    NewReference := CurrentReference OR 1 + 2; //Reference.bit0 := 1
 {$ENDIF}
     if not AtomicCmpxchg4b(CurrentReference, NewReference, FirstIn.Reference) then
       goto TryAgain;
@@ -877,7 +877,7 @@ asm
   jnz   @TryToOverrideReference                                 //Task time underflow?
                                                                 //Queue is idle now
 {$IFNDEF QueueStaticReference}
-  lea   edx, eax + 3                                            //Calcolate new Reference value, Reference.bit0 = 1
+  lea   edx, eax + 3                                            //Calcolate new dinamic Reference value, Reference.bit0 = 1
 {$ENDIF}
   lock cmpxchg [edi].TOmniRingBuffer.FirstIn.Reference, edx     //Try to set new Reference...
   jnz   @TryAgain                                               //...too late?
@@ -886,6 +886,7 @@ asm
   cmp   eax, [edi].TOmniRingBuffer.LastIn.PData
   jz    @FinishEmpty                                            //Is buffer empty?
   mov   esi, [eax]                                              //esi := result
+                                                                //Calcolate new FirstIn.PData pointer
   lea   ebx, eax + 8                                            //ebx := ring buffer next address
   cmp   ebx, [edi].TOmniRingBuffer.EndBuffer                    //if ebx > EndBuffer then...
   cmova ebx, [edi].TOmniRingBuffer.StartBuffer                  //...ebx := StartBuffer
@@ -951,7 +952,7 @@ begin
   begin
 TryAgain:
     TaskPushUnderflowCounter := TaskPushUnderflow;
-    AtStartReference := LastIn.Reference OR 1; //...Reference.bit0 := 1
+    AtStartReference := LastIn.Reference OR 1; //Reference.bit0 := 1
     repeat
       CurrentReference := LastIn.Reference;
       dec(TaskPushUnderflowCounter);
@@ -959,7 +960,7 @@ TryAgain:
     if (Byte(CurrentReference) AND 1 <> 0) and (AtStartReference <> CurrentReference) then
       goto TryAgain;
 {$IFNDEF QueueStaticReference}
-    NewReference := CurrentReference OR 1 + 2; //...Reference.bit0 := 1
+    NewReference := CurrentReference OR 1 + 2; //Reference.bit0 := 1
 {$ENDIF}
     if not AtomicCmpxchg4b(CurrentReference, NewReference, LastIn.Reference) then
       goto TryAgain;
@@ -967,12 +968,8 @@ TryAgain:
     OldLastIn := LastIn.PData;
     OldLastIn.Reference := NewReference;
     if (NewReference <> LastIn.Reference) or
-      not AtomicCmpXchg8b(OldLastIn.PData, NewReference, data, 0, OldLastIn^) then
-    begin
-      //Clear Reference.bit0 if task own Reference
-      AtomicCmpxchg4b(NewReference, NewReference - 1, LastIn.Reference);
+      not AtomicCmpXchg8b(OldLastIn.PData, NewReference, data, NewReference, OldLastIn^) then
       goto TryAgain;
-    end;
     //Calcolate ringBuffer next LastIn address
     NewLastIn := pointer(cardinal(OldLastIn) + SizeOf(TReferencedPtr));
     if cardinal(NewLastIn) > cardinal(EndBuffer) then
@@ -1014,22 +1011,25 @@ asm
 @NewReferenceSet:
   push  esi                                                     //Store data pointer
   mov   ebx, esi                                                //ebx := data
-  xor   ecx, ecx                                                //clear Reference at data write to prevent ABA conflict
-  mov   esi, [edi].TOmniRingBuffer.LastIn.PData                 //esi := TReferencedPtr
+  mov   ecx, edx                                                //ecx := Reference
+  mov   esi, dword ptr [edi].TOmniRingBuffer.LastIn             //esi := LastIn
   mov   [esi].TReferencedPtr.Reference, edx                     //Set Reference Reference to TReferencedPtr
-  mov   eax, [esi].TReferencedPtr.PData                         //eax := old data
+  mov   eax, [esi].TReferencedPtr.PData                         //eax := old data !!!
   cmp   edx, [edi].TOmniRingBuffer.LastIn.Reference             //If Reference not the same then...
   jnz   @Skip                                                   //...too late?
-  lock cmpxchg8b qword ptr [esi].TReferencedPtr.PData           //Try to write...
-                                                                //...yes write success
+  lock cmpxchg8b qword ptr [esi].TReferencedPtr                 //Try to write...
   mov   eax, esi                                                //eax := LastIn
+  mov   edx, ecx                                                //edx := Reference
+@Skip:
   pop   esi                                                     //Restore data pointer
   jnz   @Begin                                                  //...no go?
-  lea   ecx, edx - 1                                            //ecx := Reference, Reference.bit0 = 0
+                                                                //...yes write success
+  dec   ecx                                                     //ecx := Reference, Reference.bit0 = 0
+                                                                //Calcolate new LastIn.PData pointer
   lea   ebx, eax + 8                                            //ebx := ring buffer next address
   cmp   ebx, [edi].TOmniRingBuffer.EndBuffer                    //if ebx > EndBuffer then...
   cmova ebx, [edi].TOmniRingBuffer.StartBuffer                  //...ebx := StartBuffer
-  lock cmpxchg8b qword ptr [edi].TOmniRingBuffer.LastIn         //Try to set new ring buffer next address
+  lock cmpxchg8b [edi].TOmniRingBuffer.LastIn                   //Try to set new ring buffer next address
 {$IFDEF QueueStaticReference}
   lea   edx, ecx + 1                                            //edx := Reference, Reference.bit0 = 1
 {$ENDIF}
@@ -1040,20 +1040,13 @@ asm
   pop   edi
   ret
 
-@Skip:
-  pop   esi                                                     //Restore data pointer
-  mov   eax, edx                                                //eax := Reference
-  dec   edx                                                     //edx := Reference, Reference.bit0 = 0
-  lock cmpxchg [edi].TOmniRingBuffer.LastIn.Reference, ecx      //Clear Reference.bit0 if task own Reference
-  jmp   @Begin
-
 @TryToOverrideReference:
   or    bl, 1                                                   //Force start Reference.bit0 = 1
   cmp   ebx, eax                                                //Is Reference still the same ?...
   jnz   @Begin                                                  //...queue task has new owner
                                                                 //...working task Reference counter underflow
 {$IFNDEF QueueStaticReference}
-  lea   edx, eax + 2                                            //ecx := Reference, Reference.bit0 = 0
+  lea   edx, eax + 2                                            //ecx := Reference, Reference.bit0 = 1
 {$ENDIF}
   lock cmpxchg [edi].TOmniRingBuffer.LastIn.Reference, edx      //Try to override current Reference value...
   jz    @NewReferenceSet                                        //...yes
@@ -1182,14 +1175,14 @@ begin
     TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
   end;
   //Calcolate first 4 minimum average for GetTimeStamp
-  n := ( GetMinAndClear(2) + GetMinAndClear(2) + GetMinAndClear(2) + GetMinAndClear(2));
+  n := (GetMinAndClear(2) + GetMinAndClear(2) + GetMinAndClear(2) + GetMinAndClear(2));
   //Calcolate first 4 minimum average for Pop rutine * 2
   obcRecycleRingBuffer.TaskPopUnderflow := ( GetMinAndClear(0) + GetMinAndClear(0) +
-    GetMinAndClear(0) + GetMinAndClear(0) - n) div 4;
+    GetMinAndClear(0) + GetMinAndClear(0) - n) div 6;
   obcPublicRingBuffer.TaskPopUnderflow := obcRecycleRingBuffer.TaskPopUnderflow;
   //Calcolate first 4 minimum average for Push rutine * 2
   obcRecycleRingBuffer.TaskPushUnderflow := (GetMinAndClear(1) + GetMinAndClear(1) +
-    GetMinAndClear(1) + GetMinAndClear(1) - n) div 4;
+    GetMinAndClear(1) + GetMinAndClear(1) - n) div 6;
   obcPublicRingBuffer.TaskPushUnderflow := obcRecycleRingBuffer.TaskPushUnderflow;
 end; { TOmniBaseStack.Initialize }
 

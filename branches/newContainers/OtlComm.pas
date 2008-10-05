@@ -31,10 +31,15 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-26
-///   Version           : 1.02
+///   Last modification : 2008-10-05
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2008-10-05
+///       - Added two overloaded versions of IOmniCommunicationEndpoint.ReceivedWait,
+///         which are just simple wrappers for WaitForSingleObject(NewMessageEvent) +
+///         Receive.
+///       - Defined OmniThreadLibrary-reserved message ID $FFFF.
 ///     1.02: 2008-09-26
 ///       - Better default queue calculation that takes into account OtlContainers
 ///         overhead and FastMM4 granulation.
@@ -54,6 +59,10 @@ uses
   OtlCommon,
   OtlContainers;
 
+const
+  //reserved for internal OTL messaging
+  COtlReservedMsgID = $FFFF;
+
 type
   {$A4}
   TOmniMessage = record
@@ -64,6 +73,7 @@ type
   end; { TOmniMessage }
 
 const
+  //calculate default queue size so that the queue memory gets as close to 64 KB as possible
   CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
 
 type
@@ -72,6 +82,8 @@ type
   //
     function  Receive(var msg: TOmniMessage): boolean; overload;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
+    function  ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean; overload;
+    function  ReceiveWait(var msgID: word; var msgData: TOmniValue; timeout_ms: cardinal): boolean; overload;
     procedure RemoveMonitor;
     procedure Send(const msg: TOmniMessage); overload;
     procedure Send(msgID: word); overload;
@@ -119,6 +131,9 @@ type
     constructor Create(readQueue, writeQueue: TOmniMessageQueue);
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
+    function  ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean; overload; inline;
+    function  ReceiveWait(var msgID: word; var msgData: TOmniValue; timeout_ms: cardinal):
+      boolean; overload; inline;
     procedure RemoveMonitor; inline;
     procedure Send(msgID: word); overload; inline;
     procedure Send(msgID: word; msgData: array of const); overload;
@@ -150,6 +165,20 @@ function CreateTwoWayChannel(numElements: integer): IOmniTwoWayChannel;
 begin
   Result := TOmniTwoWayChannel.Create(numElements);
 end; { CreateTwoWayChannel }
+
+{ TOmniMessage }
+
+constructor TOmniMessage.Create(aMsgID: word; aMsgData: TOmniValue);
+begin
+  MsgID := aMsgID;
+  MsgData := aMsgData;
+end; { TOmniMessage.Create }
+
+constructor TOmniMessage.Create(aMsgID: word);
+begin
+  MsgID := aMsgID;
+  MsgData := TOmniValue.Null;
+end; { TOmniMessage.Create }
 
 { TOmniMessageQueue }
 
@@ -209,6 +238,22 @@ begin
   if Result then
     msg := ceReader_ref.Dequeue;
 end; { TOmniCommunicationEndpoint.Receive }
+
+function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
+  cardinal): boolean;
+begin
+  Result := (WaitForSingleObject(NewMessageEvent, timeout_ms) = WAIT_OBJECT_0);
+  if Result then
+    Result := Receive(msg);
+end; { TOmniCommunicationEndpoint.ReceiveWait }
+
+function TOmniCommunicationEndpoint.ReceiveWait(var msgID: word; var msgData: TOmniValue;
+  timeout_ms: cardinal): boolean;
+begin
+  Result := (WaitForSingleObject(NewMessageEvent, timeout_ms) = WAIT_OBJECT_0);
+  if Result then
+    Result := Receive(msgID, msgData);
+end; { TOmniCommunicationEndpoint.ReceiveWait }
 
 procedure TOmniCommunicationEndpoint.RemoveMonitor;
 begin
@@ -303,20 +348,6 @@ begin
   end;
   Result := twcEndpoint[2];
 end; { TOmniTwoWayChannel.Endpoint2 }
-
-{ TOmniMessage }
-
-constructor TOmniMessage.Create(aMsgID: word; aMsgData: TOmniValue);
-begin
-  MsgID := aMsgID;
-  MsgData := aMsgData;
-end; { TOmniMessage.Create }
-
-constructor TOmniMessage.Create(aMsgID: word);
-begin
-  MsgID := aMsgID;
-  MsgData := TOmniValue.Null;
-end; { TOmniMessage.Create }
 
 end.
 

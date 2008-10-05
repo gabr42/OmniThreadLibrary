@@ -239,7 +239,6 @@ begin
   StartBaseStackStressTest(1, 1);
 end;
 
-
 procedure TfrmTestOtlContainers.btnClearLogClick(Sender: TObject);
 begin
   lbLog.Clear;
