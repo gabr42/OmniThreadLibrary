@@ -37,10 +37,19 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-26
-///   Version           : 1.03b
+///   Last modification : 2008-10-05
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2008-10-05
+///       - Implemented IOmniTaskContro.Invoke (six overloads), used for string- and
+///         pointer-based method dispatch (see demo 18 for more details and demo 19
+///         for benchmarks).
+///       - Implemented two SetTimer overloads using new invocation methods.
+///       - Implemented IOmniTaskControl.SetQueue, which can be used to increase (or
+///         reduce) the size of the IOmniTaskControl<->IOmniTask communication queue.
+///         This function must be called before .SetMonitor, .RemoveMonitor, .Run or
+///         .Schedule.
 ///     1.03b: 2008-09-26
 ///       - More stringent Win32 API result checking.
 ///     1.03a: 2008-09-25
@@ -137,15 +146,15 @@ type
   IOmniTaskGroup = interface;
 
   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
-  //
-    function  Alertable: IOmniTaskControl;
-    function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetUniqueID: int64;
+  //
+    function  Alertable: IOmniTaskControl;
+    function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     procedure Invoke(const msgMethod: pointer); overload;
     procedure Invoke(const msgMethod: pointer; msgData: array of const); overload;
     procedure Invoke(const msgMethod: pointer; msgData: TOmniValue); overload;
@@ -167,6 +176,7 @@ type
     function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
+    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -192,6 +202,7 @@ type
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
 //    function  Sequential: IOmniTaskGroup;
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
+//  maybe: if one of group processes dies, TerminateAll should automatically happen?
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskGroupEnumerator;
@@ -445,10 +456,12 @@ type
     otcDestroyLock: boolean;
     otcExecutor   : TOmniTaskExecutor;
     otcParameters : TOmniValueContainer;
+    otcQueueLength: integer;
     otcSharedInfo : TOmniSharedTaskInfo;
     otcThread     : TOmniThread;
   strict protected
     function  CreateTask: IOmniTask;
+    procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -481,11 +494,13 @@ type
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
-    function  Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
+    function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
+      IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
+    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
     function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
@@ -1404,8 +1419,15 @@ begin
   Result := TOmniTask.Create(otcExecutor, otcParameters, otcSharedInfo);
 end; { TOmniTaskControl.CreateTask }
 
+procedure TOmniTaskControl.EnsureCommChannel;
+begin
+  if not assigned(otcSharedInfo.CommChannel) then
+    otcSharedInfo.CommChannel := CreateTwoWayChannel(otcQueueLength);
+end; { TOmniTaskControl.EnsureCommChannel }
+
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
 begin
+  EnsureCommChannel;
   Result := otcSharedInfo.CommChannel.Endpoint1;
 end; { TOmniTaskControl.GetComm }
 
@@ -1451,10 +1473,10 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
+  otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
   otcSharedInfo.TaskName := taskName;
   otcSharedInfo.UniqueID := OtlUID.Increment;
-  otcSharedInfo.CommChannel := CreateTwoWayChannel;
   otcParameters := TOmniValueContainer.Create;
   otcSharedInfo.TerminateEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
@@ -1520,6 +1542,7 @@ end; { TOmniTaskControl.MsgWait }
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
   otcSharedInfo.MonitorWindow := 0;
+  EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.RemoveMonitor;
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
@@ -1532,7 +1555,8 @@ begin
   Result := Self;
 end; { TOmniTaskControl.Run }
 
-function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
+function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool = nil
+  {default pool}): IOmniTaskControl;
 begin
   otcParameters.Lock;
   if assigned(threadPool) then
@@ -1547,6 +1571,7 @@ begin
   if otcParameters.IsLocked then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
   otcSharedInfo.MonitorWindow := hWindow;
+  EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
     integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
   Result := Self;
@@ -1580,6 +1605,15 @@ begin
   otcExecutor.Priority := threadPriority;
   Result := Self;
 end; { TOmniTaskControl.SetPriority }
+
+function TOmniTaskControl.SetQueueSize(numMessages: integer): IOmniTaskControl;
+begin
+  if assigned(otcSharedInfo.CommChannel) then
+    raise Exception.Create('TOmniTaskControl.SetQueueSize: Cannot set queue size. ' +
+                           'Queue already exists');
+  otcQueueLength := numMessages;
+  Result := Self;
+end; { TOmniTaskControl.SetQueueSize }
 
 function TOmniTaskControl.SetTimer(interval_ms: cardinal; timerMessageID: integer):
   IOmniTaskControl;

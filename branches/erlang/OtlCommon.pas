@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-09-26
-///   Version           : 1.0c
+///   Last modification : 2008-10-05
+///   Version           : 1.0d
 ///</para><para>
 ///   History:
+///     1.0d: 2008-10-05
+///       - Use GetGoodHashSize from GpStringHash unit.
 ///     1.0c: 2008-09-26
 ///       - Check PostMessage result.
 ///     1.0b: 2008-09-19
