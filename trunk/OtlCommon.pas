@@ -240,13 +240,6 @@ uses
   SysUtils,
   GpStringHash;
 
-const
-  //List of good hash table sizes, taken from
-  //http://planetmath.org/encyclopedia/GoodHashTablePrimes.html
-  CGpGoodHashSizes: array [5..30] of cardinal = (53, 97, 193, 389, 769, 1543, 3079, 6151,
-    12289, 24593, 49157, 98317, 196613, 393241, 786433, 1572869, 3145739, 6291469,
-    12582917, 25165843, 50331653, 100663319, 201326611, 402653189, 805306457, 1610612741);
-
 type
   IOmniStringData = interface ['{21E52E56-390C-4066-B9FC-83862FFBCBF3}']
     function  GetValue: string; 
