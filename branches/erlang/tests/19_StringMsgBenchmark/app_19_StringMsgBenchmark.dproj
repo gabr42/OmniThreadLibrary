@@ -49,7 +49,7 @@
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
-    <DCCReference Include="..\18_StringMsgDispatch\test_19_StringMsgBenchmark.pas">
+    <DCCReference Include="test_19_StringMsgBenchmark.pas">
       <Form>frmTestStringMsgBenchmark</Form>
     </DCCReference>
   </ItemGroup>

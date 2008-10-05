@@ -43,7 +43,7 @@ uses
 {$R *.dfm}
 
 const
-  CNumMessages = CDefaultQueueSize*10;
+  CNumMessages = 100000;
 
 { TfrmTestOTL }
 
@@ -55,49 +55,49 @@ var
   timeElapsed  : int64;
   timeStart    : int64;
 begin
-  lbLog.ItemIndex := lbLog.Items.Add('Benchmarking message ID dispatch');
+  lbLog.ItemIndex := lbLog.Items.Add(
+    Format('Benchmarking message ID dispatch; %d messages', [CNumMessages]));
   benchmarkTask := CreateTask(TBenchmarkClient.Create(), 'StringMsgBenchmark')
     .SetQueueSize(CNumMessages)
     .Run;
   timeStart := DSiTimeGetTime64;
   for iMsg := 1 to CNumMessages do
     benchmarkTask.Comm.Send(WM_RECEIVE, iMsg-1);
-  WaitForSingleObject(benchmarkTask.Comm.NewMessageEvent, INFINITE);
+  benchmarkTask.Comm.ReceiveWait(msg, INFINITE);
   timeElapsed := DSiTimeGetTime64 - timeStart;
   lbLog.ItemIndex := lbLog.Items.Add(Format('Elapsed time: %d ms', [timeElapsed]));
-  benchmarkTask.Comm.Receive(msg);
   if msg.MsgID <> WM_STOP then
     lbLog.ItemIndex := lbLog.Items.Add(Format(
       'Invalid message received. Expected %d, received %d', [WM_STOP, msg.MsgID]));
   benchmarkTask.Terminate;
 
-  lbLog.ItemIndex := lbLog.Items.Add('Benchmarking method name dispatch');
+  lbLog.ItemIndex := lbLog.Items.Add(
+    Format('Benchmarking method name dispatch; %d invocations', [CNumMessages]));
   benchmarkTask := CreateTask(TBenchmarkClient.Create(), 'StringMsgBenchmark')
     .SetQueueSize(CNumMessages)
     .Run;
   timeStart := DSiTimeGetTime64;
   for iMsg := 1 to CNumMessages do
     benchmarkTask.Invoke('Receive', iMsg-1);
-  WaitForSingleObject(benchmarkTask.Comm.NewMessageEvent, INFINITE);
+  benchmarkTask.Comm.ReceiveWait(msg, INFINITE);
   timeElapsed := DSiTimeGetTime64 - timeStart;
   lbLog.ItemIndex := lbLog.Items.Add(Format('Elapsed time: %d ms', [timeElapsed]));
-  benchmarkTask.Comm.Receive(msg);
   if msg.MsgID <> WM_STOP then
     lbLog.ItemIndex := lbLog.Items.Add(Format(
       'Invalid message received. Expected %d, received %d', [WM_STOP, msg.MsgID]));
   benchmarkTask.Terminate;
 
-  lbLog.ItemIndex := lbLog.Items.Add('Benchmarking method pointer dispatch');
+  lbLog.ItemIndex := lbLog.Items.Add(
+    Format('Benchmarking method pointer dispatch; %d invocations', [CNumMessages]));
   benchmarkTask := CreateTask(TBenchmarkClient.Create(), 'StringMsgBenchmark')
     .SetQueueSize(CNumMessages)
     .Run;
   timeStart := DSiTimeGetTime64;
   for iMsg := 1 to CNumMessages do
     benchmarkTask.Invoke(@TBenchmarkClient.Receive, iMsg-1);
-  WaitForSingleObject(benchmarkTask.Comm.NewMessageEvent, INFINITE);
+  benchmarkTask.Comm.ReceiveWait(msg, INFINITE);
   timeElapsed := DSiTimeGetTime64 - timeStart;
   lbLog.ItemIndex := lbLog.Items.Add(Format('Elapsed time: %d ms', [timeElapsed]));
-  benchmarkTask.Comm.Receive(msg);
   if msg.MsgID <> WM_STOP then
     lbLog.ItemIndex := lbLog.Items.Add(Format(
       'Invalid message received. Expected %d, received %d', [WM_STOP, msg.MsgID]));

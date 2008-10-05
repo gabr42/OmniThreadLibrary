@@ -3,7 +3,7 @@ program app_19_StringMsgBenchmark;
 uses
   FastMM4,
   Forms,
-  test_19_StringMsgBenchmark in '..\18_StringMsgDispatch\test_19_StringMsgBenchmark.pas' {frmTestStringMsgBenchmark},
+  test_19_StringMsgBenchmark in 'test_19_StringMsgBenchmark.pas' {frmTestStringMsgBenchmark},
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
