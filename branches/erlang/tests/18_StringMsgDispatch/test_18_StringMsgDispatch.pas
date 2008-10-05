@@ -29,6 +29,7 @@ type
     btnStartHello    : TButton;
     btnStopHello     : TButton;
     btnTestInvalidMsg: TButton;
+    cbStringMessages : TCheckBox;
     lbLog            : TListBox;
     OmniEventMonitor1: TOmniEventMonitor;
     procedure btnChangeMessageClick(Sender: TObject);
@@ -57,8 +58,10 @@ uses
 
 procedure TfrmTestStringMsgDispatch.btnChangeMessageClick(Sender: TObject);
 begin
-  FHelloTask.Invoke('Change', 'Random ' + IntToStr(Random(1234)));
-//  FHelloTask.Invoke(@TAsyncHello.Change, 'Random ' + IntToStr(Random(1234)));
+  if cbStringMessages.Checked then
+    FHelloTask.Invoke('Change', 'Random ' + IntToStr(Random(1234)))
+  else
+    FHelloTask.Invoke(@TAsyncHello.Change, 'Random ' + IntToStr(Random(1234)));
 end;
 
 procedure TfrmTestStringMsgDispatch.btnSendObjectClick(Sender: TObject);
@@ -67,8 +70,10 @@ var
 begin
   sl := TStringList.Create;
   sl.Text := '42';
-//  FHelloTask.Invoke(@TAsyncHello.TheAnswer, sl);
-  FHelloTask.Invoke('TheAnswer', sl);
+  if cbStringMessages.Checked then
+    FHelloTask.Invoke('TheAnswer', sl)
+  else
+    FHelloTask.Invoke(@TAsyncHello.TheAnswer, sl);
 end;
 
 procedure TfrmTestStringMsgDispatch.btnStartHelloClick(Sender: TObject);
@@ -78,11 +83,13 @@ begin
   worker := TAsyncHello.Create;
   FHelloTask :=
     OmniEventMonitor1.Monitor(CreateTask(worker, 'Hello')).
-    SetTimer(1000, 'SendMessage').
-//    SetTimer(1000, @TAsyncHello.SendMessage).
     SetParameter('Delay', 1000).
-    SetParameter('Message', 'Hello').
-    Run;
+    SetParameter('Message', 'Hello');
+  if cbStringMessages.Checked then
+    FHelloTask.SetTimer(1000, 'SendMessage')
+  else
+    FHelloTask.SetTimer(1000, @TAsyncHello.SendMessage);
+  FHelloTask.Run;
   btnStartHello.Enabled := false;
   btnChangeMessage.Enabled := true;
   btnSendObject.Enabled := true;
@@ -98,8 +105,10 @@ end;
 
 procedure TfrmTestStringMsgDispatch.btnTestInvalidMsgClick(Sender: TObject);
 begin
-//  FHelloTask.Invoke('FooBar'); // will fail, FooBar method is not defined
-  FHelloTask.Invoke(@Self.btnTestInvalidMsg); // will fail, can only invoke methods from the task's class
+  if cbStringMessages.Checked then
+    FHelloTask.Invoke('FooBar') // will fail, FooBar method is not defined
+  else
+    FHelloTask.Invoke(@Self.btnTestInvalidMsg); // will fail, can only invoke methods from the task's class
 end;
 
 procedure TfrmTestStringMsgDispatch.FormCloseQuery(Sender: TObject; var CanClose:

@@ -15,63 +15,71 @@ object frmTestStringMsgDispatch: TfrmTestStringMsgDispatch
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
-    Left = 104
+    Left = 120
     Top = 0
-    Width = 492
+    Width = 476
     Height = 286
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 0
+    TabOrder = 6
   end
   object btnStartHello: TButton
     Left = 8
     Top = 8
-    Width = 90
+    Width = 106
     Height = 25
     Caption = 'Start "Hello"'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = btnStartHelloClick
   end
   object btnStopHello: TButton
     Left = 8
     Top = 132
-    Width = 90
+    Width = 106
     Height = 25
     Caption = 'Stop "Hello"'
     Enabled = False
-    TabOrder = 2
+    TabOrder = 4
     OnClick = btnStopHelloClick
   end
   object btnChangeMessage: TButton
     Left = 8
     Top = 39
-    Width = 90
+    Width = 106
     Height = 25
     Caption = 'Change message'
     Enabled = False
-    TabOrder = 3
+    TabOrder = 1
     OnClick = btnChangeMessageClick
   end
   object btnTestInvalidMsg: TButton
     Left = 8
-    Top = 70
-    Width = 90
+    Top = 101
+    Width = 106
     Height = 25
     Caption = 'Invalid message'
     Enabled = False
-    TabOrder = 4
+    TabOrder = 3
     OnClick = btnTestInvalidMsgClick
   end
   object btnSendObject: TButton
     Left = 8
-    Top = 101
-    Width = 90
+    Top = 70
+    Width = 106
     Height = 25
     Caption = 'Send object'
     Enabled = False
-    TabOrder = 5
+    TabOrder = 2
     OnClick = btnSendObjectClick
+  end
+  object cbStringMessages: TCheckBox
+    Left = 8
+    Top = 184
+    Width = 106
+    Height = 17
+    Caption = 'String messages'
+    TabOrder = 5
   end
   object OmniEventMonitor1: TOmniEventMonitor
     OnTaskMessage = OmniEventMonitor1TaskMessage
