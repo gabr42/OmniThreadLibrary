@@ -446,9 +446,9 @@ BEGIN
 	SysConst_SInvalidOp,	"Invalid floating point operation"
 END
 
-/* c:\program files\rad studio\lib\Controls.res */
-/* c:\program files\rad studio\lib\Buttons.res */
-/* c:\program files\rad studio\lib\FileCtrl.res */
+/* c:\program files\codegear\rad studio\5.0\lib\Controls.res */
+/* c:\program files\codegear\rad studio\5.0\lib\Buttons.res */
+/* c:\program files\codegear\rad studio\5.0\lib\FileCtrl.res */
 /* X:\MSTPL\OmniThreadLibrary\tests\3_HelloWorld_with_package\test_3_HelloWorld_with_package.dfm */
 /* X:\MSTPL\OmniThreadLibrary\tests\3_HelloWorld_with_package\app_3_HelloWorld_with_package.res */
 /* X:\MSTPL\OmniThreadLibrary\tests\3_HelloWorld_with_package\app_3_HelloWorld_with_package.drf */
