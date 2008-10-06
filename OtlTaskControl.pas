@@ -51,7 +51,7 @@
 ///       - Implemented IOmniTaskControl.SetQueue, which can be used to increase (or
 ///         reduce) the size of the IOmniTaskControl<->IOmniTask communication queue.
 ///         This function must be called before .SetMonitor, .RemoveMonitor, .Run or
-///         .Schedule.
+///         .Schedule.            
 ///     1.03b: 2008-09-26
 ///       - More stringent Win32 API result checking.
 ///     1.03a: 2008-09-25
@@ -681,7 +681,7 @@ begin
   finally SetEvent(otSharedInfo.TerminatedEvent); end;
   if assigned(otSharedInfo.ChainTo) and
      (otSharedInfo.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
-  then
+  then                        
     otSharedInfo.ChainTo.Run;
   otSharedInfo.ChainTo := nil;
 end; { TOmniTask.Execute }
