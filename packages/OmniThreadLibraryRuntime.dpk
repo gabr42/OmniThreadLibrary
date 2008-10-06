@@ -32,6 +32,15 @@ requires
   vcl;
 
 contains
+  GpLists in '..\src\GpLists.pas',
+  GpStuff in '..\src\GpStuff.pas',
+{$IFNDEF Unicode}
+  HVStringBuilder in '..\src\HVStringBuilder.pas',
+  HVStringData in '..\src\HVStringData.pas',
+{$ENDIF}
+  SpinLock in '..\src\SpinLock.pas',
+  GpStringHash in '..\src\GpStringHash.pas',
+  DetailedRTTI in '..\src\DetailedRTTI.pas',
   OtlCommon in '..\OtlCommon.pas',
   OtlContainers in '..\OtlContainers.pas',
   OtlComm in '..\OtlComm.pas',
@@ -39,13 +48,6 @@ contains
   OtlTaskControl in '..\OtlTaskControl.pas',
   OtlThreadPool in '..\OtlThreadPool.pas',
   OtlEventMonitor in '..\OtlEventMonitor.pas',
-  DSiWin32 in '..\src\DSiWin32.pas',
-  GpLists in '..\src\GpLists.pas',
-  GpStuff in '..\src\GpStuff.pas',
-{$IFNDEF Unicode}
-  HVStringBuilder in '..\src\HVStringBuilder.pas',
-  HVStringData in '..\src\HVStringData.pas',
-{$ENDIF}
-  SpinLock in '..\src\SpinLock.pas';
+  DSiWin32 in '..\src\DSiWin32.pas';
 
 end.
