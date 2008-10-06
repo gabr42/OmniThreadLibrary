@@ -37,12 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-05
-///   Version           : 1.04
+///   Last modification : 2008-10-06
+///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.04a: 2008-10-06
+///       - IOmniTaskControl.Invoke modified to return IOmniTaskControl.
 ///     1.04: 2008-10-05
-///       - Implemented IOmniTaskContro.Invoke (six overloads), used for string- and
+///       - Implemented IOmniTaskControl.Invoke (six overloads), used for string- and
 ///         pointer-based method dispatch (see demo 18 for more details and demo 19
 ///         for benchmarks).
 ///       - Implemented two SetTimer overloads using new invocation methods.
@@ -155,12 +157,12 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
-    procedure Invoke(const msgMethod: pointer); overload;
-    procedure Invoke(const msgMethod: pointer; msgData: array of const); overload;
-    procedure Invoke(const msgMethod: pointer; msgData: TOmniValue); overload;
-    procedure Invoke(const msgName: string); overload;
-    procedure Invoke(const msgName: string; msgData: array of const); overload;
-    procedure Invoke(const msgName: string; msgData: TOmniValue); overload;
+    function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
+    function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
+    function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
+    function  Invoke(const msgName: string): IOmniTaskControl; overload;
+    function  Invoke(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
+    function  Invoke(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
@@ -482,12 +484,12 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
-    procedure Invoke(const msgMethod: pointer); overload; inline;
-    procedure Invoke(const msgMethod: pointer; msgData: array of const); overload;
-    procedure Invoke(const msgMethod: pointer; msgData: TOmniValue); overload; inline;
-    procedure Invoke(const msgName: string); overload; inline;
-    procedure Invoke(const msgName: string; msgData: array of const); overload; 
-    procedure Invoke(const msgName: string; msgData: TOmniValue); overload; inline;
+    function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
+    function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
+    function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload; inline;
+    function  Invoke(const msgName: string): IOmniTaskControl; overload; inline;
+    function  Invoke(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
+    function  Invoke(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload; inline;
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
@@ -1484,34 +1486,40 @@ begin
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
 end; { TOmniTaskControl.Initialize }
 
-procedure TOmniTaskControl.Invoke(const msgMethod: pointer);
+function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
 begin
   Invoke(msgMethod, TOmniValue.Null);
+  Result := Self;
 end; { TOmniTaskControl.Invoke }
 
-procedure TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: array of const);
+function TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl;
 begin
   Invoke(msgMethod, OpenArrayToVarArray(msgData));
+  Result := Self;
 end; { TOmniTaskControl.Invoke }
 
-procedure TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: TOmniValue);
+function TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl;
 begin
   Comm.Send(TOmniInternalAddressMsg.CreateMessage(msgMethod, msgData));
+  Result := Self;
 end; { TOmniTaskControl.Invoke }
 
-procedure TOmniTaskControl.Invoke(const msgName: string);
+function TOmniTaskControl.Invoke(const msgName: string): IOmniTaskControl;
 begin
   Invoke(msgName, TOmniValue.Null);
+  Result := Self;
 end; { TOmniCommunicationEndpoint.Invoke }
 
-procedure TOmniTaskControl.Invoke(const msgName: string; msgData: array of const);
+function TOmniTaskControl.Invoke(const msgName: string; msgData: array of const): IOmniTaskControl;
 begin
   Invoke(msgName, OpenArrayToVarArray(msgData));
+  Result := Self;
 end; { TOmniCommunicationEndpoint.Invoke }
 
-procedure TOmniTaskControl.Invoke(const msgName: string; msgData: TOmniValue);
+function TOmniTaskControl.Invoke(const msgName: string; msgData: TOmniValue): IOmniTaskControl;
 begin
   Comm.Send(TOmniInternalStringMsg.CreateMessage(msgName, msgData));
+  Result := Self;
 end; { TOmniCommunicationEndpoint.Invoke }
 
 function TOmniTaskControl.Join(const group: IOmniTaskGroup): IOmniTaskControl;
