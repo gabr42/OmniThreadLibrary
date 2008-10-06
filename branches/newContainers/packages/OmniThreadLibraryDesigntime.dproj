@@ -33,9 +33,9 @@
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <DCCReference Include="..\OtlRegister.pas" />
-    <DCCReference Include="C:\Documents and Settings\gabr\OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="C:\Documents and Settings\gabr\rtl.dcp" />
-    <DCCReference Include="C:\Documents and Settings\gabr\vcl.dcp" />
-    <DCCReference Include="C:\Documents and Settings\gabr\vclx.dcp" />
+    <DCCReference Include="OmniThreadLibraryRuntime.dcp" />
+    <DCCReference Include="rtl.dcp" />
+    <DCCReference Include="vcl.dcp" />
+    <DCCReference Include="vclx.dcp" />
   </ItemGroup>
 </Project>
