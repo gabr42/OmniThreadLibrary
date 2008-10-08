@@ -9,7 +9,8 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor, OtlThreadPool;
+  OtlEventMonitor,
+  OtlThreadPool;
 
 const
   CNumDataPoints = 10000000; //10.000.000
