@@ -1172,7 +1172,7 @@ var
 begin
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
-  methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, methodName);
+  methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, ShortString(methodName));
   methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
   // find the method info
   if not (assigned(methodInfoHeader) and assigned(methodAddress)) then
@@ -1208,7 +1208,7 @@ begin
     else if paramNum = 2 then
       //code says 'const' but GetMethodInfo says 'pfVar' :(
       if (params^.Flags * [pfConst, pfVar] <> []) and (paramType^.Kind = tkRecord) and
-         (SameText(paramType^.Name, 'TOmniValue'))
+         (SameText(string(paramType^.Name), 'TOmniValue'))
       then
         methodSignature := itSelfAndOmniValue
       else if (params^.Flags = [pfVar]) and (paramType^.Kind = tkClass) then
