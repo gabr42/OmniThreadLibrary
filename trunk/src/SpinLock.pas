@@ -5,8 +5,8 @@ unit SpinLock;
 # Name:        SpinLock.pas
 # Author:      Istvan Agoston <Lee_Nover@delphi-si.com>
 # Created:     2007-03-25
-# Last Change: 2008-08-29
-# Version:     1.1.10
+# Last Change: 2008-10-07
+# Version:     1.1.11
 
 # Description:
 
@@ -48,6 +48,8 @@ unit SpinLock;
 
 
 # History:
+  2008-10-07
+    ! fixed a critical bug in TicketSpinLock.Acquire; did not set a local Owner before jumping
 
   2008-08-29
     * moved constants out of classes for D7 compatibility
@@ -98,6 +100,10 @@ unit SpinLock;
 {$DEFINE SpinLock}
 {$DEFINE ASM}
 {$DEFINE DynamicSleep}
+
+{$IFDEF PUREPASCAL}
+  {$UNDEF ASM}
+{$ENDIF}
 
 interface
 
@@ -182,6 +188,7 @@ type
   end;
 
 function ProcessIdToSessionId(const dwProcessId: DWORD; out pSessionId: DWORD): BOOL; stdcall; external kernel32;
+
 
 implementation
 
@@ -649,12 +656,12 @@ begin
 asm
   mov ecx, fs:[$00000018]       // get thread information block
   mov edx, [eax].FOwner         // move owner to edx
+  mov LOwnerPtr, edx            // store Owner record in local variable
   mov ecx, [ecx+$24]            // get thread id into ecx
   cmp ecx, [edx]                // compare the owner
   je @@incLockCount             // if we own the lock just exit and increment lock count
 
   mov LLock, ecx                // store ThreadID in local variable
-  mov LOwnerPtr, edx            // store Owner record in local variable
   mov ecx, CInc
   lock xadd [edx+TSLOwnerOffset], ecx // increment the Ticket number and get the owner|ticket in ecx
   movzx edx, cx                 // copy the owner to edx
