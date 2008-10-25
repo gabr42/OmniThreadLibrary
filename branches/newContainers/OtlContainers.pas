@@ -563,7 +563,11 @@ var
     RingBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
       SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
     obcPublicRingBuffer := AllocMem(RingBufferSize);
+    Assert(cardinal(obcPublicRingBuffer) mod 8 = 0,
+      'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
     obcRecycleRingBuffer := AllocMem(RingBufferSize);
+    Assert(cardinal(obcRecycleRingBuffer) mod 8 = 0,
+      'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
     // set obcPublicRingBuffer head
     obcPublicRingBuffer.FirstIn.PData := @obcPublicRingBuffer.Buffer[0];
     obcPublicRingBuffer.LastIn.PData := @obcPublicRingBuffer.Buffer[0];
