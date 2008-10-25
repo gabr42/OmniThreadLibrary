@@ -83,7 +83,8 @@ type
     property NewDataEvent: THandle read GetNewDataEvent;
   end; { IOmniNotifySupport }
 
-  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coAdvancedStack, coStackedQueue, coQueue);
+  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coAdvancedStack,
+    coStackedQueue, coQueue);
   TOmniContainerOptions = set of TOmniContainerOption;
 
   PReferencedPtr = ^TReferencedPtr;
@@ -134,13 +135,13 @@ type
     RemoveLinkFormStack : function (var chain: TOmniChain): POmniLinkedData;
     InsertLinkToStack   : procedure (const link: POmniLinkedData; var chain: TOmniChain);
     class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
-    class function UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
-    class function RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
+    class function  UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
+    class function  RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
     class procedure InsertLinkToQueue(const data: pointer; const ringBuffer: POmniRingBuffer); static;
-    function EnqueueQueue(const value): boolean;
-    function DequeueQueue(var value): boolean;
-    function DequeueStack(var value): boolean;
-    function EnqueueStack(const value): boolean;
+    function  EnqueueQueue(const value): boolean;
+    function  DequeueQueue(var value): boolean;
+    function  DequeueStack(var value): boolean;
+    function  EnqueueStack(const value): boolean;
     procedure EmptyPureQueue;
     procedure EmptyStackedQueue;
     procedure EmptyStack; virtual;
@@ -430,8 +431,7 @@ end; { TOmniBaseContainer.Create }
 destructor TOmniBaseContainer.Destroy;
 begin
   FreeMem(obcDataBuffer);
-  if not (coStackedQueue in obcOptions) and (coQueue in obcOptions) then
-  begin
+  if not (coStackedQueue in obcOptions) and (coQueue in obcOptions) then begin
     FreeMem(obcPublicRingBuffer);
     FreeMem(obcRecycleRingBuffer);
   end;
