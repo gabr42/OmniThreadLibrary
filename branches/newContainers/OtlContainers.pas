@@ -119,6 +119,43 @@ type
   end; { TOmniLinkedData }
 
   TOmniBaseContainer = class abstract(TInterfacedObject)
+  strict protected // placeholder for list headers
+    obcListHeaders      : array [1 .. 3 * SizeOf(TOmniChain) + 4] of byte;
+  strict protected
+    obcDataBuffer       : pointer;
+    obcElementSize      : integer;
+    obcNumElements      : integer;
+    obcPublicChainP     : POmniChain;
+    obcRecycleChainP    : POmniChain;
+    obcPublicRingBuffer : POmniRingBuffer;
+    obcRecycleRingBuffer: POmniRingBuffer;
+    obcDequeuedMessagesP: POmniChain;
+    obcOptions          : TOmniContainerOptions;
+    RemoveLinkFormStack : function (var chain: TOmniChain): POmniLinkedData;
+    InsertLinkToStack   : procedure (const link: POmniLinkedData; var chain: TOmniChain);
+    class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
+    class function UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
+    class function RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
+    class procedure InsertLinkToQueue(const data: pointer; const ringBuffer: POmniRingBuffer); static;
+    function EnqueueQueue(const value): boolean;
+    function DequeueQueue(var value): boolean;
+    function DequeueStack(var value): boolean;
+    function EnqueueStack(const value): boolean;
+    procedure EmptyPureQueue;
+    procedure EmptyStackedQueue;
+    procedure EmptyStack; virtual;
+  public
+    constructor Create(Options: TOmniContainerOptions = []);
+    destructor  Destroy; override;
+    function  IsEmptyPureQueue: boolean;
+    function  IsEmptyStackedQueue: boolean;
+    function  IsEmptyStack: boolean;
+    function  IsFullPureQueue: boolean;
+    function  IsFullStack: boolean;
+    procedure Initialize(numElements, elementSize: integer); virtual;
+    property ElementSize: integer read obcElementSize;
+    property NumElements: integer read obcNumElements;
+    property Options: TOmniContainerOptions read obcOptions;
   end; { TOmniBaseContainer }
 
   TOmniBaseStack = class(TOmniBaseContainer, IOmniStack)
