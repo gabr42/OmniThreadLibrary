@@ -41,8 +41,14 @@ type
     OmniEventMonitor1           : TOmniEventMonitor;
     SaveDialog                 : TSaveDialog;
     btnClearLog: TButton;
+    btnBaseQueue1to2: TButton;
+    btnBaseQueue2to2: TButton;
+    btnQueue1to2: TButton;
+    btnQueue2to2: TButton;
     procedure btnAllTestsClick(Sender: TObject);
+    procedure btnBaseQueue1to2Click(Sender: TObject);
     procedure btnBaseQueue2to1Click(Sender: TObject);
+    procedure btnBaseQueue2to2Click(Sender: TObject);
     procedure btnBaseQueue4to1Click(Sender: TObject);
     procedure btnBaseQueueStressTestClick(Sender: TObject);
     procedure btnBaseStack1to2Click(Sender: TObject);
@@ -51,7 +57,9 @@ type
     procedure btnBaseStack4to1Click(Sender: TObject);
     procedure btnBaseStackStressTestClick(Sender: TObject);
     procedure btnClearLogClick(Sender: TObject);
+    procedure btnQueue1to2Click(Sender: TObject);
     procedure btnQueue2to1Click(Sender: TObject);
+    procedure btnQueue2to2Click(Sender: TObject);
     procedure btnQueue4to1Click(Sender: TObject);
     procedure btnQueueCorrectnessTestClick(Sender: TObject);
     procedure btnQueueStressTestClick(Sender: TObject);
@@ -199,9 +207,19 @@ begin
   (FQueuedTests[0] as TButton).Click;
 end;
 
+procedure TfrmTestOtlContainers.btnBaseQueue1to2Click(Sender: TObject);
+begin
+  StartBaseQueueStressTest(1, 2);
+end;
+
 procedure TfrmTestOtlContainers.btnBaseQueue2to1Click(Sender: TObject);
 begin
   StartBaseQueueStressTest(2, 1);
+end;
+
+procedure TfrmTestOtlContainers.btnBaseQueue2to2Click(Sender: TObject);
+begin
+  StartBaseQueueStressTest(2, 2);
 end;
 
 procedure TfrmTestOtlContainers.btnBaseQueue4to1Click(Sender: TObject);
@@ -244,9 +262,19 @@ begin
   lbLog.Clear;
 end;
 
+procedure TfrmTestOtlContainers.btnQueue1to2Click(Sender: TObject);
+begin
+  StartQueueStressTest(1, 2);
+end;
+
 procedure TfrmTestOtlContainers.btnQueue2to1Click(Sender: TObject);
 begin
   StartQueueStressTest(2, 1);
+end;
+
+procedure TfrmTestOtlContainers.btnQueue2to2Click(Sender: TObject);
+begin
+  StartQueueStressTest(2, 2);
 end;
 
 procedure TfrmTestOtlContainers.btnQueue4to1Click(Sender: TObject);
@@ -522,8 +550,10 @@ begin
     Inc(counter);
     if BaseQueue.Enqueue(counter) then
       Inc(numEnqueued)
-    else
+    else begin
       Inc(numSkipped);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d enqueued, %d skipped; %d msg/s',
@@ -559,8 +589,10 @@ begin
     Inc(counter);
     if BaseStack.Push(counter) then
       Inc(numPushed)
-    else
+    else begin
       Inc(numSkipped);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d pushed, %d skipped; %d msg/s',
@@ -596,8 +628,10 @@ begin
     Inc(counter);
     if Queue.Enqueue(counter) then
       Inc(numEnqueued)
-    else
+    else begin
       Inc(numSkipped);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d enqueued, %d skipped; %d msg/s',
@@ -674,8 +708,10 @@ begin
     Inc(counter);
     if Stack.Push(counter) then
       Inc(numPushed)
-    else
+    else begin
       Inc(numSkipped);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Writer completed in %d ms; %d pushed, %d skipped; %d msg/s',
@@ -751,8 +787,10 @@ begin
     end;
     if BaseQueue.Dequeue(counter) then
       Inc(numDequeued)
-    else
+    else begin
       Inc(numEmpty);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d dequeued, %d empty; %d msg/s',
@@ -787,8 +825,10 @@ begin
     end;
     if BaseStack.Pop(counter) then
       Inc(numPopped)
-    else
+    else begin
       Inc(numEmpty);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d popped, %d empty; %d msg/s',
@@ -856,8 +896,10 @@ begin
     end;
     if Queue.Dequeue(counter) then
       Inc(numDequeued)
-    else
+    else begin
       Inc(numEmpty);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d dequeued, %d empty; %d msg/s',
@@ -925,8 +967,10 @@ begin
     end;
     if Stack.Pop(counter) then
       Inc(numPopped)
-    else
+    else begin
       Inc(numEmpty);
+      DSiYield;
+    end;
   until false;
   Task.Comm.Send(MSG_TEST_END, Format(
     'Reader completed in %d ms; %d popped, %d empty; %d msg/s',

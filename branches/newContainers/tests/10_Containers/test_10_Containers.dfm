@@ -3,7 +3,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   Top = 0
   ActiveControl = btnBaseStackStressTest
   Caption = 'OtlContainers tester'
-  ClientHeight = 576
+  ClientHeight = 620
   ClientWidth = 636
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,18 +16,19 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   OnDestroy = FormDestroy
   DesignSize = (
     636
-    576)
+    620)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 143
     Top = 0
     Width = 493
-    Height = 576
+    Height = 620
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 23
+    ExplicitHeight = 576
   end
   object btnStackStressTest: TButton
     Left = 8
@@ -40,7 +41,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnQueueStressTest: TButton
     Left = 8
-    Top = 336
+    Top = 364
     Width = 129
     Height = 25
     Caption = 'Queue stress test'
@@ -58,7 +59,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnQueueCorrectnessTest: TButton
     Left = 8
-    Top = 389
+    Top = 447
     Width = 129
     Height = 25
     Caption = 'Queue correctness test'
@@ -112,13 +113,14 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 512
+    Top = 556
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
     TabOrder = 22
     OnClick = btnSaveLogClick
+    ExplicitTop = 512
   end
   object btnStack4to1: TButton
     Left = 8
@@ -176,7 +178,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnBaseQueueCorrectnessTest: TButton
     Left = 8
-    Top = 301
+    Top = 327
     Width = 129
     Height = 25
     Caption = 'Base q. correctness test'
@@ -193,8 +195,8 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     OnClick = btnBaseQueue2to1Click
   end
   object btnBaseQueue4to1: TButton
-    Left = 74
-    Top = 274
+    Left = 8
+    Top = 301
     Width = 63
     Height = 25
     Caption = '4 -> 1'
@@ -203,7 +205,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnQueue2to1: TButton
     Left = 8
-    Top = 363
+    Top = 392
     Width = 63
     Height = 25
     Caption = '2 -> 1'
@@ -211,8 +213,8 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     OnClick = btnQueue2to1Click
   end
   object btnQueue4to1: TButton
-    Left = 74
-    Top = 363
+    Left = 8
+    Top = 419
     Width = 63
     Height = 25
     Caption = '4 -> 1'
@@ -221,7 +223,7 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object inpTestDuration_sec: TLabeledEdit
     Left = 8
-    Top = 485
+    Top = 529
     Width = 129
     Height = 21
     Anchors = [akLeft, akBottom]
@@ -230,10 +232,11 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     EditLabel.Caption = 'Test duration (sec):'
     TabOrder = 21
     Text = '60'
+    ExplicitTop = 485
   end
   object btnAllTests: TButton
     Left = 8
-    Top = 430
+    Top = 482
     Width = 129
     Height = 25
     Caption = 'Run all tests'
@@ -242,13 +245,50 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   end
   object btnClearLog: TButton
     Left = 8
-    Top = 543
+    Top = 587
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Clear log'
     TabOrder = 24
     OnClick = btnClearLogClick
+    ExplicitTop = 543
+  end
+  object btnBaseQueue1to2: TButton
+    Left = 74
+    Top = 274
+    Width = 63
+    Height = 25
+    Caption = '1 -> 2'
+    TabOrder = 25
+    OnClick = btnBaseQueue1to2Click
+  end
+  object btnBaseQueue2to2: TButton
+    Left = 74
+    Top = 301
+    Width = 63
+    Height = 25
+    Caption = '2 -> 2'
+    TabOrder = 26
+    OnClick = btnBaseQueue2to2Click
+  end
+  object btnQueue1to2: TButton
+    Left = 74
+    Top = 392
+    Width = 63
+    Height = 25
+    Caption = '1 -> 2'
+    TabOrder = 27
+    OnClick = btnQueue1to2Click
+  end
+  object btnQueue2to2: TButton
+    Left = 74
+    Top = 419
+    Width = 63
+    Height = 25
+    Caption = '2 -> 2'
+    TabOrder = 28
+    OnClick = btnQueue2to2Click
   end
   object OmniEventMonitor1: TOmniEventMonitor
     OnTaskMessage = OmniEventMonitor1TaskMessage
