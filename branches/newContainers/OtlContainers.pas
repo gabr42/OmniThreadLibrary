@@ -124,6 +124,7 @@ type
     obsPublicChainP : POmniChain;
     obsRecycleChainP: POmniChain;
   strict protected
+    procedure MeasureExecutionTimes;
     function  PopLink(var chain: TOmniChain): POmniLinkedData;
     procedure PushLink(const link: POmniLinkedData; var chain: TOmniChain);
   public
@@ -323,12 +324,59 @@ begin
 end; { TOmniBaseStack.Empty }
 
 procedure TOmniBaseStack.Initialize(numElements, elementSize: integer);
+var
+  bufferElementSize: integer;
+  currElement      : POmniLinkedData;
+  iElement         : integer;
+  nextElement      : POmniLinkedData;
+begin
+  Assert(SizeOf(cardinal) = SizeOf(pointer));
+  Assert(numElements > 0);
+  Assert(elementSize > 0);
+  obsNumElements := numElements;
+  // calculate element size, round up to next 4-aligned value
+  obsElementSize := (elementSize + 3) AND NOT 3;
+  if (cardinal(@obsListHeaders) mod 8) = 0 then
+    obsPublicChainP := @obsListHeaders
+  else if (cardinal(@obsListHeaders) mod 8) = 4 then
+    obsPublicChainP := @(obsListHeaders[5])
+  else
+    raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
+  obsRecycleChainP := POmniChain(cardinal(obsPublicChainP) + SizeOf(TOmniChain));
+  //calculate buffer element size, round up to next 4-aligned value
+  bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
+  GetMem(obsDataBuffer, bufferElementSize * numElements);
+  if cardinal(obsDataBuffer) AND 3 <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
+  //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
+  //At the beginning, all elements are linked into the recycle chain.
+  obsRecycleChainP^.Head.PData := obsDataBuffer;
+  currElement := obsRecycleChainP^.Head.PData;
+  for iElement := 0 to obsNumElements - 2 do begin
+    nextElement := POmniLinkedData(integer(currElement) + bufferElementSize);
+    currElement.Next := nextElement;
+    currElement := nextElement;
+  end;
+  currElement.Next := nil; // terminate the chain
+  obsPublicChainP^.Head.PData := nil;
+  MeasureExecutionTimes;
+end; { TOmniBaseStack.Initialize }
+
+function TOmniBaseStack.IsEmpty: boolean;
+begin
+  Result := not assigned(obsPublicChainP^.Head.PData);
+end; { TOmniBaseStack.IsEmpty }
+
+function TOmniBaseStack.IsFull: boolean;
+begin
+  Result := not assigned(obsRecycleChainP^.Head.PData);
+end; { TOmniBaseStack.IsFull }
+
+procedure TOmniBaseStack.MeasureExecutionTimes;
 const
   NumOfSamples = 10;
 var
-  currElement  : POmniLinkedData;
-  nextElement  : POmniLinkedData;
-  TimeTestField: array [0..2]of array [1..NumOfSamples] of int64;
+  TimeTestField: array [0..2] of array [1..NumOfSamples] of int64;
 
   function GetMinAndClear(Rutine, Count: cardinal): int64;
   var
@@ -347,82 +395,38 @@ var
     end;
   end; { GetMinAndClear }
 
-  procedure InitializeStack;
-  var
-    bufferElementSize: integer;
-    iElement         : integer;
-    n                : integer;
-  begin
-    if (cardinal(@obsListHeaders) mod 8) = 0 then
-      obsPublicChainP := @obsListHeaders
-    else if (cardinal(@obsListHeaders) mod 8) = 4 then
-      obsPublicChainP := @(obsListHeaders[5])
-    else
-      raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
-    obsRecycleChainP := POmniChain(cardinal(obsPublicChainP) + SizeOf(TOmniChain));
-    //calculate buffer element size, round up to next 4-aligned value
-    bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
-    GetMem(obsDataBuffer, bufferElementSize * numElements);
-    if cardinal(obsDataBuffer) AND 3 <> 0 then
-      raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
-    //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
-    //At the beginning, all elements are linked into the recycle chain.
-    obsRecycleChainP^.Head.PData := obsDataBuffer;
-    currElement := obsRecycleChainP^.Head.PData;
-    for iElement := 0 to obsNumElements - 2 do begin
-      nextElement := POmniLinkedData(integer(currElement) + bufferElementSize);
-      currElement.Next := nextElement;
-      currElement := nextElement;
-    end;
-    currElement.Next := nil; // terminate the chain
-    obsPublicChainP^.Head.PData := nil;
-    //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obsPublicChainP^.TaskPopLoops := 1;
-    obsPublicChainP^.TaskPushLoops := 1;
-    obsRecycleChainP^.TaskPopLoops := 1;
-    obsRecycleChainP^.TaskPushLoops := 1;
-    for n := 1 to NumOfSamples do begin
-      //Measure RemoveLink rutine delay
-      TimeTestField[0, n] := GetTimeStamp;
-      currElement := PopLink(obsRecycleChainP^);
-      TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
-      //Measure InsertLink rutine delay
-      TimeTestField[1, n] := GetTimeStamp;
-      PushLink(currElement, obsRecycleChainP^);
-      TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-      //Measure GetTimeStamp rutine delay
-      TimeTestField[2, n] := GetTimeStamp;
-      TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
-    end;
-    //Calculate first 4 minimum average for GetTimeStamp
-    n := GetMinAndClear(2, 4);
-    //Calculate first 4 minimum average for RemoveLink rutine
-    obsRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
-    obsPublicChainP^.TaskPopLoops := obsRecycleChainP^.TaskPopLoops;
-    //Calculate first 4 minimum average for InsertLink rutine
-    obsRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obsPublicChainP^.TaskPushLoops := obsRecycleChainP^.TaskPushLoops;
-  end;  { InitializeStack }
+var
+  currElement: POmniLinkedData;
+  n          : integer;
 
-begin { TOmniBaseStack.Initialize }
-  Assert(SizeOf(cardinal) = SizeOf(pointer));
-  Assert(numElements > 0);
-  Assert(elementSize > 0);
-  obsNumElements := numElements;
-  // calculate element size, round up to next 4-aligned value
-  obsElementSize := (elementSize + 3) AND NOT 3;
-  InitializeStack;
-end; { TOmniBaseStack.Initialize }
-
-function TOmniBaseStack.IsEmpty: boolean;
-begin
-  Result := not assigned(obsPublicChainP^.Head.PData);
-end; { TOmniBaseStack.IsEmpty }
-
-function TOmniBaseStack.IsFull: boolean;
-begin
-  Result := not assigned(obsRecycleChainP^.Head.PData);
-end; { TOmniBaseStack.IsFull }
+begin { TOmniBaseStack.MeasureExecutionTimes }
+  //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
+  obsPublicChainP^.TaskPopLoops := 1;
+  obsPublicChainP^.TaskPushLoops := 1;
+  obsRecycleChainP^.TaskPopLoops := 1;
+  obsRecycleChainP^.TaskPushLoops := 1;
+  for n := 1 to NumOfSamples do begin
+    //Measure RemoveLink rutine delay
+    TimeTestField[0, n] := GetTimeStamp;
+    currElement := PopLink(obsRecycleChainP^);
+    TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+    //Measure InsertLink rutine delay
+    TimeTestField[1, n] := GetTimeStamp;
+    PushLink(currElement, obsRecycleChainP^);
+    TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
+    //Measure GetTimeStamp rutine delay
+    TimeTestField[2, n] := GetTimeStamp;
+    TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+  end;
+  //Calculate first 4 minimum average for GetTimeStamp
+  n := GetMinAndClear(2, 4);
+  //Calculate first 4 minimum average for RemoveLink rutine
+  obsRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+  obsPublicChainP^.TaskPopLoops := obsRecycleChainP^.TaskPopLoops;
+  //Calculate first 4 minimum average for InsertLink rutine
+  obsRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+  obsPublicChainP^.TaskPushLoops := obsRecycleChainP^.TaskPushLoops;
+end;  { TOmniBaseStack.MeasureExecutionTimes }
 
 function TOmniBaseStack.Pop(var value): boolean;
 var

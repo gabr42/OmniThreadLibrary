@@ -24,8 +24,8 @@
     <DCC_IncludePath>..\..;..\..\src;..\..\FastMM4</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
     <DCC_RangeChecking>True</DCC_RangeChecking>
-    <DCC_Optimize>False</DCC_Optimize>
     <DCC_WriteableConstants>True</DCC_WriteableConstants>
+    <DCC_Optimize>False</DCC_Optimize>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
