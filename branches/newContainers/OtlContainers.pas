@@ -127,7 +127,6 @@ type
     obcRecycleChainP    : POmniChain;
     obcRecycleRingBuffer: POmniRingBuffer;
     obcWorkAsStack      : boolean;
-    class function  UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
     class function  RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
     class procedure InsertLinkToQueue(const data: pointer; const ringBuffer: POmniRingBuffer); static;
     function  EnqueueQueue(const value): boolean;
@@ -666,7 +665,7 @@ end; { TOmniBaseContainer.IsEmptyStack }
 
 function TOmniBaseContainer.IsFullPureQueue: boolean;
 var
-  NewLastIn             : pointer;
+  NewLastIn: pointer;
 begin
   NewLastIn := pointer(cardinal(obcPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
   if cardinal(NewLastIn) > cardinal(obcPublicRingBuffer.EndBuffer) then
@@ -727,15 +726,6 @@ TryAgain:
       goto TryAgain;
   end;
 end; { TOmniBaseContainer.RemoveLinkFromQueue }
-
-class function TOmniBaseContainer.UnlinkAll(var chain: TOmniChain): POmniLinkedData;
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                        ^------ < chain.Head
-begin
-  repeat
-    result := chain.Head.PData;
-  until AtomicCmpXchg4b(result, nil, chain.Head);
-end; { TOmniBaseContainer.UnlinkAll }
 
 { TOmniBaseStack }
 
