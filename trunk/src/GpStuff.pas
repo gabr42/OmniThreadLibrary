@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-09-09
-   Version           : 1.13
+   Last modification : 2008-10-26
+   Version           : 1.14
 </pre>*)(*
    History:
+     1.14: 2008-10-26
+       - Implemented EnumValues enumerator.
      1.13: 2008-09-09
        - Added >= and <= operators to the TGp4AlignedInt.
      1.12: 2008-07-28
@@ -58,6 +60,7 @@ uses
   {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
     {$DEFINE GpStuff_AlignedInt}
+    {$DEFINE GpStuff_ValuesEnumerators}
   {$IFEND}
 {$ENDIF}
 
@@ -141,6 +144,21 @@ function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; asse
 ///  2008-07-28, Gp: Extended to support vtInt64 type.</para></summary>
 function  OpenArrayToVarArray(aValues: array of const): Variant;
 
+{$IFDEF GpStuff_ValuesEnumerators}
+type
+  IGpIntegerValueEnumerator = interface 
+    function  GetCurrent: integer;
+    function  MoveNext: boolean;
+    property Current: integer read GetCurrent;
+  end; { IGpIntegerValueEnumerator }
+
+  IGpIntegerValueEnumeratorFactory = interface
+    function  GetEnumerator: IGpIntegerValueEnumerator;
+  end; { IGpIntegerValueEnumeratorFactory }
+
+function EnumValues(aValues: array of integer): IGpIntegerValueEnumeratorFactory;
+{$ENDIF GpStuff_ValuesEnumerators}
+
 implementation
 
 uses
@@ -148,6 +166,31 @@ uses
   Variants,
 {$ENDIF ConditionalExpressions}
   SysUtils;
+
+{$IFDEF GpStuff_ValuesEnumerators}
+type
+  TGpIntegerValueEnumerator = class(TInterfacedObject, IGpIntegerValueEnumerator)
+  private
+    iveIndex    : integer;
+    iveNumValues: integer;
+    iveValues   : PIntegerArray;
+  public
+    constructor Create(values: PIntegerArray; numValues: integer);
+    destructor  Destroy; override;
+    function  GetCurrent: integer;
+    function  MoveNext: boolean;
+    property Current: integer read GetCurrent;
+  end; { TGpIntegerValueEnumerator }
+
+  TGpIntegerValueEnumeratorFactory = class(TInterfacedObject, IGpIntegerValueEnumeratorFactory)
+  private
+    ivefNumValues: integer;
+    ivefValues   : PIntegerArray;
+  public
+    constructor Create(aValues: array of integer);
+    function GetEnumerator: IGpIntegerValueEnumerator;
+  end; { TGpIntegerValueEnumeratorFactory }
+{$ENDIF GpStuff_ValuesEnumerators}
 
 function Asgn(var output: boolean; const value: boolean): boolean; overload;
 begin
@@ -412,5 +455,61 @@ begin
 end; { TGp8AlignedInt.SetValue }
 
 {$ENDIF GpStuff_AlignedInt}
+
+{$IFDEF GpStuff_ValuesEnumerators}
+
+{ TGpIntegerValueEnumerator }
+
+constructor TGpIntegerValueEnumerator.Create(values: PIntegerArray; numValues: integer);
+begin
+  iveValues := values;
+  iveNumValues := numValues;
+  iveIndex := -1;
+end; { TGpIntegerValueEnumerator.Create }
+
+destructor TGpIntegerValueEnumerator.Destroy;
+begin
+  FreeMem(iveValues);
+  inherited;
+end; { pIntegerValueEnumerator.Destroy }
+
+function TGpIntegerValueEnumerator.GetCurrent: integer;
+begin
+  Result := iveValues^[iveIndex];
+end; { TGpIntegerValueEnumerator.GetCurrent }
+
+function TGpIntegerValueEnumerator.MoveNext: boolean;
+begin
+  Inc(iveIndex);
+  Result := (iveIndex < iveNumValues);
+end; { TGpIntegerValueEnumerator.MoveNext }
+
+{ TGpIntegerValueEnumeratorFactory }
+
+constructor TGpIntegerValueEnumeratorFactory.Create(aValues: array of integer);
+var
+  dataSize: integer;
+begin
+  inherited Create;
+  ivefNumValues := Length(aValues);
+  Assert(ivefNumValues > 0);
+  dataSize := ivefNumValues * SizeOf(aValues[0]);
+  GetMem(ivefValues, dataSize);
+  Move(aValues[0], ivefValues^[0], dataSize);
+end; { TGpIntegerValueEnumeratorFactory.Create }
+
+function TGpIntegerValueEnumeratorFactory.GetEnumerator: IGpIntegerValueEnumerator;
+begin
+  Result := TGpIntegerValueEnumerator.Create(ivefValues, ivefNumValues);
+end; { TGpIntegerValueEnumeratorFactory.GetEnumerator }
+
+{ exports }
+
+function EnumValues(aValues: array of integer): IGpIntegerValueEnumeratorFactory;
+begin
+  Result := TGpIntegerValueEnumeratorFactory.Create(aValues);
+end; { EnumValues }
+
+{$ENDIF GpStuff_ValuesEnumerators}
 
 end.
