@@ -127,7 +127,6 @@ type
     obcRecycleChainP    : POmniChain;
     obcRecycleRingBuffer: POmniRingBuffer;
     obcWorkAsStack      : boolean;
-    class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
     class function  UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
     class function  RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
     class procedure InsertLinkToQueue(const data: pointer; const ringBuffer: POmniRingBuffer); static;
@@ -554,7 +553,7 @@ var
     else
       raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
     obcRecycleChainP := POmniChain(cardinal(obcPublicChainP) + SizeOf(TOmniChain));
-    //calculate bzfferelement size, round up to next 4-aligned value
+    //calculate buffer element size, round up to next 4-aligned value
     bufferElementSize := ((SizeOf(TOmniLinkedData) + obcElementSize) + 3) AND NOT 3;
     GetMem(obcDataBuffer, bufferElementSize * numElements);
     if cardinal(obcDataBuffer) AND 3 <> 0 then
@@ -654,22 +653,6 @@ TryAgain:
       goto TryAgain;
   end;
 end; { TOmniBaseContainer.InsertLinkToQueue }
-
-class function TOmniBaseContainer.InvertOrder(chainHead: POmniLinkedData): POmniLinkedData;
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                         ^------ < chainHead
-var
-  ALink:POmniLinkedData;
-begin
-  result := nil;
-  while chainHead <> nil do
-  begin
-    ALink := chainHead.Next;
-    chainHead.Next := result;
-    result := chainHead;
-    chainHead := ALink;
-  end;
-end; { TOmniBaseContainer.InvertOrder }
 
 function TOmniBaseContainer.IsEmptyPureQueue: boolean;
 begin
