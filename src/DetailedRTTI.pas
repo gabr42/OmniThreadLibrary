@@ -15,13 +15,13 @@ type
 
   TParamInfoHelper = record helper for TParamInfo
   public
-   function AsString: AnsiString;
+   function AsString: string;
    function NextParam: PParamInfo;
   end;
 
   TReturnInfoHelper = record helper for TReturnInfo
   public
-   function AsString: AnsiString;
+   function AsString: string;
   end;
 
   TMethodInfoHeaderHelper = record helper for TMethodInfoHeader
@@ -33,10 +33,10 @@ type
 
   TObjectHelper = class helper for TObject
   public
-    function RTTIMethodsAsString: AnsiString;
+    function RTTIMethodsAsString: string;
   end;
 
-  function DescriptionOfMethod( Obj: TObject; MethodName: AnsiString ): AnsiString;
+  function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
 
 implementation
 
@@ -46,7 +46,7 @@ uses
 const
   SHORT_LEN = sizeof(ShortString) - 1;
 
-function DescriptionOfMethod( Obj: TObject; MethodName: AnsiString ): AnsiString;
+function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
 var
   header: PMethodInfoHeader;
   headerEnd: Pointer;
@@ -78,14 +78,14 @@ begin
   // Now the return
   returnInfo := header.ReturnInfo;
   if assigned( returnInfo.ReturnType ) then
-    Result := AnsiString(Format( 'function %s( %s ): %s', [ MethodName, Result, returnInfo.AsString ] ))
+    Result := Format( 'function %s( %s ): %s', [ MethodName, Result, returnInfo.AsString ] )
   else
-    Result := AnsiString(Format( 'procedure %s( %s )%s', [ MethodName, Result, returnInfo.AsString ] ));
+    Result := Format( 'procedure %s( %s )%s', [ MethodName, Result, returnInfo.AsString ] );
 end;
 
 { TParamInfoHelper }
 
-function TParamInfoHelper.AsString: AnsiString;
+function TParamInfoHelper.AsString: string;
 begin
   Result := '';
   if pfResult in Flags then exit;         // Seems to be extra info about the return function, not sure what it means
@@ -108,9 +108,9 @@ end;
 
 { TReturnInfoHelper }
 
-function TReturnInfoHelper.AsString: AnsiString;
+function TReturnInfoHelper.AsString: string;
 var
-  c: AnsiString;
+  c: string;
 begin
   Assert( Version = 1, 'Version of ReturnInfo incorrect' );
   if assigned( ReturnType ) then
@@ -128,7 +128,7 @@ end;
 
 { TObjectHelper }
 
-function TObjectHelper.RTTIMethodsAsString: AnsiString;
+function TObjectHelper.RTTIMethodsAsString: string;
 var
   MethodInfo: Pointer;
   Count: Integer;
@@ -138,7 +138,7 @@ begin
     MethodInfo := PPointer(Integer(PPointer(self)^) + vmtMethodTable)^;
     if MethodInfo <> nil then
     begin
-      // Scan method and get AnsiString about each
+      // Scan method and get string about each
       Count := PWord(MethodInfo)^;
       Inc(Integer(MethodInfo), 2);
       method := MethodInfo;

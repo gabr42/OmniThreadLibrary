@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-07-28
-   Version           : 1.12
+   Last modification : 2008-09-09
+   Version           : 1.13
 </pre>*)(*
    History:
+     1.13: 2008-09-09
+       - Added >= and <= operators to the TGp4AlignedInt.
      1.12: 2008-07-28
        - Added int64 support to the OpenArrayToVarArray.
      1.11: 2008-07-20
@@ -76,10 +78,12 @@ type
     class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
     class operator Equal(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
     class operator GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator GreaterThanOrEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
     class operator Implicit(const ai: TGp4AlignedInt): integer; inline;
     class operator Implicit(const ai: TGp4AlignedInt): cardinal; inline;
     class operator Implicit(const ai: TGp4AlignedInt): PCardinal; inline;
     class operator LessThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator LessThanOrEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
     class operator NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
     class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal; inline;
     property Value: cardinal read GetValue write SetValue;
@@ -337,6 +341,12 @@ begin
   Result := (ai.Value > i);
 end; { TGp4AlignedInt.GreaterThan }
 
+class operator TGp4AlignedInt.GreaterThanOrEqual(const ai: TGp4AlignedInt; i: cardinal):
+  boolean;
+begin
+  Result := (ai.Value >= i);
+end; { TGp4AlignedInt.GreaterThanOrEqual }
+
 class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): PCardinal;
 begin
   Result := ai.Addr;
@@ -356,6 +366,12 @@ class operator TGp4AlignedInt.LessThan(const ai: TGp4AlignedInt; i: cardinal): b
 begin
   Result := (ai.Value < i);
 end; { TGp4AlignedInt.LessThan }
+
+class operator TGp4AlignedInt.LessThanOrEqual(const ai: TGp4AlignedInt; i: cardinal):
+  boolean;
+begin
+  Result := (ai.Value <= i);
+end; { TGp4AlignedInt.LessThanOrEqual }
 
 class operator TGp4AlignedInt.NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean;
 begin
