@@ -6,10 +6,12 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002
    Creation date     : 2002-10-09
-   Last modification : 2008-07-14
-   Version           : 1.40c
+   Last modification : 2008-08-20
+   Version           : 1.41
 </pre>*)(*
    History:
+     1.41: 2008-08-20
+       - Tiburon compatibility.
      1.40c: 2008-07-14
        - Bug fixed: It was not possible to use DSiTimeGetTime64 in parallel from multiple
          threads
