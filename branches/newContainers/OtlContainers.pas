@@ -28,20 +28,16 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Author            : Primoz Gabrijelcic, GJ
+///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : dt
-///   Version           : 0.3....
+///   Last modification : 2008-10-26
+///   Version           : 1.01
 ///</para><para>
 ///   History:
-///     0.3: 2008-07-16
-///       - TOmniBaseContainer made abstract.
-///       - Added TOmniBaseStack class which encapsulates base stack functionality.
-///       - TOmniQueue renamed to TOmniQueue.
-///       - Added TOmniBaseQueue class which encapsulates base queue functionality.
-///     0.2: 2008-07-15
-///       - Fixed a bug in PopLink.
-///       - Implemented Empty method in both containers.
+///     1.01: 2008-10-26
+///       - [GJ] Redesigned stack with better lock contention.
+///       - [GJ] Totally redesigned queue, which is no longer based on stack and allows
+///         multiple readers.
 ///</para></remarks>
 
 unit OtlContainers;
@@ -120,10 +116,9 @@ type
 
   TOmniBaseContainer = class abstract(TInterfacedObject)
   strict protected // placeholder for list headers
-    obcListHeaders      : array [1 .. 3 * SizeOf(TOmniChain) + 4] of byte;
+    obcListHeaders      : array [1 .. 2 * SizeOf(TOmniChain) + 4] of byte;
   strict protected
     obcDataBuffer       : pointer;
-    obcDequeuedMessagesP: POmniChain;
     obcElementSize      : integer;
     obcNumElements      : integer;
     obcOptions          : TOmniContainerOptions;
@@ -559,7 +554,6 @@ var
     else
       raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
     obcRecycleChainP := POmniChain(cardinal(obcPublicChainP) + SizeOf(TOmniChain));
-    obcDequeuedMessagesP := POmniChain(cardinal(obcRecycleChainP) + SizeOf(TOmniChain));
     //calculate bzfferelement size, round up to next 4-aligned value
     bufferElementSize := ((SizeOf(TOmniLinkedData) + obcElementSize) + 3) AND NOT 3;
     GetMem(obcDataBuffer, bufferElementSize * numElements);
@@ -622,18 +616,17 @@ class procedure TOmniBaseContainer.InsertLinkToQueue(const data: pointer;
 //FIFO buffer logic
 //Insert link to queue model with idle/busy status bit
 var
-  AtStartReference:cardinal;
-  CurrentLastIn   :PReferencedPtr;
-  CurrentReference:cardinal;
-  NewLastIn       :PReferencedPtr;
-  Reference       :cardinal;
-  TaskCounter     :cardinal;
+  AtStartReference: cardinal;
+  CurrentLastIn   : PReferencedPtr;
+  CurrentReference: cardinal;
+  NewLastIn       : PReferencedPtr;
+  Reference       : cardinal;
+  TaskCounter     : cardinal;
 label
   TryAgain;
 begin
   Reference := GetThreadId + 1;                                 //Reference.bit0 := 1
-  with ringBuffer^ do
-  begin
+  with ringBuffer^ do begin
 TryAgain:
     TaskCounter := TaskInsertLoops;
     AtStartReference := LastIn.Reference OR 1;                  //Reference.bit0 := 1
@@ -642,13 +635,15 @@ TryAgain:
       dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-      not AtomicCmpXchg4b(CurrentReference, Reference, LastIn.Reference) then
+       not AtomicCmpXchg4b(CurrentReference, Reference, LastIn.Reference)
+    then
       goto TryAgain;
     //Reference is set...
     CurrentLastIn := LastIn.PData;
     AtomicCmpXchg4b(CurrentLastIn.Reference, Reference, CurrentLastIn.Reference);
     if (Reference <> LastIn.Reference) or
-      not AtomicCmpXchg8b(CurrentLastIn.PData, Reference, data, Reference, CurrentLastIn^) then
+      not AtomicCmpXchg8b(CurrentLastIn.PData, Reference, data, Reference, CurrentLastIn^)
+    then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
     NewLastIn := pointer(cardinal(CurrentLastIn) + SizeOf(TReferencedPtr));
