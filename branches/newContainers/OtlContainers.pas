@@ -283,33 +283,6 @@ asm
   rdtsc
 end; { GetTimeStamp }
 
-function SimpleStackPopLink(var chain: TOmniChain): POmniLinkedData;
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                         ^------ < chainHead
-//Simple stack PopLink model
-var
-  Reference          : cardinal;
-begin
-  repeat
-    Reference := AtomicInc4b(chain.Head.Reference);
-    result := chain.Head.PData;
-  until (result = nil) or AtomicCmpXchg8b(result, Reference, result.Next, Reference, chain.Head);
-end; { SimpleStackPopLink }
-
-
-procedure SimpleStackPushLink(const link: POmniLinkedData; var chain: TOmniChain);
-//nil << Link.Next << Link.Next << ... << Link.Next
-//FILO buffer logic                        ^------ < chainHead
-//Simple stack PushLink model
-var
-  PData: pointer;
-begin
-  repeat
-    PData := chain.Head.PData;
-    link.Next := PData;
-  until AtomicCmpXchg4b(PData, link, chain.Head.PData);
-end; { SimpleStackPushLink }
-
 { TOmniNotifySupport }
 
 constructor TOmniNotifySupport.Create;
