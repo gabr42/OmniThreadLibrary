@@ -83,8 +83,7 @@ type
     property NewDataEvent: THandle read GetNewDataEvent;
   end; { IOmniNotifySupport }
 
-  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coAdvancedStack,
-    coStackedQueue, coQueue);
+  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coAdvancedStack);
   TOmniContainerOptions = set of TOmniContainerOption;
 
   PReferencedPtr = ^TReferencedPtr;
@@ -124,14 +123,15 @@ type
     obcListHeaders      : array [1 .. 3 * SizeOf(TOmniChain) + 4] of byte;
   strict protected
     obcDataBuffer       : pointer;
+    obcDequeuedMessagesP: POmniChain;
     obcElementSize      : integer;
     obcNumElements      : integer;
-    obcPublicChainP     : POmniChain;
-    obcRecycleChainP    : POmniChain;
-    obcPublicRingBuffer : POmniRingBuffer;
-    obcRecycleRingBuffer: POmniRingBuffer;
-    obcDequeuedMessagesP: POmniChain;
     obcOptions          : TOmniContainerOptions;
+    obcPublicChainP     : POmniChain;
+    obcPublicRingBuffer : POmniRingBuffer;
+    obcRecycleChainP    : POmniChain;
+    obcRecycleRingBuffer: POmniRingBuffer;
+    obcWorkAsStack      : boolean;
     RemoveLinkFormStack : function (var chain: TOmniChain): POmniLinkedData;
     InsertLinkToStack   : procedure (const link: POmniLinkedData; var chain: TOmniChain);
     class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
@@ -140,16 +140,13 @@ type
     class procedure InsertLinkToQueue(const data: pointer; const ringBuffer: POmniRingBuffer); static;
     function  EnqueueQueue(const value): boolean;
     function  DequeueQueue(var value): boolean;
-    function  DequeueStack(var value): boolean;
-    function  EnqueueStack(const value): boolean;
     procedure EmptyPureQueue;
-    procedure EmptyStackedQueue;
     procedure EmptyStack; virtual;
+    property WorkAsStack: boolean read obcWorkAsStack write obcWorkAsStack; // TODO 3 -oPrimoz Gabrijelcic : Temporary hack
   public
     constructor Create(Options: TOmniContainerOptions = []);
     destructor  Destroy; override;
     function  IsEmptyPureQueue: boolean;
-    function  IsEmptyStackedQueue: boolean;
     function  IsEmptyStack: boolean;
     function  IsFullPureQueue: boolean;
     function  IsFullStack: boolean;
@@ -182,26 +179,12 @@ type
     property NotifySupport: IOmniNotifySupport read osNotifySupport implements IOmniNotifySupport;
   end; { TOmniStack }
 
-  TDequeue = function(var value): boolean of object;
-  TEmpty = procedure of object;
-  TEnqueue = function(const value): boolean of object;
-  TInitialize = procedure(numElements, elementSize: integer) of object;
-  TIsEmpty = function: boolean of object;
-  TIsFull = function: boolean of object;
-
   TOmniBaseQueue = class(TOmniBaseContainer, IOmniQueue)
-  strict private
-    obqDequeue: TDequeue;
-    obqEmpty  : TEmpty;
-    obqEnqueue: TEnqueue;
-    obqIsEmpty: TIsEmpty;
-    obqIsFull : TIsFull;
   public
     constructor Create(options: TOmniContainerOptions = []);
     function  Dequeue(var value): boolean; inline;
     procedure Empty; inline;
     function  Enqueue(const value): boolean; inline;
-    procedure Initialize(numElements, elementSize: integer); override;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
   end; { TOmniBaseQueue }
@@ -229,7 +212,7 @@ uses
 type
   TOmniNotifySupport = class(TInterfacedObject, IOmniNotifySupport)
   strict private
-    onsNewDataEvent     : TDSiEventHandle;
+    onsNewDataEvent: TDSiEventHandle;
   protected
     function  GetNewDataEvent: THandle;
   public
@@ -368,7 +351,7 @@ procedure SimpleStackPushLink(const link: POmniLinkedData; var chain: TOmniChain
 //FILO buffer logic                        ^------ < chainHead
 //Simple stack PushLink model
 var
-  PData                 : pointer;
+  PData: pointer;
 begin
   repeat
     PData := chain.Head.PData;
@@ -376,16 +359,13 @@ begin
   until AtomicCmpXchg4b(PData, link, chain.Head.PData);
 end; { SimpleStackPushLink }
 
-procedure AdvacedStackPushLink(const link: POmniLinkedData; var chain:
-  TOmniChain);
-
+procedure AdvacedStackPushLink(const link: POmniLinkedData; var chain: TOmniChain);
 //Advanced stack PushLink model with idle/busy status bit
 var
-  PData: pointer;
-  TaskCounter           : cardinal;
+  PData      : pointer;
+  TaskCounter: cardinal;
 begin
-  with chain do
-  begin
+  with chain do begin
     for TaskCounter := 0 to TaskPushLoops do
       if (Head.Reference AND 1 = 0) then
         break;
@@ -431,10 +411,8 @@ end; { TOmniBaseContainer.Create }
 destructor TOmniBaseContainer.Destroy;
 begin
   FreeMem(obcDataBuffer);
-  if not (coStackedQueue in obcOptions) and (coQueue in obcOptions) then begin
-    FreeMem(obcPublicRingBuffer);
-    FreeMem(obcRecycleRingBuffer);
-  end;
+  FreeMem(obcPublicRingBuffer);
+  FreeMem(obcRecycleRingBuffer);
   inherited Destroy;
 end; { TOmniBaseContainer.Destroy }
 
@@ -449,20 +427,6 @@ begin
   Move(Data^, value, ElementSize);
   InsertLinkToQueue(Data, obcRecycleRingBuffer);
 end; { TOmniBaseContainer.Dequeue }
-
-function TOmniBaseContainer.DequeueStack(var value): boolean;
-var
-  linkedData            : POmniLinkedData;
-begin
-  if obcDequeuedMessagesP^.Head.PData = nil then
-    obcDequeuedMessagesP^.Head.PData := InvertOrder(UnlinkAll(obcPublicChainP^));
-  linkedData := RemoveLinkFormStack(obcDequeuedMessagesP^);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(linkedData.Data, value, ElementSize);
-  InsertLinkToStack(linkedData, obcRecycleChainP^);
-end; { TOmniBaseContainer.DequeueStack }
 
 procedure TOmniBaseContainer.EmptyPureQueue;
 var
@@ -489,22 +453,9 @@ begin
   until false;
 end; { TOmniBaseContainer.EmptyStack }
 
-procedure TOmniBaseContainer.EmptyStackedQueue;
-var
-  linkedData: POmniLinkedData;
-begin
-  EmptyStack;
-  if assigned(obcDequeuedMessagesP^.Head.PData) then repeat
-    linkedData := RemoveLinkFormStack(obcDequeuedMessagesP^);
-    if not assigned(linkedData) then
-      break; //repeat
-    InsertLinkToStack(linkedData, obcRecycleChainP^);
-  until false;
-end; { TOmniBaseContainer.EmptyStackedQueue }
-
 function TOmniBaseContainer.EnqueueQueue(const value): boolean;
 var
-  Data                  : pointer;
+  Data: pointer;
 begin
   Data := RemoveLinkFromQueue(obcRecycleRingBuffer);
   Result := assigned(Data);
@@ -513,18 +464,6 @@ begin
   Move(value, Data^, ElementSize);
   InsertLinkToQueue(Data, obcPublicRingBuffer);
 end; { TOmniBaseQueue.EnqueueQueue }
-
-function TOmniBaseContainer.EnqueueStack(const value): boolean;
-var
-  linkedData: POmniLinkedData;
-begin
-  linkedData := RemoveLinkFormStack(obcRecycleChainP^);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(value, linkedData.Data, ElementSize);
-  InsertLinkToStack(linkedData, obcPublicChainP^);
-end; { TOmniBaseContainer.EnqueueStack }
 
 procedure TOmniBaseContainer.Initialize(numElements, elementSize: integer);
 const
@@ -685,10 +624,10 @@ begin
   obcNumElements := numElements;
   // calculate element size, round up to next 4-aligned value
   obcElementSize := (elementSize + 3) AND NOT 3;
-  if not (coStackedQueue in obcOptions) and (coQueue in obcOptions) then
-    InitializeQueue
+  if WorkAsStack then
+    InitializeStack
   else
-    InitializeStack;
+    InitializeQueue;
 end; { Initialize }
 
 class procedure TOmniBaseContainer.InsertLinkToQueue(const data: pointer;
@@ -759,11 +698,6 @@ function TOmniBaseContainer.IsEmptyStack: boolean;
 begin
   Result := not assigned(obcPublicChainP^.Head.PData);
 end; { TOmniBaseContainer.IsEmptyStack }
-
-function TOmniBaseContainer.IsEmptyStackedQueue: boolean;
-begin
-  Result := not (assigned(obcPublicChainP^.Head.PData) or assigned(obcDequeuedMessagesP^.Head.PData));
-end; {TOmniBaseContainer.IsEmptyStackedQueue }
 
 function TOmniBaseContainer.IsFullPureQueue: boolean;
 var
@@ -842,8 +776,9 @@ end; { TOmniBaseContainer.UnlinkAll }
 
 constructor TOmniBaseStack.Create(options: TOmniContainerOptions);
 begin
+  WorkAsStack := true;
 //  Include(options, coAdvancedStack);
-  Exclude(options, coQueue);
+//  Exclude(options, coQueue);
   inherited Create(options);
 end; { TOmniBaseStack.Create }
 
@@ -922,54 +857,34 @@ end; { TOmniStack.Push }
 
 constructor TOmniBaseQueue.Create(options: TOmniContainerOptions);
 begin
-//  Include(options, coStackedQueue);
-  Include(options, coQueue);
+  WorkAsStack := false;
+//  Include(options, coQueue);
   inherited Create(options);
 end; { TOmniBaseQueue.Create }
 
 function TOmniBaseQueue.Dequeue(var value): boolean;
 begin
-  result := obqDequeue(value);
+  result := DequeueQueue(value);
 end; { TOmniBaseQueue.Dequeue }
 
 procedure TOmniBaseQueue.Empty;
 begin
-  obqEmpty;
+  EmptyPureQueue;
 end; { TOmniBaseQueue.Empty }
 
 function TOmniBaseQueue.Enqueue(const value): boolean;
 begin
-  result := obqEnqueue(value);
+  result := EnqueueQueue(value);
 end; { TOmniBaseQueue.Enqueue }
-
-procedure TOmniBaseQueue.Initialize(numElements, elementSize: integer);
-begin
-//Method model type initiation
-  if not (coStackedQueue in obcOptions) and (coQueue in obcOptions) then begin
-    obqDequeue:= DequeueQueue;
-    obqEmpty := EmptyPureQueue;
-    obqEnqueue:= EnqueueQueue;
-    obqIsEmpty:= IsEmptyPureQueue;
-    obqIsFull:= IsFullPureQueue;
-  end
-  else begin
-    obqDequeue:= DequeueStack;
-    obqEmpty := EmptyStackedQueue;
-    obqEnqueue:= EnqueueStack;
-    obqIsEmpty:= IsEmptyStackedQueue;
-    obqIsFull:= IsFullStack;
-  end;
-  inherited Initialize(numElements, elementSize);
-end; { TOmniBaseQueue.Initialize }
 
 function TOmniBaseQueue.IsEmpty: boolean;
 begin
-  result := obqIsEmpty;
+  result := IsEmptyPureQueue;
 end; { TOmniBaseQueue.IsEmpty }
 
 function TOmniBaseQueue.IsFull: boolean;
 begin
-  result := obqIsFull;
+  result := IsFullPureQueue;
 end; { TOmniBaseQueue.IsFull }
 
 { TOmniQueue }
