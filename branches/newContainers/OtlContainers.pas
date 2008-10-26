@@ -211,6 +211,22 @@ type
     property NewData: THandle read GetNewDataEvent;
   end; { TOmniNotifySupport }
 
+  TOmniBaseStackTimingInfo = record
+    TaskPopLoops : cardinal;
+    TaskPushLoops: cardinal;
+    IsInitialized: boolean;
+  end; { TOmniBaseStackTimingInfo }
+
+  TOmniBaseQueueTimingInfo = record
+    TaskInsertLoops: cardinal;
+    TaskRemoveLoops: cardinal;
+    IsInitialized  : boolean;
+  end; { TOmniBaseQueueTimingInfo }
+
+var
+  GOmniBaseStackTimingInfo: TOmniBaseStackTimingInfo;
+  GOmniBaseQueueTimingInfo: TOmniBaseQueueTimingInfo;
+
 { Intel Atomic functions support }
 
 function AtomicCmpXchg4b(const Old4b, New4b: cardinal; var Destination): boolean; overload;
@@ -402,36 +418,41 @@ var
   n          : integer;
 
 begin { TOmniBaseStack.MeasureExecutionTimes }
-  affinity := DSiGetThreadAffinity;
-  DSiSetThreadAffinity(affinity[1]);
-  try
-    //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obsPublicChainP^.TaskPopLoops := 1;
-    obsPublicChainP^.TaskPushLoops := 1;
-    obsRecycleChainP^.TaskPopLoops := 1;
-    obsRecycleChainP^.TaskPushLoops := 1;
-    for n := 1 to NumOfSamples do begin
-      //Measure RemoveLink rutine delay
-      TimeTestField[0, n] := GetTimeStamp;
-      currElement := PopLink(obsRecycleChainP^);
-      TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
-      //Measure InsertLink rutine delay
-      TimeTestField[1, n] := GetTimeStamp;
-      PushLink(currElement, obsRecycleChainP^);
-      TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-      //Measure GetTimeStamp rutine delay
-      TimeTestField[2, n] := GetTimeStamp;
-      TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
-    end;
-    //Calculate first 4 minimum average for GetTimeStamp
-    n := GetMinAndClear(2, 4);
-    //Calculate first 4 minimum average for RemoveLink rutine
-    obsRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
-    obsPublicChainP^.TaskPopLoops := obsRecycleChainP^.TaskPopLoops;
-    //Calculate first 4 minimum average for InsertLink rutine
-    obsRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obsPublicChainP^.TaskPushLoops := obsRecycleChainP^.TaskPushLoops;
-  finally DSiSetThreadAffinity(affinity); end;
+  if not GOmniBaseStackTimingInfo.IsInitialized then begin
+    affinity := DSiGetThreadAffinity;
+    DSiSetThreadAffinity(affinity[1]);
+    try
+      //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
+      obsPublicChainP^.TaskPopLoops := 1;
+      obsPublicChainP^.TaskPushLoops := 1;
+      obsRecycleChainP^.TaskPopLoops := 1;
+      obsRecycleChainP^.TaskPushLoops := 1;
+      for n := 1 to NumOfSamples do begin
+        //Measure RemoveLink rutine delay
+        TimeTestField[0, n] := GetTimeStamp;
+        currElement := PopLink(obsRecycleChainP^);
+        TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+        //Measure InsertLink rutine delay
+        TimeTestField[1, n] := GetTimeStamp;
+        PushLink(currElement, obsRecycleChainP^);
+        TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
+        //Measure GetTimeStamp rutine delay
+        TimeTestField[2, n] := GetTimeStamp;
+        TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+      end;
+      //Calculate first 4 minimum average for GetTimeStamp
+      n := GetMinAndClear(2, 4);
+      //Calculate first 4 minimum average for RemoveLink rutine
+      GOmniBaseStackTimingInfo.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+      //Calculate first 4 minimum average for InsertLink rutine
+      GOmniBaseStackTimingInfo.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+      GOmniBaseStackTimingInfo.IsInitialized := true;
+    finally DSiSetThreadAffinity(affinity); end;
+  end;
+  obsRecycleChainP^.TaskPopLoops := GOmniBaseStackTimingInfo.TaskPopLoops;
+  obsPublicChainP^.TaskPopLoops := GOmniBaseStackTimingInfo.TaskPopLoops;
+  obsRecycleChainP^.TaskPushLoops := GOmniBaseStackTimingInfo.TaskPushLoops;
+  obsPublicChainP^.TaskPushLoops := GOmniBaseStackTimingInfo.TaskPushLoops;
 end;  { TOmniBaseStack.MeasureExecutionTimes }
 
 function TOmniBaseStack.Pop(var value): boolean;
@@ -709,36 +730,41 @@ var
   currElement: pointer;
   n          : integer;
 begin { TOmniBaseQueue.MeasureExecutionTimes }
-  affinity := DSiGetThreadAffinity;
-  DSiSetThreadAffinity(affinity[1]);
-  try
-    //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obqPublicRingBuffer.TaskRemoveLoops := 1;
-    obqPublicRingBuffer.TaskInsertLoops := 1;
-    obqRecycleRingBuffer.TaskRemoveLoops := 1;
-    obqRecycleRingBuffer.TaskInsertLoops := 1;
-    for n := 1 to NumOfSamples do  begin
-      //Measure RemoveLink rutine delay
-      TimeTestField[0, n] := GetTimeStamp;
-      currElement := RemoveLink(obqRecycleRingBuffer);
-      TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
-      //Measure InsertLink rutine delay
-      TimeTestField[1, n] := GetTimeStamp;
-      InsertLink(currElement, obqRecycleRingBuffer);
-      TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-      //Measure GetTimeStamp rutine delay
-      TimeTestField[2, n] := GetTimeStamp;
-      TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
-    end;
-    //Calculate first 4 minimum average for GetTimeStamp
-    n := GetMinAndClear(2, 4);
-    //Calculate first 4 minimum average for RemoveLink rutine
-    obqRecycleRingBuffer.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
-    obqPublicRingBuffer.TaskRemoveLoops := obqRecycleRingBuffer.TaskRemoveLoops;
-    //Calculate first 4 minimum average for InsertLink rutine
-    obqRecycleRingBuffer.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obqPublicRingBuffer.TaskInsertLoops := obqRecycleRingBuffer.TaskInsertLoops;
-  finally DSiSetThreadAffinity(affinity); end;
+  if not GOmniBaseQueueTimingInfo.IsInitialized then begin
+    affinity := DSiGetThreadAffinity;
+    DSiSetThreadAffinity(affinity[1]);
+    try
+      //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
+      obqPublicRingBuffer.TaskRemoveLoops := 1;
+      obqPublicRingBuffer.TaskInsertLoops := 1;
+      obqRecycleRingBuffer.TaskRemoveLoops := 1;
+      obqRecycleRingBuffer.TaskInsertLoops := 1;
+      for n := 1 to NumOfSamples do  begin
+        //Measure RemoveLink rutine delay
+        TimeTestField[0, n] := GetTimeStamp;
+        currElement := RemoveLink(obqRecycleRingBuffer);
+        TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+        //Measure InsertLink rutine delay
+        TimeTestField[1, n] := GetTimeStamp;
+        InsertLink(currElement, obqRecycleRingBuffer);
+        TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
+        //Measure GetTimeStamp rutine delay
+        TimeTestField[2, n] := GetTimeStamp;
+        TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+      end;
+      //Calculate first 4 minimum average for GetTimeStamp
+      n := GetMinAndClear(2, 4);
+      //Calculate first 4 minimum average for RemoveLink rutine
+      GOmniBaseQueueTimingInfo.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
+      //Calculate first 4 minimum average for InsertLink rutine
+      GOmniBaseQueueTimingInfo.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
+      GOmniBaseQueueTimingInfo.IsInitialized := true;
+    finally DSiSetThreadAffinity(affinity); end;
+  end;
+  obqRecycleRingBuffer.TaskRemoveLoops := GOmniBaseQueueTimingInfo.TaskRemoveLoops;
+  obqPublicRingBuffer.TaskRemoveLoops := GOmniBaseQueueTimingInfo.TaskRemoveLoops;
+  obqRecycleRingBuffer.TaskInsertLoops := GOmniBaseQueueTimingInfo.TaskInsertLoops;
+  obqPublicRingBuffer.TaskInsertLoops := GOmniBaseQueueTimingInfo.TaskInsertLoops;
 end; { TOmniBaseQueue.MeasureExecutionTimes }
 
 class function TOmniBaseQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
@@ -821,4 +847,23 @@ begin
   end;
 end; { TOmniQueue.Enqueue }
 
+{ initialization }
+
+procedure InitializeTimingInfo;
+var
+  queue: TOmniBaseQueue;
+  stack: TOmniBaseStack;
+begin
+  GOmniBaseStackTimingInfo.IsInitialized := false;
+  stack := TOmniBaseStack.Create;
+  stack.Initialize(10, 4); // enough for initialization
+  FreeAndNil(stack);
+  GOmniBaseQueueTimingInfo.IsInitialized := false;
+  queue := TOmniBaseQueue.Create;
+  queue.Initialize(10, 4); // enough for initialization
+  FreeAndNil(queue);
+end; { InitializeTimingInfo }
+
+initialization
+  InitializeTimingInfo;
 end.
