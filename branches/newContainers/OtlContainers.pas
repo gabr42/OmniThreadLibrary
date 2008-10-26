@@ -163,7 +163,8 @@ type
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
-    class function RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
+    class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
+    procedure MeasureExecutionTimes;
   public
     function  Dequeue(var value): boolean;
     procedure Empty;
@@ -348,7 +349,7 @@ begin
   GetMem(obsDataBuffer, bufferElementSize * numElements);
   if cardinal(obsDataBuffer) AND 3 <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
-  //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
+  //Format buffer to recycleChain, init obsRecycleChain and obsPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
   obsRecycleChainP^.Head.PData := obsDataBuffer;
   currElement := obsRecycleChainP^.Head.PData;
@@ -578,94 +579,41 @@ begin
 end; { TOmniBaseQueue.Enqueue }
 
 procedure TOmniBaseQueue.Initialize(numElements, elementSize: integer);
-const
-  NumOfSamples = 10;
 var
-  TimeTestField: array [0..2]of array [1..NumOfSamples] of int64;
-
-  function GetMinAndClear(Rutine, Count: cardinal): int64;
-  var
-    m: cardinal;
-    n: integer;
-    x: integer;
-  begin
-    result := 0;
-    for m := 1 to Count do begin
-      x:= 1;
-      for n:= 2 to NumOfSamples do
-        if TimeTestField[Rutine, n] < TimeTestField[Rutine, x] then
-          x := n;
-      Inc(result, TimeTestField[Rutine, x]);
-      TimeTestField[Rutine, x] := MaxLongInt;
-    end;
-  end; { GetMinAndClear }
-
-  procedure InitializeQueue;
-  var
-    RingBufferSize: cardinal;
-    n             : integer;
-    currElement   : pointer;
-  begin
-    // allocate obcDataBuffer
-    GetMem(obqDataBuffer, elementSize * numElements + elementSize);
-    // allocate RingBuffers
-    RingBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
-      SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
-    obqPublicRingBuffer := AllocMem(RingBufferSize);
-    Assert(cardinal(obqPublicRingBuffer) mod 8 = 0,
-      'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
-    obqRecycleRingBuffer := AllocMem(RingBufferSize);
-    Assert(cardinal(obqRecycleRingBuffer) mod 8 = 0,
-      'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
-    // set obcPublicRingBuffer head
-    obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
-    obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];
-    obqPublicRingBuffer.StartBuffer := @obqPublicRingBuffer.Buffer[0];
-    obqPublicRingBuffer.EndBuffer := @obqPublicRingBuffer.Buffer[numElements];
-    // set obcRecycleRingBuffer head
-    obqRecycleRingBuffer.FirstIn.PData := @obqRecycleRingBuffer.Buffer[0];
-    obqRecycleRingBuffer.LastIn.PData := @obqRecycleRingBuffer.Buffer[numElements];
-    obqRecycleRingBuffer.StartBuffer := @obqRecycleRingBuffer.Buffer[0];
-    obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
-    // format obcRecycleRingBuffer
-    for n := 0 to numElements do
-      obqRecycleRingBuffer.Buffer[n].PData := pointer(cardinal(obqDataBuffer) + cardinal(n * elementSize));
-    //Calcolate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obqPublicRingBuffer.TaskRemoveLoops := 1;
-    obqPublicRingBuffer.TaskInsertLoops := 1;
-    obqRecycleRingBuffer.TaskRemoveLoops := 1;
-    obqRecycleRingBuffer.TaskInsertLoops := 1;
-    for n := 1 to NumOfSamples do  begin
-      //Measure RemoveLink rutine delay
-      TimeTestField[0, n] := GetTimeStamp;
-      currElement := RemoveLink(obqRecycleRingBuffer);
-      TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
-      //Measure InsertLink rutine delay
-      TimeTestField[1, n] := GetTimeStamp;
-      InsertLink(currElement, obqRecycleRingBuffer);
-      TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-      //Measure GetTimeStamp rutine delay
-      TimeTestField[2, n] := GetTimeStamp;
-      TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
-    end;
-    //Calculate first 4 minimum average for GetTimeStamp
-    n := GetMinAndClear(2, 4);
-    //Calculate first 4 minimum average for RemoveLink rutine
-    obqRecycleRingBuffer.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
-    obqPublicRingBuffer.TaskRemoveLoops := obqRecycleRingBuffer.TaskRemoveLoops;
-    //Calculate first 4 minimum average for InsertLink rutine
-    obqRecycleRingBuffer.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obqPublicRingBuffer.TaskInsertLoops := obqRecycleRingBuffer.TaskInsertLoops;
-  end; { InitializeQueue }
-
-begin { TOmniBaseQueue.Initialize }
+  n             : integer;
+  ringBufferSize: cardinal;
+begin
   Assert(SizeOf(cardinal) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obqNumElements := numElements;
   // calculate element size, round up to next 4-aligned value
   obqElementSize := (elementSize + 3) AND NOT 3;
-  InitializeQueue;
+  // allocate obqDataBuffer
+  GetMem(obqDataBuffer, elementSize * numElements + elementSize);
+  // allocate RingBuffers
+  ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
+    SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
+  obqPublicRingBuffer := AllocMem(ringBufferSize);
+  Assert(cardinal(obqPublicRingBuffer) mod 8 = 0,
+    'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
+  obqRecycleRingBuffer := AllocMem(ringBufferSize);
+  Assert(cardinal(obqRecycleRingBuffer) mod 8 = 0,
+    'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
+  // set obqPublicRingBuffer head
+  obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
+  obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];
+  obqPublicRingBuffer.StartBuffer := @obqPublicRingBuffer.Buffer[0];
+  obqPublicRingBuffer.EndBuffer := @obqPublicRingBuffer.Buffer[numElements];
+  // set obqRecycleRingBuffer head
+  obqRecycleRingBuffer.FirstIn.PData := @obqRecycleRingBuffer.Buffer[0];
+  obqRecycleRingBuffer.LastIn.PData := @obqRecycleRingBuffer.Buffer[numElements];
+  obqRecycleRingBuffer.StartBuffer := @obqRecycleRingBuffer.Buffer[0];
+  obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
+  // format obqRecycleRingBuffer
+  for n := 0 to numElements do
+    obqRecycleRingBuffer.Buffer[n].PData := pointer(cardinal(obqDataBuffer) + cardinal(n * elementSize));
+  MeasureExecutionTimes;
 end; { TOmniBaseQueue.Initialize }
 
 class procedure TOmniBaseQueue.InsertLink(const data: pointer; const ringBuffer:
@@ -727,6 +675,61 @@ begin
   result := (cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.LastIn.PData)) or
     (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
 end; { TOmniBaseQueue.IsFull }
+
+procedure TOmniBaseQueue.MeasureExecutionTimes;
+const
+  NumOfSamples = 10;
+var
+  TimeTestField: array [0..2]of array [1..NumOfSamples] of int64;
+
+  function GetMinAndClear(Rutine, Count: cardinal): int64;
+  var
+    m: cardinal;
+    n: integer;
+    x: integer;
+  begin
+    result := 0;
+    for m := 1 to Count do begin
+      x:= 1;
+      for n:= 2 to NumOfSamples do
+        if TimeTestField[Rutine, n] < TimeTestField[Rutine, x] then
+          x := n;
+      Inc(result, TimeTestField[Rutine, x]);
+      TimeTestField[Rutine, x] := MaxLongInt;
+    end;
+  end; { GetMinAndClear }
+
+var
+  currElement: pointer;
+  n          : integer;
+begin { TOmniBaseQueue.MeasureExecutionTimes }
+  //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
+  obqPublicRingBuffer.TaskRemoveLoops := 1;
+  obqPublicRingBuffer.TaskInsertLoops := 1;
+  obqRecycleRingBuffer.TaskRemoveLoops := 1;
+  obqRecycleRingBuffer.TaskInsertLoops := 1;
+  for n := 1 to NumOfSamples do  begin
+    //Measure RemoveLink rutine delay
+    TimeTestField[0, n] := GetTimeStamp;
+    currElement := RemoveLink(obqRecycleRingBuffer);
+    TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+    //Measure InsertLink rutine delay
+    TimeTestField[1, n] := GetTimeStamp;
+    InsertLink(currElement, obqRecycleRingBuffer);
+    TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
+    //Measure GetTimeStamp rutine delay
+    TimeTestField[2, n] := GetTimeStamp;
+    TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+  end;
+  //Calculate first 4 minimum average for GetTimeStamp
+  n := GetMinAndClear(2, 4);
+  //Calculate first 4 minimum average for RemoveLink rutine
+  obqRecycleRingBuffer.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
+  obqPublicRingBuffer.TaskRemoveLoops := obqRecycleRingBuffer.TaskRemoveLoops;
+  //Calculate first 4 minimum average for InsertLink rutine
+  obqRecycleRingBuffer.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
+  obqPublicRingBuffer.TaskInsertLoops := obqRecycleRingBuffer.TaskInsertLoops;
+end; { TOmniBaseQueue.MeasureExecutionTimes }
 
 class function TOmniBaseQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
 //FIFO buffer logic
