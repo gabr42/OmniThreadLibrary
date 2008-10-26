@@ -83,7 +83,7 @@ type
     property NewDataEvent: THandle read GetNewDataEvent;
   end; { IOmniNotifySupport }
 
-  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coAdvancedStack);
+  TOmniContainerOption = (coEnableMonitor, coEnableNotify);
   TOmniContainerOptions = set of TOmniContainerOption;
 
   PReferencedPtr = ^TReferencedPtr;
@@ -132,8 +132,6 @@ type
     obcRecycleChainP    : POmniChain;
     obcRecycleRingBuffer: POmniRingBuffer;
     obcWorkAsStack      : boolean;
-    RemoveLinkFormStack : function (var chain: TOmniChain): POmniLinkedData;
-    InsertLinkToStack   : procedure (const link: POmniLinkedData; var chain: TOmniChain);
     class function  InvertOrder(chainHead: POmniLinkedData): POmniLinkedData; static;
     class function  UnlinkAll(var chain: TOmniChain): POmniLinkedData; static;
     class function  RemoveLinkFromQueue(const ringBuffer: POmniRingBuffer): pointer; static;
@@ -446,10 +444,10 @@ var
   linkedData: POmniLinkedData;
 begin
   repeat
-    linkedData := RemoveLinkFormStack(obcPublicChainP^);
+    linkedData := AdvancedStackPopLink(obcPublicChainP^);
     if not assigned(linkedData) then
       break; //repeat
-    InsertLinkToStack(linkedData, obcRecycleChainP^);
+    AdvacedStackPushLink(linkedData, obcRecycleChainP^);
   until false;
 end; { TOmniBaseContainer.EmptyStack }
 
@@ -562,15 +560,6 @@ var
       raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
     obcRecycleChainP := POmniChain(cardinal(obcPublicChainP) + SizeOf(TOmniChain));
     obcDequeuedMessagesP := POmniChain(cardinal(obcRecycleChainP) + SizeOf(TOmniChain));
-    //Method model type initiation
-    if coAdvancedStack in obcOptions then begin
-      InsertLinkToStack := AdvacedStackPushLink;
-      RemoveLinkFormStack := AdvancedStackPopLink;
-    end
-    else begin
-      InsertLinkToStack := SimpleStackPushLink;
-      RemoveLinkFormStack := SimpleStackPopLink;
-    end;
     //calculate bzfferelement size, round up to next 4-aligned value
     bufferElementSize := ((SizeOf(TOmniLinkedData) + obcElementSize) + 3) AND NOT 3;
     GetMem(obcDataBuffer, bufferElementSize * numElements);
@@ -587,34 +576,32 @@ var
     end;
     currElement.Next := nil; // terminate the chain
     obcPublicChainP^.Head.PData := nil;
-    if coAdvancedStack in obcOptions then begin
-      //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-      obcPublicChainP^.TaskPopLoops := 1;
-      obcPublicChainP^.TaskPushLoops := 1;
-      obcRecycleChainP^.TaskPopLoops := 1;
-      obcRecycleChainP^.TaskPushLoops := 1;
-      for n := 1 to NumOfSamples do begin
-        //Measure RemoveLink rutine delay
-        TimeTestField[0, n] := GetTimeStamp;
-        currElement := RemoveLinkFormStack(obcRecycleChainP^);
-        TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
-        //Measure InsertLink rutine delay
-        TimeTestField[1, n] := GetTimeStamp;
-        InsertLinkToStack(currElement, obcRecycleChainP^);
-        TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-        //Measure GetTimeStamp rutine delay
-        TimeTestField[2, n] := GetTimeStamp;
-        TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
-      end;
-      //Calculate first 4 minimum average for GetTimeStamp
-      n := GetMinAndClear(2, 4);
-      //Calculate first 4 minimum average for RemoveLink rutine
-      obcRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
-      obcPublicChainP^.TaskPopLoops := obcRecycleChainP^.TaskPopLoops;
-      //Calculate first 4 minimum average for InsertLink rutine
-      obcRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
-      obcPublicChainP^.TaskPushLoops := obcRecycleChainP^.TaskPushLoops;
+    //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
+    obcPublicChainP^.TaskPopLoops := 1;
+    obcPublicChainP^.TaskPushLoops := 1;
+    obcRecycleChainP^.TaskPopLoops := 1;
+    obcRecycleChainP^.TaskPushLoops := 1;
+    for n := 1 to NumOfSamples do begin
+      //Measure RemoveLink rutine delay
+      TimeTestField[0, n] := GetTimeStamp;
+      currElement := AdvancedStackPopLink(obcRecycleChainP^);
+      TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+      //Measure InsertLink rutine delay
+      TimeTestField[1, n] := GetTimeStamp;
+      AdvacedStackPushLink(currElement, obcRecycleChainP^);
+      TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
+      //Measure GetTimeStamp rutine delay
+      TimeTestField[2, n] := GetTimeStamp;
+      TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
     end;
+    //Calculate first 4 minimum average for GetTimeStamp
+    n := GetMinAndClear(2, 4);
+    //Calculate first 4 minimum average for RemoveLink rutine
+    obcRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+    obcPublicChainP^.TaskPopLoops := obcRecycleChainP^.TaskPopLoops;
+    //Calculate first 4 minimum average for InsertLink rutine
+    obcRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+    obcPublicChainP^.TaskPushLoops := obcRecycleChainP^.TaskPushLoops;
   end;  { InitializeStack }
 
 begin
@@ -777,8 +764,6 @@ end; { TOmniBaseContainer.UnlinkAll }
 constructor TOmniBaseStack.Create(options: TOmniContainerOptions);
 begin
   WorkAsStack := true;
-//  Include(options, coAdvancedStack);
-//  Exclude(options, coQueue);
   inherited Create(options);
 end; { TOmniBaseStack.Create }
 
@@ -801,24 +786,24 @@ function TOmniBaseStack.Pop(var value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := RemoveLinkFormStack(obcPublicChainP^);
+  linkedData := AdvancedStackPopLink(obcPublicChainP^);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(linkedData.Data, value, ElementSize);
-  InsertLinkToStack(linkedData, obcRecycleChainP^);
+  AdvacedStackPushLink(linkedData, obcRecycleChainP^);
 end; { TOmniBaseStack.Pop }
 
 function TOmniBaseStack.Push(const value): boolean;
 var
   linkedData: POmniLinkedData;
 begin
-  linkedData := RemoveLinkFormStack(obcRecycleChainP^);
+  linkedData := AdvancedStackPopLink(obcRecycleChainP^);
   Result := assigned(linkedData);
   if not Result then
     Exit;
   Move(value, linkedData.Data, ElementSize);
-  InsertLinkToStack(linkedData, obcPublicChainP^);
+  AdvacedStackPushLink(linkedData, obcPublicChainP^);
 end; { TOmniBaseStack.Push }
 
 { TOmniStack }
@@ -858,7 +843,6 @@ end; { TOmniStack.Push }
 constructor TOmniBaseQueue.Create(options: TOmniContainerOptions);
 begin
   WorkAsStack := false;
-//  Include(options, coQueue);
   inherited Create(options);
 end; { TOmniBaseQueue.Create }
 
