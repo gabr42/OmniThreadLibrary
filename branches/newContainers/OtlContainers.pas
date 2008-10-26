@@ -114,15 +114,16 @@ type
     Data: record end;           //user data, variable size
   end; { TOmniLinkedData }
 
-  TOmniInternalStack = class abstract(TInterfacedObject)
-  strict protected // placeholder for list headers
-    obcListHeaders  : array [1 .. 2 * SizeOf(TOmniChain) + 4] of byte;
+  TOmniBaseStack = class abstract(TInterfacedObject, IOmniStack)
+  strict private // placeholder for list headers
+    obsListHeaders  : array [1 .. 2 * SizeOf(TOmniChain) + 4] of byte;
+  strict private
+    obsDataBuffer   : pointer;
+    obsElementSize  : integer;
+    obsNumElements  : integer;
+    obsPublicChainP : POmniChain;
+    obsRecycleChainP: POmniChain;
   strict protected
-    obcElementSize  : integer;
-    obcDataBuffer   : pointer;
-    obcNumElements  : integer;
-    obcPublicChainP : POmniChain;
-    obcRecycleChainP: POmniChain;
     function  PopLink(var chain: TOmniChain): POmniLinkedData;
     procedure PushLink(const link: POmniLinkedData; var chain: TOmniChain);
   public
@@ -130,14 +131,10 @@ type
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
-    property ElementSize: integer read obcElementSize;
-    property NumElements: integer read obcNumElements;
-  end; { TOmniInternalStack }
-
-  TOmniBaseStack = class(TOmniInternalStack, IOmniStack)
-  public
     function  Pop(var value): boolean; virtual;
     function  Push(const value): boolean; virtual;
+    property ElementSize: integer read obsElementSize;
+    property NumElements: integer read obsNumElements;
   end; { TOmniBaseStack }
 
   TOmniStack = class(TOmniBaseStack, IOmniNotifySupport, IOmniMonitorSupport)
@@ -155,13 +152,13 @@ type
     property Options: TOmniContainerOptions read osOptions;
   end; { TOmniStack }
 
-  TOmniInternalQueue = class abstract(TInterfacedObject)
+  TOmniBaseQueue = class abstract(TInterfacedObject, IOmniQueue)
   strict private
-    oiqElementSize: integer;
-    obcDataBuffer : pointer;
-    oiqNumElements: integer;
-    obcPublicRingBuffer : POmniRingBuffer;
-    obcRecycleRingBuffer: POmniRingBuffer;
+    obqDataBuffer       : pointer;
+    obqElementSize      : integer;
+    obqNumElements      : integer;
+    obqPublicRingBuffer : POmniRingBuffer;
+    obqRecycleRingBuffer: POmniRingBuffer;
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
@@ -173,11 +170,8 @@ type
     procedure Initialize(numElements, elementSize: integer); virtual;
     function IsEmpty: boolean;
     function IsFull: boolean;
-    property ElementSize: integer read oiqElementSize;
-    property NumElements: integer read oiqNumElements;
-  end; { TOmniInternalQueue }
-
-  TOmniBaseQueue = class(TOmniInternalQueue, IOmniQueue)
+    property ElementSize: integer read obqElementSize;
+    property NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
   TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport)
@@ -267,7 +261,7 @@ end; { AtomicCmpXchg8b }
 function AtomicInc4b(var Destination: cardinal; const Count: cardinal = 1): cardinal;
 //ATOMIC FUNCTION
 //begin
-//  inc(Destination, Count);
+//  Inc(Destination, Count);
 //  result := Destination;
 //end;
 asm
@@ -343,21 +337,21 @@ end; { TOmniNotifySupport.Signal }
 
 { TOmniBaseContainer }
 
-{ TOmniInternalStack }
+{ TOmniBaseStack }
 
-procedure TOmniInternalStack.Empty;
+procedure TOmniBaseStack.Empty;
 var
   linkedData: POmniLinkedData;
 begin
   repeat
-    linkedData := PopLink(obcPublicChainP^);
+    linkedData := PopLink(obsPublicChainP^);
     if not assigned(linkedData) then
       break; //repeat
-    PushLink(linkedData, obcRecycleChainP^);
+    PushLink(linkedData, obsRecycleChainP^);
   until false;
-end; { TOmniInternalStack.Empty }
+end; { TOmniBaseStack.Empty }
 
-procedure TOmniInternalStack.Initialize(numElements, elementSize: integer);
+procedure TOmniBaseStack.Initialize(numElements, elementSize: integer);
 const
   NumOfSamples = 10;
 var
@@ -388,42 +382,42 @@ var
     iElement         : integer;
     n                : integer;
   begin
-    if (cardinal(@obcListHeaders) mod 8) = 0 then
-      obcPublicChainP := @obcListHeaders
-    else if (cardinal(@obcListHeaders) mod 8) = 4 then
-      obcPublicChainP := @(obcListHeaders[5])
+    if (cardinal(@obsListHeaders) mod 8) = 0 then
+      obsPublicChainP := @obsListHeaders
+    else if (cardinal(@obsListHeaders) mod 8) = 4 then
+      obsPublicChainP := @(obsListHeaders[5])
     else
       raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
-    obcRecycleChainP := POmniChain(cardinal(obcPublicChainP) + SizeOf(TOmniChain));
+    obsRecycleChainP := POmniChain(cardinal(obsPublicChainP) + SizeOf(TOmniChain));
     //calculate buffer element size, round up to next 4-aligned value
-    bufferElementSize := ((SizeOf(TOmniLinkedData) + obcElementSize) + 3) AND NOT 3;
-    GetMem(obcDataBuffer, bufferElementSize * numElements);
-    if cardinal(obcDataBuffer) AND 3 <> 0 then
+    bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
+    GetMem(obsDataBuffer, bufferElementSize * numElements);
+    if cardinal(obsDataBuffer) AND 3 <> 0 then
       raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
     //Format buffer to recycleChain, init orbRecycleChain and orbPublicChain.
     //At the beginning, all elements are linked into the recycle chain.
-    obcRecycleChainP^.Head.PData := obcDataBuffer;
-    currElement := obcRecycleChainP^.Head.PData;
-    for iElement := 0 to obcNumElements - 2 do begin
+    obsRecycleChainP^.Head.PData := obsDataBuffer;
+    currElement := obsRecycleChainP^.Head.PData;
+    for iElement := 0 to obsNumElements - 2 do begin
       nextElement := POmniLinkedData(integer(currElement) + bufferElementSize);
       currElement.Next := nextElement;
       currElement := nextElement;
     end;
     currElement.Next := nil; // terminate the chain
-    obcPublicChainP^.Head.PData := nil;
+    obsPublicChainP^.Head.PData := nil;
     //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obcPublicChainP^.TaskPopLoops := 1;
-    obcPublicChainP^.TaskPushLoops := 1;
-    obcRecycleChainP^.TaskPopLoops := 1;
-    obcRecycleChainP^.TaskPushLoops := 1;
+    obsPublicChainP^.TaskPopLoops := 1;
+    obsPublicChainP^.TaskPushLoops := 1;
+    obsRecycleChainP^.TaskPopLoops := 1;
+    obsRecycleChainP^.TaskPushLoops := 1;
     for n := 1 to NumOfSamples do begin
       //Measure RemoveLink rutine delay
       TimeTestField[0, n] := GetTimeStamp;
-      currElement := PopLink(obcRecycleChainP^);
+      currElement := PopLink(obsRecycleChainP^);
       TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
       //Measure InsertLink rutine delay
       TimeTestField[1, n] := GetTimeStamp;
-      PushLink(currElement, obcRecycleChainP^);
+      PushLink(currElement, obsRecycleChainP^);
       TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
       //Measure GetTimeStamp rutine delay
       TimeTestField[2, n] := GetTimeStamp;
@@ -432,34 +426,46 @@ var
     //Calculate first 4 minimum average for GetTimeStamp
     n := GetMinAndClear(2, 4);
     //Calculate first 4 minimum average for RemoveLink rutine
-    obcRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
-    obcPublicChainP^.TaskPopLoops := obcRecycleChainP^.TaskPopLoops;
+    obsRecycleChainP^.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+    obsPublicChainP^.TaskPopLoops := obsRecycleChainP^.TaskPopLoops;
     //Calculate first 4 minimum average for InsertLink rutine
-    obcRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obcPublicChainP^.TaskPushLoops := obcRecycleChainP^.TaskPushLoops;
+    obsRecycleChainP^.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+    obsPublicChainP^.TaskPushLoops := obsRecycleChainP^.TaskPushLoops;
   end;  { InitializeStack }
 
-begin { TOmniInternalStack.Initialize }
+begin { TOmniBaseStack.Initialize }
   Assert(SizeOf(cardinal) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
-  obcNumElements := numElements;
+  obsNumElements := numElements;
   // calculate element size, round up to next 4-aligned value
-  obcElementSize := (elementSize + 3) AND NOT 3;
+  obsElementSize := (elementSize + 3) AND NOT 3;
   InitializeStack;
-end; { TOmniInternalStack.Initialize }
+end; { TOmniBaseStack.Initialize }
 
-function TOmniInternalStack.IsEmpty: boolean;
+function TOmniBaseStack.IsEmpty: boolean;
 begin
-  Result := not assigned(obcPublicChainP^.Head.PData);
+  Result := not assigned(obsPublicChainP^.Head.PData);
 end; { TOmniBaseContainer.IsEmpty }
 
-function TOmniInternalStack.IsFull: boolean;
+function TOmniBaseStack.IsFull: boolean;
 begin
-  Result := not assigned(obcRecycleChainP^.Head.PData);
+  Result := not assigned(obsRecycleChainP^.Head.PData);
 end; { TOmniBaseContainer.IsFull }
 
-function TOmniInternalStack.PopLink(var chain: TOmniChain): POmniLinkedData;
+function TOmniBaseStack.Pop(var value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  linkedData := PopLink(obsPublicChainP^);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(linkedData.Data, value, ElementSize);
+  PushLink(linkedData, obsRecycleChainP^);
+end; { TOmniBaseStack.Pop }
+
+function TOmniBaseStack.PopLink(var chain: TOmniChain): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 //Advanced stack PopLink model with idle/busy status bit
@@ -478,7 +484,7 @@ TryAgain:
     AtStartReference := Head.Reference OR 1;                    //Reference.bit0 := 1
     repeat
       CurrentReference := Head.Reference;
-      dec(TaskCounter);
+      Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
        not AtomicCmpXchg4b(CurrentReference, Reference, Head.Reference)
@@ -495,7 +501,19 @@ TryAgain:
   end;
 end; { PopLink }
 
-procedure TOmniInternalStack.PushLink(const link: POmniLinkedData; var chain: TOmniChain);
+function TOmniBaseStack.Push(const value): boolean;
+var
+  linkedData: POmniLinkedData;
+begin
+  linkedData := PopLink(obsRecycleChainP^);
+  Result := assigned(linkedData);
+  if not Result then
+    Exit;
+  Move(value, linkedData.Data, ElementSize);
+  PushLink(linkedData, obsPublicChainP^);
+end; { TOmniBaseStack.Push }
+
+procedure TOmniBaseStack.PushLink(const link: POmniLinkedData; var chain: TOmniChain);
 //Advanced stack PushLink model with idle/busy status bit
 var
   PData      : pointer;
@@ -511,32 +529,6 @@ begin
     until AtomicCmpXchg4b(PData, link, Head.PData);
   end;
 end; { PushLink }
-
-{ TOmniBaseStack }
-
-function TOmniBaseStack.Pop(var value): boolean;
-var
-  linkedData: POmniLinkedData;
-begin
-  linkedData := PopLink(obcPublicChainP^);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(linkedData.Data, value, ElementSize);
-  PushLink(linkedData, obcRecycleChainP^);
-end; { TOmniBaseStack.Pop }
-
-function TOmniBaseStack.Push(const value): boolean;
-var
-  linkedData: POmniLinkedData;
-begin
-  linkedData := PopLink(obcRecycleChainP^);
-  Result := assigned(linkedData);
-  if not Result then
-    Exit;
-  Move(value, linkedData.Data, ElementSize);
-  PushLink(linkedData, obcPublicChainP^);
-end; { TOmniBaseStack.Push }
 
 { TOmniStack }
 
@@ -571,46 +563,46 @@ begin
   end;
 end; { TOmniStack.Push }
 
-{ TOmniInternalQueue }
+{ TOmniBaseQueue }
 
-function TOmniInternalQueue.Dequeue(var value): boolean;
+function TOmniBaseQueue.Dequeue(var value): boolean;
 var
   Data: pointer;
 begin
-  Data := RemoveLink(obcPublicRingBuffer);
+  Data := RemoveLink(obqPublicRingBuffer);
   Result := assigned(Data);
   if not Result then
     Exit;
   Move(Data^, value, ElementSize);
-  InsertLink(Data, obcRecycleRingBuffer);
-end; { TOmniInternalQueue.Dequeue }
+  InsertLink(Data, obqRecycleRingBuffer);
+end; { TOmniBaseQueue.Dequeue }
 
-procedure TOmniInternalQueue.Empty;
+procedure TOmniBaseQueue.Empty;
 var
   Data: pointer;
 begin
   repeat
-    Data := RemoveLink(obcPublicRingBuffer);
+    Data := RemoveLink(obqPublicRingBuffer);
     if assigned(Data) then
-      InsertLink(Data, obcRecycleRingBuffer)
+      InsertLink(Data, obqRecycleRingBuffer)
     else
       break;
   until false;
-end; { TOmniInternalQueue.Empty }
+end; { TOmniBaseQueue.Empty }
 
-function TOmniInternalQueue.Enqueue(const value): boolean;
+function TOmniBaseQueue.Enqueue(const value): boolean;
 var
   Data: pointer;
 begin
-  Data := RemoveLink(obcRecycleRingBuffer);
+  Data := RemoveLink(obqRecycleRingBuffer);
   Result := assigned(Data);
   if not Result then
     Exit;
   Move(value, Data^, ElementSize);
-  InsertLink(Data, obcPublicRingBuffer);
-end; { TOmniInternalQueue.Enqueue }
+  InsertLink(Data, obqPublicRingBuffer);
+end; { TOmniBaseQueue.Enqueue }
 
-procedure TOmniInternalQueue.Initialize(numElements, elementSize: integer);
+procedure TOmniBaseQueue.Initialize(numElements, elementSize: integer);
 const
   NumOfSamples = 10;
 var
@@ -628,7 +620,7 @@ var
       for n:= 2 to NumOfSamples do
         if TimeTestField[Rutine, n] < TimeTestField[Rutine, x] then
           x := n;
-      inc(result, TimeTestField[Rutine, x]);
+      Inc(result, TimeTestField[Rutine, x]);
       TimeTestField[Rutine, x] := MaxLongInt;
     end;
   end; { GetMinAndClear }
@@ -640,42 +632,42 @@ var
     currElement   : pointer;
   begin
     // allocate obcDataBuffer
-    GetMem(obcDataBuffer, elementSize * numElements + elementSize);
+    GetMem(obqDataBuffer, elementSize * numElements + elementSize);
     // allocate RingBuffers
     RingBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
       SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
-    obcPublicRingBuffer := AllocMem(RingBufferSize);
-    Assert(cardinal(obcPublicRingBuffer) mod 8 = 0,
+    obqPublicRingBuffer := AllocMem(RingBufferSize);
+    Assert(cardinal(obqPublicRingBuffer) mod 8 = 0,
       'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
-    obcRecycleRingBuffer := AllocMem(RingBufferSize);
-    Assert(cardinal(obcRecycleRingBuffer) mod 8 = 0,
+    obqRecycleRingBuffer := AllocMem(RingBufferSize);
+    Assert(cardinal(obqRecycleRingBuffer) mod 8 = 0,
       'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
     // set obcPublicRingBuffer head
-    obcPublicRingBuffer.FirstIn.PData := @obcPublicRingBuffer.Buffer[0];
-    obcPublicRingBuffer.LastIn.PData := @obcPublicRingBuffer.Buffer[0];
-    obcPublicRingBuffer.StartBuffer := @obcPublicRingBuffer.Buffer[0];
-    obcPublicRingBuffer.EndBuffer := @obcPublicRingBuffer.Buffer[numElements];
+    obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
+    obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];
+    obqPublicRingBuffer.StartBuffer := @obqPublicRingBuffer.Buffer[0];
+    obqPublicRingBuffer.EndBuffer := @obqPublicRingBuffer.Buffer[numElements];
     // set obcRecycleRingBuffer head
-    obcRecycleRingBuffer.FirstIn.PData := @obcRecycleRingBuffer.Buffer[0];
-    obcRecycleRingBuffer.LastIn.PData := @obcRecycleRingBuffer.Buffer[numElements];
-    obcRecycleRingBuffer.StartBuffer := @obcRecycleRingBuffer.Buffer[0];
-    obcRecycleRingBuffer.EndBuffer := @obcRecycleRingBuffer.Buffer[numElements];
+    obqRecycleRingBuffer.FirstIn.PData := @obqRecycleRingBuffer.Buffer[0];
+    obqRecycleRingBuffer.LastIn.PData := @obqRecycleRingBuffer.Buffer[numElements];
+    obqRecycleRingBuffer.StartBuffer := @obqRecycleRingBuffer.Buffer[0];
+    obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
     // format obcRecycleRingBuffer
     for n := 0 to numElements do
-      obcRecycleRingBuffer.Buffer[n].PData := pointer(cardinal(obcDataBuffer) + cardinal(n * elementSize));
+      obqRecycleRingBuffer.Buffer[n].PData := pointer(cardinal(obqDataBuffer) + cardinal(n * elementSize));
     //Calcolate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-    obcPublicRingBuffer.TaskRemoveLoops := 1;
-    obcPublicRingBuffer.TaskInsertLoops := 1;
-    obcRecycleRingBuffer.TaskRemoveLoops := 1;
-    obcRecycleRingBuffer.TaskInsertLoops := 1;
+    obqPublicRingBuffer.TaskRemoveLoops := 1;
+    obqPublicRingBuffer.TaskInsertLoops := 1;
+    obqRecycleRingBuffer.TaskRemoveLoops := 1;
+    obqRecycleRingBuffer.TaskInsertLoops := 1;
     for n := 1 to NumOfSamples do  begin
       //Measure RemoveLink rutine delay
       TimeTestField[0, n] := GetTimeStamp;
-      currElement := RemoveLink(obcRecycleRingBuffer);
+      currElement := RemoveLink(obqRecycleRingBuffer);
       TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
       //Measure InsertLink rutine delay
       TimeTestField[1, n] := GetTimeStamp;
-      InsertLink(currElement, obcRecycleRingBuffer);
+      InsertLink(currElement, obqRecycleRingBuffer);
       TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
       //Measure GetTimeStamp rutine delay
       TimeTestField[2, n] := GetTimeStamp;
@@ -684,24 +676,24 @@ var
     //Calculate first 4 minimum average for GetTimeStamp
     n := GetMinAndClear(2, 4);
     //Calculate first 4 minimum average for RemoveLink rutine
-    obcRecycleRingBuffer.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
-    obcPublicRingBuffer.TaskRemoveLoops := obcRecycleRingBuffer.TaskRemoveLoops;
+    obqRecycleRingBuffer.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
+    obqPublicRingBuffer.TaskRemoveLoops := obqRecycleRingBuffer.TaskRemoveLoops;
     //Calculate first 4 minimum average for InsertLink rutine
-    obcRecycleRingBuffer.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
-    obcPublicRingBuffer.TaskInsertLoops := obcRecycleRingBuffer.TaskInsertLoops;
+    obqRecycleRingBuffer.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
+    obqPublicRingBuffer.TaskInsertLoops := obqRecycleRingBuffer.TaskInsertLoops;
   end; { InitializeQueue }
 
-begin { TOmniInternalQueue.InitializeStack }
+begin { TOmniBaseQueue.InitializeStack }
   Assert(SizeOf(cardinal) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
-  oiqNumElements := numElements;
+  obqNumElements := numElements;
   // calculate element size, round up to next 4-aligned value
-  oiqElementSize := (elementSize + 3) AND NOT 3;
+  obqElementSize := (elementSize + 3) AND NOT 3;
   InitializeQueue;
-end; { TOmniInternalQueue.InitializeStack }
+end; { TOmniBaseQueue.InitializeStack }
 
-class procedure TOmniInternalQueue.InsertLink(const data: pointer; const ringBuffer:
+class procedure TOmniBaseQueue.InsertLink(const data: pointer; const ringBuffer:
   POmniRingBuffer);
 //FIFO buffer logic
 //Insert link to queue model with idle/busy status bit
@@ -722,7 +714,7 @@ TryAgain:
     AtStartReference := LastIn.Reference OR 1;                  //Reference.bit0 := 1
     repeat
       CurrentReference := LastIn.Reference;
-      dec(TaskCounter);
+      Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
        not AtomicCmpXchg4b(CurrentReference, Reference, LastIn.Reference)
@@ -743,25 +735,25 @@ TryAgain:
     if not AtomicCmpXchg8b(CurrentLastIn, Reference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
-end; { TOmniInternalQueue.InsertLink }
+end; { TOmniBaseQueue.InsertLink }
 
-function TOmniInternalQueue.IsEmpty: boolean;
+function TOmniBaseQueue.IsEmpty: boolean;
 begin
-  Result := (obcPublicRingBuffer.FirstIn.PData = obcPublicRingBuffer.LastIn.PData);
+  Result := (obqPublicRingBuffer.FirstIn.PData = obqPublicRingBuffer.LastIn.PData);
 end; { TOmniBaseContainer.IsEmpty }
 
-function TOmniInternalQueue.IsFull: boolean;
+function TOmniBaseQueue.IsFull: boolean;
 var
   NewLastIn: pointer;
 begin
-  NewLastIn := pointer(cardinal(obcPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
-  if cardinal(NewLastIn) > cardinal(obcPublicRingBuffer.EndBuffer) then
-    NewLastIn := obcPublicRingBuffer.StartBuffer;
-  result := (cardinal(NewLastIn) > cardinal(obcPublicRingBuffer.LastIn.PData)) or
-    (obcRecycleRingBuffer.FirstIn.PData = obcRecycleRingBuffer.LastIn.PData);
+  NewLastIn := pointer(cardinal(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
+  if cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.EndBuffer) then
+    NewLastIn := obqPublicRingBuffer.StartBuffer;
+  result := (cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.LastIn.PData)) or
+    (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
 end; { TOmniBaseContainer.IsFull }
 
-class function TOmniInternalQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
+class function TOmniBaseQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
 //FIFO buffer logic
 //Remove link from queue model with idle/busy status bit
 var
@@ -782,7 +774,7 @@ TryAgain:
     AtStartReference := FirstIn.Reference OR 1;                 //Reference.bit0 := 1
     repeat
       CurrentReference := FirstIn.Reference;
-      dec(TaskCounter);
+      Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
       not AtomicCmpXchg4b(CurrentReference, Reference, FirstIn.Reference) then
@@ -807,7 +799,7 @@ TryAgain:
     if not AtomicCmpXchg8b(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
-end; { TOmniInternalQueue.RemoveLink }
+end; { TOmniBaseQueue.RemoveLink }
 
 { TOmniQueue }
 
