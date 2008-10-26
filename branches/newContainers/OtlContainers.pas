@@ -729,6 +729,7 @@ var
   affinity   : string;
   currElement: pointer;
   n          : integer;
+
 begin { TOmniBaseQueue.MeasureExecutionTimes }
   if not GOmniBaseQueueTimingInfo.IsInitialized then begin
     affinity := DSiGetThreadAffinity;
