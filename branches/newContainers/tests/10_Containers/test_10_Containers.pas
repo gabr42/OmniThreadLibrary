@@ -179,10 +179,6 @@ type
     procedure OMStartStackStressTest(var msg: TOmniMessage); message MSG_START_STACK_STRESS_TEST;
   end;
 
-procedure DSiYield; inline;
-begin
-end;
-
 { TfrmTestOtlComm }
 
 procedure TfrmTestOtlContainers.AllocateTasks(numWriters, numReaders: integer);
