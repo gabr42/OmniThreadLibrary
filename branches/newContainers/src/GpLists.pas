@@ -344,8 +344,6 @@ type
     function  GetText: string; virtual;
     procedure InsertItem(idx, item: integer);
     procedure Notify(idxItem: integer; operation: TGpListOperation); {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function GetAsDelimitedText1(const delimiter: string; appendLastDelimiter: boolean):
-        string;
     procedure QuickSort(L, R: integer; SCompare: TGpIntegerListSortCompare);
     procedure SetCapacity(const value: integer); virtual;
     procedure SetCount(const value: integer); virtual;
@@ -1401,53 +1399,6 @@ end; { TGpIntegerList.First }
 
 function TGpIntegerList.GetAsDelimitedText(const delimiter: string;
   appendLastDelimiter: boolean): string;
-var
-  iItem   : integer;
-  item    : integer;
-  lenDelim: integer;
-  lenItem : integer;
-  p       : PChar;
-  q       : PChar;
-  sItem   : string;
-  size    : integer;
-begin
-  size := 0;
-  lenDelim := Length(delimiter);
-  for iItem := 0 to Count-1 do begin
-    item := GetItems(iItem);
-    if item = 0 then
-      lenItem := 1
-    else if item < 0 then
-      lenItem := Trunc(Log10(-item))+2
-    else
-      lenItem := Trunc(Log10(item))+1;
-    Inc(size, lenItem);
-    Inc(size, lenDelim);
-  end;
-  if not appendLastDelimiter then
-    Dec(size, lenDelim);
-  SetString(Result, nil, size);
-  p := Pointer(Result);
-  for iItem := 0 to Count-1 do begin
-    sItem := IntToStr(GetItems(iItem));
-    lenItem := Length(sItem);
-    if lenItem <> 0 then begin
-      System.Move(pointer(sItem)^, p^, lenItem*SizeOf(char));
-      Inc(p, lenItem);
-    end;
-    if appendLastDelimiter or (iItem < (Count-1)) then begin
-      q := Pointer(delimiter);
-      while q^ <> #0 do begin
-        p^ := q^;
-        Inc(p);
-        Inc(q);
-      end; //while
-    end;
-  end;
-end; { TGpIntegerList.GetAsDelimitedText }
-
-function TGpIntegerList.GetAsDelimitedText1(const delimiter: string; appendLastDelimiter:
-    boolean): string;
 var
   iItem   : integer;
   item    : integer;
