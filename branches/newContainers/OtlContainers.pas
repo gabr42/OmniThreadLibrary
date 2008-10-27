@@ -47,7 +47,7 @@ unit OtlContainers;
 interface
 
 uses
-  OtlCommon;
+  OtlCommon;                                        
 
 type
   {:Lock-free, single writer, single reader, size-limited stack.
@@ -96,17 +96,8 @@ type
     LastIn         : TReferencedPtr;
     StartBuffer    : pointer;
     EndBuffer      : pointer;
-    TaskInsertLoops: cardinal;
-    TaskRemoveLoops: cardinal;
     Buffer         : TReferencedPtrBuffer;
   end; { TOmniRingBuffer }
-
-  TOmniChain = packed record
-    Head         : TReferencedPtr;
-    TaskPopLoops : cardinal;
-    TaskPushLoops: cardinal;
-  end; { TOmniChain }
-  POmniChain = ^TOmniChain;
 
   POmniLinkedData = ^TOmniLinkedData;
   TOmniLinkedData = packed record
@@ -115,19 +106,21 @@ type
   end; { TOmniLinkedData }
 
   TOmniBaseStack = class abstract(TInterfacedObject, IOmniStack)
-  strict private // placeholder for list headers
-    obsListHeaders  : array [1 .. 2 * SizeOf(TOmniChain) + 4] of byte;
   strict private
-    obsDataBuffer   : pointer;
-    obsElementSize  : integer;
-    obsNumElements  : integer;
-    obsPublicChainP : POmniChain;
-    obsRecycleChainP: POmniChain;
+    obsDataBuffer     : pointer;
+    obsElementSize    : integer;
+    obsNumElements    : integer;
+    obsPublicChainP   : PReferencedPtr;
+    obsRecycleChainP  : PReferencedPtr;
+    class var obsIsInitialized: boolean;                //default is false
+    class var obsTaskPopLoops : cardinal;
+    class var obsTaskPushLoops: cardinal;
   strict protected
     procedure MeasureExecutionTimes;
-    function  PopLink(var chain: TOmniChain): POmniLinkedData;
-    procedure PushLink(const link: POmniLinkedData; var chain: TOmniChain);
+    class function  PopLink(var chain: TReferencedPtr): POmniLinkedData; static;
+    class procedure PushLink(const link: POmniLinkedData; var chain: TReferencedPtr); static;
   public
+    destructor  Destroy; override;
     procedure Empty;
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; inline;
@@ -160,12 +153,16 @@ type
     obqNumElements      : integer;
     obqPublicRingBuffer : POmniRingBuffer;
     obqRecycleRingBuffer: POmniRingBuffer;
+    class var obqTaskInsertLoops: cardinal;             //default is false
+    class var obqTaskRemoveLoops: cardinal;
+    class var obqIsInitialized  : boolean;
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
     class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
     procedure MeasureExecutionTimes;
   public
+    destructor  Destroy; override;
     function  Dequeue(var value): boolean;
     procedure Empty;
     function  Enqueue(const value): boolean;
@@ -210,22 +207,6 @@ type
     procedure Signal;
     property NewData: THandle read GetNewDataEvent;
   end; { TOmniNotifySupport }
-
-  TOmniBaseStackTimingInfo = record
-    TaskPopLoops : cardinal;
-    TaskPushLoops: cardinal;
-    IsInitialized: boolean;
-  end; { TOmniBaseStackTimingInfo }
-
-  TOmniBaseQueueTimingInfo = record
-    TaskInsertLoops: cardinal;
-    TaskRemoveLoops: cardinal;
-    IsInitialized  : boolean;
-  end; { TOmniBaseQueueTimingInfo }
-
-var
-  GOmniBaseStackTimingInfo: TOmniBaseStackTimingInfo;
-  GOmniBaseQueueTimingInfo: TOmniBaseQueueTimingInfo;
 
 { Intel Atomic functions support }
 
@@ -276,18 +257,6 @@ asm
   pop   edi
 end; { AtomicCmpXchg8b }
 
-function AtomicInc4b(var Destination: cardinal; const Count: cardinal = 1): cardinal;
-//ATOMIC FUNCTION
-//begin
-//  Inc(Destination, Count);
-//  result := Destination;
-//end;
-asm
-  mov   ecx, Count
-  lock xadd [Destination], Count
-  lea   eax, edx + ecx
-end; { AtomicInc4b }
-
 function GetThreadId: cardinal;
 //result := GetCurrentThreadId;
 asm
@@ -328,6 +297,12 @@ end; { TOmniNotifySupport.Signal }
 
 { TOmniBaseStack }
 
+destructor TOmniBaseStack.Destroy;
+begin
+  FreeMem(obsPublicChainP);
+  inherited;
+end; { TOmniBaseStack.Destroy }
+
 procedure TOmniBaseStack.Empty;
 var
   linkedData: POmniLinkedData;
@@ -351,42 +326,40 @@ begin
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obsNumElements := numElements;
-  // calculate element size, round up to next 4-aligned value
+  //calculate element size, round up to next 4-aligned value
   obsElementSize := (elementSize + 3) AND NOT 3;
-  if (cardinal(@obsListHeaders) mod 8) = 0 then
-    obsPublicChainP := @obsListHeaders
-  else if (cardinal(@obsListHeaders) mod 8) = 4 then
-    obsPublicChainP := @(obsListHeaders[5])
-  else
-    raise Exception.Create('TOmniBaseContainer: Object is not 4-aligned');
-  obsRecycleChainP := POmniChain(cardinal(obsPublicChainP) + SizeOf(TOmniChain));
   //calculate buffer element size, round up to next 4-aligned value
   bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
-  GetMem(obsDataBuffer, bufferElementSize * numElements);
+  //calculate DataBuffer
+  GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr));
   if cardinal(obsDataBuffer) AND 3 <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
+  obsPublicChainP := obsDataBuffer;
+  inc(cardinal(obsDataBuffer), SizeOf(TReferencedPtr));
+  obsRecycleChainP := obsDataBuffer;
+  inc(cardinal(obsDataBuffer), SizeOf(TReferencedPtr));
   //Format buffer to recycleChain, init obsRecycleChain and obsPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
-  obsRecycleChainP^.Head.PData := obsDataBuffer;
-  currElement := obsRecycleChainP^.Head.PData;
+  obsRecycleChainP^.PData := obsDataBuffer;
+  currElement := obsRecycleChainP^.PData;
   for iElement := 0 to obsNumElements - 2 do begin
     nextElement := POmniLinkedData(integer(currElement) + bufferElementSize);
     currElement.Next := nextElement;
     currElement := nextElement;
   end;
   currElement.Next := nil; // terminate the chain
-  obsPublicChainP^.Head.PData := nil;
+  obsPublicChainP^.PData := nil;
   MeasureExecutionTimes;
 end; { TOmniBaseStack.Initialize }
 
 function TOmniBaseStack.IsEmpty: boolean;
 begin
-  Result := not assigned(obsPublicChainP^.Head.PData);
+  Result := not assigned(obsPublicChainP^.PData);
 end; { TOmniBaseStack.IsEmpty }
 
 function TOmniBaseStack.IsFull: boolean;
 begin
-  Result := not assigned(obsRecycleChainP^.Head.PData);
+  Result := not assigned(obsRecycleChainP^.PData);
 end; { TOmniBaseStack.IsFull }
 
 procedure TOmniBaseStack.MeasureExecutionTimes;
@@ -418,15 +391,13 @@ var
   n          : integer;
 
 begin { TOmniBaseStack.MeasureExecutionTimes }
-  if not GOmniBaseStackTimingInfo.IsInitialized then begin
+  if not obsIsInitialized then begin
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
     try
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-      obsPublicChainP^.TaskPopLoops := 1;
-      obsPublicChainP^.TaskPushLoops := 1;
-      obsRecycleChainP^.TaskPopLoops := 1;
-      obsRecycleChainP^.TaskPushLoops := 1;
+      obsTaskPopLoops := 1;
+      obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetTimeStamp;
@@ -443,16 +414,12 @@ begin { TOmniBaseStack.MeasureExecutionTimes }
       //Calculate first 4 minimum average for GetTimeStamp
       n := GetMinAndClear(2, 4);
       //Calculate first 4 minimum average for RemoveLink rutine
-      GOmniBaseStackTimingInfo.TaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+      obsTaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
       //Calculate first 4 minimum average for InsertLink rutine
-      GOmniBaseStackTimingInfo.TaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
-      GOmniBaseStackTimingInfo.IsInitialized := true;
+      obsTaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+      obsIsInitialized := true;
     finally DSiSetThreadAffinity(affinity); end;
   end;
-  obsRecycleChainP^.TaskPopLoops := GOmniBaseStackTimingInfo.TaskPopLoops;
-  obsPublicChainP^.TaskPopLoops := GOmniBaseStackTimingInfo.TaskPopLoops;
-  obsRecycleChainP^.TaskPushLoops := GOmniBaseStackTimingInfo.TaskPushLoops;
-  obsPublicChainP^.TaskPushLoops := GOmniBaseStackTimingInfo.TaskPushLoops;
 end;  { TOmniBaseStack.MeasureExecutionTimes }
 
 function TOmniBaseStack.Pop(var value): boolean;
@@ -467,38 +434,38 @@ begin
   PushLink(linkedData, obsRecycleChainP^);
 end; { TOmniBaseStack.Pop }
 
-function TOmniBaseStack.PopLink(var chain: TOmniChain): POmniLinkedData;
+class function TOmniBaseStack.PopLink(var chain: TReferencedPtr): POmniLinkedData;
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 //Advanced stack PopLink model with idle/busy status bit
 var
   AtStartReference: cardinal;
   CurrentReference: cardinal;
-  Reference       : cardinal;
   TaskCounter     : cardinal;
+  ThreadReference : cardinal;
 label
   TryAgain;
 begin
-  Reference := GetThreadId + 1;                                 //Reference.bit0 := 1
+  ThreadReference := GetThreadId + 1;                           //Reference.bit0 := 1
   with chain do begin
 TryAgain:
-    TaskCounter := TaskPopLoops;
-    AtStartReference := Head.Reference OR 1;                    //Reference.bit0 := 1
+    TaskCounter := obsTaskPopLoops;
+    AtStartReference := Reference OR 1;                         //Reference.bit0 := 1
     repeat
-      CurrentReference := Head.Reference;
+      CurrentReference := Reference;
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not AtomicCmpXchg4b(CurrentReference, Reference, Head.Reference)
+       not AtomicCmpXchg4b(CurrentReference, ThreadReference, Reference)
     then
       goto TryAgain;
     //Reference is set...
-    result := Head.PData;
+    result := PData;
     //Empty test
     if result = nil then
-      AtomicCmpXchg4b(Reference, 0, Head.Reference)             //Clear Reference if task own reference
+      AtomicCmpXchg4b(ThreadReference, 0, Reference)            //Clear Reference if task own reference
     else
-      if not AtomicCmpXchg8b(result, Reference, result.Next, 0, Head) then
+      if not AtomicCmpXchg8b(result, ThreadReference, result.Next, 0, chain) then
         goto TryAgain;
   end;
 end; { TOmniBaseStack.PopLink }
@@ -515,20 +482,20 @@ begin
   PushLink(linkedData, obsPublicChainP^);
 end; { TOmniBaseStack.Push }
 
-procedure TOmniBaseStack.PushLink(const link: POmniLinkedData; var chain: TOmniChain);
+class procedure TOmniBaseStack.PushLink(const link: POmniLinkedData; var chain: TReferencedPtr);
 //Advanced stack PushLink model with idle/busy status bit
 var
-  PData      : pointer;
+  PMemData   : pointer;
   TaskCounter: cardinal;
 begin
   with chain do begin
-    for TaskCounter := 0 to TaskPushLoops do
-      if (Head.Reference AND 1 = 0) then
+    for TaskCounter := 0 to obsTaskPushLoops do
+      if (Reference AND 1 = 0) then
         break;
     repeat
-      PData := Head.PData;
-      link.Next := PData;
-    until AtomicCmpXchg4b(PData, link, Head.PData);
+      PMemData := PData;
+      link.Next := PMemData;
+    until AtomicCmpXchg4b(PMemData, link, PData);
   end;
 end; { TOmniBaseStack.PushLink }
 
@@ -578,6 +545,14 @@ begin
   Move(Data^, value, ElementSize);
   InsertLink(Data, obqRecycleRingBuffer);
 end; { TOmniBaseQueue.Dequeue }
+
+destructor TOmniBaseQueue.Destroy;
+begin
+  FreeMem(obqDataBuffer);
+  FreeMem(obqPublicRingBuffer);
+  FreeMem(obqRecycleRingBuffer);
+  inherited;
+end; { TOmniBaseQueue.Destroy }
 
 procedure TOmniBaseQueue.Empty;
 var
@@ -651,29 +626,29 @@ var
   CurrentLastIn   : PReferencedPtr;
   CurrentReference: cardinal;
   NewLastIn       : PReferencedPtr;
-  Reference       : cardinal;
   TaskCounter     : cardinal;
+  ThreadReference : cardinal;
 label
   TryAgain;
 begin
-  Reference := GetThreadId + 1;                                 //Reference.bit0 := 1
+  ThreadReference := GetThreadId + 1;                           //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
-    TaskCounter := TaskInsertLoops;
+    TaskCounter := obqTaskInsertLoops;
     AtStartReference := LastIn.Reference OR 1;                  //Reference.bit0 := 1
     repeat
       CurrentReference := LastIn.Reference;
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not AtomicCmpXchg4b(CurrentReference, Reference, LastIn.Reference)
+       not AtomicCmpXchg4b(CurrentReference, ThreadReference, LastIn.Reference)
     then
       goto TryAgain;
     //Reference is set...
     CurrentLastIn := LastIn.PData;
-    AtomicCmpXchg4b(CurrentLastIn.Reference, Reference, CurrentLastIn.Reference);
-    if (Reference <> LastIn.Reference) or
-      not AtomicCmpXchg8b(CurrentLastIn.PData, Reference, data, Reference, CurrentLastIn^)
+    AtomicCmpXchg4b(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
+    if (ThreadReference <> LastIn.Reference) or
+      not AtomicCmpXchg8b(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
     then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
@@ -681,7 +656,7 @@ TryAgain:
     if cardinal(NewLastIn) > cardinal(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
-    if not AtomicCmpXchg8b(CurrentLastIn, Reference, NewLastIn, 0, LastIn) then
+    if not AtomicCmpXchg8b(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseQueue.InsertLink }
@@ -731,15 +706,15 @@ var
   n          : integer;
 
 begin { TOmniBaseQueue.MeasureExecutionTimes }
-  if not GOmniBaseQueueTimingInfo.IsInitialized then begin
+  if not obqIsInitialized then begin
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
     try
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-      obqPublicRingBuffer.TaskRemoveLoops := 1;
-      obqPublicRingBuffer.TaskInsertLoops := 1;
-      obqRecycleRingBuffer.TaskRemoveLoops := 1;
-      obqRecycleRingBuffer.TaskInsertLoops := 1;
+      obqTaskRemoveLoops := 1;
+      obqTaskInsertLoops := 1;
+      obqTaskRemoveLoops := 1;
+      obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetTimeStamp;
@@ -756,16 +731,12 @@ begin { TOmniBaseQueue.MeasureExecutionTimes }
       //Calculate first 4 minimum average for GetTimeStamp
       n := GetMinAndClear(2, 4);
       //Calculate first 4 minimum average for RemoveLink rutine
-      GOmniBaseQueueTimingInfo.TaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
+      obqTaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
       //Calculate first 4 minimum average for InsertLink rutine
-      GOmniBaseQueueTimingInfo.TaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
-      GOmniBaseQueueTimingInfo.IsInitialized := true;
+      obqTaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
+      obqIsInitialized := true;
     finally DSiSetThreadAffinity(affinity); end;
   end;
-  obqRecycleRingBuffer.TaskRemoveLoops := GOmniBaseQueueTimingInfo.TaskRemoveLoops;
-  obqPublicRingBuffer.TaskRemoveLoops := GOmniBaseQueueTimingInfo.TaskRemoveLoops;
-  obqRecycleRingBuffer.TaskInsertLoops := GOmniBaseQueueTimingInfo.TaskInsertLoops;
-  obqPublicRingBuffer.TaskInsertLoops := GOmniBaseQueueTimingInfo.TaskInsertLoops;
 end; { TOmniBaseQueue.MeasureExecutionTimes }
 
 class function TOmniBaseQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
@@ -784,7 +755,7 @@ begin
   Reference := GetThreadId + 1;                                 //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
-    TaskCounter := TaskRemoveLoops;
+    TaskCounter := obqTaskRemoveLoops;
     AtStartReference := FirstIn.Reference OR 1;                 //Reference.bit0 := 1
     repeat
       CurrentReference := FirstIn.Reference;
@@ -855,11 +826,9 @@ var
   queue: TOmniBaseQueue;
   stack: TOmniBaseStack;
 begin
-  GOmniBaseStackTimingInfo.IsInitialized := false;
   stack := TOmniBaseStack.Create;
   stack.Initialize(10, 4); // enough for initialization
   FreeAndNil(stack);
-  GOmniBaseQueueTimingInfo.IsInitialized := false;
   queue := TOmniBaseQueue.Create;
   queue.Initialize(10, 4); // enough for initialization
   FreeAndNil(queue);
