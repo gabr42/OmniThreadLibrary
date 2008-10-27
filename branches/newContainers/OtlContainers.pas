@@ -107,11 +107,11 @@ type
 
   TOmniBaseStack = class abstract(TInterfacedObject, IOmniStack)
   strict private
-    obsDataBuffer     : pointer;
-    obsElementSize    : integer;
-    obsNumElements    : integer;
-    obsPublicChainP   : PReferencedPtr;
-    obsRecycleChainP  : PReferencedPtr;
+    obsDataBuffer   : pointer;
+    obsElementSize  : integer;
+    obsNumElements  : integer;
+    obsPublicChainP : PReferencedPtr;
+    obsRecycleChainP: PReferencedPtr;
     class var obsIsInitialized: boolean;                //default is false
     class var obsTaskPopLoops : cardinal;
     class var obsTaskPushLoops: cardinal;
@@ -332,8 +332,8 @@ begin
   bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
   //calculate DataBuffer
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr));
-  if cardinal(obsDataBuffer) AND 3 <> 0 then
-    raise Exception.Create('TOmniBaseContainer: obcBuffer is not 4-aligned');
+  if cardinal(obsDataBuffer) AND 7 <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcBuffer is not 8-aligned');
   obsPublicChainP := obsDataBuffer;
   inc(cardinal(obsDataBuffer), SizeOf(TReferencedPtr));
   obsRecycleChainP := obsDataBuffer;
@@ -711,8 +711,6 @@ begin { TOmniBaseQueue.MeasureExecutionTimes }
     DSiSetThreadAffinity(affinity[1]);
     try
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
-      obqTaskRemoveLoops := 1;
-      obqTaskInsertLoops := 1;
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
