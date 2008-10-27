@@ -1119,3 +1119,25 @@ end; { TOmniExtendedData.SetValue }
 
 end.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

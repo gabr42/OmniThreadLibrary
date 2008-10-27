@@ -3,8 +3,8 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   Top = 0
   ActiveControl = btnBaseStackStressTest
   Caption = 'OtlContainers tester'
-  ClientHeight = 576
-  ClientWidth = 636
+  ClientHeight = 620
+  ClientWidth = 740
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,36 +15,38 @@ object frmTestOtlContainers: TfrmTestOtlContainers
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   DesignSize = (
-    636
-    576)
+    740
+    620)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
-    Left = 143
+    Left = 208
     Top = 0
-    Width = 493
-    Height = 576
+    Width = 532
+    Height = 620
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 23
+    TabOrder = 36
   end
   object btnStackStressTest: TButton
+    Tag = 11
     Left = 8
     Top = 128
-    Width = 129
+    Width = 194
     Height = 25
-    Caption = 'Stack stress test'
-    TabOrder = 6
+    Caption = 'Stack stress test (1 -> 1)'
+    TabOrder = 8
     OnClick = btnStackStressTestClick
   end
   object btnQueueStressTest: TButton
+    Tag = 11
     Left = 8
-    Top = 336
-    Width = 129
+    Top = 365
+    Width = 194
     Height = 25
-    Caption = 'Queue stress test'
-    TabOrder = 16
+    Caption = 'Queue stress test (1 -> 1)'
+    TabOrder = 22
     OnClick = btnQueueStressTestClick
   end
   object btnStackCorrectnessTest: TButton
@@ -53,117 +55,127 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Width = 129
     Height = 25
     Caption = 'Stack correctness test'
-    TabOrder = 11
+    TabOrder = 14
     OnClick = btnStackCorrectnessTestClick
   end
   object btnQueueCorrectnessTest: TButton
     Left = 8
-    Top = 389
+    Top = 447
     Width = 129
     Height = 25
     Caption = 'Queue correctness test'
-    TabOrder = 19
+    TabOrder = 26
     OnClick = btnQueueCorrectnessTestClick
   end
   object btnStack2to1: TButton
+    Tag = 21
     Left = 8
     Top = 155
     Width = 63
     Height = 25
     Caption = '2 -> 1'
-    TabOrder = 7
-    OnClick = btnStack2to1Click
+    TabOrder = 5
+    OnClick = btnStackStressTestClick
   end
   object btnStack1to2: TButton
+    Tag = 12
     Left = 74
     Top = 155
     Width = 63
     Height = 25
     Caption = '1 -> 2'
-    TabOrder = 9
-    OnClick = btnStack1to2Click
+    TabOrder = 10
+    OnClick = btnStackStressTestClick
   end
   object btnStack2to2: TButton
+    Tag = 22
     Left = 74
     Top = 182
     Width = 63
     Height = 25
     Caption = '2 -> 2'
-    TabOrder = 10
-    OnClick = btnStack2to2Click
+    TabOrder = 9
+    OnClick = btnStackStressTestClick
   end
   object btnBaseStackStressTest: TButton
+    Tag = 11
     Left = 8
     Top = 8
-    Width = 129
+    Width = 194
     Height = 25
-    Caption = 'Base stack stress test'
+    Caption = 'Base stack stress test (1 -> 1)'
     TabOrder = 0
     OnClick = btnBaseStackStressTestClick
   end
   object btnBaseQueueStressTest: TButton
+    Tag = 11
     Left = 8
     Top = 247
-    Width = 129
+    Width = 194
     Height = 25
-    Caption = 'Base queue stress test'
-    TabOrder = 12
+    Caption = 'Base queue stress test (1 -> 1)'
+    TabOrder = 15
     OnClick = btnBaseQueueStressTestClick
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 512
-    Width = 129
+    Top = 556
+    Width = 194
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
-    TabOrder = 22
+    TabOrder = 32
     OnClick = btnSaveLogClick
   end
   object btnStack4to1: TButton
+    Tag = 41
     Left = 8
     Top = 182
     Width = 63
     Height = 25
     Caption = '4 -> 1'
-    TabOrder = 8
-    OnClick = btnStack4to1Click
+    TabOrder = 7
+    OnClick = btnStackStressTestClick
   end
   object btnBaseStack2to1: TButton
+    Tag = 21
     Left = 8
-    Top = 35
+    Top = 36
     Width = 63
     Height = 25
     Caption = '2 -> 1'
     TabOrder = 1
-    OnClick = btnBaseStack2to1Click
+    OnClick = btnBaseStackStressTestClick
   end
   object btnBaseStack1to2: TButton
+    Tag = 12
     Left = 74
-    Top = 35
+    Top = 36
     Width = 63
     Height = 25
     Caption = '1 -> 2'
     TabOrder = 3
-    OnClick = btnBaseStack1to2Click
+    OnClick = btnBaseStackStressTestClick
   end
   object btnBaseStack2to2: TButton
+    Tag = 22
     Left = 74
-    Top = 62
+    Top = 63
     Width = 63
     Height = 25
     Caption = '2 -> 2'
     TabOrder = 4
-    OnClick = btnBaseStack2to2Click
+    OnClick = btnBaseStackStressTestClick
   end
   object btnBaseStack4to1: TButton
+    Tag = 41
     Left = 8
-    Top = 62
+    Top = 63
     Width = 63
     Height = 25
     Caption = '4 -> 1'
     TabOrder = 2
-    OnClick = btnBaseStack4to1Click
+    OnClick = btnBaseStackStressTestClick
   end
   object btnBaseStackCorrectnessTest: TButton
     Left = 8
@@ -171,93 +183,253 @@ object frmTestOtlContainers: TfrmTestOtlContainers
     Width = 129
     Height = 25
     Caption = 'Base s. correctness test'
-    TabOrder = 5
+    TabOrder = 6
     OnClick = btnStackCorrectnessTestClick
   end
   object btnBaseQueueCorrectnessTest: TButton
     Left = 8
-    Top = 301
+    Top = 328
     Width = 129
     Height = 25
     Caption = 'Base q. correctness test'
-    TabOrder = 15
+    TabOrder = 21
     OnClick = btnQueueCorrectnessTestClick
   end
   object btnBaseQueue2to1: TButton
+    Tag = 21
     Left = 8
     Top = 274
     Width = 63
     Height = 25
     Caption = '2 -> 1'
     TabOrder = 13
-    OnClick = btnBaseQueue2to1Click
+    OnClick = btnBaseQueueStressTestClick
   end
   object btnBaseQueue4to1: TButton
-    Left = 74
-    Top = 274
+    Tag = 41
+    Left = 8
+    Top = 301
     Width = 63
     Height = 25
     Caption = '4 -> 1'
-    TabOrder = 14
-    OnClick = btnBaseQueue4to1Click
+    TabOrder = 17
+    OnClick = btnBaseQueueStressTestClick
   end
   object btnQueue2to1: TButton
+    Tag = 21
     Left = 8
-    Top = 363
+    Top = 393
     Width = 63
     Height = 25
     Caption = '2 -> 1'
-    TabOrder = 17
-    OnClick = btnQueue2to1Click
+    TabOrder = 18
+    OnClick = btnQueueStressTestClick
   end
   object btnQueue4to1: TButton
-    Left = 74
-    Top = 363
+    Tag = 41
+    Left = 8
+    Top = 420
     Width = 63
     Height = 25
     Caption = '4 -> 1'
-    TabOrder = 18
-    OnClick = btnQueue4to1Click
+    TabOrder = 20
+    OnClick = btnQueueStressTestClick
   end
   object inpTestDuration_sec: TLabeledEdit
     Left = 8
-    Top = 485
-    Width = 129
+    Top = 529
+    Width = 194
     Height = 21
     Anchors = [akLeft, akBottom]
     EditLabel.Width = 95
     EditLabel.Height = 13
     EditLabel.Caption = 'Test duration (sec):'
-    TabOrder = 21
+    TabOrder = 30
     Text = '60'
   end
   object btnAllTests: TButton
     Left = 8
-    Top = 430
-    Width = 129
+    Top = 482
+    Width = 194
     Height = 25
     Caption = 'Run all tests'
-    TabOrder = 20
+    TabOrder = 28
     OnClick = btnAllTestsClick
   end
   object btnClearLog: TButton
     Left = 8
-    Top = 543
-    Width = 129
+    Top = 587
+    Width = 194
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Clear log'
-    TabOrder = 24
+    TabOrder = 34
     OnClick = btnClearLogClick
+  end
+  object btnBaseQueue1to2: TButton
+    Tag = 12
+    Left = 74
+    Top = 274
+    Width = 63
+    Height = 25
+    Caption = '1 -> 2'
+    TabOrder = 25
+    OnClick = btnBaseQueueStressTestClick
+  end
+  object btnBaseQueue2to2: TButton
+    Tag = 22
+    Left = 74
+    Top = 301
+    Width = 63
+    Height = 25
+    Caption = '2 -> 2'
+    TabOrder = 27
+    OnClick = btnBaseQueueStressTestClick
+  end
+  object btnQueue1to2: TButton
+    Tag = 12
+    Left = 74
+    Top = 393
+    Width = 63
+    Height = 25
+    Caption = '1 -> 2'
+    TabOrder = 29
+    OnClick = btnQueueStressTestClick
+  end
+  object btnQueue2to2: TButton
+    Tag = 22
+    Left = 74
+    Top = 420
+    Width = 63
+    Height = 25
+    Caption = '2 -> 2'
+    TabOrder = 31
+    OnClick = btnQueueStressTestClick
+  end
+  object btnBaseStack1to4: TButton
+    Tag = 14
+    Left = 140
+    Top = 35
+    Width = 63
+    Height = 25
+    Caption = '1 -> 4'
+    TabOrder = 33
+    OnClick = btnBaseStackStressTestClick
+  end
+  object btnBaseStack4to4: TButton
+    Tag = 44
+    Left = 139
+    Top = 63
+    Width = 63
+    Height = 25
+    Caption = '4 -> 4'
+    TabOrder = 35
+    OnClick = btnBaseStackStressTestClick
+  end
+  object btnStack1to4: TButton
+    Tag = 14
+    Left = 139
+    Top = 155
+    Width = 63
+    Height = 25
+    Caption = '1 -> 4'
+    TabOrder = 11
+    OnClick = btnStackStressTestClick
+  end
+  object btnStack4to4: TButton
+    Tag = 44
+    Left = 139
+    Top = 182
+    Width = 63
+    Height = 25
+    Caption = '4 -> 4'
+    TabOrder = 12
+    OnClick = btnStackStressTestClick
+  end
+  object btnBaseQueue1to4: TButton
+    Tag = 14
+    Left = 139
+    Top = 274
+    Width = 63
+    Height = 25
+    Caption = '1 -> 4'
+    TabOrder = 16
+    OnClick = btnBaseQueueStressTestClick
+  end
+  object btnBaseQueue4to4: TButton
+    Tag = 44
+    Left = 139
+    Top = 301
+    Width = 63
+    Height = 25
+    Caption = '4 -> 4'
+    TabOrder = 19
+    OnClick = btnBaseQueueStressTestClick
+  end
+  object btnQueue1to4: TButton
+    Tag = 14
+    Left = 139
+    Top = 393
+    Width = 63
+    Height = 25
+    Caption = '1 - > 4'
+    TabOrder = 23
+    OnClick = btnQueueStressTestClick
+  end
+  object btnQueue4to4: TButton
+    Tag = 44
+    Left = 139
+    Top = 420
+    Width = 63
+    Height = 25
+    Caption = '4 -> 4'
+    TabOrder = 24
+    OnClick = btnQueueStressTestClick
+  end
+  object btnBaseStackAll: TButton
+    Left = 139
+    Top = 89
+    Width = 63
+    Height = 25
+    Caption = 'Run all'
+    TabOrder = 37
+    OnClick = btnBaseStackAllClick
+  end
+  object btnStackAll: TButton
+    Left = 139
+    Top = 209
+    Width = 63
+    Height = 25
+    Caption = 'Run all'
+    TabOrder = 38
+    OnClick = btnStackAllClick
+  end
+  object btnBaseQueueAll: TButton
+    Left = 139
+    Top = 328
+    Width = 63
+    Height = 25
+    Caption = 'Run all'
+    TabOrder = 39
+    OnClick = btnBaseQueueAllClick
+  end
+  object btnQueueAll: TButton
+    Left = 139
+    Top = 447
+    Width = 63
+    Height = 25
+    Caption = 'Run all'
+    TabOrder = 40
+    OnClick = btnQueueAllClick
   end
   object OmniEventMonitor1: TOmniEventMonitor
     OnTaskMessage = OmniEventMonitor1TaskMessage
-    Left = 152
-    Top = 536
+    Left = 248
+    Top = 576
   end
   object SaveDialog: TSaveDialog
     DefaultExt = 'log'
-    Left = 184
-    Top = 536
+    Left = 216
+    Top = 576
   end
 end
