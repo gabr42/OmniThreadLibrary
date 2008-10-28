@@ -53,7 +53,7 @@ var
   Params, Param: PParamInfo;
   returnInfo: PReturnInfo;
 begin
-  header := ObjAuto.GetMethodInfo( Obj, MethodName );
+  header := ObjAuto.GetMethodInfo( Obj, ShortString(MethodName) );
   // Check the length is greater than just that of the name
   if Header.Len <= SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Header.Name) then
   begin
@@ -89,7 +89,7 @@ function TParamInfoHelper.AsString: string;
 begin
   Result := '';
   if pfResult in Flags then exit;         // Seems to be extra info about the return function, not sure what it means
-  Result := Name + ': ' + ParamType^.Name;
+  Result := string(Name) + ': ' + string(ParamType^.Name);
   if pfVar in self.Flags then             // Should really handle the other flags here
     Result := 'var ' + Result;
 end;
@@ -114,7 +114,7 @@ var
 begin
   Assert( Version = 1, 'Version of ReturnInfo incorrect' );
   if assigned( ReturnType ) then
-    Result := ReturnType^.Name;
+    Result := string(ReturnType^.Name);
   Result := Result + ';';
   case CallingConvention of
     ccRegister: ;// Default
@@ -144,7 +144,7 @@ begin
       method := MethodInfo;
       for i := 0 to Count - 1 do
       begin
-        Result := Result + DescriptionOfMethod(self, method.Name) + sLineBreak;
+        Result := Result + DescriptionOfMethod(self, string(method.Name)) + sLineBreak;
         Inc(Integer(method), PMethodInfoHeader(method)^.Len); // Get next method
       end;
     end;
