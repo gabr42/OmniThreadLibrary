@@ -85,6 +85,11 @@
 ///    http://blogs.msdn.com/pfxteam/archive/2008/06/18/8620615.aspx
 ///  - Erlang, http://en.wikipedia.org/wiki/Erlang_(programming_language)
 
+{$IF CompilerVersion >= 20}
+  {$DEFINE OTL_Anonymous}
+{$IFEND}
+{$WARN SYMBOL_PLATFORM OFF}
+
 unit OtlTaskControl;
 
 interface
@@ -217,6 +222,11 @@ type
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { IOmniTaskGroup }
 
+{$IFDEF OTL_Anonymous}
+  TOmniTaskFunction = reference to procedure (task: IOmniTask);
+  function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
+{$ENDIF OTL_Anonymous}
+
   function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(worker: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(const worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
@@ -292,7 +302,7 @@ type
 
   TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
-  TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker);
+  TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
   TOmniTaskExecutor = class
   strict private
@@ -301,6 +311,9 @@ type
     oteExecutorType      : TOmniExecutorType;
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
+    {$IFDEF OTL_Anonymous}
+    oteFunc              : TOmniTaskFunction;
+    {$ENDIF OTL_Anonymous}
     oteInternalLock      : TSynchroObject;
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
@@ -345,6 +358,9 @@ type
     constructor Create(const workerIntf: IOmniWorker); overload;
     constructor Create(method: TOmniTaskMethod); overload;
     constructor Create(proc: TOmniTaskProcedure); overload;
+    {$IFDEF OTL_Anonymous}
+    constructor Create(func: TOmniTaskFunction); overload;
+    {$ENDIF OTL_Anonymous}
     destructor  Destroy; override;
     procedure Asy_DispatchMessages(const task: IOmniTask);
     procedure Asy_Execute(const task: IOmniTask);
@@ -481,6 +497,9 @@ type
     constructor Create(const worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniTaskMethod; const taskName: string); overload;
     constructor Create(worker: TOmniTaskProcedure; const taskName: string); overload;
+    {$IFDEF OTL_Anonymous}
+    constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
+    {$ENDIF OTL_Anonymous}
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
@@ -555,6 +574,13 @@ type
   end; { TOmniTaskGroup }
 
 { exports }
+
+{$IFDEF OTL_Anonymous}
+function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl;
+begin
+  Result := TOmniTaskControl.Create(worker, taskName);
+end; { CreateTask }
+{$ENDIF OTL_Anonymous}
 
 function CreateTask(worker: TOmniTaskProcedure; const taskName: string):
   IOmniTaskControl;
@@ -843,6 +869,15 @@ begin
   Initialize;
 end; { TOmniTaskExecutor.Create }
 
+{$IFDEF OTL_Anonymous}
+constructor TOmniTaskExecutor.Create(func: TOmniTaskFunction);
+begin
+  oteExecutorType := etFunction;
+  oteFunc := func;
+  Initialize;
+end; { TOmniTaskExecutor.Create }
+{$ENDIF OTL_Anonymous}
+
 destructor TOmniTaskExecutor.Destroy;
 begin
   oteInternalLock.Acquire;
@@ -996,6 +1031,13 @@ begin
         oteMethod(task);
       etProcedure:
         oteProc(task);
+      etFunction:
+        {$IFDEF OTL_Anonymous}
+        oteFunc(task);
+        {$ELSE}
+        raise Exception.Create('TOmniTaskExecutor.Asy_Execute: ' +
+          'Anonymous function execution is not supported on Delphi 2007');
+        {$ENDIF OTL_Anonymous}
       etWorker:
         Asy_DispatchMessages(task);
       else
@@ -1007,7 +1049,8 @@ end; { TOmniTaskExecutor.Asy_Execute }
 procedure TOmniTaskExecutor.Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterComm: Additional communication support is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterComm: ' +
+      'Additional communication support is only available when working with an IOmniWorker');
   oteInternalLock.Acquire;
   try
     if not assigned(oteCommList) then
@@ -1061,7 +1104,8 @@ end; { TOmniTaskExecutor.Asy_SetTimerInt }
 procedure TOmniTaskExecutor.Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: Additional communication support is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: ' +
+      'Additional communication support is only available when working with an IOmniWorker');
   oteInternalLock.Acquire;
   try
     oteCommList.Remove(comm);
@@ -1277,7 +1321,7 @@ begin
   oteInternalLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
-  TimerMessageID := -1;
+  oteTimerMessageID.Value := cardinal(-1);
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
@@ -1304,40 +1348,42 @@ begin
   if (([tcoAlertableWait, tcoMessageWait] * Options) <> []) and
      (oteExecutorType <> etWorker)
   then
-    raise Exception.Create('TOmniTaskExecutor.SetOptions: Trying to set IOmniWorker specific option(s)');
+    raise Exception.Create('TOmniTaskExecutor.SetOptions: ' +
+      'Trying to set IOmniWorker specific option(s)');
   oteOptions := value;
 end; { TOmniTaskExecutor.SetOptions }
 
 procedure TOmniTaskExecutor.SetTimerInterval_ms(const value: cardinal);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerInterval_ms: Timer support is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.SetTimerInterval_ms: ' +
+      'Timer support is only available when working with an IOmniWorker');
   oteTimerInterval_ms.Value := value;
 end; { TOmniTaskExecutor.SetTimerInterval_ms }
 
 procedure TOmniTaskExecutor.SetTimerMessageID(const value: integer);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
+      'Timer support is only available when working with an IOmniWorker');
   oteTimerMessageID.Value := cardinal(value);
 end; { TOmniTaskExecutor.SetTimerMessageID }
 
 procedure TOmniTaskExecutor.SetTimerMessageMethod(const value: pointer);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
+      'Timer support is only available when working with an IOmniWorker');
   oteTimerMessageMethod.Value := cardinal(value);
 end; { TOmniTaskExecutor.SetTimerMessageMethod }
 
 procedure TOmniTaskExecutor.SetTimerMessageName(const value: string);
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: Timer support is only available when working with an IOmniWorker');
-//  oteInternalLock.Acquire;
-//  try
+    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
+      'Timer support is only available when working with an IOmniWorker');
     oteTimerMessageName := value;
     UniqueString(oteTimerMessageName);
-//  finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.SetTimerMessageName }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
@@ -1351,7 +1397,8 @@ end; { TOmniTaskExecutor.TerminateWhen }
 function TOmniTaskExecutor.WaitForInit: boolean;
 begin
   if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.WaitForInit: Wait for init is only available when working with an IOmniWorker');
+    raise Exception.Create('TOmniTaskExecutor.WaitForInit: ' +
+      'Wait for init is only available when working with an IOmniWorker');
   WaitForSingleObject(WorkerInitialized, INFINITE);
   Result := WorkerInitOK;
 end; { TOmniTaskExecutor.WaitForInit }
@@ -1375,6 +1422,14 @@ begin
   otcExecutor := TOmniTaskExecutor.Create(worker);
   Initialize(taskName);
 end; { TOmniTaskControl.Create }
+
+{$IFDEF OTL_Anonymous}
+constructor TOmniTaskControl.Create(worker: TOmniTaskFunction; const taskName: string);
+begin
+  otcExecutor := TOmniTaskExecutor.Create(worker);
+  Initialize(taskName);
+end; { TOmniTaskControl.Create }
+{$ENDIF OTL_Anonymous}
 
 destructor TOmniTaskControl.Destroy;
 begin

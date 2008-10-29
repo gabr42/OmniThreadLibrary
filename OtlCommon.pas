@@ -54,6 +54,8 @@
 ///       - First official release.
 ///</para></remarks>
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 unit OtlCommon;
 
 interface

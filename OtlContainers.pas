@@ -40,6 +40,8 @@
 ///         multiple readers.
 ///</para></remarks>
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 unit OtlContainers;
 
 {$R-,O+,A8}

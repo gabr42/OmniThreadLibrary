@@ -45,6 +45,8 @@
 ///       - First official release.
 ///</para></remarks>
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 unit OtlEventMonitor;
 
 interface
