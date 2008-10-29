@@ -1,13 +1,10 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{88241587-fdfe-4f8e-b2a3-8044d45a3d91}</ProjectGuid>
+			<ProjectGuid>{2FCB214C-2EBE-4450-BF73-C4913A71810E}</ProjectGuid>
 			<MainSource>OmniThreadLibraryRuntime2009.dpk</MainSource>
-			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-			<DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryRuntime.bpl</DCC_DependencyCheckOutputName>
 			<ProjectVersion>12.0</ProjectVersion>
-			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Config Condition="'$(Config)'==''">Release</Config>
+			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -23,31 +20,22 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\6.0\Bpl\OmniThreadLibraryRuntime2009.bpl</DCC_DependencyCheckOutputName>
-			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-			<DCC_RangeChecking>true</DCC_RangeChecking>
-			<DCC_Description>Omni Thread Library Runtime</DCC_Description>
-			<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
-			<DesignOnlyPackage>false</DesignOnlyPackage>
-			<DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
+			<DCC_ImageBase>00400000</DCC_ImageBase>
+			<DCC_Platform>x86</DCC_Platform>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<Version>7.0</Version>
-			<DCC_DebugInformation>False</DCC_DebugInformation>
-			<DCC_WriteableConstants>True</DCC_WriteableConstants>
-			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
-			<DCC_RangeChecking>True</DCC_RangeChecking>
-			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
-			<Version>7.0</Version>
-			<DCC_RangeChecking>True</DCC_RangeChecking>
-			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="OmniThreadLibraryRuntime2009.dpk">
@@ -63,12 +51,7 @@
 			<DCCReference Include="..\src\DetailedRTTI.pas"/>
 			<DCCReference Include="..\OtlCommon.pas"/>
 			<DCCReference Include="..\OtlContainers.pas"/>
-			<DCCReference Include="..\OtlComm.pas"/>
-			<DCCReference Include="..\OtlTask.pas"/>
-			<DCCReference Include="..\OtlTaskControl.pas"/>
-			<DCCReference Include="..\OtlThreadPool.pas"/>
-			<DCCReference Include="..\OtlEventMonitor.pas"/>
-			<DCCReference Include="..\src\DSiWin32.pas"/>
+			<DCCReference Include="..\OtlCommBufferTest.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -87,6 +70,9 @@
 			<Borland.ProjectType>Package</Borland.ProjectType>
 			<BorlandProject>
 				<Delphi.Personality>
+					<Source>
+						<Source Name="MainSource">OmniThreadLibraryRuntime2009.dpk</Source>
+					</Source>
 					<Parameters>
 						<Parameters Name="UseLauncher">False</Parameters>
 						<Parameters Name="LoadAllSymbols">True</Parameters>
@@ -103,25 +89,22 @@
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
 						<VersionInfo Name="Private">False</VersionInfo>
-						<VersionInfo Name="DLL">True</VersionInfo>
+						<VersionInfo Name="DLL">False</VersionInfo>
 						<VersionInfo Name="Locale">1060</VersionInfo>
 						<VersionInfo Name="CodePage">1250</VersionInfo>
 					</VersionInfo>
 					<VersionInfoKeys>
-						<VersionInfoKeys Name="CompanyName">Delphi-Si</VersionInfoKeys>
-						<VersionInfoKeys Name="FileDescription">Omni Thread Library Runtime</VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
+						<VersionInfoKeys Name="FileDescription"/>
 						<VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
-						<VersionInfoKeys Name="InternalName">OTL RT</VersionInfoKeys>
-						<VersionInfoKeys Name="LegalCopyright">Copylight ©2008 Delphi-Si</VersionInfoKeys>
+						<VersionInfoKeys Name="InternalName"/>
+						<VersionInfoKeys Name="LegalCopyright"/>
 						<VersionInfoKeys Name="LegalTrademarks"/>
-						<VersionInfoKeys Name="OriginalFilename">OmniThreadLibraryRuntime</VersionInfoKeys>
-						<VersionInfoKeys Name="ProductName">Omni Thread Library</VersionInfoKeys>
+						<VersionInfoKeys Name="OriginalFilename"/>
+						<VersionInfoKeys Name="ProductName"/>
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Source>
-						<Source Name="MainSource">OmniThreadLibraryRuntime2009.dpk</Source>
-					</Source>
 					<Excluded_Packages>
 						<Excluded_Packages Name="$(BDS)\bin\dcloffice2k120.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDS)\bin\dclofficexp120.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
