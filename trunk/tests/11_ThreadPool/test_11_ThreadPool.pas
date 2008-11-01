@@ -99,7 +99,7 @@ begin
     Log('some should enter thread queue, some should be rejected (queue too long).');
   for iTask := 1 to numTasks do begin
     CreateTask(THelloWorker.Create(Handle, delay_ms)).MonitorWith(OmniTED).Schedule;
-    Application.ProcessMessages;
+//    Application.ProcessMessages;
   end;
 end;
 
