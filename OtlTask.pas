@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-05
-///   Version           : 1.02
+///   Last modification : 2008-11-01
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2008-11-01
+///       - *** Breaking interface change ***
+///         - IOmniTask.Terminated renamed to IOmniTask.Stopped.
+///         - New IOmniTask.Terminated that check whether the task
+///           *has been requested to terminate*.
 ///     1.02: 2008-10-05
 ///       - Added two overloaded SetTimer methods using string/pointer invocation.
 ///     1.01: 2008-09-18
@@ -80,7 +85,8 @@ type
     procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
     procedure StopTimer;
     procedure Terminate;
-    function  Terminated: boolean; // TODO 1 -oPrimoz Gabrijelcic : Possibly bad name choice!
+    function  Terminated: boolean;
+    function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;

@@ -53,6 +53,9 @@ unit OtlThreadPool;
 
 interface
 
+{ TODO 1 -oPrimoz Gabrijelcic : Rewrite using one ITaskControl to manage thread pool. }
+{ TODO 1 -oPrimoz Gabrijelcic : Use OtlCommunication to send messages to the Monitor. }
+
 // TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
 // TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example)
 
@@ -425,7 +428,7 @@ begin
     if assigned(WorkItem_ref) then begin
       task := WorkItem_ref.Task;
       if assigned(task) then
-        Result := task.Terminated;
+        Result := task.Stopped;
     end;
   finally owtWorkItemLock.Release end;
 end; { TOTPWorkerThread.Asy_Stopped }
@@ -445,7 +448,7 @@ begin
       {$IFDEF LogThreadPool}Log('Thread %s has work item', [Description]);{$ENDIF LogThreadPool}
       workItem := WorkItem_ref;
       WorkItem_ref := nil;
-      if assigned(workItem) and assigned(workItem.Task) and (not workItem.Task.Terminated) then begin
+      if assigned(workItem) and assigned(workItem.Task) and (not workItem.Task.Stopped) then begin
         workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
         Owner.Asy_RequestCompleted(workItem, Self);
         Result := true;
@@ -638,7 +641,7 @@ begin
         otpRunningWorkers.Remove(worker);
         otpMonitorSupport.Notify(
           TOmniThreadPoolMonitorInfo.Create(UniqueID, tpoKillThread, worker.ThreadID));
-        TerminateThread(worker.Handle, 0);
+        TerminateThread(worker.Handle, cardinal(-1));
         FreeAndNil(worker);
         Result := false;
       end
@@ -1040,7 +1043,7 @@ begin
 end; { TOmniThreadPool.WndProc }
 
 initialization
-  //assumtiptions made in the code above
+  //assumptions made in the code above
   Assert(SizeOf(pointer) = SizeOf(WParam));
   Assert(SizeOf(pointer) = SizeOf(LParam));
 end.

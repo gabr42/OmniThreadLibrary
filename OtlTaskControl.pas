@@ -41,6 +41,9 @@
 ///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.05: 2008-11-01
+///       - IOmniTaskControl.Terminate kills the task thread if it doesn't terminate in
+///         the specified amount of time.
 ///     1.04a: 2008-10-06
 ///       - IOmniTaskControl.Invoke modified to return IOmniTaskControl.
 ///     1.04: 2008-10-05
@@ -437,8 +440,9 @@ type
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
+    function Stopped: boolean;
     procedure StopTimer;
-    function  Terminated: boolean;
+    function Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -473,6 +477,7 @@ type
   strict private
     otcDestroyLock: boolean;
     otcExecutor   : TOmniTaskExecutor;
+    otcOwningPool : IOmniThreadPool;
     otcParameters : TOmniValueContainer;
     otcQueueLength: integer;
     otcSharedInfo : TOmniSharedTaskInfo;
@@ -777,6 +782,11 @@ begin
   otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageName);
 end; { TOmniTask.SetTimer }
 
+function TOmniTask.Stopped: boolean;
+begin
+  Result := WaitForSingleObject(otSharedInfo.TerminatedEvent, 0) <> WAIT_TIMEOUT;
+end; { TOmniTask.Stopped }
+
 procedure TOmniTask.StopTimer;
 begin
   SetTimer(0);
@@ -791,7 +801,7 @@ end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
 begin
-  Result := WaitForSingleObject(otSharedInfo.TerminatedEvent, 0) <> WAIT_TIMEOUT;
+  Result := WaitForSingleObject(otSharedInfo.TerminateEvent, 0) <> WAIT_TIMEOUT;
 end; { TOmniTask.Terminated }
 
 procedure TOmniTask.UnregisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1618,14 +1628,14 @@ begin
   Result := Self;
 end; { TOmniTaskControl.Run }
 
-function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool = nil
-  {default pool}): IOmniTaskControl;
+function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
 begin
   otcParameters.Lock;
   if assigned(threadPool) then
-    (threadPool as IOmniThreadPoolScheduler).Schedule(CreateTask)
+    otcOwningPool := threadPool
   else
-    (GlobalOmniThreadPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
+    otcOwningPool := GlobalOmniThreadPool;
+  (otcOwningPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
   Result := Self;
 end; { TOmniTaskControl.Schedule }
 
@@ -1701,12 +1711,19 @@ end; { TOmniTaskControl.SetTimer }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
-{ TODO :
-reset executor and exit immediately if task was not started at all
-or raise exception? }
+  //TODO : reset executor and exit immediately if task was not started at all or raise exception?
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
-  // TODO 1 -oPrimoz Gabrijelcic : Kill thread if not Result?
+  if not Result then begin
+    if assigned(otcThread) then begin
+      TerminateThread(otcThread.Handle, cardinal(-1));
+      otcThread := nil;
+    end
+    else if assigned(otcOwningPool) then begin
+      otcOwningPool.Cancel(UniqueID);
+      otcOwningPool := nil;
+    end;
+  end;
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
