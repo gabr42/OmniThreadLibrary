@@ -6,6 +6,9 @@
 			<Projects Include="OmniThreadLibraryRuntime2009.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="OmniThreadLibraryDesigntime2009.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -23,14 +26,23 @@
 		<Target Name="OmniThreadLibraryRuntime2009:Make">
 			<MSBuild Targets="Make" Projects="OmniThreadLibraryRuntime2009.dproj"/>
 		</Target>
+		<Target Name="OmniThreadLibraryDesigntime2009">
+			<MSBuild Projects="OmniThreadLibraryDesigntime2009.dproj"/>
+		</Target>
+		<Target Name="OmniThreadLibraryDesigntime2009:Clean">
+			<MSBuild Targets="Clean" Projects="OmniThreadLibraryDesigntime2009.dproj"/>
+		</Target>
+		<Target Name="OmniThreadLibraryDesigntime2009:Make">
+			<MSBuild Targets="Make" Projects="OmniThreadLibraryDesigntime2009.dproj"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="OmniThreadLibraryRuntime2009"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2009;OmniThreadLibraryDesigntime2009"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="OmniThreadLibraryRuntime2009:Clean"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2009:Clean;OmniThreadLibraryDesigntime2009:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="OmniThreadLibraryRuntime2009:Make"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2009:Make;OmniThreadLibraryDesigntime2009:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>
