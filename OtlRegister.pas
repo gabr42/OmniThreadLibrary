@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-07-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2008-11-04
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2008-11-04
+///       - Added TOmniTaskRunner registration.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -51,9 +53,11 @@ interface
 
 uses
   Classes,
-  OtlEventMonitor;
+  OtlEventMonitor,
+  OtlTaskRunner;
 
 {$R OtlEventMonitor.dcr}
+{$R OtlTaskRunner.dcr}
 
 procedure Register;
 
@@ -64,6 +68,7 @@ implementation
 procedure Register;
 begin
   RegisterComponents('OmniThreadLibrary', [TOmniEventMonitor]);
+  RegisterComponents('OmniThreadLibrary', [TOmniTaskRunner]);
 end; { Register }
 
 end.
