@@ -29,10 +29,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2008-10-04
-   Version           : 1.04
+   Last modification : 2008-11-09
+   Version           : 1.05a
 </pre>*)(*
    History:
+     1.05: 2008-11-09
+       - Fixed a bug in TGpStringTable.Grow and TGpStringDictionary.Grow which caused
+         random memory overwrites.
+     1.05: 2008-11-08
+       - Added function Count to TGpStringTable, TGpStringDictionary and TGpStringHash.
      1.04: 2008-10-20
        - Added TGpStringTable string storage.
        - Added TGpStringDictionary - a hash that uses TGpStringTable for string storage.
@@ -101,6 +106,7 @@ type
     constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
     destructor  Destroy; override;
     procedure Add(const key: string; value: integer);
+    function  Count: integer;                                    {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Find(const key: string; var value: integer): boolean;
     {$IFDEF GpStringHash_Enumerators}
     function  GetEnumerator: TGpStringHashEnumerator;            {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
@@ -139,12 +145,13 @@ type
     constructor Create(numBuckets, numItems: cardinal; ownsObjects: boolean = true; canGrow: boolean = false); overload;
     destructor  Destroy; override;
     procedure Add(const key: string; value: TObject);               {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Count: integer;                                       {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Find(const key: string; var value: TObject): boolean; {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     {$IFDEF GpStringHash_Enumerators}
     function  GetEnumerator: TGpStringObjectHashEnumerator;         {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     {$ENDIF GpStringHash_Enumerators}
     function  HasKey(const key: string): boolean;                   {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    procedure Update(const key: string; value: TObject);            
+    procedure Update(const key: string; value: TObject);
     function  ValueOf(const key: string): TObject;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property Objects[const key: string]: TObject read GetObjects write SetObjects; default;
   end; { TGpStringObjectHash }
@@ -237,8 +244,10 @@ type
   public
     constructor Create(numItems, initialArraySize: cardinal);
     destructor  Destroy; override;
-    procedure Add(const key: string; value: int64);
-    function  Find(const key: string; var value: int64): boolean;
+    function  Add(const key: string; value: int64): cardinal;
+    function  Count: integer;                                    {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Find(const key: string; var index: cardinal; var value: int64): boolean;
+    procedure Get(index: cardinal; var key: string; var value: int64);
     {$IFDEF GpStringHash_Enumerators}
     function  GetEnumerator: TGpStringDictionaryEnumerator;      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     {$ENDIF GpStringHash_Enumerators}
@@ -253,6 +262,7 @@ function GetGoodHashSize(dataSize: cardinal): cardinal;
 implementation
 
 uses
+  FastMM4,
   SysUtils,
   DSiWin32;
 
@@ -356,13 +366,25 @@ begin
       Grow
     else
       raise Exception.Create('TGpStringHash.Add: Maximum size reached');
+ScanMemoryPoolForCorruptions;
   bucket := @(shItems[shFirstEmpty]); // point to an empty slot in the pre-allocated array
+ScanMemoryPoolForCorruptions;
   bucket^.Key := key;
+ScanMemoryPoolForCorruptions;
   bucket^.Value := value;
+ScanMemoryPoolForCorruptions;
   bucket^.Next := shBuckets[hash];
+ScanMemoryPoolForCorruptions;
   shBuckets[hash] := shFirstEmpty;
+ScanMemoryPoolForCorruptions;
   Inc(shFirstEmpty);
+ScanMemoryPoolForCorruptions;  
 end; { TGpStringHash.Add }
+
+function TGpStringHash.Count: integer;
+begin
+  Result := shFirstEmpty - 1;
+end; { TGpStringHash.Count }
 
 function TGpStringHash.Find(const key: string; var value: integer): boolean;
 var
@@ -413,6 +435,7 @@ var
   shOldBuckets: array of cardinal;
   shOldItems  : array of TGpHashItem;
 begin
+ScanMemoryPoolForCorruptions;
   SetLength(shOldBuckets, Length(shBuckets));
   Move(shBuckets[0], shOldBuckets[0], Length(shBuckets) * SizeOf(shBuckets[0]));
   SetLength(shOldItems, Length(shItems));
@@ -425,7 +448,7 @@ begin
   SetLength(shBuckets, GetGoodHashSize(Length(shItems)));
   FillChar(shBuckets[0], Length(shBuckets) * SizeOf(shBuckets[0]), 0);
   shItems[0].Value := -1; // sentinel for the ValueOf operation
-  shSize := Length(shItems);
+  shSize := Length(shItems) - 1;
   shNumBuckets := Length(shBuckets);
   shFirstEmpty := 1;
   for oldIndex := 1 to Length(shOldItems) - 1 do begin
@@ -438,6 +461,7 @@ begin
     Inc(shFirstEmpty);
   end;
   FillChar(shOldItems[0], Length(shOldItems) * SizeOf(shOldItems[0]), 0); //prevent string refcount problems
+ScanMemoryPoolForCorruptions;  
 end; { TGpStringHash.Grow }
 
 function TGpStringHash.HasKey(const key: string): boolean;
@@ -527,6 +551,11 @@ procedure TGpStringObjectHash.Add(const key: string; value: TObject);
 begin
   sohHash.Add(key, integer(value));
 end; { TGpStringObjectHash.Add }
+
+function TGpStringObjectHash.Count: integer;
+begin
+  Result := sohHash.Count;
+end; { TGpStringObjectHash.Count }
 
 function TGpStringObjectHash.Find(const key: string; var value: TObject): boolean;
 begin
@@ -771,7 +800,7 @@ begin
   inherited Destroy;
 end; { TGpStringDictionary.Destroy }
 
-procedure TGpStringDictionary.Add(const key: string; value: int64);
+function TGpStringDictionary.Add(const key: string; value: int64): cardinal;
 var
   bucket: PGpTableHashItem;
   hash  : cardinal;
@@ -787,15 +816,23 @@ begin
   bucket^.Next := sdBuckets[hash];
   sdBuckets[hash] := sdFirstEmpty;
   Inc(sdFirstEmpty);
+  Result := bucket^.index;
 end; { TGpStringDictionary.Add }
 
-function TGpStringDictionary.Find(const key: string; var value: int64): boolean;
+function TGpStringDictionary.Count: integer;
+begin
+  Result := sdFirstEmpty - 1;
+end; { TGpStringDictionary.Count }
+
+function TGpStringDictionary.Find(const key: string; var index: cardinal; var value:
+  int64): boolean;
 var
   bucket: integer;
 begin
   bucket := FindBucket(key);
   if bucket > 0 then begin
-    value := sdStringTable.Value[sdItems[bucket].index];
+    index := sdItems[bucket].Index;
+    value := sdStringTable.Value[index];
     Result := true;
   end
   else
@@ -808,6 +845,11 @@ begin
   while (Result <> 0) and (sdStringTable.Key[sdItems[Result].Index] <> key) do
     Result := sdItems[Result].Next;
 end; { TGpStringDictionary.FindBucket }
+
+procedure TGpStringDictionary.Get(index: cardinal; var key: string; var value: int64);
+begin
+  sdStringTable.Get(index, key, value);
+end; { TGpStringDictionary.Get }
 
 {$IFDEF GpStringHash_Enumerators}
 function TGpStringDictionary.GetEnumerator: TGpStringDictionaryEnumerator;
@@ -848,7 +890,7 @@ begin
   SetLength(sdItems, 2*Length(sdItems) + 1);
   SetLength(sdBuckets, GetGoodHashSize(Length(sdItems)));
   FillChar(sdBuckets[0], Length(sdBuckets) * SizeOf(sdBuckets[0]), 0);
-  sdSize := Length(sdItems);
+  sdSize := Length(sdItems) - 1;
   sdNumBuckets := Length(sdBuckets);
   sdFirstEmpty := 1;
   for oldIndex := 1 to Length(shOldItems) - 1 do begin
