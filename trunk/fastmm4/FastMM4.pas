@@ -1,6 +1,6 @@
 (*
 
-Fast Memory Manager 4.88
+Fast Memory Manager 4.90
 
 Description:
  A fast replacement memory manager for CodeGear Delphi Win32 applications that
@@ -225,6 +225,8 @@ Acknowledgements (for version 4):
    ScanMemoryPoolForCorruption was not thread safe.
  - Michael Rabatscher for reporting some compiler warnings.
  - QianYuan Wang for the Simplified Chinese translation of FastMM4Options.inc.
+ - Maurizio Lotauro and Christian-W. Budde for reporting some Delphi 5
+   compiler errors.
  - Everyone who have made donations. Thanks!
  - Any other Fastcoders or supporters that I have forgotten, and also everyone
    that helped with the older versions.
@@ -703,6 +705,17 @@ Change log:
   - Fixed a compilation error under Delphi 5.
   - Made LogAllocatedBlocksToFile and ScanMemoryPoolForCorruptions thread
     safe - for real this time. (Thanks to Francois Piette.)
+  Version 4.90 (9 September 2008):
+  - Added logging of the thread ID when capturing and displaying stack
+    traces. (Suggested by Allen Bauer and Mark Edington.)
+  - Fixed a Delphi 5 compiler error under FullDebugMode. (Thanks to Maurizio
+    Lotauro and Christian-W. Budde.)
+  - Changed a default setting in FastMM4Options.inc: RawStackTraces is now
+    off by default due to the high number of support requests I receive with
+    regards to the false postives it may cause. I recommend compiling debug
+    builds of applications with the "Stack Frames" option enabled.
+  - Fixed a compilation error under Kylix. (Thanks to Werner Bochtler.)
+  - Official support for Delphi 2009.
 
 *)
 
@@ -862,7 +875,7 @@ interface
 {-------------------------Public constants-----------------------------}
 const
   {The current version of FastMM}
-  FastMMVersion = '4.88';
+  FastMMVersion = '4.90';
   {The number of small block types}
 {$ifdef Align16Bytes}
   NumSmallBlockTypes = 46;
@@ -1209,9 +1222,9 @@ const
   ExpectedMemoryLeaksListSize = 64 * 1024;
   {-------------FullDebugMode constants---------------}
 {$ifdef FullDebugMode}
-  {The stack trace depth. (Must be an even number to ensure that the
+  {The stack trace depth. (Must be an *uneven* number to ensure that the
    Align16Bytes option works in FullDebugMode.)}
-  StackTraceDepth = 10;
+  StackTraceDepth = 11;
   {The number of entries in the allocation group stack}
   AllocationGroupStackSize = 1000;
   {The number of fake VMT entries - used to track virtual method calls on
@@ -1460,7 +1473,7 @@ type
 
   {The header placed in front blocks in FullDebugMode (just after the standard
    header). Must be a multiple of 16 bytes in size otherwise the Align16Bytes
-   option will not work.}
+   option will not work. Current size = 128 bytes.}
   PFullDebugBlockHeader = ^TFullDebugBlockHeader;
   TFullDebugBlockHeader = packed record
     {Space used by the medium block manager for previous/next block management.
@@ -1473,13 +1486,17 @@ type
      related memory leaks together}
     AllocationGroup: Cardinal;
     {The allocation number: All new allocations are numbered sequentially. This
-     number may be useful in memory leak analysis. If it reaches 4GB it wraps
+     number may be useful in memory leak analysis. If it reaches 4G it wraps
      back to 0.}
     AllocationNumber: Cardinal;
     {The call stack when the block was allocated}
     AllocationStackTrace: TStackTrace;
+    {The thread that allocated the block}
+    AllocatedByThread: Cardinal;
     {The call stack when the block was freed}
     FreeStackTrace: TStackTrace;
+    {The thread that freed the block}
+    FreedByThread: Cardinal;
     {The user requested size for the block. 0 if this is the first time the
      block is used.}
     UserSize: Cardinal;
@@ -1674,7 +1691,7 @@ var
    is negative then a block scan is in progress and no thread may
    allocate, free or reallocate any block or modify any FullDebugMode
    block header or footer.}
-  ThreadsInsideFullDebugModeMMRoutine: Integer;
+  ThreadsInFullDebugModeRoutine: Integer;
   {The current log file name}
   MMLogFileName: array[0..1023] of AnsiChar;
   {The 64K block of reserved memory used to trap invalid memory accesses using
@@ -1874,7 +1891,11 @@ begin
 {$endif}
     LModuleHandle := 0;
   {Get the module name}
+{$ifndef Linux}
   Result := GetModuleFileNameA(LModuleHandle, ABuffer, 512);
+{$else}
+  Result := GetModuleFileName(LModuleHandle, ABuffer, 512);
+{$endif}
 end;
 
 {Copies the name of the module followed by the given string to the buffer,
@@ -2239,6 +2260,12 @@ end;
 {-----------------Debugging Support Functions and Procedures------------------}
 
 {$ifdef FullDebugMode}
+
+{Returns the current thread ID}
+function GetThreadID: Cardinal;
+asm
+  mov eax, FS:[$24]
+end;
 
 {Fills a block of memory with the given dword. Always fills a multiple of 4 bytes}
 procedure FillDWord(var AAddress; AByteCount: Integer; ADWordFillValue: Cardinal);
@@ -5788,35 +5815,35 @@ begin
   while True do
   begin
     {Get the old thread count}
-    LOldCount := ThreadsInsideFullDebugModeMMRoutine;
+    LOldCount := ThreadsInFullDebugModeRoutine;
     if (LOldCount >= 0)
-      and (LockCmpxchg32(LOldCount, LOldCount + 1, @ThreadsInsideFullDebugModeMMRoutine) = LOldCount) then
+      and (LockCmpxchg32(LOldCount, LOldCount + 1, @ThreadsInFullDebugModeRoutine) = LOldCount) then
     begin
       Break;
     end;
-{$ifndef NeverSleepOnThreadContention}
+  {$ifndef NeverSleepOnThreadContention}
     Sleep(InitialSleepTime);
     {Try again}
-    LOldCount := ThreadsInsideFullDebugModeMMRoutine;
+    LOldCount := ThreadsInFullDebugModeRoutine;
     if (LOldCount >= 0)
-      and (LockCmpxchg32(LOldCount, LOldCount + 1, @ThreadsInsideFullDebugModeMMRoutine) = LOldCount) then
+      and (LockCmpxchg32(LOldCount, LOldCount + 1, @ThreadsInFullDebugModeRoutine) = LOldCount) then
     begin
       Break;
     end;
     Sleep(AdditionalSleepTime);
-{$endif}
+  {$endif}
   end;
 end;
 
 procedure DoneChangingFullDebugModeBlock;
 asm
-  lock dec ThreadsInsideFullDebugModeMMRoutine
+  lock dec ThreadsInFullDebugModeRoutine
 end;
 
 {Increments the allocation number}
 procedure IncrementAllocationNumber;
 asm
-  lock inc CurrentAllocationNumber;
+  lock inc CurrentAllocationNumber
 end;
 
 {Called by a routine wanting to lock the entire memory pool in FullDebugMode, e.g. before scanning the memory
@@ -5826,12 +5853,12 @@ begin
   while True do
   begin
     {Get the old thread count}
-    if LockCmpxchg32(0, -1, @ThreadsInsideFullDebugModeMMRoutine) = 0 then
+    if LockCmpxchg32(0, -1, @ThreadsInFullDebugModeRoutine) = 0 then
       Break;
 {$ifndef NeverSleepOnThreadContention}
     Sleep(InitialSleepTime);
     {Try again}
-    if LockCmpxchg32(0, -1, @ThreadsInsideFullDebugModeMMRoutine) = 0 then
+    if LockCmpxchg32(0, -1, @ThreadsInFullDebugModeRoutine) = 0 then
       Break;
     Sleep(AdditionalSleepTime);
 {$endif}
@@ -5841,8 +5868,8 @@ end;
 procedure UnblockFullDebugModeMMRoutines;
 begin
   {Currently blocked? If so, unblock the FullDebugMode routines.}
-  if ThreadsInsideFullDebugModeMMRoutine = -1 then
-    ThreadsInsideFullDebugModeMMRoutine := 0;
+  if ThreadsInFullDebugModeRoutine = -1 then
+    ThreadsInFullDebugModeRoutine := 0;
 end;
 
 procedure DeleteEventLog;
@@ -6039,14 +6066,17 @@ begin
   PCardinal(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader) + APointer.UserSize)^ := not LHeaderCheckSum;
 end;
 
-function LogCurrentStackTrace(ASkipFrames: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
+function LogCurrentThreadAndStackTrace(ASkipFrames: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
 var
   LCurrentStackTrace: TStackTrace;
 begin
   {Get the current call stack}
   GetStackTrace(@LCurrentStackTrace[0], StackTraceDepth, ASkipFrames);
-  {List it}
-  Result := AppendStringToBuffer(CurrentStackTraceMsg, ABuffer, length(CurrentStackTraceMsg));
+  {Log the thread ID}
+  Result := AppendStringToBuffer(CurrentThreadIDMsg, ABuffer, Length(CurrentThreadIDMsg));
+  Result := CardinalToHexBuf(GetThreadID, Result);
+  {List it the stack trace}
+  Result := AppendStringToBuffer(CurrentStackTraceMsg, Result, Length(CurrentStackTraceMsg));
   Result := LogStackTrace(@LCurrentStackTrace, StackTraceDepth, Result);
 end;
 
@@ -6161,9 +6191,11 @@ begin
     if APointer.AllocationStackTrace[0] <> 0 then
     begin
       if AOperation <= boGetMem then
-        LMsgPtr := AppendStringToBuffer(StackTraceAtPrevAllocMsg, LMsgPtr, Length(StackTraceAtPrevAllocMsg))
+        LMsgPtr := AppendStringToBuffer(ThreadIDPrevAllocMsg, LMsgPtr, Length(ThreadIDPrevAllocMsg))
       else
-        LMsgPtr := AppendStringToBuffer(StackTraceAtAllocMsg, LMsgPtr, Length(StackTraceAtAllocMsg));
+        LMsgPtr := AppendStringToBuffer(ThreadIDAtAllocMsg, LMsgPtr, Length(ThreadIDAtAllocMsg));
+      LMsgPtr := CardinalToHexBuf(APointer.AllocatedByThread, LMsgPtr);
+      LMsgPtr := AppendStringToBuffer(StackTraceMsg, LMsgPtr, Length(StackTraceMsg));
       LMsgPtr := LogStackTrace(@APointer.AllocationStackTrace, StackTraceDepth, LMsgPtr);
     end;
     {Get the class this block was used for previously}
@@ -6233,7 +6265,9 @@ begin
     {Get the call stack for the previous free}
     if APointer.FreeStackTrace[0] <> 0 then
     begin
-      LMsgPtr := AppendStringToBuffer(StackTraceAtFreeMsg, LMsgPtr, Length(StackTraceAtFreeMsg));
+      LMsgPtr := AppendStringToBuffer(ThreadIDAtFreeMsg, LMsgPtr, Length(ThreadIDAtFreeMsg));
+      LMsgPtr := CardinalToHexBuf(APointer.FreedByThread, LMsgPtr);
+      LMsgPtr := AppendStringToBuffer(StackTraceMsg, LMsgPtr, Length(StackTraceMsg));
       LMsgPtr := LogStackTrace(@APointer.FreeStackTrace, StackTraceDepth, LMsgPtr);
     end;
   end
@@ -6243,7 +6277,7 @@ begin
     LMsgPtr := AppendStringToBuffer(BlockHeaderCorruptedMsg, LMsgPtr, Length(BlockHeaderCorruptedMsg));
   end;
   {Add the current stack trace}
-  LMsgPtr := LogCurrentStackTrace(3 + ord(AOperation <> boGetMem) + ord(AOperation = boReallocMem), LMsgPtr);
+  LMsgPtr := LogCurrentThreadAndStackTrace(3 + Ord(AOperation <> boGetMem) + ord(AOperation = boReallocMem), LMsgPtr);
   {Add the memory dump}
   LMsgPtr := LogMemoryDump(APointer, LMsgPtr);
   {Trailing CRLF}
@@ -6292,7 +6326,9 @@ begin
     {The header is still intact - display info about this/previous allocation}
     if APointer.AllocationStackTrace[0] <> 0 then
     begin
-      LMsgPtr := AppendStringToBuffer(StackTraceAtAllocMsg, LMsgPtr, Length(StackTraceAtAllocMsg));
+      LMsgPtr := AppendStringToBuffer(ThreadIDAtAllocMsg, LMsgPtr, Length(ThreadIDAtAllocMsg));
+      LMsgPtr := CardinalToHexBuf(APointer.AllocatedByThread, LMsgPtr);
+      LMsgPtr := AppendStringToBuffer(StackTraceMsg, LMsgPtr, Length(StackTraceMsg));
       LMsgPtr := LogStackTrace(@APointer.AllocationStackTrace, StackTraceDepth, LMsgPtr);
     end;
     LMsgPtr := AppendStringToBuffer(CurrentObjectClassMsg, LMsgPtr, Length(CurrentObjectClassMsg));
@@ -6397,6 +6433,8 @@ begin
       begin
         {Set the allocation call stack}
         GetStackTrace(@PFullDebugBlockHeader(Result).AllocationStackTrace, StackTraceDepth, 1);
+        {Set the thread ID of the thread that allocated the block}
+        PFullDebugBlockHeader(Result).AllocatedByThread := GetThreadID;
         {Block is now in use}
         PFullDebugBlockHeader(Result).BlockInUse := True;
         {Set the group number}
@@ -6465,6 +6503,8 @@ begin
       LActualBlock.PreviouslyUsedByClass := PCardinal(APointer)^;
       {Set the free call stack}
       GetStackTrace(@LActualBlock.FreeStackTrace, StackTraceDepth, 1);
+      {Set the thread ID of the thread that freed the block}
+      LActualBlock.FreedByThread := GetThreadID;
       {Block is now free}
       LActualBlock.BlockInUse := False;
       {Clear the user area of the block}
@@ -6858,13 +6898,17 @@ begin
     {The header is still intact - display info about the this/previous allocation}
     if LActualBlock.AllocationStackTrace[0] <> 0 then
     begin
-      LMsgPtr := AppendStringToBuffer(StackTraceAtObjectAllocMsg, LMsgPtr, Length(StackTraceAtObjectAllocMsg));
+      LMsgPtr := AppendStringToBuffer(ThreadIDAtObjectAllocMsg, LMsgPtr, Length(ThreadIDAtObjectAllocMsg));
+      LMsgPtr := CardinalToHexBuf(LActualBlock.AllocatedByThread, LMsgPtr);
+      LMsgPtr := AppendStringToBuffer(StackTraceMsg, LMsgPtr, Length(StackTraceMsg));
       LMsgPtr := LogStackTrace(@LActualBlock.AllocationStackTrace, StackTraceDepth, LMsgPtr);
     end;
     {Get the call stack for the previous free}
     if LActualBlock.FreeStackTrace[0] <> 0 then
     begin
-      LMsgPtr := AppendStringToBuffer(StackTraceAtObjectFreeMsg, LMsgPtr, Length(StackTraceAtObjectFreeMsg));
+      LMsgPtr := AppendStringToBuffer(ThreadIDAtObjectFreeMsg, LMsgPtr, Length(ThreadIDAtObjectFreeMsg));
+      LMsgPtr := CardinalToHexBuf(LActualBlock.FreedByThread, LMsgPtr);
+      LMsgPtr := AppendStringToBuffer(StackTraceMsg, LMsgPtr, Length(StackTraceMsg));
       LMsgPtr := LogStackTrace(@LActualBlock.FreeStackTrace, StackTraceDepth, LMsgPtr);
     end;
   end
@@ -6874,7 +6918,7 @@ begin
     LMsgPtr := AppendStringToBuffer(BlockHeaderCorruptedNoHistoryMsg, LMsgPtr, Length(BlockHeaderCorruptedNoHistoryMsg));
   end;
   {Add the current stack trace}
-  LMsgPtr := LogCurrentStackTrace(2, LMsgPtr);
+  LMsgPtr := LogCurrentThreadAndStackTrace(2, LMsgPtr);
   {Add the pointer address}
   LMsgPtr := LogMemoryDump(LActualBlock, LMsgPtr);
   {Trailing CRLF}
@@ -6912,7 +6956,7 @@ begin
   {Display the error header}
   LMsgPtr := AppendStringToBuffer(InterfaceErrorHeader, @LErrorMessage[0], Length(InterfaceErrorHeader));
   {Add the current stack trace}
-  LMsgPtr := LogCurrentStackTrace(2, LMsgPtr);
+  LMsgPtr := LogCurrentThreadAndStackTrace(2, LMsgPtr);
   {Trailing CRLF}
   LMsgPtr^ := #13;
   Inc(LMsgPtr);

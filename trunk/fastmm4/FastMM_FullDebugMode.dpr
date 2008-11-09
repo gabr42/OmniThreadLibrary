@@ -1,6 +1,6 @@
 {
 
-Fast Memory Manager: FullDebugMode Support DLL 1.45
+Fast Memory Manager: FullDebugMode Support DLL 1.50
 
 Description:
  Support DLL for FastMM. With this DLL available, FastMM will report debug info
@@ -38,6 +38,8 @@ Change log:
  Version 1.44 (16 November 2006):
   - Changed the RawStackTraces code to prevent it from modifying the Windows
     "GetLastError" error code. (Thanks to Primoz Gabrijelcic.)
+ Version 1.50 (14 August 2008):
+  - Added support for Delphi 2009. (Thanks to Mark Edington.)
 
 }
 
@@ -412,20 +414,27 @@ asm
   pop ebx
 end;
 
+{Subroutine used by LogStackTrace}
+procedure AppendInfoToString(var AString: string; const AInfo: string);
+begin
+  if AInfo <> '' then
+    AString := Format('%s[%s]', [AString, AInfo]);
+end;
+
 function LogStackTrace(AReturnAddresses: PCardinal;
   AMaxDepth: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
 var
   LInd, LAddress: Cardinal;
   LNumChars: Integer;
   LInfo: TJCLLocationInfo;
-  LTempStr: AnsiString;
+  LTempStr: string;
 begin
   Result := ABuffer;
   for LInd := 0 to AMaxDepth - 1 do
   begin
     LAddress := AReturnAddresses^;
     if LAddress = 0 then
-      exit;
+      Exit;
     Result^ := #13;
     Inc(Result);
     Result^ := #10;
@@ -436,20 +445,17 @@ begin
     GetLocationInfo(Pointer(Cardinal(LAddress) - 1), LInfo);
     {Build the result string}
     LTempStr := ' ';
-    if LInfo.SourceName <> '' then
-      LTempStr := LTempStr + '[' + LInfo.SourceName + ']';
-    if LInfo.UnitName <> '' then
-      LTempStr := LTempStr + '[' + LInfo.UnitName + ']';
-    if LInfo.ProcedureName <> '' then
-      LTempStr := LTempStr + '[' + LInfo.ProcedureName + ']';
+    AppendInfoToString(LTempStr, LInfo.SourceName);
+    AppendInfoToString(LTempStr, LInfo.UnitName);
+    AppendInfoToString(LTempStr, LInfo.ProcedureName);
     if LInfo.LineNumber <> 0 then
-      LTempStr := LTempStr + '[' + IntToStr(LInfo.LineNumber) + ']';
+      AppendInfoToString(LTempStr, IntToStr(LInfo.LineNumber));
     {Return the result}
-    if length(LTempStr) < 256 then
-      LNumChars := length(LTempStr)
+    if Length(LTempStr) < 256 then
+      LNumChars := Length(LTempStr)
     else
       LNumChars := 255;
-    StrLCopy(Result, PAnsiChar(LTempStr), LNumChars);
+    StrLCopy(Result, PAnsiChar(AnsiString(LTempStr)), LNumChars);
     Inc(Result, LNumChars);
     {Next address}
     Inc(AReturnAddresses);
