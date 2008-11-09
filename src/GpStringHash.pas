@@ -262,7 +262,6 @@ function GetGoodHashSize(dataSize: cardinal): cardinal;
 implementation
 
 uses
-  FastMM4,
   SysUtils,
   DSiWin32;
 
@@ -366,19 +365,12 @@ begin
       Grow
     else
       raise Exception.Create('TGpStringHash.Add: Maximum size reached');
-ScanMemoryPoolForCorruptions;
   bucket := @(shItems[shFirstEmpty]); // point to an empty slot in the pre-allocated array
-ScanMemoryPoolForCorruptions;
   bucket^.Key := key;
-ScanMemoryPoolForCorruptions;
   bucket^.Value := value;
-ScanMemoryPoolForCorruptions;
   bucket^.Next := shBuckets[hash];
-ScanMemoryPoolForCorruptions;
   shBuckets[hash] := shFirstEmpty;
-ScanMemoryPoolForCorruptions;
   Inc(shFirstEmpty);
-ScanMemoryPoolForCorruptions;  
 end; { TGpStringHash.Add }
 
 function TGpStringHash.Count: integer;
@@ -435,7 +427,6 @@ var
   shOldBuckets: array of cardinal;
   shOldItems  : array of TGpHashItem;
 begin
-ScanMemoryPoolForCorruptions;
   SetLength(shOldBuckets, Length(shBuckets));
   Move(shBuckets[0], shOldBuckets[0], Length(shBuckets) * SizeOf(shBuckets[0]));
   SetLength(shOldItems, Length(shItems));
@@ -461,7 +452,6 @@ ScanMemoryPoolForCorruptions;
     Inc(shFirstEmpty);
   end;
   FillChar(shOldItems[0], Length(shOldItems) * SizeOf(shOldItems[0]), 0); //prevent string refcount problems
-ScanMemoryPoolForCorruptions;  
 end; { TGpStringHash.Grow }
 
 function TGpStringHash.HasKey(const key: string): boolean;
