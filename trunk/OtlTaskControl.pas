@@ -1483,6 +1483,7 @@ end; { TOmniTaskControl.ChainTo }
 
 function TOmniTaskControl.CreateTask: IOmniTask;
 begin
+  EnsureCommChannel;
   Result := TOmniTask.Create(otcExecutor, otcParameters, otcSharedInfo);
 end; { TOmniTaskControl.CreateTask }
 
