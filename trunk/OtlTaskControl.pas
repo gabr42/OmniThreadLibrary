@@ -1663,7 +1663,7 @@ end; { TOmniTaskControl.SetParameter }
 
 function TOmniTaskControl.SetParameter(const paramValue: TOmniValue): IOmniTaskControl;
 begin
-  SetParameter('', paramValue);
+  Result := SetParameter('', paramValue);
 end; { TOmniTaskControl.SetParameter }
 
 function TOmniTaskControl.SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
