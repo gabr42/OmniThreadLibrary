@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-06
-///   Version           : 1.04a
+///   Last modification : 2008-11-17
+///   Version           : 1.05a
 ///</para><para>
 ///   History:
+///     1.05a: 2008-11-17
+///       - [Jamie] Fixed bug in TOmniTaskExecutor.Asy_SetTimerInt.
 ///     1.05: 2008-11-01
 ///       - IOmniTaskControl.Terminate kills the task thread if it doesn't terminate in
 ///         the specified amount of time.
@@ -1102,6 +1104,7 @@ procedure TOmniTaskExecutor.Asy_SetTimerInt(interval_ms: cardinal; timerMsgID: i
 begin
   oteInternalLock.Acquire;
   try
+    oteTimerMessageID.Value := timerMsgID;
     oteTimerInterval_ms.Value := cardinal(interval_ms);
     oteTimerMessageMethod.Value := cardinal(timerMsgMethod);
     oteTimerMessageName := timerMsgName;
