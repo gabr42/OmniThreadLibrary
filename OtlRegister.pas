@@ -53,11 +53,9 @@ interface
 
 uses
   Classes,
-  OtlEventMonitor,
-  OtlTaskRunner;
+  OtlEventMonitor;
 
 {$R OtlEventMonitor.dcr}
-{$R OtlTaskRunner.dcr}
 
 procedure Register;
 
@@ -68,7 +66,6 @@ implementation
 procedure Register;
 begin
   RegisterComponents('OmniThreadLibrary', [TOmniEventMonitor]);
-  RegisterComponents('OmniThreadLibrary', [TOmniTaskRunner]);
 end; { Register }
 
 end.
