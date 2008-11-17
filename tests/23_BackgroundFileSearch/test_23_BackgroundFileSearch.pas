@@ -12,12 +12,12 @@ uses
 
 type
   TfrmBackgroundFileSearchDemo = class(TForm)
-    btnScan: TButton;
-    inpFolderMask: TLabeledEdit;
-    lbFiles: TListBox;
-    OTLMonitor: TOmniEventMonitor;
-    outFiles: TLabeledEdit;
-    outScanning: TLabeledEdit;
+    btnScan         : TButton;
+    inpFolderMask   : TLabeledEdit;
+    lbFiles         : TListBox;
+    OTLMonitor      : TOmniEventMonitor;
+    outFiles        : TLabeledEdit;
+    outScanning     : TLabeledEdit;
     tmrDisplayStatus: TTimer;
     procedure btnScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -26,7 +26,7 @@ type
     procedure tmrDisplayStatusTimer(Sender: TObject);
   private
     FFileList      : TStringList;
-    FScanTask      : IOMniTaskControl;
+    FScanTask      : IOmniTaskControl;
     FWaitingCount  : string;
     FWaitingMessage: string;
   end;
