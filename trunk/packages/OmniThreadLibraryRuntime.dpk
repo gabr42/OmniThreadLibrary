@@ -48,7 +48,6 @@ contains
   OtlTask in '..\OtlTask.pas',
   OtlTaskControl in '..\OtlTaskControl.pas',
   OtlThreadPool in '..\OtlThreadPool.pas',
-  OtlTaskRunner in '..\OtlTaskRunner.pas',
   OtlEventMonitor in '..\OtlEventMonitor.pas',
   DSiWin32 in '..\src\DSiWin32.pas';
 

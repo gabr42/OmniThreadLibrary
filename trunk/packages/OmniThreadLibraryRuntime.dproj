@@ -38,9 +38,8 @@
     <DCCReference Include="..\OtlComm.pas" />
     <DCCReference Include="..\OtlCommB.pas" />
     <DCCReference Include="..\OtlCommBu.pas" />
-    <DCCReference Include="..\OtlCommBuferTest.pas">
-      <ModuleName>OtlCommBufferTest</ModuleName>
-    </DCCReference>
+    <DCCReference Include="..\OtlCommBuferTest.pas" />
+    <DCCReference Include="..\OtlCommBufferTest.pas" />
     <DCCReference Include="..\OtlCommBuu.pas" />
     <DCCReference Include="..\OtlCommBuuf.pas" />
     <DCCReference Include="..\OtlCommBuufe.pas" />
