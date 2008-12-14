@@ -1070,8 +1070,11 @@ begin
   else if awaited = WAIT_IO_COMPLETION then
     // do-nothing
   else if awaited = WAIT_TIMEOUT then begin
-    CallOmniTimer;
-    oteLastTimer_ms := DSiTimeGetTime64;
+    if (TimerInterval_ms > 0) and ((DSiTimeGetTime64 - oteLastTimer_ms) >= TimerInterval_ms) then
+    begin
+      CallOmniTimer;
+      oteLastTimer_ms := DSiTimeGetTime64;
+    end;
   end //WAIT_TIMEOUT
   else //errors
     RaiseLastOSError;
@@ -1921,3 +1924,4 @@ begin
 end; { TOmniTaskGroup.WaitForAll }
 
 end.
+
