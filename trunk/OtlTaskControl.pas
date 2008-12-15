@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-11-17
-///   Version           : 1.05a
+///   Last modification : 2008-12-15
+///   Version           : 1.06
 ///</para><para>
-///   History:                     
+///   History:
+///     1.06: 2008-12-15
+///       - TOmniWorker's internal message loop can now be overridden at various places
+///         and even fully replaced with a custom code.
 ///     1.05a: 2008-11-17
 ///       - [Jamie] Fixed bug in TOmniTaskExecutor.Asy_SetTimerInt.
 ///     1.05: 2008-11-01
@@ -365,7 +368,6 @@ type
     procedure Initialize;
     procedure ProcessThreadMessages;
     procedure RaiseInvalidSignature(const methodName: string);
-    procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInt(interval_ms: cardinal; timerMsgID: integer; const timerMsgName:
       string; const timerMsgMethod: pointer);
@@ -377,6 +379,8 @@ type
     function  DispatchEvent(awaited: cardinal; const task: IOmniTask; var msgInfo:
       TOmniMessageInfo): boolean; virtual;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
+    procedure MessageLoopPayload; virtual;
+    procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     function  TimeUntilNextTimer_ms: cardinal; virtual;
     function  WaitForEvent(msgInfo: TOmniMessageInfo; timeout_ms: cardinal): cardinal; virtual;
   public
@@ -1295,8 +1299,13 @@ procedure TOmniTaskExecutor.MainMessageLoop(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
 begin
   while DispatchEvent(WaitForEvent(msgInfo, TimeUntilNextTimer_ms), task, msgInfo) do
-    ;
+    MessageLoopPayload;
 end; { TOmniTaskExecutor.MainMessageLoop }
+
+procedure TOmniTaskExecutor.MessageLoopPayload;
+begin
+  //placeholder that can be overridden
+end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
 var
