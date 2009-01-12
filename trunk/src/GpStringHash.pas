@@ -223,7 +223,7 @@ type
     Index: cardinal;
   end; { TGpHashItem }
 
-  ///<summary>A dictionary of <string, int64> pairs.</summary>
+  ///<summary>A dictionary of <string, cardinal, int64> triplets.</summary>
   ///<since>2008-10-20</since>
   TGpStringDictionary = class
   private
@@ -242,7 +242,7 @@ type
     procedure SetItems(const key: string; const value: int64);   {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpTableHashItem read GetHashItem;
   public
-    constructor Create(numItems, initialArraySize: cardinal);
+    constructor Create(initialArraySize: cardinal);
     destructor  Destroy; override;
     function  Add(const key: string; value: int64): cardinal;
     function  Count: integer;                                    {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
@@ -770,14 +770,14 @@ end; { TGpStringTable.SetValue }
 
 { TGpStringDictionary }
 
-constructor TGpStringDictionary.Create(numItems, initialArraySize: cardinal);
+constructor TGpStringDictionary.Create(initialArraySize: cardinal);
 begin
   inherited Create;
   sdStringTable := TGpStringTable.Create(initialArraySize);
-  sdNumBuckets := GetGoodHashSize(numItems);
+  sdNumBuckets := GetGoodHashSize(initialArraySize);
   SetLength(sdBuckets, sdNumBuckets);
-  SetLength(sdItems, numItems + 1);
-  sdSize := numItems;
+  SetLength(sdItems, initialArraySize + 1);
+  sdSize := initialArraySize;
   sdFirstEmpty := 1;
   sdCanGrow := true;
 end; { TGpStringDictionary.Create }
