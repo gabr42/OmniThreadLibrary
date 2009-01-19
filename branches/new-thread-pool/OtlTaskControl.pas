@@ -267,6 +267,8 @@ type
 //  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTaskGroup: IOmniTaskGroup;
 
+  function CreateTaskControlList: IOmniTaskControlList;
+
 implementation
 
 uses
@@ -684,6 +686,11 @@ function CreateTaskGroup: IOmniTaskGroup;
 begin
   Result := TOmniTaskGroup.Create;
 end; { CreateTaskGroup }
+
+function CreateTaskControlList: IOmniTaskControlList;
+begin
+  Result := TOmniTaskControlList.Create;
+end; { CreateTaskControlList }
 
 { TOmniInternalMessage }
 
