@@ -41,6 +41,9 @@
 ///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.07: 2009-01-19
+///       - Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
+///       - TOmniTaskGroup reimplemented using IOmniTaskControlList.
 ///     1.06: 2008-12-15
 ///       - TOmniWorker's internal message loop can now be overridden at various places
 ///         and even fully replaced with a custom code.
@@ -207,11 +210,34 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
-  IOmniTaskGroupEnumerator = interface
+  IOmniTaskControlListEnumerator = interface
     function GetCurrent: IOmniTaskControl;
     function MoveNext: boolean;
     property Current: IOmniTaskControl read GetCurrent;
-  end; { IOmniTaskGroupEnumerator }
+  end; { IOmniTaskControlListEnumerator }
+
+  IOmniTaskControlList = interface
+    function  Get(idxItem: integer): IOmniTaskControl;
+    function  GetCapacity: integer;
+    function  GetCount: integer;
+    procedure Put(idxItem: integer; const value: IOmniTaskControl);
+    procedure SetCapacity(const value: integer);
+    procedure SetCount(const value: integer);
+    //
+    function  Add(const item: IOmniTaskControl): integer;
+    procedure Clear;
+    procedure Delete(idxItem: integer);
+    procedure Exchange(idxItem1, idxItem2: integer);
+    function  First: IOmniTaskControl;
+    function  GetEnumerator: IOmniTaskControlListEnumerator;
+    function  IndexOf(const item: IOmniTaskControl): integer;
+    procedure Insert(idxItem: integer; const item: IOmniTaskControl);
+    function  Last: IOmniTaskControl;
+    function  Remove(const item: IOmniTaskControl): integer;
+    property Capacity: Integer read GetCapacity write SetCapacity;
+    property Count: integer read GetCount write SetCount;
+    property Items[idxItem: integer]: IOmniTaskControl read Get write Put; default;
+  end; { IOmniTaskControlList }
 
 //v1.1 extensions:
 //  maybe: Comm: IOmniCommunicationEndpoint, which is actually one-to-many-to-one
@@ -220,7 +246,7 @@ type
 //  maybe: if one of group processes dies, TerminateAll should automatically happen?
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
-    function  GetEnumerator: IOmniTaskGroupEnumerator;
+    function  GetEnumerator: IOmniTaskControlListEnumerator;
     function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
@@ -570,22 +596,47 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
 
-  TOmniTaskGroup = class;
-  
-  TOmniTaskGroupEnumerator = class(TInterfacedObject, IOmniTaskGroupEnumerator)
+  TOmniTaskControlList = class;
+
+  TOmniTaskControlListEnumerator = class(TInterfacedObject, IOmniTaskControlListEnumerator)
   strict private
-    otgeTaskEnum: TInterfaceListEnumerator;
+    otcleTaskEnum: TInterfaceListEnumerator;
   protected
     function GetCurrent: IOmniTaskControl;
     function MoveNext: boolean;
   public
     constructor Create(taskList: TInterfaceList);
-  end; { TOmniTaskGroupEnumerator }
+  end; { TOmniTaskControlListEnumerator }
+
+  TOmniTaskControlList = class(TInterfacedObject, IOmniTaskControlList)
+  strict private
+    otclList: TInterfaceList;
+  protected
+    function  Get(idxItem: integer): IOmniTaskControl;
+    function  GetCapacity: integer;
+    function  GetCount: integer;
+    procedure Put(idxItem: integer; const value: IOmniTaskControl);
+    procedure SetCapacity(const value: integer);
+    procedure SetCount(const value: integer);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Add(const item: IOmniTaskControl): integer;
+    procedure Clear;
+    procedure Delete(idxItem: integer);
+    procedure Exchange(idxItem1, idxItem2: integer);
+    function  First: IOmniTaskControl;
+    function  GetEnumerator: IOmniTaskControlListEnumerator;
+    function  IndexOf(const item: IOmniTaskControl): integer;
+    procedure Insert(idxItem: integer; const item: IOmniTaskControl);
+    function  Last: IOmniTaskControl;
+    function  Remove(const item: IOmniTaskControl): integer;
+  end; { TOmniTaskControlList }
 
   TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
   strict private
     otgRegisteredWith: IOmniTask;
-    otgTaskList      : TInterfaceList;
+    otgTaskList      : IOmniTaskControlList;
   strict protected
     procedure AutoUnregisterComms;
     procedure InternalUnregisterAllCommFrom(const task: IOmniTask);
@@ -593,7 +644,7 @@ type
     constructor Create;
     destructor  Destroy; override;
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
-    function  GetEnumerator: IOmniTaskGroupEnumerator;
+    function  GetEnumerator: IOmniTaskControlListEnumerator;
     function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
@@ -1815,35 +1866,130 @@ begin
   (otTask as IOmniTaskExecutor).Execute;
 end; { TOmniThread.Execute }
 
+{ TOmniTaskControlListEnumerator }
+
+constructor TOmniTaskControlListEnumerator.Create(taskList: TInterfaceList);
+begin
+  otcleTaskEnum := taskList.GetEnumerator;
+end; { TOmniTaskControlListEnumerator.Create }
+
+function TOmniTaskControlListEnumerator.GetCurrent: IOmniTaskControl;
+begin
+  Result := otcleTaskEnum.GetCurrent as IOmniTaskControl;
+end; { TOmniTaskControlListEnumerator.GetCurrent }
+
+function TOmniTaskControlListEnumerator.MoveNext: boolean;
+begin
+  Result := otcleTaskEnum.MoveNext;
+end; { TOmniTaskControlListEnumerator.MoveNext }
+
+{ TOmniTaskControlList }
+
+constructor TOmniTaskControlList.Create;
+begin
+  inherited Create;
+  otclList := TInterfaceList.Create;
+end; { TOmniTaskControlList.Create }
+
+destructor TOmniTaskControlList.Destroy;
+begin
+  FreeAndNil(otclList);
+  inherited Destroy;
+end; { TOmniTaskControlList.Destroy }
+
+function TOmniTaskControlList.Add(const item: IOmniTaskControl): integer;
+begin
+  Result := otclList.Add(item);
+end; { TOmniTaskControlList.Add }
+
+procedure TOmniTaskControlList.Clear;
+begin
+  otclList.Clear;
+end; { TOmniTaskControlList.Clear }
+
+procedure TOmniTaskControlList.Delete(idxItem: integer);
+begin
+  otclList.Delete(idxItem);
+end; { TOmniTaskControlList.Delete }
+
+procedure TOmniTaskControlList.Exchange(idxItem1, idxItem2: integer);
+begin
+  otclList.Exchange(idxItem1, idxItem2);
+end; { TOmniTaskControlList.Exchange }
+
+function TOmniTaskControlList.First: IOmniTaskControl;
+begin
+  Result := otclList.First as IOmniTaskControl;
+end; { TOmniTaskControlList.First }
+
+function TOmniTaskControlList.Get(idxItem: integer): IOmniTaskControl;
+begin
+  Result := otclList[idxItem] as IOmniTaskControl;
+end; { TOmniTaskControlList.Get }
+
+function TOmniTaskControlList.GetCapacity: integer;
+begin
+  Result := otclList.Capacity;
+end; { TOmniTaskControlList.GetCapacity }
+
+function TOmniTaskControlList.GetCount: integer;
+begin
+  Result := otclList.Count;
+end; { TOmniTaskControlList.GetCount }
+
+function TOmniTaskControlList.GetEnumerator: IOmniTaskControlListEnumerator;
+begin
+  Result := TOmniTaskControlListEnumerator.Create(otclList);
+end; { TOmniTaskControlList.GetEnumerator }
+
+function TOmniTaskControlList.IndexOf(const item: IOmniTaskControl): integer;
+begin
+  Result := otclList.IndexOf(item);
+end; { TOmniTaskControlList.IndexOf }
+
+procedure TOmniTaskControlList.Insert(idxItem: integer; const item: IOmniTaskControl);
+begin
+  otclList.Insert(idxItem, item);
+end; { TOmniTaskControlList.Insert }
+
+function TOmniTaskControlList.Last: IOmniTaskControl;
+begin
+  Result := otclList.Last as IOmniTaskControl;
+end; { TOmniTaskControlList.Last }
+
+procedure TOmniTaskControlList.Put(idxItem: integer; const value: IOmniTaskControl);
+begin
+  otclList[idxItem] := value;
+end; { TOmniTaskControlList.Put }
+
+function TOmniTaskControlList.Remove(const item: IOmniTaskControl): integer;
+begin
+  Result := otclList.Remove(item);
+end; { TOmniTaskControlList.Remove }
+
+procedure TOmniTaskControlList.SetCapacity(const value: integer);
+begin
+  otclList.Capacity := value;
+end; { TOmniTaskControlList.SetCapacity }
+
+procedure TOmniTaskControlList.SetCount(const value: integer);
+begin
+  otclList.Count := value;
+end; { TOmniTaskControlList.SetCount }
+
 { TOmniTaskGroupEnumerator }
-
-constructor TOmniTaskGroupEnumerator.Create(taskList: TInterfaceList);
-begin
-  otgeTaskEnum := taskList.GetEnumerator;
-end; { TOmniTaskGroupEnumerator.Create }
-
-function TOmniTaskGroupEnumerator.GetCurrent: IOmniTaskControl;
-begin
-  Result := otgeTaskEnum.GetCurrent as IOmniTaskControl;
-end; { TOmniTaskGroupEnumerator.GetCurrent }
-
-function TOmniTaskGroupEnumerator.MoveNext: boolean;
-begin
-  Result := otgeTaskEnum.MoveNext;
-end; { TOmniTaskGroupEnumerator.MoveNext }
 
 { TOmniTaskGroup }
 
 constructor TOmniTaskGroup.Create;
 begin
   inherited Create;
-  otgTaskList := TInterfaceList.Create;
+  otgTaskList := TOmniTaskControlList.Create;
 end; { TOmniTaskGroup.Create }
 
 destructor TOmniTaskGroup.Destroy;
 begin
   AutoUnregisterComms;
-  FreeAndNil(otgTaskList);
   inherited Destroy;
 end; { TOmniTaskGroup.Destroy }
 
@@ -1859,9 +2005,9 @@ begin
     InternalUnregisterAllCommFrom(otgRegisteredWith);
 end; { TOmniTaskGroup.AutoUnregisterComms }
 
-function TOmniTaskGroup.GetEnumerator: IOmniTaskGroupEnumerator;
+function TOmniTaskGroup.GetEnumerator: IOmniTaskControlListEnumerator;
 begin
-  Result := TOmniTaskGroupEnumerator.Create(otgTaskList);
+  Result := otgTaskList.GetEnumerator;
 end; { TOmniTaskGroup.GetEnumerator }
 
 procedure TOmniTaskGroup.InternalUnregisterAllCommFrom(const task: IOmniTask);
