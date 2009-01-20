@@ -507,10 +507,9 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTask }
 
-  TOmniThread = class(TThread) // TODO 3 -oPrimoz Gabrijelcic : Factor this class into OtlThread unit?
+  TOmniThread = class(TThread) // Factor this class into OtlThread unit?
   strict private
     otTask: IOmniTask;
-  strict protected
   protected
     procedure Execute; override;
   public
@@ -796,7 +795,7 @@ begin
   if assigned(otSharedInfo.ChainTo) and
      (otSharedInfo.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
   then                        
-    otSharedInfo.ChainTo.Run;
+    otSharedInfo.ChainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
   otSharedInfo.ChainTo := nil;
 end; { TOmniTask.Execute }
 
@@ -1983,8 +1982,6 @@ procedure TOmniTaskControlList.SetCount(const value: integer);
 begin
   otclList.Count := value;
 end; { TOmniTaskControlList.SetCount }
-
-{ TOmniTaskGroupEnumerator }
 
 { TOmniTaskGroup }
 
