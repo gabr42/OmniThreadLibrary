@@ -436,7 +436,7 @@ begin
   {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
-  owtWorkItemLock := TTicketSpinLock.Create;
+  owtWorkItemLock := TTicketSpinLock.Create; // TODO 1 -oPrimoz Gabrijelcic : Do we need it anymore?
   owtCommChannel := CreateTwoWayChannel;
   Resume;
 end; { TOTPWorkerThread.Create }
@@ -513,16 +513,18 @@ begin
   {$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);{$ENDIF LogThreadPool}
   Comm.Send(MSG_THREAD_CREATED, ThreadID);
   try
-    while Comm.ReceiveWait(msg, INFINITE) do begin
-      case msg.MsgID of
-        MSG_RUN:
-          ExecuteWorkItem(TOTPWorkItem(msg.MsgData.AsObject));
-        MSG_STOP:
-          Stop(true);
-        else
-          raise Exception.CreateFmt('TOTPWorkerThread.Execute: Unexpected message %d',
-                  [msg.MsgID]);
-      end;
+    while true do begin
+      if Comm.ReceiveWait(msg, INFINITE) then begin
+        case msg.MsgID of
+          MSG_RUN:
+            ExecuteWorkItem(TOTPWorkItem(msg.MsgData.AsObject));
+          MSG_STOP:
+            Stop(true);
+          else
+            raise Exception.CreateFmt('TOTPWorkerThread.Execute: Unexpected message %d',
+                    [msg.MsgID]);
+        end; //case
+      end; //if Comm.ReceiveWait
     end; //while Comm.ReceiveWait()
   finally Comm.Send(MSG_THREAD_DESTROYING, ThreadID); end;
   {$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);{$ENDIF LogThreadPool}
@@ -815,6 +817,7 @@ var
 begin
   PruneWorkingQueue;
   if IdleWorkerThreadTimeout_sec > 0 then begin
+    // TODO 1 -oPrimoz Gabrijelcic : test this path
     iWorker := 0;
     while (owIdleWorkers.CardCount > MinWorkers.Value) and (iWorker < owIdleWorkers.Count) do begin
       worker := TOTPWorkerThread(owIdleWorkers[iWorker]);
@@ -831,6 +834,7 @@ begin
   end;
   iWorker := 0;
   while iWorker < owStoppingWorkers.Count do begin
+    // TODO 1 -oPrimoz Gabrijelcic : test this path
     worker := TOTPWorkerThread(owStoppingWorkers[iWorker]);
     if (not assigned(worker.WorkItem_ref)) or
        ((worker.StartStopping_ms + int64(WaitOnTerminate_sec)*1000) < DSiTimeGetTime64) then
@@ -1045,6 +1049,9 @@ begin
   {$IFDEF LogThreadPool}Log('Stopping worker thread %s', [worker.Description]);{$ENDIF LogThreadPool}
   owStoppingWorkers.Add(worker);
   Task.UnregisterComm(worker.OwnerCommEndpoint);
+
+  !! must immediately update StartStopping
+
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [tpStoppingWorkers.Count]);{$ENDIF LogThreadPool}
 end; { TOTPWorker.StopThread }
