@@ -1445,7 +1445,7 @@ procedure TOmniTaskExecutor.SetTimerInt(interval_ms: cardinal; timerMsgID: integ
 begin
   oteInternalLock.Acquire;
   try
-    oteTimerMessageID.Value := timerMsgID;
+    oteTimerMessageID.Value := cardinal(timerMsgID);
     oteTimerInterval_ms.Value := cardinal(interval_ms);
     oteTimerMessageMethod.Value := cardinal(timerMsgMethod);
     oteTimerMessageName := timerMsgName;
