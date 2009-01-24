@@ -1105,6 +1105,7 @@ function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTas
   msgInfo: TOmniMessageInfo): boolean;
 var
   gotMsg: boolean;
+  i     : integer;
   msg   : TOmniMessage;
 begin
   Result := false;
@@ -1138,7 +1139,12 @@ begin
     end;
   end //WAIT_TIMEOUT
   else //errors
-    RaiseLastOSError;
+  begin
+//    RaiseLastOSError;
+    sleep(0);
+    for i := 0 to msgInfo.NumWaitHandles - 1 do
+      awaited := WaitForSingleObject(msgInfo.WaitHandles[i], 0);
+  end;
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
   Result := true;

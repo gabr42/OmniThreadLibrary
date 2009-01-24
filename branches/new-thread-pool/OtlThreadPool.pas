@@ -280,20 +280,22 @@ type
     WaitOnTerminate_sec        : TGp4AlignedInt;
     constructor Create(const name: string; uniqueID: int64);
   published
+    // invoked from TOTPWorkerThreads
+    procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
+    procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
+    procedure MsgThreadDestroying(var msg: TOmniMessage); message MSG_THREAD_DESTROYING;
     // invoked from TOmniThreadPool
     procedure Cancel(taskID: int64);
     procedure CancelAll;
     procedure GetActiveWorkItemDescriptions;
     procedure MaintainanceTimer;
     procedure PruneWorkingQueue;
+    procedure RemoveMonitor;
     procedure Schedule(var workItem: TOTPWorkItem);
+    procedure SetMonitor(const hWindow: TOmniValue);
     procedure SetName(const name: TOmniValue);
     procedure SetOnThreadCreated(const eventHandler: TOmniValue);
     procedure SetOnThreadDestroying(const eventHandler: TOmniValue);
-    // invoked from TOTPWorkerThreads
-    procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
-    procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
-    procedure MsgThreadDestroying(var msg: TOmniMessage); message MSG_THREAD_DESTROYING;
   end; { TOTPWorker }
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
@@ -960,6 +962,11 @@ begin
   end;
 end; { TOTPWorker.PruneWorkingQueue }
 
+procedure TOTPWorker.RemoveMonitor;
+begin
+  owMonitorSupport.RemoveMonitor;
+end; { TOTPWorker.RemoveMonitor }
+
 procedure TOTPWorker.RequestCompleted(workItem: TOTPWorkItem; worker: TOTPWorkerThread);
 begin
   workItem.Thread := worker;
@@ -1008,6 +1015,11 @@ begin
   end;
 end; { TOTPWorker.ScheduleNext }
 
+procedure TOTPWorker.SetMonitor(const hWindow: TOmniValue);
+begin
+  owMonitorSupport.SetMonitor(CreateOmniMonitorParams(hWindow, COmniPoolMsg, 0, 0));
+end; { TOTPWorker.SetMonitor }
+
 procedure TOTPWorker.SetName(const name: TOmniValue);
 begin
   owName := name;
@@ -1032,6 +1044,7 @@ procedure TOTPWorker.StopThread(worker: TOTPWorkerThread);
 begin
   {$IFDEF LogThreadPool}Log('Stopping worker thread %s', [worker.Description]);{$ENDIF LogThreadPool}
   owStoppingWorkers.Add(worker);
+  Task.UnregisterComm(worker.OwnerCommEndpoint);
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [tpStoppingWorkers.Count]);{$ENDIF LogThreadPool}
 end; { TOTPWorker.StopThread }
@@ -1045,7 +1058,7 @@ begin
   otpPoolName := name;
   otpUniqueID := OtlUID.Increment;
   otpWorker := TOTPWorker.Create(name, otpUniqueID);
-  otpWorkerTask := CreateTask(otpWorker, Format('OmniThreadPool manager %s', [name]));
+  otpWorkerTask := CreateTask(otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
 end; { TOmniThreadPool.Create }
 
 destructor TOmniThreadPool.Destroy;
@@ -1161,8 +1174,8 @@ end; { TOmniThreadPool.MonitorWith }
 
 function TOmniThreadPool.RemoveMonitor: IOmniThreadPool;
 begin
-// TODO 1 -oPrimoz Gabrijelcic : reimplement
-//  otpMonitorSupport.RemoveMonitor;
+  otpWorkerTask.Invoke(@TOTPWorker.RemoveMonitor);
+  Result := Self;
 end; { TOmniThreadPool.RemoveMonitor }
 
 procedure TOmniThreadPool.Schedule(const task: IOmniTask);
@@ -1199,8 +1212,8 @@ end; { TOmniThreadPool.SetMinWorkers }
 
 function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : reimplement
-//  otpMonitorSupport.SetMonitor(CreateOmniMonitorParams(hWindow, COmniPoolMsg, 0, 0));
+  otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, hWindow);
+  Result := Self;
 end; { TOmniThreadPool.SetMonitor }
 
 procedure TOmniThreadPool.SetName(const value: string);
