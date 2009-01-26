@@ -28,7 +28,10 @@ type
     btnCancelAll: TButton;
     btnSchedule80: TButton;
     btnSchedule80All: TButton;
+    btnSaveLog: TButton;
+    SaveDialog: TSaveDialog;
     procedure btnCancelAllClick(Sender: TObject);
+    procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
@@ -36,6 +39,7 @@ type
     procedure OmniTEDPoolThreadCreated(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadKilled(const pool: IOmniThreadPool; threadID: integer);
+    procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   private
@@ -77,7 +81,13 @@ procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
 begin
   btnSchedule6.Click;
   GlobalOmniThreadPool.CancelAll;
-end;
+end; { TfrmTestOtlThreadPool.btnCancelAllClick }
+
+procedure TfrmTestOtlThreadPool.btnSaveLogClick(Sender: TObject);
+begin
+  if SaveDialog.Execute then
+    lbLog.Items.SaveToFile(SaveDialog.FileName);
+end; { TfrmTestOtlThreadPool.btnSaveLogClick }
 
 procedure TfrmTestOtlThreadPool.btnSchedule6Click(Sender: TObject);
 var
@@ -150,7 +160,7 @@ end;
 
 procedure TfrmTestOtlThreadPool.Log(const msg: string);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn ', Now) + msg);
+  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn:ss ', Now) + msg);
 end;
 
 procedure TfrmTestOtlThreadPool.LogPoolStatus;
@@ -175,6 +185,12 @@ procedure TfrmTestOtlThreadPool.OmniTEDPoolThreadKilled(const pool: IOmniThreadP
   threadID: integer);
 begin
   Log(Format('Thread %d killed in thread pool %d', [threadID, pool.UniqueID]));
+end;
+
+procedure TfrmTestOtlThreadPool.OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool;
+  taskID: Int64);
+begin
+  Log(Format('Task %d removed from pool', [taskID]));
 end;
 
 procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(const task: IOmniTaskControl);

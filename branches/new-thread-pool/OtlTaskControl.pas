@@ -385,6 +385,7 @@ type
     oteTimerMessageMethod: TGp4AlignedInt;
     oteTimerMessageName  : string;
     oteWakeMask          : DWORD;
+    oteWaitHandlesGen    : int64;
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
@@ -407,6 +408,8 @@ type
     procedure Initialize;
     procedure ProcessThreadMessages;
     procedure RaiseInvalidSignature(const methodName: string);
+    procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
+      TOmniMessageInfo);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimerInt(interval_ms: cardinal; timerMsgID: integer; const timerMsgName:
       string; const timerMsgMethod: pointer);
@@ -1142,7 +1145,9 @@ var
   msg   : TOmniMessage;
 begin
   Result := false;
-  if ((awaited >= msgInfo.IdxFirstTerminate) and (awaited <= msgInfo.IdxLastTerminate)) or
+  if ((msgInfo.IdxFirstTerminate <> cardinal(-1)) and
+      ((awaited >= msgInfo.IdxFirstTerminate) and (awaited <= msgInfo.IdxLastTerminate)))
+     or
      (awaited = WAIT_ABANDONED)
   then
     Exit
@@ -1414,15 +1419,21 @@ end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
 var
-  awaited: cardinal;
+  awaited       : cardinal;
+  msgInfo       : TOmniMessageInfo;
+  waitHandlesGen: int64;
 begin
+  RemoveTerminationEvents(oteMsgInfo, msgInfo);
+  waitHandlesGen := oteWaitHandlesGen;
   repeat
-    awaited := WaitForEvent(oteMsgInfo, 0);
+    awaited := WaitForEvent(msgInfo, 0);
     if awaited = WAIT_TIMEOUT then
       Exit;
-    if not DispatchEvent(awaited, task, oteMsgInfo) then
+    if not DispatchEvent(awaited, task, msgInfo) then
       Exit;
     MessageLoopPayload;
+    if waitHandlesGen <> oteWaitHandlesGen then //DispatchEvent just rebuilt our internal copy
+      RebuildWaitHandles(task, oteMsgInfo);
   until false;
 end; { TOmniTaskExecutor.ProcessMessages }
 
@@ -1452,6 +1463,7 @@ var
   iIntf  : integer;
   intf   : IInterface;
 begin
+  Inc(oteWaitHandlesGen);
   oteInternalLock.Acquire;
   try
     msgInfo.IdxFirstTerminate := 0;
@@ -1482,6 +1494,24 @@ begin
     msgInfo.NumWaitHandles := msgInfo.IdxLastMessage + 1;
   finally oteInternalLock.Release; end;
 end; { RebuildWaitHandles }
+
+procedure TOmniTaskExecutor.RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo;
+  var dstMsgInfo: TOmniMessageInfo);
+var
+  offset: cardinal;
+begin
+  offset := srcMsgInfo.IdxLastTerminate + 1;
+  dstMsgInfo.IdxFirstTerminate := cardinal(-1);
+  dstMsgInfo.IdxLastTerminate := cardinal(-1);
+  dstMsgInfo.IdxFirstMessage := srcMsgInfo.IdxFirstMessage - offset;
+  dstMsgInfo.IdxLastMessage := srcMsgInfo.IdxLastMessage - offset;
+  dstMsgInfo.IdxRebuildHandles := srcMsgInfo.IdxRebuildHandles - offset;
+  dstMsgInfo.NumWaitHandles := srcMsgInfo.NumWaitHandles - offset;
+  dstMsgInfo.WaitFlags := srcMsgInfo.WaitFlags;
+  dstMsgInfo.WaitWakeMask := srcMsgInfo.WaitWakeMask;
+  Move(srcMsgInfo.WaitHandles[offset], dstMsgInfo.WaitHandles[0],
+    (Length(dstMsgInfo.WaitHandles) - integer(offset)) * SizeOf(THandle));
+end; { TOmniTaskExecutor.RemoveTerminationEvents }
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
 begin

@@ -12,6 +12,9 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
+  DesignSize = (
+    611
+    306)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
@@ -96,13 +99,29 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 8
     OnClick = btnSchedule6Click
   end
+  object btnSaveLog: TButton
+    Left = 8
+    Top = 273
+    Width = 129
+    Height = 25
+    Anchors = [akLeft, akBottom]
+    Caption = 'Save log'
+    TabOrder = 9
+    OnClick = btnSaveLogClick
+  end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
     OnPoolThreadDestroying = OmniTEDPoolThreadDestroying
     OnPoolThreadKilled = OmniTEDPoolThreadKilled
+    OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
     OnTaskMessage = OmniTEDTaskMessage
     OnTaskTerminated = OmniTEDTaskTerminated
     Left = 8
+    Top = 264
+  end
+  object SaveDialog: TSaveDialog
+    DefaultExt = 'log'
+    Left = 112
     Top = 264
   end
 end
