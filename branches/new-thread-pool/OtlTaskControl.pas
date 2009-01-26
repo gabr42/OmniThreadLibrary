@@ -1139,12 +1139,7 @@ begin
     end;
   end //WAIT_TIMEOUT
   else //errors
-  begin
-//    RaiseLastOSError;
-    sleep(0);
-    for i := 0 to msgInfo.NumWaitHandles - 1 do
-      awaited := WaitForSingleObject(msgInfo.WaitHandles[i], 0);
-  end;
+    RaiseLastOSError;
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
   Result := true;
