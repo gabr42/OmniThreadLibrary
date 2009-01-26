@@ -114,7 +114,7 @@ uses
   Classes,
   SyncObjs,
   GpStuff,
-  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTask,
@@ -283,7 +283,6 @@ uses
   DSiWin32,
   GpLists,
   GpStringHash,
-  SpinLock,
   OtlEventMonitor;
 
 type
@@ -366,12 +365,12 @@ type
     {$IFDEF OTL_Anonymous}
     oteFunc              : TOmniTaskFunction;
     {$ENDIF OTL_Anonymous}
-    oteInternalLock      : TSynchroObject;
+    oteInternalLock      : TOmniCS;
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
     oteOptions           : TOmniTaskControlOptions;
-    oteOptionsLock       : TSynchroObject;
+    oteOptionsLock       : TOmniCS;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
@@ -994,8 +993,6 @@ begin
   try
     FreeAndNil(oteCommList);
   finally oteInternalLock.Release; end;
-  FreeAndNil(oteInternalLock);
-  FreeAndNil(oteOptionsLock);
   FreeAndNil(oteTerminateHandles);
   FreeAndNil(oteMethodHash);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
@@ -1124,7 +1121,6 @@ function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTas
   msgInfo: TOmniMessageInfo): boolean;
 var
   gotMsg: boolean;
-  i     : integer;
   msg   : TOmniMessage;
 begin
   Result := false;
@@ -1160,9 +1156,9 @@ begin
   else //errors
   begin
     // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-    for i := 0 to msgInfo.NumWaitHandles - 1 do
-      GpLog.Log('[%d] %d => %d', [i, msgInfo.WaitHandles[i],
-        WaitForSingleObject(msgInfo.WaitHandles[i], 0)]);
+//    for i := 0 to msgInfo.NumWaitHandles - 1 do
+//      GpLog.Log('[%d] %d => %d', [i, msgInfo.WaitHandles[i],
+//        WaitForSingleObject(msgInfo.WaitHandles[i], 0)]);
     //>
     RaiseLastOSError;
   end;
@@ -1379,10 +1375,9 @@ end; { TOmniTaskExecutor.GetTimerMessageName }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
-  oteOptionsLock := TCriticalSection.Create;
+//  oteOptionsLock := TCriticalSection.Create;
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
-  oteInternalLock := TTicketSpinLock.Create;
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
   oteTimerMessageID.Value := cardinal(-1);
