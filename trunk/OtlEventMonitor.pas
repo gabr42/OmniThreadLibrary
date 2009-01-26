@@ -86,7 +86,7 @@ type
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
-    function Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
   published
     property OnPoolThreadCreated: TOmniPoolThreadEvent read tedOnPoolThreadCreated
       write tedOnPoolThreadCreated;
