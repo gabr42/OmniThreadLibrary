@@ -54,6 +54,7 @@ interface
 
 uses
   Windows,
+  Contnrs,
   DSiWin32;
 
 {$IFDEF ConditionalExpressions}
@@ -61,6 +62,7 @@ uses
     {$DEFINE GpStuff_Inline}
     {$DEFINE GpStuff_AlignedInt}
     {$DEFINE GpStuff_ValuesEnumerators}
+    {$DEFINE GpStuff_Helpers}
   {$IFEND}
 {$ENDIF}
 
@@ -105,6 +107,11 @@ type
     function Increment: int64; inline;
     property Value: int64 read GetValue write SetValue;
   end; { TGp8AlignedInt }
+
+  TGpObjectListHelper = class helper for TObjectList
+  public
+    function CardCount: cardinal;
+  end; { TGpObjectListHelper }
 {$ENDIF GpStuff_AlignedInt}
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -454,6 +461,13 @@ begin
   Addr^ := value;
 end; { TGp8AlignedInt.SetValue }
 
+{$ENDIF GpStuff_AlignedInt}
+
+{$IFDEF GpStuff_AlignedInt}
+function TGpObjectListHelper.CardCount: cardinal;
+begin
+  Result := cardinal(Count);
+end; { TGpObjectListHelper.CardCount }
 {$ENDIF GpStuff_AlignedInt}
 
 {$IFDEF GpStuff_ValuesEnumerators}
