@@ -247,7 +247,8 @@ type
 
   TOmniCS = record
   private
-    ocsSycn: IOmniCriticalSection;
+    ocsSync: IOmniCriticalSection;
+    procedure Initialize; 
   public
     procedure Acquire; inline;
     procedure Release; inline;
@@ -1211,16 +1212,30 @@ end; { TOmniExtendedData.SetValue }
 
 procedure TOmniCS.Acquire;
 begin
-  if not assigned(ocsSycn) then
-    ocsSycn := CreateOmniCriticalSection;
-  ocsSycn.Acquire;
+  Initialize;
+  ocsSync.Acquire;
 end; { TOmniCS.Acquire }
+
+procedure TOmniCS.Initialize;
+var
+  syncIntf: IOmniCriticalSection;
+begin
+  Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
+  Assert(cardinal(@syncIntf) mod 4 = 0, 'TOmniCS.Initialize: syncIntf is not 4-aligned!');
+  while not assigned(ocsSync) do begin
+    syncIntf := CreateOmniCriticalSection;
+    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then begin
+      pointer(syncIntf) := nil;
+      Exit;
+    end;
+    DSiYield;
+  end;
+end; { TOmniCS.Initialize }
 
 procedure TOmniCS.Release;
 begin
-  if not assigned(ocsSycn) then
-    ocsSycn := CreateOmniCriticalSection;
-  ocsSycn.Release;
+  Initialize;
+  ocsSync.Release;
 end; { TOmniCS.Release }
 
 { TOmniCriticalSection }
@@ -1247,4 +1262,5 @@ end; { TOmniCriticalSection.Release }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal));
+  Assert(SizeOf(pointer) = SizeOf(cardinal));
 end.
