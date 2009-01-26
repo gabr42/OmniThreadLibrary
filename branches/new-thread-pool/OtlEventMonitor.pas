@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2009-01-26
+///   Version           : 1.0a
 ///</para><para>
 ///   History:
+///     1.0a: 2009-01-26
+///       - Pass correct task ID to the OnPoolWorkItemCompleted handler.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -211,7 +213,7 @@ begin
         end
         else if tpMonitorInfo.ThreadPoolOperation = tpoWorkItemCompleted then begin
           if assigned(OnPoolWorkItemCompleted) then
-            OnPoolWorkItemCompleted(pool, taskID);
+            OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID);
         end;
       end;
     finally FreeAndNil(tpMonitorInfo); end;
