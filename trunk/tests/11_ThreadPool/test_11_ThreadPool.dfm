@@ -11,7 +11,11 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  DesignSize = (
+    611
+    306)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
@@ -53,7 +57,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnScheduleAndCancel: TButton
     Left = 8
-    Top = 133
+    Top = 163
     Width = 129
     Height = 25
     Caption = 'Schedule and cancel'
@@ -62,7 +66,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnCancelLong: TButton
     Left = 8
-    Top = 164
+    Top = 194
     Width = 129
     Height = 25
     Caption = 'Cancel long task'
@@ -71,7 +75,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnCancelAll: TButton
     Left = 8
-    Top = 195
+    Top = 225
     Width = 129
     Height = 25
     Caption = 'Cancel all'
@@ -87,13 +91,38 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 7
     OnClick = btnSchedule6Click
   end
+  object btnSchedule80All: TButton
+    Left = 8
+    Top = 132
+    Width = 129
+    Height = 25
+    Caption = 'Schedule 80 in long q.'
+    TabOrder = 8
+    OnClick = btnSchedule6Click
+  end
+  object btnSaveLog: TButton
+    Left = 8
+    Top = 273
+    Width = 129
+    Height = 25
+    Anchors = [akLeft, akBottom]
+    Caption = 'Save log'
+    TabOrder = 9
+    OnClick = btnSaveLogClick
+  end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
     OnPoolThreadDestroying = OmniTEDPoolThreadDestroying
     OnPoolThreadKilled = OmniTEDPoolThreadKilled
+    OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
     OnTaskMessage = OmniTEDTaskMessage
     OnTaskTerminated = OmniTEDTaskTerminated
     Left = 8
+    Top = 264
+  end
+  object SaveDialog: TSaveDialog
+    DefaultExt = 'log'
+    Left = 112
     Top = 264
   end
 end

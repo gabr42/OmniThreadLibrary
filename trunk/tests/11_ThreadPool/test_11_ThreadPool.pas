@@ -27,14 +27,20 @@ type
     btnCancelLong: TButton;
     btnCancelAll: TButton;
     btnSchedule80: TButton;
+    btnSchedule80All: TButton;
+    btnSaveLog: TButton;
+    SaveDialog: TSaveDialog;
     procedure btnCancelAllClick(Sender: TObject);
+    procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure OmniTEDPoolThreadCreated(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadKilled(const pool: IOmniThreadPool; threadID: integer);
+    procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   private
@@ -74,9 +80,16 @@ type
 
 procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
 begin
+//  btnScheduleTask.Click;
   btnSchedule6.Click;
   GlobalOmniThreadPool.CancelAll;
-end;
+end; { TfrmTestOtlThreadPool.btnCancelAllClick }
+
+procedure TfrmTestOtlThreadPool.btnSaveLogClick(Sender: TObject);
+begin
+  if SaveDialog.Execute then
+    lbLog.Items.SaveToFile(SaveDialog.FileName);
+end; { TfrmTestOtlThreadPool.btnSaveLogClick }
 
 procedure TfrmTestOtlThreadPool.btnSchedule6Click(Sender: TObject);
 var
@@ -92,15 +105,17 @@ begin
     numTasks := 80;
     delay_ms := 0;
   end;
+  if Sender = btnSchedule80All then
+    GlobalOmniThreadPool.MaxQueued := 0
+  else
+    GlobalOmniThreadPool.MaxQueued := 3;
   Log(Format('Scheduling %d tasks. Two should execute immediately, ', [numTasks]));
   if numTasks = 6 then
     Log('three should enter thread queue, one should be rejected (queue too long).')
   else
     Log('some should enter thread queue, some should be rejected (queue too long).');
-  for iTask := 1 to numTasks do begin
+  for iTask := 1 to numTasks do 
     CreateTask(THelloWorker.Create(Handle, delay_ms)).MonitorWith(OmniTED).Schedule;
-//    Application.ProcessMessages;
-  end;
 end;
 
 procedure TfrmTestOtlThreadPool.btnScheduleAndCancelClick(Sender: TObject);
@@ -138,6 +153,12 @@ begin
     task.Run;
 end;
 
+procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  GlobalOmniThreadPool.CancelAll;
+  CanClose := true;
+end;
+
 procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);
 begin
   GlobalOmniThreadPool.MonitorWith(OmniTED);
@@ -147,7 +168,7 @@ end;
 
 procedure TfrmTestOtlThreadPool.Log(const msg: string);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn ', Now) + msg);
+  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('hh:nn:ss ', Now) + msg);
 end;
 
 procedure TfrmTestOtlThreadPool.LogPoolStatus;
@@ -172,6 +193,12 @@ procedure TfrmTestOtlThreadPool.OmniTEDPoolThreadKilled(const pool: IOmniThreadP
   threadID: integer);
 begin
   Log(Format('Thread %d killed in thread pool %d', [threadID, pool.UniqueID]));
+end;
+
+procedure TfrmTestOtlThreadPool.OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool;
+  taskID: Int64);
+begin
+  Log(Format('Task %d removed from pool', [taskID]));
 end;
 
 procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(const task: IOmniTaskControl);

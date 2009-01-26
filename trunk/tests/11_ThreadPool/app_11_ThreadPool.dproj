@@ -17,15 +17,16 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_Define>DEBUG;FullDebugMode</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources</DCC_IncludePath>
+    <DCC_Define>DEBUG;FullDebugMode;CatchUseOfFreedInterfaces</DCC_Define>
+    <DCC_UnitSearchPath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_MapFile>3</DCC_MapFile>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
