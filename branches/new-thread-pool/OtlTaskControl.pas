@@ -114,7 +114,6 @@ uses
   Classes,
   SyncObjs,
   GpStuff,
-//  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTask,
@@ -903,9 +902,8 @@ end; { TOmniTask.StopTimer }
 procedure TOmniTask.Terminate;
 begin
   SetEvent(otSharedInfo.TerminateEvent);
-  if not otExecuting then begin //call Execute to run at least cleanup code
+  if not otExecuting then //call Execute to run at least cleanup code
     Execute;
-  end;
 end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
@@ -1177,14 +1175,7 @@ begin
     end;
   end //WAIT_TIMEOUT
   else //errors
-  begin
-    // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-//    for i := 0 to msgInfo.NumWaitHandles - 1 do
-//      GpLog.Log('[%d] %d => %d', [i, msgInfo.WaitHandles[i],
-//        WaitForSingleObject(msgInfo.WaitHandles[i], 0)]);
-    //>
     RaiseLastOSError;
-  end;
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
   Result := true;
@@ -1397,7 +1388,6 @@ end; { TOmniTaskExecutor.GetTimerMessageName }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
-//  oteOptionsLock := TCriticalSection.Create;
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
