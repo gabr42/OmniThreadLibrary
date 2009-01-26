@@ -286,8 +286,8 @@ type
     constructor Create(const name: string; uniqueID: int64);
   published
     // invoked from TOmniThreadPool
-    procedure Cancel(const taskID: TOmniValue);
-    procedure CancelAll;
+    procedure Cancel(const params: TOmniValue);
+    procedure CancelAll(var doneSignal: TOmniWaitableValue);
     procedure MaintainanceTimer;
     procedure PruneWorkingQueue;
     procedure RemoveMonitor;
@@ -653,14 +653,16 @@ begin
 end; { TGpThreadPool.ActiveWorkItemDescriptions }
 
 ///<returns>True: Normal exit, False: Thread was killed.</returns>
-procedure TOTPWorker.Cancel(const taskID: TOmniValue);
+procedure TOTPWorker.Cancel(const params: TOmniValue);
 var
   endWait_ms   : int64;
   iWorker      : integer;
+  taskID       : int64;
   wasTerminated: boolean;
   worker       : TOTPWorkerThread;
   workItem     : TOTPWorkItem;
 begin
+  taskID := params[0];
   wasTerminated := true;
   for iWorker := 0 to owRunningWorkers.Count - 1 do begin
     worker := TOTPWorkerThread(owRunningWorkers[iWorker]);
@@ -690,12 +692,13 @@ begin
       break; //for
     end;
   end; //for iWorker
-  Task.Comm.Send(MSG_CANCEL_RESULT, wasTerminated);
+  (VarToObj(params[1]) as TOmniWaitableValue).Signal(wasTerminated);
 end; { TOTPWorker.Cancel }
 
-procedure TOTPWorker.CancelAll;
+procedure TOTPWorker.CancelAll(var doneSignal: TOmniWaitableValue);
 begin
   InternalStop;
+  doneSignal.Signal;
 end; { TOTPWorker.CancelAll }
 
 procedure TOTPWorker.Cleanup;
@@ -1097,18 +1100,25 @@ end; { TOmniThreadPool.Destroy }
 ///<returns>True: Normal exit, False: Thread was killed.</returns>
 function TOmniThreadPool.Cancel(taskID: int64): boolean;
 var
-  msg: TOmniMessage;
+  res: TOmniWaitableValue;
 begin
-  otpWorkerTask.Invoke(@TOTPWorker.Cancel, taskID);
-  // TODO 1 -oPrimoz Gabrijelcic : Not a good idea - implement backchannel
-  otpWorkerTask.Comm.ReceiveWait(msg, INFINITE);
-  Assert(msg.msgID = MSG_CANCEL_RESULT);
-  Result := msg.MsgData;
+  res := TOmniWaitableValue.Create;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);
+    res.WaitFor(INFINITE);
+    Result := res.Value;
+  finally FreeAndNil(res); end;
 end; { TOmniThreadPool.Cancel }
 
 procedure TOmniThreadPool.CancelAll;
+var
+  res: TOmniWaitableValue;
 begin
-  otpWorkerTask.Invoke(@TOTPWorker.CancelAll);
+  res := TOmniWaitableValue.Create;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.CancelAll, res);
+    res.WaitFor(INFINITE);
+  finally FreeAndNil(res); end;
 end; { TOmniThreadPool.CancelAll }
 
 function TOmniThreadPool.CountExecuting: integer;
