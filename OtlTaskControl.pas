@@ -336,7 +336,7 @@ type
     property Signature: TOmniInvokeType read oiiSignature;
   end; { TOmniInvokeInfo }
 
-  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoFreeOnTerminate);
+  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
@@ -493,9 +493,9 @@ type
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
-    function Stopped: boolean;
+    function  Stopped: boolean;
     procedure StopTimer;
-    function Terminated: boolean;
+    function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -878,6 +878,7 @@ end; { TOmniTask.StopTimer }
 procedure TOmniTask.Terminate;
 begin
   SetEvent(otSharedInfo.TerminateEvent);
+  // TODO 1 -oPrimoz Gabrijelcic : This is a problem - we don't want to call Execute when removing unstarted task from the schedule queue!
   if not otExecuting then //for execution so that proper cleanup can occur
     Execute;
 end; { TOmniTask.Terminate }
