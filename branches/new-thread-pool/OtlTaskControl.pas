@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-12-15
-///   Version           : 1.06
+///   Last modification : 2009-01-26
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2009-01-26
+///       - Implemented IOmniTaskControl.Enforced decorator.
 ///     1.07: 2009-01-19
 ///       - Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
 ///       - TOmniTaskGroup reimplemented using IOmniTaskControlList.
@@ -174,6 +176,7 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
@@ -337,7 +340,7 @@ type
     property Signature: TOmniInvokeType read oiiSignature;
   end; { TOmniInvokeInfo }
 
-  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait);
+  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoForceExecution);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
@@ -367,6 +370,7 @@ type
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
+    oteOptionsLock       : TCriticalSection;
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
@@ -390,6 +394,7 @@ type
       var methodAddress: pointer; var methodSignature: TOmniInvokeType);
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
       var msgName: string; var msgData: TOmniValue);
+    function  GetOptions: TOmniTaskControlOptions;
     function  GetTimerInterval_ms: cardinal; inline;
     function  GetTimerMessageID: integer; inline;
     function  GetTimerMessageMethod: pointer;
@@ -431,7 +436,7 @@ type
     function WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
-    property Options: TOmniTaskControlOptions read oteOptions write SetOptions;
+    property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TimerInterval_ms: cardinal read GetTimerInterval_ms write SetTimerInterval_ms;
     property TimerMessageID: integer read GetTimerMessageID write SetTimerMessageID;
@@ -488,6 +493,7 @@ type
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
+    procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
@@ -561,6 +567,7 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload; inline;
@@ -773,6 +780,14 @@ begin
   otSharedInfo := sharedInfo;
 end; { TOmniTask.Create }
 
+procedure TOmniTask.Enforced(forceExecution: boolean);
+begin
+  if forceExecution then
+    otExecutor_ref.Options := otExecutor_ref.Options + [tcoForceExecution]
+  else
+    otExecutor_ref.Options := otExecutor_ref.Options - [tcoForceExecution];
+end; { TOmniTask.Enforced }
+
 procedure TOmniTask.Execute;
 begin
   otExecuting := true;
@@ -878,8 +893,7 @@ end; { TOmniTask.StopTimer }
 procedure TOmniTask.Terminate;
 begin
   SetEvent(otSharedInfo.TerminateEvent);
-  // TODO 1 -oPrimoz Gabrijelcic : This is a problem - we don't want to call Execute when removing unstarted task from the schedule queue!
-  if not otExecuting then //for execution so that proper cleanup can occur
+  if (not otExecuting) and (tcoForceExecution in otExecutor_ref.Options) then
     Execute;
 end; { TOmniTask.Terminate }
 
@@ -1101,6 +1115,7 @@ end; { TOmniTaskExecutor.CallOmniTimer }
 procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
+  FreeAndNil(oteOptionsLock);
 end; { TOmniTaskExecutor.Cleanup }
 
 function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask; var
@@ -1328,6 +1343,14 @@ begin
   end; //case internalType
 end; { TOmniTaskExecutor.GetMethodNameFromInternalMessage }
 
+function TOmniTaskExecutor.GetOptions: TOmniTaskControlOptions;
+begin
+  oteOptionsLock.Acquire;
+  try
+    Result := oteOptions;
+  finally oteOptionsLock.Release; end;
+end; { TOmniTaskExecutor.GetOptions }
+
 function TOmniTaskExecutor.GetTimerInterval_ms: cardinal;
 begin
   Result := oteTimerInterval_ms.Value;
@@ -1354,6 +1377,7 @@ end; { TOmniTaskExecutor.GetTimerMessageName }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
+  oteOptionsLock := TCriticalSection.Create;
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
   oteInternalLock := TTicketSpinLock.Create;
@@ -1438,7 +1462,10 @@ begin
   then
     raise Exception.Create('TOmniTaskExecutor.SetOptions: ' +
       'Trying to set IOmniWorker specific option(s)');
-  oteOptions := value;
+  oteOptionsLock.Acquire;
+  try
+    oteOptions := value;
+  finally oteOptionsLock.Release; end;
 end; { TOmniTaskExecutor.SetOptions }
 
 procedure TOmniTaskExecutor.SetTimerInterval_ms(const value: cardinal);
@@ -1601,6 +1628,15 @@ begin
   Result := TOmniTask.Create(otcExecutor, otcParameters, otcSharedInfo);
 end; { TOmniTaskControl.CreateTask }
 
+function TOmniTaskControl.Enforced(forceExecution: boolean = true): IOmniTaskControl;
+begin
+  if forceExecution then
+    Options := Options + [tcoForceExecution]
+  else
+    Options := Options - [tcoForceExecution];
+  Result := Self;
+end; { TOmniTaskControl.Enforced }
+
 procedure TOmniTaskControl.EnsureCommChannel;
 begin
   if not assigned(otcSharedInfo.CommChannel) then
@@ -1655,6 +1691,7 @@ end; { TOmniTaskControl.GetUniqueID }
 
 procedure TOmniTaskControl.Initialize;
 begin
+  otcExecutor.Options := [tcoForceExecution];
   otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
   otcSharedInfo.TaskName := taskName;
