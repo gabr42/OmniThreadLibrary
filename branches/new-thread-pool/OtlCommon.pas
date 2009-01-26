@@ -43,6 +43,7 @@
 ///   History:
 ///     1.01: 2009-01-26
 ///       - Implemented TOmniCS critical section wrapper.
+///       - Added TOmniWaitableValue class.
 ///     1.0d: 2008-10-05
 ///       - Use GetGoodHashSize from GpStringHash unit.
 ///     1.0c: 2008-09-26
@@ -63,6 +64,8 @@ unit OtlCommon;
 interface
 
 uses
+  Windows,
+  SysUtils,
   Classes,
   Variants,
   SyncObjs,
@@ -149,6 +152,18 @@ type
     property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
   end; { TOmniValue }
 
+  TOmniWaitableValue = class
+  public
+    Handle: THandle;
+    Value : TOmniValue;
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Reset; inline;
+    procedure Signal; overload; inline; 
+    procedure Signal(const data: TOmniValue); overload; inline;
+    function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean; inline;
+  end; { Implicit }
+
   TOmniValueContainer = class
   strict private
     ovcCanModify: boolean;
@@ -232,7 +247,8 @@ type
 
   TOmniCS = record
   private
-    ocsSycn: IOmniCriticalSection;
+    ocsSync: IOmniCriticalSection;
+    procedure Initialize; 
   public
     procedure Acquire; inline;
     procedure Release; inline;
@@ -250,14 +266,15 @@ type
 
   procedure SetThreadName(const name: string);
 
+  function VarToObj(const v: Variant): TObject; inline;
+
 var
   OtlUID: TGp8AlignedInt;
 
 implementation
 
 uses
-  Windows,
-  SysUtils,
+  DSiWin32,
   GpStringHash;
 
 type
@@ -458,6 +475,11 @@ begin
     RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
   except {ignore} end;
 end; { SetThreadName }
+
+function VarToObj(const v: Variant): TObject;
+begin
+  Result := TObject(cardinal(v));
+end; { VarToObj }
 
 { TOmniValueContainer }
 
@@ -1098,6 +1120,40 @@ begin
   Result.AsVariant := a;
 end; { TOmniValue.Implicit }
 
+{ TOmniWaitableValue }
+
+constructor TOmniWaitableValue.Create;
+begin
+  Handle := CreateEvent(nil, false, false, nil);
+  Value := TOmniValue.Null;
+end; { TOmniWaitableValue.Create }
+
+destructor TOmniWaitableValue.Destroy;
+begin
+  DSiCloseHandleAndInvalidate(Handle);
+end; { TOmniWaitableValue.Destroy }
+
+procedure TOmniWaitableValue.Reset;
+begin
+  WaitForSingleObject(Handle, 0);
+end; { TOmniWaitableValue.Reset }
+
+procedure TOmniWaitableValue.Signal;
+begin
+  SetEvent(Handle);
+end; { TOmniWaitableValue.Signal }
+
+procedure TOmniWaitableValue.Signal(const data: TOmniValue);
+begin
+  Value := data;
+  Signal;
+end; { TOmniWaitableValue.Signal }
+
+function TOmniWaitableValue.WaitFor(maxWait_ms: cardinal): boolean;
+begin
+  Result := (WaitForSingleObject(Handle, maxWait_ms) = WAIT_OBJECT_0);
+end; { TOmniWaitableValue.WaitFor }
+
 { TOmniStringData }
 
 constructor TOmniStringData.Create(const value: string);
@@ -1156,16 +1212,30 @@ end; { TOmniExtendedData.SetValue }
 
 procedure TOmniCS.Acquire;
 begin
-  if not assigned(ocsSycn) then
-    ocsSycn := CreateOmniCriticalSection;
-  ocsSycn.Acquire;
+  Initialize;
+  ocsSync.Acquire;
 end; { TOmniCS.Acquire }
+
+procedure TOmniCS.Initialize;
+var
+  syncIntf: IOmniCriticalSection;
+begin
+  Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
+  Assert(cardinal(@syncIntf) mod 4 = 0, 'TOmniCS.Initialize: syncIntf is not 4-aligned!');
+  while not assigned(ocsSync) do begin
+    syncIntf := CreateOmniCriticalSection;
+    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then begin
+      pointer(syncIntf) := nil;
+      Exit;
+    end;
+    DSiYield;
+  end;
+end; { TOmniCS.Initialize }
 
 procedure TOmniCS.Release;
 begin
-  if not assigned(ocsSycn) then
-    ocsSycn := CreateOmniCriticalSection;
-  ocsSycn.Release;
+  Initialize;
+  ocsSync.Release;
 end; { TOmniCS.Release }
 
 { TOmniCriticalSection }
@@ -1190,4 +1260,7 @@ begin
   ocsCritSect.Release;
 end; { TOmniCriticalSection.Release }
 
+initialization
+  Assert(SizeOf(TObject) = SizeOf(cardinal));
+  Assert(SizeOf(pointer) = SizeOf(cardinal));
 end.
