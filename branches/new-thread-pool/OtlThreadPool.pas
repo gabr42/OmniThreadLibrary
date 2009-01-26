@@ -67,6 +67,9 @@ const
   CDefaultIdleWorkerThreadTimeout_sec = 10;
   CDefaultWaitOnTerminate_sec         = 30;
 
+  CMaxConcurrentWorkers = 60; // enforced by the TOmniWorker limitations
+    // this is not configurable - don't increment it and expect the code to magically work!
+
 type
   IOmniThreadPool = interface;
 
@@ -162,7 +165,7 @@ uses
   DSiWin32,
   SpinLock,
   GpStuff,
-  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTaskControl,
@@ -1045,6 +1048,9 @@ begin
     {$IFDEF LogThreadPool}Log('Allocated thread from idle pool, num idle = %d, num running = %d[%d]', [owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting]);{$ENDIF LogThreadPool}
   end
   else if (MaxExecuting.Value <= 0) or (owRunningWorkers.CardCount < MaxExecuting.Value) then begin
+    if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count) >= CMaxConcurrentWorkers then
+      raise Exception.CreateFmt('TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
+        'due to the implementation limitations', [CMaxConcurrentWorkers]);
     worker := TOTPWorkerThread.Create;
 //GpLog.Log('Registering Comm endpoint %d for worker thread %d', [worker.OwnerCommEndpoint.NewMessageEvent, worker.ThreadID]);
     Task.RegisterComm(worker.OwnerCommEndpoint);
@@ -1244,6 +1250,10 @@ end; { TOmniThreadPool.SetIdleWorkerThreadTimeout_sec }
 
 procedure TOmniThreadPool.SetMaxExecuting(value: integer);
 begin
+  if value > CMaxConcurrentWorkers then
+    raise Exception.CreateFmt('TOmniThreadPool.SetMaxExecuting: ' +
+      'MaxExecuting cannot be larger than %d due to the implementation limitations',
+      [CMaxConcurrentWorkers]);
   WorkerObj.MaxExecuting.Value := value;
 end; { TOmniThreadPool.SetMaxExecuting }
 

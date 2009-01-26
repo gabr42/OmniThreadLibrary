@@ -112,6 +112,7 @@ uses
   Classes,
   SyncObjs,
   GpStuff,
+  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTask,
@@ -1139,7 +1140,14 @@ begin
     end;
   end //WAIT_TIMEOUT
   else //errors
+  begin
+    // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+    for i := 0 to msgInfo.NumWaitHandles - 1 do
+      GpLog.Log('[%d] %d => %d', [i, msgInfo.WaitHandles[i],
+        WaitForSingleObject(msgInfo.WaitHandles[i], 0)]);
+    //>
     RaiseLastOSError;
+  end;
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
   Result := true;

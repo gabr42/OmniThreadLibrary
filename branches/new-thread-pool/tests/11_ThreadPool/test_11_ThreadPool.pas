@@ -27,6 +27,7 @@ type
     btnCancelLong: TButton;
     btnCancelAll: TButton;
     btnSchedule80: TButton;
+    btnSchedule80All: TButton;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
@@ -92,15 +93,17 @@ begin
     numTasks := 80;
     delay_ms := 0;
   end;
+  if Sender = btnSchedule80All then
+    GlobalOmniThreadPool.MaxQueued := 0
+  else
+    GlobalOmniThreadPool.MaxQueued := 3;
   Log(Format('Scheduling %d tasks. Two should execute immediately, ', [numTasks]));
   if numTasks = 6 then
     Log('three should enter thread queue, one should be rejected (queue too long).')
   else
     Log('some should enter thread queue, some should be rejected (queue too long).');
-  for iTask := 1 to numTasks do begin
+  for iTask := 1 to numTasks do 
     CreateTask(THelloWorker.Create(Handle, delay_ms)).MonitorWith(OmniTED).Schedule;
-//    Application.ProcessMessages;
-  end;
 end;
 
 procedure TfrmTestOtlThreadPool.btnScheduleAndCancelClick(Sender: TObject);
