@@ -165,7 +165,6 @@ uses
   DSiWin32,
   SpinLock,
   GpStuff,
-//  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTaskControl,
@@ -428,7 +427,6 @@ begin
     owiTask.Enforced(false);
     owiTask.SetExitStatus(exitCode, exitMessage);
     owiTask.Terminate;
-// TODO 1 -oPrimoz Gabrijelcic : testing
     owiTask := nil;
   end;
 end; { TOTPWorkItem.TerminateTask }
@@ -441,7 +439,7 @@ begin
   {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
-  owtWorkItemLock := TTicketSpinLock.Create; // TODO 1 -oPrimoz Gabrijelcic : Do we need it anymore?
+  owtWorkItemLock := TTicketSpinLock.Create; 
   owtCommChannel := CreateTwoWayChannel;
   Resume;
 end; { TOTPWorkerThread.Create }
@@ -449,7 +447,6 @@ end; { TOTPWorkerThread.Create }
 destructor TOTPWorkerThread.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);{$ENDIF LogThreadPool}
-//GpLog.Log('Destroying thread %d and comm channel %d', [ThreadID, OwnerCommEndpoint.NewMessageEvent]);
   FreeAndNil(owtWorkItemLock);
   DSiCloseHandleAndNull(owtTerminateEvent);
   DSiCloseHandleAndNull(owtNewWorkEvent);
@@ -528,7 +525,7 @@ var
   stopUserTime   : int64;
   task           : IOmniTask;
 begin
-  WorkItem_ref := workItem; // TODO 1 -oPrimoz Gabrijelcic : still needed?
+  WorkItem_ref := workItem; 
   task := WorkItem_ref.Task;
   try
     try
@@ -543,8 +540,7 @@ begin
         {$IFDEF LogThreadPool}Log('Thread %s caught exception %s during exection of %s', [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
         if assigned(task) then
           task.SetExitStatus(EXIT_EXCEPTION, E.Message);
-        //owtRemoveFromPool := true;
-        // TODO 1 -oPrimoz Gabrijelcic : That should happen automatically when task exits with EXIT_EXCEPTION 
+        owtRemoveFromPool := true;
       end;
     end;
   finally task := nil; end;
@@ -601,7 +597,7 @@ var
   task: IOmniTask;
 begin
   {$IFDEF LogThreadPool}Log('Stop thread %s', [Description]);{$ENDIF LogThreadPool}
-  owtWorkItemLock.Acquire; // TODO 1 -oPrimoz Gabrijelcic : probably don't need it anymore
+  owtWorkItemLock.Acquire; 
   try
     if assigned(WorkItem_ref) then begin
       task := WorkItem_ref.Task;
@@ -726,12 +722,8 @@ begin
   if not assigned(worker) then
     worker := LocateThread(threadID);
   if assigned(worker) then begin
-//GpLog.Log('Unregistering Comm endpoint %d for worker thread %d', [worker.OwnerCommEndpoint.NewMessageEvent, threadID]);
     Task.UnregisterComm(worker.OwnerCommEndpoint);
     Worker.Stopped := true;
-  end
-  else begin
-//GpLog.Log('Cannot find thread %d - cannot unregister Comm endpoint', [threadID]);
   end;
   if assigned(owOnThreadDestroying) then
     owOnThreadDestroying(Self, threadID);
@@ -868,7 +860,6 @@ begin
         {$IFDEF LogThreadPool}Log('Removing stopped thread %s', [worker.Description]);{$ENDIF LogThreadPool}
       end;
       owStoppingWorkers.Delete(iWorker);
-//GpLog.Log('Destroying worker %d', [worker.ThreadID]);
       FreeAndNil(worker);
     end
     else
@@ -888,7 +879,6 @@ end; { TOTPWorker.MsgThreadCreated }
 
 procedure TOTPWorker.MsgThreadDestroying(var msg: TOmniMessage);
 begin
-//GpLog.Log('Recevied MSG_THREAD_DESTROYING[%d]', [integer(msg.MsgData)]);
   ForwardThreadDestroying(msg.MsgData, tpoDestroyThread);
 end; { TOTPWorker.MsgThreadDestroying }
 
@@ -1030,9 +1020,7 @@ begin
       raise Exception.CreateFmt('TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
         'due to the implementation limitations', [CMaxConcurrentWorkers]);
     worker := TOTPWorkerThread.Create;
-//GpLog.Log('Registering Comm endpoint %d for worker thread %d', [worker.OwnerCommEndpoint.NewMessageEvent, worker.ThreadID]);
     Task.RegisterComm(worker.OwnerCommEndpoint);
-    // TODO 1 -oPrimoz Gabrijelcic : Unregister endpoint before the thread is destroyed
     owRunningWorkers.Add(worker);
     CountRunning.Increment;
     {$IFDEF LogThreadPool}Log('Created new thread %s, num idle = %d, num running = %d[%d]', [worker.Description, owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting]);{$ENDIF LogThreadPool}
@@ -1202,7 +1190,7 @@ end; { TGpThreadPool.Log }
 
 function TOmniThreadPool.MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
 begin
-  monitor.Monitor(Self); // TODO 1 -oPrimoz Gabrijelcic : That good or should we be monitoring TOTPWorker???
+  monitor.Monitor(Self); 
   Result := Self;
 end; { TOmniThreadPool.MonitorWith }
 
