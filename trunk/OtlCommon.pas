@@ -1234,7 +1234,6 @@ end; { TOmniCS.Initialize }
 
 procedure TOmniCS.Release;
 begin
-  Initialize;
   ocsSync.Release;
 end; { TOmniCS.Release }
 
