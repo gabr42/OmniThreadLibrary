@@ -43,6 +43,8 @@
 ///   History:
 ///     1.08: 2009-01-26
 ///       - Implemented IOmniTaskControl.Enforced decorator.
+///       - Added TOmniWorker.ProcessMessages - a support for worker to recursively
+///         process messages inside message handlers.
 ///     1.07: 2009-01-19
 ///       - Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
 ///       - TOmniTaskGroup reimplemented using IOmniTaskControlList.
