@@ -370,8 +370,8 @@ type
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
-    oteOptionsLock       : TCriticalSection;
     oteOptions           : TOmniTaskControlOptions;
+    oteOptionsLock       : TSynchroObject;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
@@ -793,10 +793,11 @@ begin
   otExecuting := true;
   try
     try
+      {$IFNDEF OTL_DontSetThreadName}
+      SetThreadName(otSharedInfo.TaskName);
+      {$ENDIF OTL_DontSetThreadName}
+      if (tcoForceExecution in otExecutor_ref.Options) or (not Terminated) then
       try
-        {$IFNDEF OTL_DontSetThreadName}
-        SetThreadName(otSharedInfo.TaskName);
-        {$ENDIF OTL_DontSetThreadName}
         otExecutor_ref.Asy_Execute(Self);
       except
         on E: Exception do
@@ -810,7 +811,7 @@ begin
   finally SetEvent(otSharedInfo.TerminatedEvent); end;
   if assigned(otSharedInfo.ChainTo) and
      (otSharedInfo.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
-  then                        
+  then
     otSharedInfo.ChainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
   otSharedInfo.ChainTo := nil;
 end; { TOmniTask.Execute }
@@ -863,7 +864,7 @@ end; { TOmniTask.RegisterComm }
 procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
 begin
   otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
-end; { TOmniTask.SetExitStatus }
+ end; { TOmniTask.SetExitStatus }
 
 procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessageID: integer);
 begin
@@ -893,8 +894,9 @@ end; { TOmniTask.StopTimer }
 procedure TOmniTask.Terminate;
 begin
   SetEvent(otSharedInfo.TerminateEvent);
-  if (not otExecuting) and (tcoForceExecution in otExecutor_ref.Options) then
+  if not otExecuting then begin //call Execute to run at least cleanup code
     Execute;
+  end;
 end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
@@ -993,6 +995,7 @@ begin
     FreeAndNil(oteCommList);
   finally oteInternalLock.Release; end;
   FreeAndNil(oteInternalLock);
+  FreeAndNil(oteOptionsLock);
   FreeAndNil(oteTerminateHandles);
   FreeAndNil(oteMethodHash);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
@@ -1115,7 +1118,6 @@ end; { TOmniTaskExecutor.CallOmniTimer }
 procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
-  FreeAndNil(oteOptionsLock);
 end; { TOmniTaskExecutor.Cleanup }
 
 function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask; var
