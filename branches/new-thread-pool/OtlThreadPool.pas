@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2008-2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -45,7 +45,6 @@
 ///       - First official release.
 ///</para></remarks>
 
-/// WARNING Owner thread must process Windows messages!    WARNING
 /// WARNING Tasks must be scheduled from the owner thread! WARNING
 /// (access to task queues is not synchronised)
 
@@ -163,6 +162,7 @@ uses
   DSiWin32,
   SpinLock,
   GpStuff,
+  GpLogger, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlComm,
   OtlTaskControl,
@@ -240,7 +240,7 @@ type
     property RemoveFromPool: boolean read owtRemoveFromPool;
     property StartIdle_ms: int64 read owtStartIdle_ms write owtStartIdle_ms;
     property StartStopping_ms: int64 read owtStartStopping_ms write owtStartStopping_ms; //always modified from the owner thread
-    property Stopped: boolean read owtStopped write owtStopped;
+    property Stopped: boolean read owtStopped write owtStopped;                          //always modified from the owner thread
     property TerminateEvent: TDSiEventHandle read owtTerminateEvent;
     property WorkItem_ref: TOTPWorkItem read owtWorkItem_ref write owtWorkItem_ref; //address of the work item this thread is working on
   end; { TOTPWorkerThread }
@@ -447,6 +447,7 @@ end; { TOTPWorkerThread.Create }
 destructor TOTPWorkerThread.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);{$ENDIF LogThreadPool}
+//GpLog.Log('Destroying thread %d and comm channel %d', [ThreadID, OwnerCommEndpoint.NewMessageEvent]);
   FreeAndNil(owtWorkItemLock);
   DSiCloseHandleAndNull(owtTerminateEvent);
   DSiCloseHandleAndNull(owtNewWorkEvent);
@@ -534,7 +535,6 @@ begin
     end; //while Comm.ReceiveWait()
   finally Comm.Send(MSG_THREAD_DESTROYING, ThreadID); end;
   {$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);{$ENDIF LogThreadPool}
-  owtStopped := true;
 end; { TOTPWorkerThread.Execute }
 
 procedure TOTPWorkerThread.ExecuteWorkItem(workItem: TOTPWorkItem);
@@ -741,8 +741,14 @@ var
   worker: TOTPWorkerThread;
 begin
   worker := LocateThread(threadID);
-  if assigned(worker) then
+  if assigned(worker) then begin
+//GpLog.Log('Unregistering Comm endpoint %d for worker thread %d', [worker.OwnerCommEndpoint.NewMessageEvent, threadID]);
     Task.UnregisterComm(worker.OwnerCommEndpoint);
+    Worker.Stopped := true;
+  end
+  else begin
+//GpLog.Log('Cannot find thread %d - cannot unregister Comm endpoint', [threadID]);
+  end;
   if assigned(owOnThreadDestroying) then
     owOnThreadDestroying(Self, threadID);
   owMonitorSupport.Notify(
@@ -882,6 +888,7 @@ begin
         {$IFDEF LogThreadPool}Log('Removing stopped thread %s', [worker.Description]);{$ENDIF LogThreadPool}
       end;
       owStoppingWorkers.Delete(iWorker);
+//GpLog.Log('Destroying worker %d', [worker.ThreadID]);
       FreeAndNil(worker);
     end
     else
@@ -901,6 +908,7 @@ end; { TOTPWorker.MsgThreadCreated }
 
 procedure TOTPWorker.MsgThreadDestroying(var msg: TOmniMessage);
 begin
+//GpLog.Log('Recevied MSG_THREAD_DESTROYING[%d]', [integer(msg.MsgData)]);
   ForwardThreadDestroying(msg.MsgData, tpoDestroyThread);
 end; { TOTPWorker.MsgThreadDestroying }
 
@@ -1038,6 +1046,7 @@ begin
   end
   else if (MaxExecuting.Value <= 0) or (owRunningWorkers.CardCount < MaxExecuting.Value) then begin
     worker := TOTPWorkerThread.Create;
+//GpLog.Log('Registering Comm endpoint %d for worker thread %d', [worker.OwnerCommEndpoint.NewMessageEvent, worker.ThreadID]);
     Task.RegisterComm(worker.OwnerCommEndpoint);
     // TODO 1 -oPrimoz Gabrijelcic : Unregister endpoint before the thread is destroyed
     owRunningWorkers.Add(worker);
