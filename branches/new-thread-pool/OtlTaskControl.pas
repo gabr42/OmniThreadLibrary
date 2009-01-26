@@ -132,6 +132,7 @@ type
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
+    procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
   //
     procedure Cleanup;
@@ -144,13 +145,17 @@ type
 
   TOmniWorker = class(TInterfacedObject, IOmniWorker)
   strict private
-    owTask: IOmniTask;
+    owExecutor: TObject; {TOmniTaskExecutor}
+    owTask    : IOmniTask;
+  strict protected
+    procedure ProcessMessages;
   protected
     procedure Cleanup; virtual;
     procedure DispatchMessage(var msg: TOmniMessage); virtual;
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     function  Initialize: boolean; virtual;
+    procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
   public
     procedure Timer; virtual;
@@ -331,7 +336,7 @@ type
 
   TOmniInvokeInfo = class
   strict private
-    oiiAddress: pointer;
+    oiiAddress  : pointer;
     oiiSignature: TOmniInvokeType;
   public
     constructor Create(methodAddr: pointer; methodSignature: TOmniInvokeType);
@@ -369,6 +374,7 @@ type
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
+    oteMsgInfo           : TOmniMessageInfo;
     oteOptions           : TOmniTaskControlOptions;
     oteOptionsLock       : TOmniCS;
     otePriority          : TOTLThreadPriority;
@@ -413,6 +419,7 @@ type
       TOmniMessageInfo): boolean; virtual;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
+    procedure ProcessMessages(task: IOmniTask); virtual;
     procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     function  TimeUntilNextTimer_ms: cardinal; virtual;
     function  WaitForEvent(msgInfo: TOmniMessageInfo; timeout_ms: cardinal): cardinal; virtual;
@@ -936,6 +943,16 @@ begin
   Result := true;
 end; { TOmniWorker.Initialize }
 
+procedure TOmniWorker.ProcessMessages;
+begin
+  (owExecutor as TOmniTaskExecutor).ProcessMessages(Task);
+end; { TOmniWorker.ProcessMessages }
+
+procedure TOmniWorker.SetExecutor(executor: TObject);
+begin
+  owExecutor := executor;
+end; { TOmniWorker.SetExecutor }
+
 procedure TOmniWorker.SetTask(const value: IOmniTask);
 begin
   owTask := value;
@@ -961,6 +978,7 @@ constructor TOmniTaskExecutor.Create(const workerIntf: IOmniWorker);
 begin
   oteExecutorType := etWorker;
   oteWorkerIntf := workerIntf;
+  workerIntf.SetExecutor(Self);
   Initialize;
 end; { TOmniTaskExecutor.Create }
 
@@ -1168,13 +1186,12 @@ begin
 end; { TOmniTaskExecutor.DispatchEvent } 
 
 procedure TOmniTaskExecutor.DispatchMessages(const task: IOmniTask);
-var
-  msgInfo: TOmniMessageInfo;
 begin
   try
     oteWorkerInitOK := false;
     try
       if assigned(WorkerIntf) then begin
+        WorkerIntf.SetExecutor(Self);
         WorkerIntf.Task := task;
         if not WorkerIntf.Initialize then
           Exit;
@@ -1182,16 +1199,16 @@ begin
       oteWorkerInitOK := true;
     finally SetEvent(WorkerInitialized); end;
     if tcoMessageWait in Options then
-      msgInfo.WaitWakeMask := WakeMask
+      oteMsgInfo.WaitWakeMask := WakeMask
     else
-      msgInfo.WaitWakeMask := 0;
+      oteMsgInfo.WaitWakeMask := 0;
     if tcoAlertableWait in Options then
-      msgInfo.WaitFlags := MWMO_ALERTABLE
+      oteMsgInfo.WaitFlags := MWMO_ALERTABLE
     else
-      msgInfo.WaitFlags := 0;
-    RebuildWaitHandles(task, msgInfo);
+      oteMsgInfo.WaitFlags := 0;
+    RebuildWaitHandles(task, oteMsgInfo);
     oteLastTimer_ms := DSiTimeGetTime64;
-    MainMessageLoop(task, msgInfo);
+    MainMessageLoop(task, oteMsgInfo);
   finally
     if assigned(WorkerIntf) then begin
       WorkerIntf.Cleanup;
@@ -1394,6 +1411,20 @@ procedure TOmniTaskExecutor.MessageLoopPayload;
 begin
   //placeholder that can be overridden
 end; { TOmniTaskExecutor.MessageLoopPayload }
+
+procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
+var
+  awaited: cardinal;
+begin
+  repeat
+    awaited := WaitForEvent(oteMsgInfo, 0);
+    if awaited = WAIT_TIMEOUT then
+      Exit;
+    if not DispatchEvent(awaited, task, oteMsgInfo) then
+      Exit;
+    MessageLoopPayload;
+  until false;
+end; { TOmniTaskExecutor.ProcessMessages }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
 var
