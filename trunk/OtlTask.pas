@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-11-01
-///   Version           : 1.03
+///   Last modification : 2009-01-26
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2009-01-26
+///       - Implemented IOmniTask.Enforced decorator.
 ///     1.03: 2008-11-01
 ///       - *** Breaking interface change ***
 ///         - IOmniTask.Terminated renamed to IOmniTask.Stopped.
@@ -78,6 +80,7 @@ type
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64;
   //
+    procedure Enforced(forceExecution: boolean = true);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
@@ -103,7 +106,5 @@ type
   end; { IOmniTaskExecutor }
 
 implementation
-
-{ TOmniTask }
 
 end.

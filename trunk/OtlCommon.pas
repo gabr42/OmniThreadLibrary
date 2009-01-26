@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-05
-///   Version           : 1.0d
+///   Last modification : 2009-01-26
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2009-01-26
+///       - Implemented TOmniCS critical section wrapper.
 ///     1.0d: 2008-10-05
 ///       - Use GetGoodHashSize from GpStringHash unit.
 ///     1.0c: 2008-09-26
@@ -63,6 +65,7 @@ interface
 uses
   Classes,
   Variants,
+  SyncObjs,
   GpStuff;
 
 const
@@ -222,6 +225,19 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { IInterfaceHash }
 
+  IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
+    procedure Acquire;
+    procedure Release;
+  end; { IOmniCriticalSection }
+
+  TOmniCS = record
+  private
+    ocsSycn: IOmniCriticalSection;
+  public
+    procedure Acquire; inline;
+    procedure Release; inline;
+  end; { TOmniCS }
+
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
 
   function CreateOmniMonitorParams(window: THandle; msg: cardinal;
@@ -229,6 +245,8 @@ type
   function CreateOmniMonitorSupport: IOmniMonitorSupport;
 
   function CreateInterfaceDictionary: IInterfaceDictionary;
+
+  function CreateOmniCriticalSection: IOmniCriticalSection;
 
   procedure SetThreadName(const name: string);
 
@@ -244,17 +262,17 @@ uses
 
 type
   IOmniStringData = interface ['{21E52E56-390C-4066-B9FC-83862FFBCBF3}']
-    function  GetValue: string; 
+    function  GetValue: string;
     procedure SetValue(const value: string);
     property Value: string read GetValue write SetValue;
-  end; { IOmniStringData }            
-  
+  end; { IOmniStringData }
+
   TOmniStringData = class(TInterfacedObject, IOmniStringData)
   strict private
     osdValue: string;
   public
     constructor Create(const value: string);
-    function  GetValue: string; 
+    function  GetValue: string;
     procedure SetValue(const value: string);
     property Value: string read GetValue write SetValue;
   end; { TOmniStringData }
@@ -381,6 +399,16 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { TInterfaceDictionary }
 
+  TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
+  strict private
+    ocsCritSect: TSynchroObject;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Acquire; inline;
+    procedure Release; inline;
+  end; { TOmniCriticalSection }
+
 { exports }
 
 function CreateCounter(initialValue: integer): IOmniCounter;
@@ -403,6 +431,11 @@ function CreateInterfaceDictionary: IInterfaceDictionary;
 begin
   Result := TInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
+
+function CreateOmniCriticalSection: IOmniCriticalSection;
+begin
+  Result := TOmniCriticalSection.Create;
+end; { CreateOmniCriticalSection }
 
 procedure SetThreadName(const name: string);
 type
@@ -1119,27 +1152,42 @@ begin
   oedValue := value;
 end; { TOmniExtendedData.SetValue }
 
+{ TOmniCS }
+
+procedure TOmniCS.Acquire;
+begin
+  if not assigned(ocsSycn) then
+    ocsSycn := CreateOmniCriticalSection;
+  ocsSycn.Acquire;
+end; { TOmniCS.Acquire }
+
+procedure TOmniCS.Release;
+begin
+  if not assigned(ocsSycn) then
+    ocsSycn := CreateOmniCriticalSection;
+  ocsSycn.Release;
+end; { TOmniCS.Release }
+
+{ TOmniCriticalSection }
+
+constructor TOmniCriticalSection.Create;
+begin
+  ocsCritSect := TCriticalSection.Create;
+end; { TOmniCriticalSection.Create }
+
+destructor TOmniCriticalSection.Destroy;
+begin
+  FreeAndNil(ocsCritSect);
+end; { TOmniCriticalSection.Destroy }
+
+procedure TOmniCriticalSection.Acquire;
+begin
+  ocsCritSect.Acquire;
+end; { TOmniCriticalSection.Acquire }
+
+procedure TOmniCriticalSection.Release;
+begin
+  ocsCritSect.Release;
+end; { TOmniCriticalSection.Release }
+
 end.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
