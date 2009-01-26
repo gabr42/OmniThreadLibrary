@@ -35,6 +35,7 @@ type
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure OmniTEDPoolThreadCreated(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
@@ -150,6 +151,12 @@ begin
     task.Schedule
   else
     task.Run;
+end;
+
+procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  GlobalOmniThreadPool.CancelAll;
+  CanClose := true;
 end;
 
 procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);

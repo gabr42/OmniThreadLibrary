@@ -11,6 +11,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   DesignSize = (
     611
