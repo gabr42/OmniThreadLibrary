@@ -79,6 +79,7 @@ type
 
 procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
 begin
+//  btnScheduleTask.Click;
   btnSchedule6.Click;
   GlobalOmniThreadPool.CancelAll;
 end; { TfrmTestOtlThreadPool.btnCancelAllClick }

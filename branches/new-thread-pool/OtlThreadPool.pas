@@ -428,7 +428,8 @@ begin
     owiTask.Enforced(false);
     owiTask.SetExitStatus(exitCode, exitMessage);
     owiTask.Terminate;
-//    owiTask := nil;
+// TODO 1 -oPrimoz Gabrijelcic : testing
+    owiTask := nil;
   end;
 end; { TOTPWorkItem.TerminateTask }
 
@@ -922,8 +923,10 @@ begin
   {$IFDEF LogThreadPool}Log('Thread %s completed request %s with status %s:%s', [worker.Description, workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]);{$ENDIF LogThreadPool}
   {$IFDEF LogThreadPool}Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
   FreeAndNil(workItem);
-  if owStoppingWorkers.IndexOf(worker) >= 0 then
-    owStoppingWorkers.Remove(worker);
+//  if (not (owDestroying)) and (owStoppingWorkers.IndexOf(worker) >= 0) then begin
+//    owStoppingWorkers.Remove(worker);
+//    owIdleWorkers.Add(worker);
+//  end;
   if owRunningWorkers.IndexOf(worker) < 0 then
     worker := nil;
   if assigned(worker) then begin // move it back to the idle queue
@@ -1099,7 +1102,6 @@ end; { TOmniThreadPool.Create }
 destructor TOmniThreadPool.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread pool %p', [pointer(self), otpPoolName]);{$ENDIF LogThreadPool}
-  otpWorkerTask.Invoke(@TOTPWorker.CancelAll);
   otpWorkerTask.Terminate;
   inherited;
 end; { TOmniThreadPool.Destroy }
