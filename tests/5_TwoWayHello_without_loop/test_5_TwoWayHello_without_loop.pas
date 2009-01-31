@@ -41,6 +41,7 @@ type
     procedure actStartHelloUpdate(Sender: TObject);
     procedure actStopHelloExecute(Sender: TObject);
     procedure actStopHelloUpdate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   strict private
@@ -97,6 +98,11 @@ end;
 procedure TfrmTestTwoWayHello.actStopHelloUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := assigned(FHelloTask);
+end;
+
+procedure TfrmTestTwoWayHello.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  actStopHello.Execute;
 end;
 
 procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
