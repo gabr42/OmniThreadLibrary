@@ -1,0 +1,64 @@
+1.0: 2008-08-26
+- Initial release.
+
+1.0a: 2008-09-02
+- TGp4AlignedInt from GpStuff.pas is supposedly D2006 compatible (says a reader) 
+  so it has been enabled on that plaform. As a result, it is now possible to 
+  compiled and use OTL in D2006 (said the same source).
+- SpinLock.pas has been updated.
+- Test 6 has been changed to show why one would want to use 
+  IOmniWorker.Implementor function.
+- FastMM 4.88 included in the repository to simplify debugging.
+  FastMM4 was created by Pierre le Riche and is not covered by the 
+  OmniThreadLibrary license. It is released under a dual licensed and you can use 
+  it either under the MPL 1.1 or LGPL 2.1. More details in the included readme 
+  file and on the FastMM4 home page.
+
+1.01: 2008-11-01
+- [GJ] Redesigned stack cotainer with better lock contention.
+- [GJ] Totally redesigned queue container, which is no longer based on stack and 
+  allows multiple reader.
+- Full D2009 support; D2009 packages, project files and Tests project group.
+- Invoke-by-name and invoke-by-address messaging implemented
+  (http://17slon.com/blogs/gabr/2008/10/erlangenizing-omnithreadlibrary.html and
+  http://17slon.com/blogs/gabr/2008/10/omnithreadlibrary-using-rtti-to-call.html
+  and demos 18 and 19).
+- CreateTask(reference to function (task: ITaskControl)) implemented (D2009 only).
+- Blocking wait (ReceiveWait) implemented (demo 19).
+- Added enumerator to the IOmniTaskGroup interface.
+- Implemented IOmniTaskGroup.RegisterAllWithTask and .UnregisterAllFromTask.
+- Added automatic comm unregistration for IOmniTaskGroup.RegisterAllCommWith.
+- Implemented IOmniTaskGroup.SendToAll. 
+- New/updated tests/demos:
+  - 10_Containers 
+    - 2 -> 2, 1 -> 4 and 4 -> 4 tests for stacks and queues, 
+    - [1, 2, 4] -> [1, 2, 4] full tests.
+    - Writes CSV file with cumulative test results.
+  - 17_MsgWait: demo for the .MsgWait decorator.
+  - 18_StringMsgDispatch: Invoke demo.
+  - 19_StringMsgBenchmark: Invoke benchmark, ReceiveWait demo.
+  - 20_QuickSort: Parallel quicksort demo.
+  - 21_Anonymous_methods: Anonymous methods demo (D2009 only).
+- Message ID $FFFF is now reserved for internal purposes.
+- Better default queue length calculation that takes into account OtlContainers 
+  overhead and FastMM4 granulation.
+- Bug fixed: TOmniValue.Null was not really initialized to Null.
+- Bug fixed: Setting timer interval resets timer countdown.
+- Bug fixed: TOmniTaskControl.Schedule always scheduled task to the global 
+  thread pool.
+- Current versions of 3rd party units included.
+
+1.02: 2009-02-01
+- Thread pool reimplemented using OmniThreadLibrary.
+- Implemented IOmniTaskControl/IOmniTask.Enforced decorator.
+- Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
+- Added background file search demo.
+- Implemented TOmniCS critical section wrapper.
+- Fixed a bug in TGpStringTable.Grow and TGpStringDictionary.Grow which 
+  caused random memory overwrites.
+- Bug fixed: One overload of SetParameter was not returning Self.
+- [Jamie] Fixed bug in TOmniTaskExecutor.Asy_SetTimerInt.
+- [ajasja] Fixed bug in demos 4, 5, and 6. Exceptions was raised if demo app
+  was closed without stopping the background task first.
+- Updated to FastMM 4.90.
+- Current versions of 3rd party units included.
