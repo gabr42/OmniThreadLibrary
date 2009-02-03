@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-01-26
-///   Version           : 1.01
+///   Last modification : 2009-02-03
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2009-02-03
+///       - Added accessor to the internal critical section to the TOmniCS record.
 ///     1.01: 2009-01-26
 ///       - Implemented TOmniCS critical section wrapper.
 ///       - Added TOmniWaitableValue class.
@@ -243,15 +245,18 @@ type
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
     procedure Acquire;
     procedure Release;
+    function  GetSyncObj: TSynchroObject;
   end; { IOmniCriticalSection }
 
   TOmniCS = record
   private
     ocsSync: IOmniCriticalSection;
+    function  GetSyncObj: TSynchroObject;
   public
-    procedure Initialize; 
+    procedure Initialize;
     procedure Acquire; inline;
     procedure Release; inline;
+    property SyncObj: TSynchroObject read GetSyncObj;
   end; { TOmniCS }
 
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
@@ -423,6 +428,7 @@ type
     constructor Create;
     destructor  Destroy; override;
     procedure Acquire; inline;
+    function  GetSyncObj: TSynchroObject;
     procedure Release; inline;
   end; { TOmniCriticalSection }
 
@@ -1216,6 +1222,12 @@ begin
   ocsSync.Acquire;
 end; { TOmniCS.Acquire }
 
+function TOmniCS.GetSyncObj: TSynchroObject;
+begin
+  Initialize;
+  Result := ocsSync.GetSyncObj;
+end; { TOmniCS.GetSyncObj }
+
 procedure TOmniCS.Initialize;
 var
   syncIntf: IOmniCriticalSection;
@@ -1252,6 +1264,11 @@ procedure TOmniCriticalSection.Acquire;
 begin
   ocsCritSect.Acquire;
 end; { TOmniCriticalSection.Acquire }
+
+function TOmniCriticalSection.GetSyncObj: TSynchroObject;
+begin
+  Result := ocsCritSect;
+end; { TOmniCriticalSection.GetSyncObj }
 
 procedure TOmniCriticalSection.Release;
 begin
