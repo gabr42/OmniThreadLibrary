@@ -1278,4 +1278,5 @@ end; { TOmniCriticalSection.Release }
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal));
   Assert(SizeOf(pointer) = SizeOf(cardinal));
+  Assert(SizeOf(pointer) = 4);
 end.
