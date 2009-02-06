@@ -99,6 +99,8 @@
 ///  - Coordination Data Structures Overview, Emad Omara,
 ///    http://blogs.msdn.com/pfxteam/archive/2008/06/18/8620615.aspx
 ///  - Erlang, http://en.wikipedia.org/wiki/Erlang_(programming_language)
+///  - A single-word reader/writer spin lock,
+///    http://www.bluebytesoftware.com/blog/2009/01/30/ASinglewordReaderwriterSpinLock.aspx
 
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
