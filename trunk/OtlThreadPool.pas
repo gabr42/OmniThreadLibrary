@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-01-26
-///   Version           : 2.0
+///   Last modification : 2009-02-06
+///   Version           : 2.0a
 ///</para><para>
 ///   History:
+///     2.0a: 2009-02-06
+///       - Removed OnWorkerThreadCreated_Asy/OnWorkerThreadDestroyed_Asy
+///         notification mechanism which was pretty much useless.
 ///     2.0: 2009-01-26
 ///       - Reimplemented using OmniThreadLibrary :)
 ///     1.0: 2008-08-26
@@ -54,7 +57,6 @@ unit OtlThreadPool;
 
 interface
 
-{ TODO 1 -oPrimoz Gabrijelcic : Rewrite using one ITaskControl to manage thread pool. }
 { TODO 1 -oPrimoz Gabrijelcic : Use OtlCommunication to send messages to the Monitor. }
 
 // TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
@@ -109,19 +111,15 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
-    function  GetOnWorkerThreadCreated_Asy: TOTPWorkerThreadEvent;
-    function  GetOnWorkerThreadDestroying_Asy: TOTPWorkerThreadEvent;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
     procedure SetMaxExecuting(value: integer);
-    procedure SetMaxQueued(value: integer);
+    procedure SetMaxQueued(value: integer); overload;
     procedure SetMaxQueuedTime_sec(value: integer);
     procedure SetMinWorkers(value: integer);
     procedure SetName(const value: string);
     procedure SetWaitOnTerminate_sec(value: integer);
-    procedure SetOnWorkerThreadCreated_Asy(const value: TOTPWorkerThreadEvent);
-    procedure SetOnWorkerThreadDestroying_Asy(const value: TOTPWorkerThreadEvent);
   //
     function  Cancel(taskID: int64): boolean;
     procedure CancelAll;
@@ -141,10 +139,6 @@ type
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
-    property OnWorkerThreadCreated_Asy: TOTPWorkerThreadEvent read
-      GetOnWorkerThreadCreated_Asy write SetOnWorkerThreadCreated_Asy;
-    property OnWorkerThreadDestroying_Asy: TOTPWorkerThreadEvent read
-      GetOnWorkerThreadDestroying_Asy write SetOnWorkerThreadDestroying_Asy;
   end; { IOmniThreadPool }
 
   IOmniThreadPoolScheduler = interface ['{B7F5FFEF-2704-4CE0-ABF1-B20493E73650}']
@@ -230,7 +224,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    function Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
+    function  Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
     function  Description: string;
     procedure Execute; override;
     function  GetWorkItemInfo(var scheduledAt, startedAt: TDateTime;
@@ -254,8 +248,6 @@ type
     owIdleWorkers       : TObjectList;
     owMonitorSupport    : IOmniMonitorSupport;
     owName              : string;
-    owOnThreadCreated   : TOTPWorkerThreadEvent;
-    owOnThreadDestroying: TOTPWorkerThreadEvent;
     owRunningWorkers    : TObjectList;
     owStoppingWorkers   : TObjectList;
     owUniqueID          : int64;
@@ -296,8 +288,6 @@ type
     procedure Schedule(var workItem: TOTPWorkItem);
     procedure SetMonitor(const hWindow: TOmniValue);
     procedure SetName(const name: TOmniValue);
-    procedure SetOnThreadCreated(const eventHandler: TOmniValue);
-    procedure SetOnThreadDestroying(const eventHandler: TOmniValue);
     // invoked from TOTPWorkerThreads
     procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
     procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
@@ -306,12 +296,10 @@ type
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
   strict private
-    otpOnThreadCreated   : TOTPWorkerThreadEvent;
-    otpOnThreadDestroying: TOTPWorkerThreadEvent;
-    otpPoolName          : string;
-    otpUniqueID          : int64;
-    otpWorker            : IOmniWorker;
-    otpWorkerTask        : IOmniTaskControl;
+    otpPoolName  : string;
+    otpUniqueID  : int64;
+    otpWorker    : IOmniWorker;
+    otpWorkerTask: IOmniTaskControl;
   strict protected
     procedure Log(const msg: string; const params: array of const);
   protected
@@ -321,8 +309,6 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
-    function  GetOnWorkerThreadCreated_Asy: TOTPWorkerThreadEvent;
-    function  GetOnWorkerThreadDestroying_Asy: TOTPWorkerThreadEvent;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -331,8 +317,6 @@ type
     procedure SetMaxQueuedTime_sec(value: integer);
     procedure SetMinWorkers(value: integer);
     procedure SetName(const value: string);
-    procedure SetOnWorkerThreadCreated_Asy(const value: TOTPWorkerThreadEvent);
-    procedure SetOnWorkerThreadDestroying_Asy(const value: TOTPWorkerThreadEvent);
     procedure SetWaitOnTerminate_sec(value: integer);
     function WorkerObj: TOTPWorker;
   public
@@ -357,10 +341,6 @@ type
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
-    property OnWorkerThreadCreated_Asy: TOTPWorkerThreadEvent
-      read GetOnWorkerThreadCreated_Asy write SetOnWorkerThreadCreated_Asy;
-    property OnWorkerThreadDestroying_Asy: TOTPWorkerThreadEvent
-      read GetOnWorkerThreadDestroying_Asy write SetOnWorkerThreadDestroying_Asy;
   end; { TOmniThreadPool }
 
 const
@@ -715,8 +695,6 @@ end; { TOTPWorker.Cleanup }
 
 procedure TOTPWorker.ForwardThreadCreated(threadID: DWORD);
 begin
-  if assigned(owOnThreadCreated) then
-    owOnThreadCreated(Self, threadID);
   owMonitorSupport.Notify(
     TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID));
 end; { TOTPWorker.ForwardThreadCreated }
@@ -730,8 +708,6 @@ begin
     Task.UnregisterComm(worker.OwnerCommEndpoint);
     Worker.Stopped := true;
   end;
-  if assigned(owOnThreadDestroying) then
-    owOnThreadDestroying(Self, threadID);
   owMonitorSupport.Notify(
     TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation, threadID));
 end; { TOTPWorker.ForwardThreadDestroying }
@@ -1056,18 +1032,6 @@ begin
   owName := name;
 end; { TOTPWorker.SetName }
 
-procedure TOTPWorker.SetOnThreadCreated(const eventHandler: TOmniValue);
-begin
-  TMethod(owOnThreadCreated).Code := pointer(cardinal(eventHandler[0]));
-  TMethod(owOnThreadCreated).Data := pointer(cardinal(eventHandler[1]));
-end; { TOTPWorker.SetOnThreadCreated }
-
-procedure TOTPWorker.SetOnThreadDestroying(const eventHandler: TOmniValue);
-begin
-  TMethod(owOnThreadDestroying).Code := pointer(cardinal(eventHandler[0]));
-  TMethod(owOnThreadDestroying).Data := pointer(cardinal(eventHandler[1]));
-end; { TOTPWorker.SetOnThreadDestroying }
-
 ///<summary>Move the thread to the 'stopping' list and tell it to CancelAll.<para>
 ///   Thread is guaranted not to be in 'idle' or 'working' list when StopThread is called.</para></summary>
 ///<since>2007-07-10</since>
@@ -1163,16 +1127,6 @@ begin
   Result := otpPoolName;
 end; { TOmniThreadPool.GetName }
 
-function TOmniThreadPool.GetOnWorkerThreadCreated_Asy: TOTPWorkerThreadEvent;
-begin
-  Result := otpOnThreadCreated;
-end; { TOmniThreadPool.GetOnWorkerThreadCreated_Asy }
-
-function TOmniThreadPool.GetOnWorkerThreadDestroying_Asy: TOTPWorkerThreadEvent;
-begin
-  Result := otpOnThreadDestroying;
-end; { TOmniThreadPool.GetOnWorkerThreadDestroying_Asy }
-
 function TOmniThreadPool.GetUniqueID: int64;
 begin
   Result := otpUniqueID;
@@ -1259,22 +1213,6 @@ begin
   otpPoolName := value;
   otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
 end; { TOmniThreadPool.SetName }
-
-procedure TOmniThreadPool.SetOnWorkerThreadCreated_Asy(const value:
-  TOTPWorkerThreadEvent);
-begin
-  otpOnThreadCreated := value;
-  otpWorkerTask.Invoke(@TOTPWorker.SetOnThreadCreated,
-    [TMethod(value).Code, TMethod(value).Data]);
-end; { TOmniThreadPool.SetOnWorkerThreadCreated_Asy }
-
-procedure TOmniThreadPool.SetOnWorkerThreadDestroying_Asy(const value:
-  TOTPWorkerThreadEvent);
-begin
-  otpOnThreadDestroying := value;
-  otpWorkerTask.Invoke(@TOTPWorker.SetOnThreadDestroying,
-    [TMethod(value).Code, TMethod(value).Data]);
-end; { TOmniThreadPool.SetOnWorkerThreadDestroying_Asy }
 
 procedure TOmniThreadPool.SetWaitOnTerminate_sec(value: integer);
 begin
