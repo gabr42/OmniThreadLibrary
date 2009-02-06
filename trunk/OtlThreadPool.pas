@@ -38,9 +38,13 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2009-02-06
-///   Version           : 2.0a
+///   Version           : 2.0b
 ///</para><para>
 ///   History:
+///     2.0b: 2009-02-06
+///       - Protect communication between TOmniThreadPool and TOTPWorker with a critical
+///         section. That should allow multiple threads to Schedule tasks into one
+///         thread pool. 
 ///     2.0a: 2009-02-06
 ///       - Removed OnWorkerThreadCreated_Asy/OnWorkerThreadDestroyed_Asy
 ///         notification mechanism which was pretty much useless.
@@ -296,10 +300,11 @@ type
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
   strict private
-    otpPoolName  : string;
-    otpUniqueID  : int64;
-    otpWorker    : IOmniWorker;
-    otpWorkerTask: IOmniTaskControl;
+    otpPoolName   : string;
+    otpProtectTask: TOmniCS;
+    otpUniqueID   : int64;
+    otpWorker     : IOmniWorker;
+    otpWorkerTask : IOmniTaskControl;
   strict protected
     procedure Log(const msg: string; const params: array of const);
   protected
@@ -1070,7 +1075,10 @@ var
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);
+    otpProtectTask.Acquire;
+    try
+      otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);
+    finally otpProtectTask.Release; end;
     res.WaitFor(INFINITE);
     Result := res.Value;
   finally FreeAndNil(res); end;
@@ -1082,7 +1090,10 @@ var
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.CancelAll, res);
+    otpProtectTask.Acquire;
+    try
+      otpWorkerTask.Invoke(@TOTPWorker.CancelAll, res);
+    finally otpProtectTask.Release; end;
     res.WaitFor(INFINITE);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.CancelAll }
@@ -1168,7 +1179,10 @@ end; { TOmniThreadPool.RemoveMonitor }
 
 procedure TOmniThreadPool.Schedule(const task: IOmniTask);
 begin
-  otpWorkerTask.Invoke(@TOTPWorker.Schedule, TOTPWorkItem.Create(task));
+  otpProtectTask.Acquire;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.Schedule, TOTPWorkItem.Create(task));
+  finally otpProtectTask.Release; end;
 end; { TOmniThreadPool.Schedule }
 
 procedure TOmniThreadPool.SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -1188,13 +1202,19 @@ end; { TOmniThreadPool.SetMaxExecuting }
 procedure TOmniThreadPool.SetMaxQueued(value: integer);
 begin
   WorkerObj.MaxQueued.Value := value;
-  otpWorkerTask.Invoke(@TOTPWorker.PruneWorkingQueue);
+  otpProtectTask.Acquire;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.PruneWorkingQueue);
+  finally otpProtectTask.Release; end;
 end; { TOmniThreadPool.SetMaxQueued }
 
 procedure TOmniThreadPool.SetMaxQueuedTime_sec(value: integer);
 begin
   WorkerObj.MaxQueuedTime_sec.Value := value;
-  otpWorkerTask.Invoke(@TOTPWorker.PruneWorkingQueue);
+  otpProtectTask.Acquire;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.PruneWorkingQueue);
+  finally otpProtectTask.Release; end;
 end; { TOmniThreadPool.SetMaxQueuedTime_sec }
 
 procedure TOmniThreadPool.SetMinWorkers(value: integer);
@@ -1211,7 +1231,10 @@ end; { TOmniThreadPool.SetMonitor }
 procedure TOmniThreadPool.SetName(const value: string);
 begin
   otpPoolName := value;
-  otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
+  otpProtectTask.Acquire;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
+  finally otpProtectTask.Release; end;
 end; { TOmniThreadPool.SetName }
 
 procedure TOmniThreadPool.SetWaitOnTerminate_sec(value: integer);
