@@ -62,3 +62,11 @@
   was closed without stopping the background task first.
 - Updated to FastMM 4.90.
 - Current versions of 3rd party units included.
+
+1.03: 2009-02-08
+- Added support for per-thread initialized data to the thread pool.
+- Communication between TOmniThreadPool and TOTPWorker is protected with a critical 
+  section. That allows multiple threads to Schedule tasks into one thread pool.
+- Removed OnWorkerThreadCreated_Asy/OnWorkerThreadDestroyed_Asy thread pool 
+  notification mechanism which was pretty much useless.
+- Added connection pool demo.
