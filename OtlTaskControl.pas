@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-01-26
-///   Version           : 1.08
+///   Last modification : 2009-02-08
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2009-02-08
+///       - Implemented per-thread task data storage.
 ///     1.08: 2009-01-26
 ///       - Implemented IOmniTaskControl.Enforced decorator.
 ///       - Added TOmniWorker.ProcessMessages - a support for worker to recursively
@@ -492,6 +494,7 @@ type
     otExecutor_ref  : TOmniTaskExecutor;
     otParameters_ref: TOmniValueContainer;
     otSharedInfo    : TOmniSharedTaskInfo;
+    otThreadData    : IInterface;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
@@ -500,7 +503,9 @@ type
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
     function  GetTerminateEvent: THandle; inline;
+    function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
+    procedure SetThreadData(const value: IInterface); inline;
     procedure Terminate; 
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
@@ -523,6 +528,7 @@ type
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
+    property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTask }
 
@@ -863,6 +869,11 @@ begin
   Result := otSharedInfo.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
 
+function TOmniTask.GetThreadData: IInterface;
+begin
+  Result := otThreadData;
+end; { TOmniTask.GetThreadData }
+
 function TOmniTask.GetUniqueID: int64;
 begin
   Result := otSharedInfo.UniqueID;
@@ -887,6 +898,11 @@ procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMethod: pointer);
 begin
   otExecutor_ref.Asy_SetTimer(interval_ms, timerMethod);
 end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetThreadData(const value: IInterface);
+begin
+  otThreadData := value;
+end; { TOmniTask.SetThreadData }
 
 procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMessageName: string);
 begin

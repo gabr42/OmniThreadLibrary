@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-01-26
-///   Version           : 1.04
+///   Last modification : 2009-02-06
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2009-02-06
+///       - Implemented per-thread data storage.
 ///     1.04: 2009-01-26
 ///       - Implemented IOmniTask.Enforced decorator.
 ///     1.03: 2008-11-01
@@ -78,6 +80,7 @@ type
     function  GetParam(idxParam: integer): TOmniValue;
     function  GetParamByName(const paramName: string): TOmniValue;
     function  GetTerminateEvent: THandle;
+    function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
   //
     procedure Enforced(forceExecution: boolean = true);
@@ -98,11 +101,13 @@ type
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
     property TerminateEvent: THandle read GetTerminateEvent;
+    property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
 
   IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']
     procedure Execute;
+    procedure SetThreadData(const value: IInterface);
   end; { IOmniTaskExecutor }
 
 implementation
