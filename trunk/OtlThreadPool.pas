@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-02-06
-///   Version           : 2.0b
+///   Last modification : 2009-02-08
+///   Version           : 2.01
 ///</para><para>
 ///   History:
+///     2.01: 2009-02-08
+///       - Added support for per-thread data storage.
 ///     2.0b: 2009-02-06
 ///       - Protect communication between TOmniThreadPool and TOTPWorker with a critical
 ///         section. That should allow multiple threads to Schedule tasks into one
@@ -105,6 +107,8 @@ type
     property UniqueID: int64 read otpmiUniqueID;
   end; { TOmniThreadPoolMonitorInfo }
 
+  TOTPThreadDataFactory = function: IInterface;
+
   ///<summary>Worker thread lifetime reporting handler.</summary>
   TOTPWorkerThreadEvent = procedure(Sender: TObject; threadID: DWORD) of object;
 
@@ -115,6 +119,7 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
+    function  GetThreadDataFactory: TOTPThreadDataFactory; 
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -123,6 +128,7 @@ type
     procedure SetMaxQueuedTime_sec(value: integer);
     procedure SetMinWorkers(value: integer);
     procedure SetName(const value: string);
+    procedure SetThreadDataFactory(const value: TOTPThreadDataFactory); 
     procedure SetWaitOnTerminate_sec(value: integer);
   //
     function  Cancel(taskID: int64): boolean;
@@ -140,6 +146,8 @@ type
     property MaxQueuedTime_sec: integer read GetMaxQueuedTime_sec write SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property ThreadDataFactory: TOTPThreadDataFactory read GetThreadDataFactory write
+      SetThreadDataFactory;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
@@ -211,22 +219,24 @@ type
 
   TOTPWorkerThread = class(TThread)
   strict private
-    owtCommChannel     : IOmniTwoWayChannel;
-    owtNewWorkEvent    : TDSiEventHandle;
-    owtRemoveFromPool  : boolean;
-    owtStartIdle_ms    : int64;
-    owtStartStopping_ms: int64;
-    owtStopped         : boolean;
-    owtTerminateEvent  : TDSiEventHandle;
-    owtWorkItem_ref    : TOTPWorkItem;
-    owtWorkItemLock    : TTicketSpinLock;
+    owtCommChannel      : IOmniTwoWayChannel;
+    owtNewWorkEvent     : TDSiEventHandle;
+    owtRemoveFromPool   : boolean;
+    owtStartIdle_ms     : int64;
+    owtStartStopping_ms : int64;
+    owtStopped          : boolean;
+    owtTerminateEvent   : TDSiEventHandle;
+    owtThreadData       : IInterface;
+    owtThreadDataFactory: TOTPThreadDataFactory;
+    owtWorkItem_ref     : TOTPWorkItem;
+    owtWorkItemLock     : TTicketSpinLock;
   strict protected
     function  Comm: IOmniCommunicationEndpoint;
     procedure ExecuteWorkItem(workItem: TOTPWorkItem);
     function  GetOwnerCommEndpoint: IOmniCommunicationEndpoint;
     procedure Log(const msg: string; params: array of const);
   public
-    constructor Create;
+    constructor Create(const threadDataFactory: TOTPThreadDataFactory);
     destructor  Destroy; override;
     function  Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
     function  Description: string;
@@ -254,6 +264,7 @@ type
     owName              : string;
     owRunningWorkers    : TObjectList;
     owStoppingWorkers   : TObjectList;
+    owThreadDataFactory : TOTPThreadDataFactory;
     owUniqueID          : int64;
     owWorkItemQueue     : TObjectList;
   strict protected
@@ -292,6 +303,7 @@ type
     procedure Schedule(var workItem: TOTPWorkItem);
     procedure SetMonitor(const hWindow: TOmniValue);
     procedure SetName(const name: TOmniValue);
+    procedure SetThreadDataFactory(const threadDataFactory: TOmniValue);
     // invoked from TOTPWorkerThreads
     procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
     procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
@@ -300,11 +312,12 @@ type
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
   strict private
-    otpPoolName   : string;
-    otpProtectTask: TOmniCS;
-    otpUniqueID   : int64;
-    otpWorker     : IOmniWorker;
-    otpWorkerTask : IOmniTaskControl;
+    otpPoolName         : string;
+    otpProtectTask      : TOmniCS;
+    otpThreadDataFactory: TOTPThreadDataFactory;
+    otpUniqueID         : int64;
+    otpWorker           : IOmniWorker;
+    otpWorkerTask       : IOmniTaskControl;
   strict protected
     procedure Log(const msg: string; const params: array of const);
   protected
@@ -314,6 +327,7 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
+    function  GetThreadDataFactory: TOTPThreadDataFactory;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -322,6 +336,7 @@ type
     procedure SetMaxQueuedTime_sec(value: integer);
     procedure SetMinWorkers(value: integer);
     procedure SetName(const value: string);
+    procedure SetThreadDataFactory(const value: TOTPThreadDataFactory);
     procedure SetWaitOnTerminate_sec(value: integer);
     function WorkerObj: TOTPWorker;
   public
@@ -343,6 +358,8 @@ type
     property MaxQueuedTime_sec: integer read GetMaxQueuedTime_sec write SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property ThreadDataFactory: TOTPThreadDataFactory read GetThreadDataFactory write
+      SetThreadDataFactory;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
@@ -420,10 +437,11 @@ end; { TOTPWorkItem.TerminateTask }
 
 { TOTPWorkerThread }
 
-constructor TOTPWorkerThread.Create;
+constructor TOTPWorkerThread.Create(const threadDataFactory: TOTPThreadDataFactory);
 begin
   inherited Create(true);
   {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
+  owtThreadDataFactory := threadDataFactory;
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
   owtWorkItemLock := TTicketSpinLock.Create; 
@@ -483,6 +501,10 @@ begin
   {$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);{$ENDIF LogThreadPool}
   Comm.Send(MSG_THREAD_CREATED, ThreadID);
   try
+    if assigned(@owtThreadDataFactory) then
+      owtThreadData := owtThreadDataFactory()
+    else
+      owtThreadData := nil;
     while true do begin
       if Comm.ReceiveWait(msg, INFINITE) then begin
         case msg.MsgID of
@@ -512,14 +534,17 @@ var
   stopUserTime   : int64;
   task           : IOmniTask;
 begin
-  WorkItem_ref := workItem; 
+  WorkItem_ref := workItem;
   task := WorkItem_ref.Task;
   try
     try
       {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
       DSiGetThreadTimes(creationTime, startUserTime, startKernelTime);
       if assigned(task) then
-        (task as IOmniTaskExecutor).Execute;
+        with (task as IOmniTaskExecutor) do begin
+          SetThreadData(owtThreadData);
+          Execute;
+        end;
       DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
       {$IFDEF LogThreadPool}Log('Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms', [Description, WorkItem_ref.Description, Round((stopUserTime - startUserTime)/10000), Round((stopKernelTime - startKernelTime)/10000)]);{$ENDIF LogThreadPool}
     except
@@ -1005,7 +1030,7 @@ begin
     if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count) >= CMaxConcurrentWorkers then
       raise Exception.CreateFmt('TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
         'due to the implementation limitations', [CMaxConcurrentWorkers]);
-    worker := TOTPWorkerThread.Create;
+    worker := TOTPWorkerThread.Create(owThreadDataFactory);
     Task.RegisterComm(worker.OwnerCommEndpoint);
     owRunningWorkers.Add(worker);
     CountRunning.Increment;
@@ -1036,6 +1061,11 @@ procedure TOTPWorker.SetName(const name: TOmniValue);
 begin
   owName := name;
 end; { TOTPWorker.SetName }
+
+procedure TOTPWorker.SetThreadDataFactory(const threadDataFactory: TOmniValue);
+begin
+  owThreadDataFactory := TOTPThreadDataFactory(cardinal(threadDataFactory));
+end; { TOTPWorker.SetThreadDataFactory }
 
 ///<summary>Move the thread to the 'stopping' list and tell it to CancelAll.<para>
 ///   Thread is guaranted not to be in 'idle' or 'working' list when StopThread is called.</para></summary>
@@ -1138,6 +1168,11 @@ begin
   Result := otpPoolName;
 end; { TOmniThreadPool.GetName }
 
+function TOmniThreadPool.GetThreadDataFactory: TOTPThreadDataFactory;
+begin
+  Result := otpThreadDataFactory;
+end; { TOmniThreadPool.GetThreadDataFactory }
+
 function TOmniThreadPool.GetUniqueID: int64;
 begin
   Result := otpUniqueID;
@@ -1236,6 +1271,15 @@ begin
     otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
   finally otpProtectTask.Release; end;
 end; { TOmniThreadPool.SetName }
+
+procedure TOmniThreadPool.SetThreadDataFactory(const value: TOTPThreadDataFactory);
+begin
+  otpThreadDataFactory := @value;
+  otpProtectTask.Acquire;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.SetThreadDataFactory, cardinal(@value));
+  finally otpProtectTask.Release; end;
+end; { TOmniThreadPool.SetThreadDataFactory }
 
 procedure TOmniThreadPool.SetWaitOnTerminate_sec(value: integer);
 begin
