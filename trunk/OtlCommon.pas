@@ -41,6 +41,8 @@
 ///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02a: 2009-02-09
+///       - Simplified TOmniCS.Initialize.
 ///     1.02: 2009-02-03
 ///       - Added accessor to the internal critical section to the TOmniCS record.
 ///     1.01: 2009-01-26
@@ -1233,13 +1235,10 @@ var
   syncIntf: IOmniCriticalSection;
 begin
   Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
-  while not assigned(ocsSync) do begin
+  if not assigned(ocsSync) then begin
     syncIntf := CreateOmniCriticalSection;
-    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then begin
+    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then
       pointer(syncIntf) := nil;
-      Exit;
-    end;
-    DSiYield;
   end;
 end; { TOmniCS.Initialize }
 
