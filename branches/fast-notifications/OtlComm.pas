@@ -75,8 +75,8 @@ type
   end; { TOmniMessage }
 
 const
-  //calculate default queue size so that the queue memory gets as close to 64 KB as possible
-!  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
+  //default queues are quite small
+  CDefaultQueueSize = 128;
 
 type
   TOmniMessageQueue = class;

@@ -1,29 +1,9 @@
-﻿///<summary>Lock-free containers. Part of the OmniThreadLibrary project.</summary>
-///<author>Primoz Gabrijelcic, GJ</author>
-///<license>
-///This software is distributed under the BSD license.
-///
-///Copyright (c) 2008, Primoz Gabrijelcic
-///All rights reserved.
-///
-///Redistribution and use in source and binary forms, with or without modification,
-///are permitted provided that the following conditions are met:
-///- Redistributions of source code must retain the above copyright notice, this
-///  list of conditions and the following disclaimer.
-///- Redistributions in binary form must reproduce the above copyright notice,
-///  this list of conditions and the following disclaimer in the documentation
-///  and/or other materials provided with the distribution.
-///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
-///  products derived from this software without specific prior written permission.
-///
-///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 ///<summary>Lock-free containers. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -73,11 +53,7 @@ uses
   DSiWin32;
 
 const
-  //calculate default queue size so that the queue memory gets as close to 64 KB as possible
-//  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
-
-!  CDefaultQueueSize = 122;
-!  CPartlyEmptyCount =  round(CDefaultQueueSize * 0.9);     //Set to 90% of buffer length
+  CAlmostFullLoadFactor = 0.9; // When a queue is 90% full, it is considered 'almost full'.
 
 type
   {:Lock-free, single writer, single reader, size-limited stack.
@@ -218,7 +194,7 @@ type
   public
     constructor Create(numElements, elementSize: integer;
       options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify];
-      const PartlyEmptyCount: cardinal = CPartlyEmptyCount);
+      almostFullLoadFactor: real = CAlmostFullLoadFactor);
     procedure DeleteMessageInQueueEvent;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
@@ -878,13 +854,12 @@ begin
 end; { TOmniQueue.DeleteMessageInQueueEvent }
 
 constructor TOmniQueue.Create(numElements, elementSize: integer;
-  options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify];
-  const PartlyEmptyCount: cardinal = CPartlyEmptyCount);
+  options: TOmniContainerOptions; almostFullLoadFactor: real);
 begin
   inherited Create;
-  if MonitorOnlyFirstInQueue then
+//  if MonitorOnlyFirstInQueue then
     Include(Options, coMonitorOnlyFirstInQueue);
-  oqWriteQueuePartlyEmptyCount := PartlyEmptyCount;
+  oqWriteQueuePartlyEmptyCount := Round(numElements * almostFullLoadFactor);
   oqInQueueCount := -1;
   Initialize(numElements, elementSize);
   oqOptions := options;
@@ -892,7 +867,6 @@ begin
     oqMonitorSupport := CreateOmniMonitorSupport;
   if coEnableNotify in Options then
     oqNotifySupport := TOmniNotifySupport.Create;
-
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
@@ -957,7 +931,5 @@ end; { InitializeTimingInfo }
 
 initialization
   InitializeTimingInfo;
-  Assert(CPartlyEmptyCount < CDefaultQueueSize,
-    'TOmniBaseContainer: CPartlyEmptyCount >= CDefaultQueueSize');
-end.    
+end.
 

@@ -190,18 +190,18 @@ begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then
       begin
-        if HandleEventsDirectly then
+        {if HandleEventsDirectly then
         repeat
           if assigned(tedOnTaskMessage) then
             tedOnTaskMessage(task);
         until not MonitorOnlyFirstInQueue or task.Comm.Reader.IsEmpty
-        else begin
+        else} begin
           TOmniTaskControl(task.GetSelf).SharedInfo.ResetTaskRefreshTimeOut;
           TickCount := GetTickCount;
           while task.Comm.Receive(tedCurrentMsg) do begin
             if assigned(tedOnTaskMessage) then
               tedOnTaskMessage(task);
-            if MonitorOnlyFirstInQueue and (TickCount + 8 < GetTickCount) then begin
+            if {MonitorOnlyFirstInQueue and }(TickCount + 8 < GetTickCount) then begin
               if assigned(tedOnRefreshTimeOut) then
                 tedOnRefreshTimeOut(task);
               if AllMonitoredTasks.Count > 1 then
@@ -229,7 +229,7 @@ begin
     if assigned(OnTaskTerminated) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then
-        if HandleEventsDirectly then
+        {if HandleEventsDirectly then
         begin
           SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
           while not SharedTaskInfo.CommChannel.Endpoint1.Reader.IsEmpty do
@@ -240,7 +240,7 @@ begin
               tedOnTaskUndeliveredMessage(task);
           if Assigned(tedOnTaskTerminated) then
             OnTaskTerminated(task);
-        end else begin
+        end else} begin
           SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
           while SharedTaskInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
             if Assigned(tedOnTaskMessage) then
