@@ -18,6 +18,26 @@
 ///
 ///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+///<summary>Lock-free containers. Part of the OmniThreadLibrary project.</summary>
+///<author>Primoz Gabrijelcic, GJ</author>
+///<license>
+///This software is distributed under the BSD license.
+///
+///Copyright (c) 2008, Primoz Gabrijelcic
+///All rights reserved.
+///
+///Redistribution and use in source and binary forms, with or without modification,
+///are permitted provided that the following conditions are met:
+///- Redistributions of source code must retain the above copyright notice, this
+///  list of conditions and the following disclaimer.
+///- Redistributions in binary form must reproduce the above copyright notice,
+///  this list of conditions and the following disclaimer in the documentation
+///  and/or other materials provided with the distribution.
+///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
+///  products derived from this software without specific prior written permission.
+///
+///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 ///WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 ///DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
 ///ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
@@ -49,7 +69,15 @@ unit OtlContainers;
 interface
 
 uses
-  OtlCommon;                                        
+  OtlCommon,
+  DSiWin32;
+
+const
+  //calculate default queue size so that the queue memory gets as close to 64 KB as possible
+//  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
+
+!  CDefaultQueueSize = 122;
+!  CPartlyEmptyCount =  round(CDefaultQueueSize * 0.9);     //Set to 90% of buffer length
 
 type
   {:Lock-free, single writer, single reader, size-limited stack.
@@ -57,31 +85,35 @@ type
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
     procedure Empty;
     procedure Initialize(numElements, elementSize: integer);
-    function  Pop(var value): boolean;
-    function  Push(const value): boolean;
     function  IsEmpty: boolean;
     function  IsFull: boolean;
+    function  Pop(var value): boolean;
+    function  Push(const value): boolean;
   end; { IOmniStack }
 
   {:Lock-free, single writer, single reader ring buffer.
   }
   IOmniQueue = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
-    procedure Empty;
-    procedure Initialize(numElements, elementSize: integer);
-    function  Enqueue(const value): boolean;
     function  Dequeue(var value): boolean;
+    procedure Empty;
+    function  Enqueue(const value): boolean;
+    procedure Initialize(numElements, elementSize: integer);
     function  IsEmpty: boolean;
     function  IsFull: boolean;
   end; { IOmniQueue }
 
   IOmniNotifySupport = interface ['{E5FFC739-669A-4931-B0DC-C5005A94A08B}']
     function  GetNewDataEvent: THandle;
-  //
+    function  GetEventPair: pointer;
+    function  GetWriteQueuePartlyEmptyEvent: THandle;
+    procedure SetTerminateEvent(const Event: TDSiEventHandle);
     procedure Signal;
-    property NewDataEvent: THandle read GetNewDataEvent;
+    procedure SignalWriteQueuePartlyEmpty;
+    property  WriteQueuePartlyEmptyEvent: THandle read GetWriteQueuePartlyEmptyEvent;
+    property  NewDataEvent: THandle read GetNewDataEvent;
   end; { IOmniNotifySupport }
 
-  TOmniContainerOption = (coEnableMonitor, coEnableNotify);
+  TOmniContainerOption = (coEnableMonitor, coEnableNotify, coMonitorOnlyFirstInQueue, coMonitorOnDequeue);
   TOmniContainerOptions = set of TOmniContainerOption;
 
   PReferencedPtr = ^TReferencedPtr;
@@ -122,15 +154,15 @@ type
     class function  PopLink(var chain: TReferencedPtr): POmniLinkedData; static;
     class procedure PushLink(const link: POmniLinkedData; var chain: TReferencedPtr); static;
   public
-    destructor  Destroy; override;
+    destructor Destroy; override;
     procedure Empty;
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
     function  Pop(var value): boolean; virtual;
     function  Push(const value): boolean; virtual;
-    property ElementSize: integer read obsElementSize;
-    property NumElements: integer read obsNumElements;
+    property  ElementSize: integer read obsElementSize;
+    property  NumElements: integer read obsNumElements;
   end; { TOmniBaseStack }
 
   TOmniStack = class(TOmniBaseStack, IOmniNotifySupport, IOmniMonitorSupport)
@@ -150,11 +182,11 @@ type
 
   TOmniBaseQueue = class abstract(TInterfacedObject, IOmniQueue)
   strict private
-    obqDataBuffer       : pointer;
-    obqElementSize      : integer;
-    obqNumElements      : integer;
-    obqPublicRingBuffer : POmniRingBuffer;
-    obqRecycleRingBuffer: POmniRingBuffer;
+    obqDataBuffer               : pointer;
+    obqElementSize              : integer;
+    obqNumElements              : integer;
+    obqPublicRingBuffer         : POmniRingBuffer;
+    obqRecycleRingBuffer        : POmniRingBuffer;
     class var obqTaskInsertLoops: cardinal;             //default is false
     class var obqTaskRemoveLoops: cardinal;
     class var obqIsInitialized  : boolean;
@@ -164,53 +196,77 @@ type
     class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
     procedure MeasureExecutionTimes;
   public
-    destructor  Destroy; override;
+    destructor Destroy; override;
     function  Dequeue(var value): boolean;
     procedure Empty;
     function  Enqueue(const value): boolean;
     procedure Initialize(numElements, elementSize: integer); virtual;
-    function IsEmpty: boolean;
-    function IsFull: boolean;
-    property ElementSize: integer read obqElementSize;
-    property NumElements: integer read obqNumElements;
+    function  IsEmpty: boolean;
+    function  IsFull: boolean;
+    property  ElementSize: integer read obqElementSize;
+    property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
   TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport)
   strict private
-    oqMonitorSupport: IOmniMonitorSupport;
-    oqNotifySupport : IOmniNotifySupport;
-    oqOptions       : TOmniContainerOptions; 
+    oqFastEventMsgInQueue       : PBoolean;
+    oqMonitorSupport            : IOmniMonitorSupport;
+    oqNotifySupport             : IOmniNotifySupport;
+    oqOptions                   : TOmniContainerOptions;
+    oqInQueueCount              : Integer;
+    oqWriteQueuePartlyEmptyCount: Cardinal;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify]);
+      options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify];
+      const PartlyEmptyCount: cardinal = CPartlyEmptyCount);
+    procedure DeleteMessageInQueueEvent;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
-    property MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
-    property NotifySupport: IOmniNotifySupport read oqNotifySupport implements IOmniNotifySupport;
-    property Options: TOmniContainerOptions read oqOptions;
+    procedure SetFastEventPtrMessageInQueue(var EventBit: LongBool);
+    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
+    property  NotifySupport: IOmniNotifySupport read oqNotifySupport implements IOmniNotifySupport;
+    property  Options: TOmniContainerOptions read oqOptions;
   end; { TOmniQueue }
 
 implementation
 
 uses
   Windows,
-  SysUtils,
-  DSiWin32;
+  SysUtils;
 
 type
   TOmniNotifySupport = class(TInterfacedObject, IOmniNotifySupport)
   strict private
-    onsNewDataEvent: TDSiEventHandle;
+    onsNewDataEvent                 : TDSiEventHandle;
+    onsEventPair: record
+      onsWriteQueuePartlyEmptyEvent: TDSiEventHandle;
+      oqTerminateEvent             : TDSiEventHandle;
+    end;
   protected
-    function  GetNewDataEvent: THandle;
+    function  GetNewDataEvent: TDSiEventHandle;
+    function  GetWriteQueuePartlyEmptyEvent: TDSiEventHandle;
+    function  GetEventPair: pointer;
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Signal;
-    property NewData: THandle read GetNewDataEvent;
+    procedure SignalWriteQueuePartlyEmpty;
+    procedure SetTerminateEvent(const Event: TDSiEventHandle);
   end; { TOmniNotifySupport }
 
 { Intel Atomic functions support }
+
+function AtomicStateIncrement(var Counter): boolean;
+asm
+  lock  inc dword ptr [Counter]
+  setz  al
+end; { AtomicStateIncrement }
+
+function AtomicStateDecrement(var Counter): boolean;
+asm
+  lock  dec dword ptr [Counter]
+  sets  al
+end; { AtomicStateDecrement }
 
 function AtomicCmpXchg4b(const Old4b, New4b: cardinal; var Destination): boolean; overload;
 //ATOMIC FUNCTION
@@ -279,23 +335,48 @@ begin
   inherited Create;
   onsNewDataEvent := CreateEvent(nil, false, false, nil);
   Win32Check(onsNewDataEvent <> 0);
+  onsEventPair.onsWriteQueuePartlyEmptyEvent := CreateEvent(nil, false, false, nil);
+  Win32Check(onsEventPair.onsWriteQueuePartlyEmptyEvent <> 0);
 end; { TOmniNotifySupport.Create }
 
 destructor TOmniNotifySupport.Destroy;
 begin
   DSiCloseHandleAndNull(onsNewDataEvent);
+  DSiCloseHandleAndNull(onsEventPair.onsWriteQueuePartlyEmptyEvent);
   inherited Destroy;
 end; { TOmniNotifySupport.Destroy }
+
+function TOmniNotifySupport.GetEventPair: pointer;
+begin
+  result := @onsEventPair;
+end; { TOmniNotifySupport.GetEventPair }
 
 function TOmniNotifySupport.GetNewDataEvent: THandle;
 begin
   Result := onsNewDataEvent;
 end; { TOmniNotifySupport.GetNewDataEvent }
 
+function TOmniNotifySupport.GetWriteQueuePartlyEmptyEvent: TDSiEventHandle;
+begin
+  Result := onsEventPair.onsWriteQueuePartlyEmptyEvent;
+end; { TOmniNotifySupport.GetWriteQueuePartlyEmptyEvent }
+
+{ TOmniNotifySupport.GetNewDataEvent }
+
+procedure TOmniNotifySupport.SetTerminateEvent(const Event: TDSiEventHandle);
+begin
+  onsEventPair.oqTerminateEvent := Event;
+end; { TOmniNotifySupport.SetTerminateEvent }
+
 procedure TOmniNotifySupport.Signal;
 begin
   Win32Check(SetEvent(onsNewDataEvent));
 end; { TOmniNotifySupport.Signal }
+
+procedure TOmniNotifySupport.SignalWriteQueuePartlyEmpty;
+begin
+  Win32Check(SetEvent(onsEventPair.onsWriteQueuePartlyEmptyEvent));
+end; { TOmniNotifySupport.SignalWriteQueuePartlyEmpty }
 
 { TOmniBaseStack }
 
@@ -675,7 +756,7 @@ begin
   NewLastIn := pointer(cardinal(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
   if cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.EndBuffer) then
     NewLastIn := obqPublicRingBuffer.StartBuffer;
-  result := (cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.LastIn.PData)) or
+  result := (cardinal(NewLastIn) = cardinal(obqPublicRingBuffer.LastIn.PData)) or
     (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
 end; { TOmniBaseQueue.IsFull }
 
@@ -788,36 +869,76 @@ end; { TOmniBaseQueue.RemoveLink }
 
 { TOmniQueue }
 
+procedure TOmniQueue.DeleteMessageInQueueEvent;
+begin
+  oqFastEventMsgInQueue := nil;
+  asm
+    sfence
+  end;
+end; { TOmniQueue.DeleteMessageInQueueEvent }
+
 constructor TOmniQueue.Create(numElements, elementSize: integer;
-  options: TOmniContainerOptions);
+  options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify];
+  const PartlyEmptyCount: cardinal = CPartlyEmptyCount);
 begin
   inherited Create;
+  if MonitorOnlyFirstInQueue then
+    Include(Options, coMonitorOnlyFirstInQueue);
+  oqWriteQueuePartlyEmptyCount := PartlyEmptyCount;
+  oqInQueueCount := -1;
   Initialize(numElements, elementSize);
   oqOptions := options;
-  if coEnableMonitor in Options then
+  if (coEnableMonitor in Options) or(coMonitorOnlyFirstInQueue in Options) then
     oqMonitorSupport := CreateOmniMonitorSupport;
   if coEnableNotify in Options then
     oqNotifySupport := TOmniNotifySupport.Create;
-end; { TOmniQueue.Create }            
+
+end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
 begin
   Result := inherited Dequeue(value);
   if Result then
-    if coEnableNotify in Options then
-      oqNotifySupport.Signal;
+    if not (coMonitorOnlyFirstInQueue in Options) then
+    begin
+      if coEnableNotify in Options then
+        oqNotifySupport.Signal;
+    end else begin
+      if AtomicStateDecrement(oqInQueueCount) and assigned(oqFastEventMsgInQueue) then
+        oqFastEventMsgInQueue^ := False;
+      if oqWriteQueuePartlyEmptyCount >= (cardinal(oqInQueueCount + 1)) then
+        oqNotifySupport.SignalWriteQueuePartlyEmpty;
+    end;
 end; { TOmniQueue.Dequeue }
 
 function TOmniQueue.Enqueue(const value): boolean;
 begin
   Result := inherited Enqueue(value);
-  if Result then begin
-    if coEnableNotify in Options then
-      oqNotifySupport.Signal;
-    if coEnableMonitor in Options then
-      oqMonitorSupport.Notify;
-  end;
-end; { TOmniQueue.Enqueue }
+  if Result then
+    if not (coMonitorOnlyFirstInQueue in Options) then begin
+      if coEnableNotify in Options then
+        oqNotifySupport.Signal;
+      if coEnableMonitor in Options then
+        oqMonitorSupport.Notify;
+      if assigned(oqFastEventMsgInQueue) then
+        oqFastEventMsgInQueue^ := True;
+    end else
+      if AtomicStateIncrement(oqInQueueCount) then begin
+        if coEnableMonitor in Options then
+          oqMonitorSupport.Notify;
+        if assigned(oqFastEventMsgInQueue) then
+          oqFastEventMsgInQueue^ := True;
+      end;
+end;
+
+{ TOmniQueue.Enqueue }
+
+procedure TOmniQueue.SetFastEventPtrMessageInQueue(var EventBit: LongBool);
+begin
+  Assert((cardinal(@EventBit) AND 3) = 0, 'TOmniQueue: EventBit is not 4-aligned');
+  oqFastEventMsgInQueue := @EventBit;
+  oqFastEventMsgInQueue^ := False;
+end; { TOmniQueue.SetFastEventPtrMessageInQueue }
 
 { initialization }
 
@@ -836,4 +957,7 @@ end; { InitializeTimingInfo }
 
 initialization
   InitializeTimingInfo;
-end.
+  Assert(CPartlyEmptyCount < CDefaultQueueSize,
+    'TOmniBaseContainer: CPartlyEmptyCount >= CDefaultQueueSize');
+end.    
+

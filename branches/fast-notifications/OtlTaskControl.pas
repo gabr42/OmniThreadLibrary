@@ -68,7 +68,7 @@
 ///       - Implemented IOmniTaskControl.SetQueue, which can be used to increase (or
 ///         reduce) the size of the IOmniTaskControl<->IOmniTask communication queue.
 ///         This function must be called before .SetMonitor, .RemoveMonitor, .Run or
-///         .Schedule.            
+///         .Schedule.
 ///     1.03b: 2008-09-26
 ///       - More stringent Win32 API result checking.
 ///     1.03a: 2008-09-25
@@ -114,16 +114,17 @@ unit OtlTaskControl;
 interface
 
 uses
-  Windows,
-  SysUtils,
-  Variants,
-  Classes,
-  SyncObjs,
+  Windows, SysUtils, Variants, Classes, SyncObjs, Messages, TypInfo,   ObjAuto,
   GpStuff,
   OtlCommon,
   OtlComm,
   OtlTask,
-  OtlThreadPool;
+  OtlContainers,
+  OtlThreadPool,
+  DetailedRTTI,
+  DSiWin32,
+  GpLists,
+  GpStringHash;
 
 type
   IOmniTaskControl = interface;
@@ -176,12 +177,13 @@ type
 
   IOmniTaskGroup = interface;
 
-   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
     function  GetLock: TSynchroObject;
     function  GetName: string;
+    function  GetSelf: pointer;
     function  GetUniqueID: int64;
   //
     function  Alertable: IOmniTaskControl;
@@ -283,26 +285,48 @@ type
 
   function CreateTaskControlList: IOmniTaskControlList;
 
-implementation
-
-uses
-  Messages,
-  TypInfo,
-  ObjAuto,
-  DetailedRTTI,
-  DSiWin32,
-  GpLists,
-  GpStringHash,
-  OtlEventMonitor;
-
 type
+
+  TOmniSharedTaskInfo = class
+  strict private
+    ostiChainIgnoreErrors : boolean;
+    ostiChainTo           : IOmniTaskControl;
+    ostiCommChannel       : IOmniTwoWayChannel;
+    ostiCounter           : IOmniCounter;
+    ostiLock              : TSynchroObject;
+    ostiMonitorWindow     : THandle;
+    ostiTaskName          : string;
+    ostiTerminatedEvent   : THandle;
+    ostiTerminateEvent    : THandle;
+    ostiUniqueID          : int64;
+    ostiTaskControlTimeOut: boolean;
+    ostiTerminateEventPtr : PBoolean;
+  public
+    function GetTaskRefreshTimeOut: boolean;
+    procedure SetTaskRefreshTimeOut;
+    procedure SetFastEventTerminate;
+    procedure SetFastEventPtrTerminate(var EventBit: LongBool);
+    procedure ResetTaskRefreshTimeOut;
+    property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
+    property ChainTo: IOmniTaskControl read ostiChainTo write ostiChainTo;
+    property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
+    property Counter: IOmniCounter read ostiCounter write ostiCounter;
+    property Lock: TSynchroObject read ostiLock write ostiLock;
+    property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow;
+    property TaskName: string read ostiTaskName write ostiTaskName;
+    property TaskRefreshTimeOut: boolean read GetTaskRefreshTimeOut;
+    property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
+    property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
+    property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
+  end; { TOmniSharedTaskInfo }
+
   TOmniInternalMessageType = (imtStringMsg, imtAddressMsg);
 
   TOmniInternalMessage = class
   strict private
     imInternalMessageType: TOmniInternalMessageType;
   public
-    class function InternalType(const msg: TOmniMessage): TOmniInternalMessageType; 
+    class function InternalType(const msg: TOmniMessage): TOmniInternalMessageType;
     constructor Create(internalMessageType: TOmniInternalMessageType);
     property InternalMessageType: TOmniInternalMessageType read imInternalMessageType;
   end; { TOmniInternalMessage }
@@ -463,50 +487,30 @@ type
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
   end; { TOmniTaskExecutor }
 
-  TOmniSharedTaskInfo = class
-  strict private
-    ostiChainIgnoreErrors: boolean;
-    ostiChainTo          : IOmniTaskControl;
-    ostiCommChannel      : IOmniTwoWayChannel;
-    ostiCounter          : IOmniCounter;
-    ostiLock             : TSynchroObject;
-    ostiMonitorWindow    : THandle;
-    ostiTaskName         : string;
-    ostiTerminatedEvent  : THandle;
-    ostiTerminateEvent   : THandle;
-    ostiUniqueID         : int64;
-  public
-    property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
-    property ChainTo: IOmniTaskControl read ostiChainTo write ostiChainTo;
-    property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
-    property Counter: IOmniCounter read ostiCounter write ostiCounter;
-    property Lock: TSynchroObject read ostiLock write ostiLock;
-    property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow;
-    property TaskName: string read ostiTaskName write ostiTaskName;
-    property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
-    property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
-    property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
-  end; { TOmniSharedTaskInfo }
-
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
-    otExecuting     : boolean;
-    otExecutor_ref  : TOmniTaskExecutor;
-    otParameters_ref: TOmniValueContainer;
-    otSharedInfo    : TOmniSharedTaskInfo;
-    otThreadData    : IInterface;
+    otExecuting          : boolean;
+    otExecutor_ref       : TOmniTaskExecutor;
+    otFastEventTerminate : LongBool;
+    otFastEventMsgInQueue: LongBool;
+    otParameters_ref     : TOmniValueContainer;
+    otSharedInfo         : TOmniSharedTaskInfo;
+    otThreadData         : IInterface;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
+    function  GetFastEventPtrMsgInQueue: PBoolean; inline;
+    function  GetFastEventPtrTerminate: PBoolean; inline;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
+    function  GetSelf: pointer;
     function  GetTerminateEvent: THandle; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
     procedure SetThreadData(const value: IInterface); inline;
-    procedure Terminate; 
+    procedure Terminate;
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
@@ -527,6 +531,7 @@ type
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
+    property SharedInfo: TOmniSharedTaskInfo read otSharedInfo;
     property TerminateEvent: THandle read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
@@ -586,6 +591,7 @@ type
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
+    function  GetSelf: pointer;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload; inline;
@@ -621,6 +627,7 @@ type
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property UniqueID: int64 read GetUniqueID;
+    property SharedInfo: TOmniSharedTaskInfo read otcSharedInfo;
   end; { TOmniTaskControl }
 
   TOmniTaskControlList = class;
@@ -681,6 +688,11 @@ type
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { TOmniTaskGroup }
 
+implementation
+
+uses
+  OtlEventMonitor;
+
 { exports }
 
 {$IFDEF OTL_Anonymous}
@@ -690,8 +702,7 @@ begin
 end; { CreateTask }
 {$ENDIF OTL_Anonymous}
 
-function CreateTask(worker: TOmniTaskProcedure; const taskName: string):
-  IOmniTaskControl;
+function CreateTask(worker: TOmniTaskProcedure; const taskName: string): IOmniTaskControl;
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -796,6 +807,8 @@ begin
   otExecutor_ref := executor;
   otParameters_ref := parameters;
   otSharedInfo := sharedInfo;
+  otSharedInfo.SetFastEventPtrTerminate(otFastEventTerminate);
+  Comm.Reader.SetFastEventPtrMessageInQueue(otFastEventMsgInQueue);
 end; { TOmniTask.Create }
 
 procedure TOmniTask.Enforced(forceExecution: boolean);
@@ -847,7 +860,12 @@ end; { TOmniTask.GetCounter }
 function TOmniTask.GetLock: TSynchroObject;
 begin
   Result := otSharedInfo.Lock;
-end; { TOmniTask.GetLock }
+end; { GetLock: TSynchroObject }
+
+function TOmniTask.GetFastEventPtrMsgInQueue: PBoolean;
+begin
+  result := @otFastEventMsgInQueue;
+end; { TOmniTask.GetFastEventPtrMsgInQueue }
 
 function TOmniTask.GetName: string;
 begin
@@ -864,10 +882,20 @@ begin
   Result := otParameters_ref.ParamByName(paramName);
 end; { TOmniTask.GetParamByName }
 
+function TOmniTask.GetSelf: pointer;
+begin
+  result := self;
+end; { TOmniTask.GetSelf }
+
 function TOmniTask.GetTerminateEvent: THandle;
 begin
   Result := otSharedInfo.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
+
+function TOmniTask.GetFastEventPtrTerminate: PBoolean;
+begin
+  result := @otFastEventTerminate;
+end; { TOmniTask.GetFastEventPtrTerminate }
 
 function TOmniTask.GetThreadData: IInterface;
 begin
@@ -887,16 +915,16 @@ end; { TOmniTask.RegisterComm }
 procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
 begin
   otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
- end; { TOmniTask.SetExitStatus }
-
-procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessageID: integer);
-begin
-  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageID);
-end; { TOmniTask.SetTimer }
+end; { TOmniTask.SetExitStatus }
 
 procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMethod: pointer);
 begin
   otExecutor_ref.Asy_SetTimer(interval_ms, timerMethod);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessageID: integer);
+begin
+  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageID);
 end; { TOmniTask.SetTimer }
 
 procedure TOmniTask.SetThreadData(const value: IInterface);
@@ -921,6 +949,7 @@ end; { TOmniTask.StopTimer }
 
 procedure TOmniTask.Terminate;
 begin
+  otFastEventTerminate := True;
   SetEvent(otSharedInfo.TerminateEvent);
   if not otExecuting then //call Execute to run at least cleanup code
     Execute;
@@ -1064,7 +1093,7 @@ begin
       else
         raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
     end;
-  finally Cleanup; end;
+  finally Cleanup; end;                                                         ////1
 end; { TOmniTaskExecutor.Asy_Execute }
 
 procedure TOmniTaskExecutor.Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1657,6 +1686,7 @@ begin
     Terminate;
     FreeAndNil(otcThread);
   end;
+
   if otcDestroyLock then begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;
@@ -1742,6 +1772,11 @@ begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
 
+function TOmniTaskControl.GetSelf: pointer;
+begin
+  result := self;
+end; { TOmniTaskControl.GetSelf }
+
 function TOmniTaskControl.GetTerminatedEvent: THandle;
 begin
   Result := otcSharedInfo.TerminatedEvent;
@@ -1823,6 +1858,7 @@ function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): I
 begin
   monitor.Monitor(Self);
   Result := Self;
+  AllMonitoredTasks.Add(SharedInfo);
 end; { TOmniTaskControl.MonitorWith }
 
 function TOmniTaskControl.MsgWait(wakeMask: DWORD): IOmniTaskControl;
@@ -1867,6 +1903,8 @@ begin
   EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
     integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+  otcSharedInfo.CommChannel.Endpoint1.SetTerminateEvent(otcSharedInfo.TerminateEvent);
+  otcSharedInfo.CommChannel.Endpoint2.SetTerminateEvent(otcSharedInfo.TerminateEvent);
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 
@@ -1932,6 +1970,7 @@ end; { TOmniTaskControl.SetTimer }
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
+  otcSharedInfo.SetFastEventTerminate;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
   if not Result then begin
@@ -2197,5 +2236,38 @@ begin
   Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
 end; { TOmniTaskGroup.WaitForAll }
 
+{ TOmniSharedTaskInfo }
+
+function TOmniSharedTaskInfo.GetTaskRefreshTimeOut: boolean;
+begin
+  result := ostiTaskControlTimeOut;
+end; { TOmniSharedTaskInfo.GetTaskRefreshTimeOut }
+
+procedure TOmniSharedTaskInfo.ResetTaskRefreshTimeOut;
+begin
+  ostiTaskControlTimeOut := False;
+end; { TOmniSharedTaskInfo.ResetTaskRefreshTimeOut }
+
+procedure TOmniSharedTaskInfo.SetTaskRefreshTimeOut;
+begin
+  ostiTaskControlTimeOut := True;
+end; { TOmniSharedTaskInfo.SetTaskRefreshTimeOut }
+
+procedure TOmniSharedTaskInfo.SetFastEventTerminate;
+begin
+  ostiTerminateEventPtr^ := True;
+end; { TOmniSharedTaskInfo.SetFastEventTerminate }
+
+procedure TOmniSharedTaskInfo.SetFastEventPtrTerminate(var EventBit: LongBool);
+begin
+  Assert((cardinal(@EventBit) AND 3) = 0, 'TOmniSharedTaskInfo: EventBit is not 4-aligned');
+  ostiTerminateEventPtr := @EventBit;
+  ostiTerminateEventPtr^ := False;
+end; { TOmniSharedTaskInfo.SetFastEventPtrTerminate }
+
+initialization
+  AllMonitoredTasks := TList.Create;
+finalization
+  FreeAndNil(AllMonitoredTasks);
 end.
 

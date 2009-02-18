@@ -58,6 +58,7 @@ uses
   Classes,
   GpStuff,
   GpLists,
+  OtlComm,
   OtlCommon,
   OtlTaskControl,
   OtlThreadPool;
@@ -69,15 +70,18 @@ type
 
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
-    tedMessageWindow         : THandle;
-    tedMonitoredPools        : IInterfaceDictionary;
-    tedMonitoredTasks        : IInterfaceDictionary;
-    tedOnPoolThreadCreated   : TOmniPoolThreadEvent;
-    tedOnPoolThreadDestroying: TOmniPoolThreadEvent;
-    tedOnPoolThreadKilled    : TOmniPoolThreadEvent;
-    tedOnPoolWorkItemEvent   : TOmniPoolWorkItemEvent;
-    tedOnTaskMessage         : TOmniTaskEvent;
-    tedOnTaskTerminated      : TOmniTaskEvent;
+    tedMessageWindow           : THandle;
+    tedMonitoredPools          : IInterfaceDictionary;
+    tedMonitoredTasks          : IInterfaceDictionary;
+    tedOnPoolThreadCreated     : TOmniPoolThreadEvent;
+    tedOnPoolThreadDestroying  : TOmniPoolThreadEvent;
+    tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
+    tedOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
+    tedOnRefreshTimeOut        : TOmniTaskEvent;
+    tedOnTaskMessage           : TOmniTaskEvent;
+    tedOnTaskUndeliveredMessage: TOmniTaskEvent;
+    tedOnTaskTerminated        : TOmniTaskEvent;
+    tedCurrentMsg              : TOmniMessage;
   strict protected
     procedure WndProc(var msg: TMessage);
   public
@@ -87,6 +91,7 @@ type
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    property CurrentMsg: TOmniMessage read tedCurrentMsg;
   published
     property OnPoolThreadCreated: TOmniPoolThreadEvent read tedOnPoolThreadCreated
       write tedOnPoolThreadCreated;
@@ -96,15 +101,20 @@ type
       write tedOnPoolThreadKilled;
     property OnPoolWorkItemCompleted: TOmniPoolWorkItemEvent read tedOnPoolWorkItemEvent
       write tedOnPoolWorkItemEvent;
+    property OnRefreshTimeOut: TOmniTaskEvent read tedOnRefreshTimeOut
+      write tedOnRefreshTimeOut;
     property OnTaskMessage: TOmniTaskEvent read tedOnTaskMessage write tedOnTaskMessage;
     property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
       tedOnTaskTerminated;
+    property OnTaskUndeliveredMessage: TOmniTaskEvent read tedOnTaskUndeliveredMessage
+      write tedOnTaskUndeliveredMessage;
   end; { TOmniEventMonitor }
 
 var
   COmniTaskMsg_NewMessage: cardinal;
   COmniTaskMsg_Terminated: cardinal;
   COmniPoolMsg           : cardinal;
+  AllMonitoredTasks      : TList = nil;
 
 implementation
 
@@ -167,31 +177,83 @@ end; { TOmniEventMonitor.Monitor }
 
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
-  pool         : IOmniThreadPool;
-  task         : IOmniTaskControl;
-  taskID       : int64;
-  tpMonitorInfo: TOmniThreadPoolMonitorInfo;
+  pool              : IOmniThreadPool;
+  n                 : cardinal;
+  NextTask          : IOmniTaskControl;
+  SharedTaskInfo    : TOmniSharedTaskInfo;
+  task              : IOmniTaskControl;
+  TickCount         : Cardinal;
+  tpMonitorInfo     : TOmniThreadPoolMonitorInfo;
 begin
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
-      Int64Rec(taskID).Lo := cardinal(msg.WParam);
-      Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
+      task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then
-        OnTaskMessage(task);
+      begin
+        if HandleEventsDirectly then
+        repeat
+          if assigned(tedOnTaskMessage) then
+            tedOnTaskMessage(task);
+        until not MonitorOnlyFirstInQueue or task.Comm.Reader.IsEmpty
+        else begin
+          TOmniTaskControl(task.GetSelf).SharedInfo.ResetTaskRefreshTimeOut;
+          TickCount := GetTickCount;
+          while task.Comm.Receive(tedCurrentMsg) do begin
+            if assigned(tedOnTaskMessage) then
+              tedOnTaskMessage(task);
+            if MonitorOnlyFirstInQueue and (TickCount + 8 < GetTickCount) then begin
+              if assigned(tedOnRefreshTimeOut) then
+                tedOnRefreshTimeOut(task);
+              if AllMonitoredTasks.Count > 1 then
+                for n := 0 to AllMonitoredTasks.Count -1 do begin
+                  SharedTaskInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
+                  NextTask := tedMonitoredTasks.ValueOf(SharedTaskInfo.UniqueID) as IOmniTaskControl;
+                  if (NextTask <> task) and not SharedTaskInfo.TaskRefreshTimeOut then begin
+                    PostMessage(TOmniSharedTaskInfo(AllMonitoredTasks[n]).MonitorWindow, COmniTaskMsg_NewMessage,
+                      Int64Rec(SharedTaskInfo.UniqueID).Lo, Int64Rec(SharedTaskInfo.UniqueID).Hi);
+                    SharedTaskInfo.SetTaskRefreshTimeOut;
+                  end;
+                end;
+              //At last post to self!
+              PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
+              TOmniTaskControl(task.GetSelf).SharedInfo.SetTaskRefreshTimeOut;
+              break;
+            end;
+          end;
+        end;
+      end;
     end;
     msg.Result := 0;
   end
   else if msg.Msg = COmniTaskMsg_Terminated then begin
     if assigned(OnTaskTerminated) then begin
-      Int64Rec(taskID).Lo := cardinal(msg.WParam);
-      Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
-      if assigned(task) then begin
-        OnTaskTerminated(task);
-        Detach(task);
+      task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+      if assigned(task) then
+        if HandleEventsDirectly then
+        begin
+          SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
+          while not SharedTaskInfo.CommChannel.Endpoint1.Reader.IsEmpty do
+            if Assigned(tedOnTaskMessage) then
+              tedOnTaskMessage(task);
+          while not SharedTaskInfo.CommChannel.Endpoint2.Reader.IsEmpty  do
+            if Assigned(tedOnTaskUndeliveredMessage) then
+              tedOnTaskUndeliveredMessage(task);
+          if Assigned(tedOnTaskTerminated) then
+            OnTaskTerminated(task);
+        end else begin
+          SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
+          while SharedTaskInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
+            if Assigned(tedOnTaskMessage) then
+              tedOnTaskMessage(task);
+          while SharedTaskInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
+            if Assigned(tedOnTaskUndeliveredMessage) then
+              tedOnTaskUndeliveredMessage(task);
+          if Assigned(tedOnTaskTerminated) then
+            OnTaskTerminated(task);
+          AllMonitoredTasks.Remove(pointer(SharedTaskInfo));
+        end;
       end;
-    end;
+    Detach(task);
     msg.Result := 0;
   end
   else if msg.Msg = COmniPoolMsg then begin

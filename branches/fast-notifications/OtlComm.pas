@@ -62,6 +62,8 @@ uses
 const
   //reserved for internal OTL messaging
   COtlReservedMsgID = $FFFF;
+  //Max send wait time
+  CMaxSendWaitTime_ms = 100;
 
 type
   {$A4}
@@ -74,9 +76,11 @@ type
 
 const
   //calculate default queue size so that the queue memory gets as close to 64 KB as possible
-  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
+!  CDefaultQueueSize = $FF00{adjusted for FastMM4 granularity} div (SizeOf(TOmniMessage) + 4{SizeOf(POmniLinkedData)}); {3264 entries}
 
 type
+  TOmniMessageQueue = class;
+
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
     function  GetNewMessageEvent: THandle;
   //
@@ -84,13 +88,20 @@ type
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload;
     function  ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean; overload;
     function  ReceiveWait(var msgID: word; var msgData: TOmniValue; timeout_ms: cardinal): boolean; overload;
+    function Reader: TOmniMessageQueue;
     procedure RemoveMonitor;
     procedure Send(const msg: TOmniMessage); overload;
     procedure Send(msgID: word); overload;
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload;
-    procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
-      integer); 
+    function SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
+    function SendWait(msgID: word; msgData: TOmniValue; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
+    procedure  SendWaitE(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
+    procedure  SendWaitE(msgID: word; msgData: TOmniValue;
+      timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
+    procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam: integer);
+    procedure SetTerminateEvent(TerminateEvent: THandle);
+    function Writer: TOmniMessageQueue;
     property NewMessageEvent: THandle read GetNewMessageEvent;
   end; { IOmniCommunicationEndpoint }
 
@@ -106,6 +117,7 @@ type
     constructor Create(numMessages: integer); reintroduce;
     function  Dequeue: TOmniMessage; reintroduce;
     function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
+    function  EnqueueOver(const value: TOmniMessage): boolean; inline;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
@@ -129,6 +141,8 @@ type
     function  GetNewMessageEvent: THandle;
   public
     constructor Create(readQueue, writeQueue: TOmniMessageQueue);
+    function  GetWriteQueueFreeSpaceEvent: THandle; inline;
+    function  Reader: TOmniMessageQueue;
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
     function  ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean; overload; inline;
@@ -139,9 +153,18 @@ type
     procedure Send(msgID: word; msgData: array of const); overload;
     procedure Send(msgID: word; msgData: TOmniValue); overload; inline;
     procedure Send(const msg: TOmniMessage); overload; inline;
+    function  SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload; inline;
+    function  SendWait(msgID: word; msgData: TOmniValue;
+      timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
+    procedure  SendWaitE(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms) overload; inline;
+    procedure  SendWaitE(msgID: word; msgData: TOmniValue;
+      timeout_ms: cardinal = CMaxSendWaitTime_ms); overload; inline;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); inline;
+    procedure SetTerminateEvent(TerminateEvent: THandle);
+    function  Writer: TOmniMessageQueue;
     property NewMessageEvent: THandle read GetNewMessageEvent;
+    property  WriteQueueFreeSpaceEvent: THandle read GetWriteQueueFreeSpaceEvent;
   end; { TOmniCommunicationEndpoint }
 
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
@@ -206,6 +229,11 @@ begin
   tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
 
+function TOmniMessageQueue.EnqueueOver(const value: TOmniMessage): boolean;
+begin
+  result := inherited Enqueue(value);
+end; { TOmniMessageQueue.EnqueueWait }
+
 { TOmniCommunicationEndpoint }
 
 constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniMessageQueue);
@@ -218,7 +246,19 @@ end; { TOmniCommunicationEndpoint.Create }
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
   Result := ceReader_ref.NotifySupport.NewDataEvent;
-end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
+end;
+
+function TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent: THandle;
+begin
+  Result := ceWriter_ref.NotifySupport.NewDataEvent;
+end; { TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent }
+
+{ TOmniCommunicationEndpoint.GetNewMessageEvent }
+
+function TOmniCommunicationEndpoint.Reader: TOmniMessageQueue;
+begin
+  Result :=  ceReader_ref;
+end; { TOmniCommunicationEndpoint.Reader }
 
 function TOmniCommunicationEndpoint.Receive(var msgID: word; var msgData:
   TOmniValue): boolean;
@@ -264,7 +304,38 @@ procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
 begin
   if not ceWriter_ref.Enqueue(msg) then
     raise Exception.Create('TOmniCommunicationEndpoint.Send: Queue is full');
-end; { TOmniCommunicationEndpoint.Send }
+end;  { TOmniCommunicationEndpoint.Send }
+
+function TOmniCommunicationEndpoint.SendWait(msgID: word; msgData: TOmniValue;
+  timeout_ms: cardinal): boolean;
+var
+  msg    : TOmniMessage;
+
+begin
+  msg.msgID := msgID;
+  msg.msgData := msgData;
+  result := ceWriter_ref.EnqueueOver(msg);
+  if not result then begin
+    ResetEvent(ceWriter_ref.NotifySupport.WriteQueuePartlyEmptyEvent);
+    if WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms) = 1 then
+      raise Exception.Create('TOmniCommunicationEndpoint.SendWait: Thread terminate event!');
+    result := ceWriter_ref.EnqueueOver(msg);
+    if not result then
+      exit;
+  end;
+  msg.MsgData.RawZero;
+end; { TOmniCommunicationEndpoint.SendWait }
+
+function TOmniCommunicationEndpoint.SendWait(msgID: word;
+  timeout_ms: cardinal): boolean;
+var
+  msg    : TOmniMessage;
+
+begin
+  msg.msgID := msgID;
+  msg.msgData := TOmniValue.Null;
+  result := SendWait(msgID, msg.msgData, timeout_ms);
+end; { TOmniCommunicationEndpoint.SendWait }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word; msgData: TOmniValue);
 var
@@ -282,8 +353,38 @@ end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word);
 begin
-  Send(msgID, TOmniValue.Null); 
+  Send(msgID, TOmniValue.Null);
 end; { TOmniCommunicationEndpoint.Send }
+
+procedure TOmniCommunicationEndpoint.SendWaitE(msgID: word;
+  timeout_ms: cardinal);
+var
+  msg    : TOmniMessage;
+
+begin
+  msg.msgID := msgID;
+  msg.msgData := TOmniValue.Null;
+  SendWaitE(msgID, msg.msgData, timeout_ms);
+end; { TOmniCommunicationEndpoint.SendWaitE }
+
+procedure TOmniCommunicationEndpoint.SendWaitE(msgID: word; msgData: TOmniValue; timeout_ms: cardinal);
+var
+  msg    : TOmniMessage;
+  result : boolean;
+
+begin
+  msg.msgID := msgID;
+  msg.msgData := msgData;
+  result := ceWriter_ref.EnqueueOver(msg);
+  if not result then begin
+    ResetEvent(ceWriter_ref.NotifySupport.WriteQueuePartlyEmptyEvent);
+    WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms);
+    result := ceWriter_ref.EnqueueOver(msg);
+    if not result then
+      raise Exception.Create('TOmniCommunicationEndpoint.SendWaitE: out of time!');
+  end;
+  msg.MsgData.RawZero;
+end; { TOmniCommunicationEndpoint.SendWaitE }
 
 procedure TOmniCommunicationEndpoint.SetMonitor(hWindow: THandle; msg: cardinal;
   messageWParam, messageLParam: integer);
@@ -291,6 +392,17 @@ begin
   ceWriter_ref.MonitorSupport.SetMonitor(CreateOmniMonitorParams(
     hWindow, msg, messageWParam, messageLParam));
 end; { TOmniCommunicationEndpoint.SetMonitor }
+
+procedure TOmniCommunicationEndpoint.SetTerminateEvent(TerminateEvent: THandle);
+begin
+  ceWriter_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
+  ceReader_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
+end; { TOmniCommunicationEndpoint.SetTerminateEvent }
+
+function TOmniCommunicationEndpoint.Writer: TOmniMessageQueue;
+begin
+  result := ceWriter_ref;
+end; { TOmniCommunicationEndpoint.Writer }
 
 { TOmniTwoWayChannel }
 
