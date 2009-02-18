@@ -1,6 +1,6 @@
 (*
 
-Fast Memory Manager 4.90
+Fast Memory Manager 4.92
 
 Description:
  A fast replacement memory manager for CodeGear Delphi Win32 applications that
@@ -29,7 +29,7 @@ Advantages:
  - Optionally reports memory leaks on program shutdown. (This check can be set
    to be performed only if Delphi is currently running on the machine, so end
    users won't be bothered by the error message.)
- - Supports Delphi 4 (or later), C++ Builder 5 (or later), Kylix 3.
+ - Supports Delphi 4 (or later), C++ Builder 4 (or later), Kylix 3.
 
 Usage:
  Delphi:
@@ -178,8 +178,8 @@ Acknowledgements (for version 4):
    suggestions.
  - JRG ("The Delphi Guy") for the Spanish translation.
  - Justus Janssen for Delphi 4 support.
- - Vadim Lopushansky and Charles Vinal for reporting the Delphi 5 compile error
-   in version 4.50.
+ - Vadim Lopushansky and Charles Vinal for reporting the Delphi 5 compiler
+   error in version 4.50.
  - Johni Jeferson Capeletto for the Brazilian Portuguese translation.
  - Kurt Fitzner for reporting the BCb6 compiler error in 4.52.
  - Michal Niklas for reporting the Kylix compiler error in 4.54.
@@ -220,13 +220,14 @@ Acknowledgements (for version 4):
  - Marcus Mönnig for the ScanMemoryPoolForCorruptions suggestion and the
    suggestion to have the option to scan the memory pool before every
    operation when in FullDebugMode.
- - Craig Peterson for the SuppressMessageBoxes suggestion.
  - Francois Piette for bringing under my attention that
    ScanMemoryPoolForCorruption was not thread safe.
  - Michael Rabatscher for reporting some compiler warnings.
  - QianYuan Wang for the Simplified Chinese translation of FastMM4Options.inc.
  - Maurizio Lotauro and Christian-W. Budde for reporting some Delphi 5
    compiler errors.
+ - Patrick van Logchem for the DisableLoggingOfMemoryDumps option.
+ - Norbert Spiegel for the BCB4 support code.
  - Everyone who have made donations. Thanks!
  - Any other Fastcoders or supporters that I have forgotten, and also everyone
    that helped with the older versions.
@@ -716,6 +717,19 @@ Change log:
     builds of applications with the "Stack Frames" option enabled.
   - Fixed a compilation error under Kylix. (Thanks to Werner Bochtler.)
   - Official support for Delphi 2009.
+  Version 4.92 (25 November 2008):
+  - Added the DisableLoggingOfMemoryDumps option under FullDebugMode. When
+    this option is set, memory dumps will not be logged for memory leaks or
+    errors. (Thanks to Patrick van Logchem.)
+  - Exposed the class and string type detection code in the interface section
+    for use in application code (if required). (Requested by Patrick van
+    Logchem.)
+  - Fixed a bug in SetMMLogFileName that could cause the log file name to be
+    set incorrectly.
+  - Added BCB4 support. (Thanks to Norbert Spiegel.)
+  - Included the updated Czech translation by Rene Mihula.
+  - When FastMM raises an error due to a freed block being modified, it now
+    logs detail about which bytes in the block were modified.
 
 *)
 
@@ -775,7 +789,7 @@ interface
   {$undef AlwaysAllocateTopDown}
 {$endif}
 
-{Only the pascal version supports extended heap corruption checking.}
+{Only the Pascal version supports extended heap corruption checking.}
 {$ifdef CheckHeapForCorruption}
   {$undef ASMVersion}
 {$endif}
@@ -807,6 +821,11 @@ interface
     {$define NeverUninstall}
     {Disable memory leak reporting}
     {$undef EnableMemoryLeakReporting}
+  {$endif}
+  {for BCB4, use the Delphi 5 codepath}
+  {$ifdef ver120}
+    {$define Delphi4or5}
+    {$define BCB4}
   {$endif}
   {for BCB5, use the Delphi 5 codepath}
   {$ifdef ver130}
@@ -875,7 +894,7 @@ interface
 {-------------------------Public constants-----------------------------}
 const
   {The current version of FastMM}
-  FastMMVersion = '4.90';
+  FastMMVersion = '4.92';
   {The number of small block types}
 {$ifdef Align16Bytes}
   NumSmallBlockTypes = 46;
@@ -940,6 +959,10 @@ type
   end;
   TRegisteredMemoryLeaks = array of TRegisteredMemoryLeak;
 {$endif}
+
+  {Used by the DetectStringData routine to detect whether a leaked block
+   contains string data.}
+  TStringDataType = (stUnknown, stAnsiString, stUnicodeString);
 
 {--------------------------Public variables----------------------------}
 var
@@ -1105,6 +1128,15 @@ function UnregisterExpectedMemoryLeak(ALeakedCppVirtObjTypeIdPtr: Pointer; ACoun
 {Returns a list of all expected memory leaks}
 function GetRegisteredMemoryLeaks: TRegisteredMemoryLeaks;
 {$endif}
+
+{Returns the class for a memory block. Returns nil if it is not a valid class.
+ Used by the leak detection code.}
+function DetectClassInstance(APointer: Pointer): TClass;
+{Detects the probable string data type for a memory block. Used by the leak
+ classification code when a block cannot be identified as a known class
+ instance.}
+function DetectStringData(APMemoryBlock: Pointer;
+  AAvailableSpaceInBlock: Integer): TStringDataType;
 
 implementation
 
@@ -1276,6 +1308,10 @@ type
   {Delphi 5 Compatibility}
   PCardinal = ^Cardinal;
   PPointer = ^Pointer;
+{$endif}
+{$ifdef BCB4}
+  {Define some additional types for BCB4}
+  PInteger  = ^Integer;
 {$endif}
 
   {Move procedure type}
@@ -1763,9 +1799,9 @@ var
 
 {----------------Utility Functions------------------}
 
-{A copy StrLen in order to avoid the SysUtils unit, which would have introduced
-  overhead like exception handling code.}
-function StrLen(const Str: PAnsiChar): Cardinal;
+{A copy of StrLen in order to avoid the SysUtils unit, which would have
+ introduced overhead like exception handling code.}
+function StrLen(const AStr: PAnsiChar): Cardinal;
 asm
   {Check the first byte}
   cmp byte ptr [eax], 0
@@ -2571,7 +2607,7 @@ begin
 end;
 
 {Returns the class for a memory block. Returns nil if it is not a valid class}
-function GetObjectClass(APointer: Pointer): TClass;
+function DetectClassInstance(APointer: Pointer): TClass;
 {$ifndef Linux}
 var
   LMemInfo: TMemoryBasicInformation;
@@ -3400,7 +3436,7 @@ end;
 {---------------------Replacement Memory Manager Interface---------------------}
 
 {$ifndef ASMVersion}
-{Replacement for SysGetMem (pascal version)}
+{Replacement for SysGetMem (Pascal version)}
 function FastGetMem(ASize: Integer): Pointer;
 var
   LMediumBlock{$ifndef FullDebugMode}, LNextFreeBlock, LSecondSplit{$endif}: PMediumFreeBlock;
@@ -4414,7 +4450,7 @@ begin
 {$endif}
 end;
 
-{Replacement for SysFreeMem (pascal version)}
+{Replacement for SysFreeMem (Pascal version)}
 function FastFreeMem(APointer: Pointer): Integer;
 var
   LPSmallBlockPool{$ifndef FullDebugMode}, LPPreviousPool, LPNextPool{$endif},
@@ -4830,7 +4866,7 @@ end;
 
 {$ifndef FullDebugMode}
 {$ifndef ASMVersion}
-{Replacement for SysReallocMem (pascal version)}
+{Replacement for SysReallocMem (Pascal version)}
 function FastReallocMem(APointer: Pointer; ANewSize: Integer): Pointer;
 var
   LBlockHeader, LBlockFlags, LOldAvailableSize, LNewAllocSize,
@@ -5947,7 +5983,7 @@ begin
   if LModuleNameLength > 0 then
   begin
     {Change the filename}
-    System.Move(LogFileExtAnsi^, MMLogFileName[LModuleNameLength - 4], StrLen(LogFileExtAnsi));
+    System.Move(LogFileExtAnsi^, MMLogFileName[LModuleNameLength - 4], StrLen(LogFileExtAnsi) + 1);
   end;
 end;
 
@@ -5956,20 +5992,21 @@ end;
  revert to the default log file name.}
 procedure SetMMLogFileName(ALogFileName: PAnsiChar = nil);
 var
-  i: integer;
+  LLogFileNameLen: Integer;
 begin
+  {Is ALogFileName valid?}
   if (ALogFileName <> nil) and (ALogFileName^ <> #0) then
   begin
-    for i := 0 to StrLen(MMLogFileName) - 2 do
+    LLogFileNameLen := StrLen(ALogFileName);
+    if LLogFileNameLen < Length(MMLogFileName) then
     begin
-      MMLogFileName[i] := ALogFileName^;
-      if MMlogFileName[i] = #0 then
-        Break;
-      Inc(ALogFileName);
+      {Set the log file name}
+      System.Move(ALogFileName^, MMLogFileName, LLogFileNameLen + 1);
+      Exit;
     end;
-  end
-  else
-    SetDefaultMMLogFileName;
+  end;
+  {Invalid log file name}
+  SetDefaultMMLogFileName;
 end;
 
 {Returns the current "allocation group". Whenever a GetMem request is serviced
@@ -6033,14 +6070,15 @@ asm
 end;
 
 {Sums all the dwords starting at the given address for the fill pattern.
- Returns true if they are all valid}
-function CheckFillPattern(APointer: PCardinal; ACount: Cardinal): Boolean;
+ Returns true if they are all valid. ACount must be a multiple of 4.}
+function CheckFillPattern(APointer: PCardinal; ACount: Cardinal;
+  AFillPattern: Cardinal): Boolean;
 asm
-  {On entry: eax = APointer; edx = ACount}
+  {On entry: eax = APointer; edx = ACount; ecx = AFillPattern}
   add eax, edx
   neg edx
 @CheckLoop:
-  cmp dword ptr [eax + edx], DebugFillDWord
+  cmp [eax + edx], ecx
   jne @Done
   add edx, 4
   js @CheckLoop
@@ -6080,6 +6118,7 @@ begin
   Result := LogStackTrace(@LCurrentStackTrace, StackTraceDepth, Result);
 end;
 
+{$ifndef DisableLoggingOfMemoryDumps}
 function LogMemoryDump(APointer: PFullDebugBlockHeader; ABuffer: PAnsiChar): PAnsiChar;
 var
   LByteNum, LVal: Cardinal;
@@ -6143,6 +6182,93 @@ begin
     Inc(LDataPtr);
   end;
 end;
+{$endif}
+
+{Rotates AValue ABitCount bits to the right}
+function RotateRight(AValue, ABitCount: Cardinal): Cardinal;
+asm
+  mov ecx, edx
+  ror eax, cl
+end;
+
+{Determines whether a byte in the user portion of the freed block has been modified. Does not work beyond
+ the end of the user portion (i.e. footer and beyond).}
+function FreeBlockByteWasModified(APointer: PFullDebugBlockHeader; AUserOffset: Cardinal): Boolean;
+var
+  LFillPattern: Cardinal;
+begin
+  {Get the expected fill pattern}
+  if AUserOffset < 4 then
+  begin
+    LFillPattern := Cardinal(@FreedObjectVMT.VMTMethods[0]);
+  end
+  else
+  begin
+{$ifndef CatchUseOfFreedInterfaces}
+    LFillPattern := DebugFillDWord;
+{$else}
+    LFillPattern := Cardinal(@VMTBadInterface);
+{$endif}
+  end;
+  {Compare the byte value}
+  Result := PByte(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader) + AUserOffset)^ <>
+    Byte(RotateRight(LFillPattern, (AUserOffset and 3) * 8));
+end;
+
+function LogBlockChanges(APointer: PFullDebugBlockHeader; ABuffer: PAnsiChar): PAnsiChar;
+var
+  LOffset, LChangeStart, LCount: Cardinal;
+  LLogCount: Integer;
+begin
+  {No errors logged so far}
+  LLogCount := 0;
+  {Log a maximum of 32 changes}
+  LOffset := 0;
+  while (LOffset < APointer.UserSize) and (LLogCount < 32) do
+  begin
+    {Has the byte been modified?}
+    if FreeBlockByteWasModified(APointer, LOffset) then
+    begin
+      {Found the start of a changed block, now find the length}
+      LChangeStart := LOffset;
+      LCount := 0;
+      while True do
+      begin
+        Inc(LCount);
+        Inc(LOffset);
+        if (LOffset >= APointer.UserSize)
+          or (not FreeBlockByteWasModified(APointer, LOffset)) then
+        begin
+          Break;
+        end;
+      end;
+      {Got the offset and length, now log it.}
+      if LLogCount = 0 then
+      begin
+        ABuffer := AppendStringToBuffer(FreeModifiedDetailMsg, ABuffer, Length(FreeModifiedDetailMsg));
+      end
+      else
+      begin
+        ABuffer^ := ',';
+        Inc(ABuffer);
+        ABuffer^ := ' ';
+        Inc(ABuffer);
+      end;
+      ABuffer := CardinalToStrBuf(LChangeStart, ABuffer);
+      ABuffer^ := '(';
+      Inc(ABuffer);
+      ABuffer := CardinalToStrBuf(LCount, ABuffer);
+      ABuffer^ := ')';
+      Inc(ABuffer);
+      {Increment the log count}
+      Inc(LLogCount);
+    end;
+    {Next byte}
+    Inc(LOffset);
+  end;
+  {Return the current buffer position}
+  Result := ABuffer;
+end;
 
 procedure LogBlockError(APointer: PFullDebugBlockHeader; AOperation: TBlockOperation; LHeaderValid, LFooterValid: Boolean);
 var
@@ -6173,7 +6299,11 @@ begin
     begin
       {A freed block has been modified, or a double free has occurred}
       if AOperation <= boGetMem then
-        LMsgPtr := AppendStringToBuffer(FreeModifiedErrorMsg, LMsgPtr, Length(FreeModifiedErrorMsg))
+      begin
+        LMsgPtr := AppendStringToBuffer(FreeModifiedErrorMsg, LMsgPtr, Length(FreeModifiedErrorMsg));
+        {Log the exact changes that caused the error.}
+        LMsgPtr := LogBlockChanges(APointer, LMsgPtr);
+      end
       else
         LMsgPtr := AppendStringToBuffer(DoubleFreeErrorMsg, LMsgPtr, Length(DoubleFreeErrorMsg));
     end
@@ -6199,7 +6329,7 @@ begin
       LMsgPtr := LogStackTrace(@APointer.AllocationStackTrace, StackTraceDepth, LMsgPtr);
     end;
     {Get the class this block was used for previously}
-    LClass := GetObjectClass(@APointer.PreviouslyUsedByClass);
+    LClass := DetectClassInstance(@APointer.PreviouslyUsedByClass);
     if (LClass <> nil) and (Cardinal(LClass) <> Cardinal(@FreedObjectVMT.VMTMethods[0])) then
     begin
       LMsgPtr := AppendStringToBuffer(PreviousObjectClassMsg, LMsgPtr, Length(PreviousObjectClassMsg));
@@ -6220,7 +6350,7 @@ begin
     if (AOperation > boGetMem) and (not LFooterValid) then
     begin
       LMsgPtr := AppendStringToBuffer(CurrentObjectClassMsg, LMsgPtr, Length(CurrentObjectClassMsg));
-      LClass := GetObjectClass(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)));
+      LClass := DetectClassInstance(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)));
       if Cardinal(LClass) = Cardinal(@FreedObjectVMT.VMTMethods[0]) then
         LClass := nil;
       {$ifndef CheckCppObjectTypeEnabled}
@@ -6278,8 +6408,10 @@ begin
   end;
   {Add the current stack trace}
   LMsgPtr := LogCurrentThreadAndStackTrace(3 + Ord(AOperation <> boGetMem) + ord(AOperation = boReallocMem), LMsgPtr);
+{$ifndef DisableLoggingOfMemoryDumps}
   {Add the memory dump}
   LMsgPtr := LogMemoryDump(APointer, LMsgPtr);
+{$endif}
   {Trailing CRLF}
   LMsgPtr^ := #13;
   Inc(LMsgPtr);
@@ -6333,7 +6465,7 @@ begin
     end;
     LMsgPtr := AppendStringToBuffer(CurrentObjectClassMsg, LMsgPtr, Length(CurrentObjectClassMsg));
     {Get the current class for this block}
-    LClass := GetObjectClass(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)));
+    LClass := DetectClassInstance(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)));
     if Cardinal(LClass) = Cardinal(@FreedObjectVMT.VMTMethods[0]) then
       LClass := nil;
     {$ifndef CheckCppObjectTypeEnabled}
@@ -6368,8 +6500,10 @@ begin
     Inc(LMsgPtr);
     LMsgPtr := AppendStringToBuffer(BlockHeaderCorruptedMsg, LMsgPtr, Length(BlockHeaderCorruptedMsg));
   end;
+{$ifndef DisableLoggingOfMemoryDumps}
   {Add the memory dump}
   LMsgPtr := LogMemoryDump(APointer, LMsgPtr);
+{$endif}
   {Trailing CRLF}
   LMsgPtr^ := #13;
   Inc(LMsgPtr);
@@ -6386,28 +6520,36 @@ function CheckFreeBlockUnmodified(APBlock: PFullDebugBlockHeader; ABlockSize: Ca
   AOperation: TBlockOperation): Boolean;
 var
   LHeaderCheckSum: Cardinal;
-  LHeaderValid, LFooterValid{$ifndef CatchUseOfFreedInterfaces}, LBlockUnmodified{$endif}: Boolean;
+  LHeaderValid, LFooterValid, LBlockUnmodified: Boolean;
 begin
   LHeaderCheckSum := CalculateHeaderCheckSum(APBlock);
-  LHeaderValid := LHeaderCheckSum = PFullDebugBlockHeader(APBlock).HeaderCheckSum;
+  LHeaderValid := LHeaderCheckSum = APBlock.HeaderCheckSum;
   {Is the footer itself still in place}
   LFooterValid := LHeaderValid
-    and (PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(APBlock).UserSize)^ = (not LHeaderCheckSum));
-{$ifndef CatchUseOfFreedInterfaces}
-  if LFooterValid then
+    and (PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + APBlock.UserSize)^ = (not LHeaderCheckSum));
+  {Is the footer and debug VMT in place? The debug VMT is only valid if the user size is 4 bytes or greater.}
+  if LFooterValid
+    and (APBlock.UserSize < 4) or (PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader))^ = Cardinal(@FreedObjectVMT.VMTMethods[0])) then
   begin
-    {Clear the old footer}
-    PCardinal(Cardinal(APBlock)  + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(APBlock).UserSize)^ := DebugFillDWord;
-    {Check that all the filler bytes are valid inside the block, except for the four byte "dummy" class header}
-    LBlockUnmodified := CheckFillPattern(PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + 4),
-      ABlockSize - (BlockHeaderSize + FullDebugBlockOverhead));
+    {Store the debug fill pattern in place of the footer in order to simplify
+     checking for block modifications.}
+    PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + APBlock.UserSize)^ :=
+    {$ifndef CatchUseOfFreedInterfaces}
+      DebugFillDWord;
+    {$else}
+      RotateRight(Cardinal(@VMTBadInterface), (APBlock.UserSize and 3) * 8);
+    {$endif}
+    {Check that all the filler bytes are valid inside the block, except for
+     the four byte "dummy" class header}
+    LBlockUnmodified := CheckFillPattern(PCardinal(Cardinal(APBlock) + (SizeOf(TFullDebugBlockHeader) + 4)),
+      ABlockSize - (FullDebugBlockOverhead + 4),
+      {$ifndef CatchUseOfFreedInterfaces}DebugFillDWord{$else}Cardinal(@VMTBadInterface){$endif});
     {Reset the old footer}
-    PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(APBlock).UserSize)^ := not LHeaderCheckSum;
+    PCardinal(Cardinal(APBlock) + SizeOf(TFullDebugBlockHeader) + APBlock.UserSize)^ := not LHeaderCheckSum;
   end
   else
     LBlockUnmodified := False;
-  {$endif}
-  if (not LHeaderValid) or (not LFooterValid){$ifndef CatchUseOfFreedInterfaces}or (not LBlockUnmodified){$endif} then
+  if (not LHeaderValid) or (not LFooterValid) or (not LBlockUnmodified) then
   begin
     LogBlockError(APBlock, AOperation, LHeaderValid, LFooterValid);
     Result := False;
@@ -6443,7 +6585,12 @@ begin
         IncrementAllocationNumber;
         PFullDebugBlockHeader(Result).AllocationNumber := CurrentAllocationNumber;
         {Clear the previous block trailer}
-        PCardinal(Cardinal(Result) + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(Result).UserSize)^ := DebugFillDWord;
+        PCardinal(Cardinal(Result) + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(Result).UserSize)^ :=
+        {$ifndef CatchUseOfFreedInterfaces}
+          DebugFillDWord;
+        {$else}
+          RotateRight(Cardinal(@VMTBadInterface), (PFullDebugBlockHeader(Result).UserSize and 3) * 8);
+        {$endif}
         {Set the user size for the block}
         PFullDebugBlockHeader(Result).UserSize := ASize;
         {Set the checksums}
@@ -6589,10 +6736,14 @@ begin
       StartChangingFullDebugModeBlock;
       try
         {Clear all data after the new end of the block up to the old end of the
-         block, including the trailer}
+         block, including the trailer.}
         FillDWord(Pointer(Cardinal(APointer) + Cardinal(ANewSize) + 4)^,
           Integer(LActualBlock.UserSize) - ANewSize,
-          {$ifndef CatchUseOfFreedInterfaces}DebugFillDWord{$else}Cardinal(@VMTBadInterface){$endif});
+{$ifndef CatchUseOfFreedInterfaces}
+          DebugFillDWord);
+{$else}
+          RotateRight(Cardinal(@VMTBadInterface), (ANewSize and 3) * 8));
+{$endif}
         {Update the user size}
         LActualBlock.UserSize := ANewSize;
         {Set the new checksums}
@@ -6863,7 +7014,7 @@ begin
   if CalculateHeaderCheckSum(LActualBlock) = LActualBlock.HeaderCheckSum then
   begin
     {Get the class this block was used for previously}
-    LClass := GetObjectClass(@LActualBlock.PreviouslyUsedByClass);
+    LClass := DetectClassInstance(@LActualBlock.PreviouslyUsedByClass);
     if (LClass <> nil) and (Cardinal(LClass) <> Cardinal(@FreedObjectVMT.VMTMethods[0])) then
     begin
       LMsgPtr := AppendStringToBuffer(FreedObjectClassMsg, LMsgPtr, Length(FreedObjectClassMsg));
@@ -6919,8 +7070,10 @@ begin
   end;
   {Add the current stack trace}
   LMsgPtr := LogCurrentThreadAndStackTrace(2, LMsgPtr);
+{$ifndef DisableLoggingOfMemoryDumps}
   {Add the pointer address}
   LMsgPtr := LogMemoryDump(LActualBlock, LMsgPtr);
+{$endif}
   {Trailing CRLF}
   LMsgPtr^ := #13;
   Inc(LMsgPtr);
@@ -7305,8 +7458,77 @@ end;
   {$endif}
 {$endif}
 
-{Checks blocks for modification after free and also for memory
- leaks}
+{Detects the probable string data type for a memory block.}
+function DetectStringData(APMemoryBlock: Pointer;
+  AAvailableSpaceInBlock: Integer): TStringDataType;
+var
+  LStringLength, LElemSize, LStringMemReq, LCharInd: Integer;
+  LPossibleString: Boolean;
+  LPAnsiStr: PAnsiChar;
+  LPUniStr: PWideChar;
+begin
+  {Initialize the result}
+  Result := stUnknown;
+  {Reference count < 256}
+  if PStrRec(APMemoryBlock).refCnt < 256 then
+  begin
+    {Get the string length and element size}
+    LStringLength := PStrRec(APMemoryBlock).length;
+{$ifdef Delphi6AndUp}
+    {$if RTLVersion >= 20}
+    LElemSize := PStrRec(APMemoryBlock).elemSize;
+    {$ifend}
+    {$if RTLVersion < 20}
+    LElemSize := 1;
+    {$ifend}
+{$else}
+    LElemSize := 1;
+{$endif}
+    {Valid element size?}
+    if (LElemSize = 1) or (LElemSize = 2) then
+    begin
+      {Calculate the amount of memory required for the string}
+      LStringMemReq := (LStringLength + 1) * LElemSize + SizeOf(StrRec);
+      {Does the string fit?}
+      if (LStringLength > 0)
+        and (LStringMemReq <= AAvailableSpaceInBlock) then
+      begin
+        {It is possibly a string}
+        LPossibleString := True;
+        {Check for no characters < #32. If there are, then it is probably not
+         a string.}
+        if LElemSize = 1 then
+        begin
+          {Check that all characters are >= #32}
+          LPAnsiStr := PAnsiChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
+          for LCharInd := 1 to LStringLength do
+          begin
+            LPossibleString := LPossibleString and (LPAnsiStr^ >= #32);
+            Inc(LPAnsiStr);
+          end;
+          {Must have a trailing #0}
+          if LPossibleString and (LPAnsiStr^ = #0) then
+            Result := stAnsiString;
+        end
+        else
+        begin
+          {Check that all characters are >= #32}
+          LPUniStr := PWideChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
+          for LCharInd := 1 to LStringLength do
+          begin
+            LPossibleString := LPossibleString and (LPUniStr^ >= #32);
+            Inc(LPUniStr);
+          end;
+          {Must have a trailing #0}
+          if LPossibleString and (LPUniStr^ = #0) then
+            Result := stUnicodeString;
+        end;
+      end;
+    end;
+  end;
+end;
+
+{Checks blocks for modification after free and also for memory leaks}
 procedure CheckBlocksOnShutdown(ACheckForLeakedBlocks: Boolean);
 {$ifdef EnableMemoryLeakReporting}
 type
@@ -7414,10 +7636,7 @@ var
     LLeakedCppObjectTypeId: Pointer;
     {$endif}
     LSmallBlockLeakType: TMemoryLeakType;
-    LCharInd, LClassIndex, LStringLength, LElemSize, LStringMemReq: Integer;
-    LPAnsiStr: PAnsiChar;
-    LPUniStr: PWideChar;
-    LPossibleString: Boolean;
+    LClassIndex: Integer;
     LCurPtr, LEndPtr, LDataPtr: Pointer;
     LBlockTypeIndex: Cardinal;
     LPLeakedClasses: PLeakedClasses;
@@ -7469,7 +7688,7 @@ var
             {Default to an unknown block}
             LClassIndex := 0;
             {Get the class contained by the block}
-            LLeakedClass := GetObjectClass(LDataPtr);
+            LLeakedClass := DetectClassInstance(LDataPtr);
             {Not a Delphi class? -> is it perhaps a string or C++ object type?}
             if LLeakedClass = nil then
             begin
@@ -7503,66 +7722,10 @@ var
               else
               begin
               {$endif}
-                {Reference count < 256}
-                if PStrRec(LDataPtr).refCnt < 256 then
-                begin
-                  {Get the string length and element size}
-                  LStringLength := PStrRec(LDataPtr).length;
-{$ifdef Delphi6AndUp}
-                  {$if RTLVersion >= 20}
-                  LElemSize := PStrRec(LDataPtr).elemSize;
-                  {$ifend}
-                  {$if RTLVersion < 20}
-                  LElemSize := 1;
-                  {$ifend}
-{$else}
-                  LElemSize := 1;
-{$endif}
-                  {Valid element size?}
-                  if (LElemSize = 1) or (LElemSize = 2) then
-                  begin
-                    {Calculate the amount of memory required for the string}
-                    LStringMemReq := (LStringLength + 1) * LElemSize + SizeOf(StrRec);
-                    {Does the string fit?}
-                    if (LStringLength > 0)
-                      and (LStringMemReq <= (APSmallBlockPool.BlockType.BlockSize - (BlockHeaderSize {$ifdef FullDebugMode} + FullDebugBlockOverhead{$endif}))) then
-                    begin
-                      {It is possibly a string}
-                      LPossibleString := True;
-                      {Check for no characters < #32. If there are, then it is
-                       probably not a string.}
-                      if LElemSize = 1 then
-                      begin
-                        {Check that all characters are >= #32}
-                        LPAnsiStr := PAnsiChar(Cardinal(LDataPtr) + SizeOf(StrRec));
-                        for LCharInd := 1 to LStringLength do
-                        begin
-                          LPossibleString := LPossibleString and (LPAnsiStr^ >= #32);
-                          Inc(LPAnsiStr);
-                        end;
-                        {Must have a trailing #0}
-                        if LPossibleString and (LPAnsiStr^ = #0) then
-                        begin
-                          LClassIndex := 1;
-                        end;
-                      end
-                      else
-                      begin
-                        {Check that all characters are >= #32}
-                        LPUniStr := PWideChar(Cardinal(LDataPtr) + SizeOf(StrRec));
-                        for LCharInd := 1 to LStringLength do
-                        begin
-                          LPossibleString := LPossibleString and (LPUniStr^ >= #32);
-                          Inc(LPUniStr);
-                        end;
-                        {Must have a trailing #0}
-                        if LPossibleString and (LPUniStr^ = #0) then
-                        begin
-                          LClassIndex := 2;
-                        end;
-                      end;
-                    end;
-                  end;
+                {Not a known class: Is it perhaps string data?}
+                case DetectStringData(LDataPtr, APSmallBlockPool.BlockType.BlockSize - (BlockHeaderSize {$ifdef FullDebugMode} + FullDebugBlockOverhead{$endif})) of
+                  stAnsiString: LClassIndex := 1;
+                  stUnicodeString: LClassIndex := 2;
                 end;
               {$ifdef CheckCppObjectTypeEnabled}
               end;
