@@ -1,0 +1,44 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{36c4368c-5c36-4ea5-beb7-0bbc10ba4bf7}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Projects Include="OmniThreadLibraryDesigntime.dproj" />
+    <Projects Include="OmniThreadLibraryRuntime.dproj" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Default.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+  <BorlandProject xmlns=""> <Default.Personality> </Default.Personality> </BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Target Name="OmniThreadLibraryRuntime">
+    <MSBuild Projects="OmniThreadLibraryRuntime.dproj" Targets="" />
+  </Target>
+  <Target Name="OmniThreadLibraryRuntime:Clean">
+    <MSBuild Projects="OmniThreadLibraryRuntime.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="OmniThreadLibraryRuntime:Make">
+    <MSBuild Projects="OmniThreadLibraryRuntime.dproj" Targets="Make" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime">
+    <MSBuild Projects="OmniThreadLibraryDesigntime.dproj" Targets="" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime:Clean">
+    <MSBuild Projects="OmniThreadLibraryDesigntime.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime:Make">
+    <MSBuild Projects="OmniThreadLibraryDesigntime.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Build">
+    <CallTarget Targets="OmniThreadLibraryRuntime;OmniThreadLibraryDesigntime" />
+  </Target>
+  <Target Name="Clean">
+    <CallTarget Targets="OmniThreadLibraryRuntime:Clean;OmniThreadLibraryDesigntime:Clean" />
+  </Target>
+  <Target Name="Make">
+    <CallTarget Targets="OmniThreadLibraryRuntime:Make;OmniThreadLibraryDesigntime:Make" />
+  </Target>
+  <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
+</Project>
