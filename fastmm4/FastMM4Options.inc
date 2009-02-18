@@ -157,6 +157,10 @@ Set the default options for FastMM here.
    help to catch those errors sooner.}
   {$define AlwaysAllocateTopDown}
 
+  {Disables the logging of memory dumps together with the other detail for
+   memory errors.}
+  {.$define DisableLoggingOfMemoryDumps}
+
 {---------------------------Memory Leak Reporting-----------------------------}
 
 {Set this option to enable reporting of memory leaks. Combine it with the two
