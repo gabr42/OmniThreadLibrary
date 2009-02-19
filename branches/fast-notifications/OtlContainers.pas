@@ -50,10 +50,11 @@ interface
 
 uses
   OtlCommon,
+  OtlContainerObserver,
   DSiWin32;
 
 const
-  CAlmostFullLoadFactor = 0.9; // When a queue is 90% full, it is considered 'almost full'.
+  CPartlyEmptyLoadFactor = 0.9; // When a queue drops below 90% full, it is considered 'partly empty'.
 
 type
   {:Lock-free, single writer, single reader, size-limited stack.
@@ -183,7 +184,8 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport)
+  TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport,
+                     IOmniContainerSubject)
   strict private
     oqFastEventMsgInQueue       : PBoolean;
     oqMonitorSupport            : IOmniMonitorSupport;
@@ -191,10 +193,13 @@ type
     oqOptions                   : TOmniContainerOptions;
     oqInQueueCount              : Integer;
     oqWriteQueuePartlyEmptyCount: Cardinal;
+  protected
+    procedure Attach(observer: IOmniContainerObserver;
+      interests: TOmniContainerObserverInterests);
+    procedure Detach(observer: IOmniContainerObserver);
   public
-    constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [coEnableMonitor, coEnableNotify];
-      almostFullLoadFactor: real = CAlmostFullLoadFactor);
+    constructor Create(numElements, elementSize: integer; options: TOmniContainerOptions =
+      [coEnableMonitor, coEnableNotify]; partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor);
     procedure DeleteMessageInQueueEvent;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
@@ -853,13 +858,13 @@ begin
   end;
 end; { TOmniQueue.DeleteMessageInQueueEvent }
 
-constructor TOmniQueue.Create(numElements, elementSize: integer;
-  options: TOmniContainerOptions; almostFullLoadFactor: real);
+constructor TOmniQueue.Create(numElements, elementSize: integer; options:
+  TOmniContainerOptions; partlyEmptyLoadFactor: real);
 begin
   inherited Create;
 //  if MonitorOnlyFirstInQueue then
     Include(Options, coMonitorOnlyFirstInQueue);
-  oqWriteQueuePartlyEmptyCount := Round(numElements * almostFullLoadFactor);
+  oqWriteQueuePartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
   oqInQueueCount := -1;
   Initialize(numElements, elementSize);
   oqOptions := options;
