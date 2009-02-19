@@ -8,7 +8,8 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor, OtlComm;
+  OtlEventMonitor,
+  OtlComm;
 
 type
   TfrmTestTwoWayHello = class(TForm)
@@ -59,9 +60,10 @@ begin
     case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.ParamByName['Delay']) of
       WAIT_OBJECT_1:
         begin
-          task.Comm.Receive(msgID, msgData);
-          if msgID = MSG_CHANGE_MESSAGE then
-            msg := msgData;
+          while task.Comm.Receive(msgID, msgData) do begin
+            if msgID = MSG_CHANGE_MESSAGE then
+              msg := msgData;
+          end;
         end;
       WAIT_TIMEOUT:
         task.Comm.Send(0, msg);
