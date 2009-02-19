@@ -888,24 +888,15 @@ end; { TOmniQueue.Dequeue }
 function TOmniQueue.Enqueue(const value): boolean;
 begin
   Result := inherited Enqueue(value);
-  if Result then
-    if not (coMonitorOnlyFirstInQueue in Options) then begin
-      if coEnableNotify in Options then
-        oqNotifySupport.Signal;
-      if coEnableMonitor in Options then
-        oqMonitorSupport.Notify;
-      if assigned(oqFastEventMsgInQueue) then
-        oqFastEventMsgInQueue^ := True;
-    end else
-      if AtomicStateIncrement(oqInQueueCount) then begin
-        if coEnableMonitor in Options then
-          oqMonitorSupport.Notify;
-        if assigned(oqFastEventMsgInQueue) then
-          oqFastEventMsgInQueue^ := True;
-      end;
-end;
-
-{ TOmniQueue.Enqueue }
+  if Result and (not (coMonitorOnlyFirstInQueue in Options) or AtomicStateIncrement(oqInQueueCount)) then begin
+    if coEnableNotify in Options then
+      oqNotifySupport.Signal;
+    if coEnableMonitor in Options then
+      oqMonitorSupport.Notify;
+    if assigned(oqFastEventMsgInQueue) then
+      oqFastEventMsgInQueue^ := True;
+  end;
+end; { TOmniQueue.Enqueue }
 
 procedure TOmniQueue.SetFastEventPtrMessageInQueue(var EventBit: LongBool);
 begin
