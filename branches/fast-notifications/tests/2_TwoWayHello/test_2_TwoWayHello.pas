@@ -8,7 +8,7 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlComm;
 
 type
   TfrmTestTwoWayHello = class(TForm)
@@ -32,7 +32,7 @@ type
     FMessageDispatch: TOmniEventMonitor;
   private
     procedure HandleTaskTerminated(const task: IOmniTaskControl);
-    procedure HandleTaskMessage(const task: IOmniTaskControl);
+    procedure HandleTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   end;
 
 var
@@ -120,14 +120,11 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated', [task.UniqueID, task.Name]));
 end; { TfrmTestOTL.HandleTaskTerminated }
 
-procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl; const msg:
+  TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msgID, msgData.AsString]));
+    [task.UniqueID, task.Name, msg.MsgID, msg.MsgData.AsString]));
 end;
 
 initialization

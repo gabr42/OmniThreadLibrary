@@ -65,6 +65,7 @@ uses
 
 type
   TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
+  TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
   TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
   TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
@@ -78,7 +79,7 @@ type
     tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
     tedOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
     tedOnRefreshTimeOut        : TOmniTaskEvent;
-    tedOnTaskMessage           : TOmniTaskEvent;
+    tedOnTaskMessage           : TOmniTaskMessageEvent;
     tedOnTaskUndeliveredMessage: TOmniTaskEvent;
     tedOnTaskTerminated        : TOmniTaskEvent;
     tedCurrentMsg              : TOmniMessage;
@@ -91,7 +92,6 @@ type
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
-    property CurrentMsg: TOmniMessage read tedCurrentMsg;
   published
     property OnPoolThreadCreated: TOmniPoolThreadEvent read tedOnPoolThreadCreated
       write tedOnPoolThreadCreated;
@@ -103,7 +103,7 @@ type
       write tedOnPoolWorkItemEvent;
     property OnRefreshTimeOut: TOmniTaskEvent read tedOnRefreshTimeOut
       write tedOnRefreshTimeOut;
-    property OnTaskMessage: TOmniTaskEvent read tedOnTaskMessage write tedOnTaskMessage;
+    property OnTaskMessage: TOmniTaskMessageEvent read tedOnTaskMessage write tedOnTaskMessage;
     property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
       tedOnTaskTerminated;
     property OnTaskUndeliveredMessage: TOmniTaskEvent read tedOnTaskUndeliveredMessage
@@ -114,7 +114,7 @@ var
   COmniTaskMsg_NewMessage: cardinal;
   COmniTaskMsg_Terminated: cardinal;
   COmniPoolMsg           : cardinal;
-  AllMonitoredTasks      : TList = nil;
+  AllMonitoredTasks      : TList = nil;  // TODO 1 -oPrimoz Gabrijelcic : Must not be global! Belongs to the Monitor!
 
 implementation
 
@@ -200,9 +200,9 @@ begin
           TickCount := GetTickCount;
           while task.Comm.Receive(tedCurrentMsg) do begin
             if assigned(tedOnTaskMessage) then
-              tedOnTaskMessage(task);
+              tedOnTaskMessage(task, tedCurrentMsg);
             if {MonitorOnlyFirstInQueue and }(TickCount + 8 < GetTickCount) then begin
-              if assigned(tedOnRefreshTimeOut) then
+              if assigned(tedOnRefreshTimeOut) then // TODO 1 -oPrimoz Gabrijelcic : What is that?
                 tedOnRefreshTimeOut(task);
               if AllMonitoredTasks.Count > 1 then
                 for n := 0 to AllMonitoredTasks.Count -1 do begin
@@ -244,7 +244,7 @@ begin
           SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
           while SharedTaskInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
             if Assigned(tedOnTaskMessage) then
-              tedOnTaskMessage(task);
+              tedOnTaskMessage(task, tedCurrentMsg);
           while SharedTaskInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
             if Assigned(tedOnTaskUndeliveredMessage) then
               tedOnTaskUndeliveredMessage(task);
