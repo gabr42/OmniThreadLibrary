@@ -1,4 +1,4 @@
-///<summary>Lock-free containers. Part of the OmniThreadLibrary project.</summary>
+﻿///<summary>Lock-free containers. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -187,23 +187,24 @@ type
   TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport,
                      IOmniContainerSubject)
   strict private
-    oqFastEventMsgInQueue       : PBoolean;
+    oqFastEventMsgInQueue       : Boolean;
     oqMonitorSupport            : IOmniMonitorSupport;
     oqNotifySupport             : IOmniNotifySupport;
     oqOptions                   : TOmniContainerOptions;
     oqInQueueCount              : Integer;
     oqWriteQueuePartlyEmptyCount: Cardinal;
   protected
-    procedure Attach(observer: IOmniContainerObserver;
-      interests: TOmniContainerObserverInterests);
+    procedure Attach(observer: IOmniContainerObserver; interests:
+      TOmniContainerObserverInterests);
     procedure Detach(observer: IOmniContainerObserver);
   public
     constructor Create(numElements, elementSize: integer; options: TOmniContainerOptions =
       [coEnableMonitor, coEnableNotify]; partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor);
-    procedure DeleteMessageInQueueEvent;
+//    procedure DeleteMessageInQueueEvent;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
-    procedure SetFastEventPtrMessageInQueue(var EventBit: LongBool);
+    function GetFastEventPtrMessageInQueue: PBoolean;
+//    procedure SetFastEventPtrMessageInQueue(var EventBit: LongBool);
     property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
     property  NotifySupport: IOmniNotifySupport read oqNotifySupport implements IOmniNotifySupport;
     property  Options: TOmniContainerOptions read oqOptions;
@@ -236,18 +237,6 @@ type
   end; { TOmniNotifySupport }
 
 { Intel Atomic functions support }
-
-function AtomicStateIncrement(var Counter): boolean;
-asm
-  lock  inc dword ptr [Counter]
-  setz  al
-end; { AtomicStateIncrement }
-
-function AtomicStateDecrement(var Counter): boolean;
-asm
-  lock  dec dword ptr [Counter]
-  sets  al
-end; { AtomicStateDecrement }
 
 function AtomicCmpXchg4b(const Old4b, New4b: cardinal; var Destination): boolean; overload;
 //ATOMIC FUNCTION
@@ -850,13 +839,13 @@ end; { TOmniBaseQueue.RemoveLink }
 
 { TOmniQueue }
 
-procedure TOmniQueue.DeleteMessageInQueueEvent;
+(*procedure TOmniQueue.DeleteMessageInQueueEvent;
 begin
   oqFastEventMsgInQueue := nil;
   asm
     sfence
   end;
-end; { TOmniQueue.DeleteMessageInQueueEvent }
+end; { TOmniQueue.DeleteMessageInQueueEvent }    *)
 
 constructor TOmniQueue.Create(numElements, elementSize: integer; options:
   TOmniContainerOptions; partlyEmptyLoadFactor: real);
@@ -865,7 +854,7 @@ begin
 //  if MonitorOnlyFirstInQueue then
     Include(Options, coMonitorOnlyFirstInQueue);
   oqWriteQueuePartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
-  oqInQueueCount := -1;
+//  oqInQueueCount := -1;                                                       //ni več potrebno!!!
   Initialize(numElements, elementSize);
   oqOptions := options;
   if (coEnableMonitor in Options) or(coMonitorOnlyFirstInQueue in Options) then
@@ -874,41 +863,55 @@ begin
     oqNotifySupport := TOmniNotifySupport.Create;
 end; { TOmniQueue.Create }
 
+procedure TOmniQueue.Attach(observer: IOmniContainerObserver; interests:
+  TOmniContainerObserverInterests);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniQueue.Attach
+end; { TOmniQueue.Attach }
+
 function TOmniQueue.Dequeue(var value): boolean;
 begin
   Result := inherited Dequeue(value);
   if Result then
-    if not (coMonitorOnlyFirstInQueue in Options) then
-    begin
-      if coEnableNotify in Options then
-        oqNotifySupport.Signal;
-    end else begin
-      if AtomicStateDecrement(oqInQueueCount) and assigned(oqFastEventMsgInQueue) then
-        oqFastEventMsgInQueue^ := False;
-      if oqWriteQueuePartlyEmptyCount >= (cardinal(oqInQueueCount + 1)) then
+  begin
+    oqFastEventMsgInQueue := InterlockedDecrement(oqInQueueCount) = 0;
+    if coEnableNotify in Options then begin
+      oqNotifySupport.Signal;
+      if oqWriteQueuePartlyEmptyCount >= Cardinal(oqInQueueCount) then
         oqNotifySupport.SignalWriteQueuePartlyEmpty;
     end;
+  end;
 end; { TOmniQueue.Dequeue }
+
+procedure TOmniQueue.Detach(observer: IOmniContainerObserver);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniQueue.Detach
+end; { TOmniQueue.Detach }
 
 function TOmniQueue.Enqueue(const value): boolean;
 begin
   Result := inherited Enqueue(value);
-  if Result and (not (coMonitorOnlyFirstInQueue in Options) or AtomicStateIncrement(oqInQueueCount)) then begin
+  if Result and (not (coMonitorOnlyFirstInQueue in Options) or
+    (InterlockedIncrement(oqInQueueCount)= 1)) then begin
     if coEnableNotify in Options then
       oqNotifySupport.Signal;
     if coEnableMonitor in Options then
       oqMonitorSupport.Notify;
-    if assigned(oqFastEventMsgInQueue) then
-      oqFastEventMsgInQueue^ := True;
+    oqFastEventMsgInQueue := True;
   end;
 end; { TOmniQueue.Enqueue }
 
-procedure TOmniQueue.SetFastEventPtrMessageInQueue(var EventBit: LongBool);
+function TOmniQueue.GetFastEventPtrMessageInQueue: PBoolean;
+begin
+  result := @oqFastEventMsgInQueue;
+end;  { TOmniQueue.GetFastEventPtrMessageInQueue }
+
+(*procedure TOmniQueue.SetFastEventPtrMessageInQueue(var EventBit: LongBool);
 begin
   Assert((cardinal(@EventBit) AND 3) = 0, 'TOmniQueue: EventBit is not 4-aligned');
   oqFastEventMsgInQueue := @EventBit;
   oqFastEventMsgInQueue^ := False;
-end; { TOmniQueue.SetFastEventPtrMessageInQueue }
+end; { TOmniQueue.SetFastEventPtrMessageInQueue } *)
 
 { initialization }
 

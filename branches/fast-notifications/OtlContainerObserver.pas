@@ -79,7 +79,7 @@ type
   TOmniContainerObserverEnumFactory = record
   public
     constructor Create(observerList: TList);
-    function  GetEnumerator: IOmniContainerObserverEnum;
+    function GetEnumerator: IOmniContainerObserverEnum;
   end; { TOmniContainerObserverEnumFactory }
 
   ///<summary>List of observers and their interests. Implements separate lists for all
@@ -97,5 +97,20 @@ type
     function Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
   end; { TOmniContainerObserverList }
+
+constructor TOmniContainerObserverEnumFactory.Create(observerList: TList);
+begin
+  inherited;
+end;
+
+function TOmniContainerObserverEnumFactory.GetEnumerator: IOmniContainerObserverEnum;
+begin
+  Result := nil;
+end;
+
+function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):
+  TOmniContainerObserverEnumFactory;
+begin
+end;
 
 end.

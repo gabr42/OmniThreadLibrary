@@ -128,6 +128,7 @@ uses
 
 type
   IOmniTaskControl = interface;
+  TOmniSharedTaskInfo = class;
   
   IOmniTaskControlMonitor = interface ['{20CB3AB7-04D8-454B-AEFE-CFCFF8F27301}']
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl;
@@ -183,12 +184,12 @@ type
     function  GetExitMessage: string;
     function  GetLock: TSynchroObject;
     function  GetName: string;
-    function  GetSelf: pointer;
     function  GetUniqueID: int64;
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
+    function  GetSharedInfo: TOmniSharedTaskInfo;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
@@ -223,6 +224,7 @@ type
     property ExitMessage: string read GetExitMessage;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
+    property SharedInfo: TOmniSharedTaskInfo read GetSharedInfo;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
 
@@ -277,16 +279,6 @@ type
   function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
 {$ENDIF OTL_Anonymous}
 
-  function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
-  function CreateTask(worker: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
-  function CreateTask(const worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
-//  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
-  function CreateTaskGroup: IOmniTaskGroup;
-
-  function CreateTaskControlList: IOmniTaskControlList;
-
-type
-
   TOmniSharedTaskInfo = class
   strict private
     ostiChainIgnoreErrors : boolean;
@@ -319,6 +311,16 @@ type
     property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
     property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
   end; { TOmniSharedTaskInfo }
+
+  function CreateTask(worker: TOmniTaskProcedure; const taskName: string = ''): IOmniTaskControl; overload;
+  function CreateTask(worker: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
+  function CreateTask(const worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
+//  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
+  function CreateTaskGroup: IOmniTaskGroup;
+
+  function CreateTaskControlList: IOmniTaskControlList;
+
+type
 
   TOmniInternalMessageType = (imtStringMsg, imtAddressMsg);
 
@@ -492,7 +494,7 @@ type
     otExecuting          : boolean;
     otExecutor_ref       : TOmniTaskExecutor;
     otFastEventTerminate : LongBool;
-    otFastEventMsgInQueue: LongBool;
+//    otFastEventMsgInQueue: LongBool;
     otParameters_ref     : TOmniValueContainer;
     otSharedInfo         : TOmniSharedTaskInfo;
     otThreadData         : IInterface;
@@ -505,7 +507,6 @@ type
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
     function  GetParamByName(const paramName: string): TOmniValue; inline;
-    function  GetSelf: pointer;
     function  GetTerminateEvent: THandle; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
@@ -575,6 +576,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
+    function  GetSharedInfo: TOmniSharedTaskInfo;
     function  GetTerminatedEvent: THandle;
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64; inline;
@@ -591,7 +593,7 @@ type
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
-    function  GetSelf: pointer;
+//    function  GetSelf: pointer;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload; inline;
@@ -626,8 +628,8 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
-    property UniqueID: int64 read GetUniqueID;
     property SharedInfo: TOmniSharedTaskInfo read otcSharedInfo;
+    property UniqueID: int64 read GetUniqueID;
   end; { TOmniTaskControl }
 
   TOmniTaskControlList = class;
@@ -808,7 +810,7 @@ begin
   otParameters_ref := parameters;
   otSharedInfo := sharedInfo;
   otSharedInfo.SetFastEventPtrTerminate(otFastEventTerminate);
-  Comm.Reader.SetFastEventPtrMessageInQueue(otFastEventMsgInQueue);
+//  Comm.Reader.SetFastEventPtrMessageInQueue(otFastEventMsgInQueue);
 end; { TOmniTask.Create }
 
 procedure TOmniTask.Enforced(forceExecution: boolean);
@@ -864,7 +866,8 @@ end; { GetLock: TSynchroObject }
 
 function TOmniTask.GetFastEventPtrMsgInQueue: PBoolean;
 begin
-  result := @otFastEventMsgInQueue;
+//  result := @otFastEventMsgInQueue;
+  result := Comm.Writer.GetFastEventPtrMessageInQueue;
 end; { TOmniTask.GetFastEventPtrMsgInQueue }
 
 function TOmniTask.GetName: string;
@@ -881,11 +884,6 @@ function TOmniTask.GetParamByName(const paramName: string): TOmniValue;
 begin
   Result := otParameters_ref.ParamByName(paramName);
 end; { TOmniTask.GetParamByName }
-
-function TOmniTask.GetSelf: pointer;
-begin
-  result := self;
-end; { TOmniTask.GetSelf }
 
 function TOmniTask.GetTerminateEvent: THandle;
 begin
@@ -1772,10 +1770,17 @@ begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
 
-function TOmniTaskControl.GetSelf: pointer;
+{function TOmniTaskControl.GetSelf: pointer;
 begin
   result := self;
-end; { TOmniTaskControl.GetSelf }
+end;}
+
+function TOmniTaskControl.GetSharedInfo: TOmniSharedTaskInfo;
+begin
+  result := otcSharedInfo;
+end; { GetSharedInfo: TOmniSharedTaskInfo }
+
+{ TOmniTaskControl.GetSelf }
 
 function TOmniTaskControl.GetTerminatedEvent: THandle;
 begin

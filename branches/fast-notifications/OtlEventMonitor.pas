@@ -115,7 +115,7 @@ var
   COmniTaskMsg_Terminated: cardinal;
   COmniPoolMsg           : cardinal;
   AllMonitoredTasks      : TList = nil;  // TODO 1 -oPrimoz Gabrijelcic : Must not be global! Belongs to the Monitor!
-
+                                         // GJ: what about if we have more then one monitor?
 implementation
 
 uses
@@ -179,8 +179,7 @@ procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   pool              : IOmniThreadPool;
   n                 : cardinal;
-  NextTask          : IOmniTaskControl;
-  SharedTaskInfo    : TOmniSharedTaskInfo;
+  ntSharedInfo      : TOmniSharedTaskInfo;
   task              : IOmniTaskControl;
   TickCount         : Cardinal;
   tpMonitorInfo     : TOmniThreadPoolMonitorInfo;
@@ -196,7 +195,7 @@ begin
             tedOnTaskMessage(task);
         until not MonitorOnlyFirstInQueue or task.Comm.Reader.IsEmpty
         else} begin
-          TOmniTaskControl(task.GetSelf).SharedInfo.ResetTaskRefreshTimeOut;
+          task.SharedInfo.ResetTaskRefreshTimeOut;
           TickCount := GetTickCount;
           while task.Comm.Receive(tedCurrentMsg) do begin
             if assigned(tedOnTaskMessage) then
@@ -206,17 +205,16 @@ begin
                 tedOnRefreshTimeOut(task);
               if AllMonitoredTasks.Count > 1 then
                 for n := 0 to AllMonitoredTasks.Count -1 do begin
-                  SharedTaskInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
-                  NextTask := tedMonitoredTasks.ValueOf(SharedTaskInfo.UniqueID) as IOmniTaskControl;
-                  if (NextTask <> task) and not SharedTaskInfo.TaskRefreshTimeOut then begin
-                    PostMessage(TOmniSharedTaskInfo(AllMonitoredTasks[n]).MonitorWindow, COmniTaskMsg_NewMessage,
-                      Int64Rec(SharedTaskInfo.UniqueID).Lo, Int64Rec(SharedTaskInfo.UniqueID).Hi);
-                    SharedTaskInfo.SetTaskRefreshTimeOut;
+                  ntSharedInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
+                  if (ntSharedInfo <> task.SharedInfo) and not ntSharedInfo.TaskRefreshTimeOut then begin
+                    PostMessage(ntSharedInfo.MonitorWindow, COmniTaskMsg_NewMessage,
+                      Int64Rec(ntSharedInfo.UniqueID).Lo, Int64Rec(ntSharedInfo.UniqueID).Hi);
+                    ntSharedInfo.SetTaskRefreshTimeOut;
                   end;
                 end;
               //At last post to self!
               PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
-              TOmniTaskControl(task.GetSelf).SharedInfo.SetTaskRefreshTimeOut;
+              task.SharedInfo.SetTaskRefreshTimeOut;
               break;
             end;
           end;
@@ -241,16 +239,15 @@ begin
           if Assigned(tedOnTaskTerminated) then
             OnTaskTerminated(task);
         end else} begin
-          SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
-          while SharedTaskInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
+          while task.SharedInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
             if Assigned(tedOnTaskMessage) then
               tedOnTaskMessage(task, tedCurrentMsg);
-          while SharedTaskInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
+          while task.SharedInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
             if Assigned(tedOnTaskUndeliveredMessage) then
               tedOnTaskUndeliveredMessage(task);
           if Assigned(tedOnTaskTerminated) then
             OnTaskTerminated(task);
-          AllMonitoredTasks.Remove(pointer(SharedTaskInfo));
+          AllMonitoredTasks.Remove(pointer(task));
         end;
       end;
     Detach(task);
