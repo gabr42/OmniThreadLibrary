@@ -854,7 +854,8 @@ begin
 //  if MonitorOnlyFirstInQueue then
     Include(Options, coMonitorOnlyFirstInQueue);
   oqWriteQueuePartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
-//  oqInQueueCount := -1;                                                       //ni več potrebno!!!
+  if oqWriteQueuePartlyEmptyCount >= numElements then
+    oqWriteQueuePartlyEmptyCount := numElements - 1;
   Initialize(numElements, elementSize);
   oqOptions := options;
   if (coEnableMonitor in Options) or(coMonitorOnlyFirstInQueue in Options) then
