@@ -392,6 +392,9 @@ type
       WaitHandles      : array [0..63] of THandle;
       WaitWakeMask     : DWORD;
     end;
+  strict private // those must be 4-aligned, keep them on the top
+    oteInternalLock      : TOmniCS;
+    oteOptionsLock       : TOmniCS;
   strict private
     oteCommList          : TInterfaceList;
     oteCommRebuildHandles: THandle;
@@ -401,13 +404,11 @@ type
     {$IFDEF OTL_Anonymous}
     oteFunc              : TOmniTaskFunction;
     {$ENDIF OTL_Anonymous}
-    oteInternalLock      : TOmniCS;
     oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
     oteMsgInfo           : TOmniMessageInfo;
     oteOptions           : TOmniTaskControlOptions;
-    oteOptionsLock       : TOmniCS;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;

@@ -77,40 +77,154 @@ type
 
   ///<summary>Observer sublist enumerator factory.</summary>
   TOmniContainerObserverEnumFactory = record
+  strict private
+    coefObserverList_ref: TList;
   public
     constructor Create(observerList: TList);
-    function GetEnumerator: IOmniContainerObserverEnum;
+    function  GetEnumerator: IOmniContainerObserverEnum;
   end; { TOmniContainerObserverEnumFactory }
 
-  ///<summary>List of observers and their interests. Implements separate lists for all
-  ///    container actions for faster enumeration.</summary>
+  ///<summary>List of observers and their interests.</summary>
   IOmniContainerObserverList = interface ['{7FFE4895-C0A5-4AC2-9048-6D125BC64A39}']
+    procedure Add(observer: IOmniContainerObserver;
+      interests: TOmniContainerObserverInterests);
     function Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
+    procedure Remove(observer: IOmniContainerObserver);
   end; { IOmniContainerObserverList }
+
+  function CreateContainerObserverList: IOmniContainerObserverList;
 
 implementation
 
+uses
+  SysUtils;
+
 type
-  TOmniContainerObserverList = class(TInterfacedObject, IOmniContainerObserverList)
+  ///<summary>Observer sublist enumerator.</summary>
+  TOmniContainerObserverEnum = class(TInterfacedObject, IOmniContainerObserverEnum)
+  strict private
+    coeObserverEnum: TListEnumerator;
   public
-    function Enumerate(interest: TOmniContainerObserverInterest):
+    constructor Create(observerList: TList);
+    destructor Destroy; override;
+    function  GetCurrent: IOmniContainerObserver;
+    function  MoveNext: boolean;
+    property Current: IOmniContainerObserver read GetCurrent;
+  end; { TOmniContainerObserverEnum }
+
+  ///<summary>List of observers and their interests. Implements separate lists for all
+  ///    container actions for faster enumeration.</summary>
+  TOmniContainerObserverList = class(TInterfacedObject, IOmniContainerObserverList)
+  strict private
+    colInterestLists: array [TOmniContainerObserverInterest] of TList;
+    colObserverList: TInterfaceList;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(observer: IOmniContainerObserver; interests:
+      TOmniContainerObserverInterests);
+    function  Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
+    procedure Remove(observer: IOmniContainerObserver);
   end; { TOmniContainerObserverList }
+
+{ exports }
+
+function CreateContainerObserverList: IOmniContainerObserverList;
+begin
+  Result := TOmniContainerObserverList.Create;
+end; { CreateContainerObserverList }
+
+{ TOmniContainerObserverEnum }
+
+constructor TOmniContainerObserverEnum.Create(observerList: TList);
+begin
+  coeObserverEnum := observerList.GetEnumerator;
+end; { TOmniContainerObserverEnum.Create }
+
+destructor TOmniContainerObserverEnum.Destroy;
+begin
+  FreeAndNil(coeObserverEnum);
+  inherited;
+end; { TOmniContainerObserverEnum.Destroy }
+
+function TOmniContainerObserverEnum.GetCurrent: IOmniContainerObserver;
+begin
+  pointer(Result) := coeObserverEnum.Current;
+end; { TOmniContainerObserverEnum.GetCurrent }
+
+function TOmniContainerObserverEnum.MoveNext: boolean;
+begin
+  Result := coeObserverEnum.MoveNext;
+end; { TOmniContainerObserverEnum.MoveNext }
+
+{ TOmniContainerObserverEnumFactory }
 
 constructor TOmniContainerObserverEnumFactory.Create(observerList: TList);
 begin
-  inherited;
-end;
+  coefObserverList_ref := observerList;
+end; { TOmniContainerObserverEnumFactory.Create }
 
 function TOmniContainerObserverEnumFactory.GetEnumerator: IOmniContainerObserverEnum;
 begin
-  Result := nil;
-end;
+  Result := TOmniContainerObserverEnum.Create(coefObserverList_ref);
+end; { TOmniContainerObserverEnumFactory.GetEnumerator }
+
+{ TOmniContainerObserverList }
+
+constructor TOmniContainerObserverList.Create;
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  inherited Create;
+  colObserverList := TInterfaceList.Create;
+  for interest := Low(interest) to High(interest) do
+    colInterestLists[interest] := TList.Create;
+end; { TOmniContainerObserverList.Create }
+
+destructor TOmniContainerObserverList.Destroy;
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  for interest := Low(interest) to High(interest) do begin
+    colInterestLists[interest].Free;
+    colInterestLists[interest] := nil;
+  end;
+  FreeAndNil(colObserverList);
+  inherited Destroy;
+end; { TOmniContainerObserverList.Destroy }
+
+procedure TOmniContainerObserverList.Add(observer: IOmniContainerObserver; interests:
+  TOmniContainerObserverInterests);
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  Remove(observer);
+  colObserverList.Add(observer);
+  for interest := Low(interest) to High(interest) do
+    if interest in interests then
+      colInterestLists[interest].Add(pointer(observer));
+end; { TOmniContainerObserverList.Add }
 
 function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):
   TOmniContainerObserverEnumFactory;
 begin
-end;
+  Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest]);
+end; { TOmniContainerObserverList.Enumerate }
+
+procedure TOmniContainerObserverList.Remove(observer: IOmniContainerObserver);
+var
+  idxObserver: integer;
+  interest   : TOmniContainerObserverInterest;
+begin
+  idxObserver := colObserverList.IndexOf(observer);
+  if idxObserver < 0 then
+    Exit;
+  colObserverList.Delete(idxObserver);
+  for interest := Low(interest) to High(interest) do
+    colInterestLists[interest].Remove(pointer(observer));
+end; { TOmniContainerObserverList.Remove }
 
 end.
+
