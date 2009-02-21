@@ -97,8 +97,8 @@ type
     procedure Send(msgID: word; msgData: TOmniValue); overload;
     function  SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
     function  SendWait(msgID: word; msgData: TOmniValue; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
-    procedure  SendWaitE(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
-    procedure  SendWaitE(msgID: word; msgData: TOmniValue;
+    procedure SendWaitE(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
+    procedure SendWaitE(msgID: word; msgData: TOmniValue;
       timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam: integer);
     procedure SetTerminateEvent(TerminateEvent: THandle);
@@ -214,7 +214,7 @@ begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
   ContainerSubject.Attach(mqWinEventObserver,
-    [coiNotifyOnFirstInsert, coiNotifyOnLastRemove, coiNotifyOnPartlyEmpty]);  
+    [{coiNotifyOnFirstInsert, } coiNotifyOnAllInserts, coiNotifyOnLastRemove, coiNotifyOnPartlyEmpty]);  
   // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
@@ -260,7 +260,8 @@ end; { TOmniCommunicationEndpoint.Create }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
-  Result := ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert);
+  // TODO 1 -oPrimoz Gabrijelcic : Fix!
+  Result := ceReader_ref.EventObserver.GetEvent({coiNotifyOnFirstInsert}coiNotifyOnAllInserts);
 end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
 function TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent: THandle;

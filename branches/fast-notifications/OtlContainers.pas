@@ -925,7 +925,10 @@ function TOmniQueue.Enqueue(const value): boolean;
 begin
   Result := inherited Enqueue(value);
   if Result and (not (coMonitorOnlyFirstInQueue in Options) or
-    (InterlockedIncrement(oqInQueueCount)= 1)) then begin
+    (InterlockedIncrement(oqInQueueCount)= 1)) then
+  begin
+    ContainerSubject.Notify(coiNotifyOnAllInserts);
+    // TODO 1 -oPrimoz Gabrijelcic : Notify also on first insert
     if coEnableNotify in Options then
       oqNotifySupport.Signal;
     if coEnableMonitor in Options then
