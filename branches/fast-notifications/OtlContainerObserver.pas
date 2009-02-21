@@ -47,25 +47,23 @@ uses
   Classes;
 
 type
-  ///<summary>All actions container can report.</summary>
-  TOmniContainerAction = (caInsert, caRemove, caAlmostFull, caPartlyEmpty);
-
-  ///<summary>Container observer.</summary>
-  IOmniContainerObserver = interface ['{79288268-0B69-45C2-8E2B-50B1C5757172}']
-    procedure Notify(action: TOmniContainerAction);
-  end; { IOmniContainerObserver }
-
   ///<summary>All possible actions observer can take interest in.</summary>
   TOmniContainerObserverInterest = (coiNotifyOnFirstInsert, coiNotifyOnAllInserts,
     coiNotifyOnLastRemove, coiNotifyOnAllRemoves, coiNotifyOnAlmostFull,
     coiNotifyOnPartlyEmpty);
   TOmniContainerObserverInterests = set of TOmniContainerObserverInterest;
 
+  ///<summary>Container observer.</summary>
+  IOmniContainerObserver = interface ['{79288268-0B69-45C2-8E2B-50B1C5757172}']
+    procedure Notify(interest: TOmniContainerObserverInterest);
+  end; { IOmniContainerObserver }
+
   ///<summary>Container as a subject.</summary>
   IOmniContainerSubject = interface ['{F66DD79E-230A-4246-B740-C0A7665549EC}']
-    procedure Attach(observer: IOmniContainerObserver;
+    procedure Attach(const observer: IOmniContainerObserver;
       interests: TOmniContainerObserverInterests);
-    procedure Detach(observer: IOmniContainerObserver);
+    procedure Detach(const observer: IOmniContainerObserver);
+    procedure Notify(interest: TOmniContainerObserverInterest);
   end; { IOmniContainerSubject }
 
   ///<summary>Observer sublist enumerator.</summary>
@@ -86,14 +84,16 @@ type
 
   ///<summary>List of observers and their interests.</summary>
   IOmniContainerObserverList = interface ['{7FFE4895-C0A5-4AC2-9048-6D125BC64A39}']
-    procedure Add(observer: IOmniContainerObserver;
+    procedure Add(const observer: IOmniContainerObserver;
       interests: TOmniContainerObserverInterests);
-    function Enumerate(interest: TOmniContainerObserverInterest):
+    function  Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
-    procedure Remove(observer: IOmniContainerObserver);
+    procedure Remove(const observer: IOmniContainerObserver);
   end; { IOmniContainerObserverList }
 
   function CreateContainerObserverList: IOmniContainerObserverList;
+
+  function CreateContainerWindowsEventObserver: IOmniContainerObserver;
 
 implementation
 
@@ -101,6 +101,11 @@ uses
   SysUtils;
 
 type
+  TOmniContainerWindowsEventObserver = class(TInterfacedObject, IOmniContainerObserver)
+  public
+    procedure Notify(interest: TOmniContainerObserverInterest);
+  end; { TOmniContainerWindowsEventObserver }
+
   ///<summary>Observer sublist enumerator.</summary>
   TOmniContainerObserverEnum = class(TInterfacedObject, IOmniContainerObserverEnum)
   strict private
@@ -122,11 +127,11 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(observer: IOmniContainerObserver; interests:
+    procedure Add(const observer: IOmniContainerObserver; interests:
       TOmniContainerObserverInterests);
     function  Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
-    procedure Remove(observer: IOmniContainerObserver);
+    procedure Remove(const observer: IOmniContainerObserver);
   end; { TOmniContainerObserverList }
 
 { exports }
@@ -135,6 +140,18 @@ function CreateContainerObserverList: IOmniContainerObserverList;
 begin
   Result := TOmniContainerObserverList.Create;
 end; { CreateContainerObserverList }
+
+function CreateContainerWindowsEventObserver: IOmniContainerObserver;
+begin
+  Result := TOmniContainerWindowsEventObserver.Create;
+end; { CreateContainerWindowsEventObserver }
+
+{ TOmniContainerWindowsEventObserver }
+
+procedure TOmniContainerWindowsEventObserver.Notify(interest: TOmniContainerObserverInterest);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniContainerWindowsEventObserver.Notify
+end; { TOmniContainerWindowsEventObserver.Notify }
 
 { TOmniContainerObserverEnum }
 
@@ -152,6 +169,7 @@ end; { TOmniContainerObserverEnum.Destroy }
 function TOmniContainerObserverEnum.GetCurrent: IOmniContainerObserver;
 begin
   pointer(Result) := coeObserverEnum.Current;
+  Result._AddRef;
 end; { TOmniContainerObserverEnum.GetCurrent }
 
 function TOmniContainerObserverEnum.MoveNext: boolean;
@@ -195,8 +213,8 @@ begin
   inherited Destroy;
 end; { TOmniContainerObserverList.Destroy }
 
-procedure TOmniContainerObserverList.Add(observer: IOmniContainerObserver; interests:
-  TOmniContainerObserverInterests);
+procedure TOmniContainerObserverList.Add(const observer: IOmniContainerObserver;
+  interests: TOmniContainerObserverInterests);
 var
   interest: TOmniContainerObserverInterest;
 begin
@@ -213,7 +231,7 @@ begin
   Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest]);
 end; { TOmniContainerObserverList.Enumerate }
 
-procedure TOmniContainerObserverList.Remove(observer: IOmniContainerObserver);
+procedure TOmniContainerObserverList.Remove(const observer: IOmniContainerObserver);
 var
   idxObserver: integer;
   interest   : TOmniContainerObserverInterest;

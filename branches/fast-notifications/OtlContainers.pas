@@ -220,7 +220,7 @@ uses
 type
   TOmniNotifySupport = class(TInterfacedObject, IOmniNotifySupport)
   strict private
-    onsNewDataEvent                 : TDSiEventHandle;
+    onsNewDataEvent: TDSiEventHandle;
     onsEventPair: record
       onsWriteQueuePartlyEmptyEvent: TDSiEventHandle;
       oqTerminateEvent             : TDSiEventHandle;
@@ -242,9 +242,10 @@ type
     csObserverList: IOmniContainerObserverList;
   public
     constructor Create;
-    procedure Attach(observer: IOmniContainerObserver;
-      interests: TOmniContainerObserverInterests);
-    procedure Detach(observer: IOmniContainerObserver);
+    procedure Attach(const observer: IOmniContainerObserver; interests:
+      TOmniContainerObserverInterests);
+    procedure Detach(const observer: IOmniContainerObserver);
+    procedure Notify(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
 { Intel Atomic functions support }
@@ -361,8 +362,8 @@ end; { TOmniNotifySupport.SignalWriteQueuePartlyEmpty }
 
 { TOmniContainerSubject }
 
-procedure TOmniContainerSubject.Attach(observer: IOmniContainerObserver;
-  interests: TOmniContainerObserverInterests);
+procedure TOmniContainerSubject.Attach(const observer: IOmniContainerObserver; interests:
+  TOmniContainerObserverInterests);
 begin
   csObserverList.Add(observer, interests);
 end; { TOmniContainerSubject.Attach }
@@ -373,10 +374,18 @@ begin
   csObserverList := CreateContainerObserverList;
 end; { TOmniContainerSubject.Create }
 
-procedure TOmniContainerSubject.Detach(observer: IOmniContainerObserver);
+procedure TOmniContainerSubject.Detach(const observer: IOmniContainerObserver);
 begin
   csObserverList.Remove(observer);
 end; { TOmniContainerSubject.Detach }
+
+procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
+var
+  observer: IOmniContainerObserver;
+begin
+  for observer in csObserverList.Enumerate(interest) do
+    observer.Notify(interest);
+end; { TOmniContainerSubject.Notify }
 
 { TOmniBaseStack }
 
@@ -872,11 +881,12 @@ end; { TOmniBaseQueue.RemoveLink }
 
 constructor TOmniQueue.Create(numElements, elementSize: integer; options:
   TOmniContainerOptions; partlyEmptyLoadFactor: real);
+//var
+//  observer: IOmniContainerObserver;
 begin
   inherited Create;
   oqContainerSubject := TOmniContainerSubject.Create;
-//  if MonitorOnlyFirstInQueue then
-    Include(Options, coMonitorOnlyFirstInQueue); 
+  Include(Options, coMonitorOnlyFirstInQueue);
   oqWriteQueuePartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
   if oqWriteQueuePartlyEmptyCount >= cardinal(numElements) then
     oqWriteQueuePartlyEmptyCount := numElements - 1;
@@ -886,6 +896,16 @@ begin
     oqMonitorSupport := CreateOmniMonitorSupport;
   if coEnableNotify in Options then
     oqNotifySupport := TOmniNotifySupport.Create;
+// TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//  observer := CreateContainerWindowsEventObserver;
+//  ContainerSubject.Attach(observer, [coiNotifyOnFirstInsert, coiNotifyOnAllRemoves]);
+//  ContainerSubject.Attach(observer, [coiNotifyOnAllInserts]);
+//  ContainerSubject.Notify(coiNotifyOnAllInserts);
+//  ContainerSubject.Notify(coiNotifyOnAllInserts);
+//  ContainerSubject.Detach(observer);
+//  ContainerSubject.Attach(observer, [coiNotifyOnAllInserts]);
+//  ContainerSubject.Detach(observer);
+//  observer := nil;
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
@@ -916,7 +936,7 @@ end; { TOmniQueue.Enqueue }
 
 function TOmniQueue.GetFastEventPtrMessageInQueue: PBoolean;
 begin
-  result := @oqFastEventMsgInQueue;
+  Result := @oqFastEventMsgInQueue;
 end;  { TOmniQueue.GetFastEventPtrMessageInQueue }
 
 { initialization }
