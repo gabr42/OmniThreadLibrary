@@ -115,12 +115,13 @@ type
   }
   TOmniMessageQueue = class(TOmniQueue)
   strict private
-    mqWinEventObserver: IOmniContainerObserver;
+    mqWinEventObserver: IOmniContainerWindowsEventObserver;
   public
     constructor Create(numMessages: integer); reintroduce;
     destructor  Destroy; override;
     function  Dequeue: TOmniMessage; reintroduce;
     function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
+    property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize):
@@ -213,8 +214,8 @@ begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
   ContainerSubject.Attach(mqWinEventObserver,
-    [coiNotifyOnFirstInsert, coiNotifyOnLastRemove]);  
-  // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem with every queue!
+    [coiNotifyOnFirstInsert, coiNotifyOnLastRemove, coiNotifyOnPartlyEmpty]);  
+  // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
@@ -259,12 +260,13 @@ end; { TOmniCommunicationEndpoint.Create }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
-  Result := ceReader_ref.NotifySupport.NewDataEvent;
-end;
+  Result := ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert);
+end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
 function TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent: THandle;
 begin
-  Result := ceWriter_ref.NotifySupport.NewDataEvent;
+  // TODO 1 -oPrimoz Gabrijelcic : I think ...
+  Result := ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty);
 end; { TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent }
 
 { TOmniCommunicationEndpoint.GetNewMessageEvent }
@@ -330,8 +332,9 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : fix this
   result := (ceWriter_ref as TOmniQueue).Enqueue(msg);
   if not result then begin
-    ResetEvent(ceWriter_ref.NotifySupport.WriteQueuePartlyEmptyEvent);
-    if WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms) = 1 then
+    ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
+// TODO 1 -oPrimoz Gabrijelcic : Wait on 'partly empty' and 'terminate' events    
+//    if WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms) = 1 then
       raise Exception.Create('TOmniCommunicationEndpoint.SendWait: Thread terminate event!');
     result := (ceWriter_ref as TOmniQueue).Enqueue(msg);
     if not result then
@@ -389,8 +392,9 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : fix this
   result := (ceWriter_ref as TOmniQueue).Enqueue(msg);
   if not result then begin
-    ResetEvent(ceWriter_ref.NotifySupport.WriteQueuePartlyEmptyEvent);
-    WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms);
+    ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
+// TODO 1 -oPrimoz Gabrijelcic : Wait on 'partly empty' and 'terminate' events
+//    WaitForMultipleObjects(2, ceWriter_ref.NotifySupport.GetEventPair, false, timeout_ms);
     result := (ceWriter_ref as TOmniQueue).Enqueue(msg);
     if not result then
       raise Exception.Create('TOmniCommunicationEndpoint.SendWaitE: out of time!');
@@ -407,8 +411,9 @@ end; { TOmniCommunicationEndpoint.SetMonitor }
 
 procedure TOmniCommunicationEndpoint.SetTerminateEvent(TerminateEvent: THandle);
 begin
-  ceWriter_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
-  ceReader_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
+  // TODO 1 -oPrimoz Gabrijelcic : Rethink this approach
+//  ceWriter_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
+//  ceReader_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
 end; { TOmniCommunicationEndpoint.SetTerminateEvent }
 
 function TOmniCommunicationEndpoint.Writer: TOmniMessageQueue;

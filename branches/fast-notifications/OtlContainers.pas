@@ -188,7 +188,7 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, IOmniNotifySupport, IOmniMonitorSupport,
+  TOmniQueue = class(TOmniBaseQueue, {IOmniNotifySupport, }IOmniMonitorSupport,
                      IOmniContainerSubject)
   strict private
     oqContainerSubject          : IOmniContainerSubject;
@@ -205,7 +205,7 @@ type
     function  Enqueue(const value): boolean;
     function  GetFastEventPtrMessageInQueue: PBoolean;
     property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
-    property  NotifySupport: IOmniNotifySupport read oqNotifySupport implements IOmniNotifySupport;
+//    property  NotifySupport: IOmniNotifySupport read oqNotifySupport implements IOmniNotifySupport;
     property  Options: TOmniContainerOptions read oqOptions;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;

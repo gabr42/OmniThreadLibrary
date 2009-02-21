@@ -58,6 +58,11 @@ type
     procedure Notify(interest: TOmniContainerObserverInterest);
   end; { IOmniContainerObserver }
 
+  IOmniContainerWindowsEventObserver = interface(IOmniContainerObserver)
+                                       ['{E9FFB3D8-DC23-4A5B-AE94-2E8479120D6C}']
+    function  GetEvent(interest: TOmniContainerObserverInterest): THandle;
+  end; { IOmniContainerWindowsEventObserver } 
+
   ///<summary>Container as a subject.</summary>
   IOmniContainerSubject = interface ['{F66DD79E-230A-4246-B740-C0A7665549EC}']
     procedure Attach(const observer: IOmniContainerObserver;
@@ -92,17 +97,24 @@ type
   end; { IOmniContainerObserverList }
 
   function CreateContainerObserverList: IOmniContainerObserverList;
-
-  function CreateContainerWindowsEventObserver: IOmniContainerObserver;
+  function CreateContainerWindowsEventObserver: IOmniContainerWindowsEventObserver;
 
 implementation
 
 uses
+  Windows,
   SysUtils;
 
 type
-  TOmniContainerWindowsEventObserver = class(TInterfacedObject, IOmniContainerObserver)
+  TOmniContainerWindowsEventObserver = class(TInterfacedObject,
+                                             IOmniContainerWindowsEventObserver)
+  strict private
+    cweoEvents: array [TOmniContainerObserverInterest] of THandle;
+  strict protected
+    function  CreateEvent(interest: TOmniContainerObserverInterest): THandle;
   public
+    destructor Destroy; override;
+    function  GetEvent(interest: TOmniContainerObserverInterest): THandle;
     procedure Notify(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerWindowsEventObserver }
 
@@ -141,16 +153,47 @@ begin
   Result := TOmniContainerObserverList.Create;
 end; { CreateContainerObserverList }
 
-function CreateContainerWindowsEventObserver: IOmniContainerObserver;
+function CreateContainerWindowsEventObserver: IOmniContainerWindowsEventObserver;
 begin
   Result := TOmniContainerWindowsEventObserver.Create;
 end; { CreateContainerWindowsEventObserver }
 
 { TOmniContainerWindowsEventObserver }
 
+destructor TOmniContainerWindowsEventObserver.Destroy;
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  for interest := Low(interest) to High(interest) do 
+    if cweoEvents[interest] <> 0 then begin
+      CloseHandle(cweoEvents[interest]);
+      cweoEvents[interest] := 0;
+    end;
+  inherited;
+end; { TOmniContainerWindowsEventObserver.Destroy }
+
+function TOmniContainerWindowsEventObserver.CreateEvent(interest:
+  TOmniContainerObserverInterest): THandle;
+begin
+  Result := cweoEvents[interest];
+  if Result = 0 then begin
+    Result := Windows.CreateEvent(nil, false, false, nil);
+    if InterlockedCompareExchange(PInteger(@cweoEvents[interest])^, Result, 0) <> 0 then begin
+      CloseHandle(Result);
+      Result := cweoEvents[interest];
+    end;
+  end;
+end; { TOmniContainerWindowsEventObserver.CreateEvent }
+
+function TOmniContainerWindowsEventObserver.GetEvent(interest:
+  TOmniContainerObserverInterest): THandle;
+begin
+  Result := CreateEvent(interest);
+end; { TOmniContainerWindowsEventObserver.GetEvent }
+
 procedure TOmniContainerWindowsEventObserver.Notify(interest: TOmniContainerObserverInterest);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniContainerWindowsEventObserver.Notify
+  SetEvent(CreateEvent(interest));
 end; { TOmniContainerWindowsEventObserver.Notify }
 
 { TOmniContainerObserverEnum }
