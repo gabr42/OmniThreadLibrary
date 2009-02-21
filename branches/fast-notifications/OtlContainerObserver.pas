@@ -236,6 +236,8 @@ var
   idxObserver: integer;
   interest   : TOmniContainerObserverInterest;
 begin
+  if not assigned(observer) then
+    Exit;
   idxObserver := colObserverList.IndexOf(observer);
   if idxObserver < 0 then
     Exit;
