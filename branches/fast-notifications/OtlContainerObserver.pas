@@ -262,6 +262,7 @@ var
   interest: TOmniContainerObserverInterest;
 begin
   Remove(observer);
+  // TODO 1 -oPrimoz Gabrijelcic : Locking!
   colObserverList.Add(observer);
   for interest := Low(interest) to High(interest) do
     if interest in interests then
@@ -271,6 +272,7 @@ end; { TOmniContainerObserverList.Add }
 function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):
   TOmniContainerObserverEnumFactory;
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : Locking!
   Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest]);
 end; { TOmniContainerObserverList.Enumerate }
 
@@ -281,6 +283,7 @@ var
 begin
   if not assigned(observer) then
     Exit;
+  // TODO 1 -oPrimoz Gabrijelcic : Locking!
   idxObserver := colObserverList.IndexOf(observer);
   if idxObserver < 0 then
     Exit;

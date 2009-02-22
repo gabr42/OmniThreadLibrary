@@ -70,3 +70,7 @@
 - Removed OnWorkerThreadCreated_Asy/OnWorkerThreadDestroyed_Asy thread pool 
   notification mechanism which was pretty much useless.
 - Added connection pool demo.
+
+1.04:
+!! changed semantics in comm event notification - when you get the event, read all messages !!
+!! message is passed to the TOmniEventMonitor.OnTaskMessage handler !!

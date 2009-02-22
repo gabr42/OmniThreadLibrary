@@ -213,8 +213,7 @@ constructor TOmniMessageQueue.Create(numMessages: integer);
 begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
-  ContainerSubject.Attach(mqWinEventObserver,
-    [{coiNotifyOnFirstInsert, } coiNotifyOnAllInserts, coiNotifyOnLastRemove, coiNotifyOnPartlyEmpty]);  
+  ContainerSubject.Attach(mqWinEventObserver, [coiNotifyOnFirstInsert]);
   // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
@@ -243,12 +242,6 @@ begin
   tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
 
-// TODO: EnqueueOver
-//function TOmniMessageQueue.EnqueueOver(const value: TOmniMessage): boolean;
-//begin
-//result := inherited Enqueue(value);
-//end; { TOmniMessageQueue.EnqueueWait }
-
 { TOmniCommunicationEndpoint }
 
 constructor TOmniCommunicationEndpoint.Create(readQueue, writeQueue: TOmniMessageQueue);
@@ -260,8 +253,7 @@ end; { TOmniCommunicationEndpoint.Create }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Fix!
-  Result := ceReader_ref.EventObserver.GetEvent({coiNotifyOnFirstInsert}coiNotifyOnAllInserts);
+  Result := ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert);
 end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
 function TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent: THandle;
