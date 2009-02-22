@@ -55,7 +55,8 @@ uses
   OtlContainerObserver;
 
 const
-  CPartlyEmptyLoadFactor = 0.9; // When a queue drops below 90% full, it is considered 'partly empty'.
+  CPartlyEmptyLoadFactor = 0.8; // When an element count drops below 90%, the container is considered 'partly empty'.
+  CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
   {:Lock-free, single writer, single reader, size-limited stack.
@@ -134,13 +135,17 @@ type
 
   TOmniStack = class(TOmniBaseStack, IOmniMonitorSupport, IOmniContainerSubject)
   strict private
+    osAlmostFullCount : integer;
     osContainerSubject: IOmniContainerSubject;
     osInStackCount    : TGp4AlignedInt;
     osMonitorSupport  : IOmniMonitorSupport;
     osOptions         : TOmniContainerOptions;
+    osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [coEnableMonitor]);
+      options: TOmniContainerOptions = [coEnableMonitor];
+      partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
+      almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function Pop(var value): boolean; override;
     function Push(const value): boolean; override;
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
@@ -176,25 +181,27 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, {IOmniNotifySupport, }IOmniMonitorSupport,
-                     IOmniContainerSubject)
+  TOmniQueue = class(TOmniBaseQueue, IOmniMonitorSupport, IOmniContainerSubject)
   strict private
-    oqContainerSubject          : IOmniContainerSubject;
-    oqFastEventMsgInQueue       : boolean;
-    oqMonitorSupport            : IOmniMonitorSupport;
-    oqOptions                   : TOmniContainerOptions;
-    oqInQueueCount              : TGp4AlignedInt;
-    oqWriteQueuePartlyEmptyCount: cardinal;
+    oqAlmostFullCount    : integer;
+    oqContainerSubject   : IOmniContainerSubject;
+    oqFastEventMsgInQueue: boolean;
+    oqInQueueCount       : TGp4AlignedInt;
+    oqMonitorSupport     : IOmniMonitorSupport;
+    oqOptions            : TOmniContainerOptions;
+    oqPartlyEmptyCount   : integer;
   public
-    constructor Create(numElements, elementSize: integer; options: TOmniContainerOptions =
-      [coEnableMonitor]; partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor);
+    constructor Create(numElements, elementSize: integer;
+      options: TOmniContainerOptions = [coEnableMonitor];
+      partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
+      almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
     function  GetFastEventPtrMessageInQueue: PBoolean;
-    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
-    property  Options: TOmniContainerOptions read oqOptions;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;
+    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
+    property  Options: TOmniContainerOptions read oqOptions;
   end; { TOmniQueue }
 
 implementation
@@ -514,39 +521,59 @@ end; { TOmniBaseStack.PushLink }
 
 { TOmniStack }
 
-constructor TOmniStack.Create(numElements, elementSize: integer;
-  options: TOmniContainerOptions);
+constructor TOmniStack.Create(numElements, elementSize: integer; options:
+  TOmniContainerOptions; partlyEmptyLoadFactor, almostFullLoadFactor: real);
 begin
   inherited Create;
   Initialize(numElements, elementSize);
   osContainerSubject := TOmniContainerSubject.Create;
   osOptions := options;
   osInStackCount.Value := 0;
+  osPartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
+  if osPartlyEmptyCount >= numElements then
+    osPartlyEmptyCount := numElements - 1;
+  osAlmostFullCount := Round(numElements * almostFullLoadFactor);
+  if osAlmostFullCount >= numElements then
+    osAlmostFullCount := numElements - 1;
   if coEnableMonitor in Options then
     osMonitorSupport := CreateOmniMonitorSupport;
 end; { TOmniStack.Create }
 
 function TOmniStack.Pop(var value): boolean;
+var
+  countAfter : integer;
+  countBefore: integer;
 begin
+  countBefore := osInStackCount;
   Result := inherited Pop(value);
   if Result then begin
+    countAfter := osInStackCount.Decrement;
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-    if osInStackCount.Decrement = 0 then
+    if countAfter = 0 then
       ContainerSubject.Notify(coiNotifyOnLastRemove);
-// TODO 1 -oPrimoz Gabrijelcic : implement: TOmniStack.Pop      
-//    if oqWriteQueuePartlyEmptyCount >= Cardinal(oqInStackCount) then
-//      oqNotifySupport.SignalWriteQueuePartlyEmpty;
+    if (countBefore > osPartlyEmptyCount) and
+       (countAfter <= osPartlyEmptyCount)
+    then
+      ContainerSubject.Notify(coiNotifyOnPartlyEmpty);
   end;
 end; { TOmniStack.Pop }
 
 function TOmniStack.Push(const value): boolean;
+var
+  countAfter : integer;
+  countBefore: integer;
 begin
+  countBefore := osInStackCount;
   Result := inherited Push(value);
   if Result then begin
-    if osInStackCount.Increment = 1 then
-      ContainerSubject.Notify(coiNotifyOnFirstInsert);
+    countAfter := osInStackCount.Increment;
     ContainerSubject.Notify(coiNotifyOnAllInserts);
-// TODO 1 -oPrimoz Gabrijelcic : implement: coiNotifyOnAlmostFull
+    if countAfter = 1 then
+      ContainerSubject.Notify(coiNotifyOnFirstInsert);
+    if (countBefore < osAlmostFullCount) and
+       (countAfter >= osAlmostFullCount)
+    then
+      ContainerSubject.Notify(coiNotifyOnAlmostFull);
     if coEnableMonitor in Options then
       osMonitorSupport.Notify;
   end;
@@ -807,14 +834,17 @@ end; { TOmniBaseQueue.RemoveLink }
 { TOmniQueue }
 
 constructor TOmniQueue.Create(numElements, elementSize: integer; options:
-  TOmniContainerOptions; partlyEmptyLoadFactor: real);
+  TOmniContainerOptions; partlyEmptyLoadFactor, almostFullLoadFactor: real);
 begin
   inherited Create;
   oqContainerSubject := TOmniContainerSubject.Create;
   oqInQueueCount.Value := 0;
-  oqWriteQueuePartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
-  if oqWriteQueuePartlyEmptyCount >= cardinal(numElements) then
-    oqWriteQueuePartlyEmptyCount := numElements - 1;
+  oqPartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
+  if oqPartlyEmptyCount >= numElements then
+    oqPartlyEmptyCount := numElements - 1;
+  oqAlmostFullCount := Round(numElements * almostFullLoadFactor);
+  if oqAlmostFullCount >= numElements then
+    oqAlmostFullCount := numElements - 1;
   Initialize(numElements, elementSize);
   oqOptions := options;
   if coEnableMonitor in Options then
@@ -822,31 +852,44 @@ begin
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
+var
+  countAfter : integer;
+  countBefore: integer;
 begin
+  countBefore := oqInQueueCount;
   Result := inherited Dequeue(value);
   if Result then begin
     // TODO 1 -oPrimoz Gabrijelcic : Move 'fast event' notification into an observer
     //oqFastEventMsgInQueue :=
-    if oqInQueueCount.Decrement = 0 then
-      ContainerSubject.Notify(coiNotifyOnLastRemove);
+    countAfter := oqInQueueCount.Decrement;
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-    // TODO 1 -oPrimoz Gabrijelcic : Hmnja, a ni teh signalov preveč? A ne bi naredili samo ob prehodu nad/pod mejo?
-    if oqWriteQueuePartlyEmptyCount >= Cardinal(oqInQueueCount) then
+    if countAfter = 0 then
+      ContainerSubject.Notify(coiNotifyOnLastRemove);
+    if (countBefore > oqPartlyEmptyCount) and
+       (countAfter <= oqPartlyEmptyCount)
+    then
       ContainerSubject.Notify(coiNotifyOnPartlyEmpty);
   end;
 end; { TOmniQueue.Dequeue }
 
 function TOmniQueue.Enqueue(const value): boolean;
+var
+  countAfter : integer;
+  countBefore: integer;
 begin
+  countBefore := oqInQueueCount;
   Result := inherited Enqueue(value);
   if Result then begin
-    if oqInQueueCount.Increment = 1 then
+    countAfter := oqInQueueCount.Increment;
+    if countAfter = 1 then
       ContainerSubject.Notify(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
+    if (countBefore < oqAlmostFullCount) and
+       (countAfter >= oqAlmostFullCount)
+    then
+      ContainerSubject.Notify(coiNotifyOnAlmostFull);
     if coEnableMonitor in Options then
       oqMonitorSupport.Notify;
-    // TODO 1 -oPrimoz Gabrijelcic : add coiNotifyOnAlmostFull notifications
-    // TODO 1 -oPrimoz Gabrijelcic : Move 'fast event' notification into an observer
     oqFastEventMsgInQueue := True;
   end;
 end; { TOmniQueue.Enqueue }
