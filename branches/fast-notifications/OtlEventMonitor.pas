@@ -247,7 +247,7 @@ begin
               tedOnTaskUndeliveredMessage(task);
           if Assigned(tedOnTaskTerminated) then
             OnTaskTerminated(task);
-          AllMonitoredTasks.Remove(pointer(task));
+          AllMonitoredTasks.Remove(pointer(task.SharedInfo));          
         end;
       end;
     Detach(task);
