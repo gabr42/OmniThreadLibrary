@@ -197,7 +197,7 @@ type
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
-    function  GetFastEventPtrMessageInQueue: PBoolean;
+//    function  GetFastEventPtrMessageInQueue: PBoolean;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;
     property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
@@ -894,10 +894,10 @@ begin
   end;
 end; { TOmniQueue.Enqueue }
 
-function TOmniQueue.GetFastEventPtrMessageInQueue: PBoolean;
-begin
-  Result := @oqFastEventMsgInQueue;
-end;  { TOmniQueue.GetFastEventPtrMessageInQueue }
+//function TOmniQueue.GetFastEventPtrMessageInQueue: PBoolean;
+//begin
+//  Result := @oqFastEventMsgInQueue;
+//end;  { TOmniQueue.GetFastEventPtrMessageInQueue }
 
 { initialization }
 

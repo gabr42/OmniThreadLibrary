@@ -287,28 +287,29 @@ type
     ostiCounter           : IOmniCounter;
     ostiLock              : TSynchroObject;
     ostiMonitorWindow     : THandle;
+    ostiStopped           : boolean;
+    ostiTaskControlTimeOut: boolean;
     ostiTaskName          : string;
     ostiTerminatedEvent   : THandle;
     ostiTerminateEvent    : THandle;
+    ostiTerminating       : boolean;
     ostiUniqueID          : int64;
-    ostiTaskControlTimeOut: boolean;
-    ostiTerminateEventPtr : PBoolean;
   public
     function GetTaskRefreshTimeOut: boolean;
-    procedure SetTaskRefreshTimeOut;
-    procedure SetFastEventTerminate;
-    procedure SetFastEventPtrTerminate(var EventBit: LongBool);
     procedure ResetTaskRefreshTimeOut;
+    procedure SetTaskRefreshTimeOut;
     property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
     property ChainTo: IOmniTaskControl read ostiChainTo write ostiChainTo;
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
     property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow;
+    property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
     property TaskRefreshTimeOut: boolean read GetTaskRefreshTimeOut;
     property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
     property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
+    property Terminating: boolean read ostiTerminating write ostiTerminating;
     property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
   end; { TOmniSharedTaskInfo }
 
@@ -492,18 +493,14 @@ type
 
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
-    otExecuting          : boolean;
-    otExecutor_ref       : TOmniTaskExecutor;
-    otFastEventTerminate : LongBool;
-//    otFastEventMsgInQueue: LongBool;
-    otParameters_ref     : TOmniValueContainer;
-    otSharedInfo         : TOmniSharedTaskInfo;
-    otThreadData         : IInterface;
+    otExecuting     : boolean;
+    otExecutor_ref  : TOmniTaskExecutor;
+    otParameters_ref: TOmniValueContainer;
+    otSharedInfo    : TOmniSharedTaskInfo;
+    otThreadData    : IInterface;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
-    function  GetFastEventPtrMsgInQueue: PBoolean; inline;
-    function  GetFastEventPtrTerminate: PBoolean; inline;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
@@ -551,10 +548,8 @@ type
 
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetTerminatedEvent: THandle;
-    function  GetTerminateEvent: THandle;
   //
     property TerminatedEvent: THandle read GetTerminatedEvent;
-    property TerminateEvent: THandle read GetTerminateEvent;
   end; { IOmniTaskControlInternals }
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
@@ -810,8 +805,6 @@ begin
   otExecutor_ref := executor;
   otParameters_ref := parameters;
   otSharedInfo := sharedInfo;
-  otSharedInfo.SetFastEventPtrTerminate(otFastEventTerminate);
-//  Comm.Reader.SetFastEventPtrMessageInQueue(otFastEventMsgInQueue);
 end; { TOmniTask.Create }
 
 procedure TOmniTask.Enforced(forceExecution: boolean);
@@ -842,12 +835,14 @@ begin
         Win32Check(PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
           integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
     end;
-  finally SetEvent(otSharedInfo.TerminatedEvent); end;
+  finally
+    otSharedInfo.Stopped := true;
+    SetEvent(otSharedInfo.TerminatedEvent);
+  end;
   if assigned(otSharedInfo.ChainTo) and
      (otSharedInfo.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
   then
-    otSharedInfo.ChainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
-  otSharedInfo.ChainTo := nil;
+    otSharedInfo.ChainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool  otSharedInfo.ChainTo := nil;
 end; { TOmniTask.Execute }
 
 function TOmniTask.GetComm: IOmniCommunicationEndpoint;
@@ -864,12 +859,6 @@ function TOmniTask.GetLock: TSynchroObject;
 begin
   Result := otSharedInfo.Lock;
 end; { GetLock: TSynchroObject }
-
-function TOmniTask.GetFastEventPtrMsgInQueue: PBoolean;
-begin
-//  result := @otFastEventMsgInQueue;
-  result := Comm.Writer.GetFastEventPtrMessageInQueue;
-end; { TOmniTask.GetFastEventPtrMsgInQueue }
 
 function TOmniTask.GetName: string;
 begin
@@ -890,11 +879,6 @@ function TOmniTask.GetTerminateEvent: THandle;
 begin
   Result := otSharedInfo.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
-
-function TOmniTask.GetFastEventPtrTerminate: PBoolean;
-begin
-  result := @otFastEventTerminate;
-end; { TOmniTask.GetFastEventPtrTerminate }
 
 function TOmniTask.GetThreadData: IInterface;
 begin
@@ -938,7 +922,7 @@ end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
 begin
-  Result := WaitForSingleObject(otSharedInfo.TerminatedEvent, 0) <> WAIT_TIMEOUT;
+  Result := otSharedInfo.Stopped;
 end; { TOmniTask.Stopped }
 
 procedure TOmniTask.StopTimer;
@@ -948,7 +932,7 @@ end; { TOmniTask.StopTimer }
 
 procedure TOmniTask.Terminate;
 begin
-  otFastEventTerminate := True;
+  otSharedInfo.Terminating := true;
   SetEvent(otSharedInfo.TerminateEvent);
   if not otExecuting then //call Execute to run at least cleanup code
     Execute;
@@ -956,7 +940,7 @@ end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
 begin
-  Result := WaitForSingleObject(otSharedInfo.TerminateEvent, 0) <> WAIT_TIMEOUT;
+  Result := otSharedInfo.Terminating;
 end; { TOmniTask.Terminated }
 
 procedure TOmniTask.UnregisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1976,7 +1960,7 @@ end; { TOmniTaskControl.SetTimer }
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
-  otcSharedInfo.SetFastEventTerminate;
+  otcSharedInfo.Terminating := true;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
   if not Result then begin
@@ -2205,7 +2189,7 @@ var
   iIntf: integer;
 begin
   for iIntf := 0 to otgTaskList.Count - 1 do
-    (otgTaskList[iIntf] as IOMniTaskControl).Run;
+    (otgTaskList[iIntf] as IOmniTaskControl).Run;
   Result := Self;
 end; { TOmniTaskGroup.RunAll }
 
@@ -2222,7 +2206,7 @@ var
   iIntf: integer;
 begin
   for iIntf := 0 to otgTaskList.Count - 1 do
-    SetEvent((otgTaskList[iIntf] as IOmniTaskControlInternals).TerminateEvent);
+    (otgTaskList[iIntf] as IOmniTaskControl).Terminate;
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
 
@@ -2258,18 +2242,6 @@ procedure TOmniSharedTaskInfo.SetTaskRefreshTimeOut;
 begin
   ostiTaskControlTimeOut := True;
 end; { TOmniSharedTaskInfo.SetTaskRefreshTimeOut }
-
-procedure TOmniSharedTaskInfo.SetFastEventTerminate;
-begin
-  ostiTerminateEventPtr^ := True;
-end; { TOmniSharedTaskInfo.SetFastEventTerminate }
-
-procedure TOmniSharedTaskInfo.SetFastEventPtrTerminate(var EventBit: LongBool);
-begin
-  Assert((cardinal(@EventBit) AND 3) = 0, 'TOmniSharedTaskInfo: EventBit is not 4-aligned');
-  ostiTerminateEventPtr := @EventBit;
-  ostiTerminateEventPtr^ := False;
-end; { TOmniSharedTaskInfo.SetFastEventPtrTerminate }
 
 initialization
   AllMonitoredTasks := TList.Create;

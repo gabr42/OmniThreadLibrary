@@ -103,9 +103,6 @@ type
     property TerminateEvent: THandle read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
-//
-    function  GetFastEventPtrMsgInQueue: PBoolean;
-    function  GetFastEventPtrTerminate: PBoolean;
   end; { IOmniTask }
 
   IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']

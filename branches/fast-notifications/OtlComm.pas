@@ -102,7 +102,7 @@ type
       timeout_ms: cardinal = CMaxSendWaitTime_ms); overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam: integer);
     procedure SetTerminateEvent(TerminateEvent: THandle);
-    function Writer: TOmniMessageQueue;
+    function Writer: TOmniMessageQueue; 
     property NewMessageEvent: THandle read GetNewMessageEvent;
   end; { IOmniCommunicationEndpoint }
 
