@@ -546,6 +546,7 @@ type
     property Task: IOmniTask read otTask;
   end; { TOmniThread }
 
+  // TODO 1 -oPrimoz Gabrijelcic : Used in TOmniTaskGroup, maybe it could be removed?
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetTerminatedEvent: THandle;
   //
