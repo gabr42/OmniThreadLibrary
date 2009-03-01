@@ -1722,7 +1722,8 @@ end; { TOmniTaskControl.Enforced }
 procedure TOmniTaskControl.EnsureCommChannel;
 begin
   if not assigned(otcSharedInfo.CommChannel) then
-    otcSharedInfo.CommChannel := CreateTwoWayChannel(otcQueueLength);
+    otcSharedInfo.CommChannel :=
+      CreateTwoWayChannel(otcQueueLength, otcSharedInfo.TerminatedEvent);
 end; { TOmniTaskControl.EnsureCommChannel }
 
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
