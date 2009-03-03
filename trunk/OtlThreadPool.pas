@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-02-08
-///   Version           : 2.01
+///   Last modification : 2009-03-03
+///   Version           : 2.01b
 ///</para><para>
 ///   History:
+///     2.01b: 2009-03-03
+///       - Bug fixed: TOTPWorkerThread.Create was not waiting on the worker object to
+///         initialize.
 ///     2.01a: 2009-02-09
 ///       - Removed critical section added in 2.0b - it is not needed as the
 ///         IOmniTaskControl.Invoke is thread-safe.
@@ -1088,6 +1091,7 @@ begin
   otpUniqueID := OtlUID.Increment;
   otpWorker := TOTPWorker.Create(name, otpUniqueID);
   otpWorkerTask := CreateTask(otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
+  otpWorkerTask.WaitForInit;
 end; { TOmniThreadPool.Create }
 
 destructor TOmniThreadPool.Destroy;
