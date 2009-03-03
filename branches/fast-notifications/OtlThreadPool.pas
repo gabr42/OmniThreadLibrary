@@ -1088,6 +1088,7 @@ begin
   otpUniqueID := OtlUID.Increment;
   otpWorker := TOTPWorker.Create(name, otpUniqueID);
   otpWorkerTask := CreateTask(otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
+  otpWorkerTask.WaitForInit;
 end; { TOmniThreadPool.Create }
 
 destructor TOmniThreadPool.Destroy;
