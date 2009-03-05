@@ -36,32 +36,13 @@
     </DelphiCompile>
     <DCCReference Include="..\Otl.pas" />
     <DCCReference Include="..\OtlComm.pas" />
-    <DCCReference Include="..\OtlCommB.pas" />
-    <DCCReference Include="..\OtlCommBu.pas" />
-    <DCCReference Include="..\OtlCommBuferTest.pas" />
     <DCCReference Include="..\OtlCommBufferTest.pas" />
-    <DCCReference Include="..\OtlCommBuu.pas" />
-    <DCCReference Include="..\OtlCommBuuf.pas" />
-    <DCCReference Include="..\OtlCommBuufe.pas" />
-    <DCCReference Include="..\OtlCommBuufer.pas" />
-    <DCCReference Include="..\OtlCommBuuferT.pas" />
-    <DCCReference Include="..\OtlCommBuuferTe.pas" />
-    <DCCReference Include="..\OtlCommBuuferTes.pas" />
-    <DCCReference Include="..\OtlCommBuuferTest.pas" />
     <DCCReference Include="..\OtlCommon.pas" />
+    <DCCReference Include="..\OtlContainerObserver.pas" />
     <DCCReference Include="..\OtlContainers.pas" />
     <DCCReference Include="..\OtlEventMonitor.pas" />
-    <DCCReference Include="..\OtlT.pas" />
-    <DCCReference Include="..\OtlTa.pas" />
-    <DCCReference Include="..\OtlTas.pas" />
     <DCCReference Include="..\OtlTask.pas" />
     <DCCReference Include="..\OtlTaskControl.pas" />
-    <DCCReference Include="..\OtlTaskR.pas" />
-    <DCCReference Include="..\OtlTaskRu.pas" />
-    <DCCReference Include="..\OtlTaskRun.pas" />
-    <DCCReference Include="..\OtlTaskRunn.pas" />
-    <DCCReference Include="..\OtlTaskRunne.pas" />
-    <DCCReference Include="..\OtlTaskRunner.pas" />
     <DCCReference Include="..\OtlThreadPool.pas" />
     <DCCReference Include="..\src\DetailedRTTI.pas" />
     <DCCReference Include="..\src\DSiWin32.pas" />
@@ -71,9 +52,5 @@
     <DCCReference Include="..\src\HVStringBuilder.pas" />
     <DCCReference Include="..\src\HVStringData.pas" />
     <DCCReference Include="..\src\SpinLock.pas" />
-    <DCCReference Include="C:\Users\gabr\Desktop\OtlTaskRunnerin" />
-    <DCCReference Include="C:\Users\gabr\Desktop\rtl.dcp" />
-    <DCCReference Include="C:\Users\gabr\Desktop\vcl.dcp" />
-    <DCCReference Include="C:\Users\gabr\Desktop\vclx.dcp" />
   </ItemGroup>
 </Project>

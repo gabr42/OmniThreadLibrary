@@ -298,9 +298,11 @@ begin
   if not Result then begin
     ResetEvent(ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert));
     if DSiWaitForTwoObjects(ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert),
-        ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
-    then
-      Result := ceWriter_ref.Enqueue(msg);
+        ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0 then
+    begin
+      msg := ceReader_ref.Dequeue;
+      Result := true;
+    end;
   end;
 end; { TOmniCommunicationEndpoint.ReceiveWait }
 
@@ -339,6 +341,7 @@ begin
   Result := ceWriter_ref.Enqueue(msg);
   if not Result then begin
     ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
+    // TODO 1 -oPrimoz Gabrijelcic : Are we waiting on correct event? Add test for that.
     if DSiWaitForTwoObjects(ceWriter_Ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty),
         ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
     then

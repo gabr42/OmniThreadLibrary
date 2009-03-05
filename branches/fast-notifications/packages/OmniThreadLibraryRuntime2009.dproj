@@ -51,6 +51,7 @@
 			<DCCReference Include="..\src\DetailedRTTI.pas"/>
 			<DCCReference Include="..\OtlCommon.pas"/>
 			<DCCReference Include="..\OtlContainers.pas"/>
+			<DCCReference Include="..\OtlContainerObserver.pas"/>
 			<DCCReference Include="..\OtlCommBufferTest.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>

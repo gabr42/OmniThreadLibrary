@@ -30,9 +30,13 @@ uses
 {$R *.dfm}
 
 procedure ReceiveTestWorker(const task: IOmniTask);
+var
+  sl: TStringList;
 begin
   Sleep(2000);
-  task.Comm.Send(0, 'message 1');
+  sl := TStringList.Create;
+  sl.Add('message 1');
+  task.Comm.Send(0, sl);
   Sleep(10000);
 end;
 
@@ -44,8 +48,10 @@ var
 begin
   FReceiveTask := CreateTask(ReceiveTestWorker, 'Receive test worker').Run;
   Log('Task started; running ReceiveWait that should succeed');
-  if FReceiveTask.Comm.ReceiveWait(msg, 5000) then
-    Log('Message received: ' + msg.MsgData)
+  if FReceiveTask.Comm.ReceiveWait(msg, 5000) then begin
+    Log('Message received: ' + TStringList(msg.MsgData.AsObject).Text);
+    msg.MsgData.AsObject.Free;
+  end
   else
     Log('Receive failed');
   Log('Running ReceiveWait that should fail in 5 seconds because of timeout');

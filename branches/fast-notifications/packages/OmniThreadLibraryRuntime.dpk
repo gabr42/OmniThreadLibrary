@@ -43,6 +43,7 @@ contains
   DetailedRTTI in '..\src\DetailedRTTI.pas',
   OtlCommon in '..\OtlCommon.pas',
   OtlContainers in '..\OtlContainers.pas',
+  OtlContainerObserver in '..\OtlContainerObserver.pas',
   OtlCommBufferTest in '..\OtlCommBufferTest.pas',
   OtlComm in '..\OtlComm.pas',
   OtlTask in '..\OtlTask.pas',
