@@ -859,8 +859,6 @@ begin
   countBefore := oqInQueueCount;
   Result := inherited Dequeue(value);
   if Result then begin
-    // TODO 1 -oPrimoz Gabrijelcic : Move 'fast event' notification into an observer
-    //oqFastEventMsgInQueue :=
     countAfter := oqInQueueCount.Decrement;
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter = 0 then
@@ -893,11 +891,6 @@ begin
     oqFastEventMsgInQueue := True;
   end;
 end; { TOmniQueue.Enqueue }
-
-//function TOmniQueue.GetFastEventPtrMessageInQueue: PBoolean;
-//begin
-//  Result := @oqFastEventMsgInQueue;
-//end;  { TOmniQueue.GetFastEventPtrMessageInQueue }
 
 { initialization }
 

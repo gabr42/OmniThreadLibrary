@@ -76,7 +76,6 @@ type
   end; { TOmniMessage }
 
 const
-  //default queues are quite small
   CDefaultQueueSize = 128;
 
 type
@@ -144,7 +143,6 @@ type
   public
     constructor Create(readQueue, writeQueue: TOmniMessageQueue; taskTerminatedEvent_ref:
       THandle);
-    function  GetWriteQueueFreeSpaceEvent: THandle; inline;
     function  Reader: TOmniMessageQueue;
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
@@ -165,7 +163,7 @@ type
     procedure SetTerminateEvent(TerminateEvent: THandle);
     function  Writer: TOmniMessageQueue;
     property  NewMessageEvent: THandle read GetNewMessageEvent;
-    property  WriteQueueFreeSpaceEvent: THandle read GetWriteQueueFreeSpaceEvent;
+//    property  WriteQueueFreeSpaceEvent: THandle read GetWriteQueueFreeSpaceEvent;
   end; { TOmniCommunicationEndpoint }
 
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
@@ -212,7 +210,8 @@ constructor TOmniMessageQueue.Create(numMessages: integer);
 begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
-  ContainerSubject.Attach(mqWinEventObserver, [coiNotifyOnFirstInsert]);
+  // TODO 1 -oPrimoz Gabrijelcic : coiNotifyOnPartlyEmpty should be attached dynamically
+  ContainerSubject.Attach(mqWinEventObserver, [coiNotifyOnFirstInsert, coiNotifyOnPartlyEmpty]);
   // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
@@ -256,12 +255,6 @@ function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
   Result := ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert);
 end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
-
-function TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent: THandle;
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : I think ...
-  Result := ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty);
-end; { TOmniCommunicationEndpoint.GetWriteQueueFreeSpaceEvent }
 
 { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
@@ -341,7 +334,6 @@ begin
   Result := ceWriter_ref.Enqueue(msg);
   if not Result then begin
     ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
-    // TODO 1 -oPrimoz Gabrijelcic : Are we waiting on correct event? Add test for that.
     if DSiWaitForTwoObjects(ceWriter_Ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty),
         ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
     then

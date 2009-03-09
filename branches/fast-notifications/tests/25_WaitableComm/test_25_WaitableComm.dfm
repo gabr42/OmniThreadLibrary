@@ -35,4 +35,13 @@ object frmWaitableCommDemo: TfrmWaitableCommDemo
     TabOrder = 1
     OnClick = btnReceiveClick
   end
+  object btnSendWait: TButton
+    Left = 8
+    Top = 39
+    Width = 75
+    Height = 25
+    Caption = 'SendWait'
+    TabOrder = 2
+    OnClick = btnSendWaitClick
+  end
 end
