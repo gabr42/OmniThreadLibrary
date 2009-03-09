@@ -1895,8 +1895,6 @@ begin
   EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
     integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-  otcSharedInfo.CommChannel.Endpoint1.SetTerminateEvent(otcSharedInfo.TerminateEvent);
-  otcSharedInfo.CommChannel.Endpoint2.SetTerminateEvent(otcSharedInfo.TerminateEvent);
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 

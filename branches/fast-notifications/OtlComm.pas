@@ -97,7 +97,6 @@ type
     function  SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
     function  SendWait(msgID: word; msgData: TOmniValue; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam: integer);
-    procedure SetTerminateEvent(TerminateEvent: THandle);
     function Writer: TOmniMessageQueue; 
     property NewMessageEvent: THandle read GetNewMessageEvent;
   end; { IOmniCommunicationEndpoint }
@@ -148,7 +147,6 @@ type
     function  Reader: TOmniMessageQueue;
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
-// TODO 1 -oPrimoz Gabrijelcic : Make more complete set of of Wait methods    
     function  ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean; overload; inline;
     function  ReceiveWait(var msgID: word; var msgData: TOmniValue; timeout_ms: cardinal):
       boolean; overload; inline;
@@ -162,10 +160,8 @@ type
       timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
     procedure SetMonitor(hWindow: THandle; msg: cardinal; messageWParam, messageLParam:
       integer); inline;
-    procedure SetTerminateEvent(TerminateEvent: THandle);
     function  Writer: TOmniMessageQueue;
     property  NewMessageEvent: THandle read GetNewMessageEvent;
-//    property  WriteQueueFreeSpaceEvent: THandle read GetWriteQueueFreeSpaceEvent;
   end; { TOmniCommunicationEndpoint }
 
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
@@ -386,13 +382,6 @@ begin
   ceWriter_ref.MonitorSupport.SetMonitor(CreateOmniMonitorParams(
     hWindow, msg, messageWParam, messageLParam));
 end; { TOmniCommunicationEndpoint.SetMonitor }
-
-procedure TOmniCommunicationEndpoint.SetTerminateEvent(TerminateEvent: THandle);
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : Rethink this approach
-//  ceWriter_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
-//  ceReader_ref.NotifySupport.SetTerminateEvent(TerminateEvent);
-end; { TOmniCommunicationEndpoint.SetTerminateEvent }
 
 function TOmniCommunicationEndpoint.Writer: TOmniMessageQueue;
 begin
