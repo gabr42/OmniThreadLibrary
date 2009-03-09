@@ -69,6 +69,16 @@ begin
     FreeAndNil(sm);
   end;
   task.Comm.Send(0);
+  Sleep(5000);
+  for i := 1 to 128 do begin
+    if not task.Comm.ReceiveWait(msg, 1000) then
+      raise Exception.Create('SendTestWorker failed');
+    sm := TSendMsg(msg.MsgData.AsObject);
+    if sm.MsgCount <> i then
+      raise Exception.Create('SendTestWorker failed');
+    FreeAndNil(sm);
+  end;
+  task.Comm.Send(0);
 end;
 
 { TfrmWaitableCommDemo }
@@ -110,17 +120,33 @@ var
   i           : integer;
   msg         : TOmniMessage;
   sendTestTask: IOmniTaskControl;
+  sm          : TSendMsg;
 begin
   sendTestTask := CreateTask(SendTestWorker, 'Send test worker').Run;
   Log('Task started, sending 256 messages');
-  for i := 1 to 256 do begin
+  for i := 1 to 256 do 
     if not sendTestTask.Comm.SendWait(1, TSendMsg.Create(i), 10000 {10 sec}) then
       Log('SendWait failed where it shouldn''t');
+  if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
+    Log('Timeout waiting for EOT')
+  else
+    Log('All received');
+  Log('Sending 129 messages, last should timeout');
+  for i := 1 to 129 do begin
+    sm := TSendMsg.Create(i);
+    if not sendTestTask.Comm.SendWait(1, sm) then begin
+      if i < 129 then
+        Log('SendWait failed where it shouldn''t')
+      else begin
+        Log('Timeout');
+        FreeAndNil(sm);
+      end;
+    end;
   end;
   if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
     Log('Timeout waiting for EOT')
   else
-    Log('All sent');
+    Log('Test complete');
   sendTestTask.Terminate;
   sendTestTask := nil;
 end;
