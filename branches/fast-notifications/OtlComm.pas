@@ -111,12 +111,14 @@ type
   }
   TOmniMessageQueue = class(TOmniQueue)
   strict private
+    mqInterests       : TOmniContainerObserverInterests;
     mqWinEventObserver: IOmniContainerWindowsEventObserver;
   public
     constructor Create(numMessages: integer); reintroduce;
     destructor  Destroy; override;
     function  Dequeue: TOmniMessage; reintroduce;
     function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
+    procedure RequireObserver(interest: TOmniContainerObserverInterest);
     property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
@@ -210,8 +212,7 @@ constructor TOmniMessageQueue.Create(numMessages: integer);
 begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
-  // TODO 1 -oPrimoz Gabrijelcic : coiNotifyOnPartlyEmpty should be attached dynamically
-  ContainerSubject.Attach(mqWinEventObserver, [coiNotifyOnFirstInsert, coiNotifyOnPartlyEmpty]);
+  RequireObserver(coiNotifyOnFirstInsert);
   // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
@@ -239,6 +240,14 @@ begin
   Result := inherited Enqueue(tmp);
   tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
+
+procedure TOmniMessageQueue.RequireObserver(interest: TOmniContainerObserverInterest);
+begin
+  if not (interest in mqInterests) then begin
+    Include(mqInterests, interest);
+    ContainerSubject.Attach(mqWinEventObserver, mqInterests);
+  end;
+end; { TOmniMessageQueue.RequireObserver }
 
 { TOmniCommunicationEndpoint }
 
@@ -333,6 +342,7 @@ begin
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
   if not Result then begin
+    ceWriter_ref.RequireObserver(coiNotifyOnPartlyEmpty);
     ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
     if DSiWaitForTwoObjects(ceWriter_Ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty),
         ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
