@@ -234,7 +234,8 @@ var
 begin
   tmp := value;
   Result := inherited Enqueue(tmp);
-  tmp.MsgData.RawZero;
+  if Result then
+    tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
 
 procedure TOmniMessageQueue.RequireObserver(interest: TOmniContainerObserverInterest);
@@ -345,6 +346,8 @@ begin
     then
       Result := ceWriter_ref.Enqueue(msg);
   end;
+  if not Result then
+    msg.msgData := TOmniValue.Null;
 end; { TOmniCommunicationEndpoint.SendWait }
 
 function TOmniCommunicationEndpoint.SendWait(msgID: word;

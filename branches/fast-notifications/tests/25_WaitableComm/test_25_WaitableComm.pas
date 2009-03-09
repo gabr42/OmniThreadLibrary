@@ -79,6 +79,12 @@ begin
     FreeAndNil(sm);
   end;
   task.Comm.Send(0);
+  Sleep(5000);
+  for i := 1 to 128 do begin
+    if not task.Comm.ReceiveWait(msg, 1000) then
+      raise Exception.Create('SendTestWorker failed');
+  end;
+  task.Comm.Send(0);
 end;
 
 { TfrmWaitableCommDemo }
@@ -141,6 +147,19 @@ begin
         Log('Timeout');
         FreeAndNil(sm);
       end;
+    end;
+  end;
+  if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
+    Log('Timeout waiting for EOT')
+  else
+    Log('Test complete');
+  Log('Sending 129 messages, last should timeout');
+  for i := 1 to 129 do begin
+    if not sendTestTask.Comm.SendWait(1, IntToStr(i)) then begin
+      if i < 129 then
+        Log('SendWait failed where it shouldn''t')
+      else 
+        Log('Timeout');
     end;
   end;
   if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
