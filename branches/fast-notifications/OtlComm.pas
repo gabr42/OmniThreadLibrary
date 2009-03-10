@@ -107,6 +107,7 @@ type
   end; { IOmniTwoWayChannel }
 
   {:Fixed-size ring buffer of TOmniValues references.
+    WARNING Supports only one writer and one reader WARNING
   }
   TOmniMessageQueue = class(TOmniQueue)
   strict private
