@@ -297,11 +297,14 @@ begin
   Result := Receive(msg);
   if not Result then begin
     ResetEvent(ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert));
-    if DSiWaitForTwoObjects(ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert),
-        ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0 then
-    begin
-      msg := ceReader_ref.Dequeue;
-      Result := true;
+    Result := Receive(msg);
+    if not Result then begin
+      if DSiWaitForTwoObjects(ceReader_ref.EventObserver.GetEvent(coiNotifyOnFirstInsert),
+          ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0 then
+      begin
+        msg := ceReader_ref.Dequeue;
+        Result := true;
+      end;
     end;
   end;
 end; { TOmniCommunicationEndpoint.ReceiveWait }
@@ -340,12 +343,15 @@ begin
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
   if not Result then begin
-    ceWriter_ref.RequireObserver(coiNotifyOnPartlyEmpty);
+    ceWriter_ref.RequireObserver(coiNotifyOnPartlyEmpty); //not subscribed by default
     ResetEvent(ceWriter_ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty));
-    if DSiWaitForTwoObjects(ceWriter_Ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty),
-        ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
-    then
-      Result := ceWriter_ref.Enqueue(msg);
+    Result := ceWriter_ref.Enqueue(msg);
+    if not Result then begin
+      if DSiWaitForTwoObjects(ceWriter_Ref.EventObserver.GetEvent(coiNotifyOnPartlyEmpty),
+          ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0
+      then
+        Result := ceWriter_ref.Enqueue(msg);
+    end;
   end;
   if not Result then
     msg.msgData := TOmniValue.Null;
