@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-05
-///   Version           : 1.03
+///   Last modification : 2009-03-13
+///   Version           : 1.03a
 ///</para><para>
 ///   History:
+///     1.03a: 2009-03-13
+///       - [Lee_Nover] Added TOmniValue interface _AddRef in Enqueue and _Release in 
+///         Dequeue (only called when TOmniValue contains an interface).
 ///     1.03: 2008-10-05
 ///       - Added two overloaded versions of IOmniCommunicationEndpoint.ReceivedWait,
 ///         which are just simple wrappers for WaitForSingleObject(NewMessageEvent) +
@@ -195,6 +198,8 @@ begin
   if not inherited Dequeue(tmp) then
     raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
   Result := tmp;
+  if tmp.MsgData.IsInterface then
+    tmp.MsgData.AsInterface._Release;
 end; { TOmniMessageQueue.Dequeue }
 
 function TOmniMessageQueue.Enqueue(const value: TOmniMessage): boolean;
@@ -202,6 +207,8 @@ var
   tmp: TOmniMessage;
 begin
   tmp := value;
+  if tmp.MsgData.IsInterface then
+    tmp.MsgData.AsInterface._AddRef;
   Result := inherited Enqueue(tmp);
   tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
