@@ -21,15 +21,17 @@ type
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
     btnSendBool: TButton;
+    btnSendIntf: TButton;
     procedure btnSendBoolClick(Sender: TObject);
     procedure btnSendFloatClick(Sender: TObject);
+    procedure btnSendIntfClick(Sender: TObject);
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   private
     FClient1    : IOmniTaskControl;
     FClient2    : IOmniTaskControl;
@@ -119,6 +121,17 @@ begin
   e := a;
 end;
 
+procedure TfrmTestRegisterComm.btnSendIntfClick(Sender: TObject);
+var
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  sl.Add('123');
+  sl.Add('abc');
+  Log('Sending TStringList to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, sl);
+end;
+
 procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
 var
   sl: TStringList;
@@ -176,28 +189,26 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestRegisterComm.OmniTEDTaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestRegisterComm.OmniTEDTaskMessage(const task: IOmniTaskControl; const
+  msg: TOmniMessage);
 var
-  msgData: TOmniValue;
-  msgID  : word;
-  sData  : string;
-  sl     : TStringList;
+  sData: string;
+  sl   : TStringList;
 begin
-  task.Comm.Receive(msgID, msgData);
-  if not msgData.IsObject then
-    sData := msgData
+  if not msg.msgData.IsObject then
+    sData := msg.msgData
   else begin
-    sl := TStringList(msgData.AsObject);
+    sl := TStringList(msg.msgData.AsObject);
     sData := sl.ClassName + '/' + sl.Text;
-    if msgID = MSG_NOTIFY_RECEPTION then
+    if msg.msgID = MSG_NOTIFY_RECEPTION then
       sl.Free;
   end;
-  if msgID = MSG_NOTIFY_FORWARD then
+  if msg.msgID = MSG_NOTIFY_FORWARD then
     Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, sData]))
-  else if msgID = MSG_NOTIFY_RECEPTION then
+  else if msg.msgID = MSG_NOTIFY_RECEPTION then
     Log(Format('[%d/%s] Notify reception of %s', [task.UniqueID, task.Name, sData]))
   else
-    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msgID, sData]));
+    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msg.msgID, sData]));
 end;
 
 end.
