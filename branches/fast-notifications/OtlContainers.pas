@@ -878,7 +878,7 @@ begin
   Result := inherited Enqueue(value);
   if Result then begin
     countAfter := oqInQueueCount.Increment;
-    if countAfter = 1 then
+    if (countBefore = 0) and (countAfter > 0) then
       ContainerSubject.Notify(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
     if (countBefore < oqAlmostFullCount) and
