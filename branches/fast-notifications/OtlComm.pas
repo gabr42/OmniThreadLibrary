@@ -210,7 +210,6 @@ begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   mqWinEventObserver := CreateContainerWindowsEventObserver;
   RequireObserver(coiNotifyOnFirstInsert);
-  // TODO 1 -oPrimoz Gabrijelcic : We don't need monitor and notification subsystem in every queue!
 end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;

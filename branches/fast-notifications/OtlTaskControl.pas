@@ -104,6 +104,10 @@
 ///  - A single-word reader/writer spin lock,
 ///    http://www.bluebytesoftware.com/blog/2009/01/30/ASinglewordReaderwriterSpinLock.aspx
 
+// TODO 3 -oPrimoz Gabrijelcic : Implement message bus (subscribe/publish)
+// http://209.85.129.132/search?q=cache:B2PbIgFSyLcJ:www.dojotoolkit.org/book/dojo-book-0-9/part-3-programmatic-dijit-and-dojo/event-system/publish-and-subscribe-events+dojo+subscribe+publish&hl=sl&client=opera&strip=1
+// http://msdn.microsoft.com/en-us/library/ms978583.aspx
+
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
 {$IFEND}
@@ -295,7 +299,7 @@ type
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
   public
-    function GetTaskRefreshTimeOut: boolean;
+    function  GetTaskRefreshTimeOut: boolean;
     procedure ResetTaskRefreshTimeOut;
     procedure SetTaskRefreshTimeOut;
     property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
@@ -1183,16 +1187,18 @@ begin
   then
     Exit
   else if (awaited >= msgInfo.IdxFirstMessage) and (awaited <= msgInfo.IdxLastMessage) then begin
-    if awaited = msgInfo.IdxFirstMessage then
-      gotMsg := task.Comm.Receive(msg)
-    else begin
-      oteInternalLock.Acquire;
-      try
-        gotMsg := (oteCommList[awaited - msgInfo.IdxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
-      finally oteInternalLock.Release; end;
-    end;
-    if gotMsg and assigned(WorkerIntf) then 
-      DispatchOmniMessage(msg);
+    repeat
+      if awaited = msgInfo.IdxFirstMessage then
+        gotMsg := task.Comm.Receive(msg)
+      else begin
+        oteInternalLock.Acquire;
+        try
+          gotMsg := (oteCommList[awaited - msgInfo.IdxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
+        finally oteInternalLock.Release; end;
+      end;
+      if gotMsg and assigned(WorkerIntf) then
+        DispatchOmniMessage(msg);
+    until not gotMsg;
   end // comm handles
   else if awaited = msgInfo.IdxRebuildHandles then
     RebuildWaitHandles(task, msgInfo)
