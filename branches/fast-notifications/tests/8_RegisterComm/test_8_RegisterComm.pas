@@ -68,6 +68,19 @@ type
     procedure OMForwarding(var msg: TOmniMessage); message MSG_FORWARDING;
   end; { TCommTester }
 
+  IDataIntf = interface ['{9A2EA2D3-5615-48D1-B878-D083B1802522}']
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  end; { IDataIntf }
+
+  TDataIntf = class(TInterfacedObject, IDataIntf)
+  strict private
+    FValue: integer;
+  public
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  end; { TDataIntf }
+
 { TCommTester }
 
 constructor TCommTester.Create(commEndpoint: IOmniCommunicationEndpoint);
@@ -123,13 +136,12 @@ end;
 
 procedure TfrmTestRegisterComm.btnSendIntfClick(Sender: TObject);
 var
-  sl: TStringList;
+  intf: IDataIntf;
 begin
-  sl := TStringList.Create;
-  sl.Add('123');
-  sl.Add('abc');
-  Log('Sending TStringList to task 1');
-  FClient1.Comm.Send(MSG_FORWARD, sl);
+  intf := TDataIntf.Create;
+  intf.SetValue(42);
+  Log('Sending IDataIntf to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, intf);
 end;
 
 procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
@@ -195,14 +207,16 @@ var
   sData: string;
   sl   : TStringList;
 begin
-  if not msg.msgData.IsObject then
-    sData := msg.msgData
-  else begin
+  if msg.msgData.IsInterface then 
+    sData := IntToStr((msg.MsgData.AsInterface as IDataIntf).GetValue)
+  else if msg.msgData.IsObject then begin
     sl := TStringList(msg.msgData.AsObject);
     sData := sl.ClassName + '/' + sl.Text;
     if msg.msgID = MSG_NOTIFY_RECEPTION then
       sl.Free;
-  end;
+  end
+  else
+    sData := msg.msgData;
   if msg.msgID = MSG_NOTIFY_FORWARD then
     Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, sData]))
   else if msg.msgID = MSG_NOTIFY_RECEPTION then
@@ -210,5 +224,15 @@ begin
   else
     Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msg.msgID, sData]));
 end;
+
+function TDataIntf.GetValue: integer;
+begin
+  Result := FValue;
+end; { TDataIntf.GetValue }
+
+procedure TDataIntf.SetValue(const value: integer);
+begin
+  FValue := value;
+end; { TDataIntf.SetValue }
 
 end.
