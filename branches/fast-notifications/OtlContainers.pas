@@ -185,7 +185,6 @@ type
   strict private
     oqAlmostFullCount    : integer;
     oqContainerSubject   : IOmniContainerSubject;
-    oqFastEventMsgInQueue: boolean;
     oqInQueueCount       : TGp4AlignedInt;
     oqMonitorSupport     : IOmniMonitorSupport;
     oqOptions            : TOmniContainerOptions;
@@ -888,7 +887,6 @@ begin
       ContainerSubject.Notify(coiNotifyOnAlmostFull);
     if coEnableMonitor in Options then
       oqMonitorSupport.Notify;
-    oqFastEventMsgInQueue := True;
   end;
 end; { TOmniQueue.Enqueue }
 
