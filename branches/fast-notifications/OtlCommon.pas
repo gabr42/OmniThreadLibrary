@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-02-03
-///   Version           : 1.02
+///   Last modification : 2009-03-30
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2009-03-30
+///       - TOmniCS and IOmniCriticalSection moved to the OtlSync unit.
 ///     1.02a: 2009-02-09
 ///       - Simplified TOmniCS.Initialize.
 ///     1.02: 2009-02-03
@@ -72,7 +74,6 @@ uses
   SysUtils,
   Classes,
   Variants,
-  SyncObjs,
   GpStuff;
 
 const
@@ -244,23 +245,6 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { IInterfaceHash }
 
-  IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
-    procedure Acquire;
-    procedure Release;
-    function  GetSyncObj: TSynchroObject;
-  end; { IOmniCriticalSection }
-
-  TOmniCS = record
-  private
-    ocsSync: IOmniCriticalSection;
-    function  GetSyncObj: TSynchroObject;
-  public
-    procedure Initialize;
-    procedure Acquire; inline;
-    procedure Release; inline;
-    property SyncObj: TSynchroObject read GetSyncObj;
-  end; { TOmniCS }
-
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
 
   function CreateOmniMonitorParams(window: THandle; msg: cardinal;
@@ -268,8 +252,6 @@ type
   function CreateOmniMonitorSupport: IOmniMonitorSupport;
 
   function CreateInterfaceDictionary: IInterfaceDictionary;
-
-  function CreateOmniCriticalSection: IOmniCriticalSection;
 
   procedure SetThreadName(const name: string);
 
@@ -424,17 +406,6 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { TInterfaceDictionary }
 
-  TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
-  strict private
-    ocsCritSect: TSynchroObject;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Acquire; inline;
-    function  GetSyncObj: TSynchroObject;
-    procedure Release; inline;
-  end; { TOmniCriticalSection }
-
 { exports }
 
 function CreateCounter(initialValue: integer): IOmniCounter;
@@ -457,11 +428,6 @@ function CreateInterfaceDictionary: IInterfaceDictionary;
 begin
   Result := TInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
-
-function CreateOmniCriticalSection: IOmniCriticalSection;
-begin
-  Result := TOmniCriticalSection.Create;
-end; { CreateOmniCriticalSection }
 
 procedure SetThreadName(const name: string);
 type
@@ -1216,64 +1182,6 @@ procedure TOmniExtendedData.SetValue(const value: Extended);
 begin
   oedValue := value;
 end; { TOmniExtendedData.SetValue }
-
-{ TOmniCS }
-
-procedure TOmniCS.Acquire;
-begin
-  Initialize;
-  ocsSync.Acquire;
-end; { TOmniCS.Acquire }
-
-function TOmniCS.GetSyncObj: TSynchroObject;
-begin
-  Initialize;
-  Result := ocsSync.GetSyncObj;
-end; { TOmniCS.GetSyncObj }
-
-procedure TOmniCS.Initialize;
-var
-  syncIntf: IOmniCriticalSection;
-begin
-  Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
-  if not assigned(ocsSync) then begin
-    syncIntf := CreateOmniCriticalSection;
-    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then
-      pointer(syncIntf) := nil;
-  end;
-end; { TOmniCS.Initialize }
-
-procedure TOmniCS.Release;
-begin
-  ocsSync.Release;
-end; { TOmniCS.Release }
-
-{ TOmniCriticalSection }
-
-constructor TOmniCriticalSection.Create;
-begin
-  ocsCritSect := TCriticalSection.Create;
-end; { TOmniCriticalSection.Create }
-
-destructor TOmniCriticalSection.Destroy;
-begin
-  FreeAndNil(ocsCritSect);
-end; { TOmniCriticalSection.Destroy }
-
-procedure TOmniCriticalSection.Acquire;
-begin
-  ocsCritSect.Acquire;
-end; { TOmniCriticalSection.Acquire }
-
-function TOmniCriticalSection.GetSyncObj: TSynchroObject;
-begin
-  Result := ocsCritSect;
-end; { TOmniCriticalSection.GetSyncObj }
-
-procedure TOmniCriticalSection.Release;
-begin
-  ocsCritSect.Release;
-end; { TOmniCriticalSection.Release }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal));

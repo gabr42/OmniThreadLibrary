@@ -5,7 +5,8 @@ uses
   Forms,
   test_8_RegisterComm in 'test_8_RegisterComm.pas' {frmTestRegisterComm},
   OtlComm in '..\..\OtlComm.pas',
-  OtlTask in '..\..\OtlTask.pas';
+  OtlTask in '..\..\OtlTask.pas',
+  OtlSync in '..\..\OtlSync.pas';
 
 {$R *.res}
 

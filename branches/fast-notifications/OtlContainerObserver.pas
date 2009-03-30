@@ -36,7 +36,7 @@
 ///</para><para>
 ///   History:
 ///     1.0: 2009-03-30
-///       - Release.
+///       - First official release.
 ///</para></remarks>
 
 unit OtlContainerObserver;
@@ -114,7 +114,8 @@ uses
   Windows,
   SysUtils,
   DSiWin32,
-  OtlCommon;
+  OtlCommon,
+  OtlSync;
 
 type
   TOmniContainerWindowsEventObserver = class(TInterfacedObject,

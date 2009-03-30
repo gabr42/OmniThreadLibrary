@@ -121,14 +121,16 @@ uses
   Windows, SysUtils, Variants, Classes, SyncObjs, Messages, TypInfo,   ObjAuto,
   GpStuff,
   OtlCommon,
+  OtlSync,
   OtlComm,
   OtlTask,
   OtlContainers,
   OtlThreadPool,
+  OtlContainerObserver,
   DetailedRTTI,
   DSiWin32,
   GpLists,
-  GpStringHash, OtlContainerObserver;
+  GpStringHash;
 
 type
   IOmniTaskControl = interface;
@@ -326,7 +328,6 @@ type
   function CreateTaskControlList: IOmniTaskControlList;
 
 type
-
   TOmniInternalMessageType = (imtStringMsg, imtAddressMsg);
 
   TOmniInternalMessage = class

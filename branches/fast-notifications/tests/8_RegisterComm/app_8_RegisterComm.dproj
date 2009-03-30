@@ -41,6 +41,7 @@
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <DCCReference Include="..\..\OtlComm.pas" />
+    <DCCReference Include="..\..\OtlSync.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="test_8_RegisterComm.pas">
       <Form>frmTestRegisterComm</Form>

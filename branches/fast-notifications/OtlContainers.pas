@@ -880,8 +880,6 @@ begin
        (countAfter >= oqAlmostFullCount)
     then
       ContainerSubject.Notify(coiNotifyOnAlmostFull);
-//    if coEnableMonitor in Options then
-//      oqMonitorSupport.Notify;
   end;
 end; { TOmniQueue.Enqueue }
 
