@@ -45,7 +45,7 @@ interface
 
 uses
   Classes,
-  GpStuff;
+  GpStuff, SyncObjs;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -86,8 +86,9 @@ type
   TOmniContainerObserverEnumFactory = record
   strict private
     coefObserverList_ref: TList;
+    coefSyncObj_ref     : TSynchroObject;
   public
-    constructor Create(observerList: TList);
+    constructor Create(observerList: TList; syncObj: TSynchroObject);
     function  GetEnumerator: IOmniContainerObserverEnum;
   end; { TOmniContainerObserverEnumFactory }
 
@@ -111,7 +112,8 @@ implementation
 uses
   Windows,
   SysUtils,
-  DSiWin32;
+  DSiWin32,
+  OtlCommon;
 
 type
   TOmniContainerWindowsEventObserver = class(TInterfacedObject,
@@ -140,9 +142,10 @@ type
   TOmniContainerObserverEnum = class(TInterfacedObject, IOmniContainerObserverEnum)
   strict private
     coeObserverEnum: TListEnumerator;
+    coeSyncObj_ref : TSynchroObject;
   public
-    constructor Create(observerList: TList);
-    destructor Destroy; override;
+    constructor Create(observerList: TList; syncObj: TSynchroObject);
+    destructor  Destroy; override;
     function  GetCurrent: IOmniContainerObserver;
     function  MoveNext: boolean;
     property Current: IOmniContainerObserver read GetCurrent;
@@ -153,7 +156,8 @@ type
   TOmniContainerObserverList = class(TInterfacedObject, IOmniContainerObserverList)
   strict private
     colInterestLists: array [TOmniContainerObserverInterest] of TList;
-    colObserverList: TInterfaceList;
+    colLock         : TOmniCS; // TODO 3 -oPrimoz Gabrijelcic : Should be SWMR
+    colObserverList : TInterfaceList;
   public
     constructor Create;
     destructor  Destroy; override;
@@ -226,13 +230,16 @@ end; { TOmniContainerWindowsMessageObserver.Notify }
 
 { TOmniContainerObserverEnum }
 
-constructor TOmniContainerObserverEnum.Create(observerList: TList);
+constructor TOmniContainerObserverEnum.Create(observerList: TList; syncObj:
+  TSynchroObject);
 begin
   coeObserverEnum := observerList.GetEnumerator;
+  coeSyncObj_ref := syncObj;
 end; { TOmniContainerObserverEnum.Create }
 
 destructor TOmniContainerObserverEnum.Destroy;
 begin
+  coeSyncObj_ref.Release;
   FreeAndNil(coeObserverEnum);
   inherited;
 end; { TOmniContainerObserverEnum.Destroy }
@@ -251,14 +258,16 @@ end; { TOmniContainerObserverEnum.MoveNext }
 
 { TOmniContainerObserverEnumFactory }
 
-constructor TOmniContainerObserverEnumFactory.Create(observerList: TList);
+constructor TOmniContainerObserverEnumFactory.Create(observerList: TList; syncObj:
+  TSynchroObject);
 begin
   coefObserverList_ref := observerList;
+  coefSyncObj_ref := syncObj;
 end; { TOmniContainerObserverEnumFactory.Create }
 
 function TOmniContainerObserverEnumFactory.GetEnumerator: IOmniContainerObserverEnum;
 begin
-  Result := TOmniContainerObserverEnum.Create(coefObserverList_ref);
+  Result := TOmniContainerObserverEnum.Create(coefObserverList_ref, coefSyncObj_ref);
 end; { TOmniContainerObserverEnumFactory.GetEnumerator }
 
 { TOmniContainerObserverList }
@@ -289,16 +298,18 @@ procedure TOmniContainerObserverList.Add(const observer: IOmniContainerObserver;
   interest: TOmniContainerObserverInterest);
 begin
   Remove(observer);
-  // TODO 1 -oPrimoz Gabrijelcic : Locking!
-  colObserverList.Add(observer);
-  colInterestLists[interest].Add(pointer(observer));
+  colLock.Acquire;
+  try
+    colObserverList.Add(observer);
+    colInterestLists[interest].Add(pointer(observer));
+  finally colLock.Release; end;
 end; { TOmniContainerObserverList.Add }
 
 function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):
   TOmniContainerObserverEnumFactory;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Locking!
-  Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest]);
+  colLock.Acquire;
+  Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest], colLock.SyncObj);
 end; { TOmniContainerObserverList.Enumerate }
 
 procedure TOmniContainerObserverList.Remove(const observer: IOmniContainerObserver);
@@ -308,13 +319,15 @@ var
 begin
   if not assigned(observer) then
     Exit;
-  // TODO 1 -oPrimoz Gabrijelcic : Locking!
-  idxObserver := colObserverList.IndexOf(observer);
-  if idxObserver < 0 then
-    Exit;
-  colObserverList.Delete(idxObserver);
-  for interest := Low(interest) to High(interest) do
-    colInterestLists[interest].Remove(pointer(observer));
+  colLock.Acquire;
+  try
+    idxObserver := colObserverList.IndexOf(observer);
+    if idxObserver < 0 then
+      Exit;
+    colObserverList.Delete(idxObserver);
+    for interest := Low(interest) to High(interest) do
+      colInterestLists[interest].Remove(pointer(observer));
+  finally colLock.Release; end;
 end; { TOmniContainerObserverList.Remove }
 
 end.

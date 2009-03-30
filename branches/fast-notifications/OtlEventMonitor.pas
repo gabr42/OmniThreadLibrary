@@ -187,14 +187,13 @@ begin
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then
-      begin
+      if assigned(task) then begin
         task.SharedInfo.ResetTaskRefreshTimeOut;
         TickCount := GetTickCount;
         while task.Comm.Receive(tedCurrentMsg) do begin
           if assigned(tedOnTaskMessage) then
             tedOnTaskMessage(task, tedCurrentMsg);
-          if {MonitorOnlyFirstInQueue and }(TickCount + 8 < GetTickCount) then begin
+          if (TickCount + 8 < GetTickCount) then begin
             if assigned(tedOnRefreshTimeOut) then // TODO 1 -oPrimoz Gabrijelcic : What is that?
               tedOnRefreshTimeOut(task);
             if AllMonitoredTasks.Count > 1 then
