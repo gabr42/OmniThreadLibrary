@@ -189,34 +189,27 @@ begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then
       begin
-        {if HandleEventsDirectly then
-        repeat
+        task.SharedInfo.ResetTaskRefreshTimeOut;
+        TickCount := GetTickCount;
+        while task.Comm.Receive(tedCurrentMsg) do begin
           if assigned(tedOnTaskMessage) then
-            tedOnTaskMessage(task);
-        until not MonitorOnlyFirstInQueue or task.Comm.Reader.IsEmpty
-        else} begin
-          task.SharedInfo.ResetTaskRefreshTimeOut;
-          TickCount := GetTickCount;
-          while task.Comm.Receive(tedCurrentMsg) do begin
-            if assigned(tedOnTaskMessage) then
-              tedOnTaskMessage(task, tedCurrentMsg);
-            if {MonitorOnlyFirstInQueue and }(TickCount + 8 < GetTickCount) then begin
-              if assigned(tedOnRefreshTimeOut) then // TODO 1 -oPrimoz Gabrijelcic : What is that?
-                tedOnRefreshTimeOut(task);
-              if AllMonitoredTasks.Count > 1 then
-                for n := 0 to AllMonitoredTasks.Count -1 do begin
-                  ntSharedInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
-                  if (ntSharedInfo <> task.SharedInfo) and not ntSharedInfo.TaskRefreshTimeOut then begin
-                    PostMessage(ntSharedInfo.MonitorWindow, COmniTaskMsg_NewMessage,
-                      Int64Rec(ntSharedInfo.UniqueID).Lo, Int64Rec(ntSharedInfo.UniqueID).Hi);
-                    ntSharedInfo.SetTaskRefreshTimeOut;
-                  end;
+            tedOnTaskMessage(task, tedCurrentMsg);
+          if {MonitorOnlyFirstInQueue and }(TickCount + 8 < GetTickCount) then begin
+            if assigned(tedOnRefreshTimeOut) then // TODO 1 -oPrimoz Gabrijelcic : What is that?
+              tedOnRefreshTimeOut(task);
+            if AllMonitoredTasks.Count > 1 then
+              for n := 0 to AllMonitoredTasks.Count -1 do begin
+                ntSharedInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
+                if (ntSharedInfo <> task.SharedInfo) and not ntSharedInfo.TaskRefreshTimeOut then begin
+                  PostMessage(ntSharedInfo.MonitorWindow, COmniTaskMsg_NewMessage,
+                    Int64Rec(ntSharedInfo.UniqueID).Lo, Int64Rec(ntSharedInfo.UniqueID).Hi);
+                  ntSharedInfo.SetTaskRefreshTimeOut;
                 end;
-              //At last post to self!
-              PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
-              task.SharedInfo.SetTaskRefreshTimeOut;
-              break;
-            end;
+              end;
+            //At last post to self!
+            PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
+            task.SharedInfo.SetTaskRefreshTimeOut;
+            break;
           end;
         end;
       end;
@@ -226,30 +219,18 @@ begin
   else if msg.Msg = COmniTaskMsg_Terminated then begin
     if assigned(OnTaskTerminated) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then
-        {if HandleEventsDirectly then
-        begin
-          SharedTaskInfo := TOmniTaskControl(task.GetSelf).SharedInfo;
-          while not SharedTaskInfo.CommChannel.Endpoint1.Reader.IsEmpty do
-            if Assigned(tedOnTaskMessage) then
-              tedOnTaskMessage(task);
-          while not SharedTaskInfo.CommChannel.Endpoint2.Reader.IsEmpty  do
-            if Assigned(tedOnTaskUndeliveredMessage) then
-              tedOnTaskUndeliveredMessage(task);
-          if Assigned(tedOnTaskTerminated) then
-            OnTaskTerminated(task);
-        end else} begin
-          while task.SharedInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
-            if Assigned(tedOnTaskMessage) then
-              tedOnTaskMessage(task, tedCurrentMsg);
-          while task.SharedInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
-            if Assigned(tedOnTaskUndeliveredMessage) then
-              tedOnTaskUndeliveredMessage(task);
-          if Assigned(tedOnTaskTerminated) then
-            OnTaskTerminated(task);
-          AllMonitoredTasks.Remove(pointer(task.SharedInfo));          
-        end;
+      if assigned(task) then begin
+        while task.SharedInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
+          if Assigned(tedOnTaskMessage) then
+            tedOnTaskMessage(task, tedCurrentMsg);
+        while task.SharedInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
+          if Assigned(tedOnTaskUndeliveredMessage) then
+            tedOnTaskUndeliveredMessage(task);
+        if Assigned(tedOnTaskTerminated) then
+          OnTaskTerminated(task);
+        AllMonitoredTasks.Remove(pointer(task.SharedInfo));
       end;
+    end;
     Detach(task);
     msg.Result := 0;
   end
