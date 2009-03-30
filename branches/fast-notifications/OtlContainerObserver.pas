@@ -31,12 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-02-19
-///   Last modification : 2009-02-19
-///   Version           : 0.1
+///   Last modification : 2009-03-30
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.1: 2009-02-19
-///       - Created.
+///     1.0: 2009-03-30
+///       - Release.
 ///</para></remarks>
 
 unit OtlContainerObserver;
@@ -45,7 +45,8 @@ interface
 
 uses
   Classes,
-  GpStuff, SyncObjs;
+  SyncObjs,
+  GpStuff;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -308,7 +309,7 @@ end; { TOmniContainerObserverList.Add }
 function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):
   TOmniContainerObserverEnumFactory;
 begin
-  colLock.Acquire;
+  colLock.Acquire; //will be released when the enumerator is destroyed
   Result := TOmniContainerObserverEnumFactory.Create(colInterestLists[interest], colLock.SyncObj);
 end; { TOmniContainerObserverList.Enumerate }
 

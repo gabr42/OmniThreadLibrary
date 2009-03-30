@@ -26,6 +26,8 @@
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
+    <DCC_MapFile>3</DCC_MapFile>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
