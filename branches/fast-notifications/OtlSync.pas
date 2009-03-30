@@ -43,6 +43,7 @@
 ///   History:
 ///     1.0: 2008-08-26
 ///       - TOmniCS and IOmniCriticalSection imported from the OtlCommon unit.
+///       - [GJ] Added very simple (and very fast) multi-reader-exclusive-writer TOmniMREW.
 ///       - First official release.
 ///</para></remarks>
 
@@ -61,7 +62,7 @@ type
   end; { IOmniCriticalSection }
 
   TOmniCS = record
-  private
+  strict private
     ocsSync: IOmniCriticalSection;
     function  GetSyncObj: TSynchroObject;
   public
@@ -70,6 +71,16 @@ type
     procedure Release; inline;
     property SyncObj: TSynchroObject read GetSyncObj;
   end; { TOmniCS }
+
+  TOmniMREW = record
+  strict private
+    omrewReference : integer;      //Reference.Bit0 is 'writing in progress' flag
+  public
+    procedure EnterReadLock;
+    procedure EnterWriteLock;
+    procedure ExitReadLock;
+    procedure ExitWriteLock;
+  end; { TOmniMREW }
 
   function CreateOmniCriticalSection: IOmniCriticalSection;
 
@@ -155,5 +166,41 @@ procedure TOmniCriticalSection.Release;
 begin
   ocsCritSect.Release;
 end; { TOmniCriticalSection.Release }
+
+{ TOmniMREW }
+
+procedure TOmniMREW.EnterReadLock;
+var
+  currentReference: integer;
+begin
+  //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
+  repeat
+    currentReference := omrewReference AND NOT 1;
+  until currentReference = InterlockedCompareExchange(omrewReference, currentReference + 2, currentReference);
+end; { TOmniMREW.EnterReadLock }
+
+procedure TOmniMREW.EnterWriteLock;
+var
+  currentReference: integer;
+begin
+  //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
+  repeat
+    currentReference := omrewReference AND NOT 1;
+  until currentReference = InterlockedCompareExchange(omrewReference, currentReference + 1, currentReference);
+  //Now wait on all readers
+  repeat
+  until omrewReference = 1;
+end; { TOmniMREW.EnterWriteLock }
+
+procedure TOmniMREW.ExitReadLock;
+begin
+  //Decrease omrewReference
+  InterlockedExchangeAdd(omrewReference, -2);
+end; { TOmniMREW.ExitReadLock }
+
+procedure TOmniMREW.ExitWriteLock;
+begin
+  omrewReference := 0;
+end; { TOmniMREW.ExitWriteLock }
 
 end.

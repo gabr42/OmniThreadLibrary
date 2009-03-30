@@ -118,7 +118,7 @@ unit OtlTaskControl;
 interface
 
 uses
-  Windows, SysUtils, Variants, Classes, SyncObjs, Messages, TypInfo,   ObjAuto,
+  Windows, SysUtils, Variants, Classes, SyncObjs, Messages, TypInfo, ObjAuto,
   GpStuff,
   OtlCommon,
   OtlSync,
