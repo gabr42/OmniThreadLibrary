@@ -1,15 +1,22 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2008 Primoz Gabrijelcic
+   (c) 2009 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2008-10-26
-   Version           : 1.14
+   Last modification : 2009-03-29
+   Version           : 1.17
 </pre>*)(*
    History:
+     1.17: 2009-03-29
+       - Implemented IGpTraceable interface.
+     1.16: 2009-03-16
+       - TGp8AlignedInt.Addr must be PInt64, not PCardinal.
+       - TGp8AlignedInt renamed to TGp8AlignedInt64.
+     1.15: 2009-03-11
+       - Implemented EnumStrings enumerator.
      1.14: 2008-10-26
        - Implemented EnumValues enumerator.
      1.13: 2008-09-09
@@ -94,7 +101,7 @@ type
     property Value: cardinal read GetValue write SetValue;
   end; { TGp4AlignedInt }
 
-  TGp8AlignedInt = record
+  TGp8AlignedInt64 = record
   strict private
     aiData: packed record
       DataLo, DataHi: int64;
@@ -102,17 +109,40 @@ type
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
-    function Addr: PCardinal; inline;
+    function Addr: PInt64; inline;
     function Decrement: int64; inline;
     function Increment: int64; inline;
     property Value: int64 read GetValue write SetValue;
-  end; { TGp8AlignedInt }
+  end; { TGp8AlignedInt64 }
 
   TGpObjectListHelper = class helper for TObjectList
   public
     function CardCount: cardinal;
   end; { TGpObjectListHelper }
 {$ENDIF GpStuff_AlignedInt}
+
+type
+  IGpTraceable = interface(IInterface)
+    function  GetTraceReferences: boolean; stdcall;
+    procedure SetTraceReferences(const value: boolean); stdcall;
+    function  _AddRef: integer; stdcall;
+    function  _Release: integer; stdcall;
+    function  GetRefCount: integer; stdcall;
+    property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
+  end; { IGpTraceable }
+
+  TGpTraceable = class(TInterfacedObject, IGpTraceable)
+  private
+    gtTraceRef: boolean;
+  public
+    destructor  Destroy; override;
+    function  _AddRef: integer; stdcall;
+    function  _Release: integer; stdcall;
+    function  GetRefCount: integer; stdcall;
+    function  GetTraceReferences: boolean; stdcall;
+    procedure SetTraceReferences(const value: boolean); stdcall;
+    property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
+  end; { TGpTraceable }
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: string; const value: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -163,7 +193,18 @@ type
     function  GetEnumerator: IGpIntegerValueEnumerator;
   end; { IGpIntegerValueEnumeratorFactory }
 
-function EnumValues(aValues: array of integer): IGpIntegerValueEnumeratorFactory;
+  IGpStringValueEnumerator = interface
+    function  GetCurrent: string;
+    function  MoveNext: boolean;
+    property Current: string read GetCurrent;
+  end; { IGpStringValueEnumerator }
+
+  IGpStringValueEnumeratorFactory = interface
+    function  GetEnumerator: IGpStringValueEnumerator;
+  end; { IGpStringValueEnumeratorFactory }
+
+function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory; 
+function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
 {$ENDIF GpStuff_ValuesEnumerators}
 
 implementation
@@ -172,7 +213,8 @@ uses
 {$IFDEF ConditionalExpressions}
   Variants,
 {$ENDIF ConditionalExpressions}
-  SysUtils;
+  SysUtils,
+  Classes;
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -194,9 +236,29 @@ type
     ivefNumValues: integer;
     ivefValues   : PIntegerArray;
   public
-    constructor Create(aValues: array of integer);
+    constructor Create(const aValues: array of integer);
     function GetEnumerator: IGpIntegerValueEnumerator;
   end; { TGpIntegerValueEnumeratorFactory }
+
+  TGpStringValueEnumerator = class(TInterfacedObject, IGpStringValueEnumerator)
+  private
+    sveIndex : integer;
+    sveValues: TStringList;
+  public
+    constructor Create(values: TStringList);
+    destructor  Destroy; override;
+    function  GetCurrent: string;
+    function  MoveNext: boolean;
+    property Current: string read GetCurrent;
+  end; { TGpStringValueEnumerator }
+
+  TGpStringValueEnumeratorFactory = class(TInterfacedObject, IGpStringValueEnumeratorFactory)
+  private
+    svefValues_ref: TStringList;
+  public
+    constructor Create(values: TStringList);
+    function  GetEnumerator: IGpStringValueEnumerator;
+  end; { TGpStringValueEnumeratorFactory }
 {$ENDIF GpStuff_ValuesEnumerators}
 
 function Asgn(var output: boolean; const value: boolean): boolean; overload;
@@ -433,33 +495,33 @@ begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TGp4AlignedInt.Subtract }
 
-{ TGp8AlignedInt }
+{ TGp8AlignedInt64 }
 
-function TGp8AlignedInt.Addr: PCardinal;
+function TGp8AlignedInt64.Addr: PInt64;
 begin
   Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Result := PCardinal((cardinal(@aiData) + 7) AND NOT 7);
-end; { TGp8AlignedInt.Addr }
+  Result := PInt64((cardinal(@aiData) + 7) AND NOT 7);
+end; { TGp8AlignedInt64.Addr }
 
-function TGp8AlignedInt.Decrement: int64;
+function TGp8AlignedInt64.Decrement: int64;
 begin
-  Result := DSiInterlockedDecrement64(PInt64(Addr)^);
-end; { TGp8AlignedInt.Decrement }
+  Result := DSiInterlockedDecrement64(Addr^);
+end; { TGp8AlignedInt64.Decrement }
 
-function TGp8AlignedInt.GetValue: int64;
+function TGp8AlignedInt64.GetValue: int64;
 begin
   Result := Addr^;
-end; { TGp8AlignedInt.GetValue }
+end; { TGp8AlignedInt64.GetValue }
 
-function TGp8AlignedInt.Increment: int64;
+function TGp8AlignedInt64.Increment: int64;
 begin
-  Result := DSiInterlockedIncrement64(PInt64(Addr)^);
-end; { TGp8AlignedInt.Increment }
+  Result := DSiInterlockedIncrement64(Addr^);
+end; { TGp8AlignedInt64.Increment }
 
-procedure TGp8AlignedInt.SetValue(value: int64);
+procedure TGp8AlignedInt64.SetValue(value: int64);
 begin
   Addr^ := value;
-end; { TGp8AlignedInt.SetValue }
+end; { TGp8AlignedInt64.SetValue }
 
 {$ENDIF GpStuff_AlignedInt}
 
@@ -498,9 +560,9 @@ begin
   Result := (iveIndex < iveNumValues);
 end; { TGpIntegerValueEnumerator.MoveNext }
 
-{ TGpIntegerValueEnumeratorFactory }
+{ TGpStringValueEnumeratorFactory }
 
-constructor TGpIntegerValueEnumeratorFactory.Create(aValues: array of integer);
+constructor TGpIntegerValueEnumeratorFactory.Create(const aValues: array of integer);
 var
   dataSize: integer;
 begin
@@ -517,13 +579,100 @@ begin
   Result := TGpIntegerValueEnumerator.Create(ivefValues, ivefNumValues);
 end; { TGpIntegerValueEnumeratorFactory.GetEnumerator }
 
+{ TGpStringValueEnumerator }
+
+constructor TGpStringValueEnumerator.Create(values: TStringList);
+begin
+  sveValues := values;
+  sveIndex := -1;
+end; { TGpStringValueEnumerator.Create }
+
+destructor TGpStringValueEnumerator.Destroy;
+begin
+  FreeAndNil(sveValues);
+  inherited;
+end; { pIntegerValueEnumerator.Destroy }
+
+function TGpStringValueEnumerator.GetCurrent: string;
+begin
+  Result := sveValues[sveIndex];
+end; { TGpStringValueEnumerator.GetCurrent }
+
+function TGpStringValueEnumerator.MoveNext: boolean;
+begin
+  Inc(sveIndex);
+  Result := (sveIndex < sveValues.Count);
+end; { TGpStringValueEnumerator.MoveNext }
+
+{ TGpStringValueEnumeratorFactory }
+
+constructor TGpStringValueEnumeratorFactory.Create(values: TStringList);
+begin
+  inherited Create;
+  svefValues_ref := values;
+end; { TGpStringValueEnumeratorFactory.Create }
+
+function TGpStringValueEnumeratorFactory.GetEnumerator: IGpStringValueEnumerator;
+begin
+  Result := TGpStringValueEnumerator.Create(svefValues_ref); //enumerator takes ownership
+end; { TGpStringValueEnumeratorFactory.GetEnumerator }
+
 { exports }
 
-function EnumValues(aValues: array of integer): IGpIntegerValueEnumeratorFactory;
+function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory;
 begin
   Result := TGpIntegerValueEnumeratorFactory.Create(aValues);
 end; { EnumValues }
 
+function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
+var
+  s : string;
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  for s in aValues do
+    sl.Add(s);
+  Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumValues }
+
 {$ENDIF GpStuff_ValuesEnumerators}
+
+{ TGpTraceable }
+
+destructor TGpTraceable.Destroy;
+begin
+  if gtTraceRef then
+    asm int 3; end;
+  inherited;
+end; { TGpTraceable.Destroy }
+
+function TGpTraceable.GetRefCount: integer;
+begin
+  Result := RefCount;
+end; { TGpTraceable.GetRefCount }
+
+function TGpTraceable.GetTraceReferences: boolean;
+begin
+  Result := gtTraceRef;
+end; { TGpTraceable.GetTraceReferences }
+
+procedure TGpTraceable.SetTraceReferences(const value: boolean);
+begin
+  gtTraceRef := value;
+end; { TGpTraceable.SetTraceReferences }
+
+function TGpTraceable._AddRef: integer;
+begin
+  Result := inherited _AddRef;
+  if gtTraceRef then
+    asm int 3; end;
+end; { TGpTraceable._AddRef }
+
+function TGpTraceable._Release: integer;
+begin
+  if gtTraceRef then
+    asm int 3; end;
+  Result := inherited _Release;
+end; { TGpTraceable._Release }
 
 end.
