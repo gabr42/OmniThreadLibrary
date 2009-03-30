@@ -44,29 +44,33 @@ unit OtlContainerObserver;
 interface
 
 uses
-  Classes;
+  Classes,
+  GpStuff;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
   TOmniContainerObserverInterest = (coiNotifyOnFirstInsert, coiNotifyOnAllInserts,
     coiNotifyOnLastRemove, coiNotifyOnAllRemoves, coiNotifyOnAlmostFull,
     coiNotifyOnPartlyEmpty);
-  TOmniContainerObserverInterests = set of TOmniContainerObserverInterest;
 
   ///<summary>Container observer.</summary>
   IOmniContainerObserver = interface ['{79288268-0B69-45C2-8E2B-50B1C5757172}']
-    procedure Notify(interest: TOmniContainerObserverInterest);
+    procedure Notify;
   end; { IOmniContainerObserver }
 
   IOmniContainerWindowsEventObserver = interface(IOmniContainerObserver)
                                        ['{E9FFB3D8-DC23-4A5B-AE94-2E8479120D6C}']
-    function  GetEvent(interest: TOmniContainerObserverInterest): THandle;
-  end; { IOmniContainerWindowsEventObserver } 
+    function  GetEvent: THandle;
+  end; { IOmniContainerWindowsEventObserver }
+
+  IOmniContainerWindowsMessageObserver = interface(IOmniContainerObserver)
+                                         ['{73C41C48-8313-4161-9835-67FE8EA0A681}']
+  end; { IOmniContainerWindowsMessageObserver }
 
   ///<summary>Container as a subject.</summary>
   IOmniContainerSubject = interface ['{F66DD79E-230A-4246-B740-C0A7665549EC}']
     procedure Attach(const observer: IOmniContainerObserver;
-      interests: TOmniContainerObserverInterests);
+      interest: TOmniContainerObserverInterest);
     procedure Detach(const observer: IOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
   end; { IOmniContainerSubject }
@@ -90,7 +94,7 @@ type
   ///<summary>List of observers and their interests.</summary>
   IOmniContainerObserverList = interface ['{7FFE4895-C0A5-4AC2-9048-6D125BC64A39}']
     procedure Add(const observer: IOmniContainerObserver;
-      interests: TOmniContainerObserverInterests);
+      interest: TOmniContainerObserverInterest);
     function  Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
     procedure Remove(const observer: IOmniContainerObserver);
@@ -99,24 +103,38 @@ type
   function CreateContainerObserverList: IOmniContainerObserverList;
   function CreateContainerWindowsEventObserver: IOmniContainerWindowsEventObserver;
 
+  function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
+    wParam, lParam: integer): IOmniContainerWindowsMessageObserver;
+
 implementation
 
 uses
   Windows,
-  SysUtils;
+  SysUtils,
+  DSiWin32;
 
 type
   TOmniContainerWindowsEventObserver = class(TInterfacedObject,
                                              IOmniContainerWindowsEventObserver)
   strict private
-    cweoEvents: array [TOmniContainerObserverInterest] of THandle;
-  strict protected
-    function  CreateEvent(interest: TOmniContainerObserverInterest): THandle;
+    cweoEvent: THandle;
   public
-    destructor Destroy; override;
-    function  GetEvent(interest: TOmniContainerObserverInterest): THandle;
-    procedure Notify(interest: TOmniContainerObserverInterest);
+    destructor  Destroy; override;
+    function  GetEvent: THandle;
+    procedure Notify;
   end; { TOmniContainerWindowsEventObserver }
+
+  TOmniContainerWindowsMessageObserver = class(TInterfacedObject,
+                                               IOmniContainerWindowsMessageObserver)
+  strict private
+    cwmoHandle : THandle;
+    cwmoLParam : integer;
+    cwmoMessage: cardinal;
+    cwmoWParam : integer;
+  public
+    constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
+    procedure Notify;
+  end; { TOmniContainerWindowsMessageObserver }
 
   ///<summary>Observer sublist enumerator.</summary>
   TOmniContainerObserverEnum = class(TInterfacedObject, IOmniContainerObserverEnum)
@@ -139,8 +157,8 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(const observer: IOmniContainerObserver; interests:
-      TOmniContainerObserverInterests);
+    procedure Add(const observer: IOmniContainerObserver; interest:
+      TOmniContainerObserverInterest);
     function  Enumerate(interest: TOmniContainerObserverInterest):
       TOmniContainerObserverEnumFactory;
     procedure Remove(const observer: IOmniContainerObserver);
@@ -158,43 +176,53 @@ begin
   Result := TOmniContainerWindowsEventObserver.Create;
 end; { CreateContainerWindowsEventObserver }
 
+function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
+  lParam: integer): IOmniContainerWindowsMessageObserver;
+begin
+  Result := TOmniContainerWindowsMessageObserver.Create(hWindow, msg, wParam, lParam);
+end; { CreateContainerWindowsMessageObserver }
+
 { TOmniContainerWindowsEventObserver }
 
 destructor TOmniContainerWindowsEventObserver.Destroy;
-var
-  interest: TOmniContainerObserverInterest;
 begin
-  for interest := Low(interest) to High(interest) do 
-    if cweoEvents[interest] <> 0 then begin
-      CloseHandle(cweoEvents[interest]);
-      cweoEvents[interest] := 0;
-    end;
+  DSiCloseHandleAndNull(cweoEvent);
   inherited;
 end; { TOmniContainerWindowsEventObserver.Destroy }
 
-function TOmniContainerWindowsEventObserver.CreateEvent(interest:
-  TOmniContainerObserverInterest): THandle;
+function TOmniContainerWindowsEventObserver.GetEvent: THandle;
 begin
-  Result := cweoEvents[interest];
+  Result := cweoEvent;
   if Result = 0 then begin
     Result := Windows.CreateEvent(nil, false, false, nil);
-    if InterlockedCompareExchange(PInteger(@cweoEvents[interest])^, Result, 0) <> 0 then begin
+    if InterlockedCompareExchange(PInteger(@cweoEvent)^, Result, 0) <> 0 then begin
       CloseHandle(Result);
-      Result := cweoEvents[interest];
+      Result := cweoEvent;
     end;
   end;
-end; { TOmniContainerWindowsEventObserver.CreateEvent }
-
-function TOmniContainerWindowsEventObserver.GetEvent(interest:
-  TOmniContainerObserverInterest): THandle;
-begin
-  Result := CreateEvent(interest);
 end; { TOmniContainerWindowsEventObserver.GetEvent }
 
-procedure TOmniContainerWindowsEventObserver.Notify(interest: TOmniContainerObserverInterest);
+procedure TOmniContainerWindowsEventObserver.Notify;
 begin
-  SetEvent(CreateEvent(interest));
+  SetEvent(GetEvent);
 end; { TOmniContainerWindowsEventObserver.Notify }
+
+{ TOmniContainerWindowsMessageObserver }
+
+constructor TOmniContainerWindowsMessageObserver.Create(handle: THandle; aMessage:
+  cardinal; wParam, lParam: integer);
+begin
+  inherited Create;
+  cwmoHandle := handle;
+  cwmoMessage := aMessage;
+  cwmoWParam := wParam;
+  cwmoLParam := lParam;
+end; { TOmniContainerWindowsMessageObserver.Create }
+
+procedure TOmniContainerWindowsMessageObserver.Notify;
+begin
+  PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam);
+end; { TOmniContainerWindowsMessageObserver.Notify }
 
 { TOmniContainerObserverEnum }
 
@@ -211,6 +239,7 @@ end; { TOmniContainerObserverEnum.Destroy }
 
 function TOmniContainerObserverEnum.GetCurrent: IOmniContainerObserver;
 begin
+  Result := nil;
   pointer(Result) := coeObserverEnum.Current;
   Result._AddRef;
 end; { TOmniContainerObserverEnum.GetCurrent }
@@ -257,16 +286,12 @@ begin
 end; { TOmniContainerObserverList.Destroy }
 
 procedure TOmniContainerObserverList.Add(const observer: IOmniContainerObserver;
-  interests: TOmniContainerObserverInterests);
-var
-  interest: TOmniContainerObserverInterest;
+  interest: TOmniContainerObserverInterest);
 begin
   Remove(observer);
   // TODO 1 -oPrimoz Gabrijelcic : Locking!
   colObserverList.Add(observer);
-  for interest := Low(interest) to High(interest) do
-    if interest in interests then
-      colInterestLists[interest].Add(pointer(observer));
+  colInterestLists[interest].Add(pointer(observer));
 end; { TOmniContainerObserverList.Add }
 
 function TOmniContainerObserverList.Enumerate(interest: TOmniContainerObserverInterest):

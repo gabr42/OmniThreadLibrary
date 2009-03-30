@@ -128,7 +128,7 @@ uses
   DetailedRTTI,
   DSiWin32,
   GpLists,
-  GpStringHash;
+  GpStringHash, OtlContainerObserver;
 
 type
   IOmniTaskControl = interface;
@@ -307,7 +307,7 @@ type
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
-    property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow;
+    property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow; // TODO 1 -oPrimoz Gabrijelcic : Why do we need it?
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
     property TaskRefreshTimeOut: boolean read GetTaskRefreshTimeOut;
@@ -559,13 +559,14 @@ type
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
   strict private
-    otcDestroyLock: boolean;
-    otcExecutor   : TOmniTaskExecutor;
-    otcOwningPool : IOmniThreadPool;
-    otcParameters : TOmniValueContainer;
-    otcQueueLength: integer;
-    otcSharedInfo : TOmniSharedTaskInfo;
-    otcThread     : TOmniThread;
+    otcDestroyLock    : boolean;
+    otcExecutor       : TOmniTaskExecutor;
+    otcMonitorObserver: IOmniContainerWindowsMessageObserver;
+    otcOwningPool     : IOmniThreadPool;
+    otcParameters     : TOmniValueContainer;
+    otcQueueLength    : integer;
+    otcSharedInfo     : TOmniSharedTaskInfo;
+    otcThread         : TOmniThread;
   strict protected
     function  CreateTask: IOmniTask;
     procedure EnsureCommChannel; inline;
@@ -1870,7 +1871,8 @@ function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
   otcSharedInfo.MonitorWindow := 0;
   EnsureCommChannel;
-  otcSharedInfo.CommChannel.Endpoint2.RemoveMonitor;
+  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver);
+  otcMonitorObserver := nil;
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
 
@@ -1899,8 +1901,11 @@ begin
     raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
   otcSharedInfo.MonitorWindow := hWindow;
   EnsureCommChannel;
-  otcSharedInfo.CommChannel.Endpoint2.SetMonitor(hWindow, COmniTaskMsg_NewMessage,
-    integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+  otcMonitorObserver := CreateContainerWindowsMessageObserver(
+    hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
+    integer(Int64Rec(UniqueID).Hi));
+  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
+    otcMonitorObserver, coiNotifyOnFirstInsert);
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 

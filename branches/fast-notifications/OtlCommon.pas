@@ -276,7 +276,7 @@ type
   function VarToObj(const v: Variant): TObject; inline;
 
 var
-  OtlUID: TGp8AlignedInt;
+  OtlUID: TGp8AlignedInt64;
 
 implementation
 
@@ -346,6 +346,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
+  // TODO 1 -oPrimoz Gabrijelcic : This one goes out?
   TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
   strict private
     ompLParam : integer;

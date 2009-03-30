@@ -81,7 +81,7 @@ type
     function  IsFull: boolean;
   end; { IOmniQueue }
 
-  TOmniContainerOption = (coEnableMonitor, coMonitorOnDequeue);
+  TOmniContainerOption = ({coEnableMonitor, }coMonitorOnDequeue);
   TOmniContainerOptions = set of TOmniContainerOption;
 
   PReferencedPtr = ^TReferencedPtr;
@@ -143,7 +143,7 @@ type
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [coEnableMonitor];
+      options: TOmniContainerOptions = [{coEnableMonitor}];
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function Pop(var value): boolean; override;
@@ -181,25 +181,24 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, IOmniMonitorSupport, IOmniContainerSubject)
+  TOmniQueue = class(TOmniBaseQueue, {IOmniMonitorSupport, }IOmniContainerSubject)
   strict private
     oqAlmostFullCount    : integer;
     oqContainerSubject   : IOmniContainerSubject;
     oqInQueueCount       : TGp4AlignedInt;
-    oqMonitorSupport     : IOmniMonitorSupport;
+//    oqMonitorSupport     : IOmniMonitorSupport;
     oqOptions            : TOmniContainerOptions;
     oqPartlyEmptyCount   : integer;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [coEnableMonitor];
+      options: TOmniContainerOptions = [{coEnableMonitor}];
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
-//    function  GetFastEventPtrMessageInQueue: PBoolean;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;
-    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
+//    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
     property  Options: TOmniContainerOptions read oqOptions;
   end; { TOmniQueue }
 
@@ -215,8 +214,8 @@ type
     csObserverList: IOmniContainerObserverList;
   public
     constructor Create;
-    procedure Attach(const observer: IOmniContainerObserver; interests:
-      TOmniContainerObserverInterests);
+    procedure Attach(const observer: IOmniContainerObserver; interest:
+      TOmniContainerObserverInterest);
     procedure Detach(const observer: IOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
@@ -283,16 +282,12 @@ asm
   rdtsc
 end; { GetTimeStamp }
 
-{ TOmniNotifySupport }
-
-{ TOmniNotifySupport.GetNewDataEvent }
-
 { TOmniContainerSubject }
 
-procedure TOmniContainerSubject.Attach(const observer: IOmniContainerObserver; interests:
-  TOmniContainerObserverInterests);
+procedure TOmniContainerSubject.Attach(const observer: IOmniContainerObserver; interest:
+  TOmniContainerObserverInterest);
 begin
-  csObserverList.Add(observer, interests);
+  csObserverList.Add(observer, interest);
 end; { TOmniContainerSubject.Attach }
 
 constructor TOmniContainerSubject.Create;
@@ -311,7 +306,7 @@ var
   observer: IOmniContainerObserver;
 begin
   for observer in csObserverList.Enumerate(interest) do
-    observer.Notify(interest);
+    observer.Notify;
 end; { TOmniContainerSubject.Notify }
 
 { TOmniBaseStack }
@@ -534,8 +529,8 @@ begin
   osAlmostFullCount := Round(numElements * almostFullLoadFactor);
   if osAlmostFullCount >= numElements then
     osAlmostFullCount := numElements - 1;
-  if coEnableMonitor in Options then
-    osMonitorSupport := CreateOmniMonitorSupport;
+//  if coEnableMonitor in Options then
+//    osMonitorSupport := CreateOmniMonitorSupport;
 end; { TOmniStack.Create }
 
 function TOmniStack.Pop(var value): boolean;
@@ -573,8 +568,8 @@ begin
        (countAfter >= osAlmostFullCount)
     then
       ContainerSubject.Notify(coiNotifyOnAlmostFull);
-    if coEnableMonitor in Options then
-      osMonitorSupport.Notify;
+//    if coEnableMonitor in Options then
+//      osMonitorSupport.Notify;
   end;
 end; { TOmniStack.Push }
 
@@ -846,8 +841,8 @@ begin
     oqAlmostFullCount := numElements - 1;
   Initialize(numElements, elementSize);
   oqOptions := options;
-  if coEnableMonitor in Options then
-    oqMonitorSupport := CreateOmniMonitorSupport;
+//  if coEnableMonitor in Options then
+//    oqMonitorSupport := CreateOmniMonitorSupport;
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
@@ -885,8 +880,8 @@ begin
        (countAfter >= oqAlmostFullCount)
     then
       ContainerSubject.Notify(coiNotifyOnAlmostFull);
-    if coEnableMonitor in Options then
-      oqMonitorSupport.Notify;
+//    if coEnableMonitor in Options then
+//      oqMonitorSupport.Notify;
   end;
 end; { TOmniQueue.Enqueue }
 
