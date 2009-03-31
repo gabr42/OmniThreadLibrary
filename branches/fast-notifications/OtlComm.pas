@@ -259,7 +259,9 @@ end; { TOmniCommunicationEndpoint.Create }
 
 destructor TOmniCommunicationEndpoint.Destroy;
 begin
-  if assigned(ceWriter_ref) and assigned(cePartlyEmptyObserver) then
+  if assigned(ceWriter_ref) and assigned(ceWriter_ref.ContainerSubject) and
+     assigned(cePartlyEmptyObserver) 
+  then
     ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver);
 end; { TOmniCommunicationEndpoint.Destroy }
 
