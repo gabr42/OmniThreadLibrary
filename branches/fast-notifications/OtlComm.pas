@@ -298,7 +298,7 @@ function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_m
   cardinal): boolean;
 begin
   if ceTaskTerminatedEvent_ref = 0 then
-    raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
+    raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
   Result := Receive(msg);
   if not Result then begin
     ResetEvent(ceReader_ref.EventObserver.GetEvent);
