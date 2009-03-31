@@ -230,6 +230,8 @@ begin
   if not inherited Dequeue(tmp) then
     raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
   Result := tmp;
+  if tmp.MsgData.IsInterface then
+    tmp.MsgData.AsInterface._Release;
 end; { TOmniMessageQueue.Dequeue }
 
 function TOmniMessageQueue.Enqueue(const value: TOmniMessage): boolean;
@@ -237,6 +239,8 @@ var
   tmp: TOmniMessage;
 begin
   tmp := value;
+  if tmp.MsgData.IsInterface then
+    tmp.MsgData.AsInterface._AddRef;
   Result := inherited Enqueue(tmp);
   if Result then
     tmp.MsgData.RawZero;
