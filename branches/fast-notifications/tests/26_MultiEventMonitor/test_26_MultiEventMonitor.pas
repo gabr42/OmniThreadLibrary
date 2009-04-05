@@ -51,12 +51,11 @@ const
 procedure TaskProcedure(const task: IOmniTask);
 var
   comm: IOmniCommunicationEndpoint;
-  n: cardinal;
+  n   : cardinal;
 begin
   comm := task.Comm;
   for n := 0 to frmMultiMonitorDemo.seMessagesCount.value -1 do
     while not task.Terminated and not comm.SendWait(MSG_STRING, task.Name + IntToStr(n)) do;
-  comm := nil;
 end;
 
 procedure TfrmMultiMonitorDemo.btnStartClick(Sender: TObject);

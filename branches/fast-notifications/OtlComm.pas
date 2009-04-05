@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2009, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2008-10-05
-///   Version           : 1.03
+///   Last modification : 2009-04-05
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2009-04-05
+///       - Implemented TOmniMessageQueue.Empty and TryDequeue.
+///       - TOmniMessageQueue empties itself before it is destroyed.
 ///     1.03: 2008-10-05
 ///       - Added two overloaded versions of IOmniCommunicationEndpoint.ReceivedWait,
 ///         which are just simple wrappers for WaitForSingleObject(NewMessageEvent) +
@@ -118,6 +121,8 @@ type
     destructor  Destroy; override;
     function  Dequeue: TOmniMessage; reintroduce;
     function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
+    procedure Empty;
+    function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
     property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
@@ -225,20 +230,23 @@ destructor TOmniMessageQueue.Destroy;
 begin
   ContainerSubject.Detach(mqWinEventObserver);
   mqWinEventObserver := nil;
+  Empty;
   inherited;
 end; { TOmniMessageQueue.Destroy }
 
 function TOmniMessageQueue.Dequeue: TOmniMessage;
-var
-  tmp: TOmniMessage;
 begin
-  tmp.MsgData.RawZero;
-  if not inherited Dequeue(tmp) then
+  if not TryDequeue(Result) then
     raise Exception.Create('TOmniMessageQueue.Dequeue: Message queue is empty');
-  Result := tmp;
-  if tmp.MsgData.IsInterface then
-    tmp.MsgData.AsInterface._Release;
 end; { TOmniMessageQueue.Dequeue }
+
+procedure TOmniMessageQueue.Empty;
+var
+  msg: TOmniMessage;
+begin
+  while TryDequeue(msg) do
+    ;
+end; { TOmniMessageQueue.Empty }
 
 function TOmniMessageQueue.Enqueue(const value: TOmniMessage): boolean;
 var
@@ -251,6 +259,19 @@ begin
   if Result then
     tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
+
+function TOmniMessageQueue.TryDequeue(var msg: TOmniMessage): boolean;
+var
+  tmp: TOmniMessage;
+begin
+  tmp.MsgData.RawZero;
+  Result := inherited Dequeue(tmp);
+  if not Result then
+    Exit;
+  msg := tmp;
+  if tmp.MsgData.IsInterface then
+    tmp.MsgData.AsInterface._Release;
+end; { TOmniMessageQueue.TryDequeue }
 
 { TOmniCommunicationEndpoint }
 
@@ -435,10 +456,13 @@ begin
   for i := 1 to 2 do
     if assigned(twcEndpoint[i]) then
       (twcEndpoint[i] as IOmniCommunicationEndpointInternal).DetachFromQueues;
-  for i := 1 to 2 do begin
-    twcUnidirQueue[i].Free;
-    twcUnidirQueue[i] := nil;
-  end;
+  twcLock.Acquire;
+  try
+    for i := 1 to 2 do begin
+      twcUnidirQueue[i].Free;
+      twcUnidirQueue[i] := nil;
+    end;
+  finally twcLock.Release; end;
   FreeAndNil(twcLock);
   inherited;
 end; { TOmniTwoWayChannel.Destroy }
