@@ -1083,7 +1083,7 @@ begin
       else
         raise Exception.Create('TOmniTaskExecutor.Asy_Execute: Executor is not set');
     end;
-  finally Cleanup; end;                                                         ////1
+  finally Cleanup; end;
 end; { TOmniTaskExecutor.Asy_Execute }
 
 procedure TOmniTaskExecutor.Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1678,7 +1678,6 @@ begin
     Terminate;
     FreeAndNil(otcThread);
   end;
-
   if otcDestroyLock then begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;

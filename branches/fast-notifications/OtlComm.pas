@@ -134,7 +134,12 @@ uses
   OtlEventMonitor;
 
 type
-  TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint)
+  IOmniCommunicationEndpointInternal = interface ['{4F872DE9-6E9A-4881-B9EC-E2189DAC00F4}']
+    procedure DetachFromQueues;
+  end; { IOmniCommunicationEndpointInternal }
+
+  TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint,
+    IOmniCommunicationEndpointInternal)
   strict private
     cePartlyEmptyObserver    : IOmniContainerWindowsEventObserver;
     ceReader_ref             : TOmniMessageQueue;
@@ -143,6 +148,7 @@ type
   strict protected
     procedure RequirePartlyEmptyObserver;
   protected
+    procedure DetachFromQueues;
     function  GetNewMessageEvent: THandle;
   public
     constructor Create(readQueue, writeQueue: TOmniMessageQueue; taskTerminatedEvent_ref:
@@ -255,6 +261,10 @@ begin
   ceReader_ref := readQueue;
   ceWriter_ref := writeQueue;
   ceTaskTerminatedEvent_ref := taskTerminatedEvent_ref;
+//  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//  if pointer(Self) = pointer($7FF99CF0) then
+//    TraceReferences := true;
+//  //>
 end; { TOmniCommunicationEndpoint.Create }
 
 destructor TOmniCommunicationEndpoint.Destroy;
@@ -264,6 +274,12 @@ begin
   then
     ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver);
 end; { TOmniCommunicationEndpoint.Destroy }
+
+procedure TOmniCommunicationEndpoint.DetachFromQueues;
+begin
+  ceReader_ref := nil;
+  ceWriter_ref := nil;
+end; { TOmniCommunicationEndpoint.DetachFromQueues }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
@@ -413,11 +429,16 @@ begin
 end; { TOmniTwoWayChannel.Create }
 
 destructor TOmniTwoWayChannel.Destroy;
+var
+  i: integer;
 begin
-  twcUnidirQueue[1].Free;
-  twcUnidirQueue[1] := nil;
-  twcUnidirQueue[2].Free;
-  twcUnidirQueue[2] := nil;
+  for i := 1 to 2 do
+    if assigned(twcEndpoint[i]) then
+      (twcEndpoint[i] as IOmniCommunicationEndpointInternal).DetachFromQueues;
+  for i := 1 to 2 do begin
+    twcUnidirQueue[i].Free;
+    twcUnidirQueue[i] := nil;
+  end;
   FreeAndNil(twcLock);
   inherited;
 end; { TOmniTwoWayChannel.Destroy }

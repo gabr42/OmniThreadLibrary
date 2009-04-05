@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-03-30
-///   Version           : 1.03
+///   Last modification : 2009-04-05
+///   Version           : 1.03a
 ///</para><para>
 ///   History:
+///     1.03a: 2009-04-05
+///       - Bug fixed: TInterfaceDictionaryEnumerator was ignoring first bucket.
 ///     1.03: 2009-03-30
 ///       - TOmniCS and IOmniCriticalSection moved to the OtlSync unit.
 ///     1.02a: 2009-02-09
@@ -241,6 +243,7 @@ type
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
+    function  Count: integer; 
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { IInterfaceHash }
@@ -391,7 +394,7 @@ type
   TInterfaceDictionary = class(TInterfacedObject, IInterfaceDictionary)
   strict private
     idBuckets: TBucketArray;
-    idCount  : int64;
+    idCount  : integer;
   strict protected
     function  Find(const key: int64): PPHashItem;
     function  HashOf(const key: int64): integer; inline;
@@ -401,6 +404,7 @@ type
     destructor  Destroy; override;
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
+    function  Count: integer; inline;
     function  GetEnumerator: IInterfaceDictionaryEnumerator;
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
@@ -650,7 +654,7 @@ end; { TInterfaceDictionaryPair.SetKeyValue }
 constructor TInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
 begin
   ideBuckets := buckets;
-  ideBucketIdx := Low(ideBuckets^) + 1;
+  ideBucketIdx := Low(ideBuckets^);
   ideItem := nil;
   idePair := TInterfaceDictionaryPair.Create;
 end; { TInterfaceDictionaryEnumerator.Create }
@@ -728,6 +732,11 @@ begin
   end;
   idCount := 0;
 end; { TInterfaceDictionary.Clear }
+
+function TInterfaceDictionary.Count: integer;
+begin
+  Result := idCount;
+end; { TInterfaceDictionary.Count }
 
 function TInterfaceDictionary.Find(const key: int64): PPHashItem;
 var

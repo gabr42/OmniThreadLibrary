@@ -76,3 +76,5 @@
 !! message is passed to the TOmniEventMonitor.OnTaskMessage handler !!
 !! observer pattern in OtlContainers !!
 !! new unit OtlSync !!
+!! new test multi monitor
+!! net test waitable comm
