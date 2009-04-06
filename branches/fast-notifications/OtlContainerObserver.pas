@@ -31,10 +31,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-02-19
-///   Last modification : 2009-03-30
+///   Last modification : 2009-04-06
 ///   Version           : 1.0
 ///</para><para>
 ///   History:
+///     1.01: 2009-04-06
+///       - External event can be provided in the TOmniContainerWindowsEventObserver
+///         constructor.
+///       - Event is created in TOmniContainerWindowsEventObserver constructor if external
+///         event is not provided.
 ///     1.0: 2009-03-30
 ///       - First official release.
 ///</para></remarks>
@@ -103,7 +108,8 @@ type
   end; { IOmniContainerObserverList }
 
   function CreateContainerObserverList: IOmniContainerObserverList;
-  function CreateContainerWindowsEventObserver: IOmniContainerWindowsEventObserver;
+  function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
+    IOmniContainerWindowsEventObserver;
 
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam, lParam: integer): IOmniContainerWindowsMessageObserver;
@@ -121,10 +127,12 @@ type
   TOmniContainerWindowsEventObserver = class(TInterfacedObject,
                                              IOmniContainerWindowsEventObserver)
   strict private
-    cweoEvent: THandle;
+    cweoEvent          : THandle;
+    cweoEventIsExternal: boolean;
   public
+    constructor Create(externalEvent: THandle = 0);
     destructor  Destroy; override;
-    function  GetEvent: THandle;
+    function  GetEvent: THandle; inline;
     procedure Notify;
   end; { TOmniContainerWindowsEventObserver }
 
@@ -177,9 +185,10 @@ begin
   Result := TOmniContainerObserverList.Create;
 end; { CreateContainerObserverList }
 
-function CreateContainerWindowsEventObserver: IOmniContainerWindowsEventObserver;
+function CreateContainerWindowsEventObserver(externalEvent: THandle):
+  IOmniContainerWindowsEventObserver;
 begin
-  Result := TOmniContainerWindowsEventObserver.Create;
+  Result := TOmniContainerWindowsEventObserver.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
 
 function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
@@ -190,22 +199,29 @@ end; { CreateContainerWindowsMessageObserver }
 
 { TOmniContainerWindowsEventObserver }
 
+constructor TOmniContainerWindowsEventObserver.Create(externalEvent: THandle);
+begin
+  if externalEvent <> 0 then begin
+    cweoEvent := externalEvent;
+    cweoEventIsExternal := true;                               
+  end
+  else begin
+    cweoEvent := Windows.CreateEvent(nil, false, false, nil);
+    cweoEventIsExternal := false;
+  end;
+end; { TOmniContainerWindowsEventObserver.Create }
+
 destructor TOmniContainerWindowsEventObserver.Destroy;
 begin
-  DSiCloseHandleAndNull(cweoEvent);
+  if cweoEventIsExternal then
+    DSiCloseHandleAndNull(cweoEvent);
+  cweoEvent := 0;
   inherited;
 end; { TOmniContainerWindowsEventObserver.Destroy }
 
 function TOmniContainerWindowsEventObserver.GetEvent: THandle;
 begin
   Result := cweoEvent;
-  if Result = 0 then begin
-    Result := Windows.CreateEvent(nil, false, false, nil);
-    if InterlockedCompareExchange(PInteger(@cweoEvent)^, Result, 0) <> 0 then begin
-      CloseHandle(Result);
-      Result := cweoEvent;
-    end;
-  end;
 end; { TOmniContainerWindowsEventObserver.GetEvent }
 
 procedure TOmniContainerWindowsEventObserver.Notify;
