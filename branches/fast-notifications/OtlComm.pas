@@ -333,7 +333,7 @@ begin
   if ceTaskTerminatedEvent_ref = 0 then
     raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
   Result := Receive(msg);
-  if not Result then begin
+  if (not Result) and (timeout_ms > 0) then begin
     ResetEvent(ceReader_ref.EventObserver.GetEvent);
     Result := Receive(msg);
     if not Result then begin
@@ -383,7 +383,7 @@ begin
   msg.msgID := msgID;
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
-  if not Result then begin
+  if (not Result) and (timeout_ms > 0) then begin
     RequirePartlyEmptyObserver;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
     Result := ceWriter_ref.Enqueue(msg);
