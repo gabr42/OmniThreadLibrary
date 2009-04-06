@@ -213,7 +213,7 @@ end; { TOmniContainerWindowsEventObserver.Create }
 
 destructor TOmniContainerWindowsEventObserver.Destroy;
 begin
-  if cweoEventIsExternal then
+  if not cweoEventIsExternal then
     DSiCloseHandleAndNull(cweoEvent);
   cweoEvent := 0;
   inherited;
