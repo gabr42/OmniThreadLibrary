@@ -78,7 +78,6 @@ type
     tedOnPoolThreadDestroying  : TOmniPoolThreadEvent;
     tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
     tedOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
-    tedOnRefreshTimeOut        : TOmniTaskEvent;
     tedOnTaskMessage           : TOmniTaskMessageEvent;
     tedOnTaskUndeliveredMessage: TOmniTaskEvent;
     tedOnTaskTerminated        : TOmniTaskEvent;
@@ -101,8 +100,6 @@ type
       write tedOnPoolThreadKilled;
     property OnPoolWorkItemCompleted: TOmniPoolWorkItemEvent read tedOnPoolWorkItemEvent
       write tedOnPoolWorkItemEvent;
-    property OnRefreshTimeOut: TOmniTaskEvent read tedOnRefreshTimeOut
-      write tedOnRefreshTimeOut;
     property OnTaskMessage: TOmniTaskMessageEvent read tedOnTaskMessage write tedOnTaskMessage;
     property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
       tedOnTaskTerminated;
@@ -177,8 +174,8 @@ end; { TOmniEventMonitor.Monitor }
 
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
-//  n            : cardinal;
-//  ntSharedInfo : TOmniSharedTaskInfo;
+  owner: TComponent;
+  n            : cardinal;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
   TickCount    : Cardinal;
@@ -194,17 +191,6 @@ begin
           if assigned(tedOnTaskMessage) then
             tedOnTaskMessage(task, tedCurrentMsg);
           if (TickCount + 8 < GetTickCount) then begin
-            if assigned(tedOnRefreshTimeOut) then // TODO 1 -oPrimoz Gabrijelcic : What is that?
-              tedOnRefreshTimeOut(task);
-//            if AllMonitoredTasks.Count > 1 then
-//              for n := 0 to AllMonitoredTasks.Count -1 do begin
-//                ntSharedInfo := TOmniSharedTaskInfo(AllMonitoredTasks[n]);
-//                if (ntSharedInfo <> task.SharedInfo) and not ntSharedInfo.TaskRefreshTimeOut then begin
-//                  PostMessage(ntSharedInfo.MonitorWindow, COmniTaskMsg_NewMessage,
-//                    Int64Rec(ntSharedInfo.UniqueID).Lo, Int64Rec(ntSharedInfo.UniqueID).Hi);
-//                  ntSharedInfo.SetTaskRefreshTimeOut;
-//                end;
-//              end;
             //At last post to self!
             PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
             task.SharedInfo.SetTaskRefreshTimeOut;

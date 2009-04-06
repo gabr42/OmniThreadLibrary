@@ -59,16 +59,6 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
     TabOrder = 2
     Value = 10000
   end
-  object cbRefreshScreen: TCheckBox
-    Left = 214
-    Top = 8
-    Width = 107
-    Height = 17
-    Caption = 'ProcessMessages'
-    Checked = True
-    State = cbChecked
-    TabOrder = 3
-  end
   object seMonitors: TSpinEdit
     Left = 157
     Top = 31
@@ -76,7 +66,7 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
     Height = 22
     MaxValue = 16
     MinValue = 1
-    TabOrder = 4
+    TabOrder = 3
     Value = 4
   end
   object StatusBar: TStatusBar
@@ -85,8 +75,10 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
     Width = 440
     Height = 19
     Panels = <>
+    SimplePanel = True
   end
   object Timer1: TTimer
+    Enabled = False
     Interval = 100
     OnTimer = Timer1Timer
     Left = 16

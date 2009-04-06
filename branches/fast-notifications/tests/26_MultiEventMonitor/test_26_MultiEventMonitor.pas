@@ -14,7 +14,6 @@ uses
 type
   TfrmMultiMonitorDemo = class(TForm)
     btnStart       : TButton;
-    cbRefreshScreen: TCheckBox;
     Label1         : TLabel;
     Label2         : TLabel;
     lbFiles        : TListBox;
@@ -26,12 +25,12 @@ type
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OTLMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OTLMonitorTaskTerminated(const task: IOmniTaskControl);
-    procedure OTLRefreshTimeOut(const task: IOmniTaskControl);
     procedure Timer1Timer(Sender: TObject);
   private
-    FTasks         : array[0..15] of IOmniTaskControl;
-    MsgCount       : Cardinal;
-    OTLMonitors    : array[0..15] of TOmniEventMonitor;
+    FItems     : TStringList;
+    FTasks     : array[0..15] of IOmniTaskControl;
+    MsgCount   : Cardinal;
+    OTLMonitors: array[0..15] of TOmniEventMonitor;
   end;
 
 var
@@ -41,6 +40,7 @@ var
 implementation
 
 uses
+  DSiWin32,
   GpStuff;
 
 {$R *.dfm}
@@ -55,29 +55,29 @@ var
 begin
   comm := task.Comm;
   for n := 0 to frmMultiMonitorDemo.seMessagesCount.value -1 do
-    while not task.Terminated and not comm.SendWait(MSG_STRING, task.Name + IntToStr(n)) do;
+    while not task.Terminated and not comm.SendWait(MSG_STRING, task.Name + IntToStr(n)) do ;
 end;
 
 procedure TfrmMultiMonitorDemo.btnStartClick(Sender: TObject);
 var
   n: Cardinal;
 begin
+  FItems := TStringList.Create;
   ExitCounter := 0;
   lbFiles.Clear;
   btnStart.Enabled := false;
   seMonitors.Enabled := false;
   StatusBar.SimpleText := '';
   MsgCount := 0;
-  for n := 0 to seMonitors.Value - 1 do
-  begin
+  for n := 0 to seMonitors.Value - 1 do begin
     OTLMonitors[n] := TOmniEventMonitor.create(self);
     OTLMonitors[n].OnTaskMessage := OTLMonitorTaskMessage;
     OTLMonitors[n].OnTaskTerminated := OTLMonitorTaskTerminated;
-    OTLMonitors[n].OnRefreshTimeOut := OTLRefreshTimeOut;
     FTasks[n] := CreateTask(TaskProcedure, 'Task ' + Char(n + ord('A')) + ': ')
       .MonitorWith(OTLMonitors[n])
       .Run;
   end;
+  Timer1.Enabled := true;
 end;
 
 procedure TfrmMultiMonitorDemo.FormCloseQuery(Sender: TObject;
@@ -85,9 +85,6 @@ procedure TfrmMultiMonitorDemo.FormCloseQuery(Sender: TObject;
 var
   n: cardinal;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : testing, remove! 
-  TGpTraceable($7FF99CF0).TraceReferences := true;
-  //>
   for n := 0 to seMonitors.Value - 1 do
     if assigned(FTasks[n]) then begin
       FTasks[n].Terminate;
@@ -97,6 +94,7 @@ begin
     OTLMonitors[n].Free;
     OTLMonitors[n] := nil;
   end;
+  FreeAndNil(FItems);
   CanClose := True;
 end;
 
@@ -105,30 +103,29 @@ procedure TfrmMultiMonitorDemo.OTLMonitorTaskMessage(const task: IOmniTaskContro
 begin
   if msg.MsgID = MSG_STRING then begin
     inc(MsgCount);
-    lbFiles.Items.Add('Message: ' +IntToStr(MsgCount) + ': ' + msg.MsgData);
+    FItems.Add('Message: ' +IntToStr(MsgCount) + ': ' + msg.MsgData);
   end;
-end;
-
-procedure TfrmMultiMonitorDemo.OTLRefreshTimeOut(const task: IOmniTaskControl);
-begin
-  if cbRefreshScreen.Checked then
-    Application.ProcessMessages;
 end;
 
 procedure TfrmMultiMonitorDemo.OTLMonitorTaskTerminated(const task: IOmniTaskControl);
 begin
   inc(ExitCounter);
-  if ExitCounter >= cardinal(seMonitors.Value) then
-  begin
+  if ExitCounter >= cardinal(seMonitors.Value) then begin
     StatusBar.SimpleText := 'Message number: ' + IntToStr(MsgCount);
+    StatusBar.Update;
     btnStart.Enabled := true;
     seMonitors.Enabled := true;
+    Timer1.Enabled := false;
+    lbFiles.Items.Clear;
+    lbFiles.Items.Assign(FItems);
+    FreeAndNil(FItems);
   end;
 end;
 
 procedure TfrmMultiMonitorDemo.Timer1Timer(Sender: TObject);
 begin
   StatusBar.SimpleText := 'Message number: ' + IntToStr(MsgCount);
+  StatusBar.Update;
 end;
 
 end.
