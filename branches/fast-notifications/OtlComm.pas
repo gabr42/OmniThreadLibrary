@@ -282,10 +282,6 @@ begin
   ceReader_ref := readQueue;
   ceWriter_ref := writeQueue;
   ceTaskTerminatedEvent_ref := taskTerminatedEvent_ref;
-//  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-//  if pointer(Self) = pointer($7FF99CF0) then
-//    TraceReferences := true;
-//  //>
 end; { TOmniCommunicationEndpoint.Create }
 
 destructor TOmniCommunicationEndpoint.Destroy;
@@ -328,9 +324,7 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.Receive(var msg: TOmniMessage): boolean;
 begin
-  Result := not ceReader_ref.IsEmpty;
-  if Result then
-    msg := ceReader_ref.Dequeue;
+  Result := ceReader_ref.TryDequeue(msg);
 end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
