@@ -282,6 +282,10 @@ begin
   ceReader_ref := readQueue;
   ceWriter_ref := writeQueue;
   ceTaskTerminatedEvent_ref := taskTerminatedEvent_ref;
+//  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//  if pointer(Self) = pointer($7FF99CF0) then
+//    TraceReferences := true;
+//  //>
 end; { TOmniCommunicationEndpoint.Create }
 
 destructor TOmniCommunicationEndpoint.Destroy;
@@ -324,16 +328,18 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.Receive(var msg: TOmniMessage): boolean;
 begin
-  Result := ceReader_ref.TryDequeue(msg);
+  Result := not ceReader_ref.IsEmpty;
+  if Result then
+    msg := ceReader_ref.Dequeue;
 end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
   cardinal): boolean;
 begin
+  if ceTaskTerminatedEvent_ref = 0 then
+    raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
   Result := Receive(msg);
-  if (not Result) and (timeout_ms > 0) then begin
-    if ceTaskTerminatedEvent_ref = 0 then
-      raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
+  if not Result then begin
     ResetEvent(ceReader_ref.EventObserver.GetEvent);
     Result := Receive(msg);
     if not Result then begin
@@ -378,12 +384,12 @@ function TOmniCommunicationEndpoint.SendWait(msgID: word; msgData: TOmniValue;
 var
   msg: TOmniMessage;
 begin
+  if ceTaskTerminatedEvent_ref = 0 then
+    raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
   msg.msgID := msgID;
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
-  if (not Result) and (timeout_ms > 0) then begin
-    if ceTaskTerminatedEvent_ref = 0 then
-      raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
+  if not Result then begin
     RequirePartlyEmptyObserver;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
     Result := ceWriter_ref.Enqueue(msg);
@@ -450,13 +456,10 @@ begin
   for i := 1 to 2 do
     if assigned(twcEndpoint[i]) then
       (twcEndpoint[i] as IOmniCommunicationEndpointInternal).DetachFromQueues;
-  twcLock.Acquire;
-  try
-    for i := 1 to 2 do begin
-      twcUnidirQueue[i].Free;
-      twcUnidirQueue[i] := nil;
-    end;
-  finally twcLock.Release; end;
+  for i := 1 to 2 do begin
+    twcUnidirQueue[i].Free;
+    twcUnidirQueue[i] := nil;
+  end;
   FreeAndNil(twcLock);
   inherited;
 end; { TOmniTwoWayChannel.Destroy }
