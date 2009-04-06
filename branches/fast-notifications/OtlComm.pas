@@ -330,10 +330,10 @@ end; { TOmniCommunicationEndpoint.Receive }
 function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
   cardinal): boolean;
 begin
-  if ceTaskTerminatedEvent_ref = 0 then
-    raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
+    if ceTaskTerminatedEvent_ref = 0 then
+      raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
     ResetEvent(ceReader_ref.EventObserver.GetEvent);
     Result := Receive(msg);
     if not Result then begin
@@ -378,12 +378,12 @@ function TOmniCommunicationEndpoint.SendWait(msgID: word; msgData: TOmniValue;
 var
   msg: TOmniMessage;
 begin
-  if ceTaskTerminatedEvent_ref = 0 then
-    raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
   msg.msgID := msgID;
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
   if (not Result) and (timeout_ms > 0) then begin
+    if ceTaskTerminatedEvent_ref = 0 then
+      raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
     RequirePartlyEmptyObserver;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
     Result := ceWriter_ref.Enqueue(msg);
