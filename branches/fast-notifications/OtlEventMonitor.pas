@@ -120,7 +120,10 @@ uses
   SysUtils,
   DSiWin32;
 
-{ TOmniEventMonitor }
+const
+  CMaxReceiveLoop_ms = 5;
+
+{ TOmniEventMonitor }               
 
 constructor TOmniEventMonitor.Create(AOwner: TComponent);
 begin
@@ -174,29 +177,24 @@ end; { TOmniEventMonitor.Monitor }
 
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
-  owner: TComponent;
-  n            : cardinal;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
-  TickCount    : Cardinal;
+  timeStart    : int64;
   tpMonitorInfo: TOmniThreadPoolMonitorInfo;
 begin
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
-        task.SharedInfo.ResetTaskRefreshTimeOut;
-        TickCount := GetTickCount;
+        timeStart := GetTickCount;
         while task.Comm.Receive(tedCurrentMsg) do begin
           if assigned(tedOnTaskMessage) then
             tedOnTaskMessage(task, tedCurrentMsg);
-          if (TickCount + 8 < GetTickCount) then begin
-            //At last post to self!
-            PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam);
-            task.SharedInfo.SetTaskRefreshTimeOut;
-            break;
+          if DSiElapsedSince(GetTickCount, timeStart) > CMaxReceiveLoop_ms then begin 
+            Win32Check(PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
+            break; //while
           end;
-        end;
+        end; //while
       end;
     end;
     msg.Result := 0;

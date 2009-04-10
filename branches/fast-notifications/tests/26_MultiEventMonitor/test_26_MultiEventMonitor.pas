@@ -60,7 +60,7 @@ end;
 
 procedure TfrmMultiMonitorDemo.btnStartClick(Sender: TObject);
 var
-  n: Cardinal;
+  n: cardinal;
 begin
   FItems := TStringList.Create;
   ExitCounter := 0;

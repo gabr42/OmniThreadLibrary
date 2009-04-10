@@ -226,7 +226,7 @@ end; { TOmniContainerWindowsEventObserver.GetEvent }
 
 procedure TOmniContainerWindowsEventObserver.Notify;
 begin
-  SetEvent(GetEvent);
+  Win32Check(SetEvent(GetEvent));
 end; { TOmniContainerWindowsEventObserver.Notify }
 
 { TOmniContainerWindowsMessageObserver }
@@ -243,7 +243,7 @@ end; { TOmniContainerWindowsMessageObserver.Create }
 
 procedure TOmniContainerWindowsMessageObserver.Notify;
 begin
-  PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam);
+  Win32Check(PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam));
 end; { TOmniContainerWindowsMessageObserver.Notify }
 
 { TOmniContainerObserverEnum }

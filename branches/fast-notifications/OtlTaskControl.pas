@@ -294,16 +294,12 @@ type
     ostiLock              : TSynchroObject;
     ostiMonitorWindow     : THandle;
     ostiStopped           : boolean;
-    ostiTaskControlTimeOut: boolean;
     ostiTaskName          : string;
     ostiTerminatedEvent   : THandle;
     ostiTerminateEvent    : THandle;
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
   public
-    function  GetTaskRefreshTimeOut: boolean;
-    procedure ResetTaskRefreshTimeOut;
-    procedure SetTaskRefreshTimeOut;
     property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
     property ChainTo: IOmniTaskControl read ostiChainTo write ostiChainTo;
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
@@ -312,7 +308,6 @@ type
     property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow; // TODO 1 -oPrimoz Gabrijelcic : Why do we need it?
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
-    property TaskRefreshTimeOut: boolean read GetTaskRefreshTimeOut;
     property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
     property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
     property Terminating: boolean read ostiTerminating write ostiTerminating;
@@ -2236,23 +2231,6 @@ begin
     waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent;
   Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
 end; { TOmniTaskGroup.WaitForAll }
-
-{ TOmniSharedTaskInfo }
-
-function TOmniSharedTaskInfo.GetTaskRefreshTimeOut: boolean;
-begin
-  result := ostiTaskControlTimeOut;
-end; { TOmniSharedTaskInfo.GetTaskRefreshTimeOut }
-
-procedure TOmniSharedTaskInfo.ResetTaskRefreshTimeOut;
-begin
-  ostiTaskControlTimeOut := False;
-end; { TOmniSharedTaskInfo.ResetTaskRefreshTimeOut }
-
-procedure TOmniSharedTaskInfo.SetTaskRefreshTimeOut;
-begin
-  ostiTaskControlTimeOut := True;
-end; { TOmniSharedTaskInfo.SetTaskRefreshTimeOut }
 
 initialization
   AllMonitoredTasks := TList.Create;

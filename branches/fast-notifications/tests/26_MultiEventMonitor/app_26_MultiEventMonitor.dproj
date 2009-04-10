@@ -26,6 +26,7 @@
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_MapFile>3</DCC_MapFile>
     <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

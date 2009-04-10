@@ -865,7 +865,7 @@ begin
   Result := inherited Enqueue(value);
   if Result then begin
     countAfter := oqInQueueCount.Increment;
-    if (countBefore = 0) and (countAfter > 0) then
+    if (countBefore = 0) or (countAfter = 1) then // TODO 1 -oPrimoz Gabrijelcic : This only works with one writer! 
       ContainerSubject.Notify(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
     if (countBefore < oqAlmostFullCount) and
