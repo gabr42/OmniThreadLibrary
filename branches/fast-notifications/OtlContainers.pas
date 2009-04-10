@@ -181,12 +181,11 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, {IOmniMonitorSupport, }IOmniContainerSubject)
+  TOmniQueue = class(TOmniBaseQueue, IOmniContainerSubject)
   strict private
     oqAlmostFullCount    : integer;
     oqContainerSubject   : IOmniContainerSubject;
     oqInQueueCount       : TGp4AlignedInt;
-//    oqMonitorSupport     : IOmniMonitorSupport;
     oqOptions            : TOmniContainerOptions;
     oqPartlyEmptyCount   : integer;
   public
@@ -198,7 +197,6 @@ type
     function  Enqueue(const value): boolean;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;
-//    property  MonitorSupport: IOmniMonitorSupport read oqMonitorSupport implements IOmniMonitorSupport;
     property  Options: TOmniContainerOptions read oqOptions;
   end; { TOmniQueue }
 
@@ -529,8 +527,6 @@ begin
   osAlmostFullCount := Round(numElements * almostFullLoadFactor);
   if osAlmostFullCount >= numElements then
     osAlmostFullCount := numElements - 1;
-//  if coEnableMonitor in Options then
-//    osMonitorSupport := CreateOmniMonitorSupport;
 end; { TOmniStack.Create }
 
 function TOmniStack.Pop(var value): boolean;
@@ -568,8 +564,6 @@ begin
        (countAfter >= osAlmostFullCount)
     then
       ContainerSubject.Notify(coiNotifyOnAlmostFull);
-//    if coEnableMonitor in Options then
-//      osMonitorSupport.Notify;
   end;
 end; { TOmniStack.Push }
 
@@ -841,8 +835,6 @@ begin
     oqAlmostFullCount := numElements - 1;
   Initialize(numElements, elementSize);
   oqOptions := options;
-//  if coEnableMonitor in Options then
-//    oqMonitorSupport := CreateOmniMonitorSupport;
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
