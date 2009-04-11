@@ -388,10 +388,9 @@ end; { TOmniCommunicationEndpoint.ReceiveWait }
 
 procedure TOmniCommunicationEndpoint.RequirePartlyEmptyObserver;
 begin
-  if not assigned(cePartlyEmptyObserver) then begin
+  if not assigned(cePartlyEmptyObserver) then 
     cePartlyEmptyObserver := CreateContainerWindowsEventObserver;
-    OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
-  end;
+  OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
 end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }
 
 procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
@@ -418,16 +417,16 @@ begin
     Result := ceWriter_ref.Enqueue(msg);
     if not Result then begin
       startTime := GetTickCount;
-//      while not Result do begin
+      while not Result do begin
         waitTime := timeout_ms - DSiElapsedSince(GetTickCount, startTime);
         if (waitTime >= 0) and
            (DSiWaitForTwoObjects(cePartlyEmptyObserver.GetEvent, ceTaskTerminatedEvent_ref,
              false, waitTime) = WAIT_OBJECT_0)
         then
-          Result := ceWriter_ref.Enqueue(msg);
-//        else
-//          break; //while
-//      end; //while
+          Result := ceWriter_ref.Enqueue(msg)
+        else
+          break; //while
+      end; //while
     end; //if not Result
   end;
   if not Result then

@@ -204,7 +204,7 @@ implementation
 
 uses
   Windows,
-  SysUtils;
+  SysUtils, Classes;
 
 type
   TOmniContainerSubject = class(TInterfacedObject, IOmniContainerSubject)
@@ -216,6 +216,7 @@ type
       TOmniContainerObserverInterest);
     procedure Detach(const observer: IOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
+    procedure NotifyAndRemove(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
 { Intel Atomic functions support }
@@ -306,6 +307,25 @@ begin
   for observer in csObserverList.Enumerate(interest) do
     observer.Notify;
 end; { TOmniContainerSubject.Notify }
+
+procedure TOmniContainerSubject.NotifyAndRemove(interest: TOmniContainerObserverInterest);
+var
+  iIntf     : IInterface;
+  observer  : IOmniContainerObserver;
+  removeList: TInterfaceList;
+begin
+  removeList := TInterfaceList.Create;
+  try
+    for observer in csObserverList.Enumerate(interest) do begin
+      observer.Notify;
+      removeList.Add(observer);
+    end;
+    for iIntf in removeList do begin
+      Supports(iIntf, IOmniContainerObserver, observer);
+      Detach(observer);
+    end;
+  finally FreeAndNil(removeList); end;
+end; { TOmniContainerSubject.NotifyAndRemove }
 
 { TOmniBaseStack }
 
@@ -541,10 +561,8 @@ begin
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter = 0 then
       ContainerSubject.Notify(coiNotifyOnLastRemove);
-    if (countBefore > osPartlyEmptyCount) and
-       (countAfter <= osPartlyEmptyCount)
-    then
-      ContainerSubject.Notify(coiNotifyOnPartlyEmpty);
+    if countAfter <= osPartlyEmptyCount then
+      ContainerSubject.NotifyAndRemove(coiNotifyOnPartlyEmpty);
   end;
 end; { TOmniStack.Pop }
 
@@ -560,10 +578,8 @@ begin
     ContainerSubject.Notify(coiNotifyOnAllInserts);
     if countAfter = 1 then
       ContainerSubject.Notify(coiNotifyOnFirstInsert);
-    if (countBefore < osAlmostFullCount) and
-       (countAfter >= osAlmostFullCount)
-    then
-      ContainerSubject.Notify(coiNotifyOnAlmostFull);
+    if countAfter >= osAlmostFullCount then
+      ContainerSubject.NotifyAndRemove(coiNotifyOnAlmostFull);
   end;
 end; { TOmniStack.Push }
 
@@ -849,10 +865,8 @@ begin
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter = 0 then
       ContainerSubject.Notify(coiNotifyOnLastRemove);
-    if (countBefore > oqPartlyEmptyCount) and
-       (countAfter <= oqPartlyEmptyCount)
-    then
-      ContainerSubject.Notify(coiNotifyOnPartlyEmpty);
+    if countAfter <= oqPartlyEmptyCount then
+      ContainerSubject.NotifyAndRemove(coiNotifyOnPartlyEmpty);
   end;
 end; { TOmniQueue.Dequeue }
 
@@ -868,10 +882,8 @@ begin
     if (countBefore = 0) or (countAfter = 1) then // TODO 1 -oPrimoz Gabrijelcic : This only works with one writer! 
       ContainerSubject.Notify(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
-    if (countBefore < oqAlmostFullCount) and
-       (countAfter >= oqAlmostFullCount)
-    then
-      ContainerSubject.Notify(coiNotifyOnAlmostFull);
+    if countAfter >= oqAlmostFullCount then
+      ContainerSubject.NotifyAndRemove(coiNotifyOnAlmostFull);
   end;
 end; { TOmniQueue.Enqueue }
 

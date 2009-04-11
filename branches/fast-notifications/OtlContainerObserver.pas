@@ -79,6 +79,7 @@ type
       interest: TOmniContainerObserverInterest);
     procedure Detach(const observer: IOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
+    procedure NotifyAndRemove(interest: TOmniContainerObserverInterest);
   end; { IOmniContainerSubject }
 
   ///<summary>Observer sublist enumerator.</summary>
