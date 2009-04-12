@@ -181,20 +181,34 @@ var
   task         : IOmniTaskControl;
   timeStart    : int64;
   tpMonitorInfo: TOmniThreadPoolMonitorInfo;
-begin
+
+  function ProcessMessages(timeout_ms: integer = CMaxReceiveLoop_ms;
+    rearmSelf: boolean = true): boolean;
+  begin
+    Result := true;
+    while task.Comm.Receive(tedCurrentMsg) do begin
+      if assigned(tedOnTaskMessage) then
+        tedOnTaskMessage(task, tedCurrentMsg);
+      if DSiElapsedSince(GetTickCount, timeStart) > timeout_ms then begin
+        if rearmSelf then
+          Win32Check(PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
+        Result := false;
+        break; //while
+      end;
+    end; //while
+  end; { ProcessMessages }
+
+begin { TOmniEventMonitor.WndProc }
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
         timeStart := GetTickCount;
-        while task.Comm.Receive(tedCurrentMsg) do begin
-          if assigned(tedOnTaskMessage) then
-            tedOnTaskMessage(task, tedCurrentMsg);
-          if DSiElapsedSince(GetTickCount, timeStart) > CMaxReceiveLoop_ms then begin 
-            Win32Check(PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
-            break; //while
-          end;
-        end; //while
+        if ProcessMessages then begin
+          // all messages processed
+          task.SetMonitor(tedMessageWindow);
+          ProcessMessages(1, false);
+        end;
       end;
     end;
     msg.Result := 0;

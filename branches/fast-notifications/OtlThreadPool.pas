@@ -1245,6 +1245,7 @@ end; { TOmniThreadPool.SetMinWorkers }
 function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
 begin
   otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, hWindow);
+  // TODO 1 -oPrimoz Gabrijelcic : Not OK, must be executed immediately!
   Result := Self;
 end; { TOmniThreadPool.SetMonitor }
 

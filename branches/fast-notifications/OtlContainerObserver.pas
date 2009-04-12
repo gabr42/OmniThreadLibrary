@@ -55,9 +55,12 @@ uses
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
-  TOmniContainerObserverInterest = (coiNotifyOnFirstInsert, coiNotifyOnAllInserts,
-    coiNotifyOnLastRemove, coiNotifyOnAllRemoves, coiNotifyOnAlmostFull,
-    coiNotifyOnPartlyEmpty);
+  TOmniContainerObserverInterest = (
+    //Interests with permanent subscription:
+    coiNotifyOnAllInserts, coiNotifyOnAllRemoves, coiNotifyOnLastRemove,
+    //Interests with one-shot subscription:
+    coiNotifyOnFirstInsert, coiNotifyOnPartlyEmpty, coiNotifyOnAlmostFull
+  );
 
   ///<summary>Container observer.</summary>
   IOmniContainerObserver = interface ['{79288268-0B69-45C2-8E2B-50B1C5757172}']

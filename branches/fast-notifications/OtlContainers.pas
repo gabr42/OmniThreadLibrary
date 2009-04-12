@@ -551,10 +551,8 @@ end; { TOmniStack.Create }
 
 function TOmniStack.Pop(var value): boolean;
 var
-  countAfter : integer;
-  countBefore: integer;
+  countAfter: integer;
 begin
-  countBefore := osInStackCount;
   Result := inherited Pop(value);
   if Result then begin
     countAfter := osInStackCount.Decrement;
@@ -568,16 +566,13 @@ end; { TOmniStack.Pop }
 
 function TOmniStack.Push(const value): boolean;
 var
-  countAfter : integer;
-  countBefore: integer;
+  countAfter: integer;
 begin
-  countBefore := osInStackCount;
   Result := inherited Push(value);
   if Result then begin
     countAfter := osInStackCount.Increment;
     ContainerSubject.Notify(coiNotifyOnAllInserts);
-    if countAfter = 1 then
-      ContainerSubject.Notify(coiNotifyOnFirstInsert);
+    ContainerSubject.NotifyAndRemove(coiNotifyOnFirstInsert);
     if countAfter >= osAlmostFullCount then
       ContainerSubject.NotifyAndRemove(coiNotifyOnAlmostFull);
   end;
@@ -855,10 +850,8 @@ end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;
 var
-  countAfter : integer;
-  countBefore: integer;
+  countAfter: integer;
 begin
-  countBefore := oqInQueueCount;
   Result := inherited Dequeue(value);
   if Result then begin
     countAfter := oqInQueueCount.Decrement;
@@ -872,15 +865,12 @@ end; { TOmniQueue.Dequeue }
 
 function TOmniQueue.Enqueue(const value): boolean;
 var
-  countAfter : integer;
-  countBefore: integer;
+  countAfter: integer;
 begin
-  countBefore := oqInQueueCount;
   Result := inherited Enqueue(value);
   if Result then begin
     countAfter := oqInQueueCount.Increment;
-    if (countBefore = 0) or (countAfter = 1) then // TODO 1 -oPrimoz Gabrijelcic : This only works with one writer! 
-      ContainerSubject.Notify(coiNotifyOnFirstInsert);
+    ContainerSubject.NotifyAndRemove(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
     if countAfter >= oqAlmostFullCount then
       ContainerSubject.NotifyAndRemove(coiNotifyOnAlmostFull);

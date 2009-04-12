@@ -474,6 +474,7 @@ type
     procedure Asy_SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
     procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure EmptyMessageQueues(const task: IOmniTask);
     procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
@@ -1197,8 +1198,10 @@ begin
         DispatchOmniMessage(msg);
     until not gotMsg;
   end // comm handles
-  else if awaited = msgInfo.IdxRebuildHandles then
-    RebuildWaitHandles(task, msgInfo)
+  else if awaited = msgInfo.IdxRebuildHandles then begin
+    RebuildWaitHandles(task, msgInfo);
+    EmptyMessageQueues(task);
+  end
   else if awaited = (WAIT_OBJECT_0 + msgInfo.NumWaitHandles) then //message
     ProcessThreadMessages
   else if awaited = WAIT_IO_COMPLETION then
@@ -1212,8 +1215,11 @@ begin
   end //WAIT_TIMEOUT
   else //errors
     RaiseLastOSError;
-  if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then //could get set inside timer or message handler
+  if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
+    //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
+    EmptyMessageQueues(task);
+  end;
   Result := true;
 end; { TOmniTaskExecutor.DispatchEvent } 
 
@@ -1288,6 +1294,26 @@ begin
   else
     WorkerIntf.DispatchMessage(msg);
 end; { TOmniTaskExecutor.DispatchMessage }
+
+procedure TOmniTaskExecutor.EmptyMessageQueues(const task: IOmniTask);
+var
+  iComm: IOmniCommunicationEndpoint;
+  iIntf: IInterface;
+  msg  : TOmniMessage;
+begin
+  while task.Comm.Receive(msg) do
+    if assigned(WorkerIntf) then
+      DispatchOmniMessage(msg);
+  oteInternalLock.Acquire;
+  try
+    for iIntf in oteCommList do begin
+      iComm := iIntf as IOmniCommunicationEndpoint;
+      while iComm.Receive(msg) do
+        if assigned(WorkerIntf) then
+          DispatchOmniMessage(msg);
+    end;
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.EmptyMessageQueues }
 
 function TOmniTaskExecutor.GetExitCode: integer;
 begin
@@ -1434,14 +1460,10 @@ end; { TOmniTaskExecutor.Initialize }
 procedure TOmniTaskExecutor.MainMessageLoop(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
 begin
+  EmptyMessageQueues(task);
   while DispatchEvent(WaitForEvent(msgInfo, TimeUntilNextTimer_ms), task, msgInfo) do
     MessageLoopPayload;
 end; { TOmniTaskExecutor.MainMessageLoop }
-
-procedure TOmniTaskExecutor.MessageLoopPayload;
-begin
-  //placeholder that can be overridden
-end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
 var
@@ -1458,10 +1480,18 @@ begin
     if not DispatchEvent(awaited, task, msgInfo) then
       Exit;
     MessageLoopPayload;
-    if waitHandlesGen <> oteWaitHandlesGen then //DispatchEvent just rebuilt our internal copy
+    if waitHandlesGen <> oteWaitHandlesGen then begin
+      //DispatchEvent just rebuilt our internal copy
       RebuildWaitHandles(task, oteMsgInfo);
+      EmptyMessageQueues(task);
+    end;
   until false;
 end; { TOmniTaskExecutor.ProcessMessages }
+
+procedure TOmniTaskExecutor.MessageLoopPayload;
+begin
+  //placeholder that can be overridden
+end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessThreadMessages;
 var
@@ -1892,13 +1922,15 @@ end; { TOmniTaskControl.Schedule }
 
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
-  if otcParameters.IsLocked then
-    raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
-  otcSharedInfo.MonitorWindow := hWindow;
-  EnsureCommChannel;
-  otcMonitorObserver := CreateContainerWindowsMessageObserver(
-    hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
-    integer(Int64Rec(UniqueID).Hi));
+  if not assigned(otcMonitorObserver) then begin
+    if otcParameters.IsLocked then
+      raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
+    otcSharedInfo.MonitorWindow := hWindow;
+    EnsureCommChannel;
+    otcMonitorObserver := CreateContainerWindowsMessageObserver(
+      hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
+      integer(Int64Rec(UniqueID).Hi));
+  end;
   otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
     otcMonitorObserver, coiNotifyOnFirstInsert);
   Result := Self;

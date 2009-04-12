@@ -117,6 +117,8 @@ type
   TOmniMessageQueue = class(TOmniQueue)
   strict private
     mqWinEventObserver: IOmniContainerWindowsEventObserver;
+  strict protected
+    procedure AttachWinEventObserver;
   public
     constructor Create(numMessages: integer; createEventObserver: boolean = true);
       reintroduce;
@@ -124,8 +126,8 @@ type
     function  Dequeue: TOmniMessage; reintroduce;
     function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
     procedure Empty;
+    function  GetNewMessageEvent: THandle;
     function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
-    property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
@@ -227,14 +229,11 @@ end; { TOmniMessage.Create }
 
 { TOmniMessageQueue }
 
-constructor TOmniMessageQueue.Create(numMessages: integer; createEventObserver: boolean =
-  true);
+constructor TOmniMessageQueue.Create(numMessages: integer; createEventObserver: boolean);
 begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
-  if createEventObserver then begin
-    mqWinEventObserver := CreateContainerWindowsEventObserver;
-    ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
-  end;
+  if createEventObserver then
+    AttachWinEventObserver;
 end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
@@ -244,6 +243,13 @@ begin
   Empty;
   inherited;
 end; { TOmniMessageQueue.Destroy }
+
+procedure TOmniMessageQueue.AttachWinEventObserver;
+begin
+  if not assigned(mqWinEventObserver) then
+    mqWinEventObserver := CreateContainerWindowsEventObserver;
+  ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
+end;
 
 function TOmniMessageQueue.Dequeue: TOmniMessage;
 begin
@@ -270,6 +276,12 @@ begin
   if Result then
     tmp.MsgData.RawZero;
 end; { TOmniMessageQueue.Enqueue }
+
+function TOmniMessageQueue.GetNewMessageEvent: THandle;
+begin
+  AttachWinEventObserver;
+  Result := mqWinEventObserver.GetEvent;
+end; { TOmniMessageQueue.GetNewMessageEvent }
 
 function TOmniMessageQueue.TryDequeue(var msg: TOmniMessage): boolean;
 var
@@ -312,7 +324,7 @@ end; { TOmniCommunicationEndpoint.DetachFromQueues }
 
 function TOmniCommunicationEndpoint.GetNewMessageEvent: THandle;
 begin
-  Result := ceReader_ref.EventObserver.GetEvent;
+  Result := ceReader_ref.GetNewMessageEvent;
 end; { TOmniCommunicationEndpoint.GetNewMessageEvent }
 
 function TOmniCommunicationEndpoint.GetOtherEndpoint: IOmniCommunicationEndpoint;
@@ -346,30 +358,20 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
   cardinal): boolean;
-var
-  startTime: int64;
-  waitTime : integer;
 begin
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = 0 then
       raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
-    ResetEvent(ceReader_ref.EventObserver.GetEvent);
+    ResetEvent(ceReader_ref.GetNewMessageEvent);
     Result := Receive(msg);
     if not Result then begin
-      startTime := GetTickCount;
-      while not Result do begin
-        waitTime := timeout_ms - DSiElapsedSince(GetTickCount, startTime);
-        if (waitTime >= 0) and
-           (DSiWaitForTwoObjects(ceReader_ref.EventObserver.GetEvent,
-              ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0) then
-        begin
-          msg := ceReader_ref.Dequeue;
-          Result := true;
-        end
-        else
-          break; //while
-      end; //while
+      if DSiWaitForTwoObjects(ceReader_ref.GetNewMessageEvent,
+           ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0 then
+      begin
+        msg := ceReader_ref.Dequeue;
+        Result := true;
+      end
     end; //if not Result
   end;
 end; { TOmniCommunicationEndpoint.ReceiveWait }
@@ -401,6 +403,8 @@ end;  { TOmniCommunicationEndpoint.Send }
 
 function TOmniCommunicationEndpoint.SendWait(msgID: word; msgData: TOmniValue;
   timeout_ms: cardinal): boolean;
+label
+  retry;
 var
   msg      : TOmniMessage;
   startTime: int64;
@@ -412,18 +416,22 @@ begin
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = 0 then
       raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
+    startTime := GetTickCount;
+  retry:
     RequirePartlyEmptyObserver;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
     Result := ceWriter_ref.Enqueue(msg);
     if not Result then begin
-      startTime := GetTickCount;
       while not Result do begin
         waitTime := timeout_ms - DSiElapsedSince(GetTickCount, startTime);
         if (waitTime >= 0) and
            (DSiWaitForTwoObjects(cePartlyEmptyObserver.GetEvent, ceTaskTerminatedEvent_ref,
              false, waitTime) = WAIT_OBJECT_0)
-        then
-          Result := ceWriter_ref.Enqueue(msg)
+        then begin
+          Result := ceWriter_ref.Enqueue(msg);
+          if not Result then
+            goto retry;
+        end
         else
           break; //while
       end; //while
