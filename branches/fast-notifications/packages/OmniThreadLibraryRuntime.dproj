@@ -41,6 +41,7 @@
     <DCCReference Include="..\OtlContainerObserver.pas" />
     <DCCReference Include="..\OtlContainers.pas" />
     <DCCReference Include="..\OtlEventMonitor.pas" />
+    <DCCReference Include="..\OtlSync.pas" />
     <DCCReference Include="..\OtlTask.pas" />
     <DCCReference Include="..\OtlTaskControl.pas" />
     <DCCReference Include="..\OtlThreadPool.pas" />
@@ -52,5 +53,8 @@
     <DCCReference Include="..\src\HVStringBuilder.pas" />
     <DCCReference Include="..\src\HVStringData.pas" />
     <DCCReference Include="..\src\SpinLock.pas" />
+    <DCCReference Include="C:\Users\gabr\Desktop\rtl.dcp" />
+    <DCCReference Include="C:\Users\gabr\Desktop\vcl.dcp" />
+    <DCCReference Include="C:\Users\gabr\Desktop\vclx.dcp" />
   </ItemGroup>
 </Project>

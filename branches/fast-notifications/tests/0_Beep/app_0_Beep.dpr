@@ -1,6 +1,7 @@
 program app_0_Beep;
 
 uses
+  FastMM4,
   Forms,
   test_0_Beep in 'test_0_Beep.pas' {frmTestSimple},
   OtlCommon in '..\..\OtlCommon.pas',

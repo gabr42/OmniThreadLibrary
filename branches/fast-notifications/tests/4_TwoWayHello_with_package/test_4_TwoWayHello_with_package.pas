@@ -6,6 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
+  OtlComm,
   OtlTask,
   OtlTaskControl,
   OtlEventMonitor,
@@ -13,14 +14,14 @@ uses
 
 type
   TfrmTestTwoWayHello = class(TForm)
-    actChangeMessage      : TAction;
-    ActionList            : TActionList;
-    actStartHello         : TAction;
-    actStopHello          : TAction;
-    btnChangeMessage      : TButton;
-    btnStartHello         : TButton;
-    btnStopHello          : TButton;
-    lbLog                 : TListBox;
+    actChangeMessage : TAction;
+    ActionList       : TActionList;
+    actStartHello    : TAction;
+    actStopHello     : TAction;
+    btnChangeMessage : TButton;
+    btnStartHello    : TButton;
+    btnStopHello     : TButton;
+    lbLog            : TListBox;
     OmniEventMonitor1: TOmniEventMonitor;
     procedure actChangeMessageExecute(Sender: TObject);
     procedure actChangeMessageUpdate(Sender: TObject);
@@ -29,7 +30,8 @@ type
     procedure actStopHelloExecute(Sender: TObject);
     procedure actStopHelloUpdate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   strict private
     FHelloTask: IOmniTaskControl;
@@ -114,14 +116,11 @@ begin
   actStopHello.Execute;
 end;
 
-procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msgID, msgData.AsString]))
+    [task.UniqueID, task.Name, msg.MsgID, msg.MsgData.AsString]))
 end;
 
 procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);

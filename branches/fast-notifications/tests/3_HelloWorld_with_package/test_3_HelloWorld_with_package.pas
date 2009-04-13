@@ -8,7 +8,7 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlComm;
 
 type
   TfrmTestHelloWorld = class(TForm)
@@ -16,7 +16,8 @@ type
     lbLog           : TListBox;
     OmniEventMonitor1: TOmniEventMonitor;
     procedure btnHelloClick(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   private
     procedure RunHelloWorld(const task: IOmniTask);
@@ -40,14 +41,11 @@ begin
   OmniEventMonitor1.Monitor(CreateTask(RunHelloWorld, 'HelloWorld')).Run;
 end;
 
-procedure TfrmTestHelloWorld.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmTestHelloWorld.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msgID, msgData.AsString]));
+    [task.UniqueID, task.Name, msg.MsgID, msg.MsgData.AsString]));
 end;
 
 procedure TfrmTestHelloWorld.OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
