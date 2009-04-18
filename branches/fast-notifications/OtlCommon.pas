@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-04-05
-///   Version           : 1.03a
+///   Last modification : 2009-04-18
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2009-04-18
+///       - Added WideString support to TOmniValue.
 ///     1.03a: 2009-04-05
 ///       - Bug fixed: TInterfaceDictionaryEnumerator was ignoring first bucket.
 ///     1.03: 2009-03-30
@@ -93,7 +95,7 @@ type
     ovData: int64;
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
-             ovtObject, ovtInterface, ovtVariant);
+             ovtObject, ovtInterface, ovtVariant, ovtWideString);
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
@@ -105,6 +107,7 @@ type
     function  GetAsString: string;
     function  GetAsVariant: Variant;
     function  GetAsVariantArr(idx: integer): Variant;
+    function  GetAsWideString: WideString;
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -115,6 +118,7 @@ type
     procedure SetAsObject(const value: TObject); inline;
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
+    procedure SetAsWideString(const value: WideString);
   public
     procedure Clear; inline;
     function  IsBoolean: boolean; inline;
@@ -124,6 +128,7 @@ type
     function  IsObject: boolean; inline;
     function  IsString: boolean; inline;
     function  IsVariant: boolean; inline;
+    function  IsWideString: boolean; inline;
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
@@ -137,14 +142,16 @@ type
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
-    class operator Implicit(const a: TOmniValue): int64; inline;
-    class operator Implicit(const a: TOmniValue): TObject; inline;
-    class operator Implicit(const a: TOmniValue): Double; inline;
-    class operator Implicit(const a: TOmniValue): Extended;
-    class operator Implicit(const a: TOmniValue): IInterface;
+    class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
-    class operator Implicit(const a: TOmniValue): string;
+    class operator Implicit(const a: TOmniValue): IInterface;
     class operator Implicit(const a: TOmniValue): boolean; inline;
+    class operator Implicit(const a: TOmniValue): string; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
+    class operator Implicit(const a: TOmniValue): int64; inline;
+    class operator Implicit(const a: TOmniValue): Extended; inline;
+    class operator Implicit(const a: TOmniValue): Double; inline;
+    class operator Implicit(const a: WideString): TOmniValue;
     class operator Implicit(const a: Variant): TOmniValue; inline;
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
@@ -157,6 +164,7 @@ type
     property AsString: string read GetAsString write SetAsString;
     property AsVariant: Variant read GetAsVariant write SetAsVariant;
     property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
+    property AsWideString: WideString read GetAsWideString write SetAsWideString;
   end; { TOmniValue }
 
   TOmniWaitableValue = class
@@ -285,6 +293,22 @@ type
     procedure SetValue(const value: string);
     property Value: string read GetValue write SetValue;
   end; { TOmniStringData }
+
+  IOmniWideStringData = interface ['{B303DB23-4A06-4D25-814A-8A9EDC90D066}']
+    function  GetValue: WideString;
+    procedure SetValue(const value: WideString);
+    property Value: WideString read GetValue write SetValue;
+  end; { IOmniWideStringData }
+
+  TOmniWideStringData = class(TInterfacedObject, IOmniWideStringData)
+  strict private
+    osdValue: WideString;
+  public
+    constructor Create(const value: WideString);
+    function  GetValue: WideString;
+    procedure SetValue(const value: WideString);
+    property Value: WideString read GetValue write SetValue;
+  end; { TOmniWideStringData }
 
   IOmniVariantData = interface ['{65311D7D-67F1-452E-A0BD-C90596671FC8}']
     function  GetValue: Variant;
@@ -899,6 +923,14 @@ begin
   Result := AsVariant[idx];
 end; { TOmniValue.GetAsVariantArr }
 
+function TOmniValue.GetAsWideString: WideString;
+begin
+  if ovType = ovtWideString then
+    Result := (ovIntf as IOmniWideStringData).Value
+  else
+    Result := GetAsString;
+end; { TOmniValue.GetAsWideString }
+
 function TOmniValue.IsBoolean: boolean;
 begin
   Result := (ovType = ovtBoolean);
@@ -933,6 +965,11 @@ function TOmniValue.IsVariant: boolean;
 begin
   Result := (ovType = ovtVariant);
 end; { TOmniValue.IsVariant }
+
+function TOmniValue.IsWideString: boolean;
+begin
+  Result := (ovType = ovtWideString);
+end; { TOmniValue.IsWideString }
 
 class function TOmniValue.Null: TOmniValue;
 begin
@@ -1009,6 +1046,12 @@ begin
   ovType := ovtVariant;
 end; { TOmniValue.SetAsVariant }
 
+procedure TOmniValue.SetAsWideString(const value: WideString);
+begin
+  ovIntf := TOmniWideStringData.Create(value);
+  ovType := ovtWideString;
+end; { TOmniValue.SetAsWideString }
+
 class operator TOmniValue.Equal(const a: TOmniValue; i: integer): boolean;
 begin
   Result := (a.AsInteger = i);
@@ -1059,26 +1102,6 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): Double;
-begin
-  Result := a.AsDouble;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): int64;
-begin
-  Result := a.AsInt64;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): boolean;
-begin
-  Result := a.AsBoolean;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
-begin
-  Result := a.AsExtended;
-end; { TOmniValue.Implicit }
-
 class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
 begin
   Result := a.AsInterface;
@@ -1089,14 +1112,44 @@ begin
   Result := a.AsInteger;
 end; { TOmniValue.Implicit }
 
+class operator TOmniValue.Implicit(const a: TOmniValue): string;
+begin
+  Result := a.AsString;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
 begin
   Result := a.AsObject;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): string;
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
 begin
-  Result := a.AsString;
+  Result := a.AsDouble;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
+begin
+  Result := a.AsExtended;
+end; { TOmniValue.Implicit }            
+
+class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
+begin
+  Result := a.AsWideString;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): boolean;
+begin
+  Result := a.AsBoolean;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+begin
+  Result := a.AsInt64;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: WideString): TOmniValue;
+begin
+  Result.AsWideString := a;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
@@ -1155,6 +1208,24 @@ procedure TOmniStringData.SetValue(const value: string);
 begin
   osdValue := value;
 end; { TOmniStringData.SetValue }
+
+{ TOmniWideStringData }
+
+constructor TOmniWideStringData.Create(const value: WideString);
+begin
+  inherited Create;
+  osdValue := value;
+end; { TOmniWideStringData.Create }
+
+function TOmniWideStringData.GetValue: WideString;
+begin
+  Result := osdValue;
+end; { TOmniWideStringData.GetValue }
+
+procedure TOmniWideStringData.SetValue(const value: WideString);
+begin
+  osdValue := value;
+end; { TOmniWideStringData.SetValue }
 
 { TOmniVariantData }
 

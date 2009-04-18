@@ -80,3 +80,4 @@
 !! new test multi monitor
 !! net test waitable comm
 !! TOmniMessageQueue.TryDequeue, Empty
+!! Added WideString support to TOmniValue.

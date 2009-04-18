@@ -65,11 +65,13 @@ type
   ///<summary>Container observer.</summary>
   IOmniContainerObserver = interface ['{79288268-0B69-45C2-8E2B-50B1C5757172}']
     procedure Notify;
+    procedure NotifyOnce;
   end; { IOmniContainerObserver }
 
   IOmniContainerWindowsEventObserver = interface(IOmniContainerObserver)
                                        ['{E9FFB3D8-DC23-4A5B-AE94-2E8479120D6C}']
     function  GetEvent: THandle;
+    procedure ClearSignaled;
   end; { IOmniContainerWindowsEventObserver }
 
   IOmniContainerWindowsMessageObserver = interface(IOmniContainerObserver)
@@ -82,7 +84,7 @@ type
       interest: TOmniContainerObserverInterest);
     procedure Detach(const observer: IOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
-    procedure NotifyAndRemove(interest: TOmniContainerObserverInterest);
+    procedure NotifyOnce(interest: TOmniContainerObserverInterest);
   end; { IOmniContainerSubject }
 
   ///<summary>Observer sublist enumerator.</summary>
@@ -133,23 +135,28 @@ type
   strict private
     cweoEvent          : THandle;
     cweoEventIsExternal: boolean;
+    cweoSignaled       : boolean;
   public
     constructor Create(externalEvent: THandle = 0);
     destructor  Destroy; override;
     function  GetEvent: THandle; inline;
-    procedure Notify;
+    procedure Notify; inline;
+    procedure NotifyOnce; inline;
+    procedure ClearSignaled; inline;
   end; { TOmniContainerWindowsEventObserver }
 
   TOmniContainerWindowsMessageObserver = class(TInterfacedObject,
                                                IOmniContainerWindowsMessageObserver)
   strict private
-    cwmoHandle : THandle;
-    cwmoLParam : integer;
-    cwmoMessage: cardinal;
-    cwmoWParam : integer;
+    cwmoHandle  : THandle;
+    cwmoLParam  : integer;
+    cwmoMessage : cardinal;
+    cwmoWParam  : integer;
+    cwmoSignaled: boolean;
   public
     constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
-    procedure Notify;
+    procedure Notify; inline;
+    procedure NotifyOnce; inline;
   end; { TOmniContainerWindowsMessageObserver }
 
   ///<summary>Observer sublist enumerator.</summary>
@@ -160,8 +167,8 @@ type
   public
     constructor Create(observerList: TList; syncObj: TSynchroObject);
     destructor  Destroy; override;
-    function  GetCurrent: IOmniContainerObserver;
-    function  MoveNext: boolean;
+    function  GetCurrent: IOmniContainerObserver; inline;
+    function  MoveNext: boolean; inline;
     property Current: IOmniContainerObserver read GetCurrent;
   end; { TOmniContainerObserverEnum }
 
@@ -203,6 +210,11 @@ end; { CreateContainerWindowsMessageObserver }
 
 { TOmniContainerWindowsEventObserver }
 
+procedure TOmniContainerWindowsEventObserver.ClearSignaled;
+begin
+  cweoSignaled := False;
+end; { ClearSignaled }
+
 constructor TOmniContainerWindowsEventObserver.Create(externalEvent: THandle);
 begin
   if externalEvent <> 0 then begin
@@ -233,6 +245,14 @@ begin
   Win32Check(SetEvent(GetEvent));
 end; { TOmniContainerWindowsEventObserver.Notify }
 
+procedure TOmniContainerWindowsEventObserver.NotifyOnce;
+begin
+  if not cweoSignaled then begin
+    Win32Check(SetEvent(GetEvent));
+    cweoSignaled := true;
+  end;
+end; { TOmniContainerWindowsEventObserver.NotifyOnce }
+
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserver.Create(handle: THandle; aMessage:
@@ -249,6 +269,14 @@ procedure TOmniContainerWindowsMessageObserver.Notify;
 begin
   Win32Check(PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam));
 end; { TOmniContainerWindowsMessageObserver.Notify }
+
+procedure TOmniContainerWindowsMessageObserver.NotifyOnce;
+begin
+  if not cwmoSignaled then begin
+    Win32Check(PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam));
+    cwmoSignaled := true;
+  end;
+end; { TOmniContainerWindowsMessageObserver.NotifyOnce }
 
 { TOmniContainerObserverEnum }
 

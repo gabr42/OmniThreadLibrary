@@ -111,7 +111,6 @@ var
   COmniTaskMsg_NewMessage: cardinal;
   COmniTaskMsg_Terminated: cardinal;
   COmniPoolMsg           : cardinal;
-  AllMonitoredTasks      : TList = nil;
   
 implementation
 
@@ -225,7 +224,6 @@ begin { TOmniEventMonitor.WndProc }
             tedOnTaskUndeliveredMessage(task);
         if Assigned(tedOnTaskTerminated) then
           OnTaskTerminated(task);
-        AllMonitoredTasks.Remove(pointer(task.SharedInfo));
       end;
     end;
     Detach(task);

@@ -79,7 +79,7 @@ type
   end; { TOmniMessage }
 
 const
-  CDefaultQueueSize = 128;
+  CDefaultQueueSize = 1000;
 
 type
   TOmniMessageQueue = class;
@@ -128,6 +128,7 @@ type
     procedure Empty;
     function  GetNewMessageEvent: THandle;
     function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
+    property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
@@ -249,7 +250,7 @@ begin
   if not assigned(mqWinEventObserver) then
     mqWinEventObserver := CreateContainerWindowsEventObserver;
   ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
-end;
+end; { TOmniMessageQueue.AttachWinEventObserver }
 
 function TOmniMessageQueue.Dequeue: TOmniMessage;
 begin
@@ -363,6 +364,7 @@ begin
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = 0 then
       raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
+    ceReader_ref.EventObserver.ClearSignaled;
     ResetEvent(ceReader_ref.GetNewMessageEvent);
     Result := Receive(msg);
     if not Result then begin
@@ -390,9 +392,13 @@ end; { TOmniCommunicationEndpoint.ReceiveWait }
 
 procedure TOmniCommunicationEndpoint.RequirePartlyEmptyObserver;
 begin
-  if not assigned(cePartlyEmptyObserver) then 
+  if not assigned(cePartlyEmptyObserver) then begin
     cePartlyEmptyObserver := CreateContainerWindowsEventObserver;
-  OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
+    OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
+  end else begin
+    cePartlyEmptyObserver.ClearSignaled;
+    ResetEvent(cePartlyEmptyObserver.GetEvent);
+  end;
 end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }
 
 procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
@@ -419,7 +425,6 @@ begin
     startTime := GetTickCount;
   retry:
     RequirePartlyEmptyObserver;
-    ResetEvent(cePartlyEmptyObserver.GetEvent);
     Result := ceWriter_ref.Enqueue(msg);
     if not Result then begin
       while not Result do begin

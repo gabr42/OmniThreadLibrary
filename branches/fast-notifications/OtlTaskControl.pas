@@ -1882,7 +1882,6 @@ function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): I
 begin
   monitor.Monitor(Self);
   Result := Self;
-  AllMonitoredTasks.Add(SharedInfo);
 end; { TOmniTaskControl.MonitorWith }
 
 function TOmniTaskControl.MsgWait(wakeMask: DWORD): IOmniTaskControl;
@@ -2264,9 +2263,4 @@ begin
   Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
 end; { TOmniTaskGroup.WaitForAll }
 
-initialization
-  AllMonitoredTasks := TList.Create;
-finalization
-  FreeAndNil(AllMonitoredTasks);
 end.
-
