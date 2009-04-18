@@ -61,7 +61,7 @@ begin
         begin
           task.Comm.Receive(msgID, msgData);
           if msgID = MSG_CHANGE_MESSAGE then
-            msg := msgData;
+            msg := msgData.AsWideString;
         end;
       WAIT_TIMEOUT:
         task.Comm.Send(0, msg);
@@ -75,7 +75,7 @@ end;
 
 procedure TfrmTestTwoWayHello.actChangeMessageExecute(Sender: TObject);
 begin
-  FHelloTask.Comm.Send(MSG_CHANGE_MESSAGE, 'Random ' + IntToStr(Random(1234)));
+  FHelloTask.Comm.Send(MSG_CHANGE_MESSAGE, WideString('Random ' + IntToStr(Random(1234))));
 end;
 
 procedure TfrmTestTwoWayHello.actChangeMessageUpdate(Sender: TObject);
