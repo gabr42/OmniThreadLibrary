@@ -1304,15 +1304,17 @@ begin
   while task.Comm.Receive(msg) do
     if assigned(WorkerIntf) then
       DispatchOmniMessage(msg);
-  oteInternalLock.Acquire;
-  try
-    for iIntf in oteCommList do begin
-      iComm := iIntf as IOmniCommunicationEndpoint;
-      while iComm.Receive(msg) do
-        if assigned(WorkerIntf) then
-          DispatchOmniMessage(msg);
-    end;
-  finally oteInternalLock.Release; end;
+  if assigned(oteCommList) then begin
+    oteInternalLock.Acquire;
+    try
+      for iIntf in oteCommList do begin
+        iComm := iIntf as IOmniCommunicationEndpoint;
+        while iComm.Receive(msg) do
+          if assigned(WorkerIntf) then
+            DispatchOmniMessage(msg);
+      end;
+    finally oteInternalLock.Release; end;
+  end;
 end; { TOmniTaskExecutor.EmptyMessageQueues }
 
 function TOmniTaskExecutor.GetExitCode: integer;
