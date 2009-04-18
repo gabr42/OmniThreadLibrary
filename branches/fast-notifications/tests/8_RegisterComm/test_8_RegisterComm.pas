@@ -9,7 +9,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlComm,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlThreadPool;
 
 type
   TfrmTestRegisterComm = class(TForm)
@@ -22,6 +22,7 @@ type
     OmniTED      : TOmniEventMonitor;
     btnSendBool: TButton;
     btnSendIntf: TButton;
+    btnSendWS: TButton;
     procedure btnSendBoolClick(Sender: TObject);
     procedure btnSendFloatClick(Sender: TObject);
     procedure btnSendIntfClick(Sender: TObject);
@@ -29,6 +30,7 @@ type
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
+    procedure btnSendWSClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
@@ -179,6 +181,12 @@ begin
   FClient2.Comm.Send(MSG_FORWARD, value);
 end;
 
+procedure TfrmTestRegisterComm.btnSendWSClick(Sender: TObject);
+begin
+  Log('Sending WideString ''abc'' to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, WideString('abc'));
+end;
+
 procedure TfrmTestRegisterComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
@@ -207,16 +215,18 @@ var
   sData: string;
   sl   : TStringList;
 begin
-  if msg.msgData.IsInterface then 
+  if msg.MsgData.IsInterface then 
     sData := IntToStr((msg.MsgData.AsInterface as IDataIntf).GetValue)
-  else if msg.msgData.IsObject then begin
+  else if msg.MsgData.IsObject then begin
     sl := TStringList(msg.msgData.AsObject);
     sData := sl.ClassName + '/' + sl.Text;
     if msg.msgID = MSG_NOTIFY_RECEPTION then
       sl.Free;
   end
+  else if msg.MsgData.IsWideString then
+    sData := msg.MsgData.AsWideString
   else
-    sData := msg.msgData;
+    sData := msg.MsgData;
   if msg.msgID = MSG_NOTIFY_FORWARD then
     Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, sData]))
   else if msg.msgID = MSG_NOTIFY_RECEPTION then

@@ -18,7 +18,8 @@ type
     procedure btnRunTestsClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
   private
     FClient1    : IOmniTaskControl;
     FClient2    : IOmniTaskControl;
@@ -222,12 +223,11 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestCommunications.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestCommunications.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 var
-  msg            : TOmniMessage;
   testDuration_ms: int64;
 begin
-  task.Comm.Receive(msg);
   case msg.MsgID of
     MSG_NOTIFY_TEST_START:
       Log(Format('Running test %s; %d messages', [string(msg.MsgData), CTestQueueLength]));

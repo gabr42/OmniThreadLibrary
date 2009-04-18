@@ -142,15 +142,15 @@ type
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
-    class operator Implicit(const a: TOmniValue): WideString; inline;
-    class operator Implicit(const a: TOmniValue): integer; inline;
-    class operator Implicit(const a: TOmniValue): IInterface;
-    class operator Implicit(const a: TOmniValue): boolean; inline;
-    class operator Implicit(const a: TOmniValue): string; inline;
-    class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): int64; inline;
-    class operator Implicit(const a: TOmniValue): Extended; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
+    class operator Implicit(const a: TOmniValue): Extended; inline;
+    class operator Implicit(const a: TOmniValue): string; inline;
+    class operator Implicit(const a: TOmniValue): integer; inline;
+    class operator Implicit(const a: TOmniValue): WideString; inline;
+    class operator Implicit(const a: TOmniValue): boolean; inline;
+    class operator Implicit(const a: TOmniValue): IInterface;
     class operator Implicit(const a: WideString): TOmniValue;
     class operator Implicit(const a: Variant): TOmniValue; inline;
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
@@ -901,12 +901,13 @@ end; { TOmniValue.GetAsObject }
 function TOmniValue.GetAsString: string;
 begin
   case ovType of
-    ovtNull:     Result := '';
-    ovtBoolean:  Result := BoolToStr(AsBoolean, true);
-    ovtInteger:  Result := IntToStr(ovData);
+    ovtNull:       Result := '';
+    ovtBoolean:    Result := BoolToStr(AsBoolean, true);
+    ovtInteger:    Result := IntToStr(ovData);
     ovtDouble,
-    ovtExtended: Result := FloatToStr(AsExtended);
-    ovtString:   Result := (ovIntf as IOmniStringData).Value;
+    ovtExtended:   Result := FloatToStr(AsExtended);
+    ovtString:     Result := (ovIntf as IOmniStringData).Value;
+    ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
 end; { TOmniValue.GetAsString }
@@ -1102,29 +1103,9 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
+class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
-  Result := a.AsInterface;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): integer;
-begin
-  Result := a.AsInteger;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): string;
-begin
-  Result := a.AsString;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
-begin
-  Result := a.AsObject;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): Double;
-begin
-  Result := a.AsDouble;
+  Result := a.AsWideString;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
@@ -1132,9 +1113,9 @@ begin
   Result := a.AsExtended;
 end; { TOmniValue.Implicit }            
 
-class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
 begin
-  Result := a.AsWideString;
+  Result := a.AsInt64;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): boolean;
@@ -1142,9 +1123,29 @@ begin
   Result := a.AsBoolean;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
 begin
-  Result := a.AsInt64;
+  Result := a.AsDouble;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): integer;
+begin
+  Result := a.AsInteger;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
+begin
+  Result := a.AsInterface;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
+begin
+  Result := a.AsObject;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): string;
+begin
+  Result := a.AsString;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: WideString): TOmniValue;

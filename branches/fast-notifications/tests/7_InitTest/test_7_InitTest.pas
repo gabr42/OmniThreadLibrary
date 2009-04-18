@@ -27,7 +27,8 @@ type
     OmniEventMonitor1: TOmniEventMonitor;
     procedure btnTestFailureClick(Sender: TObject);
     procedure btnTestSuccessClick(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   private
   strict protected
@@ -73,11 +74,9 @@ begin
   Test(true);
 end;
 
-procedure TfrmTestInit.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestInit.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(Format('%d: %d %s',
     [task.UniqueID, msg.msgID, msg.MsgData.AsString]));
 end;

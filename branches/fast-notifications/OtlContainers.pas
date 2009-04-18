@@ -81,9 +81,6 @@ type
     function  IsFull: boolean;
   end; { IOmniQueue }
 
-  TOmniContainerOption = ({coEnableMonitor, }coMonitorOnDequeue);
-  TOmniContainerOptions = set of TOmniContainerOption;
-
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
     PData    : pointer;
@@ -139,17 +136,14 @@ type
     osContainerSubject: IOmniContainerSubject;
     osInStackCount    : TGp4AlignedInt;
     osMonitorSupport  : IOmniMonitorSupport;
-    osOptions         : TOmniContainerOptions;
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [{coEnableMonitor}];
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function Pop(var value): boolean; override;
     function Push(const value): boolean; override;
     property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
-    property Options: TOmniContainerOptions read osOptions;
     property ContainerSubject: IOmniContainerSubject read osContainerSubject
       implements IOmniContainerSubject;
   end; { TOmniStack }
@@ -186,18 +180,15 @@ type
     oqAlmostFullCount    : integer;
     oqContainerSubject   : IOmniContainerSubject;
     oqInQueueCount       : TGp4AlignedInt;
-    oqOptions            : TOmniContainerOptions;
     oqPartlyEmptyCount   : integer;
   public
     constructor Create(numElements, elementSize: integer;
-      options: TOmniContainerOptions = [{coEnableMonitor}];
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
       implements IOmniContainerSubject;
-    property  Options: TOmniContainerOptions read oqOptions;
   end; { TOmniQueue }
 
 implementation
@@ -534,13 +525,12 @@ end; { TOmniBaseStack.PushLink }
 
 { TOmniStack }
 
-constructor TOmniStack.Create(numElements, elementSize: integer; options:
-  TOmniContainerOptions; partlyEmptyLoadFactor, almostFullLoadFactor: real);
+constructor TOmniStack.Create(numElements, elementSize: integer; partlyEmptyLoadFactor,
+  almostFullLoadFactor: real);
 begin
   inherited Create;
   Initialize(numElements, elementSize);
   osContainerSubject := TOmniContainerSubject.Create;
-  osOptions := options;
   osInStackCount.Value := 0;
   osPartlyEmptyCount := Round(numElements * partlyEmptyLoadFactor);
   if osPartlyEmptyCount >= numElements then
@@ -833,8 +823,8 @@ end; { TOmniBaseQueue.RemoveLink }
 
 { TOmniQueue }
 
-constructor TOmniQueue.Create(numElements, elementSize: integer; options:
-  TOmniContainerOptions; partlyEmptyLoadFactor, almostFullLoadFactor: real);
+constructor TOmniQueue.Create(numElements, elementSize: integer; partlyEmptyLoadFactor,
+  almostFullLoadFactor: real);
 begin
   inherited Create;
   oqContainerSubject := TOmniContainerSubject.Create;
@@ -846,7 +836,6 @@ begin
   if oqAlmostFullCount >= numElements then
     oqAlmostFullCount := numElements - 1;
   Initialize(numElements, elementSize);
-  oqOptions := options;
 end; { TOmniQueue.Create }
 
 function TOmniQueue.Dequeue(var value): boolean;

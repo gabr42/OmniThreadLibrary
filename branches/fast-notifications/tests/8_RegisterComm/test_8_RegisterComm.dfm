@@ -87,6 +87,15 @@ object frmTestRegisterComm: TfrmTestRegisterComm
     TabOrder = 7
     OnClick = btnSendIntfClick
   end
+  object btnSendWS: TButton
+    Left = 8
+    Top = 251
+    Width = 89
+    Height = 25
+    Caption = 'Send WideString'
+    TabOrder = 8
+    OnClick = btnSendWSClick
+  end
   object OmniTED: TOmniEventMonitor
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8
