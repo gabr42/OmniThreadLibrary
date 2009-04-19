@@ -20,8 +20,10 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DesignOnlyPackage>false</DesignOnlyPackage>
+			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\6.0\Bpl\OmniThreadLibraryRuntime2009.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\6.0\Bpl\OmniThreadLibraryRuntime2009.bpl</DCC_DependencyCheckOutputName>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
@@ -51,8 +53,15 @@
 			<DCCReference Include="..\src\DetailedRTTI.pas"/>
 			<DCCReference Include="..\OtlCommon.pas"/>
 			<DCCReference Include="..\OtlContainers.pas"/>
-			<DCCReference Include="..\OtlContainerObserver.pas"/>
 			<DCCReference Include="..\OtlCommBufferTest.pas"/>
+			<DCCReference Include="..\OtlComm.pas"/>
+			<DCCReference Include="..\OtlTask.pas"/>
+			<DCCReference Include="..\OtlTaskControl.pas"/>
+			<DCCReference Include="..\OtlThreadPool.pas"/>
+			<DCCReference Include="..\OtlEventMonitor.pas"/>
+			<DCCReference Include="..\src\DSiWin32.pas"/>
+			<DCCReference Include="..\OtlContainerObserver.pas"/>
+			<DCCReference Include="..\OtlSync.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

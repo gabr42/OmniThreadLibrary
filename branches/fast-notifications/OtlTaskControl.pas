@@ -280,11 +280,6 @@ type
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
   end; { IOmniTaskGroup }
 
-{$IFDEF OTL_Anonymous}
-  TOmniTaskFunction = reference to procedure (task: IOmniTask);
-  function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
-{$ENDIF OTL_Anonymous}
-
   TOmniSharedTaskInfo = class
   strict private
     ostiChainIgnoreErrors : boolean;
@@ -318,6 +313,13 @@ type
   function CreateTask(worker: TOmniTaskMethod; const taskName: string = ''): IOmniTaskControl; overload;
   function CreateTask(const worker: IOmniWorker; const taskName: string = ''): IOmniTaskControl; overload;
 //  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
+
+{$IFDEF OTL_Anonymous}
+type
+  TOmniTaskFunction = reference to procedure (task: IOmniTask);
+  function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
+{$ENDIF OTL_Anonymous}
+
   function CreateTaskGroup: IOmniTaskGroup;
 
   function CreateTaskControlList: IOmniTaskControlList;

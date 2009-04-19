@@ -546,7 +546,7 @@ var
 begin
   Result := inherited Pop(value);
   if Result then begin
-    countAfter := osInStackCount.Decrement;
+    countAfter := osInStackCount.Decrement;  //' range check error??
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter = 0 then
       ContainerSubject.Notify(coiNotifyOnLastRemove);
