@@ -6,10 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2009-03-29
-   Version           : 1.17
+   Last modification : 2009-04-21
+   Version           : 1.17a
 </pre>*)(*
    History:
+     1.17a: 2009-04-21
+       - InterlockedIncrement/InterlockedDecrement deal with integers, therefore
+         TGp4AlignedInt.Increment/Decrement must return integers.
      1.17: 2009-03-29
        - Implemented IGpTraceable interface.
      1.16: 2009-03-16
@@ -85,8 +88,8 @@ type
     procedure SetValue(value: cardinal); inline;
   public
     function Addr: PCardinal; inline;
-    function Decrement: cardinal; inline;
-    function Increment: cardinal; inline;
+    function Decrement: integer; inline;
+    function Increment: integer; inline;
     class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
     class operator Equal(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
     class operator GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
@@ -418,7 +421,7 @@ begin
   Result := PCardinal((cardinal(@aiData) + 3) AND NOT 3);
 end; { TGp4AlignedInt.Addr }
 
-function TGp4AlignedInt.Decrement: cardinal;
+function TGp4AlignedInt.Decrement: integer;
 begin
   Result := InterlockedDecrement(PInteger(Addr)^);
 end; { TGp4AlignedInt.Decrement }
@@ -428,7 +431,7 @@ begin
   Result := Addr^;
 end; { TGp4AlignedInt.GetValue }
 
-function TGp4AlignedInt.Increment: cardinal;
+function TGp4AlignedInt.Increment: integer;
 begin
   Result := InterlockedIncrement(PInteger(Addr)^);
 end; { TGp4AlignedInt.Increment }
