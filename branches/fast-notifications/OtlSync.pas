@@ -84,13 +84,13 @@ type
 
   function CreateOmniCriticalSection: IOmniCriticalSection;
 
-  //Intel Atomic functions support
-  function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
-  function CAS32(const oldValue, newValue: pointer; var destination): boolean; overload;
-  function CAS64(const oldData, oldReference, newData, newReference: cardinal; var
-    destination): boolean; overload;
-  function CAS64(const oldData: pointer; const oldReference: cardinal; const newData:
-    pointer; const newReference: cardinal; var destination): boolean; overload;
+// Intel Atomic functions support
+function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
+function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
+function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
+  newReference: cardinal; var destination): boolean;
+function GetThreadId: cardinal;
+function GetCPUTimeStamp: int64;
 
 implementation
 
@@ -118,34 +118,40 @@ begin
 end; { CreateOmniCriticalSection }
 
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean;
-{$IFDEF PurePascal}
-begin
-  Result := oldValue = cardinal(InterlockedCompareExchange(Longint(destination),
-    newValue, oldValue));
-end; { CAS32 }
-{$ELSE PurePascal}
+//ATOMIC FUNCTION
+//begin
+//  result := oldValue = PCardinal(destination)^;
+//  if result then
+//    PCardinal(destination)^ := newValue;
+//end;
 asm
   lock cmpxchg dword ptr [destination], newValue
   setz  al
 end; { CAS32 }
-{$ENDIF PurePascal}
 
-function CAS32(const oldValue, newValue: pointer; var destination): boolean;
-{$IFDEF PurePascal}
-begin
-  result := cardinal(oldValue) = cardinal(InterlockedCompareExchange(Longint(destination),
-    Longint(newValue), Longint(oldValue)));
-end; { CAS32 }
-{$ELSE PurePascal}
+function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean;
+//ATOMIC FUNCTION
+//begin
+//  result := oldValue = PPointer(destination)^;
+//  if result then
+//    PPointer(destination)^ := newValue;
+//end;
 asm
   lock cmpxchg dword ptr [destination], newValue
   setz  al
 end; { CAS32 }
-{$ENDIF PurePascal}
 
-//64 bit compare and swap
-function CAS64(const oldData, oldReference, newData, newReference: cardinal;
-  var destination): boolean;
+function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
+  newReference: cardinal; var destination): boolean;
+//ATOMIC FUNCTION
+//begin
+//  result := (destination.PData = oldData) and (destination.Reference = oldReference);
+//  if result then
+//  begin
+//    destination.PData := newData;
+//    destination.Reference := newReference;
+//  end;
+//end;
 asm
   push  edi
   push  ebx
@@ -156,22 +162,19 @@ asm
   setz  al
   pop   ebx
   pop   edi
-end; { CAS64 }
+end; { AtomicCmpXchg8b }
 
-//64 bit compare and swap
-function CAS64(const oldData: pointer; const oldReference: cardinal; const newData:
-  pointer; const newReference: cardinal; var destination): boolean;
+function GetThreadId: cardinal;
+//result := GetCurrentThreadId;
 asm
-  push  edi
-  push  ebx
-  mov   ebx, newData
-  mov   ecx, newReference
-  mov   edi, destination
-  lock cmpxchg8b qword ptr [edi]
-  setz  al
-  pop   ebx
-  pop   edi
-end; { CAS64 }
+  mov   eax, fs:[$18]                                           //eax := thread information block
+  mov   eax, [eax + $24]                                        //eax := thread id
+end; { GetThreadId }
+
+function GetCPUTimeStamp: int64;
+asm
+  rdtsc
+end; { GetCPUTimeStamp }
 
 { TOmniCS }
 

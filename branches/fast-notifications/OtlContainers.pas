@@ -130,12 +130,11 @@ type
     property  NumElements: integer read obsNumElements;
   end; { TOmniBaseStack }
 
-  TOmniStack = class(TOmniBaseStack, IOmniMonitorSupport, IOmniContainerSubject)
+  TOmniStack = class(TOmniBaseStack, IOmniContainerSubject)
   strict private
     osAlmostFullCount : integer;
     osContainerSubject: IOmniContainerSubject;
     osInStackCount    : TGp4AlignedInt;
-    osMonitorSupport  : IOmniMonitorSupport;
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
@@ -143,7 +142,6 @@ type
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     function Pop(var value): boolean; override;
     function Push(const value): boolean; override;
-    property MonitorSupport: IOmniMonitorSupport read osMonitorSupport implements IOmniMonitorSupport;
     property ContainerSubject: IOmniContainerSubject read osContainerSubject
       implements IOmniContainerSubject;
   end; { TOmniStack }
@@ -196,7 +194,8 @@ implementation
 uses
   Windows,
   SysUtils, 
-  Classes;
+  Classes,
+  OtlSync;
 
 type
   TOmniContainerSubject = class(TInterfacedObject, IOmniContainerSubject)
@@ -210,68 +209,6 @@ type
     procedure Notify(interest: TOmniContainerObserverInterest);
     procedure NotifyOnce(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
-
-{ Intel Atomic functions support }
-
-function AtomicCmpXchg4b(const Old4b, New4b: cardinal; var Destination): boolean; overload;
-//ATOMIC FUNCTION
-//begin
-//  result := Old4b = PCardinal(Destination)^;
-//  if result then
-//    PCardinal(Destination)^ := New4b;
-//end;
-asm
-  lock cmpxchg dword ptr [Destination], New4b
-  setz  al
-end; { AtomicCmpXchg4b }
-
-function AtomicCmpXchg4b(const Old4b, New4b: pointer; var Destination): boolean; overload;
-//ATOMIC FUNCTION
-//begin
-//  result := Old4b = PPointer(Destination)^;
-//  if result then
-//    PPointer(Destination)^ := New4b;
-//end;
-asm
-  lock cmpxchg dword ptr [Destination], New4b
-  setz  al
-end; { AtomicCmpXchg4b }
-
-function AtomicCmpXchg8b(const OldPData: pointer; OldReference: cardinal; NewPData: pointer; NewReference: cardinal;
-  var Destination: TReferencedPtr): boolean;
-//ATOMIC FUNCTION
-//begin
-//  result := (Destination.PData = OldPData) and (Destination.Reference = OldReference);
-//  if result then
-//  begin
-//    Destination.PData := NewPData;
-//    Destination.Reference := NewReference;
-//  end;
-//end;
-asm
-  push  edi
-  push  ebx
-  mov   ebx, NewPData
-  mov   ecx, NewReference
-  mov   edi, Destination
-  lock cmpxchg8b qword ptr [edi]
-  setz  al
-  pop   ebx
-  pop   edi
-end; { AtomicCmpXchg8b }
-
-function GetThreadId: cardinal;
-//result := GetCurrentThreadId;
-asm
-  mov   eax, fs:[$18]                                           //eax := thread information block
-  mov   eax, [eax + $24]                                        //eax := thread id
-end; { GetThreadId }
-
-function GetTimeStamp: int64;
-//result := QueryPerformanceCounter;
-asm
-  rdtsc
-end; { GetTimeStamp }
 
 { TOmniContainerSubject }
 
@@ -424,18 +361,18 @@ begin { TOmniBaseStack.MeasureExecutionTimes }
       obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
         //Measure RemoveLink rutine delay
-        TimeTestField[0, n] := GetTimeStamp;
+        TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := PopLink(obsRecycleChainP^);
-        TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+        TimeTestField[0, n] := GetCPUTimeStamp - TimeTestField[0, n];
         //Measure InsertLink rutine delay
-        TimeTestField[1, n] := GetTimeStamp;
+        TimeTestField[1, n] := GetCPUTimeStamp;
         PushLink(currElement, obsRecycleChainP^);
-        TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-        //Measure GetTimeStamp rutine delay
-        TimeTestField[2, n] := GetTimeStamp;
-        TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+        TimeTestField[1, n] := GetCPUTimeStamp - TimeTestField[1, n];
+        //Measure GetCPUTimeStamp rutine delay
+        TimeTestField[2, n] := GetCPUTimeStamp;
+        TimeTestField[2, n] := GetCPUTimeStamp - TimeTestField[2, n];
       end;
-      //Calculate first 4 minimum average for GetTimeStamp
+      //Calculate first 4 minimum average for GetCPUTimeStamp
       n := GetMinAndClear(2, 4);
       //Calculate first 4 minimum average for RemoveLink rutine
       obsTaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
@@ -480,16 +417,16 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not AtomicCmpXchg4b(CurrentReference, ThreadReference, Reference)
+       not CAS32(CurrentReference, ThreadReference, Reference)
     then
       goto TryAgain;
     //Reference is set...
     result := PData;
     //Empty test
     if result = nil then
-      AtomicCmpXchg4b(ThreadReference, 0, Reference)            //Clear Reference if task own reference
+      CAS32(ThreadReference, 0, Reference)            //Clear Reference if task own reference
     else
-      if not AtomicCmpXchg8b(result, ThreadReference, result.Next, 0, chain) then
+      if not CAS64(result, ThreadReference, result.Next, 0, chain) then
         goto TryAgain;
   end;
 end; { TOmniBaseStack.PopLink }
@@ -519,7 +456,7 @@ begin
     repeat
       PMemData := PData;
       link.Next := PMemData;
-    until AtomicCmpXchg4b(PMemData, link, PData);
+    until CAS32(PMemData, link, PData);
   end;
 end; { TOmniBaseStack.PushLink }
 
@@ -678,14 +615,14 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not AtomicCmpXchg4b(CurrentReference, ThreadReference, LastIn.Reference)
+       not CAS32(CurrentReference, ThreadReference, LastIn.Reference)
     then
       goto TryAgain;
     //Reference is set...
     CurrentLastIn := LastIn.PData;
-    AtomicCmpXchg4b(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
+    CAS32(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
     if (ThreadReference <> LastIn.Reference) or
-      not AtomicCmpXchg8b(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
+      not CAS64(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
     then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
@@ -693,7 +630,7 @@ TryAgain:
     if cardinal(NewLastIn) > cardinal(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
-    if not AtomicCmpXchg8b(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
+    if not CAS64(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseQueue.InsertLink }
@@ -752,18 +689,18 @@ begin { TOmniBaseQueue.MeasureExecutionTimes }
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
         //Measure RemoveLink rutine delay
-        TimeTestField[0, n] := GetTimeStamp;
+        TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := RemoveLink(obqRecycleRingBuffer);
-        TimeTestField[0, n] := GetTimeStamp - TimeTestField[0, n];
+        TimeTestField[0, n] := GetCPUTimeStamp - TimeTestField[0, n];
         //Measure InsertLink rutine delay
-        TimeTestField[1, n] := GetTimeStamp;
+        TimeTestField[1, n] := GetCPUTimeStamp;
         InsertLink(currElement, obqRecycleRingBuffer);
-        TimeTestField[1, n] := GetTimeStamp - TimeTestField[1, n];
-        //Measure GetTimeStamp rutine delay
-        TimeTestField[2, n] := GetTimeStamp;
-        TimeTestField[2, n] := GetTimeStamp - TimeTestField[2, n];
+        TimeTestField[1, n] := GetCPUTimeStamp - TimeTestField[1, n];
+        //Measure GetCPUTimeStamp rutine delay
+        TimeTestField[2, n] := GetCPUTimeStamp;
+        TimeTestField[2, n] := GetCPUTimeStamp - TimeTestField[2, n];
       end;
-      //Calculate first 4 minimum average for GetTimeStamp
+      //Calculate first 4 minimum average for GetCPUTimeStamp
       n := GetMinAndClear(2, 4);
       //Calculate first 4 minimum average for RemoveLink rutine
       obqTaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
@@ -797,7 +734,7 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-      not AtomicCmpXchg4b(CurrentReference, Reference, FirstIn.Reference)
+      not CAS32(CurrentReference, Reference, FirstIn.Reference)
     then
       goto TryAgain;
     //Reference is set...
@@ -805,7 +742,7 @@ TryAgain:
     //Empty test
     if CurrentFirstIn = LastIn.PData then begin
       //Clear Reference if task own reference
-      AtomicCmpXchg4b(Reference, 0, FirstIn.Reference);
+      CAS32(Reference, 0, FirstIn.Reference);
       Result := nil;
       Exit;
     end;
@@ -816,7 +753,7 @@ TryAgain:
     if cardinal(NewFirstIn) > cardinal(EndBuffer) then
       NewFirstIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
-    if not AtomicCmpXchg8b(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
+    if not CAS64(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseQueue.RemoveLink }
