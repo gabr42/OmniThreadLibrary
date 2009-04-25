@@ -84,6 +84,14 @@ type
 
   function CreateOmniCriticalSection: IOmniCriticalSection;
 
+  //Intel Atomic functions support
+  function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
+  function CAS32(const oldValue, newValue: pointer; var destination): boolean; overload;
+  function CAS64(const oldData, oldReference, newData, newReference: cardinal; var
+    destination): boolean; overload;
+  function CAS64(const oldData: pointer; const oldReference: cardinal; const newData:
+    pointer; const newReference: cardinal; var destination): boolean; overload;
+
 implementation
 
 uses
@@ -108,6 +116,62 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 begin
   Result := TOmniCriticalSection.Create;
 end; { CreateOmniCriticalSection }
+
+function CAS32(const oldValue, newValue: cardinal; var destination): boolean;
+{$IFDEF PurePascal}
+begin
+  Result := oldValue = cardinal(InterlockedCompareExchange(Longint(destination),
+    newValue, oldValue));
+end; { CAS32 }
+{$ELSE PurePascal}
+asm
+  lock cmpxchg dword ptr [destination], newValue
+  setz  al
+end; { CAS32 }
+{$ENDIF PurePascal}
+
+function CAS32(const oldValue, newValue: pointer; var destination): boolean;
+{$IFDEF PurePascal}
+begin
+  result := cardinal(oldValue) = cardinal(InterlockedCompareExchange(Longint(destination),
+    Longint(newValue), Longint(oldValue)));
+end; { CAS32 }
+{$ELSE PurePascal}
+asm
+  lock cmpxchg dword ptr [destination], newValue
+  setz  al
+end; { CAS32 }
+{$ENDIF PurePascal}
+
+//64 bit compare and swap
+function CAS64(const oldData, oldReference, newData, newReference: cardinal;
+  var destination): boolean;
+asm
+  push  edi
+  push  ebx
+  mov   ebx, newData
+  mov   ecx, newReference
+  mov   edi, destination
+  lock cmpxchg8b qword ptr [edi]
+  setz  al
+  pop   ebx
+  pop   edi
+end; { CAS64 }
+
+//64 bit compare and swap
+function CAS64(const oldData: pointer; const oldReference: cardinal; const newData:
+  pointer; const newReference: cardinal; var destination): boolean;
+asm
+  push  edi
+  push  ebx
+  mov   ebx, newData
+  mov   ecx, newReference
+  mov   edi, destination
+  lock cmpxchg8b qword ptr [edi]
+  setz  al
+  pop   ebx
+  pop   edi
+end; { CAS64 }
 
 { TOmniCS }
 
