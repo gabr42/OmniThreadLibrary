@@ -560,7 +560,7 @@ type
   strict private
     otcDestroyLock    : boolean;
     otcExecutor       : TOmniTaskExecutor;
-    otcMonitorObserver: IOmniContainerWindowsMessageObserver;
+    otcMonitorObserver: TOmniContainerObserver;
     otcOwningPool     : IOmniThreadPool;
     otcParameters     : TOmniValueContainer;
     otcQueueLength    : integer;

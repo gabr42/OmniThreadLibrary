@@ -83,7 +83,7 @@ begin
     end;
     if not rb.IsEmpty then
       raise Exception.Create('Buffer is not empty at the end');
-  finally FreeAndNil(rb); end;
+   finally FreeAndNil(rb); end;
 end; { RingBufferTest }
 
 initialization

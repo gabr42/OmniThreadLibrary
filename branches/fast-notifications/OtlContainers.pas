@@ -175,14 +175,15 @@ type
 
   TOmniQueue = class(TOmniBaseQueue, IOmniContainerSubject)
   strict private
-    oqAlmostFullCount    : integer;
-    oqContainerSubject   : IOmniContainerSubject;
-    oqInQueueCount       : TGp4AlignedInt;
-    oqPartlyEmptyCount   : integer;
+    oqAlmostFullCount : integer;
+    oqContainerSubject: IOmniContainerSubject;
+    oqInQueueCount    : TGp4AlignedInt;
+    oqPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
+    destructor Destroy; override;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
     property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
@@ -203,17 +204,17 @@ type
     csObserverList: IOmniContainerObserverList;
   public
     constructor Create;
-    procedure Attach(const observer: IOmniContainerObserver; interest:
-      TOmniContainerObserverInterest);
-    procedure Detach(const observer: IOmniContainerObserver);
+    procedure Attach(const observer: TOmniContainerObserver;
+      interest: TOmniContainerObserverInterest);
+    procedure Detach(const observer: TOmniContainerObserver);
     procedure Notify(interest: TOmniContainerObserverInterest);
     procedure NotifyOnce(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
 { TOmniContainerSubject }
 
-procedure TOmniContainerSubject.Attach(const observer: IOmniContainerObserver; interest:
-  TOmniContainerObserverInterest);
+procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
+  interest: TOmniContainerObserverInterest);
 begin
   csObserverList.Add(observer, interest);
 end; { TOmniContainerSubject.Attach }
@@ -224,35 +225,33 @@ begin
   csObserverList := CreateContainerObserverList;
 end; { TOmniContainerSubject.Create }
 
-procedure TOmniContainerSubject.Detach(const observer: IOmniContainerObserver);
+procedure TOmniContainerSubject.Detach(const observer: TOmniContainerObserver);
 begin
   csObserverList.Remove(observer);
 end; { TOmniContainerSubject.Detach }
 
 procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
 var
-  observer: IOmniContainerObserver;
+  observer: TOmniContainerObserver;
 begin
   for observer in csObserverList.Enumerate(interest) do
     observer.Notify;
 end; { TOmniContainerSubject.Notify }
 
-procedure TOmniContainerSubject.NotifyOnce( interest: TOmniContainerObserverInterest);
+procedure TOmniContainerSubject.NotifyOnce(interest: TOmniContainerObserverInterest);
 var
-  iIntf     : IInterface;
-  observer  : IOmniContainerObserver;
-  removeList: TInterfaceList;
+  observer  : TOmniContainerObserver;
+  oObserver : pointer;
+  removeList: TList;
 begin
-  removeList := TInterfaceList.Create;
+  removeList := TList.Create;
   try
     for observer in csObserverList.Enumerate(interest) do begin
       observer.Notify;
       removeList.Add(observer);
     end;
-    for iIntf in removeList do begin
-      Supports(iIntf, IOmniContainerObserver, observer);
-      Detach(observer);
-    end;
+    for oObserver in removeList do
+      Detach(TOmniContainerObserver(oObserver));
   finally FreeAndNil(removeList); end;
 end; { TOmniContainerSubject.NotifyAndRemove }
 
@@ -774,6 +773,12 @@ begin
     oqAlmostFullCount := numElements - 1;
   Initialize(numElements, elementSize);
 end; { TOmniQueue.Create }
+
+destructor TOmniQueue.Destroy;
+begin
+  inherited;
+  oqContainerSubject := nil;
+end; { TOmniQueue.Destroy }
 
 function TOmniQueue.Dequeue(var value): boolean;
 var

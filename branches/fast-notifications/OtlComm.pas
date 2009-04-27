@@ -116,7 +116,7 @@ type
   }
   TOmniMessageQueue = class(TOmniQueue)
   strict private
-    mqWinEventObserver: IOmniContainerWindowsEventObserver;
+    mqWinEventObserver: TOmniContainerWindowsEventObserver;
   strict protected
     procedure AttachWinEventObserver;
   public
@@ -128,7 +128,7 @@ type
     procedure Empty;
     function  GetNewMessageEvent: THandle;
     function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
-    property EventObserver: IOmniContainerWindowsEventObserver read mqWinEventObserver;
+    property EventObserver: TOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
@@ -154,7 +154,7 @@ type
     IOmniCommunicationEndpointInternal)
   strict private
     ceOwner_ref              : TOmniTwoWayChannel;
-    cePartlyEmptyObserver    : IOmniContainerWindowsEventObserver;
+    cePartlyEmptyObserver    : TOmniContainerWindowsEventObserver;
     ceReader_ref             : TOmniMessageQueue;
     ceTaskTerminatedEvent_ref: THandle;
     ceWriter_ref             : TOmniMessageQueue;
@@ -240,7 +240,7 @@ end; { TOmniMessageQueue.Create }
 destructor TOmniMessageQueue.Destroy;
 begin
   ContainerSubject.Detach(mqWinEventObserver);
-  mqWinEventObserver := nil;
+  FreeAndNil(mqWinEventObserver);
   Empty;
   inherited;
 end; { TOmniMessageQueue.Destroy }
@@ -315,6 +315,7 @@ begin
      assigned(cePartlyEmptyObserver) 
   then
     ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver);
+  FreeAndNil(cePartlyEmptyObserver);
 end; { TOmniCommunicationEndpoint.Destroy }
 
 procedure TOmniCommunicationEndpoint.DetachFromQueues;
@@ -364,7 +365,6 @@ begin
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = 0 then
       raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
-    ceReader_ref.EventObserver.ClearSignaled;
     ResetEvent(ceReader_ref.GetNewMessageEvent);
     Result := Receive(msg);
     if not Result then begin
@@ -396,7 +396,7 @@ begin
     cePartlyEmptyObserver := CreateContainerWindowsEventObserver;
     OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
   end else begin
-    cePartlyEmptyObserver.ClearSignaled;
+//    cePartlyEmptyObserver.ClearSignaled;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
   end;
 end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }
