@@ -224,9 +224,9 @@ begin { TOmniEventMonitor.WndProc }
             tedOnTaskUndeliveredMessage(task);
         if Assigned(tedOnTaskTerminated) then
           OnTaskTerminated(task);
+        Detach(task);
       end;
     end;
-    Detach(task);
     msg.Result := 0;
   end
   else if msg.Msg = COmniPoolMsg then begin
