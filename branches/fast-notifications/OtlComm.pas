@@ -239,7 +239,7 @@ end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
 begin
-  ContainerSubject.Detach(mqWinEventObserver);
+  ContainerSubject.Detach(mqWinEventObserver, coiNotifyOnFirstInsert);
   FreeAndNil(mqWinEventObserver);
   Empty;
   inherited;
@@ -247,9 +247,11 @@ end; { TOmniMessageQueue.Destroy }
 
 procedure TOmniMessageQueue.AttachWinEventObserver;
 begin
-  if not assigned(mqWinEventObserver) then
+  if not assigned(mqWinEventObserver) then begin
     mqWinEventObserver := CreateContainerWindowsEventObserver;
-  ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
+    ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
+  end;
+  mqWinEventObserver.Activate;
 end; { TOmniMessageQueue.AttachWinEventObserver }
 
 function TOmniMessageQueue.Dequeue: TOmniMessage;
@@ -314,7 +316,7 @@ begin
   if assigned(ceWriter_ref) and assigned(ceWriter_ref.ContainerSubject) and
      assigned(cePartlyEmptyObserver) 
   then
-    ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver);
+    ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
   FreeAndNil(cePartlyEmptyObserver);
 end; { TOmniCommunicationEndpoint.Destroy }
 
@@ -395,8 +397,9 @@ begin
   if not assigned(cePartlyEmptyObserver) then begin
     cePartlyEmptyObserver := CreateContainerWindowsEventObserver;
     OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
-  end else begin
-//    cePartlyEmptyObserver.ClearSignaled;
+  end
+  else begin
+    cePartlyEmptyObserver.Deactivate;
     ResetEvent(cePartlyEmptyObserver.GetEvent);
   end;
 end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }

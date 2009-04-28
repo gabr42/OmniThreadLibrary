@@ -205,8 +205,8 @@ begin { TOmniEventMonitor.WndProc }
         timeStart := GetTickCount;
         if ProcessMessages then begin
           // all messages processed
-          task.SetMonitor(tedMessageWindow);
-          ProcessMessages(1, false);
+          task.SetMonitor(tedMessageWindow); //rearm
+          ProcessMessages(1, false); //check if something was posted before rearmed
         end;
       end;
     end;

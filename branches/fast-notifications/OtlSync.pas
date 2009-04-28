@@ -74,12 +74,12 @@ type
 
   TOmniMREW = record
   strict private
-    omrewReference : integer;      //Reference.Bit0 is 'writing in progress' flag
+    omrewReference: integer;      //Reference.Bit0 is 'writing in progress' flag
   public
-    procedure EnterReadLock;
-    procedure EnterWriteLock;
-    procedure ExitReadLock;
-    procedure ExitWriteLock;
+    procedure EnterReadLock; inline;
+    procedure EnterWriteLock; inline;
+    procedure ExitReadLock; inline;
+    procedure ExitWriteLock; inline;
   end; { TOmniMREW }
 
   function CreateOmniCriticalSection: IOmniCriticalSection;

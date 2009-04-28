@@ -594,7 +594,6 @@ type
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
-//    function  GetSelf: pointer;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload; inline;
@@ -1793,17 +1792,10 @@ begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
 
-{function TOmniTaskControl.GetSelf: pointer;
-begin
-  result := self;
-end;}
-
 function TOmniTaskControl.GetSharedInfo: TOmniSharedTaskInfo;
 begin
   result := otcSharedInfo;
 end; { GetSharedInfo: TOmniSharedTaskInfo }
-
-{ TOmniTaskControl.GetSelf }
 
 function TOmniTaskControl.GetTerminatedEvent: THandle;
 begin
@@ -1899,8 +1891,9 @@ function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
   otcSharedInfo.MonitorWindow := 0;
   EnsureCommChannel;
-  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver);
-  otcMonitorObserver := nil;
+  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver,
+    coiNotifyOnFirstInsert);
+  FreeAndNil(otcMonitorObserver);
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
 
@@ -1933,9 +1926,10 @@ begin
     otcMonitorObserver := CreateContainerWindowsMessageObserver(
       hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
       integer(Int64Rec(UniqueID).Hi));
+    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
+      otcMonitorObserver, coiNotifyOnFirstInsert);
   end;
-  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
-    otcMonitorObserver, coiNotifyOnFirstInsert);
+  otcMonitorObserver.Activate;
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 

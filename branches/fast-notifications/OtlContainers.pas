@@ -201,58 +201,95 @@ uses
 type
   TOmniContainerSubject = class(TInterfacedObject, IOmniContainerSubject)
   strict private
-    csObserverList: IOmniContainerObserverList;
+    csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
+    csObserverLists: array [TOmniContainerObserverInterest] of TList;
   public
     constructor Create;
+    destructor  Destroy; override;
     procedure Attach(const observer: TOmniContainerObserver;
       interest: TOmniContainerObserverInterest);
-    procedure Detach(const observer: TOmniContainerObserver);
+    procedure Detach(const observer: TOmniContainerObserver; interest:
+      TOmniContainerObserverInterest);
     procedure Notify(interest: TOmniContainerObserverInterest);
     procedure NotifyOnce(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
 { TOmniContainerSubject }
 
+constructor TOmniContainerSubject.Create;
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  inherited Create;
+  for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
+    csObserverLists[interest] := TList.Create;
+end; { TOmniContainerSubject.Create }
+
+destructor TOmniContainerSubject.Destroy;
+var
+  interest: TOmniContainerObserverInterest;
+begin
+  for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do begin
+    csObserverLists[interest].Free;
+    csObserverLists[interest] := nil;
+  end;
+  inherited;
+end; { TOmniContainerSubject.Destroy }
+
 procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
   interest: TOmniContainerObserverInterest);
 begin
-  csObserverList.Add(observer, interest);
+  csListLocks[interest].EnterWriteLock;
+  try
+    if csObserverLists[interest].IndexOf(observer) < 0 then
+      csObserverLists[interest].Add(observer);
+  finally csListLocks[interest].ExitWriteLock; end;
 end; { TOmniContainerSubject.Attach }
 
-constructor TOmniContainerSubject.Create;
+procedure TOmniContainerSubject.Detach(const observer: TOmniContainerObserver;
+  interest: TOmniContainerObserverInterest);
 begin
-  inherited Create;
-  csObserverList := CreateContainerObserverList;
-end; { TOmniContainerSubject.Create }
-
-procedure TOmniContainerSubject.Detach(const observer: TOmniContainerObserver);
-begin
-  csObserverList.Remove(observer);
+  csListLocks[interest].EnterWriteLock;
+  try
+    csObserverLists[interest].Remove(observer);
+  finally csListLocks[interest].ExitWriteLock; end;
 end; { TOmniContainerSubject.Detach }
 
 procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
 var
-  observer: TOmniContainerObserver;
+  iObserver: integer;
+  list     : TList;
 begin
-  for observer in csObserverList.Enumerate(interest) do
-    observer.Notify;
+  {$R-}
+  csListLocks[interest].EnterReadLock;
+  try
+    list := csObserverLists[interest];
+    for iObserver := 0 to list.Count - 1 do begin
+      TOmniContainerObserver(list[iObserver]).Notify;
+    end;
+  finally csListLocks[interest].ExitReadLock; end;
+  {$R+}
 end; { TOmniContainerSubject.Notify }
 
 procedure TOmniContainerSubject.NotifyOnce(interest: TOmniContainerObserverInterest);
 var
-  observer  : TOmniContainerObserver;
-  oObserver : pointer;
-  removeList: TList;
+  iObserver: integer;
+  list     : TList;
+  observer : TOmniContainerObserver;
 begin
-  removeList := TList.Create;
+  {$R-}
+  csListLocks[interest].EnterReadLock;
   try
-    for observer in csObserverList.Enumerate(interest) do begin
-      observer.Notify;
-      removeList.Add(observer);
+    list := csObserverLists[interest];
+    for iObserver := 0 to list.Count - 1 do begin
+      observer := TOmniContainerObserver(list[iObserver]);
+      if observer.IsActive then begin
+        observer.Notify;
+        observer.Deactivate;
+      end;
     end;
-    for oObserver in removeList do
-      Detach(TOmniContainerObserver(oObserver));
-  finally FreeAndNil(removeList); end;
+  finally csListLocks[interest].ExitReadLock; end;
+  {$R+}
 end; { TOmniContainerSubject.NotifyAndRemove }
 
 { TOmniBaseStack }
