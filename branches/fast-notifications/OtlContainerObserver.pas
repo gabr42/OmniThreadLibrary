@@ -79,16 +79,6 @@ type
     function  GetEvent: THandle; virtual; abstract;
   end; { TOmniContainerWindowsEventObserver }
 
-  ///<summary>Container as a subject.</summary>
-  IOmniContainerSubject = interface ['{F66DD79E-230A-4246-B740-C0A7665549EC}']
-    procedure Attach(const observer: TOmniContainerObserver;
-      interest: TOmniContainerObserverInterest);
-    procedure Detach(const observer: TOmniContainerObserver;
-      interest: TOmniContainerObserverInterest);
-    procedure Notify(interest: TOmniContainerObserverInterest);
-    procedure NotifyOnce(interest: TOmniContainerObserverInterest);
-  end; { IOmniContainerSubject }
-
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;

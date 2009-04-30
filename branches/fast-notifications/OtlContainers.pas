@@ -49,9 +49,11 @@ unit OtlContainers;
 interface
 
 uses
+  Classes,
   DSiWin32,
   GpStuff,
   OtlCommon,
+  OtlSync,
   OtlContainerObserver;
 
 const
@@ -59,6 +61,23 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
+  TOmniContainerSubject = class
+  strict private
+    csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
+    csObserverLists: array [TOmniContainerObserverInterest] of TList;
+  protected
+    procedure Notify(interest: TOmniContainerObserverInterest);
+    procedure NotifyOnce(interest: TOmniContainerObserverInterest);
+    procedure Rearm(interest: TOmniContainerObserverInterest);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Attach(const observer: TOmniContainerObserver;
+      interest: TOmniContainerObserverInterest);
+    procedure Detach(const observer: TOmniContainerObserver;
+      interest: TOmniContainerObserverInterest); 
+  end; { TOmniContainerSubject }
+
   {:Lock-free, single writer, single reader, size-limited stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
@@ -130,20 +149,20 @@ type
     property  NumElements: integer read obsNumElements;
   end; { TOmniBaseStack }
 
-  TOmniStack = class(TOmniBaseStack, IOmniContainerSubject)
+  TOmniStack = class(TOmniBaseStack)
   strict private
     osAlmostFullCount : integer;
-    osContainerSubject: IOmniContainerSubject;
+    osContainerSubject: TOmniContainerSubject;
     osInStackCount    : TGp4AlignedInt;
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
+    destructor  Destroy; override;
     function Pop(var value): boolean; override;
     function Push(const value): boolean; override;
-    property ContainerSubject: IOmniContainerSubject read osContainerSubject
-      implements IOmniContainerSubject;
+    property ContainerSubject: TOmniContainerSubject read osContainerSubject;
   end; { TOmniStack }
 
   TOmniBaseQueue = class abstract(TInterfacedObject, IOmniQueue)
@@ -173,46 +192,27 @@ type
     property  NumElements: integer read obqNumElements;
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue, IOmniContainerSubject)
+  TOmniQueue = class(TOmniBaseQueue)
   strict private
     oqAlmostFullCount : integer;
-    oqContainerSubject: IOmniContainerSubject;
+    oqContainerSubject: TOmniContainerSubject;
     oqInQueueCount    : TGp4AlignedInt;
     oqPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function  Dequeue(var value): boolean;
     function  Enqueue(const value): boolean;
-    property  ContainerSubject: IOmniContainerSubject read oqContainerSubject
-      implements IOmniContainerSubject;
+    property  ContainerSubject: TOmniContainerSubject read oqContainerSubject;
   end; { TOmniQueue }
 
 implementation
 
 uses
   Windows,
-  SysUtils, 
-  Classes,
-  OtlSync;
-
-type
-  TOmniContainerSubject = class(TInterfacedObject, IOmniContainerSubject)
-  strict private
-    csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
-    csObserverLists: array [TOmniContainerObserverInterest] of TList;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Attach(const observer: TOmniContainerObserver;
-      interest: TOmniContainerObserverInterest);
-    procedure Detach(const observer: TOmniContainerObserver; interest:
-      TOmniContainerObserverInterest);
-    procedure Notify(interest: TOmniContainerObserverInterest);
-    procedure NotifyOnce(interest: TOmniContainerObserverInterest);
-  end; { TOmniContainerSubject }
+  SysUtils;
 
 { TOmniContainerSubject }
 
@@ -283,7 +283,7 @@ begin
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do begin
       observer := TOmniContainerObserver(list[iObserver]);
-      if observer.IsActive then begin
+      if observer.IsActive then begin // TODO 1 -oPrimoz Gabrijelcic : Atomic check
         observer.Notify;
         observer.Deactivate;
       end;
@@ -291,6 +291,21 @@ begin
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}
 end; { TOmniContainerSubject.NotifyAndRemove }
+
+procedure TOmniContainerSubject.Rearm(interest: TOmniContainerObserverInterest);
+var
+  iObserver: integer;
+  list     : TList;
+begin
+  {$R-}
+  csListLocks[interest].EnterReadLock;
+  try
+    list := csObserverLists[interest];
+    for iObserver := 0 to list.Count - 1 do 
+      TOmniContainerObserver(list[iObserver]).Activate;
+  finally csListLocks[interest].ExitReadLock; end;
+  {$R+}
+end; { TOmniContainerSubject.Rearm }
 
 { TOmniBaseStack }
 
@@ -512,6 +527,12 @@ begin
   if osAlmostFullCount >= numElements then
     osAlmostFullCount := numElements - 1;
 end; { TOmniStack.Create }
+
+destructor TOmniStack.Destroy;
+begin
+  FreeAndNil(osContainerSubject);
+  inherited;
+end; { TOmniStack.Destroy }
 
 function TOmniStack.Pop(var value): boolean;
 var
@@ -813,8 +834,8 @@ end; { TOmniQueue.Create }
 
 destructor TOmniQueue.Destroy;
 begin
+  FreeAndNil(oqContainerSubject);
   inherited;
-  oqContainerSubject := nil;
 end; { TOmniQueue.Destroy }
 
 function TOmniQueue.Dequeue(var value): boolean;
@@ -824,11 +845,11 @@ begin
   Result := inherited Dequeue(value);
   if Result then begin
     countAfter := oqInQueueCount.Decrement;
+    ContainerSubject.NotifyOnce(coiNotifyOnLastRemove);
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-    if countAfter = 0 then
-      ContainerSubject.Notify(coiNotifyOnLastRemove);
     if countAfter <= oqPartlyEmptyCount then
       ContainerSubject.NotifyOnce(coiNotifyOnPartlyEmpty);
+    ContainerSubject.Rearm(coiNotifyOnFirstInsert);
   end;
 end; { TOmniQueue.Dequeue }
 
