@@ -283,7 +283,7 @@ begin
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do begin
       observer := TOmniContainerObserver(list[iObserver]);
-      if observer.IsActive then begin // TODO 1 -oPrimoz Gabrijelcic : Atomic check
+      if observer.CanNotify then begin 
         observer.Notify;
         observer.Deactivate;
       end;

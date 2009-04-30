@@ -65,13 +65,13 @@ type
   ///<summary>Container observer. Class based for performance.</summary>
   TOmniContainerObserver = class
   strict private
-    coIsActivated: boolean;
+    coIsActivated: TGp4AlignedInt;
   public
     constructor Create;
     procedure Activate; inline;
+    function  CanNotify: boolean; inline;
     procedure Deactivate; inline;
     procedure Notify; virtual; abstract;
-    property IsActive: boolean read coIsActivated;
   end; { TOmniContainerObserver }
 
   TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
@@ -139,17 +139,22 @@ end; { CreateContainerWindowsMessageObserver }
 constructor TOmniContainerObserver.Create;
 begin
   inherited;
-  coIsActivated := true;
+  Activate;
 end; { TOmniContainerObserver.Create }
 
 procedure TOmniContainerObserver.Activate;
 begin
-  coIsActivated := true;
+  coIsActivated.Value := 1;
 end; { TOmniContainerObserver.Activate }
+
+function TOmniContainerObserver.CanNotify: boolean;
+begin
+  Result := (InterlockedCompareExchange(PInteger(coIsActivated.Addr)^, 0, 1) = 1);
+end; { TOmniContainerObserver.CanNotify }
 
 procedure TOmniContainerObserver.Deactivate;
 begin
-  coIsActivated := false;
+  coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
 
 { TOmniContainerWindowsEventObserverImpl }
