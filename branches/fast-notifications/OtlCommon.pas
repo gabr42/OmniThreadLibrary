@@ -469,14 +469,16 @@ var
   ansiName      : AnsiString;
   threadNameInfo: TThreadNameInfo;
 begin
-  ansiName := AnsiString(name);
-  threadNameInfo.FType := $1000;
-  threadNameInfo.FName := PAnsiChar(ansiName);
-  threadNameInfo.FThreadID := $FFFFFFFF;
-  threadNameInfo.FFlags := 0;
-  try
-    RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
-  except {ignore} end;
+  if DebugHook <> 0 then begin
+    ansiName := AnsiString(name);
+    threadNameInfo.FType := $1000;
+    threadNameInfo.FName := PAnsiChar(ansiName);
+    threadNameInfo.FThreadID := $FFFFFFFF;
+    threadNameInfo.FFlags := 0;
+    try
+      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
+    except {ignore} end;
+  end;
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;

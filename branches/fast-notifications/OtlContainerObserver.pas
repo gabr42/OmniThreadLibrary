@@ -53,6 +53,8 @@ uses
   OtlSync,
   GpStuff;
 
+// TODO 1 -oPrimoz Gabrijelcic : Move this stuff to OtlContainers
+
 type
   ///<summary>All possible actions observer can take interest in.</summary>
   TOmniContainerObserverInterest = (
