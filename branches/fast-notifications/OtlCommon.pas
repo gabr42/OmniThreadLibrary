@@ -469,6 +469,7 @@ var
   ansiName      : AnsiString;
   threadNameInfo: TThreadNameInfo;
 begin
+  {$IFDEF ShowThreadNames}
   if DebugHook <> 0 then begin
     ansiName := AnsiString(name);
     threadNameInfo.FType := $1000;
@@ -479,6 +480,7 @@ begin
       RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
     except {ignore} end;
   end;
+  {$ENDIF}
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;
