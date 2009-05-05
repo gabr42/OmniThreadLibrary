@@ -85,7 +85,7 @@ begin
   timeStart := GetTickCount;
   FRoot := AllocateNode;
   CreateChildren(FRoot, inpTreeDepth.Value - 1);
-  Log(Format('Tree built in %.1f sec', [DSiElapsedTime(timeStart)/1000]));
+  Log(Format('Tree built in %d ms', [DSiElapsedTime(timeStart)]));
 end;
 
 procedure TfrmRecursiveTreeDemo.btnSingleCoreTestClick(Sender: TObject);
@@ -158,7 +158,7 @@ begin
     Log('Destroying tree');
     timeStart := GetTickCount;
     DestroyNode(FRoot);
-    Log(Format('Tree destroyed in %.1f sec', [DSiElapsedTime(timeStart)/1000]));
+    Log(Format('Tree destroyed in %d ms', [DSiElapsedTime(timeStart)]));
   end;
   FRoot := nil;
 end;
@@ -194,8 +194,8 @@ begin
   node.Value := 0;
   for iChild := 1 to FNumChildren do begin
     {$R-}
-    ProcessTree(node.Child[iChild]);
-    node.Value := node.Value + node.Child[iChild].Value;
+    ProcessTree(node.Child[iChild]); 
+    node.Value := node.Value + Round(Exp(Ln(node.Child[iChild].Value)));
     {$R+}
   end;
 end;
