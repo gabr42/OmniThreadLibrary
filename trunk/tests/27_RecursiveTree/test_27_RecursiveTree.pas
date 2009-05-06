@@ -96,7 +96,7 @@ end;
 
 procedure ParallelProcessTree(const task: IOmniTask);
 
-  procedure Process(node: PNode; level: integer);
+  procedure Process(node: PNode; startLevel, level: integer);
   var
     iChild  : integer;
     intf    : IInterface;
@@ -111,7 +111,7 @@ procedure ParallelProcessTree(const task: IOmniTask);
     try
       for iChild := 1 to GNumChildren do begin
         if {optimization}(level > CPruneLevel) and
-           {waiting tasks}(task.Counter.Decrement >= 0) then
+           {available tasks}(task.Counter.Decrement > 0) then
         begin //schedule new task
           if not assigned(subTasks) then
             subTasks := TInterfaceList.Create;
@@ -131,13 +131,16 @@ procedure ParallelProcessTree(const task: IOmniTask);
         else begin
           if level > CPruneLevel then //task.Counter.Decrement was executed, counteract it
             task.Counter.Increment;
-          Process(node.Child[iChild], level-1);
+          Process(node.Child[iChild], startLevel, level-1);
         end;
       end;
       //wait for all subtasks to complete
-      if assigned(subtasks) then
+      if assigned(subtasks) then begin
+        if level = startLevel then // all work done
+          task.Counter.Increment;
         for intf in subTasks do
           (intf as IOmniTaskControl).WaitFor(INFINITE);
+      end;
     finally
       subTasks.Free;
     end;
@@ -154,9 +157,8 @@ begin
   task.Comm.Send(0, Format('Task %d started: Level %d / Child %d',
     [task.UniqueID, level, integer(task.ParamByName['Child'])]));
   nodeVal := task.ParamByName['Node']; //work around internal error T2575
-  Process(PNode(nodeVal.AsObject), level);
+  Process(PNode(nodeVal.AsObject), level, level);
   task.Comm.Send(0, Format('Task %d completed', [task.UniqueID]));
-  task.Counter.Increment; //not active anymore
 end; { ParallelProcessTree }
 
 { TNode }
