@@ -4,47 +4,69 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Spin;
+  Dialogs, StdCtrls, Spin,
+  DSiWin32,
+  OtlCommon,
+  OtlComm,
+  OtlTask,
+  OtlTaskControl,
+  OtlEventMonitor;
 
 type
   PNode = ^TNode;
   TNodeArray = array [1..1] of PNode;
   TNode = packed record
+  public
     Value: int64;
-    Child: TNodeArray;
+  private
+    SubNodes: TNodeArray; // must be defined last because it will be allocated dynamically
+    function  GetChild(idxChild: integer): PNode;
+    procedure SetChild(idxChild: integer; value: PNode);
+  public
+    function IsLeaf: boolean; inline;
+    property Child[idxChild: integer]: PNode read GetChild write SetChild;
   end;
 
   TfrmRecursiveTreeDemo = class(TForm)
-    btnBuildTree  : TButton;
-    inpNumChildren: TSpinEdit;
-    inpNumTasks   : TSpinEdit;
-    inpTreeDepth  : TSpinEdit;
-    lblNumChildren: TLabel;
-    lblNumNodes   : TLabel;
-    lblNumTasks   : TLabel;
-    lblTreeDepth  : TLabel;
-    lblTreeSize   : TLabel;
-    outNumNodes   : TEdit;
-    outTreeSize   : TEdit;
-    lbLog: TListBox;
+    btnBuildTree     : TButton;
+    btnMultiCoreTest : TButton;
     btnSingleCoreTest: TButton;
+    inpNumChildren   : TSpinEdit;
+    inpNumTasks      : TSpinEdit;
+    inpTreeDepth     : TSpinEdit;
+    lblNumChildren   : TLabel;
+    lblNumNodes      : TLabel;
+    lblNumTasks      : TLabel;
+    lbLog            : TListBox;
+    lblTreeDepth     : TLabel;
+    lblTreeSize      : TLabel;
+    outNumNodes      : TEdit;
+    outTreeSize      : TEdit;
+    OtlMonitor: TOmniEventMonitor;
     procedure btnBuildTreeClick(Sender: TObject);
+    procedure btnMultiCoreTestClick(Sender: TObject);
     procedure btnSingleCoreTestClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure inpNumChildrenChange(Sender: TObject);
+    procedure OtlMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
   private
-    FNumChildren: integer;
-    FRoot       : PNode;
-    FValue      : integer;
+    FRebuildTree : boolean;
+    FRoot        : PNode;
+    FRootTask: IOmniTaskControl;
+    FTaskMessages: TStringList;
+    FTimeStart   : int64;
+    FValue       : integer;
     function  AllocateNode: PNode;
     procedure CalcNumNodes;
+    procedure ClearNode(node: PNode);
+    procedure ClearTree;
     procedure CreateChildren(node: PNode; subLevels: integer);
     procedure DestroyNode(node: PNode);
     procedure DestroyTree;
     procedure Log(const msg: string);
     procedure ProcessTree(node: PNode);
-  public
   end; { TfrmRecursiveTreeDemo }
 
 var
@@ -52,10 +74,13 @@ var
 
 implementation
 
-uses
-  DSiWin32;
-
 {$R *.dfm}
+
+const
+  CPruneLevel = 4; // don't create new task if under this level; empirically determined value
+
+var
+  GNumChildren: integer; //number of children on each level, global for simplicity
 
 function FmtMem(mem: int64): string;
 begin
@@ -67,11 +92,99 @@ begin
     Result := Format('%.0n KB',[mem/1024])
   else
     Result := Format('%.0n B',[int(mem)]);
-end; { FmtMem }
+end;
+
+procedure ParallelProcessTree(const task: IOmniTask);
+
+  procedure Process(node: PNode; level: integer);
+  var
+    iChild  : integer;
+    intf    : IInterface;
+    monitor : IOmniTaskControlMonitor;
+    monVal  : TOmniValue;
+    subTasks: TInterfaceList;
+  begin
+    if node.IsLeaf then
+      //leaf node, .Value already contains correct value
+      Exit;
+    subTasks := nil;
+    try
+      for iChild := 1 to GNumChildren do begin
+        if {optimization}(level > CPruneLevel) and
+           {waiting tasks}(task.Counter.Decrement >= 0) then
+        begin //schedule new task
+          if not assigned(subTasks) then
+            subTasks := TInterfaceList.Create;
+          monVal := task.ParamByName['Monitor']; //work around internal error T2575
+          monitor := monVal.AsInterface as IOmniTaskControlMonitor;
+          subTasks.Add(
+            CreateTask(ParallelProcessTree)
+              .SetParameter('Node',    TObject(node.Child[iChild]))
+              .SetParameter('Monitor', monitor)
+              .SetParameter('Level',   level-1)
+              .SetParameter('Child',   iChild)
+              .WithCounter(task.Counter)
+              .MonitorWith(monitor)
+              .Run
+            );
+        end
+        else begin
+          if level > CPruneLevel then //task.Counter.Decrement was executed, counteract it
+            task.Counter.Increment;
+          Process(node.Child[iChild], level-1);
+        end;
+      end;
+      //wait for all subtasks to complete
+      if assigned(subtasks) then
+        for intf in subTasks do
+          (intf as IOmniTaskControl).WaitFor(INFINITE);
+    finally
+      subTasks.Free;
+    end;
+    node.Value := 0;
+    for iChild := 1 to GNumChildren do
+      node.Value := node.Value + Round(Exp(Ln(node.Child[iChild].Value)));
+  end; { Process }
+
+var
+  level  : integer;
+  nodeVal: TOmniValue;
+begin
+  level := task.ParamByName['Level'];
+  task.Comm.Send(0, Format('Task %d started: Level %d / Child %d',
+    [task.UniqueID, level, integer(task.ParamByName['Child'])]));
+  nodeVal := task.ParamByName['Node']; //work around internal error T2575
+  Process(PNode(nodeVal.AsObject), level);
+  task.Comm.Send(0, Format('Task %d completed', [task.UniqueID]));
+  task.Counter.Increment; //not active anymore
+end; { ParallelProcessTree }
+
+{ TNode }
+
+function TNode.GetChild(idxChild: integer): PNode;
+begin
+  {$R-}
+  Result := SubNodes[idxChild];
+  {$R+}
+end;
+
+function TNode.IsLeaf: boolean;
+begin
+  Result := not assigned(SubNodes[1]);
+end;
+
+procedure TNode.SetChild(idxChild: integer; value: PNode);
+begin
+  {$R-}
+  SubNodes[idxChild] := value;
+  {$R+}
+end;
+
+{ TfrmRecursiveTreeDemo }
 
 function TfrmRecursiveTreeDemo.AllocateNode: PNode;
 begin
-  GetMem(Result, SizeOf(TNode) + SizeOf(PNode) * (FNumChildren - 1));
+  GetMem(Result, SizeOf(TNode) + SizeOf(PNode) * (GNumChildren - 1));
 end;
 
 procedure TfrmRecursiveTreeDemo.btnBuildTreeClick(Sender: TObject);
@@ -79,21 +192,43 @@ var
   timeStart: int64;
 begin
   DestroyTree;
-  FNumChildren := inpNumChildren.Value;
+  GNumChildren := inpNumChildren.Value;
   FValue := 1;
   Log('Building tree');
   timeStart := GetTickCount;
   FRoot := AllocateNode;
   CreateChildren(FRoot, inpTreeDepth.Value - 1);
   Log(Format('Tree built in %d ms', [DSiElapsedTime(timeStart)]));
+  FRebuildTree := false;
+end;
+
+procedure TfrmRecursiveTreeDemo.btnMultiCoreTestClick(Sender: TObject);
+begin
+  if (not assigned(FRoot)) or FRebuildTree then
+    btnBuildTree.Click
+  else
+    ClearTree;
+  Log('Scanning tree');
+  FTaskMessages := TStringList.Create;
+  FTimeStart := GetTickCount;
+  FRootTask := CreateTask(ParallelProcessTree)
+    .SetParameter('Node', TObject(FRoot))
+    .SetParameter('Monitor', OtlMonitor as IOmniTaskControlMonitor)
+    .SetParameter('Level', inpTreeDepth.Value) //for logging and pruning
+    .SetParameter('Child', 1) //for logging only
+    .WithCounter(CreateCounter(inpNumTasks.Value))
+    .MonitorWith(OtlMonitor)
+    .Run;
 end;
 
 procedure TfrmRecursiveTreeDemo.btnSingleCoreTestClick(Sender: TObject);
 var
   timeStart: int64;
 begin
-  if not assigned(FRoot) then
-    btnBuildTree.Click;
+  if (not assigned(FRoot)) or FRebuildTree then
+    btnBuildTree.Click
+  else
+    ClearTree;
   Log('Scanning tree');
   timeStart := GetTickCount;
   ProcessTree(FRoot);
@@ -121,21 +256,43 @@ begin
   outTreeSize.Text := FmtMem(treeSize);
 end; 
 
-procedure TfrmRecursiveTreeDemo.CreateChildren(node: PNode; subLevels: integer);
+procedure TfrmRecursiveTreeDemo.ClearNode(node: PNode);
 var
   iChild: integer;
+begin
+  if not node.IsLeaf then begin
+    node.Value := 0;
+    for iChild := 1 to GNumChildren do
+      ClearNode(node.Child[iChild]);
+  end;
+end;
+
+procedure TfrmRecursiveTreeDemo.ClearTree;
+var
+  timeStart: int64;
+begin
+  if assigned(FRoot) then begin
+    Log('Clearing tree');
+    timeStart := GetTickCount;
+    ClearNode(FRoot);
+    Log(Format('Tree cleared in %d ms', [DSiElapsedTime(timeStart)]));
+  end;
+end;
+
+procedure TfrmRecursiveTreeDemo.CreateChildren(node: PNode; subLevels: integer);
+var
+  iChild: integer;                 
 begin
   if subLevels = 0 then begin
     node.Value := FValue;
     Inc(FValue);
-    FillChar(node.Child, FNumChildren * SizeOf(PNode), 0)
+    for iChild := 1 to GNumChildren do
+      node.Child[iChild] := nil;
   end
   else begin
-    for iChild := 1 to FNumChildren do begin
-      {$R-}
+    for iChild := 1 to GNumChildren do begin
       node.Child[iChild] := AllocateNode;
       CreateChildren(node.Child[iChild], subLevels - 1);
-      {$R+}
     end;
   end;
 end;
@@ -144,9 +301,9 @@ procedure TfrmRecursiveTreeDemo.DestroyNode(node: PNode);
 var
   iChild: integer;
 begin
-  if assigned(node.Child[1]) then
-    for iChild := 1 to FNumChildren do
-      {$R-} DestroyNode(node.Child[iChild]); {$R+}
+  if not node.IsLeaf then
+    for iChild := 1 to GNumChildren do
+      DestroyNode(node.Child[iChild]);
   FreeMem(node);
 end;
 
@@ -177,6 +334,7 @@ end;
 procedure TfrmRecursiveTreeDemo.inpNumChildrenChange(Sender: TObject);
 begin
   CalcNumNodes;
+  FRebuildTree := true;
 end;
 
 procedure TfrmRecursiveTreeDemo.Log(const msg: string);
@@ -184,20 +342,36 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
+procedure TfrmRecursiveTreeDemo.OtlMonitorTaskMessage(const task: IOmniTaskControl);
+var
+  msg: TOmniMessage;
+begin
+  if task.Comm.Receive(msg) then
+    FTaskMessages.Add(msg.MsgData);
+end;
+
+procedure TfrmRecursiveTreeDemo.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
+begin
+  if task = FRootTask then begin
+    FRootTask := nil;
+    lbLog.Items.AddStrings(FTaskMessages);
+    FreeAndNil(FTaskMessages);
+    Log(Format('Completed in %d ms, answer = %d', [DSiElapsedTime(FTimeStart), FRoot.Value]));
+  end;
+end;
+
 procedure TfrmRecursiveTreeDemo.ProcessTree(node: PNode);
 var
   iChild: integer;
 begin
-  if not assigned(node.Child[1]) then
+  if node.IsLeaf then
     //leaf node, .Value already contains correct value
     Exit;
+  for iChild := 1 to GNumChildren do
+    ProcessTree(node.Child[iChild]);
   node.Value := 0;
-  for iChild := 1 to FNumChildren do begin
-    {$R-}
-    ProcessTree(node.Child[iChild]); 
-    node.Value := node.Value + Round(Exp(Ln(node.Child[iChild].Value)));
-    {$R+}
-  end;
+  for iChild := 1 to GNumChildren do
+    node.Value := node.Value + Round(Exp(Ln(node.Child[iChild].Value))); 
 end;
 
 end.

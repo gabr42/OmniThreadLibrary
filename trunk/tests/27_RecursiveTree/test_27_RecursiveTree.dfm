@@ -3,7 +3,7 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
   Top = 0
   Anchors = [akTop]
   Caption = 'Recursive tree walk demo'
-  ClientHeight = 271
+  ClientHeight = 247
   ClientWidth = 472
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -68,7 +68,7 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
     Width = 65
     Height = 22
     MaxValue = 9999
-    MinValue = 2
+    MinValue = 4
     TabOrder = 1
     Value = 10
     OnChange = inpNumChildrenChange
@@ -87,7 +87,7 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
     Left = 128
     Top = 64
     Width = 65
-    Height = 22
+    Height = 21
     ParentColor = True
     ReadOnly = True
     TabOrder = 2
@@ -96,7 +96,7 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
     Left = 128
     Top = 92
     Width = 65
-    Height = 22
+    Height = 21
     ParentColor = True
     ReadOnly = True
     TabOrder = 3
@@ -114,7 +114,7 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
     Left = 199
     Top = 0
     Width = 273
-    Height = 271
+    Height = 247
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
@@ -128,5 +128,20 @@ object frmRecursiveTreeDemo: TfrmRecursiveTreeDemo
     Caption = 'Single task test'
     TabOrder = 7
     OnClick = btnSingleCoreTestClick
+  end
+  object btnMultiCoreTest: TButton
+    Left = 8
+    Top = 214
+    Width = 185
+    Height = 25
+    Caption = 'Multiple task test'
+    TabOrder = 8
+    OnClick = btnMultiCoreTestClick
+  end
+  object OtlMonitor: TOmniEventMonitor
+    OnTaskMessage = OtlMonitorTaskMessage
+    OnTaskTerminated = OtlMonitorTaskTerminated
+    Left = 8
+    Top = 208
   end
 end
