@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-02-08
-///   Version           : 1.09
+///   Last modification : 2009-05-15
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2009-05-15
+///       - Implemented IOmniTaskControl.SilentExceptions.
 ///     1.09: 2009-02-08
 ///       - Implemented per-thread task data storage.
 ///     1.08: 2009-01-26
@@ -218,6 +220,7 @@ type
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
     function  SetQueueSize(numMessages: integer): IOmniTaskControl;
+    function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -378,7 +381,8 @@ type
     property Signature: TOmniInvokeType read oiiSignature;
   end; { TOmniInvokeInfo }
 
-  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoForceExecution);
+  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoForceExecution,
+    tcoSilentExceptions);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
@@ -401,6 +405,7 @@ type
   strict private
     oteCommList          : TInterfaceList;
     oteCommRebuildHandles: THandle;
+    oteException         : pointer;
     oteExecutorType      : TOmniExecutorType;
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
@@ -483,6 +488,7 @@ type
     property ExitMessage: string read GetExitMessage;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
+    property TaskException: pointer read oteException write oteException;
     property TimerInterval_ms: cardinal read GetTimerInterval_ms write SetTimerInterval_ms;
     property TimerMessageID: integer read GetTimerMessageID write SetTimerMessageID;
     property TimerMessageMethod: pointer read GetTimerMessageMethod write
@@ -616,6 +622,7 @@ type
     function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
+    function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -831,8 +838,14 @@ begin
       try
         otExecutor_ref.Asy_Execute(Self);
       except
-        on E: Exception do
-          SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message);
+        on E: Exception do begin
+          if tcoSilentExceptions in otExecutor_ref.Options then
+            SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message)
+          else begin
+            otExecutor_ref.TaskException := AcquireExceptionObject; 
+            raise;
+          end;
+        end;
       end;
     finally
       if otSharedInfo.MonitorWindow <> 0 then
@@ -1992,6 +2005,12 @@ begin
   Result := Self;
 end; { TOmniTaskControl.SetTimer }
 
+function TOmniTaskControl.SilentExceptions: IOmniTaskControl;
+begin
+  Options := Options + [tcoSilentExceptions];
+  Result := Self;
+end; { TOmniTaskControl.SilentExceptions }
+
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
@@ -2008,6 +2027,10 @@ begin
       otcOwningPool := nil;
     end;
   end;
+  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
+    raise Exception(otcExecutor.TaskException);
+  end;
+
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;

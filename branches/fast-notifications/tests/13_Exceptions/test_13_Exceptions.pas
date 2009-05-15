@@ -20,6 +20,8 @@ type
     btnRC              : TButton;
     lbLog              : TListBox;
     OmniTED            : TOmniEventMonitor;
+    cbSilentExceptions: TCheckBox;
+    procedure FormCreate(Sender: TObject);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunObjectTest(Sender: TObject);
     procedure RunTest(Sender: TObject);
@@ -82,6 +84,11 @@ end;
 
 { TfrmTestOtlComm }
 
+procedure TfrmTestExceptions.FormCreate(Sender: TObject);
+begin
+  Log('Don''t run this program in the debugger!');
+end;
+
 procedure TfrmTestExceptions.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
@@ -97,8 +104,11 @@ procedure TfrmTestExceptions.RunObjectTest(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := CreateTask(TExceptionTest.Create(Sender = btnInitException)).Run;
-  task.WaitFor(1000);
+  task := CreateTask(TExceptionTest.Create(Sender = btnInitException));
+  if cbSilentExceptions.Checked then
+    task.SilentExceptions;
+  task.Enforced(true).Run;
+  task.Terminate(30000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 
@@ -106,7 +116,10 @@ procedure TfrmTestExceptions.RunTest(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := CreateTask(TestException).Run;
+  task := CreateTask(TestException);
+  if cbSilentExceptions.Checked then
+    task.SilentExceptions;
+  task.Run;
   if Sender = btnAV then
     task.Comm.Send(EXC_AV)
   else if Sender = btnRC then
