@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2008-06-03
-   Version           : 1.41
+   Last modification : 2008-11-10
+   Version           : 1.42
 </pre>*)(*
    History:
+     1.42: 2008-11-10
+       - Added method FreeObjects to the TStringList helper.
      1.41: 2008-06-03
        - Unicode-ready (hope, hope).
      1.40: 2008-05-11
@@ -681,7 +683,7 @@ type
     function  Add(item: int64; count: int64): integer; reintroduce;
     function  Ensure(item: int64; count: int64): integer; reintroduce;
     procedure SortByCounter(descending: boolean = true);
-    property  Counter[idx: integer]: int64 read GetCounter write SetCounter;
+    property Counter[idx: integer]: int64 read GetCounter write SetCounter;
     property ItemCounter[item: int64]: int64 read GetItemCounter write SetItemCounter;
   end; { TGpCountedInt64List }
 
@@ -690,9 +692,10 @@ type
   ///<since>2007-06-28</since>
   TGpStringListHelper = class helper for TStringList
   public
-    function  Last: string;                         {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Contains(const s: string): boolean;   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  FetchObject(const s: string): TObject;
+    procedure FreeObjects;
+    function  Last: string;                         {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Sort;
     procedure Remove(const s: string);
   end; { TGpStringListHelper }
@@ -2967,6 +2970,16 @@ begin
   else
     Result := nil;
 end; { TGpStringListHelper.FetchObject }
+
+procedure TGpStringListHelper.FreeObjects;
+var
+  iObject: integer;
+begin
+  for iObject := 0 to Count - 1 do begin
+    Objects[iObject].Free;
+    Objects[iObject] := nil;
+  end;
+end; { TGpStringListHelper.FreeObjects }
 
 function TGpStringListHelper.Last: string;
 begin
