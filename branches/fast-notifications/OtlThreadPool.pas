@@ -838,7 +838,7 @@ begin
   PruneWorkingQueue;
   if IdleWorkerThreadTimeout_sec > 0 then begin
     iWorker := 0;
-    while (owIdleWorkers.CardCount > MinWorkers.Value) and (iWorker < owIdleWorkers.Count) do begin
+    while (owIdleWorkers.Count > MinWorkers.Value) and (iWorker < owIdleWorkers.Count) do begin
       worker := TOTPWorkerThread(owIdleWorkers[iWorker]);
       if (worker.StartStopping_ms = 0) and
          ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec)*1000) < DSiTimeGetTime64) then
@@ -932,7 +932,7 @@ begin
   if assigned(worker) then begin // move it back to the idle queue
     owRunningWorkers.Extract(worker);
     CountRunning.Decrement;
-    if (not worker.RemoveFromPool) and (owRunningWorkers.CardCount < MaxExecuting.Value) then begin
+    if (not worker.RemoveFromPool) and (owRunningWorkers.Count < MaxExecuting.Value) then begin
       worker.StartIdle_ms := DSiTimeGetTime64;
       owIdleWorkers.Add(worker);
       {$IFDEF LogThreadPool}Log('Thread %s moved back to the idle list, num idle = %d, num running = %d[%d]', [worker.Description, tpIdleWorkers.Count, tpRunningWorkers.Count, MaxExecuting]);{$ENDIF LogThreadPool}
@@ -943,7 +943,7 @@ begin
     end;
   end;
   if (not owDestroying) and (owWorkItemQueue.Count > 0) and
-     ((owIdleWorkers.Count > 0) or (owRunningWorkers.CardCount < MaxExecuting.Value)) then
+     ((owIdleWorkers.Count > 0) or (owRunningWorkers.Count < MaxExecuting.Value)) then
   begin
     workItem := TOTPWorkItem(owWorkItemQueue[0]);
     owWorkItemQueue.Delete(0);
@@ -961,7 +961,7 @@ var
   workItem      : TOTPWorkItem;
 begin
   if MaxQueued.Value > 0 then begin
-    while owWorkItemQueue.CardCount > MaxQueued.Value do begin
+    while owWorkItemQueue.Count > MaxQueued.Value do begin
       workItem := TOTPWorkItem(owWorkItemQueue[owWorkItemQueue.Count - 1]);
       {$IFDEF LogThreadPool}Log('Removing request %s from work item queue because queue length > %d', [workItem.Description, tpMaxQueueLength]);{$ENDIF LogThreadPool}
       owWorkItemQueue.Delete(owWorkItemQueue.Count - 1);
@@ -1025,7 +1025,7 @@ begin
     CountRunning.Increment;
     {$IFDEF LogThreadPool}Log('Allocated thread from idle pool, num idle = %d, num running = %d[%d]', [owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting]);{$ENDIF LogThreadPool}
   end
-  else if (MaxExecuting.Value <= 0) or (owRunningWorkers.CardCount < MaxExecuting.Value) then begin
+  else if (MaxExecuting.Value <= 0) or (owRunningWorkers.Count < MaxExecuting.Value) then begin
     if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count) >= CMaxConcurrentWorkers then
       raise Exception.CreateFmt('TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
         'due to the implementation limitations', [CMaxConcurrentWorkers]);
@@ -1046,7 +1046,7 @@ begin
     {$IFDEF LogThreadPool}Log('Queued %s ', [workItem.Description]);{$ENDIF LogThreadPool}
     owWorkItemQueue.Add(workItem);
     CountQueued.Increment;
-    if (MaxQueued > 0) and (owWorkItemQueue.CardCount >= MaxQueued.Value) then
+    if (MaxQueued > 0) and (owWorkItemQueue.Count >= MaxQueued.Value) then
       PruneWorkingQueue;
   end;
 end; { TOTPWorker.ScheduleNext }

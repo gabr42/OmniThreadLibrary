@@ -32,10 +32,10 @@
     <DelphiCompile Include="OmniThreadLibraryDesigntime.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..\..\OTL-trunk\tests\2_TwoWayHello\OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="..\..\OTL-trunk\tests\2_TwoWayHello\rtl.dcp" />
-    <DCCReference Include="..\..\OTL-trunk\tests\2_TwoWayHello\vcl.dcp" />
-    <DCCReference Include="..\..\OTL-trunk\tests\2_TwoWayHello\vclx.dcp" />
     <DCCReference Include="..\OtlRegister.pas" />
+    <DCCReference Include="C:\Users\gabr\Desktop\OmniThreadLibraryRuntime.dcp" />
+    <DCCReference Include="C:\Users\gabr\Desktop\rtl.dcp" />
+    <DCCReference Include="C:\Users\gabr\Desktop\vcl.dcp" />
+    <DCCReference Include="C:\Users\gabr\Desktop\vclx.dcp" />
   </ItemGroup>
 </Project>
