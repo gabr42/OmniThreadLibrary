@@ -1100,7 +1100,7 @@ end; { TOmniTaskExecutor.Asy_RegisterComm }
 procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
   const exitMessage: string);
 begin
-  oteExitCode.Value := cardinal(exitCode);
+  oteExitCode.Value := exitCode;
   oteInternalLock.Acquire;
   try
     oteExitMessage := exitMessage;
@@ -1457,7 +1457,7 @@ begin
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
-  oteTimerMessageID.Value := cardinal(-1);
+  oteTimerMessageID.Value := -1;
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.MainMessageLoop(const task: IOmniTask; var msgInfo:
@@ -1598,9 +1598,9 @@ procedure TOmniTaskExecutor.SetTimerInt(interval_ms: cardinal; timerMsgID: integ
 begin
   oteInternalLock.Acquire;
   try
-    oteTimerMessageID.Value := cardinal(timerMsgID);
-    oteTimerInterval_ms.Value := cardinal(interval_ms);
-    oteTimerMessageMethod.Value := cardinal(timerMsgMethod);
+    oteTimerMessageID.Value := timerMsgID;
+    oteTimerInterval_ms.Value := interval_ms;
+    oteTimerMessageMethod.Value := integer(timerMsgMethod);
     oteTimerMessageName := timerMsgName;
     UniqueString(oteTimerMessageName);
     oteLastTimer_ms := DSiTimeGetTime64;
@@ -1613,7 +1613,7 @@ begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
       'Timer support is only available when working with an IOmniWorker');
-  oteTimerMessageID.Value := cardinal(value);
+  oteTimerMessageID.Value := value;
 end; { TOmniTaskExecutor.SetTimerMessageID }
 
 procedure TOmniTaskExecutor.SetTimerMessageMethod(const value: pointer);
@@ -1621,7 +1621,7 @@ begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
       'Timer support is only available when working with an IOmniWorker');
-  oteTimerMessageMethod.Value := cardinal(value);
+  oteTimerMessageMethod.Value := integer(value);
 end; { TOmniTaskExecutor.SetTimerMessageMethod }
 
 procedure TOmniTaskExecutor.SetTimerMessageName(const value: string);

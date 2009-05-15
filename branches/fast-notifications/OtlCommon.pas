@@ -458,6 +458,7 @@ begin
 end; { CreateInterfaceDictionary }
 
 procedure SetThreadName(const name: string);
+{$IFDEF ShowThreadNames}
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
@@ -468,6 +469,7 @@ type
 var
   ansiName      : AnsiString;
   threadNameInfo: TThreadNameInfo;
+{$ENDIF}
 begin
   {$IFDEF ShowThreadNames}
   if DebugHook <> 0 then begin
