@@ -108,7 +108,7 @@ begin
   if cbSilentExceptions.Checked then
     task.SilentExceptions;
   task.Enforced(true).Run;
-  task.Terminate(30000);
+  task.Terminate(3000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 
@@ -126,7 +126,7 @@ begin
     task.Comm.Send(EXC_RC)
   else
     task.Comm.Send(EXC_CUSTOM);
-  task.WaitFor(3000);
+  task.WaitFor(30000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 

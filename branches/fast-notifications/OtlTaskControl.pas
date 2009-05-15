@@ -2027,10 +2027,8 @@ begin
       otcOwningPool := nil;
     end;
   end;
-  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
+  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then
     raise Exception(otcExecutor.TaskException);
-  end;
-
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
