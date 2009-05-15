@@ -14,13 +14,13 @@ uses
 type
   TfrmTestExceptions = class(TForm)
     btnAV              : TButton;
+    btnCleanupException: TButton;
     btnCustomException : TButton;
+    btnInitException   : TButton;
     btnRC              : TButton;
     lbLog              : TListBox;
     OmniTED            : TOmniEventMonitor;
-    btnInitException   : TButton;
-    btnCleanupException: TButton;
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunObjectTest(Sender: TObject);
     procedure RunTest(Sender: TObject);
   private
@@ -87,11 +87,9 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   Log(msg.MsgData);
 end;
 
@@ -115,7 +113,7 @@ begin
     task.Comm.Send(EXC_RC)
   else
     task.Comm.Send(EXC_CUSTOM);
-  task.WaitFor(1000);
+  task.WaitFor(3000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 

@@ -93,7 +93,7 @@ begin
   Application.ProcessMessages; //allow accumulated log messages to be processed
   Log('Awaited task termination');
 end;
-
+                    
 procedure TfrmConnectionPoolDemo.btnScheduleClick(Sender: TObject);
 begin
   Log('Creating task');
@@ -109,6 +109,7 @@ procedure TfrmConnectionPoolDemo.FormCreate(Sender: TObject);
 begin
   FConnectionPool := CreateThreadPool('Connection pool');
   FConnectionPool.ThreadDataFactory := CreateThreadData;
+  FConnectionPool.MaxExecuting := 3;
 end;
 
 procedure TfrmConnectionPoolDemo.Log(const msg: string);

@@ -77,7 +77,7 @@ end;
 
 procedure TfrmTestTwoWayHello.actChangeMessageExecute(Sender: TObject);
 begin
-  FHelloTask.Comm.Send(MSG_CHANGE_MESSAGE, 'Random ' + IntToStr(Random(1234)));
+  FHelloTask.Comm.Send(MSG_CHANGE_MESSAGE, WideString('Random ' + IntToStr(Random(1234))));
 end;
 
 procedure TfrmTestTwoWayHello.actChangeMessageUpdate(Sender: TObject);
