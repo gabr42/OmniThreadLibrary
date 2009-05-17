@@ -83,3 +83,4 @@
 !! Added WideString support to TOmniValue.
 !! TOmniTaskControl.SilentExceptions
 !! exceptions are now loud by default!
+!! OtlHooks

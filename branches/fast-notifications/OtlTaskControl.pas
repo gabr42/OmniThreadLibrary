@@ -700,6 +700,7 @@ type
 implementation
 
 uses
+  OtlHooks,
   OtlEventMonitor;
 
 { exports }
@@ -2069,7 +2070,10 @@ end; { TOmniThread.Create }
 
 procedure TOmniThread.Execute;
 begin
-  (otTask as IOmniTaskExecutor).Execute;
+  SendThreadNotifications(tntCreate);
+  try
+    (otTask as IOmniTaskExecutor).Execute;
+  finally SendThreadNotifications(tntDestroy); end;
 end; { TOmniThread.Execute }
 
 { TOmniTaskControlListEnumerator }

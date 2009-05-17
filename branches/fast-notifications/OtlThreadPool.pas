@@ -65,6 +65,8 @@ interface
 
 { TODO 1 -oPrimoz Gabrijelcic : Use OtlCommunication to send messages to the Monitor. }
 
+// TODO 1 -oPrimoz Gabrijelcic : Hook OtlHooks into thread creation
+
 // TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
 // TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example)
 

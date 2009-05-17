@@ -82,7 +82,7 @@ type
     procedure ExitWriteLock; inline;
   end; { TOmniMREW }
 
-  function CreateOmniCriticalSection: IOmniCriticalSection;
+function CreateOmniCriticalSection: IOmniCriticalSection;
 
 // Intel Atomic functions support
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
