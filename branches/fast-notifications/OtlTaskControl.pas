@@ -828,6 +828,8 @@ begin
 end; { TOmniTask.Enforced }
 
 procedure TOmniTask.Execute;
+var
+  silentException: boolean;
 begin
   otExecuting := true;
   try
@@ -840,7 +842,9 @@ begin
         otExecutor_ref.Asy_Execute(Self);
       except
         on E: Exception do begin
-          if tcoSilentExceptions in otExecutor_ref.Options then
+          silentException := (tcoSilentExceptions in otExecutor_ref.Options);
+          FilterException(E, silentException);
+          if silentException then
             SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message)
           else begin
             otExecutor_ref.TaskException := AcquireExceptionObject; 

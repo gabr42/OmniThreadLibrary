@@ -40,6 +40,12 @@ unit OtlHooks;
 
 interface
 
+uses
+  Windows,
+  SysUtils,
+  Classes,
+  OtlSync;
+
 type
   TThreadNotificationType = (tntCreate, tntDestroy);
   TThreadNotificationProc = procedure(notifyType: TThreadNotificationType;
@@ -55,23 +61,41 @@ procedure UnregisterThreadNotification(notifyMethod: TThreadNotificationMeth); o
 procedure SendThreadNotifications(notifyType: TThreadNotificationType;
   const threadName: string);
 
+type
+  TExceptionFilterProc = procedure(e: Exception; var silentException,
+    continueProcessing: boolean);
+  TExceptionFilterMeth = procedure(e: Exception; var silentException,
+    continueProcessing: boolean) of object;
+
+procedure RegisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
+procedure RegisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
+procedure UnregisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
+procedure UnregisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
+
+procedure FilterException(e: Exception; var silentException: boolean);
+
 implementation
 
-uses
-  Windows,
-  SysUtils,
-  Classes,
-  OtlSync;
-
 type
+  TProcMethodList = class(TList)
+  strict private
+    pmlLock: TOmniMREW;
+  strict protected
+    procedure Add(data, code: pointer); reintroduce; overload;
+    function  Find(data, code: pointer): integer;
+    procedure Remove(data, code: pointer); overload;
+  public
+    procedure Add(method: TMethod); reintroduce; overload;
+    procedure Add(proc: pointer); reintroduce; overload;
+    procedure EnterReadLock; inline;
+    procedure ExitReadLock; inline;
+    procedure Remove(method: TMethod); overload;
+    procedure Remove(proc: pointer); overload;
+  end; { TProcMethodList }
+
   TThreadNotifications = class
   strict private
-    tnList: TList;
-    tnLock: TOmniMREW;
-  strict protected
-    function  Find(data, code: pointer): integer;
-    procedure Register(data, code: pointer); overload;
-    procedure Unregister(data, code: pointer); overload;
+    tnList: TProcMethodList;
   public
     constructor Create;
     destructor  Destroy; override;
@@ -82,7 +106,21 @@ type
     procedure Unregister(notifyMethod: TThreadNotificationMeth); overload;
   end; { TThreadNotificationProc }
 
+  TExceptionFilters = class
+  strict private
+    efList: TProcMethodList;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Register(filterProc: TExceptionFilterProc); overload;
+    procedure Register(filterMethod: TExceptionFilterMeth); overload;
+    procedure Unregister(filterProc: TExceptionFilterProc); overload;
+    procedure Unregister(filterMethod: TExceptionFilterMeth); overload;
+    procedure Filter(e: Exception; var silentException: boolean);
+  end; { TExceptionFilters }
+
 var
+  GExceptionFilters   : TExceptionFilters;
   GThreadNotifications: TThreadNotifications;
 
 procedure RegisterThreadNotification(notifyProc: TThreadNotificationProc); overload;
@@ -111,10 +149,106 @@ begin
   GThreadNotifications.Notify(notifyType, threadName);
 end; { SendThreadNotifications }
 
+procedure RegisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
+begin
+  GExceptionFilters.Register(filterProc);
+end; { RegisterExceptionFilter }
+
+procedure RegisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
+begin
+  GExceptionFilters.Register(filterMethod);
+end; { RegisterExceptionFilter }
+
+procedure UnregisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
+begin
+  GExceptionFilters.Unregister(filterProc);
+end; { UnregisterExceptionFilter }
+
+procedure UnregisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
+begin
+  GExceptionFilters.Unregister(filterMethod);
+end; { UnregisterExceptionFilter }
+
+procedure FilterException(e: Exception; var silentException: boolean);
+begin
+  GExceptionFilters.Filter(e, silentException);
+end; { FilterException }
+
+{ TProcMethodList }
+
+procedure TProcMethodList.Add(data, code: pointer);
+begin
+  pmlLock.EnterWriteLock;
+  try
+    inherited Add(data);
+    inherited Add(code);
+  finally pmlLock.ExitWriteLock; end;
+end; { TProcMethodList.Add }
+
+procedure TProcMethodList.Add(method: TMethod);
+begin
+  Add(TMethod(method).Data, TMethod(method).Code);
+end; { TProcMethodList.Add }
+
+procedure TProcMethodList.Add(proc: pointer);
+begin
+  Add(nil, proc);
+end; { TProcMethodList.Add }
+
+procedure TProcMethodList.EnterReadLock;
+begin
+  pmlLock.EnterReadLock;
+end; { TProcMethodList.EnterReadLock }
+
+procedure TProcMethodList.ExitReadLock;
+begin
+  pmlLock.ExitReadLock;
+end; { TProcMethodList.ExitReadLock }
+
+function TProcMethodList.Find(data, code: pointer): integer;
+begin
+  pmlLock.EnterReadLock;
+  try
+    Result := 0;
+    while Result < Count do begin
+      if (Items[Result] = data) and (Items[Result+1] = code) then
+        Exit;
+      Inc(Result, 2);
+    end;
+    Result := -1;
+  finally pmlLock.ExitReadLock; end;
+end; { TProcMethodList.Find }
+
+procedure TProcMethodList.Remove(method: TMethod);
+begin
+  Remove(TMethod(method).Data, TMethod(method).Code);
+end; { TProcMethodList.Remove }
+
+procedure TProcMethodList.Remove(proc: pointer);
+begin
+  Remove(nil, proc);
+end; { TProcMethodList.Remove }
+
+procedure TProcMethodList.Remove(data, code: pointer);
+var
+  idxMeth: integer;
+begin
+  pmlLock.EnterWriteLock;
+  try
+    idxMeth := Find(data, code);
+    if idxMeth >= 0 then begin
+      Delete(idxMeth);
+      Delete(idxMeth);
+    end;
+  finally pmlLock.ExitWriteLock; end;
+end; { TProcMethodList.Remove }
+
+{ TThreadNotifications }
+
 constructor TThreadNotifications.Create;
 begin
   inherited Create;
-  tnList := TList.Create;
+  tnList := TProcMethodList.Create;
 end; { TThreadNotifications.Create }
 
 destructor TThreadNotifications.Destroy;
@@ -123,24 +257,13 @@ begin
   inherited Destroy;
 end; { TThreadNotifications.Destroy }
 
-function TThreadNotifications.Find(data, code: pointer): integer;
-begin
-  Result := 0;
-  while Result < tnList.Count do begin
-    if (tnList[Result] = data) and (tnList[Result+1] = code) then
-      Exit;
-    Inc(Result, 2);
-  end;
-  Result := -1;
-end; { TThreadNotifications.Find }
-
 procedure TThreadNotifications.Notify(notifyType: TThreadNotificationType;
   const threadName: string);
 var
   iObserver: integer;
   meth     : TMethod;
 begin
-  tnLock.EnterReadLock;
+  tnList.EnterReadLock;
   try
     iObserver := 0;
     while iObserver < tnList.Count do begin
@@ -153,54 +276,90 @@ begin
       end;
       Inc(iObserver, 2);
     end;
-  finally tnLock.ExitReadLock; end;
+  finally tnList.ExitReadLock; end;
 end; { TThreadNotifications.Notify }
 
 procedure TThreadNotifications.Register(notifyProc: TThreadNotificationProc);
 begin
-  Register(nil, pointer(@notifyProc));
+  tnList.Add(pointer(@notifyProc));
 end; { TThreadNotifications.Register }
 
 procedure TThreadNotifications.Register(notifyMethod: TThreadNotificationMeth);
 begin
-  Register(TMethod(notifyMethod).Data, TMethod(notifyMethod).Code);
-end; { TThreadNotifications.Register }
-
-procedure TThreadNotifications.Register(data, code: pointer);
-begin
-  tnLock.EnterWriteLock;
-  try
-    tnList.Add(data);
-    tnList.Add(code);
-  finally tnLock.ExitWriteLock; end;
+  tnList.Add(TMethod(notifyMethod));
 end; { TThreadNotifications.Register }
 
 procedure TThreadNotifications.Unregister(notifyProc: TThreadNotificationProc);
 begin
-  Unregister(nil, pointer(@notifyProc));
+  tnList.Remove(pointer(@notifyProc));
 end; { TThreadNotifications.Unregister }
 
 procedure TThreadNotifications.Unregister(notifyMethod: TThreadNotificationMeth);
 begin
-  Unregister(TMethod(notifyMethod).Data, TMethod(notifyMethod).Code);
+  tnList.Remove(TMethod(notifyMethod));
 end; { TThreadNotifications.Unregister }
 
-procedure TThreadNotifications.Unregister(data, code: pointer);
-var
-  idxObserver: integer;
+{ TExceptionFilters }
+
+constructor TExceptionFilters.Create;
 begin
-  tnLock.EnterWriteLock;
+  inherited Create;
+  efList := TProcMethodList.Create;
+end; { TExceptionFilters.Create }
+
+destructor TExceptionFilters.Destroy;
+begin
+  FreeAndNil(efList);
+  inherited;
+end; { TExceptionFilters.Destroy }
+
+procedure TExceptionFilters.Filter(e: Exception; var silentException: boolean);
+var
+  continueProcessing: boolean;
+  iObserver         : integer;
+  meth              : TMethod;
+begin
+  efList.EnterReadLock;
   try
-    idxObserver := Find(data, code);
-    if idxObserver >= 0 then begin
-      tnList.Delete(idxObserver);
-      tnList.Delete(idxObserver);
+    iObserver := 0;
+    continueProcessing := true;
+    while continueProcessing and (iObserver < efList.Count) do begin
+      if efList[iObserver] = nil then
+        TExceptionFilterProc(efList[iObserver+1])(e, silentException, continueProcessing)
+      else begin
+        meth.Data := efList[iObserver];
+        meth.Code := efList[iObserver+1];
+        TExceptionFilterMeth(meth)(e, silentException, continueProcessing);
+      end;
+      Inc(iObserver, 2);
     end;
-  finally tnLock.ExitWriteLock; end;
-end; { TThreadNotifications.Unregister }
+  finally efList.ExitReadLock; end;
+end; { TExceptionFilters.Filter }
+
+procedure TExceptionFilters.Register(filterMethod: TExceptionFilterMeth);
+begin
+  efList.Add(TMethod(filterMethod));
+end; { TExceptionFilters.Register }
+
+procedure TExceptionFilters.Register(filterProc: TExceptionFilterProc);
+begin
+  efList.Add(pointer(@filterProc));
+end; { TExceptionFilters.Register }
+
+procedure TExceptionFilters.Unregister(filterMethod: TExceptionFilterMeth);
+begin
+  efList.Remove(TMethod(filterMethod));
+end; { TExceptionFilters.Unregister }
+
+procedure TExceptionFilters.Unregister(filterProc: TExceptionFilterProc);
+begin
+  efList.Remove(pointer(@filterProc));
+end; { TExceptionFilters.Unregister }
 
 initialization
+  GExceptionFilters := TExceptionFilters.Create;
   GThreadNotifications := TThreadNotifications.Create;
 finalization
+  FreeAndNil(GExceptionFilters);
   FreeAndNil(GThreadNotifications);
 end.
