@@ -2013,6 +2013,8 @@ begin
 end; { TOmniTaskControl.SilentExceptions }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
+var
+  exc: Exception;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
   otcSharedInfo.Terminating := true;
@@ -2028,8 +2030,11 @@ begin
       otcOwningPool := nil;
     end;
   end;
-  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then
-    raise Exception(otcExecutor.TaskException);
+  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
+    exc := Exception(otcExecutor.TaskException);
+    otcExecutor.TaskException := nil;
+    raise exc;
+  end;
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
