@@ -42,15 +42,18 @@ interface
 
 type
   TThreadNotificationType = (tntCreate, tntDestroy);
-  TThreadNotificationProc = procedure(notifyType: TThreadNotificationType);
-  TThreadNotificationMeth = procedure(notifyType: TThreadNotificationType) of object;
+  TThreadNotificationProc = procedure(notifyType: TThreadNotificationType;
+                              const threadName: string);
+  TThreadNotificationMeth = procedure(notifyType: TThreadNotificationType;
+                              const threadName: string) of object;
 
 procedure RegisterThreadNotification(notifyProc: TThreadNotificationProc); overload;
 procedure RegisterThreadNotification(notifyMethod: TThreadNotificationMeth); overload;
 procedure UnregisterThreadNotification(notifyProc: TThreadNotificationProc); overload;
 procedure UnregisterThreadNotification(notifyMethod: TThreadNotificationMeth); overload;
 
-procedure SendThreadNotifications(notifyType: TThreadNotificationType);
+procedure SendThreadNotifications(notifyType: TThreadNotificationType;
+  const threadName: string);
 
 implementation
 
@@ -72,7 +75,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Notify(notifyType: TThreadNotificationType);
+    procedure Notify(notifyType: TThreadNotificationType; const threadName: string);
     procedure Register(notifyProc: TThreadNotificationProc); overload;
     procedure Register(notifyMethod: TThreadNotificationMeth); overload;
     procedure Unregister(notifyProc: TThreadNotificationProc); overload;
@@ -102,9 +105,10 @@ begin
   GThreadNotifications.Unregister(notifyMethod);
 end; { UnregisterThreadNotification }
 
-procedure SendThreadNotifications(notifyType: TThreadNotificationType);
+procedure SendThreadNotifications(notifyType: TThreadNotificationType;
+  const threadName: string);
 begin
-  GThreadNotifications.Notify(notifyType);
+  GThreadNotifications.Notify(notifyType, threadName);
 end; { SendThreadNotifications }
 
 constructor TThreadNotifications.Create;
@@ -130,7 +134,8 @@ begin
   Result := -1;
 end; { TThreadNotifications.Find }
 
-procedure TThreadNotifications.Notify(notifyType: TThreadNotificationType);
+procedure TThreadNotifications.Notify(notifyType: TThreadNotificationType;
+  const threadName: string);
 var
   iObserver: integer;
   meth     : TMethod;
@@ -140,11 +145,11 @@ begin
     iObserver := 0;
     while iObserver < tnList.Count do begin
       if tnList[iObserver] = nil then
-        TThreadNotificationProc(tnList[iObserver+1])(notifyType)
+        TThreadNotificationProc(tnList[iObserver+1])(notifyType, threadName)
       else begin
         meth.Data := tnList[iObserver];
         meth.Code := tnList[iObserver+1];
-        TThreadNotificationMeth(meth)(notifyType);
+        TThreadNotificationMeth(meth)(notifyType, threadName);
       end;
       Inc(iObserver, 2);
     end;

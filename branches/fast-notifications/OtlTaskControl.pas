@@ -2075,10 +2075,10 @@ end; { TOmniThread.Create }
 
 procedure TOmniThread.Execute;
 begin
-  SendThreadNotifications(tntCreate);
+  SendThreadNotifications(tntCreate, task.Name);
   try
     (otTask as IOmniTaskExecutor).Execute;
-  finally SendThreadNotifications(tntDestroy); end;
+  finally SendThreadNotifications(tntDestroy, task.Name); end;
 end; { TOmniThread.Execute }
 
 { TOmniTaskControlListEnumerator }
