@@ -207,16 +207,13 @@ end; { TProcMethodList.ExitReadLock }
 
 function TProcMethodList.Find(data, code: pointer): integer;
 begin
-  pmlLock.EnterReadLock;
-  try
-    Result := 0;
-    while Result < Count do begin
-      if (Items[Result] = data) and (Items[Result+1] = code) then
-        Exit;
-      Inc(Result, 2);
-    end;
-    Result := -1;
-  finally pmlLock.ExitReadLock; end;
+  Result := 0;
+  while Result < Count do begin
+    if (Items[Result] = data) and (Items[Result+1] = code) then
+      Exit;
+    Inc(Result, 2);
+  end;
+  Result := -1;
 end; { TProcMethodList.Find }
 
 procedure TProcMethodList.Remove(method: TMethod);
