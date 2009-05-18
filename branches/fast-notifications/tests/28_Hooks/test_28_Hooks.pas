@@ -20,7 +20,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
-    procedure NotifyMeth(notifyType: TThreadNotificationType);
+    procedure NotifyMeth(notifyType: TThreadNotificationType; const threadName: string);
     procedure NotifyFromMeth(var msg: TMessage); message WM_NOTIFY_METH;
     procedure NotifyFromProc(var msg: TMessage); message WM_NOTIFY_PROC;
   public
@@ -38,7 +38,7 @@ uses
 
 {$R *.dfm}
 
-procedure NotifyProc(notifyType: TThreadNotificationType);
+procedure NotifyProc(notifyType: TThreadNotificationType; const threadName: string);
 begin
   PostMessage(frmHooksDemo.Handle, WM_NOTIFY_PROC, WParam(notifyType), 0);  
 end;
@@ -79,7 +79,8 @@ begin
     'Notification from a procedure: ' + GetEnumName(TypeInfo(TThreadNotificationType), msg.WParam)); 
 end;
 
-procedure TfrmHooksDemo.NotifyMeth(notifyType: TThreadNotificationType);
+procedure TfrmHooksDemo.NotifyMeth(notifyType: TThreadNotificationType; const threadName:
+  string);
 begin
   PostMessage(frmHooksDemo.Handle, WM_NOTIFY_METH, WParam(notifyType), 0);
 end;
