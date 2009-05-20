@@ -849,7 +849,8 @@ begin
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter <= oqPartlyEmptyCount then
       ContainerSubject.NotifyOnce(coiNotifyOnPartlyEmpty);
-    ContainerSubject.Rearm(coiNotifyOnFirstInsert);
+    if countAfter <= 0 then
+      ContainerSubject.Rearm(coiNotifyOnFirstInsert);
   end;
 end; { TOmniQueue.Dequeue }
 
