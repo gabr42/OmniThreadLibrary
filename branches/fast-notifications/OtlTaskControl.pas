@@ -2067,6 +2067,7 @@ function TOmniTaskControl.WithLock(const lock: TSynchroObject; autoDestroyLock: 
 begin
   otcSharedInfo.Lock := lock;
   otcDestroyLock := autoDestroyLock;
+  Result := Self;
 end; { TOmniTaskControl.WithLock }
 
 { TOmniThread }
