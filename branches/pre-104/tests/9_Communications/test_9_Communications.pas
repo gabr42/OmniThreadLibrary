@@ -12,8 +12,8 @@ uses
 
 type
   TfrmTestCommunications = class(TForm)
-    btnRunTests           : TButton;
-    lbLog                 : TListBox;
+    btnRunTests      : TButton;
+    lbLog            : TListBox;
     OmniEventMonitor1: TOmniEventMonitor;
     procedure btnRunTestsClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);

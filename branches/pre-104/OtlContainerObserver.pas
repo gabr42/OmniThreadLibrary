@@ -59,9 +59,9 @@ type
   ///<summary>All possible actions observer can take interest in.</summary>
   TOmniContainerObserverInterest = (
     //Interests with permanent subscription:
-    coiNotifyOnAllInserts, coiNotifyOnAllRemoves, coiNotifyOnLastRemove,
+    coiNotifyOnAllInserts, coiNotifyOnAllRemoves,
     //Interests with one-shot subscription:
-    coiNotifyOnFirstInsert, coiNotifyOnPartlyEmpty, coiNotifyOnAlmostFull
+    coiNotifyOnPartlyEmpty, coiNotifyOnAlmostFull
   );
 
   ///<summary>Container observer. Class based for performance.</summary>

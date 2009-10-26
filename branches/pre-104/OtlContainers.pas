@@ -542,8 +542,6 @@ begin
   if Result then begin
     countAfter := osInStackCount.Decrement;  //' range check error??
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-    if countAfter = 0 then
-      ContainerSubject.Notify(coiNotifyOnLastRemove);
     if countAfter <= osPartlyEmptyCount then
       ContainerSubject.NotifyOnce(coiNotifyOnPartlyEmpty);
   end;
@@ -557,7 +555,6 @@ begin
   if Result then begin
     countAfter := osInStackCount.Increment;
     ContainerSubject.Notify(coiNotifyOnAllInserts);
-    ContainerSubject.NotifyOnce(coiNotifyOnFirstInsert);
     if countAfter >= osAlmostFullCount then
       ContainerSubject.NotifyOnce(coiNotifyOnAlmostFull);
   end;
@@ -845,11 +842,9 @@ begin
   Result := inherited Dequeue(value);
   if Result then begin
     countAfter := oqInQueueCount.Decrement;
-    ContainerSubject.NotifyOnce(coiNotifyOnLastRemove);
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter <= oqPartlyEmptyCount then
       ContainerSubject.NotifyOnce(coiNotifyOnPartlyEmpty);
-    ContainerSubject.Rearm(coiNotifyOnFirstInsert);
   end;
 end; { TOmniQueue.Dequeue }
 
@@ -860,7 +855,6 @@ begin
   Result := inherited Enqueue(value);
   if Result then begin
     countAfter := oqInQueueCount.Increment;
-    ContainerSubject.NotifyOnce(coiNotifyOnFirstInsert);
     ContainerSubject.Notify(coiNotifyOnAllInserts);
     if countAfter >= oqAlmostFullCount then
       ContainerSubject.NotifyOnce(coiNotifyOnAlmostFull);

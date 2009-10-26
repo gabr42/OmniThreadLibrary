@@ -1912,7 +1912,7 @@ begin
   otcSharedInfo.MonitorWindow := 0;
   EnsureCommChannel;
   otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver,
-    {coiNotifyOnAllInserts }coiNotifyOnFirstInsert);
+    coiNotifyOnAllInserts);
   FreeAndNil(otcMonitorObserver);
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
@@ -1947,7 +1947,7 @@ begin
       hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
       integer(Int64Rec(UniqueID).Hi));
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
-      otcMonitorObserver, {coiNotifyOnAllInserts }coiNotifyOnFirstInsert);
+      otcMonitorObserver, coiNotifyOnAllInserts);
   end;
   otcMonitorObserver.Activate;
   Result := Self;

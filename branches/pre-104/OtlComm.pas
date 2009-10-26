@@ -239,7 +239,7 @@ end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
 begin
-  ContainerSubject.Detach(mqWinEventObserver, coiNotifyOnFirstInsert);
+  ContainerSubject.Detach(mqWinEventObserver, coiNotifyOnAllInserts);
   FreeAndNil(mqWinEventObserver);
   Empty;
   inherited;
@@ -249,7 +249,7 @@ procedure TOmniMessageQueue.AttachWinEventObserver;
 begin
   if not assigned(mqWinEventObserver) then begin
     mqWinEventObserver := CreateContainerWindowsEventObserver;
-    ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnFirstInsert);
+    ContainerSubject.Attach(mqWinEventObserver, coiNotifyOnAllInserts);
   end;
   mqWinEventObserver.Activate;
 end; { TOmniMessageQueue.AttachWinEventObserver }
