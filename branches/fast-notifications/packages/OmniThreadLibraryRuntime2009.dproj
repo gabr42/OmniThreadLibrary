@@ -62,6 +62,7 @@
 			<DCCReference Include="..\src\DSiWin32.pas"/>
 			<DCCReference Include="..\OtlContainerObserver.pas"/>
 			<DCCReference Include="..\OtlSync.pas"/>
+			<DCCReference Include="..\OtlHooks.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

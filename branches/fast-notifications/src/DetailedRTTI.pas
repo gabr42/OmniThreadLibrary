@@ -117,11 +117,11 @@ begin
     Result := string(ReturnType^.Name);
   Result := Result + ';';
   case CallingConvention of
-    ccRegister: ;// Default
     ccCdecl: c := 'cdecl';
     ccPascal: c := 'pascal';
     ccStdCall: c := 'stdcall';
     ccSafeCall: c := 'safecall';
+    else c := '';
   end;
   if c <> '' then Result := Result + ' ' + c + ';';
 end;

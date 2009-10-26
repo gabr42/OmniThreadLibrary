@@ -45,6 +45,7 @@ contains
   OtlEventMonitor in '..\OtlEventMonitor.pas',
   DSiWin32 in '..\src\DSiWin32.pas',
   OtlContainerObserver in '..\OtlContainerObserver.pas',
-  OtlSync in '..\OtlSync.pas';
+  OtlSync in '..\OtlSync.pas',
+  OtlHooks in '..\OtlHooks.pas';
 
 end.
