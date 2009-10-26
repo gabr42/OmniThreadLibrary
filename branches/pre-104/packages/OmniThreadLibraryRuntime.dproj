@@ -41,6 +41,7 @@
     <DCCReference Include="..\OtlContainerObserver.pas" />
     <DCCReference Include="..\OtlContainers.pas" />
     <DCCReference Include="..\OtlEventMonitor.pas" />
+    <DCCReference Include="..\OtlHooks.pas" />
     <DCCReference Include="..\OtlSync.pas" />
     <DCCReference Include="..\OtlTask.pas" />
     <DCCReference Include="..\OtlTaskControl.pas" />
