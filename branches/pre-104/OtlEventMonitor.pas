@@ -203,11 +203,7 @@ begin { TOmniEventMonitor.WndProc }
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
         timeStart := GetTickCount;
-        if ProcessMessages then begin
-          // all messages processed
-          task.SetMonitor(tedMessageWindow); //rearm
-          ProcessMessages(1, false); //check if something was posted before rearmed
-        end;
+        ProcessMessages;
       end;
     end;
     msg.Result := 0;
