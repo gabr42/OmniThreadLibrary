@@ -260,6 +260,8 @@ var
   iObserver: integer;
   meth     : TMethod;
 begin
+  if not assigned(Self) then
+    Exit; //finalization
   tnList.EnterReadLock;
   try
     iObserver := 0;

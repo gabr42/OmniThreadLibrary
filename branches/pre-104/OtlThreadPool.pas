@@ -1276,5 +1276,7 @@ end; { TOmniThreadPool.WorkerObj }
 initialization
   //assumptions made in the code above
   Assert(SizeOf(pointer) = SizeOf(cardinal));
+finalization
+  GOmniThreadPool := nil;
 end.
 
