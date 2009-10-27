@@ -115,6 +115,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     OnPoolThreadDestroying = OmniTEDPoolThreadDestroying
     OnPoolThreadKilled = OmniTEDPoolThreadKilled
     OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
+    OnTaskMessage = OmniTEDTaskMessage
     OnTaskTerminated = OmniTEDTaskTerminated
     Left = 8
     Top = 264

@@ -71,7 +71,7 @@ type
     FTaskID    : int64;
   public
     constructor Create(formHandle: THandle; delay_ms: integer = 1000);
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function  Initialize: boolean; override;
     procedure Cleanup; override;
   end;
