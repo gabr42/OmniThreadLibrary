@@ -449,8 +449,8 @@ begin
   owtThreadDataFactory := threadDataFactory;
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
-  owtWorkItemLock := TTicketSpinLock.Create; 
-  owtCommChannel := CreateTwoWayChannel;
+  owtWorkItemLock := TTicketSpinLock.Create;
+  owtCommChannel := CreateTwoWayChannel(100, owtTerminateEvent);
   {$IFDEF OTL_DeprecatedResume}
   Start;
   {$ELSE}
