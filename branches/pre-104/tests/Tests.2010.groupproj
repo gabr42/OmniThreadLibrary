@@ -1,0 +1,372 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{E132473E-1771-48B9-9094-EFA6FBF92B20}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="0_Beep\app_0_Beep.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="1_HelloWorld\app_1_HelloWorld.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="2_TwoWayHello\app_2_TwoWayHello.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="7_InitTest\app_7_InitTest.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="8_RegisterComm\app_8_RegisterComm.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="9_Communications\app_9_Communications.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="10_Containers\app_10_Containers.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="11_ThreadPool\app_11_ThreadPool.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="12_Lock\app_12_Lock.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="13_Exceptions\app_13_Exceptions.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="14_TerminateWhen\app_14_TerminateWhen.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="15_TaskGroup\app_15_TaskGroup.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="16_ChainTo\app_16_ChainTo.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="17_MsgWait\app_17_MsgWait.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="18_StringMsgDispatch\app_18_StringMsgDispatch.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="20_QuickSort\app_20_QuickSort.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="21_Anonymous_methods\app_21_Anonymous_methods.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="22_TerminationTest\app_22_TerminationTest.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="24_ConnectionPool\app_24_ConnectionPool.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="25_WaitableComm\app_25_WaitableComm.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="27_RecursiveTree\app_27_RecursiveTree.2010.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="28_Hooks\app_28_Hooks.2010.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="app_0_Beep_2010">
+			<MSBuild Projects="0_Beep\app_0_Beep.2010.dproj"/>
+		</Target>
+		<Target Name="app_0_Beep_2010:Clean">
+			<MSBuild Targets="Clean" Projects="0_Beep\app_0_Beep.2010.dproj"/>
+		</Target>
+		<Target Name="app_0_Beep_2010:Make">
+			<MSBuild Targets="Make" Projects="0_Beep\app_0_Beep.2010.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_2010">
+			<MSBuild Projects="1_HelloWorld\app_1_HelloWorld.2010.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_2010:Clean">
+			<MSBuild Targets="Clean" Projects="1_HelloWorld\app_1_HelloWorld.2010.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_2010:Make">
+			<MSBuild Targets="Make" Projects="1_HelloWorld\app_1_HelloWorld.2010.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_2010">
+			<MSBuild Projects="2_TwoWayHello\app_2_TwoWayHello.2010.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_2010:Clean">
+			<MSBuild Targets="Clean" Projects="2_TwoWayHello\app_2_TwoWayHello.2010.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_2010:Make">
+			<MSBuild Targets="Make" Projects="2_TwoWayHello\app_2_TwoWayHello.2010.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_2010">
+			<MSBuild Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_2010:Clean">
+			<MSBuild Targets="Clean" Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_2010:Make">
+			<MSBuild Targets="Make" Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_2010">
+			<MSBuild Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_2010:Clean">
+			<MSBuild Targets="Clean" Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_2010:Make">
+			<MSBuild Targets="Make" Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2010.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_2010">
+			<MSBuild Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2010.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_2010:Clean">
+			<MSBuild Targets="Clean" Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2010.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_2010:Make">
+			<MSBuild Targets="Make" Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2010.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_2010">
+			<MSBuild Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2010.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_2010:Clean">
+			<MSBuild Targets="Clean" Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2010.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_2010:Make">
+			<MSBuild Targets="Make" Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2010.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_2010">
+			<MSBuild Projects="7_InitTest\app_7_InitTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_2010:Clean">
+			<MSBuild Targets="Clean" Projects="7_InitTest\app_7_InitTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_2010:Make">
+			<MSBuild Targets="Make" Projects="7_InitTest\app_7_InitTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_2010">
+			<MSBuild Projects="8_RegisterComm\app_8_RegisterComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_2010:Clean">
+			<MSBuild Targets="Clean" Projects="8_RegisterComm\app_8_RegisterComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_2010:Make">
+			<MSBuild Targets="Make" Projects="8_RegisterComm\app_8_RegisterComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_2010">
+			<MSBuild Projects="9_Communications\app_9_Communications.2010.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_2010:Clean">
+			<MSBuild Targets="Clean" Projects="9_Communications\app_9_Communications.2010.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_2010:Make">
+			<MSBuild Targets="Make" Projects="9_Communications\app_9_Communications.2010.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_2010">
+			<MSBuild Projects="10_Containers\app_10_Containers.2010.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_2010:Clean">
+			<MSBuild Targets="Clean" Projects="10_Containers\app_10_Containers.2010.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_2010:Make">
+			<MSBuild Targets="Make" Projects="10_Containers\app_10_Containers.2010.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_2010">
+			<MSBuild Projects="11_ThreadPool\app_11_ThreadPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_2010:Clean">
+			<MSBuild Targets="Clean" Projects="11_ThreadPool\app_11_ThreadPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_2010:Make">
+			<MSBuild Targets="Make" Projects="11_ThreadPool\app_11_ThreadPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_2010">
+			<MSBuild Projects="12_Lock\app_12_Lock.2010.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_2010:Clean">
+			<MSBuild Targets="Clean" Projects="12_Lock\app_12_Lock.2010.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_2010:Make">
+			<MSBuild Targets="Make" Projects="12_Lock\app_12_Lock.2010.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_2010">
+			<MSBuild Projects="13_Exceptions\app_13_Exceptions.2010.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_2010:Clean">
+			<MSBuild Targets="Clean" Projects="13_Exceptions\app_13_Exceptions.2010.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_2010:Make">
+			<MSBuild Targets="Make" Projects="13_Exceptions\app_13_Exceptions.2010.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_2010">
+			<MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.2010.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_2010:Clean">
+			<MSBuild Targets="Clean" Projects="14_TerminateWhen\app_14_TerminateWhen.2010.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_2010:Make">
+			<MSBuild Targets="Make" Projects="14_TerminateWhen\app_14_TerminateWhen.2010.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_2010">
+			<MSBuild Projects="15_TaskGroup\app_15_TaskGroup.2010.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_2010:Clean">
+			<MSBuild Targets="Clean" Projects="15_TaskGroup\app_15_TaskGroup.2010.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_2010:Make">
+			<MSBuild Targets="Make" Projects="15_TaskGroup\app_15_TaskGroup.2010.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_2010">
+			<MSBuild Projects="16_ChainTo\app_16_ChainTo.2010.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_2010:Clean">
+			<MSBuild Targets="Clean" Projects="16_ChainTo\app_16_ChainTo.2010.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_2010:Make">
+			<MSBuild Targets="Make" Projects="16_ChainTo\app_16_ChainTo.2010.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_2010">
+			<MSBuild Projects="17_MsgWait\app_17_MsgWait.2010.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_2010:Clean">
+			<MSBuild Targets="Clean" Projects="17_MsgWait\app_17_MsgWait.2010.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_2010:Make">
+			<MSBuild Targets="Make" Projects="17_MsgWait\app_17_MsgWait.2010.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_2010">
+			<MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2010.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_2010:Clean">
+			<MSBuild Targets="Clean" Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2010.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_2010:Make">
+			<MSBuild Targets="Make" Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2010.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_2010">
+			<MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2010.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_2010:Clean">
+			<MSBuild Targets="Clean" Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2010.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_2010:Make">
+			<MSBuild Targets="Make" Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2010.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_2010">
+			<MSBuild Projects="20_QuickSort\app_20_QuickSort.2010.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_2010:Clean">
+			<MSBuild Targets="Clean" Projects="20_QuickSort\app_20_QuickSort.2010.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_2010:Make">
+			<MSBuild Targets="Make" Projects="20_QuickSort\app_20_QuickSort.2010.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_2010">
+			<MSBuild Projects="21_Anonymous_methods\app_21_Anonymous_methods.2010.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_2010:Clean">
+			<MSBuild Targets="Clean" Projects="21_Anonymous_methods\app_21_Anonymous_methods.2010.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_2010:Make">
+			<MSBuild Targets="Make" Projects="21_Anonymous_methods\app_21_Anonymous_methods.2010.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_2010">
+			<MSBuild Projects="22_TerminationTest\app_22_TerminationTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_2010:Clean">
+			<MSBuild Targets="Clean" Projects="22_TerminationTest\app_22_TerminationTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_2010:Make">
+			<MSBuild Targets="Make" Projects="22_TerminationTest\app_22_TerminationTest.2010.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_2010">
+			<MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2010.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_2010:Clean">
+			<MSBuild Targets="Clean" Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2010.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_2010:Make">
+			<MSBuild Targets="Make" Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2010.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_2010">
+			<MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_2010:Clean">
+			<MSBuild Targets="Clean" Projects="24_ConnectionPool\app_24_ConnectionPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_2010:Make">
+			<MSBuild Targets="Make" Projects="24_ConnectionPool\app_24_ConnectionPool.2010.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2010">
+			<MSBuild Projects="25_WaitableComm\app_25_WaitableComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2010:Clean">
+			<MSBuild Targets="Clean" Projects="25_WaitableComm\app_25_WaitableComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2010:Make">
+			<MSBuild Targets="Make" Projects="25_WaitableComm\app_25_WaitableComm.2010.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2010">
+			<MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2010.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2010:Clean">
+			<MSBuild Targets="Clean" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2010.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2010:Make">
+			<MSBuild Targets="Make" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2010.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2010">
+			<MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.2010.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2010:Clean">
+			<MSBuild Targets="Clean" Projects="27_RecursiveTree\app_27_RecursiveTree.2010.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2010:Make">
+			<MSBuild Targets="Make" Projects="27_RecursiveTree\app_27_RecursiveTree.2010.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2010">
+			<MSBuild Projects="28_Hooks\app_28_Hooks.2010.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2010:Clean">
+			<MSBuild Targets="Clean" Projects="28_Hooks\app_28_Hooks.2010.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2010:Make">
+			<MSBuild Targets="Make" Projects="28_Hooks\app_28_Hooks.2010.dproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="app_0_Beep_2010;app_1_HelloWorld_2010;app_2_TwoWayHello_2010;app_3_HelloWorld_with_package_2010;app_4_TwoWayHello_with_package_2010;app_5_TwoWayHello_without_loop_2010;app_6_TwoWayHello_with_object_worker_2010;app_7_InitTest_2010;app_8_RegisterComm_2010;app_9_Communications_2010;app_10_Containers_2010;app_11_ThreadPool_2010;app_12_Lock_2010;app_13_Exceptions_2010;app_14_TerminateWhen_2010;app_15_TaskGroup_2010;app_16_ChainTo_2010;app_17_MsgWait_2010;app_18_StringMsgDispatch_2010;app_19_StringMsgBenchmark_2010;app_20_QuickSort_2010;app_21_Anonymous_methods_2010;app_22_TerminationTest_2010;app_23_BackgroundFileSearch_2010;app_24_ConnectionPool_2010;app_25_WaitableComm_2010;app_26_MultiEventMonitor_2010;app_27_RecursiveTree_2010;app_28_Hooks_2010"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="app_0_Beep_2010:Clean;app_1_HelloWorld_2010:Clean;app_2_TwoWayHello_2010:Clean;app_3_HelloWorld_with_package_2010:Clean;app_4_TwoWayHello_with_package_2010:Clean;app_5_TwoWayHello_without_loop_2010:Clean;app_6_TwoWayHello_with_object_worker_2010:Clean;app_7_InitTest_2010:Clean;app_8_RegisterComm_2010:Clean;app_9_Communications_2010:Clean;app_10_Containers_2010:Clean;app_11_ThreadPool_2010:Clean;app_12_Lock_2010:Clean;app_13_Exceptions_2010:Clean;app_14_TerminateWhen_2010:Clean;app_15_TaskGroup_2010:Clean;app_16_ChainTo_2010:Clean;app_17_MsgWait_2010:Clean;app_18_StringMsgDispatch_2010:Clean;app_19_StringMsgBenchmark_2010:Clean;app_20_QuickSort_2010:Clean;app_21_Anonymous_methods_2010:Clean;app_22_TerminationTest_2010:Clean;app_23_BackgroundFileSearch_2010:Clean;app_24_ConnectionPool_2010:Clean;app_25_WaitableComm_2010:Clean;app_26_MultiEventMonitor_2010:Clean;app_27_RecursiveTree_2010:Clean;app_28_Hooks_2010:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="app_0_Beep_2010:Make;app_1_HelloWorld_2010:Make;app_2_TwoWayHello_2010:Make;app_3_HelloWorld_with_package_2010:Make;app_4_TwoWayHello_with_package_2010:Make;app_5_TwoWayHello_without_loop_2010:Make;app_6_TwoWayHello_with_object_worker_2010:Make;app_7_InitTest_2010:Make;app_8_RegisterComm_2010:Make;app_9_Communications_2010:Make;app_10_Containers_2010:Make;app_11_ThreadPool_2010:Make;app_12_Lock_2010:Make;app_13_Exceptions_2010:Make;app_14_TerminateWhen_2010:Make;app_15_TaskGroup_2010:Make;app_16_ChainTo_2010:Make;app_17_MsgWait_2010:Make;app_18_StringMsgDispatch_2010:Make;app_19_StringMsgBenchmark_2010:Make;app_20_QuickSort_2010:Make;app_21_Anonymous_methods_2010:Make;app_22_TerminationTest_2010:Make;app_23_BackgroundFileSearch_2010:Make;app_24_ConnectionPool_2010:Make;app_25_WaitableComm_2010:Make;app_26_MultiEventMonitor_2010:Make;app_27_RecursiveTree_2010:Make;app_28_Hooks_2010:Make"/>
+		</Target>
+		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+	</Project>
