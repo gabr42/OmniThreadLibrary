@@ -462,6 +462,8 @@ type
     procedure SetTimerMessageID(const value: integer);
     procedure SetTimerMessageMethod(const value: pointer);
     procedure SetTimerMessageName(const value: string);
+    function  TestForInternalRebuild(const task: IOmniTask;
+      var msgInfo: TOmniMessageInfo): boolean;
   protected
     function  DispatchEvent(awaited: cardinal; const task: IOmniTask; var msgInfo:
       TOmniMessageInfo): boolean; virtual;
@@ -1220,7 +1222,7 @@ begin
       end;
       if gotMsg and assigned(WorkerIntf) then
         DispatchOmniMessage(msg);
-    until not gotMsg;
+    until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
   end // comm handles
   else if awaited = msgInfo.IdxRebuildHandles then begin
     RebuildWaitHandles(task, msgInfo);
@@ -1239,11 +1241,7 @@ begin
   end //WAIT_TIMEOUT
   else //errors
     RaiseLastOSError;
-  if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
-    //could get set inside timer or message handler
-    RebuildWaitHandles(task, msgInfo);
-    EmptyMessageQueues(task);
-  end;
+  TestForInternalRebuild(task, msgInfo);
   Result := true;
 end; { TOmniTaskExecutor.DispatchEvent } 
 
@@ -1663,6 +1661,18 @@ begin
     oteTerminateHandles := TGpIntegerList.Create;
   oteTerminateHandles.Add(handle);
 end; { TOmniTaskExecutor.TerminateWhen }
+
+function TOmniTaskExecutor.TestForInternalRebuild(const task: IOmniTask; var msgInfo:
+  TOmniMessageInfo): boolean;
+begin
+  Result := false;
+  if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
+    //could get set inside timer or message handler
+    RebuildWaitHandles(task, msgInfo);
+    EmptyMessageQueues(task);
+    Result := true;
+  end;
+end; { TOmniTaskExecutor.TestForInternalRebuild }
 
 function TOmniTaskExecutor.TimeUntilNextTimer_ms: cardinal;
 var
