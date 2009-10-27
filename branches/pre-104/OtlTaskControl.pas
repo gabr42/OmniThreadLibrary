@@ -1331,10 +1331,16 @@ begin
     try
       for iIntf in oteCommList do begin
         iComm := iIntf as IOmniCommunicationEndpoint;
-        while iComm.Receive(msg) do
-          if assigned(WorkerIntf) then
+        while iComm.Receive(msg) do begin
+          if assigned(WorkerIntf) then begin
             DispatchOmniMessage(msg);
-      end;
+            if not assigned(oteCommList) then
+              break; //while
+          end;
+        end; //while
+        if not assigned(oteCommList) then
+          break; //for
+      end; //for iIntf
     finally oteInternalLock.Release; end;
   end;
 end; { TOmniTaskExecutor.EmptyMessageQueues }
