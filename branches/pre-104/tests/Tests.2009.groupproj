@@ -75,6 +75,21 @@
 			<Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2009.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="24_ConnectionPool\app_24_ConnectionPool.2009.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="25_WaitableComm\app_25_WaitableComm.2009.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.2009.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="27_RecursiveTree\app_27_RecursiveTree.2009.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="28_Hooks\app_28_Hooks.2009.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -299,14 +314,59 @@
 		<Target Name="app_23_BackgroundFileSearch_2009:Make">
 			<MSBuild Targets="Make" Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2009.dproj"/>
 		</Target>
+		<Target Name="app_24_ConnectionPool_2009">
+			<MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.2009.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_2009:Clean">
+			<MSBuild Targets="Clean" Projects="24_ConnectionPool\app_24_ConnectionPool.2009.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_2009:Make">
+			<MSBuild Targets="Make" Projects="24_ConnectionPool\app_24_ConnectionPool.2009.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2009">
+			<MSBuild Projects="25_WaitableComm\app_25_WaitableComm.2009.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2009:Clean">
+			<MSBuild Targets="Clean" Projects="25_WaitableComm\app_25_WaitableComm.2009.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_2009:Make">
+			<MSBuild Targets="Make" Projects="25_WaitableComm\app_25_WaitableComm.2009.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2009">
+			<MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2009.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2009:Clean">
+			<MSBuild Targets="Clean" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2009.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_2009:Make">
+			<MSBuild Targets="Make" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2009.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2009">
+			<MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.2009.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2009:Clean">
+			<MSBuild Targets="Clean" Projects="27_RecursiveTree\app_27_RecursiveTree.2009.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_2009:Make">
+			<MSBuild Targets="Make" Projects="27_RecursiveTree\app_27_RecursiveTree.2009.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2009">
+			<MSBuild Projects="28_Hooks\app_28_Hooks.2009.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2009:Clean">
+			<MSBuild Targets="Clean" Projects="28_Hooks\app_28_Hooks.2009.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_2009:Make">
+			<MSBuild Targets="Make" Projects="28_Hooks\app_28_Hooks.2009.dproj"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="app_0_Beep_2009;app_1_HelloWorld_2009;app_2_TwoWayHello_2009;app_3_HelloWorld_with_package_2009;app_4_TwoWayHello_with_package_2009;app_5_TwoWayHello_without_loop_2009;app_6_TwoWayHello_with_object_worker_2009;app_7_InitTest_2009;app_8_RegisterComm_2009;app_9_Communications_2009;app_10_Containers_2009;app_11_ThreadPool_2009;app_12_Lock_2009;app_13_Exceptions_2009;app_14_TerminateWhen_2009;app_15_TaskGroup_2009;app_16_ChainTo_2009;app_17_MsgWait_2009;app_18_StringMsgDispatch_2009;app_19_StringMsgBenchmark_2009;app_20_QuickSort_2009;app_21_Anonymous_methods_2009;app_22_TerminationTest_2009;app_23_BackgroundFileSearch_2009"/>
+			<CallTarget Targets="app_0_Beep_2009;app_1_HelloWorld_2009;app_2_TwoWayHello_2009;app_3_HelloWorld_with_package_2009;app_4_TwoWayHello_with_package_2009;app_5_TwoWayHello_without_loop_2009;app_6_TwoWayHello_with_object_worker_2009;app_7_InitTest_2009;app_8_RegisterComm_2009;app_9_Communications_2009;app_10_Containers_2009;app_11_ThreadPool_2009;app_12_Lock_2009;app_13_Exceptions_2009;app_14_TerminateWhen_2009;app_15_TaskGroup_2009;app_16_ChainTo_2009;app_17_MsgWait_2009;app_18_StringMsgDispatch_2009;app_19_StringMsgBenchmark_2009;app_20_QuickSort_2009;app_21_Anonymous_methods_2009;app_22_TerminationTest_2009;app_23_BackgroundFileSearch_2009;app_24_ConnectionPool_2009;app_25_WaitableComm_2009;app_26_MultiEventMonitor_2009;app_27_RecursiveTree_2009;app_28_Hooks_2009"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="app_0_Beep_2009:Clean;app_1_HelloWorld_2009:Clean;app_2_TwoWayHello_2009:Clean;app_3_HelloWorld_with_package_2009:Clean;app_4_TwoWayHello_with_package_2009:Clean;app_5_TwoWayHello_without_loop_2009:Clean;app_6_TwoWayHello_with_object_worker_2009:Clean;app_7_InitTest_2009:Clean;app_8_RegisterComm_2009:Clean;app_9_Communications_2009:Clean;app_10_Containers_2009:Clean;app_11_ThreadPool_2009:Clean;app_12_Lock_2009:Clean;app_13_Exceptions_2009:Clean;app_14_TerminateWhen_2009:Clean;app_15_TaskGroup_2009:Clean;app_16_ChainTo_2009:Clean;app_17_MsgWait_2009:Clean;app_18_StringMsgDispatch_2009:Clean;app_19_StringMsgBenchmark_2009:Clean;app_20_QuickSort_2009:Clean;app_21_Anonymous_methods_2009:Clean;app_22_TerminationTest_2009:Clean;app_23_BackgroundFileSearch_2009:Clean"/>
+			<CallTarget Targets="app_0_Beep_2009:Clean;app_1_HelloWorld_2009:Clean;app_2_TwoWayHello_2009:Clean;app_3_HelloWorld_with_package_2009:Clean;app_4_TwoWayHello_with_package_2009:Clean;app_5_TwoWayHello_without_loop_2009:Clean;app_6_TwoWayHello_with_object_worker_2009:Clean;app_7_InitTest_2009:Clean;app_8_RegisterComm_2009:Clean;app_9_Communications_2009:Clean;app_10_Containers_2009:Clean;app_11_ThreadPool_2009:Clean;app_12_Lock_2009:Clean;app_13_Exceptions_2009:Clean;app_14_TerminateWhen_2009:Clean;app_15_TaskGroup_2009:Clean;app_16_ChainTo_2009:Clean;app_17_MsgWait_2009:Clean;app_18_StringMsgDispatch_2009:Clean;app_19_StringMsgBenchmark_2009:Clean;app_20_QuickSort_2009:Clean;app_21_Anonymous_methods_2009:Clean;app_22_TerminationTest_2009:Clean;app_23_BackgroundFileSearch_2009:Clean;app_24_ConnectionPool_2009:Clean;app_25_WaitableComm_2009:Clean;app_26_MultiEventMonitor_2009:Clean;app_27_RecursiveTree_2009:Clean;app_28_Hooks_2009:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="app_0_Beep_2009:Make;app_1_HelloWorld_2009:Make;app_2_TwoWayHello_2009:Make;app_3_HelloWorld_with_package_2009:Make;app_4_TwoWayHello_with_package_2009:Make;app_5_TwoWayHello_without_loop_2009:Make;app_6_TwoWayHello_with_object_worker_2009:Make;app_7_InitTest_2009:Make;app_8_RegisterComm_2009:Make;app_9_Communications_2009:Make;app_10_Containers_2009:Make;app_11_ThreadPool_2009:Make;app_12_Lock_2009:Make;app_13_Exceptions_2009:Make;app_14_TerminateWhen_2009:Make;app_15_TaskGroup_2009:Make;app_16_ChainTo_2009:Make;app_17_MsgWait_2009:Make;app_18_StringMsgDispatch_2009:Make;app_19_StringMsgBenchmark_2009:Make;app_20_QuickSort_2009:Make;app_21_Anonymous_methods_2009:Make;app_22_TerminationTest_2009:Make;app_23_BackgroundFileSearch_2009:Make"/>
+			<CallTarget Targets="app_0_Beep_2009:Make;app_1_HelloWorld_2009:Make;app_2_TwoWayHello_2009:Make;app_3_HelloWorld_with_package_2009:Make;app_4_TwoWayHello_with_package_2009:Make;app_5_TwoWayHello_without_loop_2009:Make;app_6_TwoWayHello_with_object_worker_2009:Make;app_7_InitTest_2009:Make;app_8_RegisterComm_2009:Make;app_9_Communications_2009:Make;app_10_Containers_2009:Make;app_11_ThreadPool_2009:Make;app_12_Lock_2009:Make;app_13_Exceptions_2009:Make;app_14_TerminateWhen_2009:Make;app_15_TaskGroup_2009:Make;app_16_ChainTo_2009:Make;app_17_MsgWait_2009:Make;app_18_StringMsgDispatch_2009:Make;app_19_StringMsgBenchmark_2009:Make;app_20_QuickSort_2009:Make;app_21_Anonymous_methods_2009:Make;app_22_TerminationTest_2009:Make;app_23_BackgroundFileSearch_2009:Make;app_24_ConnectionPool_2009:Make;app_25_WaitableComm_2009:Make;app_26_MultiEventMonitor_2009:Make;app_27_RecursiveTree_2009:Make;app_28_Hooks_2009:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>
