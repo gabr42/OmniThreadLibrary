@@ -59,6 +59,10 @@
 ///       - First official release.
 ///</para></remarks>
 
+{$IF CompilerVersion >= 21}
+  {$DEFINE OTL_DeprecatedResume}
+{$IFEND}
+
 unit OtlThreadPool;
 
 interface
@@ -447,7 +451,11 @@ begin
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
   owtWorkItemLock := TTicketSpinLock.Create; 
   owtCommChannel := CreateTwoWayChannel;
+  {$IFDEF OTL_DeprecatedResume}
+  Start;
+  {$ELSE}
   Resume;
+  {$ENDIF OTL_DeprecatedResume}
 end; { TOTPWorkerThread.Create }
 
 destructor TOTPWorkerThread.Destroy;

@@ -48,8 +48,6 @@
 			<DCCReference Include="vclx.dcp"/>
 			<DCCReference Include="OmniThreadLibraryRuntime2009.dcp"/>
 			<DCCReference Include="..\OtlRegister.pas"/>
-			<DCCReference Include="OmniThreadLibraryRuntime200.dcp"/>
-			<DCCReference Include="OmniThreadLibraryRuntime20.dcp"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

@@ -115,6 +115,9 @@
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
 {$IFEND}
+{$IF CompilerVersion >= 21}
+  {$DEFINE OTL_DeprecatedResume}
+{$IFEND}
 {$WARN SYMBOL_PLATFORM OFF}
 
 unit OtlTaskControl;
@@ -1921,7 +1924,11 @@ function TOmniTaskControl.Run: IOmniTaskControl;
 begin
   otcParameters.Lock;
   otcThread := TOmniThread.Create(CreateTask);
+  {$IFDEF OTL_DeprecatedResume}
+  otcThread.Start;
+  {$ELSE}
   otcThread.Resume;
+  {$ENDIF OTL_DeprecatedResume}
   Result := Self;
 end; { TOmniTaskControl.Run }
 
