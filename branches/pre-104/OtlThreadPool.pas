@@ -209,8 +209,8 @@ type
     owiStartedAt   : TDateTime;
     owiTask        : IOmniTask;
     owiThread      : TOTPWorkerThread;
+    owiUniqueID    : int64;
   strict protected
-    function  GetUniqueID: int64;
   public
     constructor Create(const task: IOmniTask);
     function  Description: string;
@@ -218,7 +218,7 @@ type
     property ScheduledAt: TDateTime read owiScheduledAt;
     property Scheduled_ms: int64 read owiScheduled_ms;
     property StartedAt: TDateTime read owiStartedAt write owiStartedAt;
-    property UniqueID: int64 read GetUniqueID;
+    property UniqueID: int64 read owiUniqueID;
     property Task: IOmniTask read owiTask;
     property Thread: TOTPWorkerThread read owiThread write owiThread;
   end; { TOTPWorkItem }
@@ -415,20 +415,13 @@ begin
   owiTask := task;
   owiScheduledAt := Now;
   owiScheduled_ms := DSiTimeGetTime64;
+  owiUniqueID := owiTask.UniqueID;
 end; { TOTPWorkItem.Create }
 
 function TOTPWorkItem.Description: string;
 begin
   Result := Format('%s:%d', [Task.Name, UniqueID]);
 end; { TOTPWorkItem.Description }
-
-function TOTPWorkItem.GetUniqueID: int64;
-begin
-  if assigned(Task) then
-    Result := Task.UniqueID
-  else
-    Result := -1;
-end; { TOTPWorkItem.GetUniqueID }
 
 procedure TOTPWorkItem.TerminateTask(exitCode: integer; const exitMessage: string);
 begin
