@@ -35,7 +35,7 @@ type
     lbLog            : TListBox;
     OtlEventMonitor1 : TOmniEventMonitor;
     procedure btnSort(Sender: TObject);
-    procedure OtlEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OtlEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   strict private
     FSortStart: int64;
   private
@@ -87,11 +87,9 @@ begin
     FData[iData] := Random(High(integer));
 end;
 
-procedure TfrmQuickSortDemo.OtlEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmQuickSortDemo.OtlEventMonitor1TaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   if msg.MsgID = WM_STOP then begin
     FSortStart := DSiTimeGetTime64 - FSortStart;
     lbLog.ItemIndex := lbLog.Items.Add(Format('Sorted, elapsed time = %d ms', [FSortStart]));

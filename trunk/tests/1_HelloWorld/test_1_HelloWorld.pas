@@ -8,7 +8,7 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlComm;
 
 type
   TfrmTestHelloWorld = class(TForm)
@@ -20,7 +20,7 @@ type
     FMessageDispatch: TOmniEventMonitor;
   private
     procedure HandleTaskTerminated(const task: IOmniTaskControl);
-    procedure HandleTaskMessage(const task: IOmniTaskControl);
+    procedure HandleTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunHelloWorld(const task: IOmniTask);
   end;
 
@@ -55,14 +55,11 @@ begin
   btnHello.Enabled := true;
 end; { TfrmTestOTL.HandleTaskTerminated }
 
-procedure TfrmTestHelloWorld.HandleTaskMessage(const task: IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmTestHelloWorld.HandleTaskMessage(const task: IOmniTaskControl; const msg:
+  TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msgID, msgData.AsString]));
+    [task.UniqueID, task.Name, msg.msgID, msg.msgData.AsString]));
 end;
 
 procedure TfrmTestHelloWorld.RunHelloWorld(const task: IOmniTask);

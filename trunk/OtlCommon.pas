@@ -38,11 +38,15 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2009-04-18
-///   Version           : 1.03
+///   Version           : 1.04
 ///</para><para>
 ///   History:
-///     1.03: 2009-04-18
+///     1.04: 2009-04-18
 ///       - Added WideString support to TOmniValue.
+///     1.03a: 2009-04-05
+///       - Bug fixed: TInterfaceDictionaryEnumerator was ignoring first bucket.
+///     1.03: 2009-03-30
+///       - TOmniCS and IOmniCriticalSection moved to the OtlSync unit.
 ///     1.02a: 2009-02-09
 ///       - Simplified TOmniCS.Initialize.
 ///     1.02: 2009-02-03
@@ -74,7 +78,6 @@ uses
   SysUtils,
   Classes,
   Variants,
-  SyncObjs,
   GpStuff;
 
 const
@@ -139,11 +142,11 @@ type
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
-    class operator Implicit(const a: TOmniValue): TObject; inline;
-    class operator Implicit(const a: TOmniValue): string;
     class operator Implicit(const a: TOmniValue): int64; inline;
+    class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
-    class operator Implicit(const a: TOmniValue): Extended;
+    class operator Implicit(const a: TOmniValue): Extended; inline;
+    class operator Implicit(const a: TOmniValue): string; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
     class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: TOmniValue): boolean; inline;
@@ -248,26 +251,10 @@ type
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
+    function  Count: integer; 
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { IInterfaceHash }
-
-  IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
-    procedure Acquire;
-    procedure Release;
-    function  GetSyncObj: TSynchroObject;
-  end; { IOmniCriticalSection }
-
-  TOmniCS = record
-  private
-    ocsSync: IOmniCriticalSection;
-    function  GetSyncObj: TSynchroObject;
-  public
-    procedure Initialize;
-    procedure Acquire; inline;
-    procedure Release; inline;
-    property SyncObj: TSynchroObject read GetSyncObj;
-  end; { TOmniCS }
 
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
 
@@ -277,14 +264,12 @@ type
 
   function CreateInterfaceDictionary: IInterfaceDictionary;
 
-  function CreateOmniCriticalSection: IOmniCriticalSection;
-
   procedure SetThreadName(const name: string);
 
   function VarToObj(const v: Variant): TObject; inline;
 
 var
-  OtlUID: TGp8AlignedInt;
+  OtlUID: TGp8AlignedInt64;
 
 implementation
 
@@ -370,6 +355,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
+  // TODO 1 -oPrimoz Gabrijelcic : This one goes out?
   TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
   strict private
     ompLParam : integer;
@@ -432,7 +418,7 @@ type
   TInterfaceDictionary = class(TInterfacedObject, IInterfaceDictionary)
   strict private
     idBuckets: TBucketArray;
-    idCount  : int64;
+    idCount  : integer;
   strict protected
     function  Find(const key: int64): PPHashItem;
     function  HashOf(const key: int64): integer; inline;
@@ -442,21 +428,11 @@ type
     destructor  Destroy; override;
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
+    function  Count: integer; inline;
     function  GetEnumerator: IInterfaceDictionaryEnumerator;
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { TInterfaceDictionary }
-
-  TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
-  strict private
-    ocsCritSect: TSynchroObject;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Acquire; inline;
-    function  GetSyncObj: TSynchroObject;
-    procedure Release; inline;
-  end; { TOmniCriticalSection }
 
 { exports }
 
@@ -481,12 +457,8 @@ begin
   Result := TInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
 
-function CreateOmniCriticalSection: IOmniCriticalSection;
-begin
-  Result := TOmniCriticalSection.Create;
-end; { CreateOmniCriticalSection }
-
 procedure SetThreadName(const name: string);
+{$IFDEF ShowThreadNames}
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
@@ -497,15 +469,20 @@ type
 var
   ansiName      : AnsiString;
   threadNameInfo: TThreadNameInfo;
+{$ENDIF}
 begin
-  ansiName := AnsiString(name);
-  threadNameInfo.FType := $1000;
-  threadNameInfo.FName := PAnsiChar(ansiName);
-  threadNameInfo.FThreadID := $FFFFFFFF;
-  threadNameInfo.FFlags := 0;
-  try
-    RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
-  except {ignore} end;
+  {$IFDEF ShowThreadNames}
+  if DebugHook <> 0 then begin
+    ansiName := AnsiString(name);
+    threadNameInfo.FType := $1000;
+    threadNameInfo.FName := PAnsiChar(ansiName);
+    threadNameInfo.FThreadID := $FFFFFFFF;
+    threadNameInfo.FFlags := 0;
+    try
+      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
+    except {ignore} end;
+  end;
+  {$ENDIF}
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;
@@ -707,7 +684,7 @@ end; { TInterfaceDictionaryPair.SetKeyValue }
 constructor TInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
 begin
   ideBuckets := buckets;
-  ideBucketIdx := Low(ideBuckets^) + 1;
+  ideBucketIdx := Low(ideBuckets^);
   ideItem := nil;
   idePair := TInterfaceDictionaryPair.Create;
 end; { TInterfaceDictionaryEnumerator.Create }
@@ -785,6 +762,11 @@ begin
   end;
   idCount := 0;
 end; { TInterfaceDictionary.Clear }
+
+function TInterfaceDictionary.Count: integer;
+begin
+  Result := idCount;
+end; { TInterfaceDictionary.Count }
 
 function TInterfaceDictionary.Find(const key: int64): PPHashItem;
 var
@@ -925,12 +907,13 @@ end; { TOmniValue.GetAsObject }
 function TOmniValue.GetAsString: string;
 begin
   case ovType of
-    ovtNull:     Result := '';
-    ovtBoolean:  Result := BoolToStr(AsBoolean, true);
-    ovtInteger:  Result := IntToStr(ovData);
+    ovtNull:       Result := '';
+    ovtBoolean:    Result := BoolToStr(AsBoolean, true);
+    ovtInteger:    Result := IntToStr(ovData);
     ovtDouble,
-    ovtExtended: Result := FloatToStr(AsExtended);
-    ovtString:   Result := (ovIntf as IOmniStringData).Value;
+    ovtExtended:   Result := FloatToStr(AsExtended);
+    ovtString:     Result := (ovIntf as IOmniStringData).Value;
+    ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
 end; { TOmniValue.GetAsString }
@@ -1126,19 +1109,19 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
-begin
-  Result := a.AsExtended;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): Double;
-begin
-  Result := a.AsDouble;
-end; { TOmniValue.Implicit }
-
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
   Result := a.AsWideString;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Extended;
+begin
+  Result := a.AsExtended;
+end; { TOmniValue.Implicit }            
+
+class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+begin
+  Result := a.AsInt64;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): boolean;
@@ -1146,19 +1129,19 @@ begin
   Result := a.AsBoolean;
 end; { TOmniValue.Implicit }
 
-class operator TOmniValue.Implicit(const a: TOmniValue): int64;
+class operator TOmniValue.Implicit(const a: TOmniValue): Double;
 begin
-  Result := a.AsInt64;
-end; { TOmniValue.Implicit }
-
-class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
-begin
-  Result := a.AsInterface;
+  Result := a.AsDouble;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): integer;
 begin
   Result := a.AsInteger;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): IInterface;
+begin
+  Result := a.AsInterface;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
@@ -1286,64 +1269,6 @@ procedure TOmniExtendedData.SetValue(const value: Extended);
 begin
   oedValue := value;
 end; { TOmniExtendedData.SetValue }
-
-{ TOmniCS }
-
-procedure TOmniCS.Acquire;
-begin
-  Initialize;
-  ocsSync.Acquire;
-end; { TOmniCS.Acquire }
-
-function TOmniCS.GetSyncObj: TSynchroObject;
-begin
-  Initialize;
-  Result := ocsSync.GetSyncObj;
-end; { TOmniCS.GetSyncObj }
-
-procedure TOmniCS.Initialize;
-var
-  syncIntf: IOmniCriticalSection;
-begin
-  Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
-  if not assigned(ocsSync) then begin
-    syncIntf := CreateOmniCriticalSection;
-    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then
-      pointer(syncIntf) := nil;
-  end;
-end; { TOmniCS.Initialize }
-
-procedure TOmniCS.Release;
-begin
-  ocsSync.Release;
-end; { TOmniCS.Release }
-
-{ TOmniCriticalSection }
-
-constructor TOmniCriticalSection.Create;
-begin
-  ocsCritSect := TCriticalSection.Create;
-end; { TOmniCriticalSection.Create }
-
-destructor TOmniCriticalSection.Destroy;
-begin
-  FreeAndNil(ocsCritSect);
-end; { TOmniCriticalSection.Destroy }
-
-procedure TOmniCriticalSection.Acquire;
-begin
-  ocsCritSect.Acquire;
-end; { TOmniCriticalSection.Acquire }
-
-function TOmniCriticalSection.GetSyncObj: TSynchroObject;
-begin
-  Result := ocsCritSect;
-end; { TOmniCriticalSection.GetSyncObj }
-
-procedure TOmniCriticalSection.Release;
-begin
-  ocsCritSect.Release;
-end; { TOmniCriticalSection.Release }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal));

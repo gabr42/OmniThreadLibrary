@@ -9,7 +9,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlComm,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlThreadPool;
 
 type
   TfrmTestRegisterComm = class(TForm)
@@ -21,15 +21,19 @@ type
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
     btnSendBool: TButton;
+    btnSendIntf: TButton;
+    btnSendWS: TButton;
     procedure btnSendBoolClick(Sender: TObject);
     procedure btnSendFloatClick(Sender: TObject);
+    procedure btnSendIntfClick(Sender: TObject);
     procedure btnSendObjectClick(Sender: TObject);
     procedure btnSendStringClick(Sender: TObject);
     procedure btnSendTo1Click(Sender: TObject);
     procedure btnSendTo2Click(Sender: TObject);
+    procedure btnSendWSClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   private
     FClient1    : IOmniTaskControl;
     FClient2    : IOmniTaskControl;
@@ -65,6 +69,19 @@ type
     procedure OMForward(var msg: TOmniMessage); message MSG_FORWARD;
     procedure OMForwarding(var msg: TOmniMessage); message MSG_FORWARDING;
   end; { TCommTester }
+
+  IDataIntf = interface ['{9A2EA2D3-5615-48D1-B878-D083B1802522}']
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  end; { IDataIntf }
+
+  TDataIntf = class(TInterfacedObject, IDataIntf)
+  strict private
+    FValue: integer;
+  public
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  end; { TDataIntf }
 
 { TCommTester }
 
@@ -119,6 +136,16 @@ begin
   e := a;
 end;
 
+procedure TfrmTestRegisterComm.btnSendIntfClick(Sender: TObject);
+var
+  intf: IDataIntf;
+begin
+  intf := TDataIntf.Create;
+  intf.SetValue(42);
+  Log('Sending IDataIntf to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, intf);
+end;
+
 procedure TfrmTestRegisterComm.btnSendObjectClick(Sender: TObject);
 var
   sl: TStringList;
@@ -154,6 +181,12 @@ begin
   FClient2.Comm.Send(MSG_FORWARD, value);
 end;
 
+procedure TfrmTestRegisterComm.btnSendWSClick(Sender: TObject);
+begin
+  Log('Sending WideString ''abc'' to task 1');
+  FClient1.Comm.Send(MSG_FORWARD, WideString('abc'));
+end;
+
 procedure TfrmTestRegisterComm.FormCreate(Sender: TObject);
 begin
   FCommChannel := CreateTwoWayChannel(1024);
@@ -176,28 +209,40 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestRegisterComm.OmniTEDTaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestRegisterComm.OmniTEDTaskMessage(const task: IOmniTaskControl; const
+  msg: TOmniMessage);
 var
-  msgData: TOmniValue;
-  msgID  : word;
-  sData  : string;
-  sl     : TStringList;
+  sData: string;
+  sl   : TStringList;
 begin
-  task.Comm.Receive(msgID, msgData);
-  if not msgData.IsObject then
-    sData := msgData
-  else begin
-    sl := TStringList(msgData.AsObject);
+  if msg.MsgData.IsInterface then 
+    sData := IntToStr((msg.MsgData.AsInterface as IDataIntf).GetValue)
+  else if msg.MsgData.IsObject then begin
+    sl := TStringList(msg.msgData.AsObject);
     sData := sl.ClassName + '/' + sl.Text;
-    if msgID = MSG_NOTIFY_RECEPTION then
+    if msg.msgID = MSG_NOTIFY_RECEPTION then
       sl.Free;
-  end;
-  if msgID = MSG_NOTIFY_FORWARD then
+  end
+  else if msg.MsgData.IsWideString then
+    sData := msg.MsgData.AsWideString
+  else
+    sData := msg.MsgData;
+  if msg.msgID = MSG_NOTIFY_FORWARD then
     Log(Format('[%d/%s] Notify forward of %s', [task.UniqueID, task.Name, sData]))
-  else if msgID = MSG_NOTIFY_RECEPTION then
+  else if msg.msgID = MSG_NOTIFY_RECEPTION then
     Log(Format('[%d/%s] Notify reception of %s', [task.UniqueID, task.Name, sData]))
   else
-    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msgID, sData]));
+    Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msg.msgID, sData]));
 end;
+
+function TDataIntf.GetValue: integer;
+begin
+  Result := FValue;
+end; { TDataIntf.GetValue }
+
+procedure TDataIntf.SetValue(const value: integer);
+begin
+  FValue := value;
+end; { TDataIntf.SetValue }
 
 end.

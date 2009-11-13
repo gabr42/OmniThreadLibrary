@@ -97,6 +97,10 @@ end;
 function TParamInfoHelper.NextParam: PParamInfo;
 begin
   Result := PParamInfo(Integer(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
+  {$IF CompilerVersion >= 21}
+  // Skip attribute data
+  Result := PParamInfo(cardinal(Result) + PWord(Result)^);
+  {$IFEND}
 end;
 
 { TMethodInfoHeaderHelper }
@@ -117,11 +121,11 @@ begin
     Result := string(ReturnType^.Name);
   Result := Result + ';';
   case CallingConvention of
-    ccRegister: ;// Default
     ccCdecl: c := 'cdecl';
     ccPascal: c := 'pascal';
     ccStdCall: c := 'stdcall';
     ccSafeCall: c := 'safecall';
+    else c := '';
   end;
   if c <> '' then Result := Result + ' ' + c + ';';
 end;

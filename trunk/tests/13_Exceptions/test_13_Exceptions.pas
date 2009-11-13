@@ -14,13 +14,15 @@ uses
 type
   TfrmTestExceptions = class(TForm)
     btnAV              : TButton;
+    btnCleanupException: TButton;
     btnCustomException : TButton;
+    btnInitException   : TButton;
     btnRC              : TButton;
     lbLog              : TListBox;
     OmniTED            : TOmniEventMonitor;
-    btnInitException   : TButton;
-    btnCleanupException: TButton;
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    cbSilentExceptions: TCheckBox;
+    procedure FormCreate(Sender: TObject);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunObjectTest(Sender: TObject);
     procedure RunTest(Sender: TObject);
   private
@@ -82,16 +84,19 @@ end;
 
 { TfrmTestOtlComm }
 
+procedure TfrmTestExceptions.FormCreate(Sender: TObject);
+begin
+  Log('Don''t run this program in the debugger!');
+end;
+
 procedure TfrmTestExceptions.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   Log(msg.MsgData);
 end;
 
@@ -99,8 +104,11 @@ procedure TfrmTestExceptions.RunObjectTest(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := CreateTask(TExceptionTest.Create(Sender = btnInitException)).Run;
-  task.WaitFor(1000);
+  task := CreateTask(TExceptionTest.Create(Sender = btnInitException));
+  if cbSilentExceptions.Checked then
+    task.SilentExceptions;
+  task.Enforced(true).Run;
+  task.Terminate(3000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 
@@ -108,14 +116,17 @@ procedure TfrmTestExceptions.RunTest(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := CreateTask(TestException).Run;
+  task := CreateTask(TestException);
+  if cbSilentExceptions.Checked then
+    task.SilentExceptions;
+  task.Run;
   if Sender = btnAV then
     task.Comm.Send(EXC_AV)
   else if Sender = btnRC then
     task.Comm.Send(EXC_RC)
   else
     task.Comm.Send(EXC_CUSTOM);
-  task.WaitFor(1000);
+  task.WaitFor(30000);
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
 

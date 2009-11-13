@@ -1,6 +1,7 @@
 program app_10_Containers;
 
 uses
+  FastMM4,
   Forms,
   test_10_Containers in 'test_10_Containers.pas' {frmTestOtlContainers},
   OtlComm in '..\..\OtlComm.pas',

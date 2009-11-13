@@ -18,7 +18,7 @@ type
     OTLMonitor: TOmniEventMonitor;
     procedure btnStopClick(Sender: TObject);
     procedure btnTerminateClick(Sender: TObject);
-    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OTLMonitorTaskTerminated(const task: IOmniTaskControl);
   private
     function StartWorker: IOmniTaskControl;
@@ -60,11 +60,9 @@ begin
     [Ord(StartWorker.Terminate(100))]));
 end;
 
-procedure TfrmTerminationDemo.OTLMonitorTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTerminationDemo.OTLMonitorTaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(msg.MsgData);
 end;
 

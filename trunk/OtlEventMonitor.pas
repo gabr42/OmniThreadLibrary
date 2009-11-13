@@ -58,26 +58,30 @@ uses
   Classes,
   GpStuff,
   GpLists,
+  OtlComm,
   OtlCommon,
   OtlTaskControl,
   OtlThreadPool;
 
 type
   TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
+  TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
   TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
   TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
-    tedMessageWindow         : THandle;
-    tedMonitoredPools        : IInterfaceDictionary;
-    tedMonitoredTasks        : IInterfaceDictionary;
-    tedOnPoolThreadCreated   : TOmniPoolThreadEvent;
-    tedOnPoolThreadDestroying: TOmniPoolThreadEvent;
-    tedOnPoolThreadKilled    : TOmniPoolThreadEvent;
-    tedOnPoolWorkItemEvent   : TOmniPoolWorkItemEvent;
-    tedOnTaskMessage         : TOmniTaskEvent;
-    tedOnTaskTerminated      : TOmniTaskEvent;
+    tedMessageWindow           : THandle;
+    tedMonitoredPools          : IInterfaceDictionary;
+    tedMonitoredTasks          : IInterfaceDictionary;
+    tedOnPoolThreadCreated     : TOmniPoolThreadEvent;
+    tedOnPoolThreadDestroying  : TOmniPoolThreadEvent;
+    tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
+    tedOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
+    tedOnTaskMessage           : TOmniTaskMessageEvent;
+    tedOnTaskUndeliveredMessage: TOmniTaskEvent;
+    tedOnTaskTerminated        : TOmniTaskEvent;
+    tedCurrentMsg              : TOmniMessage;
   strict protected
     procedure WndProc(var msg: TMessage);
   public
@@ -96,16 +100,18 @@ type
       write tedOnPoolThreadKilled;
     property OnPoolWorkItemCompleted: TOmniPoolWorkItemEvent read tedOnPoolWorkItemEvent
       write tedOnPoolWorkItemEvent;
-    property OnTaskMessage: TOmniTaskEvent read tedOnTaskMessage write tedOnTaskMessage;
+    property OnTaskMessage: TOmniTaskMessageEvent read tedOnTaskMessage write tedOnTaskMessage;
     property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
       tedOnTaskTerminated;
+    property OnTaskUndeliveredMessage: TOmniTaskEvent read tedOnTaskUndeliveredMessage
+      write tedOnTaskUndeliveredMessage;
   end; { TOmniEventMonitor }
 
 var
   COmniTaskMsg_NewMessage: cardinal;
   COmniTaskMsg_Terminated: cardinal;
   COmniPoolMsg           : cardinal;
-
+  
 implementation
 
 uses
@@ -113,7 +119,10 @@ uses
   SysUtils,
   DSiWin32;
 
-{ TOmniEventMonitor }
+const
+  CMaxReceiveLoop_ms = 5;
+
+{ TOmniEventMonitor }               
 
 constructor TOmniEventMonitor.Create(AOwner: TComponent);
 begin
@@ -128,7 +137,7 @@ destructor TOmniEventMonitor.Destroy;
 var
   intfKV: TInterfaceDictionaryPair;
 begin
-  for intfKV in tedMonitoredTasks do
+  for intfKV in tedMonitoredTasks do 
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;
   tedMonitoredTasks.Clear;
   for intfKV in tedMonitoredPools do
@@ -169,26 +178,48 @@ procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
-  taskID       : int64;
+  timeStart    : int64;
   tpMonitorInfo: TOmniThreadPoolMonitorInfo;
-begin
+
+  function ProcessMessages(timeout_ms: integer = CMaxReceiveLoop_ms;
+    rearmSelf: boolean = true): boolean;
+  begin
+    Result := true;
+    while task.Comm.Receive(tedCurrentMsg) do begin
+      if assigned(tedOnTaskMessage) then
+        tedOnTaskMessage(task, tedCurrentMsg);
+      if DSiElapsedSince(GetTickCount, timeStart) > timeout_ms then begin
+        if rearmSelf then
+          Win32Check(PostMessage(tedMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
+        Result := false;
+        break; //while
+      end;
+    end; //while
+  end; { ProcessMessages }
+
+begin { TOmniEventMonitor.WndProc }
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     if assigned(OnTaskMessage) then begin
-      Int64Rec(taskID).Lo := cardinal(msg.WParam);
-      Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
-      if assigned(task) then
-        OnTaskMessage(task);
+      task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+      if assigned(task) then begin
+        timeStart := GetTickCount;
+        ProcessMessages;
+      end;
     end;
     msg.Result := 0;
   end
   else if msg.Msg = COmniTaskMsg_Terminated then begin
     if assigned(OnTaskTerminated) then begin
-      Int64Rec(taskID).Lo := cardinal(msg.WParam);
-      Int64Rec(taskID).Hi := cardinal(msg.LParam);
-      task := tedMonitoredTasks.ValueOf(taskID) as IOmniTaskControl;
+      task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
-        OnTaskTerminated(task);
+        while task.SharedInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
+          if Assigned(tedOnTaskMessage) then
+            tedOnTaskMessage(task, tedCurrentMsg);
+        while task.SharedInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
+          if Assigned(tedOnTaskUndeliveredMessage) then
+            tedOnTaskUndeliveredMessage(task);
+        if Assigned(tedOnTaskTerminated) then
+          OnTaskTerminated(task);
         Detach(task);
       end;
     end;

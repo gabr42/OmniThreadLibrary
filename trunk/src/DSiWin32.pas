@@ -6,12 +6,29 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002
    Creation date     : 2002-10-09
-   Last modification : 2008-08-20
-   Version           : 1.41
+   Last modification : 2009-03-17
+   Version           : 1.46
 </pre>*)(*
    History:
+     1.46: 2009-03-17
+       - Added dynamically loaded API forwarders DSiWow64DisableWow64FsRedirection and
+         DSiWow64RevertWow64FsRedirection.
+       - Implemented function DSiDisableWow64FsRedirection and DSiRevertWow64FsRedirection.
+     1.45: 2009-03-16
+       - Implemented DSiGetCurrentThreadHandle and DSiGetCurrentProcessHandle.
+     1.44a: 2009-02-28
+       - Added D2009 compatibility fixes to DSiGetFolderLocation, DSiGetNetworkResource,
+         DSiGetComputerName, DSiGetWindowsFolder.
+       - Fixed DSiGetTempFileName, GetUserName.
+     1.44: 2009-02-05
+       - Added functions DSiAddApplicationToFirewallExceptionList and
+         DSiAddPortToFirewallExceptionList.
+     1.43: 2009-01-28
+       - Added functions DSiGetNetworkResource, DSiDisconnectFromNetworkResource.
+     1.42: 2009-01-23
+       - Added functions DSiGetGlobalMemoryStatus, DSiGlobalMemoryStatusEx.
      1.41: 2008-08-20
-       - Tiburon compatibility.
+       - Delphi 2009 compatibility.
      1.40c: 2008-07-14
        - Bug fixed: It was not possible to use DSiTimeGetTime64 in parallel from multiple
          threads
@@ -313,7 +330,7 @@ const
   CSIDL_WINDOWS                 = $0024; //GetWindowsDirectory()
 
   CSIDL_FLAG_DONT_UNEXPAND = $2000; //Combine with another CSIDL constant to ensure expanding of environment variables.
-  CSIDL_FLAG_DONT_VERIFY   = $4000; //Combine with another CSIDL constant, except for CSIDL_FLAG_CREATE, to return an unverified folder path—with no attempt to create or initialize the folder.
+  CSIDL_FLAG_DONT_VERIFY   = $4000; //Combine with another CSIDL constant, except for CSIDL_FLAG_CREATE, to return an unverified folder path-with no attempt to create or initialize the folder.
   CSIDL_FLAG_CREATE        = $8000; // new for Win2K, OR this in to force creation of folder
 
   FILE_DEVICE_FILE_SYSTEM  = 9;
@@ -429,6 +446,23 @@ type
   PPROCESS_MEMORY_COUNTERS = ^_PROCESS_MEMORY_COUNTERS;
   TProcessMemoryCounters = _PROCESS_MEMORY_COUNTERS;
   PProcessMemoryCounters = ^_PROCESS_MEMORY_COUNTERS;
+
+  DWORDLONG = int64;
+  
+  PMemoryStatusEx = ^TMemoryStatusEx;
+  _MEMORYSTATUSEX = record
+    dwLength: DWORD;
+    dwMemoryLoad: DWORD;
+    ullTotalPhys: DWORDLONG;
+    ullAvailPhys: DWORDLONG;
+    ullTotalPageFile: DWORDLONG;
+    ullAvailPageFile: DWORDLONG;
+    ullTotalVirtual: DWORDLONG;
+    ullAvailVirtual: DWORDLONG;
+    ullAvailExtendedVirtual: DWORDLONG;
+  end;
+  TMemoryStatusEx = _MEMORYSTATUSEX;
+  MEMORYSTATUSEX = _MEMORYSTATUSEX;
 
   // Service Controller handle
   SC_HANDLE = THandle;
@@ -554,6 +588,9 @@ const
   procedure DSiDeleteTree(const folder: string; removeSubdirsOnly: boolean);
   function  DSiDeleteWithBatch(const fileName: string; rmDir: boolean = false): boolean;
   function  DSiDirectoryExistsW(const directory: WideString): boolean;
+  function  DSiDisableWow64FsRedirection(var oldStatus: pointer): boolean;
+  function  DSiDisconnectFromNetworkResource(mappedLetter: char; updateProfile: boolean =
+    false): boolean;
   function  DSiEjectMedia(deviceLetter: char): boolean;
   procedure DSiEmptyFolder(const folder: string);
   function  DSiEmptyRecycleBin: boolean;
@@ -576,6 +613,7 @@ const
   function  DSiGetFileTimes(const fileName: string; var creationTime, lastAccessTime,
     lastModificationTime: TDateTime): boolean;
   function  DSiGetLongPathName(const fileName: string): string;
+  function  DSiGetNetworkResource(mappedLetter: char; var networkResource: string): boolean;
   function  DSiGetTempFileName(const prefix: string; const tempPath: string = ''): string;
   function  DSiGetTempPath: string;
   function  DSiGetUniqueFileName(const extension: string): string;
@@ -586,6 +624,7 @@ const
   function  DSiMoveFile(const srcName, destName: string; overwrite: boolean = true): boolean;
   function  DSiMoveOnReboot(const srcName, destName: string): boolean;
   procedure DSiRemoveFolder(const folder: string);
+  function  DSiRevertWow64FsRedirection(const oldStatus: pointer): boolean;
   function  DSiShareFolder(const folder, shareName, comment: string): boolean;
   function  DSiUncompressFile(fileHandle: THandle): boolean;
   function  DSiUnShareFolder(const shareName: string): boolean;
@@ -593,6 +632,8 @@ const
 { Processes }
 
   function  DSiAffinityMaskToString(affinityMask: DWORD): string;
+  function  DSiGetCurrentProcessHandle: THandle;
+  function  DSiGetCurrentThreadHandle: THandle;
   function  DSiEnablePrivilege(const privilegeName: string): boolean;
   function  DSiExecute(const commandLine: string;
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
@@ -652,6 +693,7 @@ const
 
   procedure DSiFreePidl(pidl: PItemIDList);
   procedure DSiFreeMemAndNil(var mem: pointer);
+  function DSiGetGlobalMemoryStatus(var memoryStatus: TMemoryStatusEx): boolean;
 
 { Windows }
 
@@ -763,6 +805,19 @@ const
 
 { Install }
 
+const // firewall management constants
+  NET_FW_PROFILE_DOMAIN     = 0;
+  NET_FW_PROFILE_STANDARD   = 1;
+  NET_FW_IP_VERSION_ANY     = 2;
+  NET_FW_IP_PROTOCOL_UDP    = 17;
+  NET_FW_IP_PROTOCOL_TCP    = 6;
+  NET_FW_SCOPE_ALL          = 0;
+  NET_FW_SCOPE_LOCAL_SUBNET = 1;
+
+  function  DSiAddApplicationToFirewallExceptionList(const entryName,
+    applicationFullPath: string): boolean;
+  function  DSiAddPortToFirewallExceptionList(const entryName: string;
+    portNumber: cardinal): boolean;
   function  DSiAddUninstallInfo(const displayName, uninstallCommand, publisher,
     URLInfoAbout, displayVersion, helpLink, URLUpdateInfo: string): boolean;
   function  DSiAutoRunApp(const applicationName, applicationPath: string;
@@ -870,13 +925,14 @@ type
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  function  DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
   function  DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   function  DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
   function  DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: PChar;
     dwLogonType, dwLogonProvider: DWORD; var phToken: THandle): BOOL; stdcall;
   function  DSiNetApiBufferFree(buffer: pointer): cardinal; stdcall;
   function  DSiNetWkstaGetInfo(servername: PChar; level: cardinal;
-    out bufptr: Pointer): cardinal; stdcall;
+    out bufptr: pointer): cardinal; stdcall;
   function  DSiNTNetShareAdd(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord; stdcall;
   function  DSiNTNetShareDel(serverName: PChar; netName: PWideChar;
@@ -889,6 +945,8 @@ type
     disableWakeEvent: BOOL = false): BOOL; stdcall;
   function  DSiSHEmptyRecycleBin(Wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
+  function  DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
+  function  DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
 
 { Helpers }
 
@@ -941,6 +999,7 @@ type
     nSize: DWORD): DWORD; stdcall;
   TGetProcessMemoryInfo = function(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  TGlobalMemoryStatusEx = function(memStatus: PMemoryStatusEx): boolean; stdcall;
   TImpersonateLoggedOnUser = function(hToken: THandle): BOOL; stdcall;
   TIsWow64Process = function(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
   TLogonUser = function(lpszUsername, lpszDomain, lpszPassword: LPCSTR;
@@ -959,6 +1018,8 @@ type
   TSetSuspendState = function(hibernate, forceCritical, disableWakeEvent: BOOL): BOOL; stdcall;
   TSHEmptyRecycleBin = function(wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
+  TWow64DisableWow64FsRedirection = function(var oldStatus: pointer): BOOL; stdcall;
+  TWow64RevertWow64FsRedirection = function(const oldStatus: pointer): BOOL; stdcall;
 
 const
   G9xNetShareAdd: T9xNetShareAdd = nil;
@@ -972,6 +1033,7 @@ const
   GGetLongPathName: TGetLongPathName = nil;
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
   GGetProcessMemoryInfo: TGetProcessMemoryInfo = nil;
+  GGlobalMemoryStatusEx: TGlobalMemoryStatusEx = nil;
   GImpersonateLoggedOnUser: TImpersonateLoggedOnUser = nil;
   GIsWow64Process: TIsWow64Process = nil;
   GLogonUser: TLogonUser = nil;
@@ -984,6 +1046,8 @@ const
   GSetDllDirectory: TSetDllDirectory = nil;
   GSetSuspendState: TSetSuspendState = nil;
   GSHEmptyRecycleBin: TSHEmptyRecycleBin = nil;
+  GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
+  GWow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection = nil;
 
   function DSiGetProcAddress(const libFileName, procName: string): FARPROC; forward;
 
@@ -1807,33 +1871,19 @@ const
     @since   2008-05-05
   }
   function DSiConnectToNetworkResource(const networkResource: string; const mappedLetter:
-    string = ''; const username: string = ''; const password: string = ''): boolean;
+    string; const username: string; const password: string): boolean;
   var
-    bufferSize : DWORD;
     driveName  : string;
     netResource: TNetResource;
-    remoteName : pointer;
-    wnetResult : integer;
+    remoteName : string;
   begin
     Result := false;
     if mappedLetter <> '' then begin
-      GetMem(remoteName, MAX_PATH+1);
-      try
-        driveName := mappedLetter[1] + ':';
-        wnetResult := GetDriveType(PChar(driveName + '\'));
-        if wnetResult = DRIVE_REMOTE then begin
-          bufferSize := MAX_PATH;
-          wnetResult := WNetGetConnection(PChar(driveName), remoteName, bufferSize);
-          if wnetResult = ERROR_MORE_DATA then begin
-            FreeMem(remoteName);
-            GetMem(remoteName, bufferSize);
-            wnetResult := WNetGetConnection(PChar(driveName), remoteName, bufferSize);
-          end;
-          Result := (wnetResult = NO_ERROR) and (AnsiSameText(networkResource, Trim(PChar(remoteName))));
-          if (not Result) and (wnetResult = NO_ERROR) then
-            WNetCancelConnection2(PChar(driveName), 0, true);
-        end;
-      finally FreeMem(remoteName); end;
+      if DSiGetNetworkResource(mappedLetter[1], remoteName) and (remoteName <> '') then
+        if AnsiSameText(remoteName, networkResource) then
+          Result := true
+        else
+          DSiDisconnectFromNetworkResource(mappedLetter[1]);
     end;
     if not Result then begin
       FillChar(netResource, SizeOf (netResource), 0);
@@ -1841,8 +1891,10 @@ const
       netResource.dwType := RESOURCETYPE_DISK;
       netResource.dwDisplayType := RESOURCEDISPLAYTYPE_SHARE;
       netResource.dwUsage := RESOURCEUSAGE_CONNECTABLE;
-      if mappedLetter <> '' then
-        netResource.lpLocalName := PChar(driveName);
+      if mappedLetter <> '' then begin
+        driveName := mappedLetter + ':'#0;
+        netResource.lpLocalName := PChar(@driveName[1]);
+      end;
       netResource.lpRemoteName := PChar(networkResource);
       Result := (WNetAddConnection2(netResource, PChar(password), PChar(username), 0) = NO_ERROR);
     end;
@@ -1947,31 +1999,34 @@ const
   // deletes itself, then run it as an invisible console app with low priority.
   var
     bat    : text;
-    tmpFile: string;
-    si     : TStartupInfo;
     pi     : TProcessInformation;
+    si     : TStartupInfo;
+    tmpFile: string;
+    winTemp: string;
   begin
     Result := false;
     try
-      tmpFile := ChangeFileExt(DSiGetTempFileName('wt'),'.bat');
-      if tmpFile <> '' then begin
-        Assign(bat,tmpFile);
+      winTemp := DSiGetTempFileName('wt');
+      if winTemp <> '' then begin
+        tmpFile := ChangeFileExt(winTemp, '.bat');
+        MoveFile(PChar(winTemp), PChar(tmpFile));
+        Assign(bat, tmpFile);
         Rewrite(bat);
         Writeln(bat,':repeat');
-        Writeln(bat,'del "',fileName,'"');
-        Writeln(bat,'if exist "',fileName,'" goto repeat');
-        if rmDir
-          then Writeln(bat,'rmdir "',ExtractFilePath(fileName),'"');
-        Writeln(bat,'del ',tmpFile);
+        Writeln(bat, 'del "', fileName, '"');
+        Writeln(bat, 'if exist "', fileName, '" goto repeat');
+        if rmDir then
+          Writeln(bat,'rmdir "', ExtractFilePath(fileName), '"');
+        Writeln(bat,'del "', tmpFile, '"');
         Close(bat);
-        FillChar(si,SizeOf(si),0);
+        FillChar(si, SizeOf(si), 0);
         si.cb := SizeOf(si);
         si.dwFlags := STARTF_USESHOWWINDOW;
         si.wShowWindow := SW_HIDE;
         if (CreateProcess(nil, PChar(tmpFile), nil, nil, false,
           CREATE_SUSPENDED or IDLE_PRIORITY_CLASS, nil,
-          PChar(ExtractFilePath(tmpFile)), si, pi))
-        then begin
+          PChar(ExtractFilePath(tmpFile)), si, pi)) then
+        begin
           SetThreadPriority(pi.hThread, THREAD_PRIORITY_IDLE);
           CloseHandle(pi.hProcess);
           ResumeThread(pi.hThread);
@@ -1993,6 +2048,36 @@ const
     code := GetFileAttributesW(PWideChar(directory));
     Result := (code <> -1) and ((FILE_ATTRIBUTE_DIRECTORY AND code) <> 0);
   end; { DSiDirectoryExistsW }
+
+  {:Try to disable WOW64 file system redirection if running on 64-bit Windows.
+    Always succeeds on 32-bit windows.
+    @author  gabr
+    @since   2009-03-17
+  }
+  function DSiDisableWow64FsRedirection(var oldStatus: pointer): boolean;
+  begin
+    if DSiIsWow64 then
+      Result := DSiWow64DisableWow64FsRedirection(oldStatus)
+    else
+      Result := true;
+  end; { DSiDisableWow64FsRedirection }
+
+  {:Disconnects mapped letter.
+    @author  gabr
+    @since   2009-01-28
+  }
+  function DSiDisconnectFromNetworkResource(mappedLetter: char;
+    updateProfile: boolean): boolean;
+  var
+    driveName: string;
+    flags    : cardinal;
+  begin
+    driveName := mappedLetter + ':'#0;
+    flags := 0;
+    if updateProfile then
+      flags := CONNECT_UPDATE_PROFILE;
+    Result := (WNetCancelConnection2(PChar(@driveName[1]), flags, true) = NO_ERROR);
+  end; { DSiDisconnectFromNetworkResource }
 
   {gp}
   function DSiEjectMedia(deviceLetter: char): boolean;
@@ -2317,6 +2402,39 @@ const
     end;
   end; { DSiGetLongPathName }
 
+  {:Returns information on mapped network resource.
+    @author  gabr
+    @since   2009-01-28
+  }
+  function DSiGetNetworkResource(mappedLetter: char; var networkResource: string): boolean;
+  var
+    bufferSize: cardinal;
+    driveName : string;
+    remoteName: PChar;
+    wnetResult: integer;
+  begin
+    networkResource := '';
+    driveName := mappedLetter + ':';
+    wnetResult := GetDriveType(PChar(driveName + '\'));
+    if wnetResult <> DRIVE_REMOTE then
+      Result := true
+    else begin
+      bufferSize := MAX_PATH * SizeOf(char);
+      GetMem(remoteName, bufferSize + SizeOf(char));
+      try
+        wnetResult := WNetGetConnection(PChar(driveName), remoteName, bufferSize);
+        if wnetResult = ERROR_MORE_DATA then begin
+          FreeMem(remoteName);
+          GetMem(remoteName, bufferSize);
+          wnetResult := WNetGetConnection(PChar(driveName), remoteName, bufferSize);
+        end;
+        Result := (wnetResult = NO_ERROR);
+        if Result then
+          networkResource := Trim(StrPas(PChar(remoteName)));
+      finally FreeMem(remoteName); end;
+    end;
+  end; { DSiGetNetworkResource }
+
   {:Returns temporary file name, either in the specified path or in the default temp path
     (if 'tempPath' is empty).
     @author  Miha-R
@@ -2325,6 +2443,7 @@ const
   function DSiGetTempFileName(const prefix, tempPath: string): string;
   var
     tempFileName: PChar;
+    usePrefix   : string;
     useTempPath : string;
   begin
     Result := '';
@@ -2332,9 +2451,13 @@ const
     try
       if tempPath = '' then
         useTempPath := DSiGetTempPath
-      else
+      else begin
         useTempPath := tempPath;
-      if GetTempFileName(PChar(useTempPath), PChar(prefix), 0, tempFileName) <> 0 then
+        UniqueString(useTempPath);
+      end;
+      usePrefix := prefix;
+      UniqueString(usePrefix);
+      if GetTempFileName(PChar(useTempPath), PChar(usePrefix), 0, tempFileName) <> 0 then
         Result := StrPas(tempFileName)
       else
         Result := '';
@@ -2347,11 +2470,11 @@ const
   }
   function DSiGetTempPath: string;
   var
+    bufSize : DWORD;
     tempPath: PChar;
-    bufSize: DWORD;
   begin
     bufSize := GetTempPath(0, nil);
-    GetMem(tempPath, bufSize*SizeOf(char));
+    GetMem(tempPath, bufSize * SizeOf(char));
     try
       GetTempPath(bufSize, tempPath);
       Result := StrPas(tempPath);
@@ -2520,6 +2643,19 @@ const
       RemoveDir(folder);
   end; { DSiRemoveFolder }
 
+  {:Try to revert WOW64 file system redirection status if running on 64-bit Windows.
+    Always succeeds on 32-bit windows.
+    @author  gabr
+    @since   2009-03-17
+  }
+  function DSiRevertWow64FsRedirection(const oldStatus: pointer): boolean;
+  begin
+    if DSiIsWow64 then
+      Result := DSiWow64RevertWow64FsRedirection(oldStatus)
+    else
+      Result := true;
+  end; { DSiRevertWow64FsRedirection }
+  
   {ales}
   function DSiShareFolder(const folder, shareName, comment: string): boolean;
   var
@@ -2607,6 +2743,28 @@ const
       affinityMask := affinityMask SHR 1;
     end;
   end; { DSiAffinityMaskToString }
+
+  {:Converts 'current process' pseudo-handle into a real handle belonging to the same
+    process. Don't forget to close the returned handle!
+    @author  gabr
+    @since   2009-03-16
+  }
+  function  DSiGetCurrentProcessHandle: THandle;
+  begin
+    DuplicateHandle(GetCurrentProcess, GetCurrentProcess, GetCurrentProcess, @Result, 0,
+      false, DUPLICATE_SAME_ACCESS);
+  end; { DSiGetCurrentProcessHandle } 
+
+  {:Converts 'current thread' pseudo-handle into a real handle belonging to the same
+    process. Don't forget to close the returned handle!
+    @author  gabr
+    @since   2009-03-16
+  }
+  function  DSiGetCurrentThreadHandle: THandle;
+  begin
+    DuplicateHandle(GetCurrentProcess, GetCurrentThread, GetCurrentProcess, @Result, 0,
+      false, DUPLICATE_SAME_ACCESS);
+  end; { DSiGetCurrentThreadHandle }
 
   {:Enables specified privilege for the current process.
     @author  Gre-Gor
@@ -3434,6 +3592,17 @@ const
     end;
   end; { DSiFreeMemAndNil }
 
+  {:Wrapper for the GlobalMemoryStatusEx API. Required Windows 2000.
+    @author: gp
+    @since   2009-01-23
+  }
+  function DSiGetGlobalMemoryStatus(var memoryStatus: TMemoryStatusEx): boolean;
+  begin
+    FillChar(memoryStatus, SizeOf(memoryStatus), 0);
+    memoryStatus.dwLength := SizeOf(memoryStatus);
+    Result := DSiGlobalMemoryStatusEx(@memoryStatus);
+  end; { DSiGlobalMemoryStatusEx }
+
 { Windows }
 
 const //DSiAllocateHwnd window extra data offsets
@@ -4150,13 +4319,13 @@ var
     buffer    : PChar;
     bufferSize: DWORD;
   begin
-    bufferSize := MAX_COMPUTERNAME_LENGTH+1;
-    GetMem(buffer, bufferSize);
+    bufferSize := MAX_COMPUTERNAME_LENGTH + 1;
+    GetMem(buffer, bufferSize * SizeOf(char));
     try
       GetComputerName(buffer, bufferSize);
       SetLength(Result, StrLen(buffer));
       if Result <> '' then
-        Move(buffer^, Result[1], Length(Result));
+        Move(buffer^, Result[1], Length(Result) * SizeOf(char));
     finally FreeMem(buffer); end;
   end; { DSiGetComputerName }
 
@@ -4281,7 +4450,7 @@ var
     path : PChar;
     pPIDL: PItemIDList;
   begin
-    GetMem(path, MAX_PATH);
+    GetMem(path, MAX_PATH * SizeOf(char));
     try
       if Succeeded(SHGetSpecialFolderLocation(0, CSIDL, pPIDL)) then begin
         SHGetPathFromIDList(pPIDL, path);
@@ -4428,7 +4597,7 @@ var
     buffer    : PChar;
     bufferSize: DWORD;
   begin
-    bufferSize := 128;
+    bufferSize := 256; //UNLEN from lmcons.h
     buffer := AllocMem(bufferSize);
     try
       GetUserName(buffer, bufferSize);
@@ -4475,10 +4644,10 @@ var
   var
     path: PChar;
   begin
-    GetMem(path, MAX_PATH);
+    GetMem(path, MAX_PATH * SizeOf(char));
     try
-      if GetWindowsDirectory(path, MAX_PATH) <> 0 then
-        Result := string(path)
+      if GetWindowsDirectory(path, MAX_PATH * SizeOf(char)) <> 0 then
+        Result := StrPas(path)
       else
         Result := '';
     finally FreeMem(path); end;
@@ -4672,6 +4841,68 @@ var
       Result := HKEY_LOCAL_MACHINE;
   end; { UninstallRoot }
 
+  {:Adds application to the list of firewall exceptions. Based on the code at
+    http://www.delphi3000.com/articles/article_5021.asp?SK=.
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2009-02-05
+  }
+  function DSiAddApplicationToFirewallExceptionList(const entryName,
+    applicationFullPath: string): boolean;
+  var
+    app    : OleVariant;
+    fwMgr  : OleVariant;
+    profile: OleVariant;
+  begin
+    Result := false;
+    try
+      fwMgr := CreateOLEObject('HNetCfg.FwMgr');
+      profile := fwMgr.LocalPolicy.CurrentProfile;
+      app := CreateOLEObject('HNetCfg.FwAuthorizedApplication');
+      app.ProcessImageFileName := applicationFullPath;
+      app.Name := EntryName;
+      app.Scope := NET_FW_SCOPE_ALL;
+      app.IpVersion := NET_FW_IP_VERSION_ANY;
+      app.Enabled :=true;
+      profile.AuthorizedApplications.Add(app);
+      Result := true;
+    except
+      on E: EOleSysError do
+        SetLastError(cardinal(E.ErrorCode));
+    end;
+  end; { DSiAddApplicationToFirewallExceptionList }
+
+  {:Adds application to the list of firewall exceptions. Based on the code at
+    http://www.delphi3000.com/articles/article_5021.asp?SK=.
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2009-02-05
+  }
+  function DSiAddPortToFirewallExceptionList(const entryName: string;
+    portNumber: cardinal): boolean;
+  var
+    fwMgr  : OleVariant;
+    port   : OleVariant;
+    profile: OleVariant;
+  begin
+    Result := false;
+    try
+      fwMgr := CreateOLEObject('HNetCfg.FwMgr');
+      profile := fwMgr.LocalPolicy.CurrentProfile;
+      port := CreateOLEObject('HNetCfg.FWOpenPort');
+      port.Name := EntryName;
+      port.Protocol := NET_FW_IP_PROTOCOL_TCP;
+      port.Port := PortNumber;
+      port.Scope := NET_FW_SCOPE_ALL;
+      port.Enabled := true;
+      profile.GloballyOpenPorts.Add(port);
+      Result := true;
+    except
+      on E: EOleSysError do 
+        SetLastError(cardinal(E.ErrorCode));
+    end;
+  end; { DSiAddPortToFirewallExceptionList }
+  
   {gp}
   function DSiAddUninstallInfo(const displayName, uninstallCommand, publisher,
     URLInfoAbout, displayVersion, helpLink, URLUpdateInfo: string): boolean;
@@ -4907,8 +5138,8 @@ var
 { Time }
 
 threadvar
-  GLastTimeGetTime     : DWORD;
-  GTimeGetTimeBase     : int64;
+  GLastTimeGetTime: DWORD;
+  GTimeGetTimeBase: int64;
 
 var
   GPerformanceFrequency: int64;
@@ -5450,10 +5681,6 @@ var
     end;
   end; { DSiGetProcessImageFileName }
 
-  {:Retrieves application compatibility flags for the specified application.
-    @since   2007-02-11
-    @author  Miha-R, gabr
-  }
   function DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
   begin
@@ -5466,6 +5693,18 @@ var
       Result := false;
     end;
   end; { DSiGetProcessMemoryInfo }
+
+  function DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
+  begin
+    if not assigned(GGlobalMemoryStatusEx) then
+      GGlobalMemoryStatusEx := DSiGetProcAddress('kernel32', 'GlobalMemoryStatusEx');
+    if assigned(GGlobalMemoryStatusEx) then
+      Result := GGlobalMemoryStatusEx(memStatus)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGlobalMemoryStatusEx }
 
   function DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   begin
@@ -5613,6 +5852,26 @@ var
     else
       Result := S_FALSE;
   end; { DSiSHEmptyRecycleBin }
+
+  function DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
+  begin
+    if not assigned(GWow64DisableWow64FsRedirection) then
+      GWow64DisableWow64FsRedirection := DSiGetProcAddress('kernel32', 'Wow64DisableWow64FsRedirection');
+    if assigned(GWow64DisableWow64FsRedirection) then
+      Result := GWow64DisableWow64FsRedirection(oldStatus)
+    else
+      Result := false;
+  end; { DSiWow64DisableWow64FsRedirection }
+
+  function DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
+  begin
+    if not assigned(GWow64RevertWow64FsRedirection) then
+      GWow64RevertWow64FsRedirection := DSiGetProcAddress('kernel32', 'Wow64RevertWow64FsRedirection');
+    if assigned(GWow64RevertWow64FsRedirection) then
+      Result := GWow64RevertWow64FsRedirection(oldStatus)
+    else
+      Result := false;
+  end; { DSiWow64RevertWow64FsRedirection }
 
 initialization
   InitializeCriticalSection(GDSiWndHandlerCritSect);

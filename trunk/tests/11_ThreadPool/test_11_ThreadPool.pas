@@ -41,7 +41,7 @@ type
     procedure OmniTEDPoolThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolThreadKilled(const pool: IOmniThreadPool; threadID: integer);
     procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   private
     procedure Log(const msg: string);
@@ -71,7 +71,7 @@ type
     FTaskID    : int64;
   public
     constructor Create(formHandle: THandle; delay_ms: integer = 1000);
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function  Initialize: boolean; override;
     procedure Cleanup; override;
   end;
@@ -201,11 +201,9 @@ begin
   Log(Format('Task %d removed from pool', [taskID]));
 end;
 
-procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   case msg.MsgID of
     MSG_HELLO: begin
       Log(msg.MsgData);

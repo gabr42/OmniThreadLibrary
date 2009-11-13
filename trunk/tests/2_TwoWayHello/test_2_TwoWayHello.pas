@@ -8,7 +8,8 @@ uses
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor,
+  OtlComm;
 
 type
   TfrmTestTwoWayHello = class(TForm)
@@ -32,7 +33,7 @@ type
     FMessageDispatch: TOmniEventMonitor;
   private
     procedure HandleTaskTerminated(const task: IOmniTaskControl);
-    procedure HandleTaskMessage(const task: IOmniTaskControl);
+    procedure HandleTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   end;
 
 var
@@ -59,9 +60,10 @@ begin
     case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.ParamByName['Delay']) of
       WAIT_OBJECT_1:
         begin
-          task.Comm.Receive(msgID, msgData);
-          if msgID = MSG_CHANGE_MESSAGE then
-            msg := msgData.AsWideString;
+          while task.Comm.Receive(msgID, msgData) do begin
+            if msgID = MSG_CHANGE_MESSAGE then
+              msg := msgData;
+          end;
         end;
       WAIT_TIMEOUT:
         task.Comm.Send(0, msg);
@@ -120,14 +122,11 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] Terminated', [task.UniqueID, task.Name]));
 end; { TfrmTestOTL.HandleTaskTerminated }
 
-procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl; const msg:
+  TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
-    [task.UniqueID, task.Name, msgID, msgData.AsString]));
+    [task.UniqueID, task.Name, msg.MsgID, msg.MsgData.AsString]));
 end;
 
 initialization

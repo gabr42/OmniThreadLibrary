@@ -1,6 +1,7 @@
 program app_4_TwoWayHello_with_package;
 
 uses
+  FastMM4,
   Forms,
   test_4_TwoWayHello_with_package in 'test_4_TwoWayHello_with_package.pas' {frmTestTwoWayHello},
   OtlCommon in '..\..\OtlCommon.pas',
