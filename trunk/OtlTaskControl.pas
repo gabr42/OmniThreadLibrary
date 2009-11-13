@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2009-11-13
-///   Version           : 1.11
+///   Version           : 1.11a
 ///</para><para>
 ///   History:
+///     1.11a: 2009-11-13
+///       - Cleanup in TOmniTask.Execute reordered to fix Issue 13.
 ///     1.11: 2009-11-13
 ///       - Implemented automatic event monitor with methods IOmniTaskControl.OnMessage
 ///         and OnTerminated. Both support 'procedure of object' and
@@ -531,7 +533,7 @@ type
     otExecuting     : boolean;
     otExecutor_ref  : TOmniTaskExecutor;
     otParameters_ref: TOmniValueContainer;
-    otSharedInfo    : TOmniSharedTaskInfo;
+    otSharedInfo_ref: TOmniSharedTaskInfo;
     otThreadData    : IInterface;
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -565,7 +567,7 @@ type
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
     property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
-    property SharedInfo: TOmniSharedTaskInfo read otSharedInfo;
+    property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
     property TerminateEvent: THandle read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
@@ -872,7 +874,7 @@ begin
   inherited Create;
   otExecutor_ref := executor;
   otParameters_ref := parameters;
-  otSharedInfo := sharedInfo;
+  otSharedInfo_ref := sharedInfo;
 end; { TOmniTask.Create }
 
 procedure TOmniTask.Enforced(forceExecution: boolean);
@@ -885,13 +887,15 @@ end; { TOmniTask.Enforced }
 
 procedure TOmniTask.Execute;
 var
+  chainTo        : IOmniTaskControl;
   silentException: boolean;
 begin
   otExecuting := true;
+  chainTo := nil;
   try
     try
       {$IFNDEF OTL_DontSetThreadName}
-      SetThreadName(otSharedInfo.TaskName);
+      SetThreadName(otSharedInfo_ref.TaskName);
       {$ENDIF OTL_DontSetThreadName}
       if (tcoForceExecution in otExecutor_ref.Options) or (not Terminated) then
       try
@@ -903,44 +907,47 @@ begin
           if silentException then
             SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message)
           else begin
-            otExecutor_ref.TaskException := AcquireExceptionObject; 
+            otExecutor_ref.TaskException := AcquireExceptionObject;
             raise;
           end;
         end;
       end;
     finally
-      if otSharedInfo.MonitorWindow <> 0 then
-        Win32Check(PostMessage(otSharedInfo.MonitorWindow, COmniTaskMsg_Terminated,
-          integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
+      otSharedInfo_ref.Stopped := true;
+      SetEvent(otSharedInfo_ref.TerminatedEvent);
     end;
+    if assigned(otSharedInfo_ref.ChainTo) and
+       (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
+    then
+      chainTo := otSharedInfo_ref.ChainTo;
+    otSharedInfo_ref.ChainTo := nil;
   finally
-    otSharedInfo.Stopped := true;
-    SetEvent(otSharedInfo.TerminatedEvent);
+    if otSharedInfo_ref.MonitorWindow <> 0 then
+      Win32Check(PostMessage(otSharedInfo_ref.MonitorWindow, COmniTaskMsg_Terminated,
+        integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
   end;
-  if assigned(otSharedInfo.ChainTo) and
-     (otSharedInfo.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
-  then
-    otSharedInfo.ChainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool  otSharedInfo.ChainTo := nil;
+  if assigned(chainTo) then
+    chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
 end; { TOmniTask.Execute }
 
 function TOmniTask.GetComm: IOmniCommunicationEndpoint;
 begin
-  Result := otSharedInfo.CommChannel.Endpoint2;
+  Result := otSharedInfo_ref.CommChannel.Endpoint2;
 end; { TOmniTask.GetComm }
 
 function TOmniTask.GetCounter: IOmniCounter;
 begin
-  Result := otSharedInfo.Counter;
+  Result := otSharedInfo_ref.Counter;
 end; { TOmniTask.GetCounter }
 
 function TOmniTask.GetLock: TSynchroObject;
 begin
-  Result := otSharedInfo.Lock;
+  Result := otSharedInfo_ref.Lock;
 end; { GetLock: TSynchroObject }
 
 function TOmniTask.GetName: string;
 begin
-  Result := otSharedInfo.TaskName;
+  Result := otSharedInfo_ref.TaskName;
 end; { TOmniTask.GetName }
 
 function TOmniTask.GetParam(idxParam: integer): TOmniValue;
@@ -955,7 +962,7 @@ end; { TOmniTask.GetParamByName }
 
 function TOmniTask.GetTerminateEvent: THandle;
 begin
-  Result := otSharedInfo.TerminateEvent;
+  Result := otSharedInfo_ref.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
 
 function TOmniTask.GetThreadData: IInterface;
@@ -965,7 +972,7 @@ end; { TOmniTask.GetThreadData }
 
 function TOmniTask.GetUniqueID: int64;
 begin
-  Result := otSharedInfo.UniqueID;
+  Result := otSharedInfo_ref.UniqueID;
 end; { TOmniTask.GetUniqueID }
 
 procedure TOmniTask.RegisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1000,7 +1007,7 @@ end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
 begin
-  Result := otSharedInfo.Stopped;
+  Result := otSharedInfo_ref.Stopped;
 end; { TOmniTask.Stopped }
 
 procedure TOmniTask.StopTimer;
@@ -1010,15 +1017,15 @@ end; { TOmniTask.StopTimer }
 
 procedure TOmniTask.Terminate;
 begin
-  otSharedInfo.Terminating := true;
-  SetEvent(otSharedInfo.TerminateEvent);
+  otSharedInfo_ref.Terminating := true;
+  SetEvent(otSharedInfo_ref.TerminateEvent);
   if not otExecuting then //call Execute to run at least cleanup code
     Execute;
 end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
 begin
-  Result := otSharedInfo.Terminating;
+  Result := otSharedInfo_ref.Terminating;
 end; { TOmniTask.Terminated }
 
 procedure TOmniTask.UnregisterComm(const comm: IOmniCommunicationEndpoint);
