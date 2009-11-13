@@ -1,6 +1,6 @@
 (*
 
-Fast Memory Manager 4.92
+Fast Memory Manager 4.94
 
 Description:
  A fast replacement memory manager for CodeGear Delphi Win32 applications that
@@ -228,6 +228,7 @@ Acknowledgements (for version 4):
    compiler errors.
  - Patrick van Logchem for the DisableLoggingOfMemoryDumps option.
  - Norbert Spiegel for the BCB4 support code.
+ - Uwe Schuster for the improved string leak detection code.
  - Everyone who have made donations. Thanks!
  - Any other Fastcoders or supporters that I have forgotten, and also everyone
    that helped with the older versions.
@@ -730,6 +731,39 @@ Change log:
   - Included the updated Czech translation by Rene Mihula.
   - When FastMM raises an error due to a freed block being modified, it now
     logs detail about which bytes in the block were modified.
+  Version 4.94 (28 August 2009):
+  - Added the DoNotInstallIfDLLMissing option that prevents FastMM from
+    installing itself if the FastMM_FullDebugMode.dll library is not
+    available. (Only applicable when FullDebugMode and LoadDebugDLLDynamically
+    are both enabled.) This is useful when the same executable will be used for
+    both debugging and deployment - when the debug support DLL is available
+    FastMM will be installed in FullDebugMode, and otherwise the default memory
+    manager will be used.
+  - Added the FullDebugModeWhenDLLAvailable option that combines the
+    FullDebugMode, LoadDebugDLLDynamically and DoNotInstallIfDLLMissing options.
+  - Re-enabled RawStackTraces by default. The frame based stack traces (even
+    when compiling with stack frames enabled) are generally too incomplete.
+  - Improved the speed of large block operations under FullDebugMode: Since
+    large blocks are never reused, there is no point in clearing them before
+    and after use (so it does not do that anymore).
+  - If an error occurs in FullDebugMode and FastMM is unable to append to the
+    log file, it will attempt to write to a log file of the same name in the
+    "My Documents" folder. This feature is helpful when the executable resides
+    in a read-only location and the default log file, which is derived from the
+    executable name, would thus not be writeable.
+  - Added support for controlling the error log file location through an
+    environment variable. If the 'FastMMLogFilePath' environment variable is
+    set then any generated error logs will be written to the specified folder
+    instead of the default location (which is the same folder as the
+    application).
+  - Improved the call instruction detection code in the FastMM_FullDebugMode
+    library. (Thanks to the JCL team.)
+  - Improved the string leak detection and reporting code. (Thanks to Uwe
+    Schuster.)
+  - New FullDebugMode feature: Whenever FreeMem or ReallocMem is called, FastMM
+    will check that the block was actually allocated through the same FastMM
+    instance. This is useful for tracking down memory manager sharing issues.
+  - Compatible with Delphi 2010.
 
 *)
 
@@ -750,6 +784,13 @@ interface
   {$define InstallOnlyIfRunningInIDE}
   {$define FullDebugMode}
   {$define LoadDebugDLLDynamically}
+{$endif}
+
+{Install in FullDebugMode only when the DLL is available?}
+{$ifdef FullDebugModeWhenDLLAvailable}
+  {$define FullDebugMode}
+  {$define LoadDebugDLLDynamically}
+  {$define DoNotInstallIfDLLMissing}
 {$endif}
 
 {Some features not currently supported under Kylix}
@@ -891,10 +932,16 @@ interface
   {$DEBUGINFO OFF}
 {$endif}
 
+{$ifdef BCB}
+  {$ifdef borlndmmdll}
+    {$OBJEXPORTALL OFF}
+  {$endif}
+{$endif}
+
 {-------------------------Public constants-----------------------------}
 const
   {The current version of FastMM}
-  FastMMVersion = '4.92';
+  FastMMVersion = '4.94';
   {The number of small block types}
 {$ifdef Align16Bytes}
   NumSmallBlockTypes = 46;
@@ -1025,7 +1072,7 @@ procedure FinalizeMemoryManager;
 
 {For completion of "RequireDebuggerPresenceForLeakReporting" checking in "FinalizeMemoryManager"}
 var
-  pCppDebugHook: PInteger = nil;
+  pCppDebugHook: ^Integer = nil; //PInteger not defined in BCB5
 
 {$ifdef CheckCppObjectTypeEnabled}
 (*$HPPEMIT ''#13#10 *)
@@ -1143,6 +1190,9 @@ implementation
 uses
 {$ifndef Linux}
   Windows,
+  {$ifdef FullDebugMode}
+  ShlObj,
+  {$endif}
 {$else}
   Libc,
 {$endif}
@@ -1516,8 +1566,9 @@ type
      If a medium block is binned then these two dwords will be modified.}
     Reserved1: Cardinal;
     Reserved2: Cardinal;
-    {Is the block currently allocated?}
-    BlockInUse: LongBool;
+    {Is the block currently allocated? If it is allocated this will be the address of the getmem routine
+     through which it was allocated, otherwise it will be nil.}
+    AllocatedByRoutine: Pointer;
     {The allocation group: Can be used in the debugging process to group
      related memory leaks together}
     AllocationGroup: Cardinal;
@@ -2372,120 +2423,120 @@ end;
 {$endif}
 
 {Converts a cardinal to string at the buffer location, returning the new
- buffer position.}
-function CardinalToStrBuf(ACardinal: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
+ buffer position. Note: Only supports numbers up to 2^31.}
+function CardinalToStrBuf(ACardinal: Cardinal; APBuffer: PAnsiChar): PAnsiChar;
 asm
   {On entry: eax = ACardinal, edx = ABuffer}
   push edi
-  mov  edi, edx                //Pointer to the first character in edi
-  //Calculate leading digit: divide the number by 1e9
-  add  eax, 1                  //Increment the number
-  mov  edx, $89705F41          //1e9 reciprocal
-  mul  edx                     //Multplying with reciprocal
-  shr  eax, 30                 //Save fraction bits
-  mov  ecx, edx                //First digit in bits <31:29>
-  and  edx, $1FFFFFFF          //Filter fraction part edx<28:0>
-  shr  ecx, 29                 //Get leading digit into accumulator
-  lea  edx, [edx+4*edx]        //Calculate ...
-  add  edx, eax                //... 5*fraction
-  mov  eax, ecx                //Copy leading digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #2
-  mov  eax, edx                //Point format such that 1.0 = 2^28
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 28                 //Next digit
-  and  edx, $0fffffff          //Fraction part edx<27:0>
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #3
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:27>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<26:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 27                 //Next digit
-  and  edx, $07ffffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #4
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:26>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<25:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 26                 //Next digit
-  and  edx, $03ffffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #5
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:25>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<24:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 25                 //Next digit
-  and  edx, $01ffffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #6
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:24>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<23:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 24                 //Next digit
-  and  edx, $00ffffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #7
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:23>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<31:23>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 23                 //Next digit
-  and  edx, $007fffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #8
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:22>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<22:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 22                 //Next digit
-  and  edx, $003fffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #9
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:21>
-  lea  edx, [edx*4+edx]        //5*fraction, new fraction edx<21:0>
-  cmp  ecx, 1                  //Any non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 21                 //Next digit
-  and  edx, $001fffff          //Fraction part
-  or   ecx, eax                //Accumulate next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store digit out to memory
-  //Calculate digit #10
-  lea  eax, [edx*4+edx]        //5*fraction, new digit eax<31:20>
-  cmp  ecx, 1                  //Any-non-zero digit yet ?
-  sbb  edi, -1                 //Yes->increment ptr, No->keep old ptr
-  shr  eax, 20                 //Next digit
-  or   eax, '0'                //Convert digit to ASCII
-  mov  [edi], al               //Store last digit and end marker out to memory
+  mov edi, edx                //Pointer to the first character in edi
+  {Calculate leading digit: divide the number by 1e9}
+  add eax, 1                  //Increment the number
+  mov edx, $89705F41          //1e9 reciprocal
+  mul edx                     //Multplying with reciprocal
+  shr eax, 30                 //Save fraction bits
+  mov ecx, edx                //First digit in bits <31:29>
+  and edx, $1FFFFFFF          //Filter fraction part edx<28:0>
+  shr ecx, 29                 //Get leading digit into accumulator
+  lea edx, [edx + 4 * edx]    //Calculate ...
+  add edx, eax                //... 5*fraction
+  mov eax, ecx                //Copy leading digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #2}
+  mov eax, edx                //Point format such that 1.0 = 2^28
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 28                 //Next digit
+  and edx, $0fffffff          //Fraction part edx<27:0>
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #3}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:27>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<26:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 27                 //Next digit
+  and edx, $07ffffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #4}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:26>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<25:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 26                 //Next digit
+  and edx, $03ffffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #5}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:25>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<24:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 25                 //Next digit
+  and edx, $01ffffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #6}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:24>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<23:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 24                 //Next digit
+  and edx, $00ffffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #7}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:23>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<31:23>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 23                 //Next digit
+  and edx, $007fffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #8}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:22>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<22:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 22                 //Next digit
+  and edx, $003fffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #9}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:21>
+  lea edx, [edx * 4 + edx]    //5*fraction, new fraction edx<21:0>
+  cmp ecx, 1                  //Any non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 21                 //Next digit
+  and edx, $001fffff          //Fraction part
+  or ecx, eax                 //Accumulate next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store digit out to memory
+  {Calculate digit #10}
+  lea eax, [edx * 4 + edx]    //5*fraction, new digit eax<31:20>
+  cmp ecx, 1                  //Any-non-zero digit yet ?
+  sbb edi, -1                 //Yes->increment ptr, No->keep old ptr
+  shr eax, 20                 //Next digit
+  or eax, '0'                 //Convert digit to ASCII
+  mov [edi], al               //Store last digit and end marker out to memory
   {Return a pointer to the next character}
   lea eax, [edi + 1]
   {Restore edi}
-  pop  edi
+  pop edi
 end;
 
 {Converts a cardinal to a hexadecimal string at the buffer location, returning
  the new buffer position.}
-function CardinalToHexBuf(ACardinal: integer; ABuffer: PAnsiChar): PAnsiChar;
+function CardinalToHexBuf(ACardinal: Integer; APBuffer: PAnsiChar): PAnsiChar;
 asm
   {On entry:
     eax = ACardinal
@@ -3233,11 +3284,8 @@ begin
     {Add the size of the header}
     Inc(Cardinal(Result), LargeBlockHeaderSize);
 {$ifdef FullDebugMode}
-    {Clear the user area of the block}
-    FillDWord(Pointer(Cardinal(Result) + SizeOf(TFullDebugBlockHeader) + 4)^,
-      LLargeUsedBlockSize - LargeBlockHeaderSize - FullDebugBlockOverhead - 4,
-      {$ifndef CatchUseOfFreedInterfaces}DebugFillDWord{$else}Cardinal(@VMTBadInterface){$endif});
-    {Set the debug header and footer}
+    {Since large blocks are never reused, the user area is not initialized to
+     the debug fill pattern, but the debug header and footer must be set.}
     PFullDebugBlockHeader(Result).HeaderCheckSum := Cardinal(Result);
     PCardinal(Cardinal(Result) + SizeOf(TFullDebugBlockHeader))^ := not Cardinal(Result);
 {$endif}
@@ -5914,17 +5962,67 @@ begin
   DeleteFileA(MMLogFileName);
 end;
 
+{Finds the start and length of the file name given a full path.}
+procedure ExtractFileName(APFullPath: PAnsiChar; var APFileNameStart: PAnsiChar; var AFileNameLength: Integer);
+var
+  LChar: AnsiChar;
+begin
+  {Initialize}
+  APFileNameStart := APFullPath;
+  AFileNameLength := 0;
+  {Find the file }
+  while True do
+  begin
+    {Get the next character}
+    LChar := APFullPath^;
+    {End of the path string?}
+    if LChar = #0 then
+      Break;
+    {Advance the buffer position}
+    Inc(APFullPath);
+    {Found a backslash? -> May be the start of the file name}
+    if LChar = '\' then
+      APFileNameStart := APFullPath;
+  end;
+  {Calculate the length of the file name}
+  AFileNameLength := Integer(APFullPath) - Integer(APFileNameStart);
+end;
+
 procedure AppendEventLog(ABuffer: Pointer; ACount: Cardinal);
 var
   LFileHandle, LBytesWritten: Cardinal;
   LEventHeader: array[0..1023] of AnsiChar;
-  LMsgPtr: PAnsiChar;
+  LAlternateLogFileName: array[0..2047] of AnsiChar;
+  LPathLen, LNameLength: Integer;
+  LMsgPtr, LPFileName: PAnsiChar;
   LSystemTime: TSystemTime;
 begin
-  {Append the file}
+  {Try to open the log file in read/write mode.}
   LFileHandle := CreateFileA(MMLogFileName, GENERIC_READ or GENERIC_WRITE,
     0, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-  if LFileHandle <> 0 then
+  {Did log file creation fail? If so, the destination folder is perhaps read-only:
+   Try to redirect logging to a file in the user's "My Documents" folder.}
+  if (LFileHandle = INVALID_HANDLE_VALUE)
+    and SHGetSpecialFolderPathA(0, @LAlternateLogFileName, CSIDL_PERSONAL, True) then
+  begin
+    {Extract the filename part from MMLogFileName and append it to the path of
+     the "My Documents" folder.}
+    LPathLen := StrLen(LAlternateLogFileName);
+    {Ensure that there is a trailing backslash in the path}
+    if (LPathLen = 0) or (LAlternateLogFileName[LPathLen - 1] <> '\') then
+    begin
+      LAlternateLogFileName[LPathLen] := '\';
+      Inc(LPathLen);
+    end;
+    {Add the filename to the path}
+    ExtractFileName(@MMLogFileName, LPFileName, LNameLength);
+    System.Move(LPFileName^, LAlternateLogFileName[LPathLen], LNameLength + 1);
+    {Try to open the alternate log file}
+    LFileHandle := CreateFileA(LAlternateLogFileName, GENERIC_READ or GENERIC_WRITE,
+      0, nil, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  end;
+  {Was the log file opened/created successfully?}
+  if LFileHandle <> INVALID_HANDLE_VALUE then
   begin
     {Seek to the end of the file}
     SetFilePointer(LFileHandle, 0, nil, FILE_END);
@@ -5975,15 +6073,38 @@ procedure SetDefaultMMLogFileName;
 const
   LogFileExtAnsi: PAnsiChar = LogFileExtension;
 var
-  LModuleNameLength: Cardinal;
+  LEnvVarLength, LModuleNameLength: Cardinal;
+  LPathOverride: array[0..2047] of AnsiChar;
+  LPFileName: PAnsiChar;
+  LFileNameLength: Integer;
 begin
   {Get the name of the application}
   LModuleNameLength := AppendModuleFileName(@MMLogFileName[0]);
-  {Replace the last few characters}
+  {Replace the last few characters of the module name, and optionally override
+   the path.}
   if LModuleNameLength > 0 then
   begin
     {Change the filename}
-    System.Move(LogFileExtAnsi^, MMLogFileName[LModuleNameLength - 4], StrLen(LogFileExtAnsi) + 1);
+    System.Move(LogFileExtAnsi^, MMLogFileName[LModuleNameLength - 4],
+      StrLen(LogFileExtAnsi) + 1);
+    {Try to read the FastMMLogFilePath environment variable}
+    LEnvVarLength := GetEnvironmentVariableA('FastMMLogFilePath',
+      @LPathOverride, 1023);
+    {Does the environment variable exist? If so, override the log file path.}
+    if LEnvVarLength > 0 then
+    begin
+      {Ensure that there's a trailing backslash.}
+      if LPathOverride[LEnvVarLength - 1] <> '\' then
+      begin
+        LPathOverride[LEnvVarLength] := '\';
+        Inc(LEnvVarLength);
+      end;
+      {Add the filename to the path override}
+      ExtractFileName(@MMLogFileName[0], LPFileName, LFileNameLength);
+      System.Move(LPFileName^, LPathOverride[LEnvVarLength], LFileNameLength + 1);
+      {Copy the override path back to the filename buffer}
+      System.Move(LPathOverride, MMLogFileName, SizeOf(MMLogFileName) - 1);
+    end;
   end;
 end;
 
@@ -6113,7 +6234,7 @@ begin
   {Log the thread ID}
   Result := AppendStringToBuffer(CurrentThreadIDMsg, ABuffer, Length(CurrentThreadIDMsg));
   Result := CardinalToHexBuf(GetThreadID, Result);
-  {List it the stack trace}
+  {List the stack trace}
   Result := AppendStringToBuffer(CurrentStackTraceMsg, Result, Length(CurrentStackTraceMsg));
   Result := LogStackTrace(@LCurrentStackTrace, StackTraceDepth, Result);
 end;
@@ -6297,7 +6418,9 @@ begin
     {Is the footer still valid?}
     if LFooterValid then
     begin
-      {A freed block has been modified, or a double free has occurred}
+      {A freed block has been modified, a double free has occurred, or an
+       attempt was made to free a memory block allocated by a different
+       instance of FastMM.}
       if AOperation <= boGetMem then
       begin
         LMsgPtr := AppendStringToBuffer(FreeModifiedErrorMsg, LMsgPtr, Length(FreeModifiedErrorMsg));
@@ -6305,7 +6428,14 @@ begin
         LMsgPtr := LogBlockChanges(APointer, LMsgPtr);
       end
       else
-        LMsgPtr := AppendStringToBuffer(DoubleFreeErrorMsg, LMsgPtr, Length(DoubleFreeErrorMsg));
+      begin
+        {It is either a double free, or an attempt was made to free a block
+         that was allocated via a different memory manager.}
+        if APointer.AllocatedByRoutine = nil then
+          LMsgPtr := AppendStringToBuffer(DoubleFreeErrorMsg, LMsgPtr, Length(DoubleFreeErrorMsg))
+        else
+          LMsgPtr := AppendStringToBuffer(WrongMMFreeErrorMsg, LMsgPtr, Length(WrongMMFreeErrorMsg));
+      end;
     end
     else
     begin
@@ -6347,7 +6477,7 @@ begin
     end;
     {$endif}
     {Get the current class for this block}
-    if (AOperation > boGetMem) and (not LFooterValid) then
+    if (AOperation > boGetMem) and (APointer.AllocatedByRoutine <> nil) then
     begin
       LMsgPtr := AppendStringToBuffer(CurrentObjectClassMsg, LMsgPtr, Length(CurrentObjectClassMsg));
       LClass := DetectClassInstance(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)));
@@ -6469,7 +6599,18 @@ begin
     if Cardinal(LClass) = Cardinal(@FreedObjectVMT.VMTMethods[0]) then
       LClass := nil;
     {$ifndef CheckCppObjectTypeEnabled}
-    LMsgPtr := AppendClassNameToBuffer(LClass, LMsgPtr);
+    if LClass <> nil then
+    begin
+      LMsgPtr := AppendClassNameToBuffer(LClass, LMsgPtr);
+    end
+    else
+    begin
+      case DetectStringData(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)), APointer.UserSize) of
+        stUnknown: LMsgPtr := AppendClassNameToBuffer(nil, LMsgPtr);
+        stAnsiString: LMsgPtr := AppendStringToBuffer(AnsiStringBlockMessage, LMsgPtr, Length(AnsiStringBlockMessage));
+        stUnicodeString: LMsgPtr := AppendStringToBuffer(UnicodeStringBlockMessage, LMsgPtr, Length(UnicodeStringBlockMessage));
+      end;
+    end;
     {$else}
     if (LClass = nil) and Assigned(GetCppVirtObjTypeNameFunc) then
     begin
@@ -6478,8 +6619,16 @@ begin
       if LCppObjectTypeName <> nil then
         LMsgPtr := AppendStringToBuffer(LCppObjectTypeName, LMsgPtr, StrLen(LCppObjectTypeName))
       else
-        LMsgPtr := AppendClassNameToBuffer(LClass, LMsgPtr);
-    end;
+      begin
+        case DetectStringData(Pointer(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader)), APointer.UserSize) of
+          stUnknown: LMsgPtr := AppendClassNameToBuffer(nil, LMsgPtr);
+          stAnsiString: LMsgPtr := AppendStringToBuffer(AnsiStringBlockMessage, LMsgPtr, Length(AnsiStringBlockMessage));
+          stUnicodeString: LMsgPtr := AppendStringToBuffer(UnicodeStringBlockMessage, LMsgPtr, Length(UnicodeStringBlockMessage));
+        end;
+      end;
+    end
+    else
+      LMsgPtr := AppendClassNameToBuffer(LClass, LMsgPtr);
     {$endif}
     {Log the allocation group}
     if APointer.AllocationGroup > 0 then
@@ -6571,14 +6720,17 @@ begin
     Result := FastGetMem(ASize + FullDebugBlockOverhead);
     if Result <> nil then
     begin
-      if CheckFreeBlockUnmodified(Result, GetAvailableSpaceInBlock(Result) + 4, boGetMem) then
+      {Large blocks are always newly allocated (and never reused), so checking
+       for a modify-after-free is not necessary.}
+      if (ASize > (MaximumMediumBlockSize - BlockHeaderSize - FullDebugBlockOverhead))
+        or CheckFreeBlockUnmodified(Result, GetAvailableSpaceInBlock(Result) + 4, boGetMem) then
       begin
         {Set the allocation call stack}
         GetStackTrace(@PFullDebugBlockHeader(Result).AllocationStackTrace, StackTraceDepth, 1);
         {Set the thread ID of the thread that allocated the block}
         PFullDebugBlockHeader(Result).AllocatedByThread := GetThreadID;
-        {Block is now in use}
-        PFullDebugBlockHeader(Result).BlockInUse := True;
+        {Block is now in use: It was allocated by this routine}
+        PFullDebugBlockHeader(Result).AllocatedByRoutine := @DebugGetMem;
         {Set the group number}
         PFullDebugBlockHeader(Result).AllocationGroup := AllocationGroupStack[AllocationGroupStackTop];
         {Set the allocation number}
@@ -6617,7 +6769,9 @@ begin
   LHeaderValid := CalculateHeaderCheckSum(APointer) = APointer.HeaderCheckSum;
   LFooterValid := LHeaderValid
     and (APointer.HeaderCheckSum = (not PCardinal(Cardinal(APointer) + SizeOf(TFullDebugBlockHeader) + PFullDebugBlockHeader(APointer).UserSize)^));
-  if LHeaderValid and LFooterValid and APointer.BlockInUse then
+  {The header and footer must be valid and the block must have been allocated by this memory manager
+   instance.}
+  if LHeaderValid and LFooterValid and (APointer.AllocatedByRoutine = @DebugGetMem) then
   begin
     Result := True;
   end
@@ -6633,6 +6787,7 @@ end;
 function DebugFreeMem(APointer: Pointer): Integer;
 var
   LActualBlock: PFullDebugBlockHeader;
+  LBlockHeader: Cardinal;
 begin
   {Scan the entire memory pool first?}
   if FullDebugModeScanMemoryPoolBeforeEveryOperation then
@@ -6646,21 +6801,27 @@ begin
     {Enter the memory manager: block scans may not be performed now}
     StartChangingFullDebugModeBlock;
     try
-      {Get the class the block was used for}
-      LActualBlock.PreviouslyUsedByClass := PCardinal(APointer)^;
-      {Set the free call stack}
-      GetStackTrace(@LActualBlock.FreeStackTrace, StackTraceDepth, 1);
-      {Set the thread ID of the thread that freed the block}
-      LActualBlock.FreedByThread := GetThreadID;
-      {Block is now free}
-      LActualBlock.BlockInUse := False;
-      {Clear the user area of the block}
-      FillDWord(APointer^, LActualBlock.UserSize,
-        {$ifndef CatchUseOfFreedInterfaces}DebugFillDWord{$else}Cardinal(@VMTBadInterface){$endif});
-      {Set a pointer to the dummy VMT}
-      PCardinal(APointer)^ := Cardinal(@FreedObjectVMT.VMTMethods[0]);
-      {Recalculate the checksums}
-      UpdateHeaderAndFooterCheckSums(LActualBlock);
+      {Large blocks are never reused, so there is no point in updating their
+       headers and fill pattern.}
+      LBlockHeader := PCardinal(Cardinal(LActualBlock) - BlockHeaderSize)^;
+      if LBlockHeader and (IsFreeBlockFlag or IsMediumBlockFlag or IsLargeBlockFlag) <> IsLargeBlockFlag then
+      begin
+        {Get the class the block was used for}
+        LActualBlock.PreviouslyUsedByClass := PCardinal(APointer)^;
+        {Set the free call stack}
+        GetStackTrace(@LActualBlock.FreeStackTrace, StackTraceDepth, 1);
+        {Set the thread ID of the thread that freed the block}
+        LActualBlock.FreedByThread := GetThreadID;
+        {Block is now free}
+        LActualBlock.AllocatedByRoutine := nil;
+        {Clear the user area of the block}
+        FillDWord(APointer^, LActualBlock.UserSize,
+          {$ifndef CatchUseOfFreedInterfaces}DebugFillDWord{$else}Cardinal(@VMTBadInterface){$endif});
+        {Set a pointer to the dummy VMT}
+        PCardinal(APointer)^ := Cardinal(@FreedObjectVMT.VMTMethods[0]);
+        {Recalculate the checksums}
+        UpdateHeaderAndFooterCheckSums(LActualBlock);
+      end;
       {Free the actual block}
       Result := FastFreeMem(LActualBlock);
     finally
@@ -7461,70 +7622,90 @@ end;
 {Detects the probable string data type for a memory block.}
 function DetectStringData(APMemoryBlock: Pointer;
   AAvailableSpaceInBlock: Integer): TStringDataType;
+const
+  {If the string reference count field contains a value greater than this,
+   then it is assumed that the block is not a string.}
+  MaxRefCount = 255;
+  {The lowest ASCII character code considered valid string data. If there are
+   any characters below this code point then the data is assumed not to be a
+   string. #9 = Tab.}
+  MinCharCode = #9;
 var
   LStringLength, LElemSize, LStringMemReq, LCharInd: Integer;
-  LPossibleString: Boolean;
   LPAnsiStr: PAnsiChar;
   LPUniStr: PWideChar;
 begin
-  {Initialize the result}
-  Result := stUnknown;
-  {Reference count < 256}
-  if PStrRec(APMemoryBlock).refCnt < 256 then
+  {Check that the reference count is within a reasonable range}
+  if PStrRec(APMemoryBlock).refCnt > MaxRefCount then
   begin
-    {Get the string length and element size}
-    LStringLength := PStrRec(APMemoryBlock).length;
+    Result := stUnknown;
+    Exit;
+  end;
 {$ifdef Delphi6AndUp}
-    {$if RTLVersion >= 20}
-    LElemSize := PStrRec(APMemoryBlock).elemSize;
-    {$ifend}
-    {$if RTLVersion < 20}
-    LElemSize := 1;
-    {$ifend}
+  {$if RTLVersion >= 20}
+  LElemSize := PStrRec(APMemoryBlock).elemSize;
+  {Element size must be either 1 (Ansi) or 2 (Unicode)}
+  if (LElemSize <> 1) and (LElemSize <> 2) then
+  begin
+    Result := stUnknown;
+    Exit;
+  end;
+  {$ifend}
+  {$if RTLVersion < 20}
+  LElemSize := 1;
+  {$ifend}
 {$else}
-    LElemSize := 1;
+  LElemSize := 1;
 {$endif}
-    {Valid element size?}
-    if (LElemSize = 1) or (LElemSize = 2) then
+  {Get the string length}
+  LStringLength := PStrRec(APMemoryBlock).length;
+  {Calculate the amount of memory required for the string}
+  LStringMemReq := (LStringLength + 1) * LElemSize + SizeOf(StrRec);
+  {Does the string fit?}
+  if (LStringLength <= 0) or (LStringMemReq > AAvailableSpaceInBlock) then
+  begin
+    Result := stUnknown;
+    Exit;
+  end;
+  {Check for no characters outside the expected range. If there are,
+   then it is probably not a string.}
+  if LElemSize = 1 then
+  begin
+    {Check that all characters are in the range considered valid.}
+    LPAnsiStr := PAnsiChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
+    for LCharInd := 1 to LStringLength do
     begin
-      {Calculate the amount of memory required for the string}
-      LStringMemReq := (LStringLength + 1) * LElemSize + SizeOf(StrRec);
-      {Does the string fit?}
-      if (LStringLength > 0)
-        and (LStringMemReq <= AAvailableSpaceInBlock) then
+      if LPAnsiStr^ < MinCharCode then
       begin
-        {It is possibly a string}
-        LPossibleString := True;
-        {Check for no characters < #32. If there are, then it is probably not
-         a string.}
-        if LElemSize = 1 then
-        begin
-          {Check that all characters are >= #32}
-          LPAnsiStr := PAnsiChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
-          for LCharInd := 1 to LStringLength do
-          begin
-            LPossibleString := LPossibleString and (LPAnsiStr^ >= #32);
-            Inc(LPAnsiStr);
-          end;
-          {Must have a trailing #0}
-          if LPossibleString and (LPAnsiStr^ = #0) then
-            Result := stAnsiString;
-        end
-        else
-        begin
-          {Check that all characters are >= #32}
-          LPUniStr := PWideChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
-          for LCharInd := 1 to LStringLength do
-          begin
-            LPossibleString := LPossibleString and (LPUniStr^ >= #32);
-            Inc(LPUniStr);
-          end;
-          {Must have a trailing #0}
-          if LPossibleString and (LPUniStr^ = #0) then
-            Result := stUnicodeString;
-        end;
+        Result := stUnknown;
+        Exit;
       end;
+      Inc(LPAnsiStr);
     end;
+    {Must have a trailing #0}
+    if LPAnsiStr^ = #0 then
+      Result := stAnsiString
+    else
+      Result := stUnknown;
+  end
+  else
+  begin
+    {Check that all characters are in the range considered valid.}
+    LPUniStr := PWideChar(Cardinal(APMemoryBlock) + SizeOf(StrRec));
+    for LCharInd := 1 to LStringLength do
+    begin
+      if LPUniStr^ < MinCharCode then
+      begin
+        Result := stUnknown;
+        Exit;
+      end;
+      Inc(LPUniStr);
+    end;
+    {Must have a trailing #0}
+    if LPUniStr^ = #0 then
+      Result := stUnicodeString
+    else
+      Result := stUnknown;
   end;
 end;
 
@@ -8413,6 +8594,16 @@ var
 begin
   {Default to error}
   Result := False;
+{$ifdef FullDebugMode}
+  {$ifdef LoadDebugDLLDynamically}
+    {$ifdef DoNotInstallIfDLLMissing}
+  {Should FastMM be installed only if the FastMM_FullDebugMode.dll file is
+   available?}
+  if FullDebugModeDLL = 0 then
+    Exit;
+    {$endif}
+  {$endif}
+{$endif}
   {Is FastMM already installed?}
   if FastMMIsInstalled then
   begin

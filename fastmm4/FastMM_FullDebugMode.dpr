@@ -1,6 +1,6 @@
 {
 
-Fast Memory Manager: FullDebugMode Support DLL 1.50
+Fast Memory Manager: FullDebugMode Support DLL 1.60
 
 Description:
  Support DLL for FastMM. With this DLL available, FastMM will report debug info
@@ -40,6 +40,9 @@ Change log:
     "GetLastError" error code. (Thanks to Primoz Gabrijelcic.)
  Version 1.50 (14 August 2008):
   - Added support for Delphi 2009. (Thanks to Mark Edington.)
+ Version 1.60 (5 May 2009):
+  - Improved the code used to identify call instructions in the stack trace
+    code. (Thanks to the JCL team.)
 
 }
 
@@ -147,8 +150,8 @@ begin
     {Update the map}
     LStartPage := Cardinal(LMemInfo.BaseAddress) div 4096;
     LPageCount := LMemInfo.RegionSize div 4096;
-    if (LStartPage + LPageCount) < Cardinal(length(MemoryPageAccessMap)) then
-      FillChar(MemoryPageAccessMap[LStartPage], LPageCount, ord(LAccess));
+    if (LStartPage + LPageCount) < Cardinal(Length(MemoryPageAccessMap)) then
+      FillChar(MemoryPageAccessMap[LStartPage], LPageCount, Ord(LAccess));
   end
   else
   begin
@@ -161,9 +164,9 @@ end;
  safe to call while exceptions are being handled.}
 function IsValidCallSite(AReturnAddress: Cardinal): boolean;
 var
-  LCallAddress, LCode8Back, LCode4Back: Cardinal;
+  LCallAddress, LCode8Back, LCode4Back, LTemp: Cardinal;
 begin
-  if (AReturnAddress and $ffff0000 <> 0) then
+  if AReturnAddress > $ffff then
   begin
     {The call address is up to 8 bytes before the return address}
     LCallAddress := AReturnAddress - 8;
@@ -174,24 +177,83 @@ begin
     if (MemoryPageAccessMap[LCallAddress div 4096] = mpaExecutable)
       and (MemoryPageAccessMap[(LCallAddress + 8) div 4096] = mpaExecutable) then
     begin
-      {Read the previous 8 bytes}
+      {Try to determine what kind of call it is (if any), more or less in order
+       of frequency of occurrence. (Code below taken from the Jedi Code Library
+       (jcl.sourceforge.net).)}
       try
-        LCode8Back := PCardinal(LCallAddress)^;
+        {5 bytes, CALL NEAR REL32}
+        if PByteArray(LCallAddress)[3] = $E8 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {Get the 4 bytes before the return address}
         LCode4Back := PCardinal(LCallAddress + 4)^;
-        {Is it a valid "call" instruction?}
-        Result :=
-          {5-byte, CALL [-$1234567]}
-          ((LCode8Back and $FF000000) = $E8000000)
-          {2 byte, CALL EAX}
-          or ((LCode4Back and $38FF0000) = $10FF0000)
-          {3 byte, CALL [EBP+0x8]}
-          or ((LCode4Back and $0038FF00) = $0010FF00)
-          {4 byte, CALL ??}
-          or ((LCode4Back and $000038FF) = $000010FF)
-          {6-byte, CALL ??}
-          or ((LCode8Back and $38FF0000) = $10FF0000)
-          {7-byte, CALL [ESP-0x1234567]}
-          or ((LCode8Back and $0038FF00) = $0010FF00);
+        {2 byte call?}
+        LTemp := LCode4Back and $F8FF0000;
+        {2 bytes, CALL NEAR EAX}
+        if LTemp = $D0FF0000 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {2 bytes, CALL NEAR [EAX]}
+        if LTemp = $10FF0000 then
+        begin
+          LTemp := LCode4Back - LTemp;
+          if (LTemp <> $04000000) and (LTemp <> $05000000) then
+          begin
+            Result := True;
+            Exit;
+          end;
+        end;
+        {3 bytes, CALL NEAR [EAX+EAX*i]}
+        if (LCode4Back and $00FFFF00) = $0014FF00 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {3 bytes, CALL NEAR [EAX+$12]}
+        if ((LCode4Back and $00F8FF00) = $0050FF00)
+          and ((LCode4Back and $00070000) <> $00040000) then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {4 bytes, CALL NEAR [EAX+EAX+$12]}
+        if Word(LCode4Back) = $54FF then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {6 bytes, CALL NEAR [$12345678]}
+        LCode8Back := PCardinal(LCallAddress)^;
+        if (LCode8Back and $FFFF0000) = $15FF0000 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {6 bytes, CALL NEAR [EAX+$12345678]}
+        if ((LCode8Back and $F8FF0000) = $90FF0000)
+          and ((LCode8Back and $07000000) <> $04000000) then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {7 bytes, CALL NEAR [EAX+EAX+$1234567]}
+        if (LCode8Back and $00FFFF00) = $0094FF00 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {7 bytes, CALL FAR $1234:12345678}
+        if (LCode8Back and $0000FF00) = $00009A00 then
+        begin
+          Result := True;
+          Exit;
+        end;
+        {Not a valid call site}
+        Result := False;
       except
         {The access has changed}
         UpdateMemoryPageAccessMap(LCallAddress);
@@ -245,8 +307,8 @@ begin
         {Does this appear to be a valid return address}
         if (LReturnAddress and $ffff0000) <> 0 then
         begin
-          {Is the map for this return address incorrect? If may be unknown or marked
-           as unexecutable because a library was previously not yet loaded, or
+          {Is the map for this return address incorrect? It may be unknown or marked
+           as non-executable because a library was previously not yet loaded, or
            perhaps this is not a valid stack frame.}
           if MemoryPageAccessMap[(LReturnAddress - 8) div 4096] <> mpaExecutable then
             UpdateMemoryPageAccessMap(LReturnAddress - 8);
