@@ -38,7 +38,8 @@ type
     procedure btnStopHelloClick(Sender: TObject);
     procedure btnTestInvalidMsgClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+      const msg: TOmniMessage);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   strict private
     FHelloTask: IOmniTaskControl;
@@ -118,11 +119,9 @@ begin
     btnStopHello.Click;
 end;
 
-procedure TfrmTestStringMsgDispatch.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestStringMsgDispatch.OmniEventMonitor1TaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
     [task.UniqueID, task.Name, msg.msgID, msg.msgData.AsString]));
 end;

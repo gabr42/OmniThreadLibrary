@@ -11,6 +11,9 @@ object frmWaitableCommDemo: TfrmWaitableCommDemo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  DesignSize = (
+    472
+    245)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
@@ -23,6 +26,7 @@ object frmWaitableCommDemo: TfrmWaitableCommDemo
     Margins.Top = 89
     Margins.Right = 0
     Margins.Bottom = 0
+    Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
   end

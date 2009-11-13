@@ -50,7 +50,7 @@ begin
   sl := TStringList.Create;
   sl.Add('message 1');
   task.Comm.Send(0, sl);
-  Sleep(10000);
+  Sleep(7000);
 end;
 
 procedure SendTestWorker(const task: IOmniTask);
@@ -70,7 +70,7 @@ begin
   end;
   task.Comm.Send(0);
   Sleep(5000);
-  for i := 1 to 128 do begin
+  for i := 1 to 256 do begin
     if not task.Comm.ReceiveWait(msg, 1000) then
       raise Exception.Create('SendTestWorker failed');
     sm := TSendMsg(msg.MsgData.AsObject);
@@ -80,7 +80,7 @@ begin
   end;
   task.Comm.Send(0);
   Sleep(5000);
-  for i := 1 to 128 do begin
+  for i := 1 to 256 do begin
     if not task.Comm.ReceiveWait(msg, 1000) then
       raise Exception.Create('SendTestWorker failed');
   end;
@@ -95,7 +95,7 @@ var
   receiveTestTask: IOmniTaskControl;
 begin
   receiveTestTask := CreateTask(ReceiveTestWorker, 'Receive test worker').Run;
-  Log('Task started; running ReceiveWait that should succeed');
+  Log('Task started; running ReceiveWait that should succeed in 2 seconds');
   if receiveTestTask.Comm.ReceiveWait(msg, 5000) then begin
     Log('Message received: ' + TStringList(msg.MsgData.AsObject).Text);
     msg.MsgData.AsObject.Free;
@@ -128,7 +128,7 @@ var
   sendTestTask: IOmniTaskControl;
   sm          : TSendMsg;
 begin
-  sendTestTask := CreateTask(SendTestWorker, 'Send test worker').Run;
+  sendTestTask := CreateTask(SendTestWorker, 'Send test worker').SetQueueSize(256).Run;
   Log('Task started, sending 256 messages');
   for i := 1 to 256 do 
     if not sendTestTask.Comm.SendWait(1, TSendMsg.Create(i), 10000 {10 sec}) then
@@ -137,30 +137,34 @@ begin
     Log('Timeout waiting for EOT')
   else
     Log('All received');
-  Log('Sending 129 messages, last should timeout');
-  for i := 1 to 129 do begin
+  Log('Sending 257 messages, last should timeout');
+  for i := 1 to 257 do begin
     sm := TSendMsg.Create(i);
-    if not sendTestTask.Comm.SendWait(1, sm) then begin
-      if i < 129 then
+    if not sendTestTask.Comm.SendWait(i, sm) then begin
+      if i < 257 then
         Log('SendWait failed where it shouldn''t')
       else begin
         Log('Timeout');
         FreeAndNil(sm);
       end;
-    end;
+    end
+    else if i = 257 then
+      Log('SendWait succeeded where it shouldn''t');
   end;
   if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
     Log('Timeout waiting for EOT')
   else
     Log('Test complete');
-  Log('Sending 129 messages, last should timeout');
-  for i := 1 to 129 do begin
-    if not sendTestTask.Comm.SendWait(1, IntToStr(i)) then begin
-      if i < 129 then
+  Log('Sending 257 messages, last should timeout');
+  for i := 1 to 257 do begin
+    if not sendTestTask.Comm.SendWait(i, IntToStr(i)) then begin
+      if i < 257 then
         Log('SendWait failed where it shouldn''t')
       else 
         Log('Timeout');
-    end;
+    end
+    else if i = 257 then
+      Log('SendWait succeeded where it shouldn''t')
   end;
   if not sendTestTask.Comm.ReceiveWait(msg, 10000) then
     Log('Timeout waiting for EOT')

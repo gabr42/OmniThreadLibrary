@@ -18,10 +18,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG;FullDebugMode;CatchUseOfFreedInterfaces</DCC_Define>
-    <DCC_UnitSearchPath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
-    <DCC_ResourcePath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
-    <DCC_ObjPath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
-    <DCC_IncludePath>x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
+    <DCC_UnitSearchPath>H:\RAZVOJ\OmniThreadLibrary;H:\RAZVOJ\OmniThreadLibrary\src;x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>H:\RAZVOJ\OmniThreadLibrary;H:\RAZVOJ\OmniThreadLibrary\src;x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>H:\RAZVOJ\OmniThreadLibrary;H:\RAZVOJ\OmniThreadLibrary\src;x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>H:\RAZVOJ\OmniThreadLibrary;H:\RAZVOJ\OmniThreadLibrary\src;x:\gp\common;x:\common\jwa;x:\common\src;x:\common\omnixml;x:\gp\common\except;..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_Optimize>False</DCC_Optimize>

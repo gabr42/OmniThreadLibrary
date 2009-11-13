@@ -49,7 +49,7 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure inpNumChildrenChange(Sender: TObject);
-    procedure OtlMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure OtlMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
   private
     FRebuildTree : boolean;
@@ -344,12 +344,10 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmRecursiveTreeDemo.OtlMonitorTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmRecursiveTreeDemo.OtlMonitorTaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  if task.Comm.Receive(msg) then
-    FTaskMessages.Add(msg.MsgData);
+  FTaskMessages.Add(msg.MsgData);
 end;
 
 procedure TfrmRecursiveTreeDemo.OtlMonitorTaskTerminated(const task: IOmniTaskControl);

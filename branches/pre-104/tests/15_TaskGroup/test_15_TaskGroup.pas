@@ -19,7 +19,7 @@ type
     OmniTED      : TOmniEventMonitor;
     procedure btnStartTasksClick(Sender: TObject);
     procedure btnStopTasksClick(Sender: TObject);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   strict private
     FTaskGroup: IOmniTaskGroup;
@@ -74,11 +74,9 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestTaskGroup.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestTaskGroup.OmniTEDTaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   Log(Format('Initializing task %d on thread %d', [integer(msg.MsgData[0]), integer(msg.MsgData[1])]));
 end;
 
