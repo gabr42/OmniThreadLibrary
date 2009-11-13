@@ -93,6 +93,9 @@
 			<Projects Include="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2010.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.2010.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -371,14 +374,23 @@
 		<Target Name="app_29_ImplicitEventMonitor_2010:Make">
 			<MSBuild Targets="Make" Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2010.dproj"/>
 		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_2010">
+			<MSBuild Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.2010.dproj"/>
+		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_2010:Clean">
+			<MSBuild Targets="Clean" Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.2010.dproj"/>
+		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_2010:Make">
+			<MSBuild Targets="Make" Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.2010.dproj"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="app_0_Beep_2010;app_1_HelloWorld_2010;app_2_TwoWayHello_2010;app_3_HelloWorld_with_package_2010;app_4_TwoWayHello_with_package_2010;app_5_TwoWayHello_without_loop_2010;app_6_TwoWayHello_with_object_worker_2010;app_7_InitTest_2010;app_8_RegisterComm_2010;app_9_Communications_2010;app_10_Containers_2010;app_11_ThreadPool_2010;app_12_Lock_2010;app_13_Exceptions_2010;app_14_TerminateWhen_2010;app_15_TaskGroup_2010;app_16_ChainTo_2010;app_17_MsgWait_2010;app_18_StringMsgDispatch_2010;app_19_StringMsgBenchmark_2010;app_20_QuickSort_2010;app_21_Anonymous_methods_2010;app_22_TerminationTest_2010;app_23_BackgroundFileSearch_2010;app_24_ConnectionPool_2010;app_25_WaitableComm_2010;app_26_MultiEventMonitor_2010;app_27_RecursiveTree_2010;app_28_Hooks_2010;app_29_ImplicitEventMonitor_2010"/>
+			<CallTarget Targets="app_0_Beep_2010;app_1_HelloWorld_2010;app_2_TwoWayHello_2010;app_3_HelloWorld_with_package_2010;app_4_TwoWayHello_with_package_2010;app_5_TwoWayHello_without_loop_2010;app_6_TwoWayHello_with_object_worker_2010;app_7_InitTest_2010;app_8_RegisterComm_2010;app_9_Communications_2010;app_10_Containers_2010;app_11_ThreadPool_2010;app_12_Lock_2010;app_13_Exceptions_2010;app_14_TerminateWhen_2010;app_15_TaskGroup_2010;app_16_ChainTo_2010;app_17_MsgWait_2010;app_18_StringMsgDispatch_2010;app_19_StringMsgBenchmark_2010;app_20_QuickSort_2010;app_21_Anonymous_methods_2010;app_22_TerminationTest_2010;app_23_BackgroundFileSearch_2010;app_24_ConnectionPool_2010;app_25_WaitableComm_2010;app_26_MultiEventMonitor_2010;app_27_RecursiveTree_2010;app_28_Hooks_2010;app_29_ImplicitEventMonitor_2010;app_30_AnonymousEventMonitor_2010"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="app_0_Beep_2010:Clean;app_1_HelloWorld_2010:Clean;app_2_TwoWayHello_2010:Clean;app_3_HelloWorld_with_package_2010:Clean;app_4_TwoWayHello_with_package_2010:Clean;app_5_TwoWayHello_without_loop_2010:Clean;app_6_TwoWayHello_with_object_worker_2010:Clean;app_7_InitTest_2010:Clean;app_8_RegisterComm_2010:Clean;app_9_Communications_2010:Clean;app_10_Containers_2010:Clean;app_11_ThreadPool_2010:Clean;app_12_Lock_2010:Clean;app_13_Exceptions_2010:Clean;app_14_TerminateWhen_2010:Clean;app_15_TaskGroup_2010:Clean;app_16_ChainTo_2010:Clean;app_17_MsgWait_2010:Clean;app_18_StringMsgDispatch_2010:Clean;app_19_StringMsgBenchmark_2010:Clean;app_20_QuickSort_2010:Clean;app_21_Anonymous_methods_2010:Clean;app_22_TerminationTest_2010:Clean;app_23_BackgroundFileSearch_2010:Clean;app_24_ConnectionPool_2010:Clean;app_25_WaitableComm_2010:Clean;app_26_MultiEventMonitor_2010:Clean;app_27_RecursiveTree_2010:Clean;app_28_Hooks_2010:Clean;app_29_ImplicitEventMonitor_2010:Clean"/>
+			<CallTarget Targets="app_0_Beep_2010:Clean;app_1_HelloWorld_2010:Clean;app_2_TwoWayHello_2010:Clean;app_3_HelloWorld_with_package_2010:Clean;app_4_TwoWayHello_with_package_2010:Clean;app_5_TwoWayHello_without_loop_2010:Clean;app_6_TwoWayHello_with_object_worker_2010:Clean;app_7_InitTest_2010:Clean;app_8_RegisterComm_2010:Clean;app_9_Communications_2010:Clean;app_10_Containers_2010:Clean;app_11_ThreadPool_2010:Clean;app_12_Lock_2010:Clean;app_13_Exceptions_2010:Clean;app_14_TerminateWhen_2010:Clean;app_15_TaskGroup_2010:Clean;app_16_ChainTo_2010:Clean;app_17_MsgWait_2010:Clean;app_18_StringMsgDispatch_2010:Clean;app_19_StringMsgBenchmark_2010:Clean;app_20_QuickSort_2010:Clean;app_21_Anonymous_methods_2010:Clean;app_22_TerminationTest_2010:Clean;app_23_BackgroundFileSearch_2010:Clean;app_24_ConnectionPool_2010:Clean;app_25_WaitableComm_2010:Clean;app_26_MultiEventMonitor_2010:Clean;app_27_RecursiveTree_2010:Clean;app_28_Hooks_2010:Clean;app_29_ImplicitEventMonitor_2010:Clean;app_30_AnonymousEventMonitor_2010:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="app_0_Beep_2010:Make;app_1_HelloWorld_2010:Make;app_2_TwoWayHello_2010:Make;app_3_HelloWorld_with_package_2010:Make;app_4_TwoWayHello_with_package_2010:Make;app_5_TwoWayHello_without_loop_2010:Make;app_6_TwoWayHello_with_object_worker_2010:Make;app_7_InitTest_2010:Make;app_8_RegisterComm_2010:Make;app_9_Communications_2010:Make;app_10_Containers_2010:Make;app_11_ThreadPool_2010:Make;app_12_Lock_2010:Make;app_13_Exceptions_2010:Make;app_14_TerminateWhen_2010:Make;app_15_TaskGroup_2010:Make;app_16_ChainTo_2010:Make;app_17_MsgWait_2010:Make;app_18_StringMsgDispatch_2010:Make;app_19_StringMsgBenchmark_2010:Make;app_20_QuickSort_2010:Make;app_21_Anonymous_methods_2010:Make;app_22_TerminationTest_2010:Make;app_23_BackgroundFileSearch_2010:Make;app_24_ConnectionPool_2010:Make;app_25_WaitableComm_2010:Make;app_26_MultiEventMonitor_2010:Make;app_27_RecursiveTree_2010:Make;app_28_Hooks_2010:Make;app_29_ImplicitEventMonitor_2010:Make"/>
+			<CallTarget Targets="app_0_Beep_2010:Make;app_1_HelloWorld_2010:Make;app_2_TwoWayHello_2010:Make;app_3_HelloWorld_with_package_2010:Make;app_4_TwoWayHello_with_package_2010:Make;app_5_TwoWayHello_without_loop_2010:Make;app_6_TwoWayHello_with_object_worker_2010:Make;app_7_InitTest_2010:Make;app_8_RegisterComm_2010:Make;app_9_Communications_2010:Make;app_10_Containers_2010:Make;app_11_ThreadPool_2010:Make;app_12_Lock_2010:Make;app_13_Exceptions_2010:Make;app_14_TerminateWhen_2010:Make;app_15_TaskGroup_2010:Make;app_16_ChainTo_2010:Make;app_17_MsgWait_2010:Make;app_18_StringMsgDispatch_2010:Make;app_19_StringMsgBenchmark_2010:Make;app_20_QuickSort_2010:Make;app_21_Anonymous_methods_2010:Make;app_22_TerminationTest_2010:Make;app_23_BackgroundFileSearch_2010:Make;app_24_ConnectionPool_2010:Make;app_25_WaitableComm_2010:Make;app_26_MultiEventMonitor_2010:Make;app_27_RecursiveTree_2010:Make;app_28_Hooks_2010:Make;app_29_ImplicitEventMonitor_2010:Make;app_30_AnonymousEventMonitor_2010:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>

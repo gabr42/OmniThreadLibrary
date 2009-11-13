@@ -194,6 +194,10 @@ type
 
   TOmniTaskTerminatedEvent = procedure(const task: IOmniTaskControl) of object;
   TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
+{$IFDEF OTL_Anonymous}
+  TOmniOnMessageFunction = reference to procedure(const task: IOmniTaskControl; const msg: TOmniMessage);
+  TOmniOnTerminatedFunction = reference to procedure(const task: IOmniTaskControl);
+{$ENDIF OTL_Anonymous}
 
   IOmniTaskControl = interface(IGpTraceable) ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
@@ -217,8 +221,12 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
-    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
-    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
+    {$IFDEF OTL_Anonymous}
+    function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
+    {$ENDIF OTL_Anonymous}
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
@@ -330,7 +338,7 @@ type
 
 {$IFDEF OTL_Anonymous}
 type
-  TOmniTaskFunction = reference to procedure (task: IOmniTask);
+  TOmniTaskFunction = reference to procedure(task: IOmniTask);
   function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
 {$ENDIF OTL_Anonymous}
 
@@ -579,6 +587,11 @@ type
 
   TOmniTaskControl = class(TGpTraceable, IGpTraceable, IOmniTaskControl, IOmniTaskControlInternals)
   strict private
+    {$IFDEF OTL_Anonymous}
+    otcOnMessageRef   : TOmniOnMessageFunction;
+    otcOnTerminatedRef: TOmniOnTerminatedFunction;
+    {$ENDIF OTL_Anonymous}
+  strict private
     otcDestroyLock    : boolean;
     otcEventMonitor   : TObject{TOmniEventMonitor};
     otcExecutor       : TOmniTaskExecutor;
@@ -611,12 +624,15 @@ type
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
   public
+    {$IFDEF OTL_Anonymous}
+    constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
+    function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
+    {$ENDIF OTL_Anonymous}
+  public
     constructor Create(const worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniTaskMethod; const taskName: string); overload;
     constructor Create(worker: TOmniTaskProcedure; const taskName: string); overload;
-    {$IFDEF OTL_Anonymous}
-    constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
-    {$ENDIF OTL_Anonymous}
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
@@ -631,8 +647,8 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
-    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
-    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
@@ -1851,12 +1867,20 @@ procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
 begin
   if assigned(otcOnMessage) then
     otcOnMessage(Self, msg);
+  {$IFDEF OTL_Anonymous}
+  if assigned(otcOnMessageRef) then
+    otcOnMessageRef(Self, msg);
+  {$ENDIF OTL_Anonymous}
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
   if assigned(otcOnTerminated) then
     otcOnTerminated(Self);
+  {$IFDEF OTL_Anonymous}
+  if assigned(otcOnTerminatedRef) then
+    otcOnTerminatedRef(Self);
+  {$ENDIF OTL_Anonymous}
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
@@ -1986,12 +2010,22 @@ begin
 end; { TOmniTaskControl.MsgWait }
 
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent):
-  IOmniTaskControl;
+    IOmniTaskControl;
 begin
   otcOnMessage := eventHandler;
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
+
+{$IFDEF OTL_Anonymous}
+function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction):
+    IOmniTaskControl;
+begin
+  otcOnMessageRef := eventHandler;
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+{$ENDIF OTL_Anonymous}
 
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
   IOmniTaskControl;
@@ -2000,6 +2034,15 @@ begin
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
+
+{$IFDEF OTL_Anonymous}
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
+begin
+  otcOnTerminatedRef := eventHandler;
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnTerminated }
+{$ENDIF OTL_Anonymous}
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
