@@ -1,6 +1,7 @@
 program app_13_Exceptions;
 
 uses
+  FastMM4,
   Forms,
   test_13_Exceptions in 'test_13_Exceptions.pas' {frmTestExceptions},
   OtlComm in '..\..\OtlComm.pas',

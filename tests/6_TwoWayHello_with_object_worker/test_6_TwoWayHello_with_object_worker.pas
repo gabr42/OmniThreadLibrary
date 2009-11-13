@@ -44,7 +44,8 @@ type
     procedure actStopHelloExecute(Sender: TObject);
     procedure actStopHelloUpdate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
     procedure OmniEventMonitor1TaskTerminated(const task: IOmniTaskControl);
   strict private
     FHelloTask: IOmniTaskControl;
@@ -107,11 +108,9 @@ begin
   actStopHello.Execute;
 end;
 
-procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestTwoWayHello.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
     [task.UniqueID, task.Name, msg.msgID, msg.msgData.AsString]));
 end;

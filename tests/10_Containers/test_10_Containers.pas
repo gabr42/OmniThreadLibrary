@@ -73,7 +73,7 @@ type
     procedure btnStackStressTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; msg: TOmniMessage);
   private
     FAllTestsStart   : int64;
     FBaseQueue       : TOmniBaseQueue;
@@ -310,10 +310,10 @@ procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
   FBaseStack := TOmniBaseStack.Create;
   FBaseStack.Initialize(CTestQueueLength, SizeOf(integer));
-  FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer), [coEnableNotify]);
+  FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
   FBaseQueue := TOmniBaseQueue.Create;
   FBaseQueue.Initialize(CTestQueueLength, SizeOf(integer));
-  FQueue := TOmniQueue.Create(CTestQueueLength, SizeOf(integer), [coEnableNotify]);
+  FQueue := TOmniQueue.Create(CTestQueueLength, SizeOf(integer));
   FCounter := CreateCounter;
   FQueuedTests := TGpIntegerObjectList.Create(false);
   AllocateTasks(1, 1);
@@ -355,70 +355,69 @@ begin
   Application.ProcessMessages;
 end;
 
-procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl);
+procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
+  msg: TOmniMessage);
 var
   f  : textfile;
-  msg: TOmniMessage;
 begin
-  if task.Comm.Receive(msg) then
-    case msg.MsgID of
-      MSG_FULL_STOP:
-        begin
-          Log('All tasks stopped');
-          Log(Format('Total reader throughput: %d msg/s', [FReaderThroughput]));
-          Log(Format('Total writer throughput: %d msg/s', [FWriterThroughput]));
-          if msg.MsgData = 'base stack' then
-            btnBaseStackCorrectnessTest.Click
-          else if msg.MsgData = 'stack' then
-            btnStackCorrectnessTest.Click
-          else if msg.MsgData = 'base queue' then
-            btnBaseQueueCorrectnessTest.Click
+  case msg.MsgID of
+    MSG_FULL_STOP:
+      begin
+        Log('All tasks stopped');
+        Log(Format('Total reader throughput: %d msg/s', [FReaderThroughput]));
+        Log(Format('Total writer throughput: %d msg/s', [FWriterThroughput]));
+        if msg.MsgData = 'base stack' then
+          btnBaseStackCorrectnessTest.Click
+        else if msg.MsgData = 'stack' then
+          btnStackCorrectnessTest.Click
+        else if msg.MsgData = 'base queue' then
+          btnBaseQueueCorrectnessTest.Click
+        else
+          btnQueueCorrectnessTest.Click;
+        AssignFile(f, 'containers_bench.csv');
+        if FileExists('containers_bench.csv') then
+          Append(f)
+        else
+          Rewrite(f);
+        Writeln(f, '"', FTestName, '",', FNumReaders, ',', FNumWriters, ',',
+          FReaderThroughput, ',', FWriterThroughput);
+        CloseFile(f);
+      end;
+    MSG_TEST_END:
+      Log(string(msg.MsgData));
+    MSG_WRITER_THROUGHPUT:
+      Inc(FWriterThroughput, msg.MsgData);
+    MSG_READER_THROUGHPUT:
+      Inc(FReaderThroughput, msg.MsgData);
+    MSG_STACK_WRITE_COMPLETED:
+      begin
+        Log('Reading from stack');
+        FReaders[1].Comm.Send(MSG_START_STACK_READ,
+          [CTestQueueLength, cardinal(msg.MsgData)]);
+      end;
+    MSG_STACK_READ_COMPLETED, MSG_QUEUE_READ_COMPLETED:
+      begin
+        Log('Test completed');
+        if FQueuedTests.Count > 0 then begin
+          FQueuedTests.Delete(0);
+          if FQueuedTests.Count = 0 then
+            Log(Format('All tests completed. Total run time = %d seconds',
+              [Round((DSiTimeGetTime64 - FAllTestsStart)/1000)]))
           else
-            btnQueueCorrectnessTest.Click;
-          AssignFile(f, 'containers_bench.csv');
-          if FileExists('containers_bench.csv') then
-            Append(f)
-          else
-            Rewrite(f);
-          Writeln(f, '"', FTestName, '",', FNumReaders, ',', FNumWriters, ',',
-            FReaderThroughput, ',', FWriterThroughput);
-          CloseFile(f);
+            StartFirstTest;
         end;
-      MSG_TEST_END:
-        Log(string(msg.MsgData));
-      MSG_WRITER_THROUGHPUT:
-        Inc(FWriterThroughput, msg.MsgData);
-      MSG_READER_THROUGHPUT:
-        Inc(FReaderThroughput, msg.MsgData);
-      MSG_STACK_WRITE_COMPLETED:
-        begin
-          Log('Reading from stack');
-          FReaders[1].Comm.Send(MSG_START_STACK_READ,
-            [CTestQueueLength, cardinal(msg.MsgData)]);
-        end;
-      MSG_STACK_READ_COMPLETED, MSG_QUEUE_READ_COMPLETED:
-        begin
-          Log('Test completed');
-          if FQueuedTests.Count > 0 then begin
-            FQueuedTests.Delete(0);
-            if FQueuedTests.Count = 0 then
-              Log(Format('All tests completed. Total run time = %d seconds',
-                [Round((DSiTimeGetTime64 - FAllTestsStart)/1000)]))
-            else
-              StartFirstTest;
-          end;
-        end;
-      MSG_QUEUE_WRITE_COMPLETED:
-        begin
-          Log('Reading from queue');
-          FReaders[1].Comm.Send(MSG_START_QUEUE_READ,
-            [CTestQueueLength, cardinal(msg.MsgData)]);
-        end;
-      MSG_TEST_FAILED:
-        Log('Write test failed. ' + msg.MsgData);
-      else
-        Log(Format('Unknown message %d', [msg.MsgID]));
-    end; //case
+      end;
+    MSG_QUEUE_WRITE_COMPLETED:
+      begin
+        Log('Reading from queue');
+        FReaders[1].Comm.Send(MSG_START_QUEUE_READ,
+          [CTestQueueLength, cardinal(msg.MsgData)]);
+      end;
+    MSG_TEST_FAILED:
+      Log('Write test failed. ' + msg.MsgData);
+    else
+      Log(Format('Unknown message %d', [msg.MsgID]));
+  end; //case
 end;
 
 procedure TfrmTestOtlContainers.ScheduleAllBaseQueueTests;

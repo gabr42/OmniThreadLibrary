@@ -6,10 +6,14 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2009-04-21
-   Version           : 1.17a
+   Last modification : 2009-05-08
+   Version           : 1.18
 </pre>*)(*
    History:
+     1.18: 2009-05-08
+       - TGp4AlignedInt fully changed from working with Cardinal to Integer.
+       - Implemented function CAS (compare and swap) in TGp4AlignedInt and
+         TGp8AlignedInt64 records. 
      1.17a: 2009-04-21
        - InterlockedIncrement/InterlockedDecrement deal with integers, therefore
          TGp4AlignedInt.Increment/Decrement must return integers.
@@ -84,24 +88,25 @@ type
   TGp4AlignedInt = record
   strict private
     aiData: int64;
-    function  GetValue: cardinal; inline;
-    procedure SetValue(value: cardinal); inline;
+    function  GetValue: integer; inline;
+    procedure SetValue(value: integer); inline;
   public
-    function Addr: PCardinal; inline;
+    function Addr: PInteger; inline;
+    function CAS(oldValue, newValue: integer): boolean;
     function Decrement: integer; inline;
     function Increment: integer; inline;
     class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
-    class operator Equal(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
-    class operator GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
-    class operator GreaterThanOrEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator Equal(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator GreaterThan(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator GreaterThanOrEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
     class operator Implicit(const ai: TGp4AlignedInt): integer; inline;
     class operator Implicit(const ai: TGp4AlignedInt): cardinal; inline;
-    class operator Implicit(const ai: TGp4AlignedInt): PCardinal; inline;
-    class operator LessThan(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
-    class operator LessThanOrEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
-    class operator NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): PInteger; inline;
+    class operator LessThan(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator LessThanOrEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator NotEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
     class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal; inline;
-    property Value: cardinal read GetValue write SetValue;
+    property Value: integer read GetValue write SetValue;
   end; { TGp4AlignedInt }
 
   TGp8AlignedInt64 = record
@@ -113,6 +118,7 @@ type
     procedure SetValue(value: int64); inline;
   public
     function Addr: PInt64; inline;
+    function CAS(oldValue, newValue: int64): boolean;
     function Decrement: int64; inline;
     function Increment: int64; inline;
     property Value: int64 read GetValue write SetValue;
@@ -183,6 +189,8 @@ function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; asse
 ///  2008-03-31, Gp: Extended to support vtObject type.
 ///  2008-07-28, Gp: Extended to support vtInt64 type.</para></summary>
 function  OpenArrayToVarArray(aValues: array of const): Variant;
+
+function  FormatDataSize(value: int64): string;
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -375,6 +383,16 @@ begin
   end; //for i
 end; { OpenArrayToVarArray }
 
+function FormatDataSize(value: int64): string;
+begin
+  if value < 1024*1024 then
+    Result := Format('%.1f KB', [value/1024])
+  else if value < 1024*1024*1024 then
+    Result := Format('%.1f MB', [value/1024/1024])
+  else
+    Result := Format('%.1f GB', [value/1024/1024/1024]);
+end; { FormatDataSize }
+
 function ReverseDWord(dw: cardinal): cardinal;
 asm
   bswap eax
@@ -415,28 +433,33 @@ end; { TableFindNE }
 
 { TGpAlignedInt }
 
-function TGp4AlignedInt.Addr: PCardinal;
+function TGp4AlignedInt.Addr: PInteger;
 begin
   Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Result := PCardinal((cardinal(@aiData) + 3) AND NOT 3);
+  Result := PInteger((cardinal(@aiData) + 3) AND NOT 3);
 end; { TGp4AlignedInt.Addr }
+
+function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;
+begin
+  Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue; 
+end; { TGp4AlignedInt.CAS }
 
 function TGp4AlignedInt.Decrement: integer;
 begin
-  Result := InterlockedDecrement(PInteger(Addr)^);
+  Result := InterlockedDecrement(Addr^);
 end; { TGp4AlignedInt.Decrement }
 
-function TGp4AlignedInt.GetValue: cardinal;
+function TGp4AlignedInt.GetValue: integer;
 begin
   Result := Addr^;
 end; { TGp4AlignedInt.GetValue }
 
 function TGp4AlignedInt.Increment: integer;
 begin
-  Result := InterlockedIncrement(PInteger(Addr)^);
+  Result := InterlockedIncrement(Addr^);
 end; { TGp4AlignedInt.Increment }
 
-procedure TGp4AlignedInt.SetValue(value: cardinal);
+procedure TGp4AlignedInt.SetValue(value: integer);
 begin
   Addr^ := value;
 end; { TGp4AlignedInt.SetValue }
@@ -446,23 +469,23 @@ begin
   Result := cardinal(int64(ai.Value) + i);
 end; { TGp4AlignedInt.Add }
 
-class operator TGp4AlignedInt.Equal(const ai: TGp4AlignedInt; i: cardinal): boolean;
+class operator TGp4AlignedInt.Equal(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value = i);
 end; { TGp4AlignedInt.Equal }
 
-class operator TGp4AlignedInt.GreaterThan(const ai: TGp4AlignedInt; i: cardinal): boolean;
+class operator TGp4AlignedInt.GreaterThan(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value > i);
 end; { TGp4AlignedInt.GreaterThan }
 
-class operator TGp4AlignedInt.GreaterThanOrEqual(const ai: TGp4AlignedInt; i: cardinal):
+class operator TGp4AlignedInt.GreaterThanOrEqual(const ai: TGp4AlignedInt; i: integer):
   boolean;
 begin
   Result := (ai.Value >= i);
 end; { TGp4AlignedInt.GreaterThanOrEqual }
 
-class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): PCardinal;
+class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): PInteger;
 begin
   Result := ai.Addr;
 end; { TGp4AlignedInt.Implicit }
@@ -477,18 +500,18 @@ begin
   Result := integer(ai.Value);
 end; { TGp4AlignedInt.Implicit }
 
-class operator TGp4AlignedInt.LessThan(const ai: TGp4AlignedInt; i: cardinal): boolean;
+class operator TGp4AlignedInt.LessThan(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value < i);
 end; { TGp4AlignedInt.LessThan }
 
-class operator TGp4AlignedInt.LessThanOrEqual(const ai: TGp4AlignedInt; i: cardinal):
+class operator TGp4AlignedInt.LessThanOrEqual(const ai: TGp4AlignedInt; i: integer):
   boolean;
 begin
   Result := (ai.Value <= i);
 end; { TGp4AlignedInt.LessThanOrEqual }
 
-class operator TGp4AlignedInt.NotEqual(const ai: TGp4AlignedInt; i: cardinal): boolean;
+class operator TGp4AlignedInt.NotEqual(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value <> i);
 end; { TGp4AlignedInt.NotEqual }
@@ -505,6 +528,11 @@ begin
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   Result := PInt64((cardinal(@aiData) + 7) AND NOT 7);
 end; { TGp8AlignedInt64.Addr }
+
+function TGp8AlignedInt64.CAS(oldValue, newValue: int64): boolean;
+begin
+  Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
+end; { TGp8AlignedInt64.CAS }
 
 function TGp8AlignedInt64.Decrement: int64;
 begin

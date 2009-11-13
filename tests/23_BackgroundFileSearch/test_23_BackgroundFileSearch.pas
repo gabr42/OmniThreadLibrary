@@ -21,7 +21,7 @@ type
     tmrDisplayStatus: TTimer;
     procedure btnScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
-    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OTLMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure tmrDisplayStatusTimer(Sender: TObject);
   private
@@ -106,12 +106,10 @@ begin
 end;
 
 procedure TfrmBackgroundFileSearchDemo.OTLMonitorTaskMessage(const task:
-  IOmniTaskControl);
+  IOmniTaskControl; const msg: TOmniMessage);
 var
   folderFiles: TStringList;
-  msg        : TOmniMessage;
 begin
-  task.Comm.Receive(msg);
   if msg.MsgID = MSG_SCAN_FOLDER then
     FWaitingMessage := msg.MsgData
   else if msg.MsgID = MSG_FOLDER_FILES then begin

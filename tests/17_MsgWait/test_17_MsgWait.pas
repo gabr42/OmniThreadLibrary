@@ -23,7 +23,7 @@ type
     procedure actStartUpdate(Sender: TObject);
     procedure actStopExecute(Sender: TObject);
     procedure actStopUpdate(Sender: TObject);
-    procedure oeMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure oeMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   strict private
     FHelloWorld: IOmniTaskControl;
   end;
@@ -72,11 +72,9 @@ begin
   (Sender as TAction).Enabled := assigned(FHelloWorld);
 end;
 
-procedure TfrmTestMsgWait.oeMonitorTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestMsgWait.oeMonitorTaskMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   lbLog.ItemIndex := lbLog.Items.Add(msg.MsgData);
 end;
 

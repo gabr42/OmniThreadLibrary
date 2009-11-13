@@ -11,6 +11,7 @@ object frmTestExceptions: TfrmTestExceptions
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
@@ -67,6 +68,16 @@ object frmTestExceptions: TfrmTestExceptions
     Caption = 'Cleanup exception'
     TabOrder = 5
     OnClick = RunObjectTest
+  end
+  object cbSilentExceptions: TCheckBox
+    Left = 8
+    Top = 200
+    Width = 129
+    Height = 17
+    Caption = 'Silent exceptions'
+    Checked = True
+    State = cbChecked
+    TabOrder = 6
   end
   object OmniTED: TOmniEventMonitor
     OnTaskMessage = OmniTEDTaskMessage

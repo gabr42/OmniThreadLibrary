@@ -17,7 +17,7 @@ type
     btnHello: TButton;
     OTLMonitor: TOmniEventMonitor;
     procedure btnHelloClick(Sender: TObject);
-    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl);
+    procedure OTLMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OTLMonitorTaskTerminated(const task: IOmniTaskControl);
   private
     { Private declarations }
@@ -42,15 +42,11 @@ begin
     'HelloWorld')).Run;
 end;
 
-procedure TfrmAnonymousMethodsDemo.OTLMonitorTaskMessage(const task:
-    IOmniTaskControl);
-var
-  msgID  : word;
-  msgData: TOmniValue;
+procedure TfrmAnonymousMethodsDemo.OTLMonitorTaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msgID, msgData);
   lbLog.ItemIndex := lbLog.Items.Add(Format('%d:[%d/%s] %d|%s',
-    [GetCurrentThreadID, task.UniqueID, task.Name, msgID, msgData.AsString]));
+    [GetCurrentThreadID, task.UniqueID, task.Name, msg.msgID, msg.msgData.AsString]));
 end;
 
 procedure TfrmAnonymousMethodsDemo.OTLMonitorTaskTerminated(const task:

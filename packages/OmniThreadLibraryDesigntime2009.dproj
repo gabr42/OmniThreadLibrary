@@ -21,7 +21,7 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
-			<DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\6.0\Bpl\OmniThreadLibraryDesigntime2009.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\6.0\Bpl\OmniThreadLibraryDesigntime2009.bpl</DCC_DependencyCheckOutputName>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<GenDll>true</GenDll>
@@ -46,8 +46,9 @@
 			<DCCReference Include="rtl.dcp"/>
 			<DCCReference Include="vcl.dcp"/>
 			<DCCReference Include="vclx.dcp"/>
-			<DCCReference Include="OmniThreadLibraryRuntime200.dcp"/>
+			<DCCReference Include="OmniThreadLibraryRuntime2009.dcp"/>
 			<DCCReference Include="..\OtlRegister.pas"/>
+			<DCCReference Include="OmniThreadLibraryRuntime200.dcp"/>
 			<DCCReference Include="OmniThreadLibraryRuntime20.dcp"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>

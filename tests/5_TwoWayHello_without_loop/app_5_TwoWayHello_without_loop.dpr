@@ -1,6 +1,7 @@
 program app_5_TwoWayHello_without_loop;
 
 uses
+  FastMM4,
   Forms,
   test_5_TwoWayHello_without_loop in 'test_5_TwoWayHello_without_loop.pas' {frmTestTwoWayHello},
   OtlCommon in '..\..\OtlCommon.pas',

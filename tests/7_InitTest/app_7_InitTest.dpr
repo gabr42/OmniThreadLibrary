@@ -1,6 +1,7 @@
 program app_7_InitTest;
 
 uses
+  FastMM4,
   Forms,
   test_7_InitTest in 'test_7_InitTest.pas' {frmTestInit},
   OtlCommon in '..\..\OtlCommon.pas',
@@ -8,9 +9,7 @@ uses
   OtlThreadPool in '..\..\OtlThreadPool.pas',
   OtlComm in '..\..\OtlComm.pas',
   OtlContainers in '..\..\OtlContainers.pas',
-  OtlTaskControl in '..\..\OtlTaskControl.pas' {;
-
-{$R *.res};
+  OtlTaskControl in '..\..\OtlTaskControl.pas';
 
 {$R *.res}
 

@@ -32,10 +32,6 @@ requires
 contains
   GpLists in '..\src\GpLists.pas',
   GpStuff in '..\src\GpStuff.pas',
-{$IFNDEF Unicode}
-  HVStringBuilder in '..\src\HVStringBuilder.pas',
-  HVStringData in '..\src\HVStringData.pas',
-{$ENDIF}
   SpinLock in '..\src\SpinLock.pas',
   GpStringHash in '..\src\GpStringHash.pas',
   DetailedRTTI in '..\src\DetailedRTTI.pas',
@@ -47,6 +43,9 @@ contains
   OtlTaskControl in '..\OtlTaskControl.pas',
   OtlThreadPool in '..\OtlThreadPool.pas',
   OtlEventMonitor in '..\OtlEventMonitor.pas',
-  DSiWin32 in '..\src\DSiWin32.pas';
+  DSiWin32 in '..\src\DSiWin32.pas',
+  OtlContainerObserver in '..\OtlContainerObserver.pas',
+  OtlSync in '..\OtlSync.pas',
+  OtlHooks in '..\OtlHooks.pas';
 
 end.
