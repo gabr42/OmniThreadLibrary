@@ -17,7 +17,7 @@ type
     lbLog        : TListBox;
     OmniTED      : TOmniEventMonitor;
     procedure btnStartTasksClick(Sender: TObject);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   private
     procedure BgTask(const task: IOmniTask);
@@ -75,11 +75,8 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestChainTo.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestChainTo.OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   Log(string(msg.MsgData));
 end;
 
