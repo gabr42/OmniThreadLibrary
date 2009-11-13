@@ -191,7 +191,10 @@ type
 
   IOmniTaskGroup = interface;
 
-  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  TOmniTaskTerminatedEvent = procedure(const task: IOmniTaskControl) of object;
+  TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
+
+  IOmniTaskControl = interface(IGpTraceable) ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
@@ -213,6 +216,8 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
@@ -566,24 +571,32 @@ type
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetTerminatedEvent: THandle;
   //
+    procedure ForwardTaskMessage(const msg: TOmniMessage);
+    procedure ForwardTaskTerminated;
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TGpTraceable, IGpTraceable, IOmniTaskControl, IOmniTaskControlInternals)
   strict private
     otcDestroyLock    : boolean;
+    otcEventMonitor   : TObject{TOmniEventMonitor};
     otcExecutor       : TOmniTaskExecutor;
     otcMonitorObserver: TOmniContainerObserver;
+    otcOnMessage      : TOmniTaskMessageEvent;
+    otcOnTerminated   : TOmniTaskTerminatedEvent;
     otcOwningPool     : IOmniThreadPool;
     otcParameters     : TOmniValueContainer;
     otcQueueLength    : integer;
     otcSharedInfo     : TOmniSharedTaskInfo;
     otcThread         : TOmniThread;
   strict protected
+    procedure CreateInternalMonitor;
     function  CreateTask: IOmniTask;
     procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
   protected
+    procedure ForwardTaskMessage(const msg: TOmniMessage);
+    procedure ForwardTaskTerminated;
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
@@ -617,6 +630,8 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
@@ -709,6 +724,18 @@ implementation
 uses
   OtlHooks,
   OtlEventMonitor;
+
+type
+  TOmniTaskControlEventMonitor = class(TOmniEventMonitor)
+  strict protected
+    procedure ForwardTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
+    procedure ForwardTaskTerminated(const task: IOmniTaskControl);
+  public
+    constructor Create; reintroduce;
+  end; { TOmniTaskControlEventMonitor }
+
+var
+  GTaskControlEventMonitor: TOmniTaskControlEventMonitor;
 
 { exports }
 
@@ -1741,6 +1768,10 @@ end; { TOmniTaskControl.Create }
 destructor TOmniTaskControl.Destroy;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
+  if assigned(otcEventMonitor) then begin
+    RemoveMonitor;
+    otcEventMonitor := nil;
+  end;
   if assigned(otcThread) then begin
     Terminate;
     FreeAndNil(otcThread);
@@ -1762,6 +1793,7 @@ begin
   FreeAndNil(otcParameters);
   FreeAndNil(otcSharedInfo);
   inherited Destroy;
+  _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
 end; { TOmniTaskControl.Destroy }
 
 function TOmniTaskControl.Alertable: IOmniTaskControl;
@@ -1777,6 +1809,14 @@ begin
   otcSharedInfo.ChainIgnoreErrors := ignoreErrors;
   Result := Self;
 end; { TOmniTaskControl.ChainTo }
+
+procedure TOmniTaskControl.CreateInternalMonitor;
+begin
+  if not assigned(otcEventMonitor) then begin
+    otcEventMonitor := GTaskControlEventMonitor;
+    TOmniEventMonitor(otcEventMonitor).Monitor(Self);
+  end;
+end; { TOmniTaskControl.CreateInternalMonitor }
 
 function TOmniTaskControl.CreateTask: IOmniTask;
 begin
@@ -1799,6 +1839,18 @@ begin
     otcSharedInfo.CommChannel :=
       CreateTwoWayChannel(otcQueueLength, otcSharedInfo.TerminatedEvent);
 end; { TOmniTaskControl.EnsureCommChannel }
+
+procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
+begin
+  if assigned(otcOnMessage) then
+    otcOnMessage(Self, msg);
+end; { TOmniTaskControl.ForwardTaskMessage }
+
+procedure TOmniTaskControl.ForwardTaskTerminated;
+begin
+  if assigned(otcOnTerminated) then
+    otcOnTerminated(Self);
+end; { TOmniTaskControl.ForwardTaskTerminated }
 
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
 begin
@@ -1926,13 +1978,31 @@ begin
   Result := Self;
 end; { TOmniTaskControl.MsgWait }
 
+function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent):
+  IOmniTaskControl;
+begin
+  otcOnMessage := eventHandler;
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
+  IOmniTaskControl;
+begin
+  otcOnTerminated := eventHandler;
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnTerminated }
+
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
-  otcSharedInfo.MonitorWindow := 0;
-  EnsureCommChannel;
-  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver,
-    coiNotifyOnAllInserts);
-  FreeAndNil(otcMonitorObserver);
+  if assigned(otcMonitorObserver) then begin
+    otcSharedInfo.MonitorWindow := 0;
+    EnsureCommChannel;
+    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver,
+      coiNotifyOnAllInserts);
+    FreeAndNil(otcMonitorObserver);
+  end;
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
 
@@ -1971,6 +2041,9 @@ begin
       integer(Int64Rec(UniqueID).Hi));
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
       otcMonitorObserver, coiNotifyOnAllInserts);
+  end
+  else if otcSharedInfo.MonitorWindow <> hWindow then begin
+    raise Exception.Create('TOmniTaskControl.SetMonitor: Task can be only monitored with a single monitor');
   end;
   otcMonitorObserver.Activate;
   Result := Self;
@@ -2321,4 +2394,29 @@ begin
   Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
 end; { TOmniTaskGroup.WaitForAll }
 
+{ TOmniTaskControlEventMonitor }
+
+constructor TOmniTaskControlEventMonitor.Create;
+begin
+  inherited Create(nil);
+  OnTaskMessage := ForwardTaskMessage;
+  OnTaskTerminated := ForwardTaskTerminated;
+end; { TOmniTaskControlEventMonitor.Create }
+
+procedure TOmniTaskControlEventMonitor.ForwardTaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
+begin
+  (task as IOmniTaskControlInternals).ForwardTaskMessage(msg);
+end; { TOmniTaskControlEventMonitor.ForwardTaskMessage }
+
+procedure TOmniTaskControlEventMonitor.ForwardTaskTerminated(
+  const task: IOmniTaskControl);
+begin
+  (task as IOmniTaskControlInternals).ForwardTaskTerminated;
+end; { TOmniTaskControlEventMonitor.ForwardTaskTerminated }
+
+initialization
+  GTaskControlEventMonitor := TOmniTaskControlEventMonitor.Create;
+finalization
+  FreeAndNil(GTaskControlEventMonitor);
 end.

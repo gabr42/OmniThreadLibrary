@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2008-10-26
-///   Version           : 1.01
+///   Last modification : 2009-11-11
+///   Version           : 1.01b
 ///</para><para>
 ///   History:
+///     1.01b: 2009-11-11
+///       - [GJ] better fix for the initialization crash.
+///     1.01a: 2009-11-10
+///       - Bug fixed: Initialization code could crash with range check error.
 ///     1.01: 2008-10-26
 ///       - [GJ] Redesigned stack with better lock contention.
 ///       - [GJ] Totally redesigned queue, which is no longer based on stack and allows
@@ -378,22 +382,22 @@ procedure TOmniBaseStack.MeasureExecutionTimes;
 const
   NumOfSamples = 10;
 var
-  TimeTestField: array [0..2] of array [1..NumOfSamples] of int64;
+  TimeTestField: array [0..1] of array [1..NumOfSamples] of int64;
 
-  function GetMinAndClear(Rutine, Count: cardinal): int64;
+  function GetMinAndClear(routine, count: cardinal): int64;
   var
     m: cardinal;
     n: integer;
     x: integer;
   begin
-    result := 0;
-    for m := 1 to Count do begin
+    Result := 0;
+    for m := 1 to count do begin
       x:= 1;
       for n:= 2 to NumOfSamples do
-        if TimeTestField[Rutine, n] < TimeTestField[Rutine, x] then
+        if TimeTestField[routine, n] < TimeTestField[routine, x] then
           x := n;
-      Inc(result, TimeTestField[Rutine, x]);
-      TimeTestField[Rutine, x] := MaxLongInt;
+      Inc(Result, TimeTestField[routine, x]);
+      TimeTestField[routine, x] := MaxLongInt;
     end;
   end; { GetMinAndClear }
 
@@ -411,6 +415,7 @@ begin { TOmniBaseStack.MeasureExecutionTimes }
       obsTaskPopLoops := 1;
       obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
+        DSiYield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := PopLink(obsRecycleChainP^);
@@ -419,16 +424,11 @@ begin { TOmniBaseStack.MeasureExecutionTimes }
         TimeTestField[1, n] := GetCPUTimeStamp;
         PushLink(currElement, obsRecycleChainP^);
         TimeTestField[1, n] := GetCPUTimeStamp - TimeTestField[1, n];
-        //Measure GetCPUTimeStamp rutine delay
-        TimeTestField[2, n] := GetCPUTimeStamp;
-        TimeTestField[2, n] := GetCPUTimeStamp - TimeTestField[2, n];
       end;
-      //Calculate first 4 minimum average for GetCPUTimeStamp
-      n := GetMinAndClear(2, 4);
       //Calculate first 4 minimum average for RemoveLink rutine
-      obsTaskPopLoops := (GetMinAndClear(0, 4) - n) div 2;
+      obsTaskPopLoops := GetMinAndClear(0, 4) div 4;
       //Calculate first 4 minimum average for InsertLink rutine
-      obsTaskPushLoops := (GetMinAndClear(1, 4) - n) div 4;
+      obsTaskPushLoops := GetMinAndClear(1, 4) div 4;
       obsIsInitialized := true;
     finally DSiSetThreadAffinity(affinity); end;
   end;
@@ -709,22 +709,22 @@ procedure TOmniBaseQueue.MeasureExecutionTimes;
 const
   NumOfSamples = 10;
 var
-  TimeTestField: array [0..2]of array [1..NumOfSamples] of int64;
+  TimeTestField: array [0..1] of array [1..NumOfSamples] of int64;
 
-  function GetMinAndClear(Rutine, Count: cardinal): int64;
+  function GetMinAndClear(routine, count: cardinal): int64;
   var
     m: cardinal;
     n: integer;
     x: integer;
   begin
-    result := 0;
-    for m := 1 to Count do begin
+    Result  := 0;
+    for m := 1 to count do begin
       x:= 1;
       for n:= 2 to NumOfSamples do
-        if TimeTestField[Rutine, n] < TimeTestField[Rutine, x] then
+        if TimeTestField[routine, n] < TimeTestField[routine, x] then
           x := n;
-      Inc(result, TimeTestField[Rutine, x]);
-      TimeTestField[Rutine, x] := MaxLongInt;
+      Inc(Result, TimeTestField[routine, x]);
+      TimeTestField[routine, x] := MaxLongInt;
     end;
   end; { GetMinAndClear }
 
@@ -742,6 +742,7 @@ begin { TOmniBaseQueue.MeasureExecutionTimes }
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
+        DSiYield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := RemoveLink(obqRecycleRingBuffer);
@@ -750,16 +751,9 @@ begin { TOmniBaseQueue.MeasureExecutionTimes }
         TimeTestField[1, n] := GetCPUTimeStamp;
         InsertLink(currElement, obqRecycleRingBuffer);
         TimeTestField[1, n] := GetCPUTimeStamp - TimeTestField[1, n];
-        //Measure GetCPUTimeStamp rutine delay
-        TimeTestField[2, n] := GetCPUTimeStamp;
-        TimeTestField[2, n] := GetCPUTimeStamp - TimeTestField[2, n];
       end;
-      //Calculate first 4 minimum average for GetCPUTimeStamp
-      n := GetMinAndClear(2, 4);
-      //Calculate first 4 minimum average for RemoveLink rutine
-      obqTaskRemoveLoops := (GetMinAndClear(0, 4) - n) div 4;
-      //Calculate first 4 minimum average for InsertLink rutine
-      obqTaskInsertLoops := (GetMinAndClear(1, 4) - n) div 4;
+      obqTaskRemoveLoops := GetMinAndClear(0, 4) div 4;
+      obqTaskInsertLoops := GetMinAndClear(1, 4) div 4;
       obqIsInitialized := true;
     finally DSiSetThreadAffinity(affinity); end;
   end;
