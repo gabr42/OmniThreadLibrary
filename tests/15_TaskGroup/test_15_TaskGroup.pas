@@ -64,9 +64,13 @@ end;
 
 procedure TfrmTestTaskGroup.btnStopTasksClick(Sender: TObject);
 begin
-  FTaskGroup.TerminateAll;
-  FTaskGroup := nil;
-  Log('All stopped');
+  if assigned(FTaskGroup) then begin
+    FTaskGroup.TerminateAll;
+    FTaskGroup := nil;
+    Log('All stopped');
+  end
+  else
+    Log('Nothing to stop');
 end;
 
 procedure TfrmTestTaskGroup.Log(const msg: string);
