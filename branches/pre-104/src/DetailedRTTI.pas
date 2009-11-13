@@ -97,6 +97,10 @@ end;
 function TParamInfoHelper.NextParam: PParamInfo;
 begin
   Result := PParamInfo(Integer(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
+  {$IF CompilerVersion >= 21}
+  // Skip attribute data
+  Result := PParamInfo(cardinal(Result) + PWord(Result)^);
+  {$IFEND}
 end;
 
 { TMethodInfoHeaderHelper }

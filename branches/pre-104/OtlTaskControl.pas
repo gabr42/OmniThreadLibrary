@@ -117,6 +117,7 @@
 {$IFEND}
 {$IF CompilerVersion >= 21}
   {$DEFINE OTL_DeprecatedResume}
+  {$DEFINE OTL_KnowsParamCount}
 {$IFEND}
 {$WARN SYMBOL_PLATFORM OFF}
 
@@ -1396,6 +1397,7 @@ var
   paramNum        : integer;
   params          : PParamInfo;
   paramType       : PTypeInfo;
+  returnInfo      : PReturnInfo;
 begin
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
@@ -1419,12 +1421,17 @@ begin
   // only limited subset of method signatures is allowed:
   // (Self), (Self, const TOmniValue), (Self, var TObject)
   headerEnd := cardinal(methodInfoHeader) + methodInfoHeader^.Len;
-  params := PParamInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
-            - CShortLen + SizeOf(TReturnInfo) + Length(methodInfoHeader^.Name));
+  returnInfo := PReturnInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
+            - CShortLen + Length(methodInfoHeader^.Name));
+  params := PParamInfo(cardinal(returnInfo) + SizeOf(TReturnInfo));
   paramNum := 0;
   methodSignature := itUnknown;
   // Loop over the parameters
-  while cardinal(params) < headerEnd do begin
+  while (cardinal(params) < headerEnd) do begin
+    {$IFDEF OTL_KnowsParamCount}
+    if paramNum >= returnInfo.ParamCount then
+      break; //while
+    {$ENDIF OTL_KnowsParamCount}
     Inc(paramNum);
     paramType := params.ParamType^;
     if paramNum = 1 then
