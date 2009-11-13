@@ -250,6 +250,7 @@ type
     function  GetWorkItemInfo(var scheduledAt, startedAt: TDateTime;
       var description: string): boolean;
     function  IsExecuting(taskID: int64): boolean;
+    procedure Start;
     procedure Stop;
     function  WorkItemDescription: string;
     property NewWorkEvent: TDSiEventHandle read owtNewWorkEvent;
@@ -444,11 +445,6 @@ begin
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
   owtWorkItemLock := TTicketSpinLock.Create;
   owtCommChannel := CreateTwoWayChannel(100, owtTerminateEvent);
-  {$IFDEF OTL_DeprecatedResume}
-  Start;
-  {$ELSE}
-  Resume;
-  {$ENDIF OTL_DeprecatedResume}
 end; { TOTPWorkerThread.Create }
 
 destructor TOTPWorkerThread.Destroy;
@@ -604,6 +600,15 @@ begin
   Owner.Log(msg, params);
   {$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Log }
+
+procedure TOTPWorkerThread.Start;
+begin
+  {$IFDEF OTL_DeprecatedResume}
+  inherited Start;
+  {$ELSE}
+  inherited Resume;
+  {$ENDIF OTL_DeprecatedResume}
+end; { TOTPWorkerThread.Start }
 
 ///<summary>Gently stop the worker thread.
 procedure TOTPWorkerThread.Stop;
@@ -1033,6 +1038,7 @@ begin
       raise Exception.CreateFmt('TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
         'due to the implementation limitations', [CMaxConcurrentWorkers]);
     worker := TOTPWorkerThread.Create(owThreadDataFactory);
+    worker.Start;
     Task.RegisterComm(worker.OwnerCommEndpoint);
     owRunningWorkers.Add(worker);
     CountRunning.Increment;
