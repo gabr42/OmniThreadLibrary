@@ -95,7 +95,7 @@
   CompareAndSwap functions.
 - New unit OtlHooks contains API that can be used by external libraries to hook into
   OTL thread creation/destruction process and into exception chain.
-- Multiple bugs fixed.
+- All known bugs fixed.
 - New demos:
   - 25_WaitableComm: Demo for ReceiveWait and SendWait.
   - 26_MultiEventMonitor: How to run multiple event monitors in parallel.
@@ -108,3 +108,4 @@ To be resolved before release:
 - TODO in OtlCommon
 - TODOs in OtlThreadPool
 - TODO: Do we need OtlContainers?
+- check known issues

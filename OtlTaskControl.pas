@@ -925,6 +925,11 @@ begin
     if otSharedInfo_ref.MonitorWindow <> 0 then
       Win32Check(PostMessage(otSharedInfo_ref.MonitorWindow, COmniTaskMsg_Terminated,
         integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
+    //Task controller could die any time now. Make sure we're not using shared
+    //structures anymore.
+    otExecutor_ref   := nil;
+    otParameters_ref := nil;
+    otSharedInfo_ref := nil;
   end;
   if assigned(chainTo) then
     chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
@@ -2239,11 +2244,15 @@ begin
 end; { TOmniThread.Create }
 
 procedure TOmniThread.Execute;
+var
+  taskName: string;
 begin
-  SendThreadNotifications(tntCreate, task.Name);
+  taskName := task.Name;
+  SendThreadNotifications(tntCreate, taskName);
   try
     (otTask as IOmniTaskExecutor).Execute;
-  finally SendThreadNotifications(tntDestroy, task.Name); end;
+    // task reference may not be valid anymore
+  finally SendThreadNotifications(tntDestroy, taskName); end;
 end; { TOmniThread.Execute }
 
 { TOmniTaskControlListEnumerator }
