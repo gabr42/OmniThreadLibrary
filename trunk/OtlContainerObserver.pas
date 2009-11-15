@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-02-19
-///   Last modification : 2009-04-06
-///   Version           : 1.0
+///   Last modification : 2009-11-15
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2009-11-15
+///       - Windows message observer exposes some of its internals.
 ///     1.01: 2009-04-06
 ///       - External event can be provided in the TOmniContainerWindowsEventObserverImpl
 ///         constructor.
@@ -52,8 +54,6 @@ uses
   Classes,
   OtlSync,
   GpStuff;
-
-// TODO 1 -oPrimoz Gabrijelcic : Move this stuff to OtlContainers
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -81,10 +81,18 @@ type
     function  GetEvent: THandle; virtual; abstract;
   end; { TOmniContainerWindowsEventObserver }
 
+  TOmniContainerWindowsMessageObserver = class(TOmniContainerObserver)
+  strict protected
+    function  GetHandle: THandle; virtual; abstract;
+  public
+    procedure Send(aMessage: cardinal; wParam, lParam: integer); virtual; abstract;
+    property Handle: THandle read GetHandle;
+  end; { TOmniContainerWindowsMessageObserver }
+
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
-    wParam, lParam: integer): TOmniContainerObserver;
+    wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
 
 implementation
 
@@ -106,23 +114,21 @@ type
     procedure Notify; override;
   end; { TOmniContainerWindowsEventObserverImpl }
 
-  TOmniContainerWindowsMessageObserver = class(TOmniContainerObserver)
+  TOmniContainerWindowsMessageObserverImpl = class(TOmniContainerWindowsMessageObserver)
   strict private
     cwmoHandle  : THandle;
     cwmoLParam  : integer;
     cwmoMessage : cardinal;
     cwmoWParam  : integer;
+  strict protected
+    function  GetHandle: THandle; override;
   public
+    procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
 
 { exports }
-
-//function CreateContainerObserverList: IOmniContainerObserverList;
-//begin
-//  Result := TOmniContainerObserverList.Create;
-//end; { CreateContainerObserverList }
 
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
   TOmniContainerWindowsEventObserver;
@@ -131,9 +137,9 @@ begin
 end; { CreateContainerWindowsEventObserver }
 
 function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
-  lParam: integer): TOmniContainerObserver;
+  lParam: integer): TOmniContainerWindowsMessageObserver;
 begin
-  Result := TOmniContainerWindowsMessageObserver.Create(hWindow, msg, wParam, lParam);
+  Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
 
 { TOmniContainerObserver }
@@ -193,7 +199,7 @@ end; { TOmniContainerWindowsEventObserverImpl.Notify }
 
 { TOmniContainerWindowsMessageObserver }
 
-constructor TOmniContainerWindowsMessageObserver.Create(handle: THandle; aMessage:
+constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:
   cardinal; wParam, lParam: integer);
 begin
   inherited Create;
@@ -203,10 +209,21 @@ begin
   cwmoLParam := lParam;
 end; { TOmniContainerWindowsMessageObserver.Create }
 
-procedure TOmniContainerWindowsMessageObserver.Notify;
+function TOmniContainerWindowsMessageObserverImpl.GetHandle: THandle;
+begin
+  Result := cwmoHandle;
+end; { TOmniContainerWindowsMessageObserverImpl.GetHandle }
+
+procedure TOmniContainerWindowsMessageObserverImpl.Notify;
 begin
   Win32Check(PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam));
 end; { TOmniContainerWindowsMessageObserver.Notify }
+
+procedure TOmniContainerWindowsMessageObserverImpl.Send(aMessage: cardinal;
+  wParam, lParam: integer);
+begin
+  Win32Check(PostMessage(cwmoHandle, aMessage, wParam, lParam));
+end; { TOmniContainerWindowsMessageObserverImpl.Send }
 
 end.
 

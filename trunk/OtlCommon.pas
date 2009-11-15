@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-04-18
-///   Version           : 1.04
+///   Last modification : 2009-11-15
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2009-11-15
+///       - Removed lots of stuff that is now implemented using container observers.
 ///     1.04: 2009-04-18
 ///       - Added WideString support to TOmniValue.
 ///     1.03a: 2009-04-05
@@ -198,28 +200,6 @@ type
     function ParamByName(const paramName: string): TOmniValue;
   end; { TOmniValueContainer }
 
-  IOmniMonitorParams = interface
-    function  GetLParam: integer;
-    function  GetMessage: cardinal;
-    function  GetWindow: THandle;
-    function  GetWParam: integer;
-  //
-    property Window: THandle read GetWindow;
-    property Msg: cardinal read GetMessage;
-    property WParam: integer read GetWParam;
-    property LParam: integer read GetLParam;
-  end; { IOmniMonitorParams }
-
-  IOmniMonitorSupport = interface ['{6D5F1191-9E4A-4DD5-99D8-694C95B0DE90}']
-    function  GetMonitor: IOmniMonitorParams;
-  //
-    procedure Notify; overload;
-    procedure Notify(obj: TObject); overload; 
-    procedure RemoveMonitor;
-    procedure SetMonitor(const monitor: IOmniMonitorParams);
-    property Monitor: IOmniMonitorParams read GetMonitor;
-  end; { IOmniMonitorSupport }
-
   IOmniCounter = interface ['{3A73CCF3-EDC5-484F-8459-532B8C715E3C}']
     function  GetValue: integer;
     procedure SetValue(const value: integer);
@@ -257,10 +237,6 @@ type
   end; { IInterfaceHash }
 
   function CreateCounter(initialValue: integer = 0): IOmniCounter;
-
-  function CreateOmniMonitorParams(window: THandle; msg: cardinal;
-    wParam, lParam: integer): IOmniMonitorParams;
-  function CreateOmniMonitorSupport: IOmniMonitorSupport;
 
   function CreateInterfaceDictionary: IInterfaceDictionary;
 
@@ -355,40 +331,6 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
-  // TODO 1 -oPrimoz Gabrijelcic : This one goes out?
-  TOmniMonitorParams = class(TInterfacedObject, IOmniMonitorParams)
-  strict private
-    ompLParam : integer;
-    ompMessage: cardinal;
-    ompWindow : THandle;
-    ompWParam : integer;
-  protected
-    function  GetLParam: integer;
-    function  GetMessage: cardinal;
-    function  GetWindow: THandle;
-    function  GetWParam: integer;
-  public
-    constructor Create(window: THandle; msg: cardinal; wParam, lParam: integer);
-    destructor Destroy; override;
-    property LParam: integer read GetLParam;
-    property Msg: cardinal read GetMessage;
-    property Window: THandle read GetWindow;
-    property WParam: integer read GetWParam;
-  end; { TOmniMonitorParams }
-
-  TOmniMonitorSupport = class(TInterfacedObject, IOmniMonitorSupport)
-  strict private
-    omsMonitor: IOmniMonitorParams;
-  protected
-    function  GetMonitor: IOmniMonitorParams;
-  public
-    procedure Notify; overload;
-    procedure Notify(obj: TObject); overload;
-    procedure RemoveMonitor;
-    procedure SetMonitor(const monitor: IOmniMonitorParams);
-    property Monitor: IOmniMonitorParams read GetMonitor;
-  end; { TOmniMonitorSupport }
-
   PPHashItem = ^PHashItem;
   PHashItem = ^THashItem;
   THashItem = record
@@ -440,17 +382,6 @@ function CreateCounter(initialValue: integer): IOmniCounter;
 begin
   Result := TOmniCounter.Create(initialValue);
 end; { CreateCounter }
-
-function CreateOmniMonitorParams(window: THandle; msg: cardinal;
-  wParam, lParam: integer): IOmniMonitorParams;
-begin
-  Result := TOmniMonitorParams.Create(window, msg, wParam, lParam);
-end; { CreateOmniMonitorParams }
-
-function CreateOmniMonitorSupport: IOmniMonitorSupport;
-begin
-  Result := TOmniMonitorSupport.Create;
-end; { CreateOmniMonitorSupport }
 
 function CreateInterfaceDictionary: IInterfaceDictionary;
 begin
@@ -599,77 +530,6 @@ procedure TOmniCounter.SetValue(const value: integer);
 begin
   ocValue.Value := value;
 end; { TOmniCounter.SetValue }
-
-{ TOmniMonitorSupport }
-
-function TOmniMonitorSupport.GetMonitor: IOmniMonitorParams;
-begin
-  Result := omsMonitor;
-end; { TOmniMonitorSupport.GetMonitor }
-
-procedure TOmniMonitorSupport.Notify;
-var
-  params: IOmniMonitorParams;
-begin
-  params := GetMonitor;
-  if assigned(params) then
-    Win32Check(PostMessage(params.Window, params.Msg, params.WParam, params.LParam));
-end; { TOmniMonitorSupport.Notify }
-
-procedure TOmniMonitorSupport.Notify(obj: TObject);
-var
-  params: IOmniMonitorParams;
-begin
-  params := GetMonitor;
-  if not (assigned(params) and
-          PostMessage(params.Window, params.Msg, params.WParam, LParam(obj)))
-  then
-    FreeAndNil(obj);
-end; { TOmniMonitorSupport.Notify }
-
-procedure TOmniMonitorSupport.RemoveMonitor;
-begin
-  omsMonitor := nil;
-end; { TOmniMonitorSupport.RemoveMonitor }
-
-procedure TOmniMonitorSupport.SetMonitor(const monitor: IOmniMonitorParams);
-begin
-  omsMonitor := monitor;
-end; { TOmniMonitorSupport.SetMonitor }
-
-constructor TOmniMonitorParams.Create(window: THandle; msg: cardinal; wParam, lParam:
-  integer);
-begin
-  ompMessage := msg;
-  ompLParam := lParam;
-  ompWParam := wParam;
-  ompWindow := window;
-end; { TOmniMonitorParams.Create }
-
-destructor TOmniMonitorParams.Destroy;
-begin
-  inherited Destroy;
-end;
-
-function TOmniMonitorParams.GetLParam: integer;
-begin
-  Result := ompLParam;
-end; { TOmniMonitorParams.GetLParam }
-
-function TOmniMonitorParams.GetMessage: cardinal;
-begin
-  Result := ompMessage;
-end; { TOmniMonitorParams.GetMessage }
-
-function TOmniMonitorParams.GetWindow: THandle;
-begin
-  Result := ompWindow;
-end; { TOmniMonitorParams.GetWindow }
-
-function TOmniMonitorParams.GetWParam: integer;
-begin
-  Result := ompWParam;
-end; { TOmniMonitorParams.GetWParam }
 
 { TInterfaceDictionaryPair }
 
