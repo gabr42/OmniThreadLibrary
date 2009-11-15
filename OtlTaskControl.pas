@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-13
-///   Version           : 1.11a
+///   Last modification : 2009-11-15
+///   Version           : 1.12
 ///</para><para>
 ///   History:
+///     1.12: 2009-11-15
+///       - Event monitor notifications implemented with container observer.
 ///     1.11a: 2009-11-13
 ///       - Cleanup in TOmniTask.Execute reordered to fix Issue 13.
 ///     1.11: 2009-11-13

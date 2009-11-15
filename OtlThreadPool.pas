@@ -72,10 +72,8 @@ unit OtlThreadPool;
 
 interface
 
-{ TODO 1 -oPrimoz Gabrijelcic : Use OtlCommunication to send messages to the Monitor. }
-
+// TODO 1 -oPrimoz Gabrijelcic : Use OtlCommunication to send messages to the Monitor.
 // TODO 1 -oPrimoz Gabrijelcic : Hook OtlHooks into thread creation
-
 // TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
 // TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example)
 
@@ -186,6 +184,7 @@ uses
   GpStuff,
   OtlCommon,
   OtlComm,
+  OtlContainerObserver,
   OtlTaskControl,
   OtlEventMonitor;
 
@@ -272,7 +271,7 @@ type
   strict private
     owDestroying        : boolean;
     owIdleWorkers       : TObjectList;
-    owMonitorSupport    : IOmniMonitorSupport;
+    owMonitorObserver   : TOmniContainerWindowsMessageObserver;
     owName              : string;
     owRunningWorkers    : TObjectList;
     owStoppingWorkers   : TObjectList;
@@ -310,16 +309,16 @@ type
     procedure Cancel(const params: TOmniValue);
     procedure CancelAll(var doneSignal: TOmniWaitableValue);
     procedure MaintainanceTimer;
+    // invoked from TOTPWorkerThreads
+    procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
+    procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
+    procedure MsgThreadDestroying(var msg: TOmniMessage); message MSG_THREAD_DESTROYING;
     procedure PruneWorkingQueue;
     procedure RemoveMonitor;
     procedure Schedule(var workItem: TOTPWorkItem);
     procedure SetMonitor(const hWindow: TOmniValue);
     procedure SetName(const name: TOmniValue);
     procedure SetThreadDataFactory(const threadDataFactory: TOmniValue);
-    // invoked from TOTPWorkerThreads
-    procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
-    procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
-    procedure MsgThreadDestroying(var msg: TOmniMessage); message MSG_THREAD_DESTROYING;
   end; { TOTPWorker }
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
@@ -737,8 +736,8 @@ end; { TOTPWorker.Cleanup }
 
 procedure TOTPWorker.ForwardThreadCreated(threadID: DWORD);
 begin
-  owMonitorSupport.Notify(
-    TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID));
+  owMonitorObserver.Send(COmniPoolMsg, 0,
+    cardinal(TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID)));
 end; { TOTPWorker.ForwardThreadCreated }
 
 procedure TOTPWorker.ForwardThreadDestroying(threadID: DWORD; threadPoolOperation:
@@ -750,13 +749,12 @@ begin
     Task.UnregisterComm(worker.OwnerCommEndpoint);
     Worker.Stopped := true;
   end;
-  owMonitorSupport.Notify(
-    TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation, threadID));
+  owMonitorObserver.Send(COmniPoolMsg, 0,
+    cardinal(TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation, threadID)));
 end; { TOTPWorker.ForwardThreadDestroying }
 
 function TOTPWorker.Initialize: boolean;
 begin
-  owMonitorSupport := CreateOmniMonitorSupport;
   owIdleWorkers := TObjectList.Create(false);
   owRunningWorkers := TObjectList.Create(false);
   CountRunning.Value := 0;
@@ -876,7 +874,7 @@ begin
           ResumeThread(worker.Handle);
           break; //while
         end;
-        TerminateThread(worker.Handle, cardinal(-1)); 
+        TerminateThread(worker.Handle, cardinal(-1));
         ForwardThreadDestroying(worker.ThreadID, tpoKillThread, worker);
       end
       else begin
@@ -931,8 +929,8 @@ begin
     FreeAndNil(workItem);
     Exit;
   end;
-  owMonitorSupport.Notify(
-    TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID));
+  owMonitorObserver.Send(COmniPoolMsg, 0,
+    cardinal(TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID)));
   {$IFDEF LogThreadPool}Log('Thread %s completed request %s with status %s:%s', [worker.Description, workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]);{$ENDIF LogThreadPool}
   {$IFDEF LogThreadPool}Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
   FreeAndNil(workItem);
@@ -981,7 +979,7 @@ begin
       CountQueued.Decrement;
       errorMsg := Format('Execution queue is too long (%d work items)', [owWorkItemQueue.Count]);
       workItem.TerminateTask(EXIT_THREADPOOL_QUEUE_TOO_LONG, errorMsg);
-      RequestCompleted(workItem, nil); 
+      RequestCompleted(workItem, nil);
     end; //while
   end;
   if MaxQueuedTime_sec.Value > 0 then begin
@@ -1011,7 +1009,7 @@ end; { TOTPWorker.PruneWorkingQueue }
 
 procedure TOTPWorker.RemoveMonitor;
 begin
-  owMonitorSupport.RemoveMonitor;
+  FreeAndNil(owMonitorObserver);
 end; { TOTPWorker.RemoveMonitor }
 
 procedure TOTPWorker.RequestCompleted(workItem: TOTPWorkItem; worker: TOTPWorkerThread);
@@ -1067,7 +1065,11 @@ end; { TOTPWorker.ScheduleNext }
 
 procedure TOTPWorker.SetMonitor(const hWindow: TOmniValue);
 begin
-  owMonitorSupport.SetMonitor(CreateOmniMonitorParams(hWindow, COmniPoolMsg, 0, 0));
+  if not assigned(owMonitorObserver) then
+    owMonitorObserver := CreateContainerWindowsMessageObserver(hWindow, COmniPoolMsg, 0, 0)
+  else if owMonitorObserver.Handle <> THandle(hWindow) then begin
+    raise Exception.Create('TOTPWorker.SetMonitor: Task can be only monitored with a single monitor');
+  end;
 end; { TOTPWorker.SetMonitor }
 
 procedure TOTPWorker.SetName(const name: TOmniValue);
