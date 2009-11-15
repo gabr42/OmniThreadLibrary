@@ -1067,9 +1067,8 @@ procedure TOTPWorker.SetMonitor(const hWindow: TOmniValue);
 begin
   if not assigned(owMonitorObserver) then
     owMonitorObserver := CreateContainerWindowsMessageObserver(hWindow, COmniPoolMsg, 0, 0)
-  else if owMonitorObserver.Handle <> THandle(hWindow) then begin
+  else if owMonitorObserver.Handle <> THandle(hWindow) then
     raise Exception.Create('TOTPWorker.SetMonitor: Task can be only monitored with a single monitor');
-  end;
 end; { TOTPWorker.SetMonitor }
 
 procedure TOTPWorker.SetName(const name: TOmniValue);
