@@ -19,6 +19,12 @@
     <Projects Include="20_QuickSort\app_20_QuickSort.dproj" />
     <Projects Include="22_TerminationTest\app_22_TerminationTest.dproj" />
     <Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" />
+    <Projects Include="24_ConnectionPool\app_24_ConnectionPool.dproj" />
+    <Projects Include="25_WaitableComm\app_25_WaitableComm.dproj" />
+    <Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" />
+    <Projects Include="27_RecursiveTree\app_27_RecursiveTree.dproj" />
+    <Projects Include="28_Hooks\app_28_Hooks.dproj" />
+    <Projects Include="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" />
     <Projects Include="2_TwoWayHello\app_2_TwoWayHello.dproj" />
     <Projects Include="3_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" />
     <Projects Include="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" />
@@ -241,14 +247,68 @@
   <Target Name="app_23_BackgroundFileSearch:Make">
     <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" Targets="Make" />
   </Target>
+  <Target Name="app_24_ConnectionPool">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="" />
+  </Target>
+  <Target Name="app_24_ConnectionPool:Clean">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_24_ConnectionPool:Make">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_25_WaitableComm">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="" />
+  </Target>
+  <Target Name="app_25_WaitableComm:Clean">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_25_WaitableComm:Make">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_26_MultiEventMonitor">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="" />
+  </Target>
+  <Target Name="app_26_MultiEventMonitor:Clean">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_26_MultiEventMonitor:Make">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_27_RecursiveTree">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="" />
+  </Target>
+  <Target Name="app_27_RecursiveTree:Clean">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_27_RecursiveTree:Make">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_28_Hooks">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="" />
+  </Target>
+  <Target Name="app_28_Hooks:Clean">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_28_Hooks:Make">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_29_ImplicitEventMonitor">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="" />
+  </Target>
+  <Target Name="app_29_ImplicitEventMonitor:Clean">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_29_ImplicitEventMonitor:Make">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="Make" />
+  </Target>
   <Target Name="Build">
-    <CallTarget Targets="app_0_Beep;app_1_HelloWorld;app_2_TwoWayHello;app_3_HelloWorld_with_package;app_4_TwoWayHello_with_package;app_5_TwoWayHello_without_loop;app_6_TwoWayHello_with_object_worker;app_7_InitTest;app_8_RegisterComm;app_9_Communications;app_10_Containers;app_11_ThreadPool;app_12_Lock;app_13_Exceptions;app_14_TerminateWhen;app_15_TaskGroup;app_16_ChainTo;app_17_MsgWait;app_18_StringMsgDispatch;app_19_StringMsgBenchmark;app_20_QuickSort;app_22_TerminationTest;app_23_BackgroundFileSearch" />
+    <CallTarget Targets="app_0_Beep;app_1_HelloWorld;app_2_TwoWayHello;app_3_HelloWorld_with_package;app_4_TwoWayHello_with_package;app_5_TwoWayHello_without_loop;app_6_TwoWayHello_with_object_worker;app_7_InitTest;app_8_RegisterComm;app_9_Communications;app_10_Containers;app_11_ThreadPool;app_12_Lock;app_13_Exceptions;app_14_TerminateWhen;app_15_TaskGroup;app_16_ChainTo;app_17_MsgWait;app_18_StringMsgDispatch;app_19_StringMsgBenchmark;app_20_QuickSort;app_22_TerminationTest;app_23_BackgroundFileSearch;app_24_ConnectionPool;app_25_WaitableComm;app_26_MultiEventMonitor;app_27_RecursiveTree;app_28_Hooks;app_29_ImplicitEventMonitor" />
   </Target>
   <Target Name="Clean">
-    <CallTarget Targets="app_0_Beep:Clean;app_1_HelloWorld:Clean;app_2_TwoWayHello:Clean;app_3_HelloWorld_with_package:Clean;app_4_TwoWayHello_with_package:Clean;app_5_TwoWayHello_without_loop:Clean;app_6_TwoWayHello_with_object_worker:Clean;app_7_InitTest:Clean;app_8_RegisterComm:Clean;app_9_Communications:Clean;app_10_Containers:Clean;app_11_ThreadPool:Clean;app_12_Lock:Clean;app_13_Exceptions:Clean;app_14_TerminateWhen:Clean;app_15_TaskGroup:Clean;app_16_ChainTo:Clean;app_17_MsgWait:Clean;app_18_StringMsgDispatch:Clean;app_19_StringMsgBenchmark:Clean;app_20_QuickSort:Clean;app_22_TerminationTest:Clean;app_23_BackgroundFileSearch:Clean" />
+    <CallTarget Targets="app_0_Beep:Clean;app_1_HelloWorld:Clean;app_2_TwoWayHello:Clean;app_3_HelloWorld_with_package:Clean;app_4_TwoWayHello_with_package:Clean;app_5_TwoWayHello_without_loop:Clean;app_6_TwoWayHello_with_object_worker:Clean;app_7_InitTest:Clean;app_8_RegisterComm:Clean;app_9_Communications:Clean;app_10_Containers:Clean;app_11_ThreadPool:Clean;app_12_Lock:Clean;app_13_Exceptions:Clean;app_14_TerminateWhen:Clean;app_15_TaskGroup:Clean;app_16_ChainTo:Clean;app_17_MsgWait:Clean;app_18_StringMsgDispatch:Clean;app_19_StringMsgBenchmark:Clean;app_20_QuickSort:Clean;app_22_TerminationTest:Clean;app_23_BackgroundFileSearch:Clean;app_24_ConnectionPool:Clean;app_25_WaitableComm:Clean;app_26_MultiEventMonitor:Clean;app_27_RecursiveTree:Clean;app_28_Hooks:Clean;app_29_ImplicitEventMonitor:Clean" />
   </Target>
   <Target Name="Make">
-    <CallTarget Targets="app_0_Beep:Make;app_1_HelloWorld:Make;app_2_TwoWayHello:Make;app_3_HelloWorld_with_package:Make;app_4_TwoWayHello_with_package:Make;app_5_TwoWayHello_without_loop:Make;app_6_TwoWayHello_with_object_worker:Make;app_7_InitTest:Make;app_8_RegisterComm:Make;app_9_Communications:Make;app_10_Containers:Make;app_11_ThreadPool:Make;app_12_Lock:Make;app_13_Exceptions:Make;app_14_TerminateWhen:Make;app_15_TaskGroup:Make;app_16_ChainTo:Make;app_17_MsgWait:Make;app_18_StringMsgDispatch:Make;app_19_StringMsgBenchmark:Make;app_20_QuickSort:Make;app_22_TerminationTest:Make;app_23_BackgroundFileSearch:Make" />
+    <CallTarget Targets="app_0_Beep:Make;app_1_HelloWorld:Make;app_2_TwoWayHello:Make;app_3_HelloWorld_with_package:Make;app_4_TwoWayHello_with_package:Make;app_5_TwoWayHello_without_loop:Make;app_6_TwoWayHello_with_object_worker:Make;app_7_InitTest:Make;app_8_RegisterComm:Make;app_9_Communications:Make;app_10_Containers:Make;app_11_ThreadPool:Make;app_12_Lock:Make;app_13_Exceptions:Make;app_14_TerminateWhen:Make;app_15_TaskGroup:Make;app_16_ChainTo:Make;app_17_MsgWait:Make;app_18_StringMsgDispatch:Make;app_19_StringMsgBenchmark:Make;app_20_QuickSort:Make;app_22_TerminationTest:Make;app_23_BackgroundFileSearch:Make;app_24_ConnectionPool:Make;app_25_WaitableComm:Make;app_26_MultiEventMonitor:Make;app_27_RecursiveTree:Make;app_28_Hooks:Make;app_29_ImplicitEventMonitor:Make" />
   </Target>
   <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
 </Project>
