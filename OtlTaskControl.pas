@@ -318,7 +318,7 @@ type
     ostiCommChannel       : IOmniTwoWayChannel;
     ostiCounter           : IOmniCounter;
     ostiLock              : TSynchroObject;
-    ostiMonitorWindow     : THandle;
+    ostiMonitor           : TOmniContainerWindowsMessageObserver;
     ostiStopped           : boolean;
     ostiTaskName          : string;
     ostiTerminatedEvent   : THandle;
@@ -331,7 +331,7 @@ type
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
-    property MonitorWindow: THandle read ostiMonitorWindow write ostiMonitorWindow; // TODO 1 -oPrimoz Gabrijelcic : Why do we need it?
+    property Monitor: TOmniContainerWindowsMessageObserver read ostiMonitor write ostiMonitor;
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
     property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
@@ -604,7 +604,6 @@ type
     otcDestroyLock    : boolean;
     otcEventMonitor   : TObject{TOmniEventMonitor};
     otcExecutor       : TOmniTaskExecutor;
-    otcMonitorObserver: TOmniContainerObserver;
     otcOnMessage      : TOmniTaskMessageEvent;
     otcOnTerminated   : TOmniTaskTerminatedEvent;
     otcOwningPool     : IOmniThreadPool;
@@ -924,9 +923,9 @@ begin
       chainTo := otSharedInfo_ref.ChainTo;
     otSharedInfo_ref.ChainTo := nil;
   finally
-    if otSharedInfo_ref.MonitorWindow <> 0 then
-      Win32Check(PostMessage(otSharedInfo_ref.MonitorWindow, COmniTaskMsg_Terminated,
-        integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi)));
+    if assigned(otSharedInfo_ref.Monitor) then
+      otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
+        integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
     //Task controller could die any time now. Make sure we're not using shared
     //structures anymore.
     otExecutor_ref   := nil;
@@ -2065,12 +2064,12 @@ end; { TOmniTaskControl.OnTerminated }
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
-  if assigned(otcMonitorObserver) then begin
-    otcSharedInfo.MonitorWindow := 0;
+  if assigned(otcSharedInfo.Monitor) then begin
     EnsureCommChannel;
-    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(otcMonitorObserver,
-      coiNotifyOnAllInserts);
-    FreeAndNil(otcMonitorObserver);
+    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
+      otcSharedInfo.Monitor, coiNotifyOnAllInserts);
+    otcSharedInfo.Monitor.Free;
+    otcSharedInfo.Monitor := nil;
   end;
   Result := Self;
 end; { TOmniTaskControl.RemoveMonitor }
@@ -2100,21 +2099,19 @@ end; { TOmniTaskControl.Schedule }
 
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
-  if not assigned(otcMonitorObserver) then begin
+  if not assigned(otcSharedInfo.Monitor) then begin
     if otcParameters.IsLocked then
       raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
-    otcSharedInfo.MonitorWindow := hWindow;
     EnsureCommChannel;
-    otcMonitorObserver := CreateContainerWindowsMessageObserver(
+    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(
       hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
       integer(Int64Rec(UniqueID).Hi));
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
-      otcMonitorObserver, coiNotifyOnAllInserts);
+      otcSharedInfo.Monitor, coiNotifyOnAllInserts);
   end
-  else if otcSharedInfo.MonitorWindow <> hWindow then begin
+  else if otcSharedInfo.Monitor.Handle <> hWindow then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Task can be only monitored with a single monitor');
-  end;
-  otcMonitorObserver.Activate;
+  otcSharedInfo.Monitor.Activate;
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
 
