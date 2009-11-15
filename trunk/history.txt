@@ -72,14 +72,14 @@
 - Added connection pool demo.
 
 1.04:
-- COMPATIBILITY ISSUES
-  - Changed semantics in comm event notifications! When you get the 'new message' event,
-    read all messages from the queue in a loop!
-  - Message is passed to the TOmniEventMonitor.OnTaskMessage handler. There's no need
-    to read from Comm queue in the handler.
-  - Exceptions in tasks are now visible by default. To hide them, use
-    IOmniTaskControl.SilentExceptions. Test 13_Exceptions was improved to demonstrate this
-    behaviour.
+*** COMPATIBILITY ISSUES ***
+  *** Changed semantics in comm event notifications! When you get the 'new message'
+      event, read all messages from the queue in a loop!
+  *** Message is passed to the TOmniEventMonitor.OnTaskMessage handler. There's no need
+      to read from Comm queue in the handler.
+  *** Exceptions in tasks are now visible by default. To hide them, use
+      IOmniTaskControl.SilentExceptions. Test 13_Exceptions was improved to demonstrate
+      this behaviour.
 - Works with Delphi 2010.
 - Default communication queue size reduced to 1000 messages.
 - Support for 'wait and send' in IOmniCommunicationEndpoint.SendWait.
@@ -104,5 +104,3 @@
   - 29_ImplicitEventMonitor: Demo for OnMessage and OnTerminated, named method approach.
   - 30_AnonymousEventMonitor: Demo for OnMessage and OnTerminated, anonymous method approach.
 
-To be resolved before release:
-- GJ problem in mail
