@@ -21,6 +21,8 @@ type
     seMonitors     : TSpinEdit;
     StatusBar      : TStatusBar;
     Timer1         : TTimer;
+    lblQueueSize: TLabel;
+    inpQueueSize: TSpinEdit;
     procedure btnStartClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure OTLMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
@@ -74,6 +76,7 @@ begin
     OTLMonitors[n].OnTaskMessage := OTLMonitorTaskMessage;
     OTLMonitors[n].OnTaskTerminated := OTLMonitorTaskTerminated;
     FTasks[n] := CreateTask(TaskProcedure, 'Task ' + Char(n + ord('A')) + ': ')
+      .SetQueueSize(inpQueueSize.Value)
       .MonitorWith(OTLMonitors[n])
       .Run;
   end;

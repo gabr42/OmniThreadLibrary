@@ -31,6 +31,13 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
     Height = 13
     Caption = 'Number of threads/monitors:'
   end
+  object lblQueueSize: TLabel
+    Left = 8
+    Top = 62
+    Width = 57
+    Height = 13
+    Caption = 'Queue size:'
+  end
   object btnStart: TButton
     Left = 349
     Top = 8
@@ -42,9 +49,9 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
   end
   object lbFiles: TListBox
     Left = 8
-    Top = 56
+    Top = 87
     Width = 424
-    Height = 426
+    Height = 395
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 1
@@ -76,6 +83,16 @@ object frmMultiMonitorDemo: TfrmMultiMonitorDemo
     Height = 19
     Panels = <>
     SimplePanel = True
+  end
+  object inpQueueSize: TSpinEdit
+    Left = 119
+    Top = 59
+    Width = 73
+    Height = 22
+    MaxValue = 1000000
+    MinValue = 1
+    TabOrder = 5
+    Value = 1000
   end
   object Timer1: TTimer
     Enabled = False
