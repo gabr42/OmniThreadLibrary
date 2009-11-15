@@ -105,7 +105,4 @@
   - 30_AnonymousEventMonitor: Demo for OnMessage and OnTerminated, anonymous method approach.
 
 To be resolved before release:
-- TODO in OtlCommon
-- TODOs in OtlThreadPool
-- TODO: Do we need OtlContainersObserver?
-- check known issues
+- GJ problem in mail

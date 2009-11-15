@@ -73,7 +73,8 @@ unit OtlThreadPool;
 interface
 
 // TODO 1 -oPrimoz Gabrijelcic : Should be monitorable by the OmniTaskEventDispatch
-// TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example) 
+// TODO 3 -oPrimoz Gabrijelcic : Needs an async event reporting unexpected states (kill threads, for example)
+// TODO 5 -oPrimoz Gabrijelcic : Loggers should (maybe) send log info to the event monitor 
 
 uses
   Windows,
@@ -635,9 +636,9 @@ end; { TOTPWorkerThread.IsExecuting }
 
 procedure TOTPWorkerThread.Log(const msg: string; params: array of const);
 begin
-{$IFDEF LogThreadPool}
+  {$IFDEF LogThreadPool}
   Owner.Log(msg, params);
-{$ENDIF LogThreadPool}
+  {$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Log }
 
 procedure TOTPWorkerThread.Start;
@@ -878,7 +879,6 @@ end; { TOTPWorker.LocateThread }
 
 procedure TOTPWorker.Log(const msg: string; const params: array of const );
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Pass log messages to the event monitor 
   {$IFDEF LogThreadPool}
   // use whatever logger you want
   {$ENDIF LogThreadPool}
@@ -1338,7 +1338,6 @@ end; { TOmniThreadPool.SetMinWorkers }
 function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
 begin
   otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, hWindow);
-  // TODO 1 -oPrimoz Gabrijelcic : Not OK, must be executed immediately! 
   Result := Self;
 end; { TOmniThreadPool.SetMonitor }
 
