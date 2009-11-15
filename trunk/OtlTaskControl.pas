@@ -555,6 +555,7 @@ type
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
@@ -585,7 +586,6 @@ type
     property Task: IOmniTask read otTask;
   end; { TOmniThread }
 
-  // TODO 1 -oPrimoz Gabrijelcic : Used in TOmniTaskGroup, maybe it could be removed?
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetTerminatedEvent: THandle;
   //
@@ -908,7 +908,7 @@ begin
           if silentException then
             SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message)
           else begin
-            otExecutor_ref.TaskException := AcquireExceptionObject;
+            SetException(AcquireExceptionObject);
             raise;
           end;
         end;
@@ -985,6 +985,11 @@ procedure TOmniTask.RegisterComm(const comm: IOmniCommunicationEndpoint);
 begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
+
+procedure TOmniTask.SetException(exceptionObject: pointer);
+begin
+  otExecutor_ref.TaskException := exceptionObject;
+end; { TOmniTask.SetException }
 
 procedure TOmniTask.SetExitStatus(exitCode: integer; const exitMessage: string);
 begin

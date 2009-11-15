@@ -85,6 +85,7 @@ type
   //
     procedure Enforced(forceExecution: boolean = true);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
     procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
