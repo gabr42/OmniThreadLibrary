@@ -29,6 +29,7 @@ type
     FScanTask      : IOmniTaskControl;
     FWaitingCount  : string;
     FWaitingMessage: string;
+    procedure StopScan(Sender: TObject);
   end;
 
 var
@@ -87,7 +88,8 @@ end;
 procedure TfrmBackgroundFileSearchDemo.btnScanClick(Sender: TObject);
 begin
   FFileList := TStringList.Create;
-  btnScan.Enabled := false;
+  btnScan.Caption := 'Stop';
+  btnScan.OnClick := StopScan;
   tmrDisplayStatus.Enabled := true;
   FScanTask := CreateTask(ScanFolders, 'ScanFolders')
     .MonitorWith(OTLMonitor)
@@ -130,7 +132,16 @@ begin
   lbFiles.Items.AddStrings(FFileList);
   FreeAndNil(FFileList);
   FScanTask := nil;
-  btnScan.Enabled := true;
+  btnScan.Caption := 'Start';
+  btnScan.OnClick := btnScanClick;
+end;
+
+procedure TfrmBackgroundFileSearchDemo.StopScan(Sender: TObject);
+begin
+  FScanTask.Terminate; // APP Hangs here
+  FScanTask := nil;
+  btnScan.Caption := 'Start';
+  btnScan.OnClick := btnScanClick;
 end;
 
 procedure TfrmBackgroundFileSearchDemo.tmrDisplayStatusTimer(Sender: TObject);
