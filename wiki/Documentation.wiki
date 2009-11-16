@@ -1,4 +1,4 @@
-#summary OmniThreadLibrary documentation home
+#summary OmniThreadLibrary documentation
 #labels Featured
 #sidebar TableOfContents
 
