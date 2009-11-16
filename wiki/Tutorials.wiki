@@ -1,0 +1,21 @@
+#summary OmniThreadLibrary tutorials
+
+= Tutorials =
+
+[http://17slon.com/blogs/gabr/2008/06/omnithreadlibrary-example-1-beep-world.html The simplest possible OTL threading code]
+
+[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-example-2-hello-world.html Hello, World example]
+
+[http://17slon.com/blogs/gabr/2008/09/omnithreadlibrary-patterns-how-to-not.html How to (not) create a task]
+
+[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-example-3.html Bidirectional communication]
+
+[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-example-4.html Message-driven worker, the OTL way]
+
+[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-example-5-registering.html Registering additional communication channels]
+
+[http://17slon.com/blogs/gabr/2008/09/processing-windows-messages-in.html Processing Windows messages]
+
+[http://17slon.com/blogs/gabr/2008/11/background-file-scanning-with.html Background file scanning]
+
+[http://17slon.com/blogs/gabr/2009/02/building-connection-pool.html Building a connection pool]
