@@ -208,7 +208,7 @@ type
   TOmniOnTerminatedFunction = reference to procedure(const task: IOmniTaskControl);
 {$ENDIF OTL_Anonymous}
 
-  IOmniTaskControl = interface(IGpTraceable) ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
@@ -594,7 +594,7 @@ type
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TGpTraceable, IGpTraceable, IOmniTaskControl, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
   strict private
     {$IFDEF OTL_Anonymous}
     otcOnMessageRef   : TOmniOnMessageFunction;
