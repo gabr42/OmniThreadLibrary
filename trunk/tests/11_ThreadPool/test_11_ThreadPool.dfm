@@ -2,7 +2,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Left = 0
   Top = 0
   Caption = 'OtlThreadPool tester'
-  ClientHeight = 306
+  ClientHeight = 397
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,18 +15,19 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   OnCreate = FormCreate
   DesignSize = (
     611
-    306)
+    397)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 143
     Top = 0
     Width = 468
-    Height = 306
+    Height = 397
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
+    ExplicitTop = -8
   end
   object btnRunTask: TButton
     Left = 8
@@ -102,13 +103,32 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 273
+    Top = 364
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
     TabOrder = 9
     OnClick = btnSaveLogClick
+    ExplicitTop = 273
+  end
+  object btnScheduleUnobserved: TButton
+    Left = 8
+    Top = 280
+    Width = 129
+    Height = 25
+    Caption = 'Schedule unobserved'
+    TabOrder = 10
+    OnClick = btnScheduleUnobservedClick
+  end
+  object btnScheduleObserved: TButton
+    Left = 8
+    Top = 311
+    Width = 129
+    Height = 25
+    Caption = 'Schedule observed'
+    TabOrder = 11
+    OnClick = btnScheduleObservedClick
   end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
@@ -117,12 +137,12 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
     OnTaskMessage = OmniTEDTaskMessage
     OnTaskTerminated = OmniTEDTaskTerminated
-    Left = 8
-    Top = 264
+    Left = 152
+    Top = 360
   end
   object SaveDialog: TSaveDialog
     DefaultExt = 'log'
-    Left = 112
-    Top = 264
+    Left = 192
+    Top = 360
   end
 end
