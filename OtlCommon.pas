@@ -179,7 +179,7 @@ type
     procedure Signal; overload; inline; 
     procedure Signal(const data: TOmniValue); overload; inline;
     function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean; inline;
-  end; { Implicit }
+  end; { TOmniWaitableValue }
 
   TOmniValueContainer = class
   strict private
