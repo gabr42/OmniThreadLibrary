@@ -778,9 +778,10 @@ end; { TOTPWorker.Cleanup }
 
 procedure TOTPWorker.ForwardThreadCreated(threadID: DWORD);
 begin
-  owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID))
-    );
+  if assigned(owMonitorObserver) then
+    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+        (TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID))
+      );
 end; { TOTPWorker.ForwardThreadCreated }
 
 procedure TOTPWorker.ForwardThreadDestroying(threadID: DWORD;
@@ -792,7 +793,8 @@ begin
     task.UnregisterComm(worker.OwnerCommEndpoint);
     worker.Stopped := true;
   end;
-  owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+  if assigned(owMonitorObserver) then
+    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
       (TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation,
         threadID)));
 end; { TOTPWorker.ForwardThreadDestroying }
@@ -977,7 +979,8 @@ begin
     FreeAndNil(workItem);
     Exit;
   end;
-  owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+  if assigned(owMonitorObserver) then
+    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
       (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.uniqueID)));
   {$IFDEF LogThreadPool}Log('Thread %s completed request %s with status %s:%s', [worker.Description, workItem.Description, GetEnumName(TypeInfo(TGpTPStatus), Ord(workItem.Status)), workItem.LastError]); {$ENDIF LogThreadPool}
   {$IFDEF LogThreadPool}Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
