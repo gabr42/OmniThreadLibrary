@@ -30,11 +30,15 @@ type
     btnSchedule80All: TButton;
     btnSaveLog: TButton;
     SaveDialog: TSaveDialog;
+    btnScheduleUnobserved: TButton;
+    btnScheduleObserved: TButton;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
+    procedure btnScheduleObservedClick(Sender: TObject);
+    procedure btnScheduleUnobservedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure OmniTEDPoolThreadCreated(const pool: IOmniThreadPool; threadID: integer);
@@ -44,8 +48,11 @@ type
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   private
+    FObservableTask: IOmniTaskControl;
+    FThreadPool: IOmniThreadPool;
     procedure Log(const msg: string);
     procedure LogPoolStatus;
+    procedure ReleaseObservableTask(const task: IOmniTaskControl);
     procedure WMThreadStateChanged(var msg: TMessage); message WM_THREAD_STATE_CHANGED;
     procedure WMObjectDestroyed(var msg: TMessage); message WM_OBJECT_DESTROYED;
   end;
@@ -153,9 +160,32 @@ begin
     task.Run;
 end;
 
+procedure TfrmTestOtlThreadPool.btnScheduleObservedClick(Sender: TObject);
+begin
+  if assigned(FThreadPool) then
+    FThreadPool.CancelAll;
+  FThreadPool := CreateThreadPool('Test thread pool')
+    .MonitorWith(OmniTED);
+  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'unobserved task')
+    .OnTerminated(ReleaseObservableTask)
+    .Schedule(FThreadPool);
+end;
+
+procedure TfrmTestOtlThreadPool.btnScheduleUnobservedClick(Sender: TObject);
+begin
+  if assigned(FThreadPool) then
+    FThreadPool.CancelAll;
+  FThreadPool := CreateThreadPool('Test thread pool');
+  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'unobserved task')
+    .OnTerminated(ReleaseObservableTask)
+    .Schedule(FThreadPool);
+end;
+
 procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   GlobalOmniThreadPool.CancelAll;
+  FThreadPool.CancelAll;
+  FThreadPool := nil;
   CanClose := true;
 end;
 
@@ -218,6 +248,11 @@ procedure TfrmTestOtlThreadPool.OmniTEDTaskTerminated(const task: IOmniTaskContr
 begin
   Log(Format('Task %d terminated with status [%d]%s',
     [task.UniqueID, task.ExitCode, task.ExitMessage]));
+end;
+
+procedure TfrmTestOtlThreadPool.ReleaseObservableTask(const task: IOmniTaskControl);
+begin
+  FObservableTask := nil;
 end;
 
 procedure TfrmTestOtlThreadPool.WMObjectDestroyed(var msg: TMessage);
