@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-15
-///   Version           : 2.03
-/// </para><para> 
+///   Last modification : 2009-11-17
+///   Version           : 2.03a
+/// </para><para>
 ///   History:
+///     2.03a: 2009-11-17
+///       - Task worker must not depend on monitor to be assigned.
+///       - SetMonitor must be synchronous.
 ///     2.02: 2009-11-13
 ///       - D2010 compatibility changes.
 ///     2.01b: 2009-03-03
@@ -322,7 +325,7 @@ type
     procedure PruneWorkingQueue;
     procedure RemoveMonitor;
     procedure Schedule(var workItem: TOTPWorkItem);
-    procedure SetMonitor(const hWindow: TOmniValue);
+    procedure SetMonitor(const params: TOmniValue);
     procedure SetName(const name: TOmniValue);
     procedure SetThreadDataFactory(const ThreadDataFactory: TOmniValue);
   end; { TOTPWorker }
@@ -1139,15 +1142,19 @@ begin
   end;
 end; { TOTPWorker.ScheduleNext }
 
-procedure TOTPWorker.SetMonitor(const hWindow: TOmniValue);
+procedure TOTPWorker.SetMonitor(const params: TOmniValue);
+var
+  hWindow: THandle;
 begin
+  hWindow := params[0];
   if not assigned(owMonitorObserver) then
-    owMonitorObserver := CreateContainerWindowsMessageObserver
-      (hWindow, COmniPoolMsg, 0, 0)
-  else if owMonitorObserver.Handle <> THandle(hWindow) then
+    owMonitorObserver :=
+      CreateContainerWindowsMessageObserver(hWindow, COmniPoolMsg, 0, 0)
+  else if owMonitorObserver.Handle <> hWindow then
     raise Exception.Create(
       'TOTPWorker.SetMonitor: Task can be only monitored with a single monitor'
       );
+  (VarToObj(params[1]) as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetMonitor }
 
 procedure TOTPWorker.SetName(const name: TOmniValue);
@@ -1339,8 +1346,14 @@ begin
 end; { TOmniThreadPool.SetMinWorkers }
 
 function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
+var
+  res: TOmniWaitableValue;
 begin
-  otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, hWindow);
+  res := TOmniWaitableValue.Create;
+  try
+    otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, [hWindow, res]);
+    res.WaitFor(INFINITE);
+  finally FreeAndNil(res); end;
   Result := Self;
 end; { TOmniThreadPool.SetMonitor }
 
