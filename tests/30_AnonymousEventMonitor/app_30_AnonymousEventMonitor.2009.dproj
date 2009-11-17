@@ -1,13 +1,10 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{5b4d7e19-e450-42a2-a0c7-e85a59fc3f8f}</ProjectGuid>
-			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-			<DCC_DependencyCheckOutputName>app_11_ThreadPool.exe</DCC_DependencyCheckOutputName>
-			<MainSource>app_11_ThreadPool.dpr</MainSource>
-			<ProjectVersion>12.0</ProjectVersion>
+			<ProjectGuid>{8C56974A-3033-4917-8D58-290B0F6EB447}</ProjectGuid>
+			<MainSource>app_30_AnonymousEventMonitor.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -23,38 +20,33 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_DebugDCUs>true</DCC_DebugDCUs>
-			<DCC_DependencyCheckOutputName>app_11_ThreadPool.exe</DCC_DependencyCheckOutputName>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;h:\razvoj\omnithreadlibrary\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DependencyCheckOutputName>app_30_AnonymousEventMonitor.exe</DCC_DependencyCheckOutputName>
+			<DCC_ImageBase>00400000</DCC_ImageBase>
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
+			<DCC_Platform>x86</DCC_Platform>
+			<DCC_E>false</DCC_E>
+			<DCC_N>false</DCC_N>
+			<DCC_S>false</DCC_S>
+			<DCC_F>false</DCC_F>
+			<DCC_K>false</DCC_K>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<Version>7.0</Version>
-			<DCC_DebugInformation>False</DCC_DebugInformation>
-			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
-			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
-			<Version>7.0</Version>
-			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_IncludePath)</DCC_IncludePath>
-			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-			<DCC_RangeChecking>True</DCC_RangeChecking>
-			<DCC_Optimize>False</DCC_Optimize>
-			<DCC_MapFile>3</DCC_MapFile>
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="app_11_ThreadPool.dpr">
+			<DelphiCompile Include="app_30_AnonymousEventMonitor.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="test_11_ThreadPool.pas">
-				<Form>frmTestOtlThreadPool</Form>
+			<DCCReference Include="test_30_AnonymousEventMonitor.pas">
+				<Form>frmAnonymousEventMonitorDemo</Form>
 			</DCCReference>
-			<DCCReference Include="..\..\OtlComm.pas"/>
-			<DCCReference Include="..\..\OtlTaskControl.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -70,9 +62,12 @@
 		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
-			<Borland.ProjectType/>
+			<Borland.ProjectType>VCLApplication</Borland.ProjectType>
 			<BorlandProject>
 				<Delphi.Personality>
+					<Source>
+						<Source Name="MainSource">app_30_AnonymousEventMonitor.dpr</Source>
+					</Source>
 					<Parameters>
 						<Parameters Name="UseLauncher">False</Parameters>
 						<Parameters Name="LoadAllSymbols">True</Parameters>
@@ -105,9 +100,6 @@
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Source>
-						<Source Name="MainSource">app_11_ThreadPool.dpr</Source>
-					</Source>
 				</Delphi.Personality>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
