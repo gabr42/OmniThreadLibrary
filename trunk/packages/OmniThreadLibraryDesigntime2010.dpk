@@ -28,7 +28,7 @@ requires
   rtl,
   vcl,
   vclx,
-  OmniThreadLibraryRuntime2009;
+  OmniThreadLibraryRuntime2010;
 
 contains
   OtlRegister in '..\OtlRegister.pas';
