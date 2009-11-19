@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-15
-///   Version           : 1.12
+///   Last modification : 2009-11-19
+///   Version           : 1.13
 ///</para><para>
 ///   History:
+///     1.13: 2009-11-19
+///       - Implemented IOmniTaskControl.Unobserved decorator.
 ///     1.12: 2009-11-15
 ///       - Event monitor notifications implemented with container observer.
 ///     1.11a: 2009-11-13
@@ -251,6 +253,7 @@ type
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
+    function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
@@ -672,6 +675,7 @@ type
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
+    function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
@@ -2215,6 +2219,12 @@ begin
   otcExecutor.TerminateWhen(event);
   Result := Self;
 end; { TOmniTaskControl.TerminateWhen }
+
+function TOmniTaskControl.Unobserved: IOmniTaskControl;
+begin
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
 begin
