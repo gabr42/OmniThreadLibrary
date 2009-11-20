@@ -44,7 +44,7 @@
 ///     1.05: 2009-02-06
 ///       - Implemented per-thread data storage.
 ///     1.04: 2009-01-26
-///       - Implemented IOmniTask.Enforced decorator.
+///       - Implemented IOmniTask.Enforced behaviour modifier.
 ///     1.03: 2008-11-01
 ///       - *** Breaking interface change ***
 ///         - IOmniTask.Terminated renamed to IOmniTask.Stopped.
