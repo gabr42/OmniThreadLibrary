@@ -42,7 +42,7 @@
 ///</para><para>
 ///   History:
 ///     1.13: 2009-11-19
-///       - Implemented IOmniTaskControl.Unobserved decorator.
+///       - Implemented IOmniTaskControl.Unobserved behaviour modifier.
 ///     1.12: 2009-11-15
 ///       - Event monitor notifications implemented with container observer.
 ///     1.11a: 2009-11-13
@@ -57,7 +57,7 @@
 ///     1.09: 2009-02-08
 ///       - Implemented per-thread task data storage.
 ///     1.08: 2009-01-26
-///       - Implemented IOmniTaskControl.Enforced decorator.
+///       - Implemented IOmniTaskControl.Enforced behaviour modifier.
 ///       - Added TOmniWorker.ProcessMessages - a support for worker to recursively
 ///         process messages inside message handlers.
 ///     1.07: 2009-01-19
