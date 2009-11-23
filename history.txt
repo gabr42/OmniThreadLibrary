@@ -34,7 +34,7 @@
     - 2 -> 2, 1 -> 4 and 4 -> 4 tests for stacks and queues, 
     - [1, 2, 4] -> [1, 2, 4] full tests.
     - Writes CSV file with cumulative test results.
-  - 17_MsgWait: demo for the .MsgWait decorator.
+  - 17_MsgWait: demo for the .MsgWait behaviour modifier.
   - 18_StringMsgDispatch: Invoke demo.
   - 19_StringMsgBenchmark: Invoke benchmark, ReceiveWait demo.
   - 20_QuickSort: Parallel quicksort demo.
@@ -50,7 +50,7 @@
 
 1.02: 2009-02-01
 - Thread pool reimplemented using OmniThreadLibrary.
-- Implemented IOmniTaskControl/IOmniTask.Enforced decorator.
+- Implemented IOmniTaskControl/IOmniTask.Enforced behaviour modifier.
 - Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
 - Added background file search demo.
 - Implemented TOmniCS critical section wrapper.
@@ -71,7 +71,7 @@
   notification mechanism which was pretty much useless.
 - Added connection pool demo.
 
-1.04:
+1.04: 2009-11-23
 *** COMPATIBILITY ISSUES ***
   *** Changed semantics in comm event notifications! When you get the 'new message'
       event, read all messages from the queue in a loop!
@@ -90,6 +90,7 @@
 - Implemented automatic event monitor with methods IOmniTaskControl.OnMessage and
   OnTerminated. Both support 'procedure of object' and 'reference to procedure'
   parameters.
+- Implemented IOmniTaskControl.Unobserved behaviour modifier.
 - New unit OtlSync contains (old) TOmniCS and IOmniCriticalSection together with (new)
   TOmniMREW - very simple and extremely fast multi-reader-exclusive-writer - and atomic
   CompareAndSwap functions.
@@ -103,4 +104,3 @@
   - 28_Hooks: Demo for the new hook system.
   - 29_ImplicitEventMonitor: Demo for OnMessage and OnTerminated, named method approach.
   - 30_AnonymousEventMonitor: Demo for OnMessage and OnTerminated, anonymous method approach.
-
