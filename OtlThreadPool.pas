@@ -582,6 +582,8 @@ begin
           'Thread %s caught exception %s during exection of %s',
           [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
         owtRemoveFromPool := true;
+        //must re-acquire exception object or it will be released when this exception block exists
+        AcquireExceptionObject;
       end;
     end;
   finally task := nil; end;
