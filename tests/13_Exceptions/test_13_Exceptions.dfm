@@ -79,6 +79,14 @@ object frmTestExceptions: TfrmTestExceptions
     State = cbChecked
     TabOrder = 6
   end
+  object cbThreadPool: TCheckBox
+    Left = 8
+    Top = 223
+    Width = 97
+    Height = 17
+    Caption = 'Use thread pool'
+    TabOrder = 7
+  end
   object OmniTED: TOmniEventMonitor
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8

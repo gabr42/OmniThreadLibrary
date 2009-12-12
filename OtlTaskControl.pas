@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-19
-///   Version           : 1.13
+///   Last modification : 2009-12-12
+///   Version           : 1.13a
 ///</para><para>
 ///   History:
+///     1.13a: 2009-12-12
+///       - Raise loud exception for pooled tasks.
 ///     1.13: 2009-11-19
 ///       - Implemented IOmniTaskControl.Unobserved behaviour modifier.
 ///     1.12: 2009-11-15
@@ -118,6 +120,8 @@
 ///    http://www.bluebytesoftware.com/blog/2009/01/30/ASinglewordReaderwriterSpinLock.aspx
 ///  - CancellationToken, 
 ///    http://blogs.msdn.com/pfxteam/archive/2009/06/22/9791840.aspx
+///  - BlockingCollection
+///    http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
 
 // TODO 3 -oPrimoz Gabrijelcic : Implement multiple timers.
 
@@ -621,6 +625,7 @@ type
     function  CreateTask: IOmniTask;
     procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
+    procedure RaiseTaskException;
   protected
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
@@ -1827,7 +1832,9 @@ begin
   if assigned(otcThread) then begin
     Terminate;
     FreeAndNil(otcThread);
-  end;
+  end
+  else
+    RaiseTaskException;
   if otcDestroyLock then begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;
@@ -2073,6 +2080,17 @@ begin
 end; { TOmniTaskControl.OnTerminated }
 {$ENDIF OTL_Anonymous}
 
+procedure TOmniTaskControl.RaiseTaskException;
+var
+  exc: Exception;
+begin
+  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
+    exc := Exception(otcExecutor.TaskException);
+    otcExecutor.TaskException := nil;
+    raise exc;
+  end;
+end; { TOmniTaskControl.RaiseTaskException }
+
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
   if assigned(otcSharedInfo.Monitor) then begin
@@ -2192,8 +2210,6 @@ begin
 end; { TOmniTaskControl.SilentExceptions }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
-var
-  exc: Exception;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
   otcSharedInfo.Terminating := true;
@@ -2209,11 +2225,7 @@ begin
       otcOwningPool := nil;
     end;
   end;
-  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
-    exc := Exception(otcExecutor.TaskException);
-    otcExecutor.TaskException := nil;
-    raise exc;
-  end;
+  RaiseTaskException;
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
