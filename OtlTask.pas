@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-02-06
-///   Version           : 1.05
+///   Last modification : 2009-12-12
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2009-12-12
+///       - Defined IOmniTask.RegisterWaitObject/UnregisterWaitObject.
+///       - Implemented TOmniWaitObjectList.
 ///     1.05: 2009-02-06
 ///       - Implemented per-thread data storage.
 ///     1.04: 2009-01-26
@@ -58,6 +61,10 @@
 ///       - First official release.
 ///</para></remarks>
 
+{$IF CompilerVersion >= 20}
+  {$DEFINE OTL_Anonymous}
+{$IFEND}
+
 unit OtlTask;
 
 interface
@@ -68,10 +75,33 @@ uses
   Variants,
   Classes,
   SyncObjs,
+  GpLists,
   OtlCommon,
   OtlComm;
 
 type
+  IOmniTask = interface;
+
+  TOmniWaitObjectMethod = procedure of object;
+
+  TOmniWaitObjectList = class
+  strict private
+    owolResponseHandlers: TGpTMethodList;
+    owolWaitObjects     : TGpIntegerList;
+  strict protected
+    function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
+    function  GetWaitObjects(idxWaitObject: integer): THandle;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
+    function  Count: integer;
+    procedure Remove(waitObject: THandle);
+    property ResponseHandlers[idxHandler: integer]: TOmniWaitObjectMethod read
+      GetResponseHandlers;
+    property WaitObjects[idxWaitObject: integer]: THandle read GetWaitObjects;
+  end; { TOmniWaitObjectList }
+
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetCounter: IOmniCounter;
@@ -85,6 +115,7 @@ type
   //
     procedure Enforced(forceExecution: boolean = true);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
@@ -95,6 +126,7 @@ type
     function  Terminated: boolean;
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure UnregisterWaitObject(waitObject: THandle);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
     property Lock: TSynchroObject read GetLock;
@@ -113,4 +145,57 @@ type
 
 implementation
 
+{ TOmniWaitObjectList }
+
+constructor TOmniWaitObjectList.Create;
+begin
+  inherited Create;
+  owolWaitObjects := TGpIntegerList.Create;
+  owolResponseHandlers := TGpTMethodList.Create;
+end; { TOmniWaitObjectList.Create }
+
+destructor TOmniWaitObjectList.Destroy;
+begin
+  FreeAndNil(owolResponseHandlers);
+  FreeAndNil(owolWaitObjects);
+  inherited Destroy;
+end; { TOmniWaitObjectList.Destroy }
+
+procedure TOmniWaitObjectList.Add(waitObject: THandle;
+  responseHandler: TOmniWaitObjectMethod);
+begin
+  Remove(waitObject);
+  owolWaitObjects.Add(waitObject);
+  owolResponseHandlers.Add(TMethod(responseHandler));
+end; { TOmniWaitObjectList.Add }
+
+function TOmniWaitObjectList.Count: integer;
+begin
+  Result := owolWaitObjects.Count;
+end; { TOmniWaitObjectList.Count }
+
+function TOmniWaitObjectList.GetResponseHandlers(idxHandler: integer):
+  TOmniWaitObjectMethod;
+begin
+  Result := TOmniWaitObjectMethod(owolResponseHandlers[idxHandler]);
+end; { TOmniWaitObjectList.GetResponseHandlers }
+
+function TOmniWaitObjectList.GetWaitObjects(idxWaitObject: integer): THandle;
+begin
+  Result := owolWaitObjects[idxWaitObject];
+end; { TOmniWaitObjectList.GetWaitObjects }
+
+procedure TOmniWaitObjectList.Remove(waitObject: THandle);
+var
+  idxWaitObject: integer;
+begin
+  idxWaitObject := owolWaitObjects.IndexOf(waitObject);
+  if idxWaitObject >= 0 then begin
+    owolWaitObjects.Delete(idxWaitObject);
+    owolResponseHandlers.Delete(idxWaitObject);
+  end;
+end; { TOmniWaitObjectList.Remove }
+
+initialization
+  Assert(SizeOf(THandle) = SizeOf(integer));
 end.

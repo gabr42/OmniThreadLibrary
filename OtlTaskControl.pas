@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2009-12-12
-///   Version           : 1.13a
+///   Version           : 1.14
 ///</para><para>
 ///   History:
+///     1.14: 2009-12-12
+///       - Implemented support for IOmniTask.RegisterWaitObject/UnregisterWaitObject.
 ///     1.13a: 2009-12-12
 ///       - Raise loud exception for pooled tasks.
 ///     1.13: 2009-11-19
@@ -110,7 +112,7 @@
 ///</para></remarks>
 
 ///Literature
-///  - Lock my Object… Please!, Allen Bauer,
+///  - Lock my Object... Please!, Allen Bauer,
 ///    http://blogs.codegear.com/abauer/2008/02/19/38856
 ///  - Threading in C#, Joseph Albahari, http://www.albahari.com/threading/
 ///  - Coordination Data Structures Overview, Emad Omara,
@@ -122,7 +124,7 @@
 ///    http://blogs.msdn.com/pfxteam/archive/2009/06/22/9791840.aspx
 ///  - BlockingCollection
 ///    http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
-
+  
 // TODO 3 -oPrimoz Gabrijelcic : Implement multiple timers.
 
 // TODO 3 -oPrimoz Gabrijelcic : Implement message bus (subscribe/publish)
@@ -426,15 +428,17 @@ type
   TOmniTaskExecutor = class
   strict private type
     TOmniMessageInfo = record
-      IdxFirstMessage  : cardinal;
-      IdxFirstTerminate: cardinal;
-      IdxLastMessage   : cardinal;
-      IdxLastTerminate : cardinal;
-      IdxRebuildHandles: cardinal;
-      NumWaitHandles   : cardinal;
-      WaitFlags        : DWORD;
-      WaitHandles      : array [0..63] of THandle;
-      WaitWakeMask     : DWORD;
+      IdxFirstMessage   : cardinal;
+      IdxFirstTerminate : cardinal;
+      IdxFirstWaitObject: cardinal;
+      IdxLastMessage    : cardinal;
+      IdxLastTerminate  : cardinal;
+      IdxLastWaitObject : cardinal;
+      IdxRebuildHandles : cardinal;
+      NumWaitHandles    : cardinal;
+      WaitFlags         : DWORD;
+      WaitHandles       : array [0..63] of THandle;
+      WaitWakeMask      : DWORD;
     end;
   strict private // those must be 4-aligned, keep them on the top
     oteInternalLock      : TOmniCS;
@@ -463,6 +467,7 @@ type
     oteTimerMessageName  : string;
     oteWakeMask          : DWORD;
     oteWaitHandlesGen    : int64;
+    oteWaitObjectList    : TOmniWaitObjectList;
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
@@ -515,11 +520,13 @@ type
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure Asy_RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer); overload;
     procedure Asy_SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
     procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure Asy_UnregisterWaitObject(waitObject: THandle);
     procedure EmptyMessageQueues(const task: IOmniTask);
     procedure TerminateWhen(handle: THandle);
     function WaitForInit: boolean;
@@ -564,6 +571,7 @@ type
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
@@ -573,6 +581,7 @@ type
     procedure StopTimer;
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
+    procedure UnregisterWaitObject(waitObject: THandle);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
     property Lock: TSynchroObject read GetLock;
@@ -808,6 +817,15 @@ begin
   Result := TOmniTaskControlList.Create;
 end; { CreateTaskControlList }
 
+{ TOmniWaitObjectHandler }
+
+{$IFDEF OTL_Anonymous}
+constructor Create(responseHandler: TOmniWaitObjectFunction); overload;
+begin
+  owohResponseFunction := responseHandler;
+end; { TOmniWaitObjectHandler.Create }
+{$ENDIF OTL_Anonymous}
+
 { TOmniInternalMessage }
 
 constructor TOmniInternalMessage.Create(internalMessageType: TOmniInternalMessageType);
@@ -997,6 +1015,11 @@ begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
+procedure TOmniTask.RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
+begin
+  otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
+end; { TOmniTask.RegisterWaitObject }
+
 procedure TOmniTask.SetException(exceptionObject: pointer);
 begin
   otExecutor_ref.TaskException := exceptionObject;
@@ -1054,6 +1077,11 @@ procedure TOmniTask.UnregisterComm(const comm: IOmniCommunicationEndpoint);
 begin
   otExecutor_ref.Asy_UnregisterComm(comm);
 end; { TOmniTask.UnregisterComm }
+
+procedure TOmniTask.UnregisterWaitObject(waitObject: THandle);
+begin
+  otExecutor_ref.Asy_UnregisterWaitObject(waitObject);
+end; { TOmniTask.UnregisterWaitObject }
 
 { TOmniWorker }
 
@@ -1200,6 +1228,21 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
 
+procedure TOmniTaskExecutor.Asy_RegisterWaitObject(waitObject: THandle;
+  responseHandler: TOmniWaitObjectMethod);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterWaitObject: ' +
+      'WaitObject support is only available when working with an IOmniWorker');
+  oteInternalLock.Acquire;
+  try
+    if not assigned(oteWaitObjectList) then
+      oteWaitObjectList := TOmniWaitObjectList.Create;
+    oteWaitObjectList.Add(waitObject, responseHandler);
+    SetEvent(oteCommRebuildHandles);
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
+
 procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
   const exitMessage: string);
 begin
@@ -1241,6 +1284,20 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
+procedure TOmniTaskExecutor.Asy_UnregisterWaitObject(waitObject: THandle);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterWaitObject: ' +
+      'WaitObject support is only available when working with an IOmniWorker');
+  oteInternalLock.Acquire;
+  try
+    oteWaitObjectList.Remove(waitObject);
+    if oteWaitObjectList.Count = 0 then
+      FreeAndNil(oteWaitObjectList);
+    SetEvent(oteCommRebuildHandles);
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.Asy_UnregisterWaitObject }
+
 procedure TOmniTaskExecutor.CallOmniTimer;
 var
   msg           : TOmniMessage;
@@ -1278,8 +1335,9 @@ end; { TOmniTaskExecutor.Cleanup }
 function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask; var
   msgInfo: TOmniMessageInfo): boolean;
 var
-  gotMsg: boolean;
-  msg   : TOmniMessage;
+  gotMsg         : boolean;
+  msg            : TOmniMessage;
+  responseHandler: TOmniWaitObjectMethod;
 begin
   Result := false;
   if ((msgInfo.IdxFirstTerminate <> cardinal(-1)) and
@@ -1301,6 +1359,14 @@ begin
       if gotMsg and assigned(WorkerIntf) then
         DispatchOmniMessage(msg);
     until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
+  end // comm handles
+  else if (awaited >= msgInfo.IdxFirstWaitObject) and (awaited <= msgInfo.IdxLastWaitObject) then begin
+    oteInternalLock.Acquire;
+    try
+      responseHandler := oteWaitObjectList.ResponseHandlers[awaited - msgInfo.IdxFirstWaitObject];
+    finally oteInternalLock.Release; end;
+    responseHandler();
+    TestForInternalRebuild(task, msgInfo);
   end // comm handles
   else if awaited = msgInfo.IdxRebuildHandles then begin
     RebuildWaitHandles(task, msgInfo);
@@ -1629,9 +1695,10 @@ end; { TOmniTaskExecutor.RaiseInvalidSignature }
 procedure TOmniTaskExecutor.RebuildWaitHandles(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
 var
-  iHandle: integer;
-  iIntf  : integer;
-  intf   : IInterface;
+  iHandle    : integer;
+  iIntf      : integer;
+  intf       : IInterface;
+  iWaitObject: integer;
 begin
   Inc(oteWaitHandlesGen);
   oteInternalLock.Acquire;
@@ -1661,7 +1728,15 @@ begin
             'Cannot wait on more than %d handles', [High(msgInfo.WaitHandles)]);
         msgInfo.WaitHandles[msgInfo.IdxLastMessage] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
       end;
-    msgInfo.NumWaitHandles := msgInfo.IdxLastMessage + 1;
+    msgInfo.IdxFirstWaitObject := msgInfo.IdxLastMessage + 1;
+    msgInfo.IdxLastWaitObject := msgInfo.IdxFirstWaitObject - 1;
+    if assigned(oteWaitObjectList) then begin
+      for iWaitObject := 0 to oteWaitObjectList.Count - 1 do begin
+        Inc(msgInfo.IdxLastWaitObject);
+        msgInfo.WaitHandles[msgInfo.IdxLastWaitObject] := oteWaitObjectList.WaitObjects[iWaitObject];
+      end;
+    end;
+    msgInfo.NumWaitHandles := msgInfo.IdxLastWaitObject;
   finally oteInternalLock.Release; end;
 end; { RebuildWaitHandles }
 
