@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-17
-///   Version           : 2.03a
+///   Last modification : 2009-12-12
+///   Version           : 2.03b
 /// </para><para>
 ///   History:
+///     2.03b: 2009-12-12
+///       - Fixed exception handling for silent exceptions.
 ///     2.03a: 2009-11-17
 ///       - Task worker must not depend on monitor to be assigned.
 ///       - SetMonitor must be synchronous.
@@ -183,7 +185,7 @@ uses
   Messages,
   Classes,
   Contnrs,
-{$IFNDEF Unicode} // Tiburon provides own TStringBuilder class 
+{$IFNDEF Unicode} // D2009+ provides own TStringBuilder class 
   HVStringBuilder,
 {$ENDIF}
   DSiWin32,
@@ -551,7 +553,6 @@ end; { TOTPWorkerThread.Execute }
 procedure TOTPWorkerThread.ExecuteWorkItem(workItem: TOTPWorkItem);
 var
   creationTime   : TDateTime;
-  silentException: boolean;
   startKernelTime: int64;
   startUserTime  : int64;
   stopKernelTime : int64;
@@ -579,17 +580,7 @@ begin
       on E: Exception do begin
 {$IFDEF LogThreadPool}Log(
           'Thread %s caught exception %s during exection of %s',
-          [Description, E.Message, WorkItem_ref.Description]);
-        {$ENDIF LogThreadPool}
-        if assigned(task) then begin
-          FilterException(E, silentException);
-          if silentException then
-            task.SetExitStatus(EXIT_EXCEPTION, E.Message)
-          else begin
-            task.SetException(AcquireExceptionObject);
-            raise;
-          end;
-        end;
+          [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
         owtRemoveFromPool := true;
       end;
     end;
