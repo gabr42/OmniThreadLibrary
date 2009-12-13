@@ -6,10 +6,15 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2009-05-08
-   Version           : 1.18
+   Last modification : 2009-11-16
+   Version           : 1.19a
 </pre>*)(*
    History:
+     1.19a: 2009-11-16
+       - IGpTraceable needs GUID.
+     1.19: 2009-07-15
+       - Added EnumPairs string array enumerator.
+       - Added EnumList string enumerator.
      1.18: 2009-05-08
        - TGp4AlignedInt fully changed from working with Cardinal to Integer.
        - Implemented function CAS (compare and swap) in TGp4AlignedInt and
@@ -132,6 +137,7 @@ type
 
 type
   IGpTraceable = interface(IInterface)
+    ['{EA2316AC-B5FA-45EA-86E0-9016CD51C336}']
     function  GetTraceReferences: boolean; stdcall;
     procedure SetTraceReferences(const value: boolean); stdcall;
     function  _AddRef: integer; stdcall;
@@ -214,8 +220,31 @@ type
     function  GetEnumerator: IGpStringValueEnumerator;
   end; { IGpStringValueEnumeratorFactory }
 
-function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory; 
+  TGpStringPair = class
+  private
+    kvKey  : string;
+    kvValue: string;
+  public
+    property Key: string read kvKey write kvKey;
+    property Value: string read kvValue write kvValue;
+  end; { TGpStringPair }
+
+  IGpStringPairEnumerator = interface
+    function  GetCurrent: TGpStringPair;
+    function  MoveNext: boolean;
+    property Current: TGpStringPair read GetCurrent;
+  end; { IGpStringPairEnumerator }
+
+  IGpStringPairEnumeratorFactory = interface
+    function  GetEnumerator: IGpStringPairEnumerator;
+  end; { IGpStringPairEnumeratorFactory }
+
+function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory;
 function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
+function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
+function EnumList(const aList: string; delim: char; const quoteChar: string = '';
+  stripQuotes: boolean = true): IGpStringValueEnumeratorFactory;
+
 {$ENDIF GpStuff_ValuesEnumerators}
 
 implementation
@@ -270,7 +299,75 @@ type
     constructor Create(values: TStringList);
     function  GetEnumerator: IGpStringValueEnumerator;
   end; { TGpStringValueEnumeratorFactory }
+
+  TGpStringPairEnumerator = class(TInterfacedObject, IGpStringPairEnumerator)
+  private
+    sveCurrentPair: TGpStringPair;
+    sveIndex      : integer;
+    svePairs      : TStringList;
+  public
+    constructor Create(values: TStringList);
+    destructor  Destroy; override;
+    function  GetCurrent: TGpStringPair;
+    function  MoveNext: boolean;
+    property Current: TGpStringPair read GetCurrent;
+  end; { TGpStringPairEnumerator }
+
+  TGpStringPairEnumeratorFactory = class(TInterfacedObject, IGpStringPairEnumeratorFactory)
+  private
+    svefPairs_ref: TStringList;
+  public
+    constructor Create(values: TStringList);
+    function  GetEnumerator: IGpStringPairEnumerator;
+  end; { TGpStringPairEnumeratorFactory }
 {$ENDIF GpStuff_ValuesEnumerators}
+
+type
+  TDelimiters = array of integer;
+
+//copied from GpString unit
+procedure GetDelimiters(const list: string; delim: char; const quoteChar: string;
+  addTerminators: boolean; var delimiters: TDelimiters);
+var
+  chk  : boolean;
+  i    : integer;
+  idx  : integer;
+  quote: char;
+  skip : boolean;
+begin
+  SetLength(delimiters, Length(list)+2); // leave place for terminators
+  idx := 0;
+  if addTerminators then begin
+    delimiters[idx] := 0;
+    Inc(idx);
+  end;
+  skip := false;
+  if quoteChar = '' then begin
+    chk := false;
+    quote := #0; //to keep compiler happy
+  end
+  else begin
+    chk   := true;
+    quote := quoteChar[1];
+  end;
+  for i := 1 to Length(list) do begin
+    if chk and (list[i] = quote) then
+      skip := not skip
+    else if not skip then begin
+      if list[i] = delim then begin
+        delimiters[idx] := i;
+        Inc(idx);
+      end;
+    end;
+  end; //for
+  if addTerminators then begin
+    delimiters[idx] := Length(list)+1;
+    Inc(idx);
+  end;
+  SetLength(delimiters,idx);
+end; { GetDelimiters }
+
+{ exports }
 
 function Asgn(var output: boolean; const value: boolean): boolean; overload;
 begin
@@ -374,6 +471,7 @@ begin
         vtCurrency:   Result[i] := VCurrency^;
         vtVariant:    Result[i] := VVariant^;
         vtObject:     Result[i] := integer(VObject);
+        vtInterface:  Result[i] := integer(VInterface);
         vtWideString: Result[i] := WideString(VWideString);
         vtInt64:      Result[i] := VInt64^;
       else
@@ -635,7 +733,7 @@ begin
   Result := (sveIndex < sveValues.Count);
 end; { TGpStringValueEnumerator.MoveNext }
 
-{ TGpStringValueEnumeratorFactory }
+{ TGpStringPairEnumeratorFactory }
 
 constructor TGpStringValueEnumeratorFactory.Create(values: TStringList);
 begin
@@ -647,6 +745,48 @@ function TGpStringValueEnumeratorFactory.GetEnumerator: IGpStringValueEnumerator
 begin
   Result := TGpStringValueEnumerator.Create(svefValues_ref); //enumerator takes ownership
 end; { TGpStringValueEnumeratorFactory.GetEnumerator }
+
+{ TGpStringPairEnumerator }
+
+constructor TGpStringPairEnumerator.Create(values: TStringList);
+begin
+  svePairs := values;
+  sveIndex := -2;
+  sveCurrentPair := TGpStringPair.Create;
+end; { TGpStringPairEnumerator.Create }
+
+destructor TGpStringPairEnumerator.Destroy;
+begin
+  FreeAndNil(sveCurrentPair);
+  FreeAndNil(svePairs);
+  inherited;
+end; { pIntegerPairEnumerator.Destroy }
+
+function TGpStringPairEnumerator.GetCurrent: TGpStringPair;
+begin
+  sveCurrentPair.Key := svePairs[sveIndex];
+  sveCurrentPair.Value := svePairs[sveIndex+1];
+  Result := sveCurrentPair;
+end; { TGpStringPairEnumerator.GetCurrent }
+
+function TGpStringPairEnumerator.MoveNext: boolean;
+begin
+  Inc(sveIndex, 2);
+  Result := (sveIndex < svePairs.Count);
+end; { TGpStringPairEnumerator.MoveNext }
+
+{ TGpStringPairEnumeratorFactory }
+
+constructor TGpStringPairEnumeratorFactory.Create(values: TStringList);
+begin
+  inherited Create;
+  svefPairs_ref := values;
+end; { TGpStringPairEnumeratorFactory.Create }
+
+function TGpStringPairEnumeratorFactory.GetEnumerator: IGpStringPairEnumerator;
+begin
+  Result := TGpStringPairEnumerator.Create(svefPairs_ref); //enumerator takes ownership
+end; { TGpStringPairEnumeratorFactory.GetEnumerator }
 
 { exports }
 
@@ -665,6 +805,47 @@ begin
     sl.Add(s);
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumValues }
+
+function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
+var
+  s : string;
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  for s in aValues do
+    sl.Add(s);
+  Result := TGpStringPairEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumPairs }
+
+function EnumList(const aList: string; delim: char; const quoteChar: string;
+  stripQuotes: boolean): IGpStringValueEnumeratorFactory;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+  sl        : TStringList;
+begin
+  sl := TStringList.Create;
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        sl.Add(Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3))
+      else
+        sl.Add(Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1));
+    end;
+  end;
+  Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumList }
 
 {$ENDIF GpStuff_ValuesEnumerators}
 

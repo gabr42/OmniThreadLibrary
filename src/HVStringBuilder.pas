@@ -85,7 +85,7 @@ type
 {$ENDIF}
 {$ENDIF}
     function EnsureCapacity(Capacity: Integer): Integer;
-    function Equals(aStringBuilder: StringBuilder): Boolean;
+    function Equals(aStringBuilder: StringBuilder): Boolean; {$IF CompilerVersion >= 21}reintroduce;{$IFEND}
     function Insert(Index: Integer; Value: Boolean): StringBuilder; overload;
     function Insert(Index: Integer; Value: Char): StringBuilder; overload;
     function Insert(Index: Integer; Value: PChar): StringBuilder; overload;
@@ -106,8 +106,8 @@ type
     function Replace(OldChar: Char; NewChar: Char; StartIndex: Integer; Count: Integer): StringBuilder; overload;
     function Replace(const OldValue: String; NewValue: String): StringBuilder; overload;
     function Replace(const OldValue: String; NewValue: String; StartIndex: Integer; Count: Integer): StringBuilder; overload;
-    function ToString: String; {override;} overload;
-    function ToString(StartIndex: Integer; Length: Integer): String; overload;
+    function ToString: String; {$IF CompilerVersion >= 21}reintroduce;{$IFEND} overload;
+    function ToString(StartIndex: Integer; Length: Integer): String; {$IF CompilerVersion >= 21}reintroduce;{$IFEND} overload;
     property Capacity: Integer read GetCapacity write SetCapacity;
     property Chars[Index: Integer]: Char read GetChars write SetChars; default;
     property Length: Integer read GetLength write SetLength;
