@@ -97,6 +97,7 @@
 - New unit OtlHooks contains API that can be used by external libraries to hook into
   OTL thread creation/destruction process and into exception chain.
 - All known bugs fixed.
+- Current versions of 3rd party units included.
 - New demos:
   - 25_WaitableComm: Demo for ReceiveWait and SendWait.
   - 26_MultiEventMonitor: How to run multiple event monitors in parallel.
@@ -109,4 +110,4 @@
 - IMPORTANT: Fixed thread pool exception handling.
 - Implemented IOmniTask.RegisterWaitObject/UnregisterWaitObject.
 - Added demo 31_WaitableObjects: Demo for the new RegisterWaitObject/UnregisterWaitObject API.
-
+- Current versions of 3rd party units included.
