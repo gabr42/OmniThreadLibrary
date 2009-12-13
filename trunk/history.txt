@@ -104,3 +104,9 @@
   - 28_Hooks: Demo for the new hook system.
   - 29_ImplicitEventMonitor: Demo for OnMessage and OnTerminated, named method approach.
   - 30_AnonymousEventMonitor: Demo for OnMessage and OnTerminated, anonymous method approach.
+
+1.04a: 2009-12-13
+- IMPORTANT: Fixed thread pool exception handling.
+- Implemented IOmniTask.RegisterWaitObject/UnregisterWaitObject.
+- Added demo 31_WaitableObjects: Demo for the new RegisterWaitObject/UnregisterWaitObject API.
+
