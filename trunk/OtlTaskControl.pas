@@ -1178,6 +1178,7 @@ begin
   oteInternalLock.Acquire;
   try
     FreeAndNil(oteCommList);
+    FreeAndNil(oteWaitObjectList);
   finally oteInternalLock.Release; end;
   FreeAndNil(oteTerminateHandles);
   FreeAndNil(oteMethodHash);
@@ -1736,7 +1737,7 @@ begin
         msgInfo.WaitHandles[msgInfo.IdxLastWaitObject] := oteWaitObjectList.WaitObjects[iWaitObject];
       end;
     end;
-    msgInfo.NumWaitHandles := msgInfo.IdxLastWaitObject;
+    msgInfo.NumWaitHandles := msgInfo.IdxLastWaitObject + 1;
   finally oteInternalLock.Release; end;
 end; { RebuildWaitHandles }
 
