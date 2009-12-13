@@ -117,8 +117,6 @@ begin
 end; { TSignalDemo.OMChangeSignal1 }
 
 procedure TSignalDemo.OMSignal2(var msg: TOmniMessage);
-var
-  awaited: DWORD;
 begin
   SetEvent(FSignal2);
 end; { TSignalDemo.HandleMessageSignal2 }
