@@ -817,15 +817,6 @@ begin
   Result := TOmniTaskControlList.Create;
 end; { CreateTaskControlList }
 
-{ TOmniWaitObjectHandler }
-
-{$IFDEF OTL_Anonymous}
-constructor Create(responseHandler: TOmniWaitObjectFunction); overload;
-begin
-  owohResponseFunction := responseHandler;
-end; { TOmniWaitObjectHandler.Create }
-{$ENDIF OTL_Anonymous}
-
 { TOmniInternalMessage }
 
 constructor TOmniInternalMessage.Create(internalMessageType: TOmniInternalMessageType);
