@@ -4,12 +4,58 @@
 
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
-                       Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002
+                       Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja
    Creation date     : 2002-10-09
-   Last modification : 2009-03-17
-   Version           : 1.46
+   Last modification : 2009-11-24
+   Version           : 1.53a
 </pre>*)(*
    History:
+     1.53a: 2009-11-24
+       - Fixed TDSiRegistry.ReadVariant and WriteVariant to work with varUString
+         (also fixes all sorts of TDSiRegistry problems in Delphi 2010.)
+     1.53: 2009-11-13
+       - Implemented DSiDeleteRegistryValue.
+       - Added parameter 'access' to the DSiKillRegistry.
+     1.52a: 2009-11-04
+       - [Mitja] Fixed allocation in DSiGetUserName.
+       - [Mitja] Also catch 'error' output in DSiExecuteAndCapture.
+     1.52: 2009-10-28
+       - DSiAddApplicationToFirewallExceptionList renamed to
+         DSiAddApplicationToFirewallExceptionListXP.
+       - Added DSiAddApplicationToFirewallExceptionListAdvanced which uses Advanced
+         Firewall interface, available on Vista+.
+       - DSiAddApplicationToFirewallExceptionList now calls either
+         DSiAddApplicationToFirewallExceptionListXP or
+         DSiAddApplicationToFirewallExceptionListAdvanced, depending on OS version.
+       - Implemented functions to remove application from the firewall exception list:
+         DSiRemoveApplicationFromFirewallExceptionList,
+         DSiRemoveApplicationFromFirewallExceptionListAdvanced,
+         DSiRemoveApplicationFromFirewallExceptionListXP.
+     1.51a: 2009-10-27
+       - Convert non-EOleSysError exceptions in DSiAddApplicationToFirewallExceptionList
+         into ERROR_INVALID_FUNCTION error.
+     1.51: 2009-10-22
+       - Added 'onNewLine' callback to the DSiExecuteAndCapture. This event reports
+         program output line-by-line in real time and it can extend total time allowed
+         for program execution.
+     1.50: 2009-10-20
+       - [Mitja] Updated DSiExecuteAndCapture: settable timeout, Unicode Delphi support,
+         LastError is set if CreateProcess fails.
+       - Implemented functions DSiGetSubstDrive and DSiGetSubstPath.
+     1.49: 2009-10-12
+       - Added 'access' parameter to the DSiWriteRegistry methods so that user can
+         request writing to the non-virtualized key when running on 64-bit system
+         (KEY_WOW64_64KEY).
+     1.48: 2009-10-09
+       - Defined TOSVersionInfoEx record and corresponding constants.
+       - Extended DSiGetWindowsVersion to return wvWinServer2008, wvWin7 and
+         wvWinServer2008R2.
+       - Extended DSiGetTrueWindowsVersion to return wvWinServer2008OrVistaSP1 and
+         wvWin7OrServer2008R2.
+     1.47a: 2009-09-03
+       - Added parameter connectionIsAvailable to the DSiGetNetworkResource.
+     1.47: 2009-05-22
+       - Added dynamically loaded API forwarder DSiGetTickCount64.
      1.46: 2009-03-17
        - Added dynamically loaded API forwarders DSiWow64DisableWow64FsRedirection and
          DSiWow64RevertWow64FsRedirection.
@@ -19,7 +65,7 @@
      1.44a: 2009-02-28
        - Added D2009 compatibility fixes to DSiGetFolderLocation, DSiGetNetworkResource,
          DSiGetComputerName, DSiGetWindowsFolder.
-       - Fixed DSiGetTempFileName, GetUserName.
+       - Fixed DSiGetTempFileName, DSiGetUserName.
      1.44: 2009-02-05
        - Added functions DSiAddApplicationToFirewallExceptionList and
          DSiAddPortToFirewallExceptionList.
@@ -473,6 +519,10 @@ type
   TDSiEnumFilesExCallback = procedure(const folder: string; S: TSearchRec;
     isAFolder: boolean; var stopEnum: boolean) of object;
 
+  // DSiExecuteAndCapture callback
+  TDSiOnNewLineCallback = procedure(const line: string; var runningTimeLeft_sec: integer)
+    of object;
+
   TDSiFileTime = (ftCreation, ftLastAccess, ftLastModification);
 
 { Handles }
@@ -528,8 +578,10 @@ type
 
   function DSiCreateRegistryKey(const registryKey: string;
     root: HKEY = HKEY_CURRENT_USER): boolean;
+  function DSiDeleteRegistryValue(const registryKey, name: string; root: HKEY =
+    HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean;
   function DSiKillRegistry(const registryKey: string;
-    root: HKEY = HKEY_CURRENT_USER): boolean;
+    root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean;
   function DSiReadRegistry(const registryKey, name: string;
     defaultValue: Variant; root: HKEY = HKEY_CURRENT_USER;
     access: longword = KEY_QUERY_VALUE): Variant; overload;
@@ -541,9 +593,9 @@ type
   function DSiRegistryValueExists(const registryKey, name: string;
     root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_QUERY_VALUE): boolean;
   function DSiWriteRegistry(const registryKey, name: string; value: int64;
-    root: HKEY = HKEY_CURRENT_USER): boolean; overload;
+    root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean; overload;
   function DSiWriteRegistry(const registryKey, name: string; value: Variant;
-    root: HKEY = HKEY_CURRENT_USER): boolean; overload;
+    root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean; overload;
 
 { Files }
 
@@ -613,7 +665,10 @@ const
   function  DSiGetFileTimes(const fileName: string; var creationTime, lastAccessTime,
     lastModificationTime: TDateTime): boolean;
   function  DSiGetLongPathName(const fileName: string): string;
-  function  DSiGetNetworkResource(mappedLetter: char; var networkResource: string): boolean;
+  function  DSiGetNetworkResource(mappedLetter: char; var networkResource: string; var
+    connectionIsAvailable: boolean): boolean;
+  function  DSiGetSubstDrive(mappedLetter: char): string;
+  function  DSiGetSubstPath(const path: string): string;
   function  DSiGetTempFileName(const prefix: string; const tempPath: string = ''): string;
   function  DSiGetTempPath: string;
   function  DSiGetUniqueFileName(const extension: string): string;
@@ -638,8 +693,9 @@ const
   function  DSiExecute(const commandLine: string;
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
     wait: boolean = false): cardinal;
-  function  DSiExecuteAndCapture(const app: string; output: TStrings;
-    const workDir: string; var exitCode: longword): cardinal;
+  function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
+    var exitCode: longword; waitTimeout_sec: integer = 15; onNewLine: TDSiOnNewLineCallback
+    = nil): cardinal;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
     const domain: string = '.'; visibility: integer = SW_SHOWDEFAULT;
     const workDir: string = ''; wait: boolean = false): cardinal;
@@ -693,7 +749,7 @@ const
 
   procedure DSiFreePidl(pidl: PItemIDList);
   procedure DSiFreeMemAndNil(var mem: pointer);
-  function DSiGetGlobalMemoryStatus(var memoryStatus: TMemoryStatusEx): boolean;
+  function  DSiGetGlobalMemoryStatus(var memoryStatus: TMemoryStatusEx): boolean;
 
 { Windows }
 
@@ -762,7 +818,8 @@ type
   TDSiBootType = (btNormal, btFailSafe, btFailSafeWithNetwork, btUnknown);
   TDSiWindowsVersion = (wvUnknown, wvWin31, wvWin95, wvWin95OSR2, wvWin98,
     wvWin98SE, wvWinME, wvWin9x, wvWinNT3, wvWinNT4, wvWin2000, wvWinXP,
-    wvWinNT, wvWinServer2003, wvWinVista);
+    wvWinNT, wvWinServer2003, wvWinVista, wvWinServer2008, wvWinServer2008OrVistaSP1,
+    wvWin7, wvWinServer2008R2, wvWin7OrServer2008R2);
 
   TDSiUIElement = (ueMenu, ueMessage, ueWindowCaption, ueStatus);
 
@@ -771,7 +828,69 @@ const
     'Windows 3.1', 'Windows 95', 'Windows 95 OSR 2', 'Windows 98',
     'Windows 98 SE', 'Windows Me', 'Windows 9x', 'Windows NT 3.5',
     'Windows NT 4', 'Windows 2000', 'Windows XP', 'Windows NT', 'Windows Server 2003',
-    'Windows Vista');
+    'Windows Vista', 'Windows Server 2008', 'Windows Server 2008 or Windows Vista SP1',
+    'Windows 7', 'Windows Server 2008 R2', 'Windows 7 or Windows Server 2008 R2');
+
+  VER_SUITE_BACKOFFICE     = $00000004; // Microsoft BackOffice components are installed.
+  VER_SUITE_BLADE          = $00000400; // Windows Server 2003, Web Edition is installed.
+  VER_SUITE_COMPUTE_SERVER = $00004000; // Windows Server 2003, Compute Cluster Edition is installed.
+  VER_SUITE_DATACENTER     = $00000080; // Windows Server 2008 Datacenter, Windows Server 2003, Datacenter Edition, or Windows 2000 Datacenter Server is installed.
+  VER_SUITE_ENTERPRISE     = $00000002; // Windows Server 2008 Enterprise, Windows Server 2003, Enterprise Edition, or Windows 2000 Advanced Server is installed. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_EMBEDDEDNT     = $00000040; // Windows XP Embedded is installed.
+  VER_SUITE_PERSONAL       = $00000200; // Windows Vista Home Premium, Windows Vista Home Basic, or Windows XP Home Edition is installed.
+  VER_SUITE_SINGLEUSERTS   = $00000100; // Remote Desktop is supported, but only one interactive session is supported. This value is set unless the system is running in application server mode.
+  VER_SUITE_SMALLBUSINESS  = $00000001; // Microsoft Small Business Server was once installed on the system, but may have been upgraded to another version of Windows. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_SMALLBUSINESS_RESTRICTED
+                           = $00000020; // Microsoft Small Business Server is installed with the restrictive client license in force. Refer to the Remarks section for more information about this bit flag.
+  VER_SUITE_STORAGE_SERVER = $00002000; // Windows Storage Server 2003 R2 or Windows Storage Server 2003is installed.
+  VER_SUITE_TERMINAL       = $00000010; // Terminal Services is installed. This value is always set.
+  VER_SUITE_WH_SERVER      = $00008000; // Windows Home Server is installed.
+
+  VER_NT_DOMAIN_CONTROLLER = $0000002; // The system is a domain controller and the operating system is Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
+  VER_NT_SERVER            = $0000003; // The operating system is Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
+                                       // Note that a server that is also a domain controller is reported as VER_NT_DOMAIN_CONTROLLER, not VER_NT_SERVER.
+  VER_NT_WORKSTATION       = $0000001; // The operating system is Windows Vista, Windows XP Professional, Windows XP Home Edition, or Windows 2000 Professional.
+
+type
+  _OSVERSIONINFOEXA = record
+    dwOSVersionInfoSize: DWORD;
+    dwMajorVersion: DWORD;
+    dwMinorVersion: DWORD;
+    dwBuildNumber: DWORD;
+    dwPlatformId: DWORD;
+    szCSDVersion: array[0..127] of AnsiChar; { Maintenance AnsiString for PSS usage }
+    wServicePackMajor: WORD;
+    wServicePackMinor: WORD;
+    wSuiteMask: WORD;
+    wProductType: BYTE;
+    wReserved: BYTE;
+  end;
+  {$EXTERNALSYM _OSVERSIONINFOEXA}
+  _OSVERSIONINFOEXW = record
+    dwOSVersionInfoSize: DWORD;
+    dwMajorVersion: DWORD;
+    dwMinorVersion: DWORD;
+    dwBuildNumber: DWORD;
+    dwPlatformId: DWORD;
+    szCSDVersion: array[0..127] of WideChar; { Maintenance WideString for PSS usage }
+    wServicePackMajor: WORD;
+    wServicePackMinor: WORD;
+    wSuiteMask: WORD;
+    wProductType: BYTE;
+    wReserved: BYTE;
+  end;
+  {$EXTERNALSYM _OSVERSIONINFOExW}
+  _OSVERSIONINFEXO = _OSVERSIONINFOEXA;
+  TOSVersionInfoExA = _OSVERSIONINFOEXA;
+  TOSVersionInfoExW = _OSVERSIONINFOEXW;
+  TOSVersionInfoEx = TOSVersionInfoExA;
+  OSVERSIONINFOEXA = _OSVERSIONINFOEXA;
+  {$EXTERNALSYM OSVERSIONINFOEXA}
+  {$EXTERNALSYM OSVERSIONINFOEX}
+  OSVERSIONINFOEXW = _OSVERSIONINFOEXW;
+  {$EXTERNALSYM OSVERSIONINFOEXW}
+  {$EXTERNALSYM OSVERSIONINFOEX}
+  OSVERSIONINFOEX = OSVERSIONINFOEXA;
 
   function  DSiGetAppCompatFlags(const exeName: string): string;
   function  DSiGetBootType: TDSiBootType;
@@ -805,17 +924,87 @@ const
 
 { Install }
 
-const // firewall management constants
-  NET_FW_PROFILE_DOMAIN     = 0;
-  NET_FW_PROFILE_STANDARD   = 1;
-  NET_FW_IP_VERSION_ANY     = 2;
-  NET_FW_IP_PROTOCOL_UDP    = 17;
-  NET_FW_IP_PROTOCOL_TCP    = 6;
+const // Firewall management constants.
+  // NET_FW_IP_PROTOCOL
+  NET_FW_IP_PROTOCOL_TCP = 6;
+  NET_FW_IP_PROTOCOL_UDP = 17;
+
+  // NET_FW_IP_VERSION
+  NET_FW_IP_VERSION_V4  = 0;
+  NET_FW_IP_VERSION_V6  = 1;
+  NET_FW_IP_VERSION_ANY = 2;
+
+  // NET_FW_POLICY_TYPE
+  NET_FW_POLICY_GROUP     = 0;
+  NET_FW_POLICY_LOCAL     = 1;
+  NET_FW_POLICY_EFFECTIVE = 2;
+
+  // NET_FW_PROFILE_TYPE
+  NET_FW_PROFILE_DOMAIN   = 0;
+  NET_FW_PROFILE_STANDARD = 1;
+  NET_FW_PROFILE_CURRENT  = 2;
+
+  // NET_FW_SCOPE
   NET_FW_SCOPE_ALL          = 0;
   NET_FW_SCOPE_LOCAL_SUBNET = 1;
+  NET_FW_SCOPE_CUSTOM       = 2;
+
+  // NET_FW_SERVICE_TYPE 
+  NET_FW_SERVICE_FILE_AND_PRINT = 0;
+  NET_FW_SERVICE_UPNP           = 1;
+  NET_FW_SERVICE_REMOTE_DESKTOP = 2;
+  NET_FW_SERVICE_NONE           = 3;
+
+  // NET_FW_ACTION
+  NET_FW_ACTION_BLOCK = 0;
+  NET_FW_ACTION_ALLOW = 1;
+
+  // NET_FW_EDGE_TRAVERSAL_TYPE
+  NET_FW_EDGE_TRAVERSAL_TYPE_DENY          = 0;
+  NET_FW_EDGE_TRAVERSAL_TYPE_ALLOW         = 1;
+  NET_FW_EDGE_TRAVERSAL_TYPE_DEFER_TO_APP  = 2;
+  NET_FW_EDGE_TRAVERSAL_TYPE_DEFER_TO_USER = 3;
+
+  // NET_FW_MODIFY_STATE
+  NET_FW_MODIFY_STATE_OK              = 0;
+  NET_FW_MODIFY_STATE_GP_OVERRIDE     = 1;
+  NET_FW_MODIFY_STATE_INBOUND_BLOCKED = 2;
+
+  // NET_FW_PROFILE_TYPE2
+  NET_FW_PROFILE2_DOMAIN  = 1;
+  NET_FW_PROFILE2_PRIVATE = 2;
+  NET_FW_PROFILE2_PUBLIC  = 4;
+  NET_FW_PROFILE2_ALL     = $7FFFFFFF;
+
+  // NET_FW_RULE_CATEGORY
+  NET_FW_RULE_CATEGORY_BOOT       = 0;
+  NET_FW_RULE_CATEGORY_STEALTH    = 1;
+  NET_FW_RULE_CATEGORY_FIREWALL   = 2;
+  NET_FW_RULE_CATEGORY_CONSEC     = 3;
+  NET_FW_RULE_CATEGORY_MAX        = 4;
+
+  // NET_FW_RULE_DIRECTION
+  NET_FW_RULE_DIR_IN    = 0;
+  NET_FW_RULE_DIR_OUT   = 1;
+
+type // Firewall management types
+  TDSiFwIPProtocol = (fwProtoTCP, fwProtoUDP);
+  TDSiFwIPProtocols = set of TDSiFwIPProtocol;
+
+  TDSiFwIPProfile = (fwProfileDomain, fwProfilePrivate, fwProfilePublic, fwProfileAll,
+    fwProfileCurrent);
+  TDSiFwIPProfiles = set of TDSiFwIPProfile;
 
   function  DSiAddApplicationToFirewallExceptionList(const entryName,
-    applicationFullPath: string): boolean;
+    applicationFullPath: string; description: string = ''; grouping: string = '';
+    serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
+    localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
+  function  DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
+    applicationFullPath: string; description: string = ''; grouping: string = '';
+    serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
+    localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
+  function  DSiAddApplicationToFirewallExceptionListXP(const entryName,
+    applicationFullPath: string; profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
   function  DSiAddPortToFirewallExceptionList(const entryName: string;
     portNumber: cardinal): boolean;
   function  DSiAddUninstallInfo(const displayName, uninstallCommand, publisher,
@@ -835,6 +1024,11 @@ const // firewall management constants
   function  DSiRegisterActiveX(const fileName: string; registerDLL: boolean): HRESULT;
   procedure DSiRegisterRunOnce(const applicationName,
     applicationPath: string);
+  function  DSiRemoveApplicationFromFirewallExceptionList(const entryName,
+    applicationFullPath: string): boolean;
+  function  DSiRemoveApplicationFromFirewallExceptionListAdvanced(const entryName: string): boolean;
+  function  DSiRemoveApplicationFromFirewallExceptionListXP(
+    const applicationFullPath: string): boolean;
   procedure DSiRemoveRunOnce(const applicationName: string);
   function  DSiRemoveUninstallInfo(const displayName: string): boolean;
   function  DSiShortcutExists(const displayName: string;
@@ -925,6 +1119,7 @@ type
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  function  DSiGetTickCount64: int64; stdcall;
   function  DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
   function  DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   function  DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
@@ -999,6 +1194,7 @@ type
     nSize: DWORD): DWORD; stdcall;
   TGetProcessMemoryInfo = function(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  TGetTickCount64 = function: int64; stdcall;
   TGlobalMemoryStatusEx = function(memStatus: PMemoryStatusEx): boolean; stdcall;
   TImpersonateLoggedOnUser = function(hToken: THandle): BOOL; stdcall;
   TIsWow64Process = function(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
@@ -1033,6 +1229,7 @@ const
   GGetLongPathName: TGetLongPathName = nil;
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
   GGetProcessMemoryInfo: TGetProcessMemoryInfo = nil;
+  GGetTickCount64: TGetTickCount64 = nil;
   GGlobalMemoryStatusEx: TGlobalMemoryStatusEx = nil;
   GImpersonateLoggedOnUser: TImpersonateLoggedOnUser = nil;
   GIsWow64Process: TIsWow64Process = nil;
@@ -1568,7 +1765,8 @@ const
       varBoolean: Result := ReadBool(name,defval);
       varString : Result := ReadString(name,defval);
       {$IFDEF Unicode}
-      varOleStr : Result := ReadString(name, defval);
+      varOleStr,
+      varUString: Result := ReadString(name, defval);
       {$ELSE}
       varOleStr : Result := UTF8Decode(ReadString(name, UTF8Encode(defval)));
       {$ENDIF Unicode}
@@ -1621,11 +1819,15 @@ const
   procedure TDSiRegistry.WriteVariant(const name: string; value: variant);
   begin
     case VarType(value) of
+      varByte,
+      varWord,
+      varLongWord,
       varInteger: WriteInteger(name,value);
       varBoolean: WriteBool(name,value);
       varString : WriteString(name,value);
       {$IFDEF Unicode}
-      varOleStr : WriteString(name, value);
+      varOleStr,
+      varUString: WriteString(name, value);
       {$ELSE}
       varOleStr : WriteString(name,UTF8Encode(value));
       {$ENDIF Unicode}
@@ -1702,13 +1904,32 @@ const
     finally {TRegistry.}Free; end;
   end; { DSiCreateRegistryKey }
 
+  {:Deletes a value from the registry.
+    @author  gabr
+    @since   2009-11-13
+  }
+  function DSiDeleteRegistryValue(const registryKey, name: string; root: HKEY =
+    HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean;
+  begin
+    Result := false;
+    try
+      with TDSiRegistry.Create(access) do try
+        RootKey := root;
+        if OpenKey(registryKey, true) then try
+          Result := DeleteValue(name);
+        finally CloseKey; end;
+      finally {TDSiRegistry.}Free; end;
+    except end;
+  end; { DSiDeleteRegistryValue }
+
   {:Deletes a key with all subkeys from the registry.
     @author  gabr
     @since   2002-11-25
   }
-  function DSiKillRegistry(const registryKey: string; root: HKEY): boolean;
+  function DSiKillRegistry(const registryKey: string; root: HKEY;
+    access: longword): boolean;
   begin
-    with TRegistry.Create do try
+    with TRegistry.Create(access) do try
       RootKey := root;
       Result := DeleteKey(registryKey);
     finally {TRegistry.}  Free; end;
@@ -1786,11 +2007,11 @@ const
     @since   2002-11-25
   }        
   function DSiWriteRegistry(const registryKey, name: string; value: int64;
-    root: HKEY): boolean; 
+    root: HKEY; access: longword): boolean; 
   begin
     Result := false;
     try
-      with TDSiRegistry.Create do try
+      with TDSiRegistry.Create(access) do try
         RootKey := root;
         if OpenKey(registryKey, true) then try
           WriteInt64(name, value);
@@ -1805,11 +2026,11 @@ const
     @since   2002-11-25
   }        
   function DSiWriteRegistry(const registryKey, name: string; value: Variant;
-    root: HKEY): boolean; 
+    root: HKEY; access: longword): boolean; 
   begin
     Result := false;
     try
-      with TDSiRegistry.Create do try
+      with TDSiRegistry.Create(access) do try
         RootKey := root;
         if OpenKey(registryKey, true) then try
           WriteVariant(name, value);
@@ -1874,12 +2095,13 @@ const
     string; const username: string; const password: string): boolean;
   var
     driveName  : string;
+    isAvailable: boolean;
     netResource: TNetResource;
     remoteName : string;
   begin
     Result := false;
     if mappedLetter <> '' then begin
-      if DSiGetNetworkResource(mappedLetter[1], remoteName) and (remoteName <> '') then
+      if DSiGetNetworkResource(mappedLetter[1], remoteName, isAvailable) and (remoteName <> '') then
         if AnsiSameText(remoteName, networkResource) then
           Result := true
         else
@@ -2406,17 +2628,19 @@ const
     @author  gabr
     @since   2009-01-28
   }
-  function DSiGetNetworkResource(mappedLetter: char; var networkResource: string): boolean;
+  function DSiGetNetworkResource(mappedLetter: char; var networkResource: string; var
+    connectionIsAvailable: boolean): boolean;
   var
     bufferSize: cardinal;
     driveName : string;
     remoteName: PChar;
     wnetResult: integer;
   begin
+    connectionIsAvailable := false;
     networkResource := '';
     driveName := mappedLetter + ':';
     wnetResult := GetDriveType(PChar(driveName + '\'));
-    if wnetResult <> DRIVE_REMOTE then
+    if (wnetResult <> DRIVE_REMOTE) and (wnetResult <> DRIVE_NO_ROOT_DIR) then
       Result := true
     else begin
       bufferSize := MAX_PATH * SizeOf(char);
@@ -2428,12 +2652,73 @@ const
           GetMem(remoteName, bufferSize);
           wnetResult := WNetGetConnection(PChar(driveName), remoteName, bufferSize);
         end;
-        Result := (wnetResult = NO_ERROR);
-        if Result then
+        Result := (wnetResult = NO_ERROR) or (wnetResult = ERROR_CONNECTION_UNAVAIL);
+        if Result then begin
+          connectionIsAvailable := (wnetResult = NO_ERROR);
           networkResource := Trim(StrPas(PChar(remoteName)));
+        end;
       finally FreeMem(remoteName); end;
     end;
   end; { DSiGetNetworkResource }
+
+  {:Converts SUBSTed drive letter into true path.
+    Returns empty string if letter does not belog to a SUBSTed drive.
+    @author  gabr
+    @since   2009-10-20
+  }
+  function DSiGetSubstDrive(mappedLetter: char): string;
+  var
+    buffer    : PChar;
+    bufferSize: integer;
+    device    : string;
+  begin
+    Result := '';
+    device := mappedLetter + ':';
+    bufferSize := 256;
+    GetMem(buffer, bufferSize * SizeOf(char));
+    try
+      repeat
+        if QueryDosDevice(PChar(device), buffer, bufferSize-1) = 0 then begin
+          if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+            break //repeat
+          else begin
+            FreeMem(buffer);
+            bufferSize := 2 * bufferSize;
+            GetMem(buffer, bufferSize * SizeOf(char));
+          end;
+        end
+        else begin
+          device := string(buffer);
+          if Copy(device, 1, 4) = '\??\' then begin
+            Result := device;
+            Delete(Result, 1, 4);
+          end;
+          break; //repeat
+        end;
+      until false;
+    finally FreeMem(buffer); end;
+  end; { DSiGetSubstDrive }
+
+  {:Converts SUBSTed path into true path.
+    Returns original path if it does not lie on a SUBSTed drive.
+    @author  gabr
+    @since   2009-10-20
+  }
+  function DSiGetSubstPath(const path: string): string;
+  var
+    origPath: string;
+  begin
+    Result := path;
+    if Length(Result) < 2 then
+      Exit;
+    if path[2] = ':' then begin
+      origPath := DSiGetSubstDrive(path[1]);
+      if origPath <> '' then begin
+        Delete(Result, 1, 2);
+        Result := origPath + Result;
+      end;
+    end;
+  end; { DSiGetSubstPath }
 
   {:Returns temporary file name, either in the specified path or in the default temp path
     (if 'tempPath' is empty).
@@ -2889,78 +3174,135 @@ const
     Totaly reworked on 2006-01-23. New code contributed by matej.
     Handles only up to 1 MB of console process output.
     @returns ID of the console process or 0 if process couldn't be started.
-    @author  aoven, Lee_Nover, gabr, matej
+    @author  aoven, Lee_Nover, gabr, matej, mitja
     @since   2003-05-24
   }
-  function DSiExecuteAndCapture(const app: string; output: TStrings;
-    const workDir: string; var exitCode: longword): cardinal;
-  const
-    ReadBuffer = 1048576;  // 1 MB Buffer
+  function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
+    var exitCode: longword; waitTimeout_sec: integer; onNewLine: TDSiOnNewLineCallback): cardinal;
   var
-    Security            : TSecurityAttributes;
-    ReadPipe            : THandle;
-    WritePipe           : THandle;
-    start               : TStartUpInfo;
-    ProcessInfo         : TProcessInformation;
-    Buffer              : PAnsiChar;
-    TotalBytesRead      : DWORD;
-    BytesRead           : DWORD;
-    AppRunning          : integer;
-    n                   : integer;
-    BytesLeftThisMessage: integer;
-    TotalBytesAvail     : integer;
-    useWorkDir          : string;
-  begin
+    endTime_ms         : int64;
+    lineBuffer         : PAnsiChar;
+    lineBufferSize     : integer;
+    partialLine        : string;
+    runningTimeLeft_sec: integer;
+
+    procedure ProcessPartialLine(buffer: PAnsiChar; numBytes: integer);
+    var
+      now_ms: int64;
+      p     : integer;
+    begin
+      if lineBufferSize < (numBytes + 1) then begin
+        lineBufferSize := numBytes + 1;
+        ReallocMem(lineBuffer, lineBufferSize);
+      end;
+      // called made sure that buffer is zero terminated
+      OemToCharA(buffer, lineBuffer);
+      {$IFDEF Unicode}
+      partialLine := partialLine + UnicodeString(StrPas(lineBuffer));
+      {$ELSE}
+      partialLine := partialLine + StrPas(lineBuffer);
+      {$ENDIF Unicode}
+      repeat
+        p := Pos(#13#10, partialLine);
+        if p <= 0 then
+          break; //repeat
+        now_ms := DSiTimeGetTime64;
+        runningTimeLeft_sec := (endTime_ms - now_ms) div 1000;
+        onNewLine(Copy(partialLine, 1, p-1), runningTimeLeft_sec);
+        endTime_ms := now_ms + runningTimeLeft_sec * 1000;
+        Delete(partialLine, 1, p+1);
+      until false;
+    end; { ProcessPartialLine }
+
+  const
+    SizeReadBuffer = 1048576;  // 1 MB Buffer
+
+  var
+    appRunning      : integer;
+    appW            : string;
+    buffer          : PAnsiChar;
+    bytesLeftThisMsg: integer;
+    bytesRead       : DWORD;
+    err             : cardinal;
+    processInfo     : TProcessInformation;
+    readPipe        : THandle;
+    security        : TSecurityAttributes;
+    start           : TStartUpInfo;
+    totalBytesAvail : integer;
+    totalBytesRead  : DWORD;
+    useWorkDir      : string;
+    writePipe       : THandle;
+
+  begin { DSiExecuteAndCapture }
     Result := 0;
-    Security.nLength := SizeOf(TSecurityAttributes);
-    Security.bInheritHandle := true;
-    Security.lpSecurityDescriptor := nil;
-    if CreatePipe (ReadPipe, WritePipe, @Security, 0) then begin
-      Buffer := AllocMem(ReadBuffer + 1);
+    err := 0;
+    partialLine := '';
+    lineBufferSize := 0;
+    lineBuffer := nil;
+    endTime_ms := DSiTimeGetTime64 + waitTimeout_sec * 1000;
+    security.nLength := SizeOf(TSecurityAttributes);
+    security.bInheritHandle := true;
+    security.lpSecurityDescriptor := nil;
+    if CreatePipe (readPipe, writePipe, @security, 0) then begin
+      buffer := AllocMem(SizeReadBuffer + 1);
       FillChar(Start,Sizeof(Start),#0);
       start.cb := SizeOf(start);
-      start.hStdOutput := WritePipe;
-      start.hStdInput := ReadPipe;
+      start.hStdOutput := writePipe;
+      start.hStdInput := readPipe;
+      start.hStdError := writePipe;
       start.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
       start.wShowWindow := SW_HIDE;
       if workDir = '' then
         GetDir(0, useWorkDir)
       else
         useWorkDir := workDir;
-      if CreateProcess(nil, PChar(app), @Security, @Security, true,
-           CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil,PChar(useWorkDir), start,
-           ProcessInfo) then
+      appW := app;
+      UniqueString(appW);
+      if CreateProcess(nil, PChar(appW), @security, @security, true,
+           CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, PChar(useWorkDir), start,
+           processInfo) then
       begin
-        Result := ProcessInfo.hProcess;
-        n := 0;
-        TotalBytesRead := 0;
+        Result := processInfo.hProcess;
+        totalBytesRead := 0;
         repeat
-          // Increase counter to prevent an endless loop if the process is dead
-          Inc(n,1);
-          AppRunning := WaitForSingleObject(ProcessInfo.hProcess,100);
-          if not PeekNamedPipe(ReadPipe, @Buffer[TotalBytesRead], ReadBuffer, @BytesRead,
-                   @TotalBytesAvail, @BytesLeftThisMessage)
+          appRunning := WaitForSingleObject(processInfo.hProcess, 100);
+          if not PeekNamedPipe(readPipe, @buffer[totalBytesRead],
+                   SizeReadBuffer - totalBytesRead, @bytesRead, @totalBytesAvail,
+                   @bytesLeftThisMsg)
           then
             break //repeat
-          else if BytesRead > 0 then
-            ReadFile(ReadPipe,Buffer[TotalBytesRead],BytesRead,BytesRead,nil);
-          TotalBytesRead := TotalBytesRead + BytesRead;
-        until (AppRunning <> WAIT_TIMEOUT) or (n > 150);
-        Buffer[TotalBytesRead] := #0;
-        OemToCharA(Buffer, Buffer);
+          else if bytesRead > 0 then
+            ReadFile(readPipe, buffer[totalBytesRead], bytesRead, bytesRead, nil);
+          buffer[totalBytesRead + bytesRead] := #0; // required for ProcessPartialLine
+          if assigned(onNewLine) then
+            ProcessPartialLine(@buffer[totalBytesRead], bytesRead);
+          totalBytesRead := totalBytesRead + bytesRead;
+          if totalBytesRead = SizeReadBuffer then
+            raise Exception.Create('DSiExecuteAndCapture: Buffer full!');
+        until (appRunning <> WAIT_TIMEOUT) or (DSiTimeGetTime64 > endTime_ms);
+        if partialLine <> '' then begin
+          runningTimeLeft_sec := 0;
+          onNewLine(partialLine, runningTimeLeft_sec);
+        end;
+        OemToCharA(buffer, buffer);
         {$IFDEF Unicode}
         output.Text := UnicodeString(StrPas(Buffer));
         {$ELSE}
-        output.Text := StrPas(Buffer);
+        output.Text := StrPas(buffer);
         {$ENDIF Unicode}
-      end;
-      FreeMem(Buffer);
-      GetExitCodeProcess(ProcessInfo.hProcess, exitCode);
-      CloseHandle(ProcessInfo.hProcess);
-      CloseHandle(ProcessInfo.hThread); 
-      CloseHandle(ReadPipe); 
-      CloseHandle(WritePipe); 
-    end; 
+      end
+      else
+        err := GetLastError;
+      FreeMem(buffer);
+      GetExitCodeProcess(processInfo.hProcess, exitCode);
+      CloseHandle(processInfo.hProcess);
+      CloseHandle(processInfo.hThread);
+      CloseHandle(readPipe);
+      CloseHandle(writePipe);
+      DSiFreeMemAndNil(pointer(lineBuffer));
+    end;
+    if err <> 0 then
+      SetLastError(err);
   end; { DSiExecuteAndCapture }
 
   {:Retrieves affinity mask of the current process as a list of CPU IDs (0..9, A..V).
@@ -4266,7 +4608,7 @@ var
   }
   function DSiGetAppCompatFlags(const exeName: string): string;
   var
-    wow64key: HKEY;
+    wow64key: longword;
   begin
     Result := DSiReadRegistry(
       'Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers',
@@ -4562,7 +4904,11 @@ var
   begin { DSiGetTrueWindowsVersion }
     hKernel32 := GetModuleHandle('kernel32');
     Win32Check(hKernel32 <> 0);
-    if ExportsAPI(hKernel32, 'GetLocaleInfoEx') then
+    if ExportsAPI(hKernel32, 'CreateRemoteThreadEx') then
+      Result := wvWin7OrServer2008R2
+    else if ExportsAPI(hKernel32, 'AddSecureMemoryCacheCallback') then
+      Result := wvWinServer2008OrVistaSP1
+    else if ExportsAPI(hKernel32, 'GetLocaleInfoEx') then
       Result := wvWinVista
     else if ExportsAPI(hKernel32, 'GetLargePageMinimum') then
       Result := wvWinServer2003
@@ -4598,7 +4944,7 @@ var
     bufferSize: DWORD;
   begin
     bufferSize := 256; //UNLEN from lmcons.h
-    buffer := AllocMem(bufferSize);
+    buffer := AllocMem(bufferSize * SizeOf(char));
     try
       GetUserName(buffer, bufferSize);
       Result := string(buffer);
@@ -4659,7 +5005,9 @@ var
   }
   function DSiGetWindowsVersion: TDSiWindowsVersion;
   var
-    versionInfo: TOSVersionInfo;
+    versionInfo      : TOSVersionInfo;
+    versionInfoEx    : TOSVersionInfoEx;
+    versionInfoExFake: TOSVersionInfo absolute versionInfoEx;
   begin
     versionInfo.dwOSVersionInfoSize := SizeOf(versionInfo);
     GetVersionEx(versionInfo);
@@ -4695,7 +5043,20 @@ var
               2: Result := wvWinServer2003;
               else Result := wvWinNT
             end; //case versionInfo.dwMinorVersion
-          6: Result := wvWinVista;
+          6: begin
+            versionInfoEx.dwOSVersionInfoSize := SizeOf(versionInfoEx);
+            GetVersionEx(versionInfoExFake);
+            if versionInfoEx.wProductType = VER_NT_WORKSTATION then
+              if versionInfoEx.dwMinorVersion = 0 then
+                Result := wvWinVista
+              else
+                Result := wvWin7
+            else
+              if versionInfoEx.dwMinorVersion = 0 then
+                Result := wvWinServer2008
+              else
+                Result := wvWinServer2008R2;
+          end;
         end; //case versionInfo.dwMajorVersion
       end; //versionInfo.dwPlatformID
   end; { DSiGetWindowsVersion }
@@ -4841,36 +5202,142 @@ var
       Result := HKEY_LOCAL_MACHINE;
   end; { UninstallRoot }
 
-  {:Adds application to the list of firewall exceptions. Based on the code at
-    http://www.delphi3000.com/articles/article_5021.asp?SK=.
-    CoInitialize must be called before using this function.
+  {:On Vista+, calls DSiAddApplicationToFirewallExceptionListAdvanced.
+    On XP, remaps parameters and calls DSiAddApplicationToFirewallExceptionListXP.
+    On lesser Windows, simply returns False. 
     @author  gabr
-    @since   2009-02-05
+    @since   2009-10-28
   }
   function DSiAddApplicationToFirewallExceptionList(const entryName,
-    applicationFullPath: string): boolean;
+    applicationFullPath: string; description: string; grouping: string;
+    serviceName: string; protocols: TDSiFwIPProtocols; localPorts: string;
+    profiles: TDSiFwIPProfiles): boolean;
   var
-    app    : OleVariant;
-    fwMgr  : OleVariant;
-    profile: OleVariant;
+    profile    : TDSiFwIPProfile;
+    versionInfo: TOSVersionInfo;
+  begin
+    Result := false;
+    versionInfo.dwOSVersionInfoSize := SizeOf(versionInfo);
+    GetVersionEx(versionInfo);
+    if versionInfo.dwPlatformID = VER_PLATFORM_WIN32_NT then begin
+      if (versionInfo.dwMajorVersion = 5) and (versionInfo.dwMinorVersion >= 1) then begin
+        Result := true;
+        for profile := Low(TDSiFwIPProfile) to High(TDSiFwIPProfile) do
+          if (((fwProfileAll in profiles) and (profile <> fwProfileCurrent)) or (profile in profiles)) and
+             (profile in [fwProfileCurrent, fwProfileDomain, fwProfilePrivate])
+          then
+            if not DSiAddApplicationToFirewallExceptionListXP(entryName,
+                     applicationFullPath, profile)
+            then
+              Result := false;
+      end
+      else if versionInfo.dwMajorVersion >= 6 then
+        Result := DSiAddApplicationToFirewallExceptionListAdvanced(entryName,
+          applicationFullPath, description, grouping, serviceName, protocols, localPorts,
+          profiles);
+    end;
+  end; { DSiAddApplicationToFirewallExceptionList }
+
+  {:Adds application to the list of firewall exceptions, advanced style (Vista+).
+    Based on MSDN example http://msdn.microsoft.com/en-us/library/aa364695(VS.85).aspx.
+    For more information on parameters, check http://msdn.microsoft.com/en-us/library/aa365344(VS.85).aspx.
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2009-10-28
+  }
+  function DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
+    applicationFullPath: string; description: string; grouping: string;
+    serviceName: string; protocols: TDSiFwIPProtocols; localPorts: string;
+    profiles: TDSiFwIPProfiles): boolean;
+  var
+    fwPolicy2  : OleVariant;
+    profileMask: integer;
+    protocol   : TDSiFwIPProtocol;
+    rule       : OleVariant;
   begin
     Result := false;
     try
-      fwMgr := CreateOLEObject('HNetCfg.FwMgr');
-      profile := fwMgr.LocalPolicy.CurrentProfile;
-      app := CreateOLEObject('HNetCfg.FwAuthorizedApplication');
-      app.ProcessImageFileName := applicationFullPath;
-      app.Name := EntryName;
-      app.Scope := NET_FW_SCOPE_ALL;
-      app.IpVersion := NET_FW_IP_VERSION_ANY;
-      app.Enabled :=true;
-      profile.AuthorizedApplications.Add(app);
+      //http://msdn.microsoft.com/en-us/library/aa366458(VS.85).aspx
+      //Windows Firewall with Advanced Security was first released with Windows Vista.
+      fwPolicy2 := CreateOLEObject('HNetCfg.FwPolicy2');
+      if fwProfileCurrent in profiles then
+        profileMask := fwPolicy2.CurrentProfileTypes
+      else if fwProfileAll in profiles then
+        profileMask := NET_FW_PROFILE2_ALL
+      else begin
+        profileMask := 0;
+        if fwProfileDomain  in profiles then profileMask := profileMask OR NET_FW_PROFILE2_DOMAIN;
+        if fwProfilePrivate in profiles then profileMask := profileMask OR NET_FW_PROFILE2_PRIVATE;
+        if fwProfilePublic  in profiles then profileMask := profileMask OR NET_FW_PROFILE2_PUBLIC;
+      end;
+      for protocol := Low(TDSiFwIPProtocol) to High(TDSiFwIPProtocol) do
+        if protocol in protocols then begin
+          rule := CreateOLEObject('HNetCfg.FWRule');
+          rule.Name := entryName;
+          rule.Description := description;
+          rule.ApplicationName := applicationFullPath;
+          if protocol = fwProtoTCP then
+            rule.Protocol := NET_FW_IP_PROTOCOL_TCP
+          else if protocol = fwProtoUDP then
+            rule.Protocol := NET_FW_IP_PROTOCOL_UDP
+          else
+            raise Exception.Create('DSiAddApplicationToFirewallExceptionListAdvanced: ' +
+                                   'Unexpected protocol!');
+          rule.LocalPorts := localPorts;
+          rule.Enabled := true;
+          rule.Grouping := grouping;
+          rule.Profiles := profileMask;
+          rule.Action := NET_FW_ACTION_ALLOW;
+          rule.ServiceName := serviceName;
+          fwPolicy2.Rules.Add(rule);
+        end;
       Result := true;
     except
       on E: EOleSysError do
         SetLastError(cardinal(E.ErrorCode));
+      else
+        SetLastError(ERROR_INVALID_FUNCTION);
     end;
-  end; { DSiAddApplicationToFirewallExceptionList }
+  end; { DSiAddApplicationToFirewallExceptionListAdvanced }
+
+  {:Adds application to the list of firewall exceptions, XP style. Based on the code at
+    http://www.delphi3000.com/articles/article_5021.asp?SK=.
+    MSDN: //http://msdn.microsoft.com/en-us/library/aa366449(VS.85).aspx
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2009-02-05
+  }
+  function DSiAddApplicationToFirewallExceptionListXP(const entryName,
+    applicationFullPath: string; profile: TDSiFwIPProfile): boolean;
+  var
+    app      : OleVariant;
+    fwMgr    : OleVariant;
+    fwProfile: OleVariant;
+  begin
+    Result := false;
+    try
+      fwMgr := CreateOLEObject('HNetCfg.FwMgr');
+      if profile = fwProfileCurrent then
+        fwProfile := fwMgr.LocalPolicy.CurrentProfile
+      else if profile = fwProfileDomain then
+        fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_DOMAIN)
+      else if profile = fwProfilePrivate {alias for 'standard'} then
+        fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_STANDARD);
+      app := CreateOLEObject('HNetCfg.FwAuthorizedApplication');
+      app.ProcessImageFileName := DSiGetSubstPath(applicationFullPath);
+      app.Name := EntryName;
+      app.Scope := NET_FW_SCOPE_ALL;
+      app.IpVersion := NET_FW_IP_VERSION_ANY;
+      app.Enabled :=true;
+      fwProfile.AuthorizedApplications.Add(app);
+      Result := true;
+    except
+      on E: EOleSysError do
+        SetLastError(cardinal(E.ErrorCode));
+      else
+        SetLastError(ERROR_INVALID_FUNCTION);
+    end;
+  end; { DSiAddApplicationToFirewallExceptionListXP }
 
   {:Adds application to the list of firewall exceptions. Based on the code at
     http://www.delphi3000.com/articles/article_5021.asp?SK=.
@@ -5094,13 +5561,82 @@ var
         Result := E_NOTIMPL;
     finally FreeLibrary(DLLHandle); end;
   end; { DSiRegisterActiveX }
-  
+
   {gp}
   procedure DSiRegisterRunOnce(const applicationName, applicationPath: string);
   begin
     DSiWriteRegistry('SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce',
       applicationName, applicationPath);
   end; { DSiRegisterRunOnce }
+
+  {:On Vista+, calls DSiRemoveApplicationFromFirewallExceptionListAdvanced.
+    On XP, remaps parameters and calls DSiRemoveApplicationFromFirewallExceptionListXP.
+    On lesser Windows, simply returns False.
+    @author  gabr
+    @since   2009-10-28
+  }
+  function DSiRemoveApplicationFromFirewallExceptionList(const entryName,
+    applicationFullPath: string): boolean;
+  var
+    versionInfo: TOSVersionInfo;
+  begin
+    Result := false;
+    versionInfo.dwOSVersionInfoSize := SizeOf(versionInfo);
+    GetVersionEx(versionInfo);
+    if versionInfo.dwPlatformID = VER_PLATFORM_WIN32_NT then begin
+      if (versionInfo.dwMajorVersion = 5) and (versionInfo.dwMinorVersion >= 1) then
+        Result := DSiRemoveApplicationFromFirewallExceptionListXP(applicationFullPath)
+      else if versionInfo.dwMajorVersion >= 6 then
+        Result := DSiRemoveApplicationFromFirewallExceptionListAdvanced(entryName);
+    end;
+  end; { DSiRemoveApplicationFromFirewallExceptionList }
+
+  {:Removes application from the firewall exception list, advanced style (Vista+).
+    @author  gabr
+    @since   2009-10-28
+  }
+  function  DSiRemoveApplicationFromFirewallExceptionListAdvanced(const entryName: string): boolean;
+  var
+    fwPolicy2: OleVariant;
+  begin
+    Result := false;
+    try
+      fwPolicy2 := CreateOLEObject('HNetCfg.FwPolicy2');
+      fwPolicy2.Rules.Remove(entryName);
+      Result := true;
+    except
+      on E: EOleSysError do
+        SetLastError(cardinal(E.ErrorCode));
+      else
+        SetLastError(ERROR_INVALID_FUNCTION);
+    end;
+  end; { DSiRemoveApplicationFromFirewallExceptionListAdvanced }
+
+  {:Removes application from the firewall exception list, XP style.
+    @author  gabr
+    @since   2009-10-28
+  }
+  function  DSiRemoveApplicationFromFirewallExceptionListXP(const applicationFullPath: string): boolean;
+  var
+    fwMgr    : OleVariant;
+    fwProfile: OleVariant;
+    profile  : integer;
+  begin
+    Result := false;
+    try
+      fwMgr := CreateOLEObject('HNetCfg.FwMgr');
+      for profile := NET_FW_PROFILE_DOMAIN to NET_FW_PROFILE_STANDARD do begin
+        fwProfile := fwMgr.LocalPolicy.GetProfileByType(profile);
+        fwProfile.AuthorizedApplications.Remove(DSiGetSubstPath(applicationFullPath));
+      end;
+      Result := true;
+    except
+      on E: EOleSysError do
+        SetLastError(cardinal(E.ErrorCode));
+      else
+        SetLastError(ERROR_INVALID_FUNCTION);
+    end;
+  end; { DSiRemoveApplicationFromFirewallExceptionListXP }
 
   {gp}
   procedure DSiRemoveRunOnce(const applicationName: string);
@@ -5693,6 +6229,16 @@ var
       Result := false;
     end;
   end; { DSiGetProcessMemoryInfo }
+
+  function DSiGetTickCount64: int64; stdcall;
+  begin
+    if not assigned(GGetTickCount64) then
+      GGetTickCount64 := DSiGetProcAddress('kernel32', 'GetTickCount64');
+    if assigned(GGetTickCount64) then
+      Result := GGetTickCount64()
+    else
+      raise Exception.Create('Unsupported API: GetTickCount64');
+  end; { DSiGetTickCount64 }
 
   function DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
   begin
