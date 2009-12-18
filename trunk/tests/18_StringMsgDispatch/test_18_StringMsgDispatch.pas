@@ -135,6 +135,7 @@ begin
   btnSendObject.Enabled := false;
   btnTestInvalidMsg.Enabled := false;
   btnStopHello.Enabled := false;
+  FHelloTask := nil;
 end;
 
 { TAsyncHello }
