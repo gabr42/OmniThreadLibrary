@@ -1509,7 +1509,7 @@ var
   paramType       : PTypeInfo;
   returnInfo      : PReturnInfo;
 
-  function VerifyFlags(flags, requiredFlags: TParamFlags): boolean;
+  function VerifyObjectFlags(flags, requiredFlags: TParamFlags): boolean;
   begin
     Result := ((flags * requiredFlags) = requiredFlags);
     if not Result then
@@ -1517,12 +1517,27 @@ var
     flags := flags - requiredFlags;
     {$IF CompilerVersion < 21}
     Result := (flags = []);
-    {$ELSEIF CompilerVersion = 21} // Delphi 2010 original and Update 1 report flag [] while Update 2 and 4 report flag [pfAddress]
+    {$ELSEIF CompilerVersion = 21}
+    // Delphi 2010 original and Update 1: []
+    // Delphi 2010 while Update 2 and 4: [pfAddress]
     Result := (flags = []) or (flags = [pfAddress]);
     {$ELSE} // best guess
     Result := (flags = [pfAddress]);
     {$IFEND}
-  end; { VerifyFlags }
+  end; { VerifyObjectFlags }
+
+  function VerifyConstFlags(flags: TParamFlags): boolean;
+  begin
+    {$IF CompilerVersion < 21}
+    Result := (flags = [pfVar]);
+    {$ELSEIF CompilerVersion = 21}
+      // Delphi 2010 original and Update 1: [pfVar]
+      // Delphi 2010 Update 2 and 4: [pfConst, pfReference]
+    Result := (flags = [pfVar]) or (flags = [pfConst, pfReference]);
+    {$ELSE} // best guess
+    Result := (flags = [pfConst, pfReference]);
+    {$IFEND}
+  end; { VerifyConstFlags }
 
 begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
@@ -1561,17 +1576,16 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
     Inc(paramNum);
     paramType := params.ParamType^;
     if paramNum = 1 then
-      if (not VerifyFlags(params^.Flags, [])) or (paramType^.Kind <> tkClass) then
+      if (not VerifyObjectFlags(params^.Flags, [])) or (paramType^.Kind <> tkClass) then
         RaiseInvalidSignature(methodName)
       else
         methodSignature := itSelf
     else if paramNum = 2 then
-      //code says 'const' but GetMethodInfo says 'pfVar' :(
-      if (params^.Flags * [pfConst, pfVar] <> []) and (paramType^.Kind = tkRecord) and
+      if VerifyConstFlags(params^.Flags) and (paramType^.Kind = tkRecord) and
          (SameText(string(paramType^.Name), 'TOmniValue'))
       then
         methodSignature := itSelfAndOmniValue
-      else if VerifyFlags(params^.Flags, [pfVar]) and (paramType^.Kind = tkClass) then
+      else if VerifyObjectFlags(params^.Flags, [pfVar]) and (paramType^.Kind = tkClass) then
         methodSignature := itSelfAndObject
       else
         RaiseInvalidSignature(methodName)
