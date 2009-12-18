@@ -1,5 +1,6 @@
 #summary A list of modifications in OmniThreadLibrary public releases.
 #labels Featured
+#sidebar TableOfContents
 
 = 1.04b: 2009-12-18 =
   * [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
