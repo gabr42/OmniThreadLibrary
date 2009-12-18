@@ -3,8 +3,8 @@
 #sidebar TableOfContents
 
 = 1.04b: 2009-12-18 =
-  * [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
-  * [ahwux] Added missing task interface cleanup to OnTerminated in demo 18.
+  * ahwux, gabr Fixed Delphi 2010 Update 4 compatibility.
+  * ahwux Added missing task interface cleanup to OnTerminated in demo 18.
 
 = 1.04a: 2009-12-13 = 
   * *IMPORTANT*: Fixed thread pool exception handling.
