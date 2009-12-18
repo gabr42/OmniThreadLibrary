@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-12-12
-///   Version           : 1.14
+///   Last modification : 2009-12-18
+///   Version           : 1.14a
 ///</para><para>
 ///   History:
+///     1.14a: 2009-12-18
+///       - Worked around a change in Delphi 2010 update 4.
 ///     1.14: 2009-12-12
 ///       - Implemented support for IOmniTask.RegisterWaitObject/UnregisterWaitObject.
 ///     1.13a: 2009-12-12
@@ -1506,7 +1508,19 @@ var
   params          : PParamInfo;
   paramType       : PTypeInfo;
   returnInfo      : PReturnInfo;
-begin
+
+  function VerifyFlags(flags: TParamFlags): boolean;
+  begin
+    {$IF CompilerVersion < 21}
+    Result := (flags = []);
+    {$ELSEIF CompilerVersion = 21}
+    Result := (flags = []) or (flags = [pfAddress]);
+    {$ELSE} // best guess
+    Result := (flags = [pfAddress]);
+    {$IFEND}
+  end; { VerifyFlags }
+
+begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
   methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor, ShortString(methodName));
@@ -1543,7 +1557,7 @@ begin
     Inc(paramNum);
     paramType := params.ParamType^;
     if paramNum = 1 then
-      if (params^.Flags <> []) or (paramType^.Kind <> tkClass) then
+      if (not VerifyFlags(params^.Flags)) or (paramType^.Kind <> tkClass) then
         RaiseInvalidSignature(methodName)
       else
         methodSignature := itSelf
