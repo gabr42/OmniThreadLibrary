@@ -1509,8 +1509,12 @@ var
   paramType       : PTypeInfo;
   returnInfo      : PReturnInfo;
 
-  function VerifyFlags(flags: TParamFlags): boolean;
+  function VerifyFlags(flags, requiredFlags: TParamFlags): boolean;
   begin
+    Result := ((flags * requiredFlags) = requiredFlags);
+    if not Result then
+      Exit;
+    flags := flags - requiredFlags;
     {$IF CompilerVersion < 21}
     Result := (flags = []);
     {$ELSEIF CompilerVersion = 21} // Delphi 2010 original and Update 1 report flag [] while Update 2 and 4 report flag [pfAddress]
@@ -1557,7 +1561,7 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
     Inc(paramNum);
     paramType := params.ParamType^;
     if paramNum = 1 then
-      if (not VerifyFlags(params^.Flags)) or (paramType^.Kind <> tkClass) then
+      if (not VerifyFlags(params^.Flags, [])) or (paramType^.Kind <> tkClass) then
         RaiseInvalidSignature(methodName)
       else
         methodSignature := itSelf
@@ -1567,7 +1571,7 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
          (SameText(string(paramType^.Name), 'TOmniValue'))
       then
         methodSignature := itSelfAndOmniValue
-      else if (params^.Flags = [pfVar]) and (paramType^.Kind = tkClass) then
+      else if VerifyFlags(params^.Flags, [pfVar]) and (paramType^.Kind = tkClass) then
         methodSignature := itSelfAndObject
       else
         RaiseInvalidSignature(methodName)

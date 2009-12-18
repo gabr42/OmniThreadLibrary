@@ -159,12 +159,12 @@ end;
 
 procedure TQuickSortTask.Sort(const msgData: TOmniValue);
 begin
-  FData            := PData(cardinal(msgData[0]));
-  FSubdivideWork   := msgData[3];
+  FData          := PData(cardinal(msgData[0]));
+  FSubdivideWork := msgData[3];
   QuickSort(msgData[1], msgData[2]);
   if Task.Counter.Decrement = 0 then
     Task.Comm.Send(WM_STOP);
-  Task.Terminate; 
+  Task.Terminate;
 end;
 
 initialization
