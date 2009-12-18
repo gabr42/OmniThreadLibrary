@@ -1,5 +1,6 @@
 #summary Table of Contents
 
   * [Documentation]
+  * [Changelog]
   * [Tutorials]
   * [Internals]
