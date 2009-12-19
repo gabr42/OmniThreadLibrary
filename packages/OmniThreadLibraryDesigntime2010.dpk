@@ -22,6 +22,8 @@ package OmniThreadLibraryDesigntime2010;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
+{$DESCRIPTION 'OmniThreadLibrary designtime'}
+{$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
