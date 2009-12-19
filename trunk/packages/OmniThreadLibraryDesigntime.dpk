@@ -22,7 +22,7 @@ package OmniThreadLibraryDesigntime;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DESCRIPTION 'Omni Thread Library Designtime'}
+{$DESCRIPTION 'OmniThreadLibrary designtime'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 

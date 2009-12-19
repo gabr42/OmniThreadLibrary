@@ -20,11 +20,12 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_Description>OmniThreadLibrary designtime</DCC_Description>
 			<DCC_UnitSearchPath>$(BDSCOMMONDIR)\Dcp;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\7.0\Bpl\OmniThreadLibraryDesigntime2010.bpl</DCC_DependencyCheckOutputName>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DesignOnlyPackage>false</DesignOnlyPackage>
+			<DesignOnlyPackage>true</DesignOnlyPackage>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
