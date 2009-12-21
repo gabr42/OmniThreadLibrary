@@ -22,7 +22,7 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 0
+    TabOrder = 5
   end
   object btnTest: TButton
     Left = 8
@@ -30,17 +30,53 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Width = 121
     Height = 25
     Caption = 'Single-threaded test'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = btnTestClick
   end
   object btn2to2: TButton
     Left = 8
-    Top = 39
+    Top = 71
     Width = 121
     Height = 25
     Caption = '2 -> 2'
     TabOrder = 2
     OnClick = btn2to2Click
+  end
+  object btn3to3: TButton
+    Left = 8
+    Top = 102
+    Width = 121
+    Height = 25
+    Caption = '3 -> 3'
+    TabOrder = 3
+    OnClick = btn3to3Click
+  end
+  object btn4to4: TButton
+    Left = 8
+    Top = 133
+    Width = 121
+    Height = 25
+    Caption = '4 -> 4'
+    TabOrder = 4
+    OnClick = btn4to4Click
+  end
+  object btn1to1: TButton
+    Left = 8
+    Top = 40
+    Width = 121
+    Height = 25
+    Caption = '1 -> 1'
+    TabOrder = 1
+    OnClick = btn1to1Click
+  end
+  object btnTestIntf: TButton
+    Left = 8
+    Top = 240
+    Width = 121
+    Height = 25
+    Caption = 'Send interfaces'
+    TabOrder = 6
+    OnClick = btnTestIntfClick
   end
   object OtlMonitor: TOmniEventMonitor
     OnTaskTerminated = OtlMonitorTaskTerminated
