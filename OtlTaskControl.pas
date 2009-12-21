@@ -1529,8 +1529,8 @@ var
     {$IF CompilerVersion < 21}
     Result := (flags = [pfVar]);
     {$ELSEIF CompilerVersion = 21}
-      // Delphi 2010 original and Update 1: [pfVar]
-      // Delphi 2010 Update 2 and 4: [pfConst, pfReference]
+    // Delphi 2010 original and Update 1: [pfVar]
+    // Delphi 2010 Update 2 and 4: [pfConst, pfReference]
     Result := (flags = [pfVar]) or (flags = [pfConst, pfReference]);
     {$ELSE} // best guess
     Result := (flags = [pfConst, pfReference]);

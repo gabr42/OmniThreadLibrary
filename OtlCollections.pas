@@ -251,15 +251,17 @@ begin
       {$ENDIF DEBUG}
     end
     else if tag = tagExtending then begin
-      DSIYield;
       {$IFDEF DEBUG}
       LoopEnqExtending.Increment;
       {$ENDIF DEBUG}
+      DSIYield;
     end
-    {$IFDEF DEBUG}
-    else
+    else begin
+      {$IFDEF DEBUG}
       LoopEnqOther.Increment;
-    {$ENDIF DEBUG}
+      {$ENDIF DEBUG}
+      asm pause; end;
+    end;
   until false;
   {$IFDEF DEBUG}
   Assert(tail = ocTailPointer);
@@ -401,15 +403,17 @@ begin
       {$ENDIF DEBUG}
     end
     else if tag = tagRemoving then begin
-      DSiYield; // TODO 5 -oPrimoz Gabrijelcic : I don't think we need Yield here, even if tag = tagRemoving; but still - do the test
       {$IFDEF DEBUG}
       LoopDeqRemoving.Increment;
       {$ENDIF DEBUG}
+      DSiYield; // TODO 5 -oPrimoz Gabrijelcic : I don't think we need Yield here, even if tag = tagRemoving; but still - do the test
     end
-    {$IFDEF DEBUG}
-    else
+    else begin
+      {$IFDEF DEBUG}
       LoopDeqOther.Increment;
-    {$ENDIF DEBUG}
+      {$ENDIF DEBUG}
+      asm pause; end;
+    end;
   until false;
   if Result then begin
     {$IFDEF DEBUG}
