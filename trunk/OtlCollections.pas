@@ -145,6 +145,8 @@ type
     LoopReader      : TGp4AlignedInt;
     NumDequeued     : TGp4AlignedInt;
     NumEnqueued     : TGp4AlignedInt;
+    NumTrueAlloc    : TGp4AlignedInt;
+    NumReusedAlloc  : TGp4AlignedInt;
   {$ENDIF DEBUG}
   public
     constructor Create;
@@ -237,36 +239,23 @@ begin
     if tag = tagFree then begin
       if tail^.CASTag(tag, tagAllocating) then
         break //repeat
-      {$IFDEF DEBUG}
-      else
-        LoopEnqFree.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG}else LoopEnqFree.Increment; {$ENDIF DEBUG}
     end
     else if tag = tagEndOfList then begin
       if tail^.CASTag(tag, tagExtending) then
         break //repeat
-      {$IFDEF DEBUG}
-      else
-        LoopEnqEOL.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG}else LoopEnqEOL.Increment; {$ENDIF DEBUG}
     end
     else if tag = tagExtending then begin
-      {$IFDEF DEBUG}
-      LoopEnqExtending.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG} LoopEnqExtending.Increment; {$ENDIF DEBUG}
       DSIYield;
     end
     else begin
-      {$IFDEF DEBUG}
-      LoopEnqOther.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG} LoopEnqOther.Increment; {$ENDIF DEBUG}
       asm pause; end;
     end;
   until false;
-  {$IFDEF DEBUG}
-  Assert(tail = ocTailPointer);
-  NumEnqueued.Increment;
-  {$ENDIF DEBUG}
+  {$IFDEF DEBUG} Assert(tail = ocTailPointer); NumEnqueued.Increment; {$ENDIF DEBUG}
   if tag = tagFree then begin
     tail^.Value := tmp;
     {$IFDEF DEBUG}
@@ -308,12 +297,15 @@ var
   pTaggedItem: POmniTaggedValue;
 begin
   if assigned(ocCachedBlock) then begin
+    {$IFDEF DEBUG}NumReusedAlloc.Increment;{$ENDIF DEBUG}
     Result := ocCachedBlock;
     ocCachedBlock := nil;
     ZeroMemory(Result, CBlockSize);
   end
-  else         
+  else begin
+    {$IFDEF DEBUG}NumTrueAlloc.Increment;{$ENDIF DEBUG}
     Result := AllocMem(CBlockSize);
+  end;
   pTaggedItem := Result;
   for iItem := 1 to (CBlockSize div SizeOf(TOmniTaggedValue)) - 1 do begin
     pTaggedItem^.tag := tagFree;
@@ -334,10 +326,9 @@ begin
   if not TryEnterWriter then
     Exit;
   for pBlock in ocGarbage do begin
-// TODO 1 -oPrimoz Gabrijelcic : testing, remove! 
-//    if not assigned(ocCachedBlock) then
-//      ocCachedBlock := pBlock
-//    else
+    if not assigned(ocCachedBlock) then
+      ocCachedBlock := pBlock
+    else
       FreeMem(pBlock);
   end;
   ocGarbage.Clear;
@@ -354,15 +345,10 @@ begin
     if value >= 0 then
       if ocRemoveCount.CAS(value, value + 1) then
         break
-      {$IFDEF DEBUG}
-      else
-        LoopReader.Increment
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG}else LoopReader.Increment {$ENDIF DEBUG}
     else begin
       DSiYield; // TODO 5 -oPrimoz Gabrijelcic : Test if this helps or not
-      {$IFDEF DEBUG}
-      LoopGC.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG} LoopGC.Increment; {$ENDIF DEBUG}
     end;
   until false;
 end; { TOmniCollection.EnterReader }
@@ -397,21 +383,14 @@ begin
     else if tag in [tagAllocated, tagBlockPointer] then begin
       if head^.CASTag(tag, tagRemoving) then
         break //repeat
-      {$IFDEF DEBUG}
-      else
-        LoopDeqAllocated.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG}else LoopDeqAllocated.Increment; {$ENDIF DEBUG}
     end
     else if tag = tagRemoving then begin
-      {$IFDEF DEBUG}
-      LoopDeqRemoving.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG} LoopDeqRemoving.Increment; {$ENDIF DEBUG}
       DSiYield; // TODO 5 -oPrimoz Gabrijelcic : I don't think we need Yield here, even if tag = tagRemoving; but still - do the test
     end
     else begin
-      {$IFDEF DEBUG}
-      LoopDeqOther.Increment;
-      {$ENDIF DEBUG}
+      {$IFDEF DEBUG} LoopDeqOther.Increment; {$ENDIF DEBUG}
       asm pause; end;
     end;
   until false;
