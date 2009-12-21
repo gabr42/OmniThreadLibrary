@@ -230,11 +230,14 @@ end; { TfrmTestOtlCollections.Log }
 procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniCollection; const collName:
   string);
 begin
-  Log('%s: %6d / %6d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d', [collName,
+  {$IFDEF DEBUG}
+  Log('%s: %6d / %6d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d', [collName,
     coll.NumEnqueued.Value, coll.NumDequeued.Value,
+    coll.NumTrueAlloc.Value, coll.NumReusedAlloc.Value,
     coll.LoopEnqFree.Value, coll.LoopEnqEOL.Value, coll.LoopEnqExtending.Value,
     coll.LoopEnqOther.Value, coll.LoopDeqAllocated.Value, coll.LoopDeqRemoving.Value,
     coll.LoopDeqOther.Value, coll.LoopReader.Value, coll.LoopGC.Value]);
+  {$ENDIF DEBUG}
 end; { TfrmTestOtlCollections.LogCollectionStat }
 
 procedure TfrmTestOtlCollections.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
@@ -245,7 +248,7 @@ begin
     time := DSiTimeGetTime64 - FStartTime;
     Log('All worker threads terminated, execution time = %d', [time]);
     CheckResult;
-//    PostMessage(Handle, WM_USER, 0, 0);
+    PostMessage(Handle, WM_USER, 0, 0);
   end;
 end; { TfrmTestOtlCollections.OtlMonitorTaskTerminated }
 
