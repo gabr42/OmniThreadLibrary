@@ -124,8 +124,6 @@
 ///    http://www.bluebytesoftware.com/blog/2009/01/30/ASinglewordReaderwriterSpinLock.aspx
 ///  - CancellationToken, 
 ///    http://blogs.msdn.com/pfxteam/archive/2009/06/22/9791840.aspx
-///  - BlockingCollection
-///    http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
   
 // TODO 3 -oPrimoz Gabrijelcic : Implement multiple timers.
 
