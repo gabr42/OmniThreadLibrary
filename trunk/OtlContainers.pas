@@ -61,7 +61,7 @@ uses
   OtlContainerObserver;
 
 const
-  CPartlyEmptyLoadFactor = 0.8; // When an element count drops below 90%, the container is considered 'partly empty'.
+  CPartlyEmptyLoadFactor = 0.8; // When an element count drops below 80%, the container is considered 'partly empty'.
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type

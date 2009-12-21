@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-15
-///   Version           : 1.05
+///   Last modification : 2009-12-21
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2009-12-21
+///       - Added pointer conversions and AsPointer cast to TOmniValue.
 ///     1.05: 2009-11-15
 ///       - Removed lots of stuff that is now implemented using container observers.
 ///     1.04: 2009-04-18
@@ -97,7 +99,8 @@ type
     ovData: int64;
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
-             ovtObject, ovtInterface, ovtVariant, ovtWideString);
+             ovtObject, ovtInterface, ovtVariant, ovtWideString,
+             ovtPointer);
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
@@ -106,6 +109,7 @@ type
     function  GetAsInteger: integer; inline;
     function  GetAsInterface: IInterface; inline;
     function  GetAsObject: TObject; inline;
+    function  GetAsPointer: pointer;
     function  GetAsString: string;
     function  GetAsVariant: Variant;
     function  GetAsVariantArr(idx: integer): Variant;
@@ -118,6 +122,7 @@ type
     procedure SetAsInteger(const value: integer); inline;
     procedure SetAsInterface(const value: IInterface); inline;
     procedure SetAsObject(const value: TObject); inline;
+    procedure SetAsPointer(const value: pointer);
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
@@ -128,6 +133,7 @@ type
     function  IsFloating: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
+    function  IsPointer: boolean; inline;
     function  IsString: boolean; inline;
     function  IsVariant: boolean; inline;
     function  IsWideString: boolean; inline;
@@ -141,6 +147,7 @@ type
     class operator Implicit(const a: Extended): TOmniValue;
     class operator Implicit(const a: integer): TOmniValue; inline;
     class operator Implicit(const a: int64): TOmniValue; inline;
+    class operator Implicit(const a: pointer): TOmniValue; inline;
     class operator Implicit(const a: string): TOmniValue;
     class operator Implicit(const a: IInterface): TOmniValue;
     class operator Implicit(const a: TObject): TOmniValue; inline;
@@ -150,6 +157,7 @@ type
     class operator Implicit(const a: TOmniValue): Extended; inline;
     class operator Implicit(const a: TOmniValue): string; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
+    class operator Implicit(const a: TOmniValue): pointer; inline;
     class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: TOmniValue): boolean; inline;
     class operator Implicit(const a: TOmniValue): IInterface;
@@ -163,6 +171,7 @@ type
     property AsInteger: integer read GetAsInteger write SetAsInteger;
     property AsInterface: IInterface read GetAsInterface write SetAsInterface;
     property AsObject: TObject read GetAsObject write SetAsObject;
+    property AsPointer: pointer read GetAsPointer write SetAsPointer;
     property AsString: string read GetAsString write SetAsString;
     property AsVariant: Variant read GetAsVariant write SetAsVariant;
     property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
@@ -764,6 +773,13 @@ begin
   Result := TObject(RawData^);
 end; { TOmniValue.GetAsObject }
 
+function TOmniValue.GetAsPointer: pointer;
+begin
+  if ovType <> ovtPointer then
+    Exception.Create('TOmniValue cannot be converted to pointer');
+  Result := pointer(RawData^);
+end; { TOmniValue.GetAsPointer }
+
 function TOmniValue.GetAsString: string;
 begin
   case ovType of
@@ -822,6 +838,11 @@ function TOmniValue.IsObject: boolean;
 begin
   Result := (ovType = ovtObject);
 end; { TOmniValue.IsObject }
+
+function TOmniValue.IsPointer: boolean;
+begin
+  Result := (ovType = ovtPointer);
+end; { TOmniValue.IsPointer }
 
 function TOmniValue.IsString: boolean;
 begin
@@ -900,6 +921,12 @@ begin
   RawData^ := int64(value);
   ovType := ovtObject;
 end; { TOmniValue.SetAsObject }
+
+procedure TOmniValue.SetAsPointer(const value: pointer);
+begin
+  RawData^ := int64(value);
+  ovType := ovtPointer;
+end; { TOmniValue.SetAsPointer }
 
 procedure TOmniValue.SetAsString(const value: string);
 begin
@@ -1022,6 +1049,16 @@ end; { TOmniValue.Implicit }
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
 begin
   Result.AsVariant := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: pointer): TOmniValue;
+begin
+  Result.AsPointer := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): pointer;
+begin
+  Result := a.AsPointer;
 end; { TOmniValue.Implicit }
 
 { TOmniWaitableValue }
