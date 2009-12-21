@@ -23,8 +23,16 @@ type
     OtlMonitor: TOmniEventMonitor;
     btnTest   : TButton;
     btn2to2   : TButton;
+    btn3to3: TButton;
+    btn4to4: TButton;
+    btn1to1: TButton;
+    btnTestIntf: TButton;
+    procedure btn1to1Click(Sender: TObject);
     procedure btn2to2Click(Sender: TObject);
+    procedure btn3to3Click(Sender: TObject);
+    procedure btn4to4Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
+    procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
   private
@@ -56,7 +64,7 @@ var
 implementation
 
 const
-  CCountThreadedTest = 100000;
+  CCountThreadedTest = 1000000;
   CCountSingleTest   = 100000;
 
 {$R *.dfm}
@@ -105,10 +113,25 @@ end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
 
+procedure TfrmTestOtlCollections.btn1to1Click(Sender: TObject);
+begin
+  PrepareTest(1, 1);
+end; { TfrmTestOtlCollections.btn1to1Click }
+
 procedure TfrmTestOtlCollections.btn2to2Click(Sender: TObject);
 begin
   PrepareTest(2, 2);
 end; { TfrmTestOtlCollections.btn2to2Click }
+
+procedure TfrmTestOtlCollections.btn3to3Click(Sender: TObject);
+begin
+  PrepareTest(3, 3);
+end; { TfrmTestOtlCollections.btn3to3Click }
+
+procedure TfrmTestOtlCollections.btn4to4Click(Sender: TObject);
+begin
+  PrepareTest(4, 4);
+end; { TfrmTestOtlCollections.btn4to4Click }
 
 procedure TfrmTestOtlCollections.btnTestClick(Sender: TObject);
 var
@@ -137,6 +160,34 @@ begin
   time := DSiTimeGetTime64 - time;
   Log('TOmniCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestClick }
+
+procedure TfrmTestOtlCollections.btnTestIntfClick(Sender: TObject);
+var
+  coll : TOmniCollection;
+  i    : integer;
+  loop : integer;
+  qi   : TOmniValue;
+  time : int64;
+  value: TOmniValue;
+begin
+  time := DSiTimeGetTime64;
+  coll := TOmniCollection.Create;
+  try
+    for loop := 1 to 10 do begin
+      for i := 1 to CCountSingleTest do
+        coll.Enqueue(CreateCounter(i));
+      for i := 1 to CCountSingleTest do begin
+        qi := coll.Dequeue;
+        if (qi.AsInterface as IOmniCounter).Value <> i then
+          raise Exception.CreateFmt('Expected %d', [i]);
+      end;
+      if coll.TryDequeue(value) then
+        raise Exception.Create('Collection is not empty at the end');
+    end;
+  finally FreeAndNil(coll); end;
+  time := DSiTimeGetTime64 - time;
+  Log('TOmniCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+end; { TfrmTestOtlCollections.btnTestIntfClick }
 
 procedure TfrmTestOtlCollections.CheckResult;
 var
@@ -184,7 +235,7 @@ begin
     coll.LoopEnqFree.Value, coll.LoopEnqEOL.Value, coll.LoopEnqExtending.Value,
     coll.LoopEnqOther.Value, coll.LoopDeqAllocated.Value, coll.LoopDeqRemoving.Value,
     coll.LoopDeqOther.Value, coll.LoopReader.Value, coll.LoopGC.Value]);
-end;
+end; { TfrmTestOtlCollections.LogCollectionStat }
 
 procedure TfrmTestOtlCollections.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
@@ -194,8 +245,7 @@ begin
     time := DSiTimeGetTime64 - FStartTime;
     Log('All worker threads terminated, execution time = %d', [time]);
     CheckResult;
-    if time < 1000 then
-      PostMessage(Handle, WM_USER, 0, 0);
+//    PostMessage(Handle, WM_USER, 0, 0);
   end;
 end; { TfrmTestOtlCollections.OtlMonitorTaskTerminated }
 
