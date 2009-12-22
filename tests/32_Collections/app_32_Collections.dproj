@@ -10,14 +10,12 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_DebugInformation>False</DCC_DebugInformation>
-    <DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
-    <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    <DCC_SymbolReferenceInfo>2</DCC_SymbolReferenceInfo>
     <DCC_Define>RELEASE</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
+    <DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
