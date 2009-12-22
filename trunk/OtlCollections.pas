@@ -263,6 +263,7 @@ end; { TOmniCollection.Destroy }
 procedure TOmniCollection.AddToQC(lastSlot: POmniTaggedValue);
 begin
   {$IFDEF Debug}
+  Assert(assigned(lastSlot));
   Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
   {$ENDIF Debug}
   Dec(lastSlot, CNumSlots - 1); // calculate block address from the address of the last slot
@@ -482,7 +483,7 @@ begin
         ocHeadPointer := next; // release the lock
 //        asm sfence; end;
       end
-      else begin     
+      else begin
         Inc(next);
         ocHeadPointer := next; // release the lock
 //        asm sfence; end;
@@ -527,6 +528,7 @@ var
   sentinel     : POmniTaggedValue;
 begin
   {$IFDEF Debug}
+  Assert(assigned(lastSlot));
   Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
   {$ENDIF Debug}
   sentinel := lastSlot;
@@ -538,10 +540,16 @@ begin
     repeat
       if scan^.Tag = tagRemoving then
         firstRemoving := scan;
+      if scan = sentinel then
+        break;
       Dec(scan);
-    until scan = sentinel;
+    until false;
     sentinel := firstRemoving;
-  until not assigned(firstRemoving);
+    if assigned(firstRemoving) then
+      asm pause; end
+    else
+      break; //repeat
+  until false;
 end; { TOmniCollection.WaitForAllRemoved }
 
 initialization
