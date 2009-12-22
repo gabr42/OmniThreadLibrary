@@ -49,14 +49,14 @@ Enqueue:
       yield
   forever
   if tag = tagFree then
-    store value, tagAllocated
     increment tail
+    store value, tagAllocated
   else
     allocate and initialize new block
       last entry has tagEndOfList tag, others have tagFree
+    set tail to (new block + 1 slot)
     store value, tagAllocated into new block
-    store pointer to new block, tagBlockPointer
-    set tail to new block
+    store pointer to new block, tagBlockPointer, into original
 
   Dec(removeCount);
 
@@ -80,14 +80,16 @@ Dequeue:
     yield?
   forever
   if tag = tagAllocated then
+    increment head
     get value
     store tagRemoved
-    increment head
   else
-    set header to new block
-    get value
+    if first slot in new block is allocated
+      set head to (new block + 1 slot)
+      get value
+    else
+      set head to new block
     store tagDestroying
-    set head to new block
     put last block into GC list
     retry
 
@@ -120,7 +122,7 @@ type
     ocHeadPointer: POmniTaggedValue;
     ocTailPointer: POmniTaggedValue;
   strict private
-    fblockCount: integer;
+    ocBlockCount : integer;
     ocCachedBlock: POmniTaggedValue;
     ocGarbage    : TList;
     ocHasGCBlocks: boolean;
@@ -130,7 +132,7 @@ type
     function  AllocateBlock: pointer;
     procedure CleanupGC;
     procedure DumpBlock(pBlock: POmniTaggedValue);
-    procedure EnterReader; inline;
+    procedure EnterReader; inline; 
     procedure LeaveReader; inline;
     procedure LeaveWriter; inline;
     function  TryEnterWriter: boolean; inline;
@@ -228,12 +230,8 @@ var
   extension: POmniTaggedValue;
   tag      : TOmniCollectionTag;
   tail     : POmniTaggedValue;
-  tmp      : TOmniValue;
 begin
   CleanupGC;
-  tmp := value;
-  if tmp.IsInterface then
-    tmp.AsInterface._AddRef;
   EnterReader;
   repeat
     tail := ocTailPointer;
@@ -258,19 +256,17 @@ begin
     end;
   until false;
   {$IFDEF DEBUG} Assert(tail = ocTailPointer); NumEnqueued.Increment; {$ENDIF DEBUG}
-  if tag = tagFree then begin
-    tail^.Value := tmp;
+  if tag = tagFree then begin // enqueueing
+    Inc(ocTailPointer); // release the lock
+    tail^.Value := value; // this works because the slot was initialized to zero when allocating
     {$IFDEF DEBUG}
     if not tail^.CASTag(tagAllocating, tagAllocated) then
       raise Exception.Create('Internal error');
     {$ELSE}
     tail^.Tag := tagAllocated;
     {$ENDIF DEBUG}
-    // head can overrun the tail for a moment here but that's not a problem (hope, hope)
-    Inc(ocTailPointer);
-    asm sfence; end;
   end
-  else begin
+  else begin // allocating memory
     extension := AllocateBlock;
     {$IFDEF DEBUG}
     if not extension^.CASTag(tagFree, tagAllocated) then
@@ -278,7 +274,10 @@ begin
     {$ELSE}
     extension^.Tag := tagAllocated;
     {$ENDIF DEBUG}
-    extension^.Value := tmp;
+    extension^.Value := value;  // this works because the slot was initialized to zero when allocating
+    Inc(extension);             // skip allready allocated slot
+    ocTailPointer := extension; // release the lock
+    Dec(extension);             // link must point to the first slot
     tail^.Value := cardinal(extension);
     {$IFDEF DEBUG}
     if not tail^.CASTag(tagExtending, tagBlockPointer) then
@@ -286,13 +285,8 @@ begin
     {$ELSE}
     tail^.Tag := tagBlockPointer;
     {$ENDIF DEBUG}
-    Inc(extension);
-    // head can overrun the tail for a moment here but that's not a problem (hope, hope)
-    ocTailPointer := extension;
-    asm sfence; end;
   end;
   LeaveReader;
-  tmp.RawZero;
 end; { TOmniCollection.Enqueue }
 
 function TOmniCollection.AllocateBlock: pointer;
@@ -330,12 +324,12 @@ begin
   if not TryEnterWriter then
     Exit;
   for pBlock in ocGarbage do begin
-//    if not assigned(ocCachedBlock) then
-//      ocCachedBlock := pBlock
-//    else
-// TODO 1 -oPrimoz Gabrijelcic : testing, remove! 
-//DumpBlock(pBlock);
+    if not assigned(ocCachedBlock) then
+      ocCachedBlock := pBlock
+    else begin
+      //DumpBlock(pBlock);
       FreeMem(pBlock);
+    end;
   end;
   ocGarbage.Clear;
   ocHasGCBlocks := false;
@@ -347,8 +341,8 @@ var
   f: textfile;
   i: integer;
 begin
-  fblockCount := fblockCount + 1;
-  AssignFile(f, Format('block_%.8x_%.3d.txt', [cardinal(Self), fblockCount]));
+  ocBlockCount := ocBlockCount + 1;
+  AssignFile(f, Format('block_%.8x_%.3d.txt', [cardinal(Self), ocBlockCount]));
   Rewrite(f);
   for i := 1 to (CBlockSize div SizeOf(TOmniTaggedValue)) do begin
     Writeln(f, Ord(pBlock^.Tag), ' ', integer(pBlock^.Value));
@@ -368,7 +362,7 @@ begin
         break
       {$IFDEF DEBUG}else LoopReader.Increment {$ENDIF DEBUG}
     else begin
-      DSiYield; // TODO 5 -oPrimoz Gabrijelcic : Test if this helps or not
+      DSiYield; // let the GC do its work
       {$IFDEF DEBUG} LoopGC.Increment; {$ENDIF DEBUG}
     end;
   until false;
@@ -389,7 +383,6 @@ var
   head: POmniTaggedValue;
   next: POmniTaggedValue;
   tag : TOmniCollectionTag;
-  tmp : TOmniValue;
 begin
   Result := true;
   CleanupGC;
@@ -408,23 +401,24 @@ begin
     end
     else if tag = tagRemoving then begin
       {$IFDEF DEBUG} LoopDeqRemoving.Increment; {$ENDIF DEBUG}
-      DSiYield; // TODO 5 -oPrimoz Gabrijelcic : I don't think we need Yield here, even if tag = tagRemoving; but still - do the test
+      DSiYield;
     end
     else begin
       {$IFDEF DEBUG} LoopDeqOther.Increment; {$ENDIF DEBUG}
       asm pause; end;
     end;
   until false;
-  if Result then begin
+  if Result then begin // dequeueing
     {$IFDEF DEBUG}
     Assert(head = ocHeadPointer);
     {$ENDIF DEBUG}
-    tmp.RawZero;
     if tag = tagAllocated then begin
-      tmp := head^.Value;
-      value := tmp;
-      if tmp.IsInterface then
-        tmp.AsInterface._Release;
+      Inc(ocHeadPointer); // release the lock
+      value := head^.Value;
+      if value.IsInterface then begin
+        head^.Value.AsInterface._Release;
+        head^.Value.RawZero;
+      end;
       {$IFDEF DEBUG}
       NumDequeued.Increment;
       if not head^.CASTag(tagRemoving, tagRemoved) then
@@ -432,16 +426,18 @@ begin
       {$ELSE}
       head^.Tag := tagRemoved;
       {$ENDIF DEBUG}
-      Inc(ocHeadPointer);
-      Result := true;
     end
-    else begin
+    else begin // releasing memory
       next := POmniTaggedValue(cardinal(head^.Value));
       if next^.Tag = tagAllocated then begin
-        tmp := next^.Value;
-        value := tmp;
-        if tmp.IsInterface then
-          tmp.AsInterface._Release;
+        Inc(next);             // skip the first slot, it's ours
+        ocHeadPointer := next; // release the lock
+        Dec(next);             // move back to our slot
+        value := next^.Value;
+        if value.IsInterface then begin
+          next^.Value.AsInterface._Release;
+          next^.Value.RawZero;
+        end;
         {$IFDEF DEBUG}
         NumDequeued.Increment;
         if not next^.CASTag(tagAllocated, tagRemoved) then
@@ -452,19 +448,15 @@ begin
         next^.Tag := tagRemoved;
         head^.Tag := tagDestroying;
         {$ENDIF DEBUG}
-        Inc(next);
-        ocHeadPointer := next;
-        Result := true;
       end
       else begin
+        ocHeadPointer := next; // release the lock
         {$IFDEF DEBUG}
         if not head^.CASTag(tagRemoving, tagDestroying) then
           raise Exception.Create('Internal error');
         {$ELSE}
         head^.Tag := tagDestroying;
         {$ENDIF DEBUG}
-        ocHeadPointer := next;
-        Result := true;
       end;
       AddToQC(head);
     end;
@@ -482,4 +474,5 @@ initialization
   Assert(SizeOf(TOmniTaggedValue) = 16);
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   Assert(CBlockSize = 65536);
+//  DSiDeleteFiles(GetCurrentDir, 'block*.txt');
 end.
