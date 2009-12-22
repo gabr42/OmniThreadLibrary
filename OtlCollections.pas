@@ -349,7 +349,7 @@ begin
   {$IFDEF DEBUG} Assert(tail = ocTailPointer); NumEnqueued.Increment; {$ENDIF DEBUG}
   if tag = tagFree then begin // enqueueing
     Inc(ocTailPointer); // release the lock
-    asm sfence; end;
+//    asm sfence; end;
     tail^.Value := value; // this works because the slot was initialized to zero when allocating
     {$IFDEF DEBUG}
     if not tail^.CASTag(tagAllocating, tagAllocated) then
@@ -369,7 +369,7 @@ begin
     extension^.Value := value;  // this works because the slot was initialized to zero when allocating
     Inc(extension);             // skip allready allocated slot
     ocTailPointer := extension; // release the lock
-    asm sfence; end;
+//    asm sfence; end;
     Dec(extension);             // link must point to the first slot
     tail^.Value := cardinal(extension);
     {$IFDEF DEBUG}
@@ -460,7 +460,7 @@ begin
     {$ENDIF DEBUG}
     if tag = tagAllocated then begin
       Inc(ocHeadPointer); // release the lock
-      asm sfence; end;
+//      asm sfence; end;
       value := head^.Value;
       if value.IsInterface then begin
         head^.Value.AsInterface._Release;
@@ -487,27 +487,19 @@ begin
         NumDequeued.Increment;
         if not next^.CASTag(tagAllocated, tagRemoved) then
           raise Exception.Create('Internal error');
-        if not head^.CASTag(tagRemoving, tagDestroying) then
-          raise Exception.Create('Internal error');
         {$ELSE}
         next^.Tag := tagRemoved;
-        head^.Tag := tagDestroying;
         {$ENDIF DEBUG}
         Inc(next);             // skip the first slot, it's ours
-        ocHeadPointer := next; // release the lock
-        asm sfence; end;
-//        Dec(next);             // move back to our slot
-      end
-      else begin
-        {$IFDEF DEBUG}
-        if not head^.CASTag(tagRemoving, tagDestroying) then
-          raise Exception.Create('Internal error');
-        {$ELSE}
-        head^.Tag := tagDestroying;
-        {$ENDIF DEBUG}
-        ocHeadPointer := next; // release the lock
-        asm sfence; end;
       end;
+      {$IFDEF DEBUG}
+      if not head^.CASTag(tagRemoving, tagDestroying) then
+        raise Exception.Create('Internal error');
+      {$ELSE}
+      head^.Tag := tagDestroying;
+      {$ENDIF DEBUG}
+      ocHeadPointer := next; // release the lock
+//        asm sfence; end;
       AddToQC(head);
     end;
   end;
