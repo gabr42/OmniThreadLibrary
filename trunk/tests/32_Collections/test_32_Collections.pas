@@ -26,14 +26,13 @@ type
     cbRepeat   : TCheckBox;
     lbLog      : TListBox;
     OtlMonitor : TOmniEventMonitor;
-    procedure btn1to1Click(Sender: TObject);
-    procedure btn2to2Click(Sender: TObject);
-    procedure btn3to3Click(Sender: TObject);
-    procedure btn4to4Click(Sender: TObject);
+    btn6to6: TButton;
+    btn8to8: TButton;
     procedure btnTestClick(Sender: TObject);
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
+    procedure StartTest(Sender: TObject);
   private
     FChanCollection: TOmniCollection;
     FDstCollection : TOmniCollection;
@@ -129,26 +128,6 @@ end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
 
-procedure TfrmTestOtlCollections.btn1to1Click(Sender: TObject);
-begin
-  PrepareTest(1, 1);
-end; { TfrmTestOtlCollections.btn1to1Click }
-
-procedure TfrmTestOtlCollections.btn2to2Click(Sender: TObject);
-begin
-  PrepareTest(2, 2);
-end; { TfrmTestOtlCollections.btn2to2Click }
-
-procedure TfrmTestOtlCollections.btn3to3Click(Sender: TObject);
-begin
-  PrepareTest(3, 3);
-end; { TfrmTestOtlCollections.btn3to3Click }
-
-procedure TfrmTestOtlCollections.btn4to4Click(Sender: TObject);
-begin
-  PrepareTest(4, 4);
-end; { TfrmTestOtlCollections.btn4to4Click }
-
 procedure TfrmTestOtlCollections.btnTestClick(Sender: TObject);
 var
   coll : TOmniCollection;
@@ -236,7 +215,7 @@ end; { TfrmTestOtlCollections.FormCloseQuery }
 
 procedure TfrmTestOtlCollections.Log(const msg: string);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(msg);
+  lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('[hh:nn:ss] ', Now) + msg);
 end; { TfrmTestOtlCollections.Log }
 
 procedure TfrmTestOtlCollections.Log(const msg: string; const params: array of const);
@@ -314,6 +293,7 @@ begin
   GReadersCount.Value := 0;
 //  DSiDeleteFiles(GetCurrentDir, 'reader*.txt');
 //  DSiDeleteFiles(GetCurrentDir, 'forwarder*.txt');
+  Log('%d -> %d', [numForwarders, numReaders]);
   FSrcCollection := TOmniCollection.Create;
   FDstCollection := TOmniCollection.Create;
   FChanCollection := TOmniCollection.Create;
@@ -324,6 +304,11 @@ begin
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);
 end; { TfrmTestOtlCollections.PrepareTest }
+
+procedure TfrmTestOtlCollections.StartTest(Sender: TObject);
+begin
+  PrepareTest(TButton(Sender).Tag, TButton(Sender).Tag);
+end; { TfrmTestOtlCollections.StartTest }
 
 procedure TfrmTestOtlCollections.StopForwarders;
 var
@@ -360,12 +345,7 @@ end; { TfrmTestOtlCollections.StopWorkers }
 
 procedure TfrmTestOtlCollections.WMRestartTest(var msg: TMessage);
 begin
-  if Random(3) = 0 then
-    btn2to2.Click
-  else if Random(2) = 0 then
-    btn3to3.Click
-  else
-    btn4to4.Click;
+  PrepareTest(Random(8)+1, Random(8)+1);
 end; { TfrmTestOtlCollections.WMRestartTest }
 
 initialization

@@ -1,23 +1,67 @@
+///<summary>Growable micro-locking collections. Part of the OmniThreadLibrary project.</summary>
+///<author>Primoz Gabrijelcic</author>
+///<license>
+///This software is distributed under the BSD license.
+///
+///Copyright (c) 2009 Primoz Gabrijelcic
+///All rights reserved.
+///
+///Redistribution and use in source and binary forms, with or without modification,
+///are permitted provided that the following conditions are met:
+///- Redistributions of source code must retain the above copyright notice, this
+///  list of conditions and the following disclaimer.
+///- Redistributions in binary form must reproduce the above copyright notice,
+///  this list of conditions and the following disclaimer in the documentation
+///  and/or other materials provided with the distribution.
+///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
+///  products derived from this software without specific prior written permission.
+///
+///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+///WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+///DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+///ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+///(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+///LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+///ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+///(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+///</license>
+///<remarks><para>
+///   Author            : Primoz Gabrijelcic
+///   Creation date     : 2009-12-19
+///   Last modification : 2009-12-22
+///   Version           : 1.0
+///</para><para>
+///   History:
+///     1.0: 2009-12-22
+///       - Released.
+///</para></remarks>
+
 unit OtlCollections;
 
 // TODO 3 -oPrimoz Gabrijelcic : Should implement container observer
 
 (*
-TOmniValue = 13 bytes
-tag = 1 byte
-2 bytes left empty
+TOmniCollection
+===============
+
+slot contains:
+  tag = 1 byte
+  2 bytes left empty
+  TOmniValue = 13 bytes
 tags are 4-aligned
 
 tags:
-  tagFree = F
-  tagAllocating = a
-  tagAllocated = A
-  tagEndOfList = E
-  tagExtending = e
-  tagBlockPointer = P
-  tagRemoving = r
-  tagRemoved = R
-  tagDestroying = D
+  tagFree
+  tagAllocating
+  tagAllocated
+  tagEndOfList
+  tagExtending
+  tagBlockPointer
+  tagRemoving
+  tagRemoved
+  tagDestroying
 
 CleanupGC:
   if not GC.IsEmpty then
@@ -34,7 +78,7 @@ Enqueue:
       if CAS(removeCount, removeCount + 1) then
         break
     else
-      yield? // maybe not if FastMM FreeMem is fast
+      yield
   forever
 
   repeat
@@ -67,7 +111,7 @@ Dequeue:
       if CAS(removeCount, removeCount + 1) then
         break
     else
-      yield? // maybe not if FastMM FreeMem is fast
+      yield
   forever
 
   repeat
@@ -225,70 +269,6 @@ begin
   ocHasGCBlocks := true;
 end; { TOmniCollection.AddToQC }
 
-procedure TOmniCollection.Enqueue(const value: TOmniValue);
-var
-  extension: POmniTaggedValue;
-  tag      : TOmniCollectionTag;
-  tail     : POmniTaggedValue;
-begin
-  CleanupGC;
-  EnterReader;
-  repeat
-    tail := ocTailPointer;
-    tag := tail^.tag;
-    if tag = tagFree then begin
-      if tail^.CASTag(tag, tagAllocating) then
-        break //repeat
-      {$IFDEF DEBUG}else LoopEnqFree.Increment; {$ENDIF DEBUG}
-    end
-    else if tag = tagEndOfList then begin
-      if tail^.CASTag(tag, tagExtending) then
-        break //repeat
-      {$IFDEF DEBUG}else LoopEnqEOL.Increment; {$ENDIF DEBUG}
-    end
-    else if tag = tagExtending then begin
-      {$IFDEF DEBUG} LoopEnqExtending.Increment; {$ENDIF DEBUG}
-      DSIYield;
-    end
-    else begin
-      {$IFDEF DEBUG} LoopEnqOther.Increment; {$ENDIF DEBUG}
-      asm pause; end;
-    end;
-  until false;
-  {$IFDEF DEBUG} Assert(tail = ocTailPointer); NumEnqueued.Increment; {$ENDIF DEBUG}
-  if tag = tagFree then begin // enqueueing
-    Inc(ocTailPointer); // release the lock
-    tail^.Value := value; // this works because the slot was initialized to zero when allocating
-    {$IFDEF DEBUG}
-    if not tail^.CASTag(tagAllocating, tagAllocated) then
-      raise Exception.Create('Internal error');
-    {$ELSE}
-    tail^.Tag := tagAllocated;
-    {$ENDIF DEBUG}
-  end
-  else begin // allocating memory
-    extension := AllocateBlock;
-    {$IFDEF DEBUG}
-    if not extension^.CASTag(tagFree, tagAllocated) then
-      raise Exception.Create('Internal error');
-    {$ELSE}
-    extension^.Tag := tagAllocated;
-    {$ENDIF DEBUG}
-    extension^.Value := value;  // this works because the slot was initialized to zero when allocating
-    Inc(extension);             // skip allready allocated slot
-    ocTailPointer := extension; // release the lock
-    Dec(extension);             // link must point to the first slot
-    tail^.Value := cardinal(extension);
-    {$IFDEF DEBUG}
-    if not tail^.CASTag(tagExtending, tagBlockPointer) then
-      raise Exception.Create('Internal error');
-    {$ELSE}
-    tail^.Tag := tagBlockPointer;
-    {$ENDIF DEBUG}
-  end;
-  LeaveReader;
-end; { TOmniCollection.Enqueue }
-
 function TOmniCollection.AllocateBlock: pointer;
 var
   iItem      : integer;
@@ -335,6 +315,72 @@ begin
   ocHasGCBlocks := false;
   LeaveWriter;
 end; { TOmniCollection.CleanupGC }
+
+procedure TOmniCollection.Enqueue(const value: TOmniValue);
+var
+  extension: POmniTaggedValue;
+  tag      : TOmniCollectionTag;
+  tail     : POmniTaggedValue;
+begin
+  CleanupGC;
+  EnterReader;
+  repeat
+    tail := ocTailPointer;
+    tag := tail^.tag;
+    if tag = tagFree then begin
+      if tail^.CASTag(tag, tagAllocating) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopEnqFree.Increment; {$ENDIF DEBUG}
+    end
+    else if tag = tagEndOfList then begin
+      if tail^.CASTag(tag, tagExtending) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopEnqEOL.Increment; {$ENDIF DEBUG}
+    end
+    else if tag = tagExtending then begin
+      {$IFDEF DEBUG} LoopEnqExtending.Increment; {$ENDIF DEBUG}
+      DSIYield;
+    end
+    else begin
+      {$IFDEF DEBUG} LoopEnqOther.Increment; {$ENDIF DEBUG}
+      asm pause; end;
+    end;
+  until false;
+  {$IFDEF DEBUG} Assert(tail = ocTailPointer); NumEnqueued.Increment; {$ENDIF DEBUG}
+  if tag = tagFree then begin // enqueueing
+    Inc(ocTailPointer); // release the lock
+    asm sfence; end;
+    tail^.Value := value; // this works because the slot was initialized to zero when allocating
+    {$IFDEF DEBUG}
+    if not tail^.CASTag(tagAllocating, tagAllocated) then
+      raise Exception.Create('Internal error');
+    {$ELSE}
+    tail^.Tag := tagAllocated;
+    {$ENDIF DEBUG}
+  end
+  else begin // allocating memory
+    extension := AllocateBlock;
+    {$IFDEF DEBUG}
+    if not extension^.CASTag(tagFree, tagAllocated) then
+      raise Exception.Create('Internal error');
+    {$ELSE}
+    extension^.Tag := tagAllocated;
+    {$ENDIF DEBUG}
+    extension^.Value := value;  // this works because the slot was initialized to zero when allocating
+    Inc(extension);             // skip allready allocated slot
+    ocTailPointer := extension; // release the lock
+    asm sfence; end;
+    Dec(extension);             // link must point to the first slot
+    tail^.Value := cardinal(extension);
+    {$IFDEF DEBUG}
+    if not tail^.CASTag(tagExtending, tagBlockPointer) then
+      raise Exception.Create('Internal error');
+    {$ELSE}
+    tail^.Tag := tagBlockPointer;
+    {$ENDIF DEBUG}
+  end;
+  LeaveReader;
+end; { TOmniCollection.Enqueue }
 
 procedure TOmniCollection.DumpBlock(pBlock: POmniTaggedValue);
 var
@@ -414,6 +460,7 @@ begin
     {$ENDIF DEBUG}
     if tag = tagAllocated then begin
       Inc(ocHeadPointer); // release the lock
+      asm sfence; end;
       value := head^.Value;
       if value.IsInterface then begin
         head^.Value.AsInterface._Release;
@@ -428,11 +475,9 @@ begin
       {$ENDIF DEBUG}
     end
     else begin // releasing memory
+      // if tail pointer is incremented too soon, another thread may release the block we are working on before we are finished
       next := POmniTaggedValue(cardinal(head^.Value));
       if next^.Tag = tagAllocated then begin
-        Inc(next);             // skip the first slot, it's ours
-        ocHeadPointer := next; // release the lock
-        Dec(next);             // move back to our slot
         value := next^.Value;
         if value.IsInterface then begin
           next^.Value.AsInterface._Release;
@@ -448,15 +493,20 @@ begin
         next^.Tag := tagRemoved;
         head^.Tag := tagDestroying;
         {$ENDIF DEBUG}
+        Inc(next);             // skip the first slot, it's ours
+        ocHeadPointer := next; // release the lock
+        asm sfence; end;
+//        Dec(next);             // move back to our slot
       end
       else begin
-        ocHeadPointer := next; // release the lock
         {$IFDEF DEBUG}
         if not head^.CASTag(tagRemoving, tagDestroying) then
           raise Exception.Create('Internal error');
         {$ELSE}
         head^.Tag := tagDestroying;
         {$ENDIF DEBUG}
+        ocHeadPointer := next; // release the lock
+        asm sfence; end;
       end;
       AddToQC(head);
     end;

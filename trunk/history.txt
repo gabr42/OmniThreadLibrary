@@ -1,4 +1,5 @@
 - Set package names and designtime/runtime type in D2009/D2010 packages.
+- Added 
 
 1.04b: 2009-12-18
 - [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
