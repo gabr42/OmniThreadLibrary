@@ -184,8 +184,10 @@ end;
 procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   GlobalOmniThreadPool.CancelAll;
-  FThreadPool.CancelAll;
-  FThreadPool := nil;
+  if assigned(FThreadPool) then begin
+    FThreadPool.CancelAll;
+    FThreadPool := nil;
+  end;
   CanClose := true;
 end;
 
