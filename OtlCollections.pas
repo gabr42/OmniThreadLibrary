@@ -120,6 +120,7 @@ type
     ocHeadPointer: POmniTaggedValue;
     ocTailPointer: POmniTaggedValue;
   strict private
+    fblockCount: integer;
     ocCachedBlock: POmniTaggedValue;
     ocGarbage    : TList;
     ocHasGCBlocks: boolean;
@@ -128,6 +129,7 @@ type
     procedure AddToQC(lastSlot: POmniTaggedValue);
     function  AllocateBlock: pointer;
     procedure CleanupGC;
+    procedure DumpBlock(pBlock: POmniTaggedValue);
     procedure EnterReader; inline;
     procedure LeaveReader; inline;
     procedure LeaveWriter; inline;
@@ -266,6 +268,7 @@ begin
     {$ENDIF DEBUG}
     // head can overrun the tail for a moment here but that's not a problem (hope, hope)
     Inc(ocTailPointer);
+    asm sfence; end;
   end
   else begin
     extension := AllocateBlock;
@@ -286,6 +289,7 @@ begin
     Inc(extension);
     // head can overrun the tail for a moment here but that's not a problem (hope, hope)
     ocTailPointer := extension;
+    asm sfence; end;
   end;
   LeaveReader;
   tmp.RawZero;
@@ -326,15 +330,32 @@ begin
   if not TryEnterWriter then
     Exit;
   for pBlock in ocGarbage do begin
-    if not assigned(ocCachedBlock) then
-      ocCachedBlock := pBlock
-    else
+//    if not assigned(ocCachedBlock) then
+//      ocCachedBlock := pBlock
+//    else
+// TODO 1 -oPrimoz Gabrijelcic : testing, remove! 
+//DumpBlock(pBlock);
       FreeMem(pBlock);
   end;
   ocGarbage.Clear;
   ocHasGCBlocks := false;
   LeaveWriter;
 end; { TOmniCollection.CleanupGC }
+
+procedure TOmniCollection.DumpBlock(pBlock: POmniTaggedValue);
+var
+  f: textfile;
+  i: integer;
+begin
+  fblockCount := fblockCount + 1;
+  AssignFile(f, Format('block_%.8x_%.3d.txt', [cardinal(Self), fblockCount]));
+  Rewrite(f);
+  for i := 1 to (CBlockSize div SizeOf(TOmniTaggedValue)) do begin
+    Writeln(f, Ord(pBlock^.Tag), ' ', integer(pBlock^.Value));
+    Inc(pBlock);
+  end;
+  CloseFile(f);
+end; { TOmniCollection.DumpBlock }
 
 procedure TOmniCollection.EnterReader;
 var

@@ -31,6 +31,7 @@
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
     <DCC_MapFile>3</DCC_MapFile>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
