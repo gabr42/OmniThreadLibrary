@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2009-11-11
-///   Version           : 1.01b
+///   Last modification : 2009-12-22
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2009-12-22
+///       - TOmniContainerSubject moved into OtlContainerObserver because it will also be
+///         used in OtlCollections.
 ///     1.01b: 2009-11-11
 ///       - [GJ] better fix for the initialization crash.
 ///     1.01a: 2009-11-10
@@ -65,23 +68,6 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
-  TOmniContainerSubject = class
-  strict private
-    csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
-    csObserverLists: array [TOmniContainerObserverInterest] of TList;
-  protected
-    procedure Notify(interest: TOmniContainerObserverInterest);
-    procedure NotifyOnce(interest: TOmniContainerObserverInterest);
-    procedure Rearm(interest: TOmniContainerObserverInterest);
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Attach(const observer: TOmniContainerObserver;
-      interest: TOmniContainerObserverInterest);
-    procedure Detach(const observer: TOmniContainerObserver;
-      interest: TOmniContainerObserverInterest); 
-  end; { TOmniContainerSubject }
-
   {:Lock-free, single writer, single reader, size-limited stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
@@ -217,99 +203,6 @@ implementation
 uses
   Windows,
   SysUtils;
-
-{ TOmniContainerSubject }
-
-constructor TOmniContainerSubject.Create;
-var
-  interest: TOmniContainerObserverInterest;
-begin
-  inherited Create;
-  for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
-    csObserverLists[interest] := TList.Create;
-end; { TOmniContainerSubject.Create }
-
-destructor TOmniContainerSubject.Destroy;
-var
-  interest: TOmniContainerObserverInterest;
-begin
-  for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do begin
-    csObserverLists[interest].Free;
-    csObserverLists[interest] := nil;
-  end;
-  inherited;
-end; { TOmniContainerSubject.Destroy }
-
-procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
-  interest: TOmniContainerObserverInterest);
-begin
-  csListLocks[interest].EnterWriteLock;
-  try
-    if csObserverLists[interest].IndexOf(observer) < 0 then
-      csObserverLists[interest].Add(observer);
-  finally csListLocks[interest].ExitWriteLock; end;
-end; { TOmniContainerSubject.Attach }
-
-procedure TOmniContainerSubject.Detach(const observer: TOmniContainerObserver;
-  interest: TOmniContainerObserverInterest);
-begin
-  csListLocks[interest].EnterWriteLock;
-  try
-    csObserverLists[interest].Remove(observer);
-  finally csListLocks[interest].ExitWriteLock; end;
-end; { TOmniContainerSubject.Detach }
-
-procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
-var
-  iObserver: integer;
-  list     : TList;
-begin
-  {$R-}
-  csListLocks[interest].EnterReadLock;
-  try
-    list := csObserverLists[interest];
-    for iObserver := 0 to list.Count - 1 do begin
-      TOmniContainerObserver(list[iObserver]).Notify;
-    end;
-  finally csListLocks[interest].ExitReadLock; end;
-  {$R+}
-end; { TOmniContainerSubject.Notify }
-
-procedure TOmniContainerSubject.NotifyOnce(interest: TOmniContainerObserverInterest);
-var
-  iObserver: integer;
-  list     : TList;
-  observer : TOmniContainerObserver;
-begin
-  {$R-}
-  csListLocks[interest].EnterReadLock;
-  try
-    list := csObserverLists[interest];
-    for iObserver := 0 to list.Count - 1 do begin
-      observer := TOmniContainerObserver(list[iObserver]);
-      if observer.CanNotify then begin 
-        observer.Notify;
-        observer.Deactivate;
-      end;
-    end;
-  finally csListLocks[interest].ExitReadLock; end;
-  {$R+}
-end; { TOmniContainerSubject.NotifyAndRemove }
-
-procedure TOmniContainerSubject.Rearm(interest: TOmniContainerObserverInterest);
-var
-  iObserver: integer;
-  list     : TList;
-begin
-  {$R-}
-  csListLocks[interest].EnterReadLock;
-  try
-    list := csObserverLists[interest];
-    for iObserver := 0 to list.Count - 1 do 
-      TOmniContainerObserver(list[iObserver]).Activate;
-  finally csListLocks[interest].ExitReadLock; end;
-  {$R+}
-end; { TOmniContainerSubject.Rearm }
 
 { TOmniBaseStack }
 
