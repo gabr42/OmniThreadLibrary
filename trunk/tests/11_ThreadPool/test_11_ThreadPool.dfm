@@ -27,7 +27,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-    ExplicitTop = -8
   end
   object btnRunTask: TButton
     Left = 8
@@ -110,7 +109,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Caption = 'Save log'
     TabOrder = 9
     OnClick = btnSaveLogClick
-    ExplicitTop = 273
   end
   object btnScheduleUnobserved: TButton
     Left = 8
