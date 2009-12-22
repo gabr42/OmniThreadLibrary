@@ -180,6 +180,7 @@ type
     procedure LeaveReader; inline;
     procedure LeaveWriter; inline;
     function  TryEnterWriter: boolean; inline;
+    procedure WaitForAllRemoved(const lastSlot: POmniTaggedValue);
   {$IFDEF DEBUG}
   public
     LoopDeqAllocated: TGp4AlignedInt;
@@ -477,7 +478,15 @@ begin
     else begin // releasing memory
       // if tail pointer is incremented too soon, another thread may release the block we are working on before we are finished
       next := POmniTaggedValue(cardinal(head^.Value));
-      if next^.Tag = tagAllocated then begin
+      if next^.Tag <> tagAllocated then begin
+        ocHeadPointer := next; // release the lock
+//        asm sfence; end;
+      end
+      else begin     
+        Inc(next);
+        ocHeadPointer := next; // release the lock
+//        asm sfence; end;
+        Dec(next);
         value := next^.Value;
         if value.IsInterface then begin
           next^.Value.AsInterface._Release;
@@ -490,7 +499,6 @@ begin
         {$ELSE}
         next^.Tag := tagRemoved;
         {$ENDIF DEBUG}
-        Inc(next);             // skip the first slot, it's ours
       end;
       {$IFDEF DEBUG}
       if not head^.CASTag(tagRemoving, tagDestroying) then
@@ -498,8 +506,9 @@ begin
       {$ELSE}
       head^.Tag := tagDestroying;
       {$ENDIF DEBUG}
-      ocHeadPointer := next; // release the lock
-//        asm sfence; end;
+      // At this moment, another thread may still be dequeueing from the previous slot
+      // and memory should not yet be released!
+      WaitForAllRemoved(head);
       AddToQC(head);
     end;
   end;
@@ -510,6 +519,30 @@ function TOmniCollection.TryEnterWriter: boolean;
 begin
   Result := (ocRemoveCount.Value = 0) and (ocRemoveCount.CAS(0, -1));
 end; { TOmniCollection.TryEnterWriter }
+
+procedure TOmniCollection.WaitForAllRemoved(const lastSlot: POmniTaggedValue);
+var
+  firstRemoving: POmniTaggedValue;
+  scan         : POmniTaggedValue;
+  sentinel     : POmniTaggedValue;
+begin
+  {$IFDEF Debug}
+  Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
+  {$ENDIF Debug}
+  sentinel := lastSlot;
+  Dec(sentinel, CNumSlots - 1);
+  repeat
+    firstRemoving := nil; 
+    scan := lastSlot;
+    Dec(scan);
+    repeat
+      if scan^.Tag = tagRemoving then
+        firstRemoving := scan;
+      Dec(scan);
+    until scan = sentinel;
+    sentinel := firstRemoving;
+  until not assigned(firstRemoving);
+end; { TOmniCollection.WaitForAllRemoved }
 
 initialization
   Assert(SizeOf(TOmniValue) = 13);
