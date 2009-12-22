@@ -1,7 +1,5 @@
 unit test_32_Collections;
 
-// TODO 1 -oPrimoz Gabrijelcic : Test interface passing
-
 interface
 
 uses
@@ -66,7 +64,7 @@ implementation
 //  GpStreams;
 
 const
-  CCountThreadedTest = 100000;
+  CCountThreadedTest = 1000000;
   CCountSingleTest   = 100000;
 
 var
@@ -201,7 +199,7 @@ begin
       end;
       if coll.TryDequeue(value) then
         raise Exception.Create('Collection is not empty at the end');
-    end;
+    end; //for loop
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
   Log('TOmniCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
@@ -316,7 +314,6 @@ begin
   GReadersCount.Value := 0;
 //  DSiDeleteFiles(GetCurrentDir, 'reader*.txt');
 //  DSiDeleteFiles(GetCurrentDir, 'forwarder*.txt');
-//  DSiDeleteFiles(GetCurrentDir, 'block*.txt');
   FSrcCollection := TOmniCollection.Create;
   FDstCollection := TOmniCollection.Create;
   FChanCollection := TOmniCollection.Create;
@@ -359,18 +356,17 @@ begin
   FreeAndNil(FSrcCollection);
   FreeAndNil(FDstCollection);
   FreeAndNil(FChanCollection);
-end;
+end; { TfrmTestOtlCollections.StopWorkers }
 
 procedure TfrmTestOtlCollections.WMRestartTest(var msg: TMessage);
 begin
-  Sleep(1000);
   if Random(3) = 0 then
     btn2to2.Click
   else if Random(2) = 0 then
     btn3to3.Click
   else
     btn4to4.Click;
-end;
+end; { TfrmTestOtlCollections.WMRestartTest }
 
 initialization
   Assert(SizeOf(cardinal) = SizeOf(pointer));
