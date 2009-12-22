@@ -19,14 +19,15 @@ uses
 
 type
   TfrmTestOtlCollections = class(TForm)
-    lbLog     : TListBox;
-    OtlMonitor: TOmniEventMonitor;
-    btnTest   : TButton;
-    btn2to2   : TButton;
-    btn3to3: TButton;
-    btn4to4: TButton;
-    btn1to1: TButton;
+    btn1to1    : TButton;
+    btn2to2    : TButton;
+    btn3to3    : TButton;
+    btn4to4    : TButton;
+    btnTest    : TButton;
     btnTestIntf: TButton;
+    cbRepeat   : TCheckBox;
+    lbLog      : TListBox;
+    OtlMonitor : TOmniEventMonitor;
     procedure btn1to1Click(Sender: TObject);
     procedure btn2to2Click(Sender: TObject);
     procedure btn3to3Click(Sender: TObject);
@@ -43,8 +44,6 @@ type
     FReaders       : array of IOmniTaskControl;
     FSrcCollection : TOmniCollection;
     FStartTime     : int64;
-    FStopForwarders: boolean;
-    FStopReaders   : boolean;
     procedure CheckResult;
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const params: array of const); overload;
@@ -63,52 +62,71 @@ var
 
 implementation
 
+//uses
+//  GpStreams;
+
 const
-  CCountThreadedTest = 1000000;
+  CCountThreadedTest = 100000;
   CCountSingleTest   = 100000;
+
+var
+  GForwardersCount: TGp4AlignedInt;
+  GReadersCount   : TGp4AlignedInt;
+  GStopForwarders : boolean;
+  GStopReaders    : boolean;
 
 {$R *.dfm}
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
   chanColl: TOmniCollection;
+  list    : TGpIntegerList;
   srcColl : TOmniCollection;
-  stopFlag: PBoolean;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Source'];  srcColl := TOmniCollection(value.AsObject);
   value := task.ParamByName['Channel']; chanColl := TOmniCollection(value.AsObject);
-  value := task.ParamByName['Stop'];    stopFlag := PBoolean(value.AsPointer);
-  value := -1;
-  while not stopFlag^ do
-    while srcColl.TryDequeue(value) do begin
-      chanColl.Enqueue(value);
-      if value = CCountThreadedTest then begin
-        stopFlag^ := true;
-        break; //while
+  list := TGpIntegerList.Create;
+  try
+    while not GStopForwarders do
+      while srcColl.TryDequeue(value) do begin
+        list.Add(value.AsInteger);
+        chanColl.Enqueue(value);
+        if GForwardersCount.Increment = CCountThreadedTest then begin
+          GStopForwarders := true;
+          break; //while
+        end;
       end;
-    end;
+//    AutoDestroyStream(SafeCreateFileStream(
+//      Format('forwarder_%d.txt', [GetCurrentThreadID]), fmCreate)).Stream
+//      .WriteStr(list.Text);
+  finally FreeAndNil(list); end;
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
   chanColl: TOmniCollection;
   dstColl : TOmniCollection;
-  stopFlag: PBoolean;
+  list    : TGpIntegerList;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Channel'];     chanColl := TOmniCollection(value.AsObject);
   value := task.ParamByName['Destination']; dstColl := TOmniCollection(value.AsObject);
-  value := task.ParamByName['Stop'];        stopFlag := PBoolean(value.AsPointer);
-  value := -1;
-  while not stopFlag^ do
-    while chanColl.TryDequeue(value) do begin
-      dstColl.Enqueue(value);
-      if value = CCountThreadedTest then begin
-        stopFlag^ := true;
-        break; //while
+  list := TGpIntegerList.Create;
+  try
+    while not GStopReaders do
+      while chanColl.TryDequeue(value) do begin
+        list.Add(value.AsInteger);
+        dstColl.Enqueue(value);
+        if GReadersCount.Increment = CCountThreadedTest then begin
+          GStopReaders := true;
+          break; //while
+        end;
       end;
-    end;
+//    AutoDestroyStream(SafeCreateFileStream(
+//      Format('reader_%d.txt', [GetCurrentThreadID]), fmCreate)).Stream
+//      .WriteStr(list.Text);
+  finally FreeAndNil(list); end;
 end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
@@ -198,18 +216,19 @@ begin
   LogCollectionStat(FSrcCollection, 'Source');
   LogCollectionStat(FChanCollection, 'Channel');
   LogCollectionStat(FDstCollection, 'Destination');
-  testList := TGpIntegerList.Create;
   try
-    while FDstCollection.TryDequeue(value) do
-      testList.Add(value.AsInteger);
-    testList.Sorted := true;
-    if testList.Count <> CCountThreadedTest then
-      raise Exception.CreateFmt('Expected %d items, got %d', [CCountThreadedTest, testList.Count]);
-    for i := 1 to CCountThreadedTest do
-      if testList[i-1] <> i then
-        raise Exception.CreateFmt('Got value %d at position %d', [testList[i], i-1]);
-  finally FreeAndNil(testList); end;
-  StopWorkers;
+    testList := TGpIntegerList.Create;
+    try
+      while FDstCollection.TryDequeue(value) do
+        testList.Add(value.AsInteger);
+      testList.Sorted := true;
+      if testList.Count <> CCountThreadedTest then
+        raise Exception.CreateFmt('Expected %d items, got %d', [CCountThreadedTest, testList.Count]);
+      for i := 1 to CCountThreadedTest do
+        if testList[i-1] <> i then
+          raise Exception.CreateFmt('Got value %d at position %d', [testList[i], i-1]);
+    finally FreeAndNil(testList); end;
+  finally StopWorkers; end;
 end; { TfrmTestOtlCollections.CheckResult }
 
 procedure TfrmTestOtlCollections.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -231,7 +250,9 @@ procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniCollection; const 
   string);
 begin
   {$IFDEF DEBUG}
-  Log('%s: %6d / %6d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d', [collName,
+  Log(
+    '%s[%p]: %6d / %6d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d',
+    [collName, pointer(coll),
     coll.NumEnqueued.Value, coll.NumDequeued.Value,
     coll.NumTrueAlloc.Value, coll.NumReusedAlloc.Value,
     coll.LoopEnqFree.Value, coll.LoopEnqEOL.Value, coll.LoopEnqExtending.Value,
@@ -248,7 +269,8 @@ begin
     time := DSiTimeGetTime64 - FStartTime;
     Log('All worker threads terminated, execution time = %d', [time]);
     CheckResult;
-    PostMessage(Handle, WM_USER, 0, 0);
+    if cbRepeat.Checked then
+      PostMessage(Handle, WM_USER, 0, 0);
   end;
 end; { TfrmTestOtlCollections.OtlMonitorTaskTerminated }
 
@@ -262,7 +284,6 @@ begin
       CreateTask(ForwarderWorker, Format('Forwarder %d', [iForwarder]))
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
-      .SetParameter('Stop', @FStopForwarders)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -278,7 +299,6 @@ begin
       CreateTask(ReaderWorker, Format('Reader %d', [iReader]))
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
-      .SetParameter('Stop', @FStopReaders)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -290,8 +310,13 @@ var
 begin
   StopForwarders;
   StopReaders;
-  FStopForwarders := false;
-  FStopReaders := false;
+  GStopForwarders := false;
+  GStopReaders := false;
+  GForwardersCount.Value := 0;
+  GReadersCount.Value := 0;
+//  DSiDeleteFiles(GetCurrentDir, 'reader*.txt');
+//  DSiDeleteFiles(GetCurrentDir, 'forwarder*.txt');
+//  DSiDeleteFiles(GetCurrentDir, 'block*.txt');
   FSrcCollection := TOmniCollection.Create;
   FDstCollection := TOmniCollection.Create;
   FChanCollection := TOmniCollection.Create;
@@ -338,7 +363,13 @@ end;
 
 procedure TfrmTestOtlCollections.WMRestartTest(var msg: TMessage);
 begin
-  btn2to2.Click;
+  Sleep(1000);
+  if Random(3) = 0 then
+    btn2to2.Click
+  else if Random(2) = 0 then
+    btn3to3.Click
+  else
+    btn4to4.Click;
 end;
 
 initialization

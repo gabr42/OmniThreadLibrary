@@ -78,6 +78,14 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     TabOrder = 6
     OnClick = btnTestIntfClick
   end
+  object cbRepeat: TCheckBox
+    Left = 8
+    Top = 164
+    Width = 97
+    Height = 17
+    Caption = 'Repeat'
+    TabOrder = 7
+  end
   object OtlMonitor: TOmniEventMonitor
     OnTaskTerminated = OtlMonitorTaskTerminated
     Left = 224
