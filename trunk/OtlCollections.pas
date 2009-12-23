@@ -178,7 +178,7 @@ type
     procedure EnterReader; 
     procedure LeaveReader; inline;
     procedure LeaveWriter; inline;
-    procedure ReleaseBlock(lastSlot: POmniTaggedValue);
+    procedure ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean = false);
     procedure EnterWriter; 
     procedure WaitForAllRemoved(const lastSlot: POmniTaggedValue);
   {$IFDEF DEBUG}
@@ -243,12 +243,20 @@ begin
 end; { TOmniCollection.Dequeue }
 
 destructor TOmniCollection.Destroy;
+var
+  pBlock: POmniTaggedValue;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Must follow not tail but head pointer over all blocks and release them all
-  while ocTailPointer.Tag <> tagEndOfList do
-    Inc(ocTailPointer);
-  ReleaseBlock(ocTailPointer);
-  FreeMem(ocCachedBlock);
+  while assigned(ocHeadPointer) do begin
+    if ocHeadPointer.Tag in [tagBlockPointer, tagEndOfList] then begin
+      pBlock := ocHeadPointer;
+      ocHeadPointer := POmniTaggedValue(ocHeadPointer.Value.AsPointer);
+      ReleaseBlock(pBlock, true);
+    end
+    else
+      Inc(ocHeadPointer);
+  end;
+  if assigned(ocCachedBlock) then
+    FreeMem(ocCachedBlock);
   inherited;
 end; { TOmniCollection.Destroy }
 
@@ -372,7 +380,7 @@ begin
   ocRemoveCount.Value := 0;
 end; { TOmniCollection.LeaveWriter }
 
-procedure TOmniCollection.ReleaseBlock(lastSlot: POmniTaggedValue);
+procedure TOmniCollection.ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean);
 begin
   {$IFDEF DEBUG}
   Inc(lastSlot);
@@ -386,7 +394,7 @@ begin
   Dec(lastSlot);
   Assert(lastSlot^.Tag = tagSentinel);
   {$ENDIF};
-  if assigned(ocCachedBlock) or (not CAS32(nil, lastSlot, ocCachedBlock)) then
+  if forceFree or assigned(ocCachedBlock) or (not CAS32(nil, lastSlot, ocCachedBlock)) then
     FreeMem(lastSlot);
 end; { TOmniCollection.ReleaseBlock }
 
