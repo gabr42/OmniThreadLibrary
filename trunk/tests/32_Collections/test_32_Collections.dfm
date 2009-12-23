@@ -23,7 +23,6 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
-    ExplicitHeight = 273
   end
   object btnTest: TButton
     Left = 8

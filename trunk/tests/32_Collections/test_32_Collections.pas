@@ -228,13 +228,11 @@ procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniCollection; const 
 begin
   {$IFDEF DEBUG}
   Log(
-    '%s[%p]: %6d / %6d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d / %3d',
+    '%s[%p]: %6d / %6d / %3d / %3d / %3d / %3d  / %3d / %3d',
     [collName, pointer(coll),
-    coll.NumEnqueued.Value, coll.NumDequeued.Value,
     coll.NumTrueAlloc.Value, coll.NumReusedAlloc.Value,
     coll.LoopEnqFree.Value, coll.LoopEnqEOL.Value, coll.LoopEnqExtending.Value,
-    coll.LoopEnqOther.Value, coll.LoopDeqAllocated.Value, coll.LoopDeqRemoving.Value,
-    coll.LoopDeqOther.Value, coll.LoopReader.Value, coll.LoopGC.Value]);
+    coll.LoopEnqOther.Value, coll.LoopDeqAllocated.Value, coll.LoopDeqOther.Value]);
   {$ENDIF DEBUG}
 end; { TfrmTestOtlCollections.LogCollectionStat }
 

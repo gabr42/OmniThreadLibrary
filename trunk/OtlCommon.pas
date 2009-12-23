@@ -398,7 +398,6 @@ begin
 end; { CreateInterfaceDictionary }
 
 procedure SetThreadName(const name: string);
-{$IFDEF ShowThreadNames}
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
@@ -409,9 +408,7 @@ type
 var
   ansiName      : AnsiString;
   threadNameInfo: TThreadNameInfo;
-{$ENDIF}
 begin
-  {$IFDEF ShowThreadNames}
   if DebugHook <> 0 then begin
     ansiName := AnsiString(name);
     threadNameInfo.FType := $1000;
@@ -422,7 +419,6 @@ begin
       RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
     except {ignore} end;
   end;
-  {$ENDIF}
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;

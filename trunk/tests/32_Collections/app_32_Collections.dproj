@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{910a1420-3637-406d-a20c-182b99f04d2c}</ProjectGuid>
-    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
     <DCC_DependencyCheckOutputName>app_32_Collections.exe</DCC_DependencyCheckOutputName>
@@ -20,11 +20,11 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_Define>DEBUG;FullDebugMode</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
+    <DCC_Define>DEBUG;FullDebugMode;ShowThreadNames</DCC_Define>
+    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;x:\common\src</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;x:\common\src</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;x:\common\src</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;x:\common\src</DCC_IncludePath>
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
