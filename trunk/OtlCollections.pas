@@ -30,11 +30,11 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-19
-///   Last modification : 2009-12-22
+///   Last modification : 2009-12-24
 ///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     1.0: 2009-12-22
+///     1.0: 2009-12-24
 ///       - Released.
 ///</para></remarks>
 
@@ -45,8 +45,6 @@ unit OtlCollections;
 (*
 TOmniCollection
 ===============
-
-**** the documentation below is not totally accurate at the moment ****
 
 slot contains:
   tag = 1 byte
@@ -64,67 +62,39 @@ tags:
   tagExtending
   tagBlockPointer
   tagDestroying
-  tagDestroyed;
-
-CleanupGC:
-  if not GC.IsEmpty then
-    if removeCount = 0 then
-      if CAS(removeCount, -1) then begin
-        GC.Cleanup
-        removeCount := 0;
-      end;
+  tagDestroyed
 
 Enqueue:
-  CleanupGC;
-  repeat
-    if removeCount >= 0 then
-      if CAS(removeCount, removeCount + 1) then
-        break
-    else
-      yield
-  forever
-
+  readlock GC
   repeat
     fetch tag from current tail
-    if tag = tagFree and
-       CAS(tag, tagAllocating) then
+    if tag = tagFree and CAS(tag, tagAllocating) then
       break
-    if tag = tagEndOfList and
-       CAS(tag, tagExtending) then
+    if tag = tagEndOfList and CAS(tag, tagExtending) then
       break
-    if tag = tagExtending then
-      yield
+    yield
   forever
   if tag = tagFree then
     increment tail
-    store value, tagAllocated
+    store (tagAllocated, value) into locked slot
   else
     allocate and initialize new block
       last entry has tagEndOfList tag, others have tagFree
-    set tail to (new block + 1 slot)
-    store value, tagAllocated into new block
-    store pointer to new block, tagBlockPointer, into original
-
-  Dec(removeCount);
+    set tail to new block's slot 1
+    store (tagAllocated, value) into new block's slot 0
+    store (tagBlockPointer, pointer to new block) into locked slot
+  leave GC
 
 Dequeue:
-  CleanupGC;
-  repeat
-    if removeCount >= 0 then
-      if CAS(removeCount, removeCount + 1) then
-        break
-    else
-      yield
-  forever
-
+  readlock GC
   repeat
     fetch tag from current head
     if tag = tagFree then
       return Empty
-    if tag in [tagAllocated, tagBlockPointer] and
-       CAS(tag, tagRemoving) then
+    if tag = tagAllocated and CAS(tag, tagRemoving) then
       break
-    yield?
+    if tag = tagBlockPointer and CAS(tag, tagDestroying) then
+    yield
   forever
   if tag = tagAllocated then
     increment head
@@ -132,15 +102,18 @@ Dequeue:
     store tagRemoved
   else
     if first slot in new block is allocated
-      set head to (new block + 1 slot)
+      set head to new block's slot 1
       get value
     else
       set head to new block
+    leave GC
     store tagDestroying
-    put last block into GC list
-    retry
+    writelock GC
+    release original block
+    leave GC
+    exit
 
-  Dec(removeCount);
+  leave GC
 *)
 
 interface
@@ -148,7 +121,6 @@ interface
 uses
   Classes,
   GpStuff,
-  GpLists, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlSync;
 
@@ -165,7 +137,7 @@ type
   end; { TOmniTaggedValue }
   POmniTaggedValue = ^TOmniTaggedValue;
 
-  ///<summary>Growable, threadsafe, O(1) enqueue and dequeue, microlocking queue.</summary>
+  ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
   TOmniCollection = class
   strict private // keep 4-aligned
     ocCachedBlock: POmniTaggedValue;
@@ -289,9 +261,7 @@ begin
   {$ENDIF}
   pEOL := Result;
   Inc(pEOL, CNumSlots - 1);
-  {$IFDEF DEBUG}
-  Assert(Result^.Tag = tagFree);
-  {$ENDIF}
+  {$IFDEF DEBUG} Assert(Result^.Tag = tagFree); {$ENDIF}
   pEOL^.tag := tagEndOfList;
 end; { TOmniCollection.AllocateBlock }
 
@@ -334,6 +304,9 @@ begin
   else begin // allocating memory
     {$IFDEF DEBUG} Assert(tag = tagEndOfList); {$ENDIF}
     extension := AllocateBlock;
+    Inc(extension);             // skip allocated slot
+    ocTailPointer := extension; // release the lock
+    Dec(extension);
     {$IFDEF DEBUG} // create backlink
     Dec(extension);
     extension^.Value.AsPointer := tail;
@@ -341,9 +314,6 @@ begin
     {$ENDIF}
     {$IFNDEF DEBUG} extension^.Tag := tagAllocated; {$ELSE} Assert(extension^.CASTag(tagFree, tagAllocated)); {$ENDIF}
     extension^.Value := value;  // this works because the slot was initialized to zero when allocating
-    Inc(extension);             // skip allocated slot
-    ocTailPointer := extension; // release the lock
-    Dec(extension);             // link must point to the first slot
     tail^.Value := extension;
     {$IFNDEF DEBUG} tail^.Tag := tagBlockPointer; {$ELSE} Assert(tail^.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
   end;
@@ -506,7 +476,5 @@ initialization
   Assert(SizeOf(TOmniTaggedValue) = 16);
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   Assert(CBlockSize = (65536 {$IFDEF DEBUG} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
-  DSiDeleteFiles(GetCurrentDir, 'block*.txt');
-  DSiDeleteFiles(GetCurrentDir, 'chain*.txt');
 end.
 
