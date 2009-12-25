@@ -12,7 +12,7 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlCollections,
+  OtlContainers,
   OtlEventMonitor;
 
 type
@@ -34,17 +34,17 @@ type
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure StartTest(Sender: TObject);
   private
-    FChanCollection: TOmniCollection;
-    FDstCollection : TOmniCollection;
+    FChanCollection: TOmniBaseCollection;
+    FDstCollection : TOmniBaseCollection;
     FForwarders    : array of IOmniTaskControl;
     FNumWorkers    : TGp4AlignedInt;
     FReaders       : array of IOmniTaskControl;
-    FSrcCollection : TOmniCollection;
+    FSrcCollection : TOmniBaseCollection;
     FStartTime     : int64;
     procedure CheckResult;
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const params: array of const); overload;
-    procedure LogCollectionStat(coll: TOmniCollection; const collName: string);
+    procedure LogCollectionStat(coll: TOmniBaseCollection; const collName: string);
     procedure PrepareForwarders(numForwarders: integer);
     procedure PrepareReaders(numReaders: integer);
     procedure PrepareTest(numForwarders, numReaders: integer);
@@ -76,13 +76,13 @@ var
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniCollection;
+  chanColl: TOmniBaseCollection;
   list    : TGpIntegerList;
-  srcColl : TOmniCollection;
+  srcColl : TOmniBaseCollection;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Source'];  srcColl := TOmniCollection(value.AsObject);
-  value := task.ParamByName['Channel']; chanColl := TOmniCollection(value.AsObject);
+  value := task.ParamByName['Source'];  srcColl := TOmniBaseCollection(value.AsObject);
+  value := task.ParamByName['Channel']; chanColl := TOmniBaseCollection(value.AsObject);
   list := TGpIntegerList.Create;
   try
     while not GStopForwarders do
@@ -94,21 +94,18 @@ begin
           break; //while
         end;
       end;
-//    AutoDestroyStream(SafeCreateFileStream(
-//      Format('forwarder_%d.txt', [GetCurrentThreadID]), fmCreate)).Stream
-//      .WriteStr(list.Text);
   finally FreeAndNil(list); end;
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniCollection;
-  dstColl : TOmniCollection;
+  chanColl: TOmniBaseCollection;
+  dstColl : TOmniBaseCollection;
   list    : TGpIntegerList;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Channel'];     chanColl := TOmniCollection(value.AsObject);
-  value := task.ParamByName['Destination']; dstColl := TOmniCollection(value.AsObject);
+  value := task.ParamByName['Channel'];     chanColl := TOmniBaseCollection(value.AsObject);
+  value := task.ParamByName['Destination']; dstColl := TOmniBaseCollection(value.AsObject);
   list := TGpIntegerList.Create;
   try
     while not GStopReaders do
@@ -120,9 +117,6 @@ begin
           break; //while
         end;
       end;
-//    AutoDestroyStream(SafeCreateFileStream(
-//      Format('reader_%d.txt', [GetCurrentThreadID]), fmCreate)).Stream
-//      .WriteStr(list.Text);
   finally FreeAndNil(list); end;
 end; { ReaderWorker }
 
@@ -130,7 +124,7 @@ end; { ReaderWorker }
 
 procedure TfrmTestOtlCollections.btnTestClick(Sender: TObject);
 var
-  coll : TOmniCollection;
+  coll : TOmniBaseCollection;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -138,7 +132,7 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := TOmniCollection.Create;
+  coll := TOmniBaseCollection.Create;
   try
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
@@ -153,12 +147,12 @@ begin
     end;
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestClick }
 
 procedure TfrmTestOtlCollections.btnTestIntfClick(Sender: TObject);
 var
-  coll : TOmniCollection;
+  coll : TOmniBaseCollection;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -166,7 +160,7 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := TOmniCollection.Create;
+  coll := TOmniBaseCollection.Create;
   try
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
@@ -181,7 +175,7 @@ begin
     end; //for loop
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestIntfClick }
 
 procedure TfrmTestOtlCollections.CheckResult;
@@ -223,7 +217,7 @@ begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
 
-procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniCollection; const collName:
+procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniBaseCollection; const collName:
   string);
 begin
   {$IFDEF DEBUG}
@@ -289,12 +283,10 @@ begin
   GStopReaders := false;
   GForwardersCount.Value := 0;
   GReadersCount.Value := 0;
-//  DSiDeleteFiles(GetCurrentDir, 'reader*.txt');
-//  DSiDeleteFiles(GetCurrentDir, 'forwarder*.txt');
   Log('%d -> %d', [numForwarders, numReaders]);
-  FSrcCollection := TOmniCollection.Create;
-  FDstCollection := TOmniCollection.Create;
-  FChanCollection := TOmniCollection.Create;
+  FSrcCollection := TOmniBaseCollection.Create;
+  FDstCollection := TOmniBaseCollection.Create;
+  FChanCollection := TOmniBaseCollection.Create;
   FNumWorkers.Value := numForwarders + numReaders;
   for i := 1 to CCountThreadedTest do
     FSrcCollection.Enqueue(i);

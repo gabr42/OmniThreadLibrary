@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2009-12-22
-///   Version           : 1.02
+///   Last modification : 2009-12-25
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2009-12-25
+///       - Implemented dynamically allocated, O(1) enqueue and dequeue, threadsafe,
+///         microlocking queue. Class TOmniBaseCollection contains base implementation
+///         while TOmniCollection adds notification support.
 ///     1.02: 2009-12-22
 ///       - TOmniContainerSubject moved into OtlContainerObserver because it will also be
 ///         used in OtlCollections.
@@ -133,8 +137,8 @@ type
     procedure Initialize(numElements, elementSize: integer); virtual;
     function  IsEmpty: boolean; inline;
     function  IsFull: boolean; inline;
-    function  Pop(var value): boolean; virtual;
-    function  Push(const value): boolean; virtual;
+    function  Pop(var value): boolean;
+    function  Push(const value): boolean;
     property  ElementSize: integer read obsElementSize;
     property  NumElements: integer read obsNumElements;
   end; { TOmniBaseStack }
@@ -150,8 +154,8 @@ type
       partlyEmptyLoadFactor: real = CPartlyEmptyLoadFactor;
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     destructor  Destroy; override;
-    function Pop(var value): boolean; override;
-    function Push(const value): boolean; override;
+    function Pop(var value): boolean;
+    function Push(const value): boolean; 
     property ContainerSubject: TOmniContainerSubject read osContainerSubject;
   end; { TOmniStack }
 
@@ -198,11 +202,63 @@ type
     property  ContainerSubject: TOmniContainerSubject read oqContainerSubject;
   end; { TOmniQueue }
 
+  TOmniCollectionTag = (tagFree, tagAllocating, tagAllocated, tagRemoving, tagRemoved,
+    tagEndOfList, tagExtending, tagBlockPointer, tagDestroying
+    {$IFDEF DEBUG}, tagStartOfList, tagSentinel{$ENDIF});
+
+  TOmniTaggedValue = packed record
+    Tag     : TOmniCollectionTag;
+    Stuffing: word;
+    Value   : TOmniValue;
+    function CASTag(oldTag, newTag: TOmniCollectionTag): boolean;
+  end; { TOmniTaggedValue }
+  POmniTaggedValue = ^TOmniTaggedValue;
+
+  ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
+  TOmniBaseCollection = class
+  strict private // keep 4-aligned
+    obcCachedBlock: POmniTaggedValue;
+    obcHeadPointer: POmniTaggedValue;
+    obcTailPointer: POmniTaggedValue;
+  strict private
+    obcRemoveCount: TGp4AlignedInt;
+  strict protected
+    function  AllocateBlock: POmniTaggedValue;
+    procedure EnterReader; 
+    procedure LeaveReader; inline;
+    procedure LeaveWriter; inline;
+    procedure ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean = false);
+    procedure EnterWriter; 
+    procedure WaitForAllRemoved(const lastSlot: POmniTaggedValue);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Dequeue: TOmniValue;
+    procedure Enqueue(const value: TOmniValue);
+    function  TryDequeue(var value: TOmniValue): boolean;
+  end; { TOmniBaseCollection }
+
+  TOmniCollection = class(TOmniBaseCollection)
+  strict private
+    ocContainerSubject: TOmniContainerSubject;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Dequeue: TOmniValue;
+    procedure Enqueue(const value: TOmniValue);
+    function  TryDequeue(var value: TOmniValue): boolean;
+    property ContainerSubject: TOmniContainerSubject read ocContainerSubject;
+  end; { TOmniCollection }
+
 implementation
 
 uses
   Windows,
   SysUtils;
+
+const
+  CCollNumSlots = 4*1024 {$IFDEF DEBUG} - 3 {$ENDIF};
+  CCollBlockSize = SizeOf(TOmniTaggedValue) * CCollNumSlots; //64 KB
 
 { TOmniBaseStack }
 
@@ -748,6 +804,365 @@ begin
   end;
 end; { TOmniQueue.Enqueue }
 
+(*
+TOmniCollection
+===============
+
+slot contains:
+  tag = 1 byte
+  2 bytes left empty
+  TOmniValue = 13 bytes
+tags are 4-aligned
+
+tags:
+  tagFree
+  tagAllocating
+  tagAllocated
+  tagRemoving
+  tagRemoved
+  tagEndOfList
+  tagExtending
+  tagBlockPointer
+  tagDestroying
+
+Enqueue:
+  readlock GC
+  repeat
+    fetch tag from current tail
+    if tag = tagFree and CAS(tag, tagAllocating) then
+      break
+    if tag = tagEndOfList and CAS(tag, tagExtending) then
+      break
+    yield
+  forever
+  if tag = tagFree then
+    increment tail
+    store (tagAllocated, value) into locked slot
+  else
+    allocate and initialize new block
+      last entry has tagEndOfList tag, others have tagFree
+    set tail to new block's slot 1
+    store (tagAllocated, value) into new block's slot 0
+    store (tagBlockPointer, pointer to new block) into locked slot
+  leave GC
+
+Dequeue:
+  readlock GC
+  repeat
+    fetch tag from current head
+    if tag = tagFree then
+      return Empty
+    if tag = tagAllocated and CAS(tag, tagRemoving) then
+      break
+    if tag = tagBlockPointer and CAS(tag, tagDestroying) then
+    yield
+  forever
+  if tag = tagAllocated then
+    increment head
+    get value
+    store tagRemoved
+  else
+    if first slot in new block is allocated
+      set head to new block's slot 1
+      get value
+    else
+      set head to new block
+    leave GC
+    writelock GC
+    release original block
+    leave GC
+    exit
+
+  leave GC
+*)
+
+{ TOmniTaggedValue }
+
+function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniCollectionTag): boolean;
+var
+  newValue: DWORD;
+  oldValue: DWORD;
+begin
+  oldValue := PDWORD(@Tag)^ AND $FFFFFF00 OR DWORD(ORD(oldTag));
+  newValue := oldValue AND $FFFFFF00 OR DWORD(Ord(newTag));
+  {$IFDEF Debug} Assert(cardinal(@Tag) mod 4 = 0); {$ENDIF}
+  Result := CAS32(oldValue, newValue, Tag);
+end; { TOmniTaggedValue.CASTag }
+
+{ TOmniBaseCollection }
+
+constructor TOmniBaseCollection.Create;
+begin
+  inherited;
+  Assert(cardinal(obcHeadPointer) mod 4 = 0);
+  Assert(cardinal(obcTailPointer) mod 4 = 0);
+  Assert(cardinal(obcCachedBlock) mod 4 = 0);
+  obcHeadPointer := AllocateBlock;
+  obcTailPointer := obcHeadPointer;
+end; { TOmniBaseCollection.Create }
+
+function TOmniBaseCollection.Dequeue: TOmniValue;
+begin
+  if not TryDequeue(Result) then
+    raise Exception.Create('TOmniBaseCollection.Dequeue: Message queue is empty');
+end; { TOmniBaseCollection.Dequeue }
+
+destructor TOmniBaseCollection.Destroy;
+var
+  pBlock: POmniTaggedValue;
+begin
+  while assigned(obcHeadPointer) do begin
+    if obcHeadPointer.Tag in [tagBlockPointer, tagEndOfList] then begin
+      pBlock := obcHeadPointer;
+      obcHeadPointer := POmniTaggedValue(obcHeadPointer.Value.AsPointer);
+      ReleaseBlock(pBlock, true);
+    end
+    else
+      Inc(obcHeadPointer);
+  end;
+  if assigned(obcCachedBlock) then
+    FreeMem(obcCachedBlock);
+  inherited;
+end; { TOmniBaseCollection.Destroy }
+
+function TOmniBaseCollection.AllocateBlock: POmniTaggedValue;
+var
+  cached: POmniTaggedValue;
+  pEOL  : POmniTaggedValue;
+begin
+  cached := obcCachedBlock;
+  if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
+    {$IFDEF DEBUG}NumReusedAlloc.Increment;{$ENDIF DEBUG}
+    Result := cached;
+    ZeroMemory(Result, CCollBlockSize {$IFDEF DEBUG} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
+  end
+  else begin
+    {$IFDEF DEBUG}NumTrueAlloc.Increment;{$ENDIF DEBUG}
+    Result := AllocMem(CCollBlockSize {$IFDEF DEBUG} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
+  end;
+  Assert(Ord(tagFree) = 0);
+  {$IFDEF DEBUG}
+  Assert(Result^.Tag = tagFree);
+  Result^.Tag := tagSentinel;
+  Inc(Result);
+  Assert(Result^.Tag = tagFree);
+  Result^.Tag := tagStartOfList;
+  Inc(Result, CCollNumSlots + 1);
+  Assert(Result^.Tag = tagFree);    
+  Result^.Tag := tagSentinel;
+  Dec(Result, CCollNumSlots);
+  {$ENDIF}
+  pEOL := Result;
+  Inc(pEOL, CCollNumSlots - 1);
+  {$IFDEF DEBUG} Assert(Result^.Tag = tagFree); {$ENDIF}
+  pEOL^.tag := tagEndOfList;
+end; { TOmniBaseCollection.AllocateBlock }
+
+procedure TOmniBaseCollection.Enqueue(const value: TOmniValue);
+var
+  extension: POmniTaggedValue;
+  tag      : TOmniCollectionTag;
+  tail     : POmniTaggedValue;
+begin
+  EnterReader;
+  repeat
+    tail := obcTailPointer;
+    tag := tail^.tag;
+    if tag = tagFree then begin
+      if tail^.CASTag(tag, tagAllocating) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopEnqFree.Increment; {$ENDIF}
+    end
+    else if tag = tagEndOfList then begin
+      if tail^.CASTag(tag, tagExtending) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopEnqEOL.Increment; {$ENDIF}
+    end
+    else if tag = tagExtending then begin
+      {$IFDEF DEBUG} LoopEnqExtending.Increment; {$ENDIF}
+      DSIYield;
+    end
+    else begin
+      {$IFDEF DEBUG} LoopEnqOther.Increment; {$ENDIF}
+      asm pause; end;
+    end;
+  until false;
+  {$IFDEF DEBUG} Assert(tail = ocTailPointer); {$ENDIF}
+  if tag = tagFree then begin // enqueueing
+    Inc(obcTailPointer); // release the lock
+    tail^.Value := value; // this works because the slot was initialized to zero when allocating
+    {$IFDEF DEBUG} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
+    {$IFNDEF DEBUG} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
+  end
+  else begin // allocating memory
+    {$IFDEF DEBUG} Assert(tag = tagEndOfList); {$ENDIF}
+    extension := AllocateBlock;
+    Inc(extension);             // skip allocated slot
+    obcTailPointer := extension; // release the lock
+    Dec(extension);
+    {$IFDEF DEBUG} // create backlink
+    Dec(extension);
+    extension^.Value.AsPointer := tail;
+    Inc(extension);
+    {$ENDIF}
+    {$IFNDEF DEBUG} extension^.Tag := tagAllocated; {$ELSE} Assert(extension^.CASTag(tagFree, tagAllocated)); {$ENDIF}
+    extension^.Value := value;  // this works because the slot was initialized to zero when allocating
+    tail^.Value := extension;
+    {$IFNDEF DEBUG} tail^.Tag := tagBlockPointer; {$ELSE} Assert(tail^.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
+  end;
+  LeaveReader;
+end; { TOmniBaseCollection.Enqueue }
+
+procedure TOmniBaseCollection.EnterReader;
+var
+  value: integer;
+begin
+  repeat
+    value := obcRemoveCount.Value;
+    if value >= 0 then
+      if obcRemoveCount.CAS(value, value + 1) then
+        break
+    else 
+      DSiYield; // let the GC do its work
+  until false;
+end; { TOmniBaseCollection.EnterReader }
+
+procedure TOmniBaseCollection.EnterWriter;
+begin
+  while not ((obcRemoveCount.Value = 0) and (obcRemoveCount.CAS(0, -1))) do
+    asm pause; end;
+end; { TOmniBaseCollection.EnterWriter }
+
+procedure TOmniBaseCollection.LeaveReader;
+begin
+  obcRemoveCount.Decrement;
+end; { TOmniBaseCollection.LeaveReader }
+
+procedure TOmniBaseCollection.LeaveWriter;
+begin
+  obcRemoveCount.Value := 0;
+end; { TOmniBaseCollection.LeaveWriter }
+
+procedure TOmniBaseCollection.ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean);
+begin
+  {$IFDEF DEBUG}
+  Inc(lastSlot);
+  Assert(lastSlot^.Tag = tagSentinel);
+  Dec(lastSlot);
+  {$ENDIF}
+  Dec(lastSlot, CCollNumSlots - 1);
+  {$IFDEF DEBUG}
+  Dec(lastSlot);
+  Assert(lastSlot^.Tag = tagStartOfList);
+  Dec(lastSlot);
+  Assert(lastSlot^.Tag = tagSentinel);
+  {$ENDIF};
+  if forceFree or assigned(obcCachedBlock) or (not CAS32(nil, lastSlot, obcCachedBlock)) then
+    FreeMem(lastSlot);
+end; { TOmniBaseCollection.ReleaseBlock }
+
+function TOmniBaseCollection.TryDequeue(var value: TOmniValue): boolean;
+var
+  head: POmniTaggedValue;
+  next: POmniTaggedValue;
+  tag : TOmniCollectionTag;
+begin
+  Result := true;
+  EnterReader;
+  repeat
+    head := obcHeadPointer;
+    tag := head^.Tag;
+    if tag = tagFree then begin
+      Result := false;
+      break; //repeat
+    end
+    else if tag = tagAllocated then begin
+      if head^.CASTag(tag, tagRemoving) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopDeqAllocated.Increment; {$ENDIF}
+    end
+    else if tag = tagBlockPointer then begin
+      if head^.CASTag(tag, tagDestroying) then
+        break //repeat
+      {$IFDEF DEBUG}else LoopDeqAllocated.Increment; {$ENDIF}
+    end
+    else begin
+      {$IFDEF DEBUG} LoopDeqOther.Increment; {$ENDIF}
+      DSiYield;
+    end;
+  until false;
+  if Result then begin // dequeueing
+    if tag = tagAllocated then begin
+      Inc(obcHeadPointer); // release the lock
+      value := head^.Value;
+      if value.IsInterface then begin
+        head^.Value.AsInterface._Release;
+        head^.Value.RawZero;
+      end;
+      {$IFNDEF DEBUG} head^.Tag := tagRemoved; {$ELSE} Assert(head^.CASTag(tagRemoving, tagRemoved)); {$ENDIF}
+    end
+    else begin // releasing memory
+      {$IFDEF DEBUG} Assert(tag = tagBlockPointer); {$ENDIF}
+      next := POmniTaggedValue(head^.Value.AsPointer);
+      if next^.Tag <> tagAllocated then begin
+        {$IFDEF DEBUG} Assert(next^.Tag = tagFree); {$ENDIF}
+        obcHeadPointer := next; // release the lock
+      end
+      else begin
+        Inc(next);
+        obcHeadPointer := next; // release the lock
+        Dec(next);
+        value := next^.Value;
+        if value.IsInterface then begin
+          next^.Value.AsInterface._Release;
+          next^.Value.RawZero;
+        end;
+        {$IFNDEF DEBUG} next^.Tag := tagRemoved; {$ELSE} Assert(next^.CASTag(tagAllocated, tagRemoved)); {$ENDIF DEBUG}
+      end;
+      // At this moment, another thread may still be dequeueing from one of the previous
+      // slots and memory should not yet be released!
+      LeaveReader;
+      EnterWriter;
+      ReleaseBlock(head);
+      LeaveWriter;
+      Exit;
+    end;
+  end;
+  LeaveReader;
+end; { TOmniBaseCollection.TryDequeue }
+
+procedure TOmniBaseCollection.WaitForAllRemoved(const lastSlot: POmniTaggedValue);
+var
+  firstRemoving: POmniTaggedValue;
+  scan         : POmniTaggedValue;
+  sentinel     : POmniTaggedValue;
+begin
+  {$IFDEF Debug}
+  Assert(assigned(lastSlot));
+  Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
+  {$ENDIF Debug}
+  sentinel := lastSlot;
+  Dec(sentinel, CCollNumSlots - 1);
+  repeat
+    firstRemoving := nil;
+    scan := lastSlot;
+    Dec(scan);
+    repeat
+      {$IFDEF DEBUG} Assert(scan^.Tag in [tagRemoving, tagRemoved]); {$ENDIF}
+      if scan^.Tag = tagRemoving then
+        firstRemoving := scan;
+      if scan = sentinel then
+        break;
+      Dec(scan);
+    until false;
+    sentinel := firstRemoving;
+    if assigned(firstRemoving) then
+      asm pause; end
+    else
+      break; //repeat
+  until false;
+end; { TOmniBaseCollection.WaitForAllRemoved }
+
 { initialization }
 
 procedure InitializeTimingInfo;
@@ -763,7 +1178,44 @@ begin
   FreeAndNil(queue);
 end; { InitializeTimingInfo }
 
+{ TOmniCollection }
+
+constructor TOmniCollection.Create;
+begin
+  inherited Create;
+  ocContainerSubject := TOmniContainerSubject.Create;
+end; { TOmniCollection.Create }
+
+destructor TOmniCollection.Destroy;
+begin
+  FreeAndNil(ocContainerSubject);
+  inherited;
+end; { TOmniCollection.Destroy }
+
+function TOmniCollection.Dequeue: TOmniValue;
+begin
+  Result := inherited Dequeue;
+  ContainerSubject.Notify(coiNotifyOnAllRemoves);
+end; { TOmniCollection.Dequeue }
+
+procedure TOmniCollection.Enqueue(const value: TOmniValue);
+begin
+  inherited Enqueue(value);
+  ContainerSubject.Notify(coiNotifyOnAllInserts);
+end; { TOmniCollection.Enqueue }
+
+function TOmniCollection.TryDequeue(var value: TOmniValue): boolean;
+begin
+  Result := TryDequeue(value);
+  if Result then
+    ContainerSubject.Notify(coiNotifyOnAllRemoves);
+end; { TOmniCollection.TryDequeue }
+
 initialization
+  Assert(SizeOf(TOmniValue) = 13);
+  Assert(SizeOf(TOmniTaggedValue) = 16);
+  Assert(SizeOf(pointer) = SizeOf(cardinal));
+  Assert(CCollBlockSize = (65536 {$IFDEF DEBUG} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
   InitializeTimingInfo;
 end.
 
