@@ -52,6 +52,7 @@
 ///</para></remarks>
 
 {$WARN SYMBOL_PLATFORM OFF}
+//DEFINE DEBUG_OMNI_COLLECTION to enable assertions in TOmniBaseCollection
 
 unit OtlContainers;
 
@@ -204,7 +205,7 @@ type
 
   TOmniCollectionTag = (tagFree, tagAllocating, tagAllocated, tagRemoving, tagRemoved,
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying
-    {$IFDEF DEBUG}, tagStartOfList, tagSentinel{$ENDIF});
+    {$IFDEF DEBUG_OMNI_COLLECTION}, tagStartOfList, tagSentinel{$ENDIF});
 
   TOmniTaggedValue = packed record
     Tag     : TOmniCollectionTag;
@@ -257,7 +258,7 @@ uses
   SysUtils;
 
 const
-  CCollNumSlots = 4*1024 {$IFDEF DEBUG} - 3 {$ENDIF};
+  CCollNumSlots = 4*1024 {$IFDEF DEBUG_OMNI_COLLECTION} - 3 {$ENDIF};
   CCollBlockSize = SizeOf(TOmniTaggedValue) * CCollNumSlots; //64 KB
 
 { TOmniBaseStack }
@@ -885,7 +886,7 @@ var
 begin
   oldValue := PDWORD(@Tag)^ AND $FFFFFF00 OR DWORD(ORD(oldTag));
   newValue := oldValue AND $FFFFFF00 OR DWORD(Ord(newTag));
-  {$IFDEF Debug} Assert(cardinal(@Tag) mod 4 = 0); {$ENDIF}
+  {$IFDEF DEBUG_OMNI_COLLECTION} Assert(cardinal(@Tag) mod 4 = 0); {$ENDIF}
   Result := CAS32(oldValue, newValue, Tag);
 end; { TOmniTaggedValue.CASTag }
 
@@ -932,16 +933,13 @@ var
 begin
   cached := obcCachedBlock;
   if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
-    {$IFDEF DEBUG}NumReusedAlloc.Increment;{$ENDIF DEBUG}
     Result := cached;
-    ZeroMemory(Result, CCollBlockSize {$IFDEF DEBUG} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
+    ZeroMemory(Result, CCollBlockSize {$IFDEF DEBUG_OMNI_COLLECTION} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
   end
-  else begin
-    {$IFDEF DEBUG}NumTrueAlloc.Increment;{$ENDIF DEBUG}
-    Result := AllocMem(CCollBlockSize {$IFDEF DEBUG} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
-  end;
+  else
+    Result := AllocMem(CCollBlockSize {$IFDEF DEBUG_OMNI_COLLECTION} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
   Assert(Ord(tagFree) = 0);
-  {$IFDEF DEBUG}
+  {$IFDEF DEBUG_OMNI_COLLECTION}
   Assert(Result^.Tag = tagFree);
   Result^.Tag := tagSentinel;
   Inc(Result);
@@ -954,7 +952,7 @@ begin
   {$ENDIF}
   pEOL := Result;
   Inc(pEOL, CCollNumSlots - 1);
-  {$IFDEF DEBUG} Assert(Result^.Tag = tagFree); {$ENDIF}
+  {$IFDEF DEBUG_OMNI_COLLECTION} Assert(Result^.Tag = tagFree); {$ENDIF}
   pEOL^.tag := tagEndOfList;
 end; { TOmniBaseCollection.AllocateBlock }
 
@@ -971,44 +969,38 @@ begin
     if tag = tagFree then begin
       if tail^.CASTag(tag, tagAllocating) then
         break //repeat
-      {$IFDEF DEBUG}else LoopEnqFree.Increment; {$ENDIF}
     end
     else if tag = tagEndOfList then begin
       if tail^.CASTag(tag, tagExtending) then
         break //repeat
-      {$IFDEF DEBUG}else LoopEnqEOL.Increment; {$ENDIF}
     end
-    else if tag = tagExtending then begin
-      {$IFDEF DEBUG} LoopEnqExtending.Increment; {$ENDIF}
-      DSIYield;
-    end
-    else begin
-      {$IFDEF DEBUG} LoopEnqOther.Increment; {$ENDIF}
+    else if tag = tagExtending then
+      DSIYield
+    else
       asm pause; end;
-    end;
   until false;
-  {$IFDEF DEBUG} Assert(tail = ocTailPointer); {$ENDIF}
+  {$IFDEF DEBUG_OMNI_COLLECTION} Assert(tail = obcTailPointer); {$ENDIF}
   if tag = tagFree then begin // enqueueing
     Inc(obcTailPointer); // release the lock
     tail^.Value := value; // this works because the slot was initialized to zero when allocating
-    {$IFDEF DEBUG} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
-    {$IFNDEF DEBUG} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
+    {$IFDEF DEBUG_OMNI_COLLECTION} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
+    {$IFNDEF DEBUG_OMNI_COLLECTION} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
   end
   else begin // allocating memory
-    {$IFDEF DEBUG} Assert(tag = tagEndOfList); {$ENDIF}
+    {$IFDEF DEBUG_OMNI_COLLECTION} Assert(tag = tagEndOfList); {$ENDIF}
     extension := AllocateBlock;
     Inc(extension);             // skip allocated slot
     obcTailPointer := extension; // release the lock
     Dec(extension);
-    {$IFDEF DEBUG} // create backlink
+    {$IFDEF DEBUG_OMNI_COLLECTION} // create backlink
     Dec(extension);
     extension^.Value.AsPointer := tail;
     Inc(extension);
     {$ENDIF}
-    {$IFNDEF DEBUG} extension^.Tag := tagAllocated; {$ELSE} Assert(extension^.CASTag(tagFree, tagAllocated)); {$ENDIF}
+    {$IFNDEF DEBUG_OMNI_COLLECTION} extension^.Tag := tagAllocated; {$ELSE} Assert(extension^.CASTag(tagFree, tagAllocated)); {$ENDIF}
     extension^.Value := value;  // this works because the slot was initialized to zero when allocating
     tail^.Value := extension;
-    {$IFNDEF DEBUG} tail^.Tag := tagBlockPointer; {$ELSE} Assert(tail^.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
+    {$IFNDEF DEBUG_OMNI_COLLECTION} tail^.Tag := tagBlockPointer; {$ELSE} Assert(tail^.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
   end;
   LeaveReader;
 end; { TOmniBaseCollection.Enqueue }
@@ -1045,13 +1037,13 @@ end; { TOmniBaseCollection.LeaveWriter }
 
 procedure TOmniBaseCollection.ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean);
 begin
-  {$IFDEF DEBUG}
+  {$IFDEF DEBUG_OMNI_COLLECTION}
   Inc(lastSlot);
   Assert(lastSlot^.Tag = tagSentinel);
   Dec(lastSlot);
   {$ENDIF}
   Dec(lastSlot, CCollNumSlots - 1);
-  {$IFDEF DEBUG}
+  {$IFDEF DEBUG_OMNI_COLLECTION}
   Dec(lastSlot);
   Assert(lastSlot^.Tag = tagStartOfList);
   Dec(lastSlot);
@@ -1079,19 +1071,16 @@ begin
     else if tag = tagAllocated then begin
       if head^.CASTag(tag, tagRemoving) then
         break //repeat
-      {$IFDEF DEBUG}else LoopDeqAllocated.Increment; {$ENDIF}
     end
     else if tag = tagBlockPointer then begin
       if head^.CASTag(tag, tagDestroying) then
         break //repeat
-      {$IFDEF DEBUG}else LoopDeqAllocated.Increment; {$ENDIF}
     end
-    else begin
-      {$IFDEF DEBUG} LoopDeqOther.Increment; {$ENDIF}
+    else
       DSiYield;
-    end;
   until false;
   if Result then begin // dequeueing
+    {$IFDEF DEBUG_OMNI_COLLECTION} Assert(head = obcHeadPointer); {$ENDIF}
     if tag = tagAllocated then begin
       Inc(obcHeadPointer); // release the lock
       value := head^.Value;
@@ -1099,13 +1088,13 @@ begin
         head^.Value.AsInterface._Release;
         head^.Value.RawZero;
       end;
-      {$IFNDEF DEBUG} head^.Tag := tagRemoved; {$ELSE} Assert(head^.CASTag(tagRemoving, tagRemoved)); {$ENDIF}
+      {$IFNDEF DEBUG_OMNI_COLLECTION} head^.Tag := tagRemoved; {$ELSE} Assert(head^.CASTag(tagRemoving, tagRemoved)); {$ENDIF}
     end
     else begin // releasing memory
-      {$IFDEF DEBUG} Assert(tag = tagBlockPointer); {$ENDIF}
+      {$IFDEF DEBUG_OMNI_COLLECTION} Assert(tag = tagBlockPointer); {$ENDIF}
       next := POmniTaggedValue(head^.Value.AsPointer);
       if next^.Tag <> tagAllocated then begin
-        {$IFDEF DEBUG} Assert(next^.Tag = tagFree); {$ENDIF}
+        {$IFDEF DEBUG_OMNI_COLLECTION} Assert(next^.Tag = tagFree); {$ENDIF}
         obcHeadPointer := next; // release the lock
       end
       else begin
@@ -1117,7 +1106,7 @@ begin
           next^.Value.AsInterface._Release;
           next^.Value.RawZero;
         end;
-        {$IFNDEF DEBUG} next^.Tag := tagRemoved; {$ELSE} Assert(next^.CASTag(tagAllocated, tagRemoved)); {$ENDIF DEBUG}
+        {$IFNDEF DEBUG_OMNI_COLLECTION} next^.Tag := tagRemoved; {$ELSE} Assert(next^.CASTag(tagAllocated, tagRemoved)); {$ENDIF DEBUG}
       end;
       // At this moment, another thread may still be dequeueing from one of the previous
       // slots and memory should not yet be released!
@@ -1137,7 +1126,7 @@ var
   scan         : POmniTaggedValue;
   sentinel     : POmniTaggedValue;
 begin
-  {$IFDEF Debug}
+  {$IFDEF DEBUG_OMNI_COLLECTION}
   Assert(assigned(lastSlot));
   Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
   {$ENDIF Debug}
@@ -1148,7 +1137,7 @@ begin
     scan := lastSlot;
     Dec(scan);
     repeat
-      {$IFDEF DEBUG} Assert(scan^.Tag in [tagRemoving, tagRemoved]); {$ENDIF}
+      {$IFDEF DEBUG_OMNI_COLLECTION} Assert(scan^.Tag in [tagRemoving, tagRemoved]); {$ENDIF}
       if scan^.Tag = tagRemoving then
         firstRemoving := scan;
       if scan = sentinel then
@@ -1215,7 +1204,7 @@ initialization
   Assert(SizeOf(TOmniValue) = 13);
   Assert(SizeOf(TOmniTaggedValue) = 16);
   Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Assert(CCollBlockSize = (65536 {$IFDEF DEBUG} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
+  Assert(CCollBlockSize = (65536 {$IFDEF DEBUG_OMNI_COLLECTION} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
   InitializeTimingInfo;
 end.
 

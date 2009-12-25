@@ -2,8 +2,8 @@ object frmTestOtlCollections: TfrmTestOtlCollections
   Left = 0
   Top = 0
   Caption = 'OtlCollections tester'
-  ClientHeight = 323
-  ClientWidth = 586
+  ClientHeight = 410
+  ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,13 +12,16 @@ object frmTestOtlCollections: TfrmTestOtlCollections
   Font.Style = []
   OldCreateOrder = False
   OnCloseQuery = FormCloseQuery
+  DesignSize = (
+    630
+    410)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
-    Left = 135
+    Left = 152
     Top = 0
-    Width = 451
-    Height = 323
+    Width = 478
+    Height = 410
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
@@ -27,7 +30,7 @@ object frmTestOtlCollections: TfrmTestOtlCollections
   object btnTest: TButton
     Left = 8
     Top = 8
-    Width = 121
+    Width = 138
     Height = 25
     Caption = 'Single-threaded test'
     TabOrder = 0
@@ -37,7 +40,7 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Tag = 2
     Left = 8
     Top = 72
-    Width = 121
+    Width = 138
     Height = 25
     Caption = '2 -> 2'
     TabOrder = 2
@@ -47,7 +50,7 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Tag = 3
     Left = 8
     Top = 104
-    Width = 121
+    Width = 138
     Height = 25
     Caption = '3 -> 3'
     TabOrder = 3
@@ -57,7 +60,7 @@ object frmTestOtlCollections: TfrmTestOtlCollections
     Tag = 4
     Left = 8
     Top = 136
-    Width = 121
+    Width = 138
     Height = 25
     Caption = '4 -> 4'
     TabOrder = 4
@@ -66,8 +69,8 @@ object frmTestOtlCollections: TfrmTestOtlCollections
   object btn1to1: TButton
     Tag = 1
     Left = 8
-    Top = 40
-    Width = 121
+    Top = 41
+    Width = 138
     Height = 25
     Caption = '1 -> 1'
     TabOrder = 1
@@ -75,40 +78,62 @@ object frmTestOtlCollections: TfrmTestOtlCollections
   end
   object btnTestIntf: TButton
     Left = 8
-    Top = 288
-    Width = 121
+    Top = 377
+    Width = 138
     Height = 25
+    Anchors = [akLeft, akBottom]
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
+    ExplicitTop = 337
   end
   object cbRepeat: TCheckBox
     Left = 8
-    Top = 231
+    Top = 270
     Width = 97
     Height = 17
     Caption = 'Repeat'
     TabOrder = 7
   end
-  object btn6to6: TButton
-    Tag = 6
-    Left = 8
-    Top = 168
-    Width = 121
-    Height = 25
-    Caption = '6 -> 6'
-    TabOrder = 8
-    OnClick = StartTest
-  end
   object btn8to8: TButton
     Tag = 8
     Left = 8
-    Top = 200
-    Width = 121
+    Top = 168
+    Width = 138
     Height = 25
     Caption = '8 -> 8'
-    TabOrder = 9
+    TabOrder = 8
     OnClick = StartTest
+  end
+  object rgCollectionType: TRadioGroup
+    Left = 8
+    Top = 293
+    Width = 138
+    Height = 60
+    Caption = 'Collection class'
+    ItemIndex = 0
+    Items.Strings = (
+      'TOmniBaseCollection'
+      'TOmniCollection')
+    TabOrder = 9
+  end
+  object btn1to7: TButton
+    Left = 8
+    Top = 200
+    Width = 138
+    Height = 25
+    Caption = '1 -> 7'
+    TabOrder = 10
+    OnClick = btn1to7Click
+  end
+  object btn7to1: TButton
+    Left = 8
+    Top = 232
+    Width = 138
+    Height = 25
+    Caption = '7 -> 1'
+    TabOrder = 11
+    OnClick = btn7to1Click
   end
   object OtlMonitor: TOmniEventMonitor
     OnTaskTerminated = OtlMonitorTaskTerminated
