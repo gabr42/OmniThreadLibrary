@@ -26,8 +26,12 @@ type
     cbRepeat   : TCheckBox;
     lbLog      : TListBox;
     OtlMonitor : TOmniEventMonitor;
-    btn6to6: TButton;
     btn8to8: TButton;
+    rgCollectionType: TRadioGroup;
+    btn1to7: TButton;
+    btn7to1: TButton;
+    procedure btn1to7Click(Sender: TObject);
+    procedure btn7to1Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -44,7 +48,6 @@ type
     procedure CheckResult;
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const params: array of const); overload;
-    procedure LogCollectionStat(coll: TOmniBaseCollection; const collName: string);
     procedure PrepareForwarders(numForwarders: integer);
     procedure PrepareReaders(numReaders: integer);
     procedure PrepareTest(numForwarders, numReaders: integer);
@@ -52,6 +55,8 @@ type
     procedure StopReaders;
     procedure StopWorkers;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
+  strict protected
+    function CreateCollection: TOmniBaseCollection;
   end; { TfrmTestOtlCollections }
 
 var
@@ -77,50 +82,50 @@ var
 procedure ForwarderWorker(const task: IOmniTask);
 var
   chanColl: TOmniBaseCollection;
-  list    : TGpIntegerList;
   srcColl : TOmniBaseCollection;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Source'];  srcColl := TOmniBaseCollection(value.AsObject);
   value := task.ParamByName['Channel']; chanColl := TOmniBaseCollection(value.AsObject);
-  list := TGpIntegerList.Create;
-  try
-    while not GStopForwarders do
-      while srcColl.TryDequeue(value) do begin
-        list.Add(value.AsInteger);
-        chanColl.Enqueue(value);
-        if GForwardersCount.Increment = CCountThreadedTest then begin
-          GStopForwarders := true;
-          break; //while
-        end;
+  while not GStopForwarders do
+    while srcColl.TryDequeue(value) do begin
+      chanColl.Enqueue(value);
+      if GForwardersCount.Increment = CCountThreadedTest then begin
+        GStopForwarders := true;
+        break; //while
       end;
-  finally FreeAndNil(list); end;
+    end;
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
   chanColl: TOmniBaseCollection;
   dstColl : TOmniBaseCollection;
-  list    : TGpIntegerList;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Channel'];     chanColl := TOmniBaseCollection(value.AsObject);
   value := task.ParamByName['Destination']; dstColl := TOmniBaseCollection(value.AsObject);
-  list := TGpIntegerList.Create;
-  try
-    while not GStopReaders do
-      while chanColl.TryDequeue(value) do begin
-        list.Add(value.AsInteger);
-        dstColl.Enqueue(value);
-        if GReadersCount.Increment = CCountThreadedTest then begin
-          GStopReaders := true;
-          break; //while
-        end;
+  while not GStopReaders do
+    while chanColl.TryDequeue(value) do begin
+      dstColl.Enqueue(value);
+      if GReadersCount.Increment = CCountThreadedTest then begin
+        GStopReaders := true;
+        break; //while
       end;
-  finally FreeAndNil(list); end;
+    end;
 end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
+
+procedure TfrmTestOtlCollections.btn1to7Click(Sender: TObject);
+begin
+  PrepareTest(1, 7);
+end; { TfrmTestOtlCollections.btn1to7Click }
+
+procedure TfrmTestOtlCollections.btn7to1Click(Sender: TObject);
+begin
+  PrepareTest(7, 1);
+end; { TfrmTestOtlCollections.btn7to1Click }
 
 procedure TfrmTestOtlCollections.btnTestClick(Sender: TObject);
 var
@@ -132,7 +137,7 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := TOmniBaseCollection.Create;
+  coll := CreateCollection;
   try
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
@@ -160,7 +165,7 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := TOmniBaseCollection.Create;
+  coll := CreateCollection;
   try
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
@@ -184,9 +189,6 @@ var
   testList: TGpIntegerList;
   value: TOmniValue;
 begin
-  LogCollectionStat(FSrcCollection, 'Source');
-  LogCollectionStat(FChanCollection, 'Channel');
-  LogCollectionStat(FDstCollection, 'Destination');
   try
     testList := TGpIntegerList.Create;
     try
@@ -202,6 +204,14 @@ begin
   finally StopWorkers; end;
 end; { TfrmTestOtlCollections.CheckResult }
 
+function TfrmTestOtlCollections.CreateCollection: TOmniBaseCollection;
+begin
+  if rgCollectionType.ItemIndex = 0 then
+    Result := TOmniBaseCollection.Create
+  else
+    Result := TOmniCollection.Create;
+end; { TfrmTestOtlCollections.CreateCollection }
+
 procedure TfrmTestOtlCollections.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   StopWorkers;
@@ -216,19 +226,6 @@ procedure TfrmTestOtlCollections.Log(const msg: string; const params: array of c
 begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
-
-procedure TfrmTestOtlCollections.LogCollectionStat(coll: TOmniBaseCollection; const collName:
-  string);
-begin
-  {$IFDEF DEBUG}
-  Log(
-    '%s[%p]: %6d / %6d / %3d / %3d / %3d / %3d  / %3d / %3d',
-    [collName, pointer(coll),
-    coll.NumTrueAlloc.Value, coll.NumReusedAlloc.Value,
-    coll.LoopEnqFree.Value, coll.LoopEnqEOL.Value, coll.LoopEnqExtending.Value,
-    coll.LoopEnqOther.Value, coll.LoopDeqAllocated.Value, coll.LoopDeqOther.Value]);
-  {$ENDIF DEBUG}
-end; { TfrmTestOtlCollections.LogCollectionStat }
 
 procedure TfrmTestOtlCollections.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
@@ -284,9 +281,9 @@ begin
   GForwardersCount.Value := 0;
   GReadersCount.Value := 0;
   Log('%d -> %d', [numForwarders, numReaders]);
-  FSrcCollection := TOmniBaseCollection.Create;
-  FDstCollection := TOmniBaseCollection.Create;
-  FChanCollection := TOmniBaseCollection.Create;
+  FSrcCollection := CreateCollection;
+  FDstCollection := CreateCollection;
+  FChanCollection := CreateCollection;
   FNumWorkers.Value := numForwarders + numReaders;
   for i := 1 to CCountThreadedTest do
     FSrcCollection.Enqueue(i);
