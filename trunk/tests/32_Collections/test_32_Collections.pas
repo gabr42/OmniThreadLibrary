@@ -13,6 +13,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlContainers,
+  OtlCollections,
   OtlEventMonitor;
 
 type
@@ -63,9 +64,6 @@ var
   frmTestOtlCollections: TfrmTestOtlCollections;
 
 implementation
-
-//uses
-//  GpStreams;
 
 const
   CCountThreadedTest = 1000000;
