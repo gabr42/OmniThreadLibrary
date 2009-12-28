@@ -1,7 +1,7 @@
-object frmTestOmniCollection: TfrmTestOmniCollection
+object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Left = 0
   Top = 0
-  Caption = 'TOmniCollection tester'
+  Caption = 'TOmniBlockingCollection tester'
   ClientHeight = 410
   ClientWidth = 630
   Color = clBtnFace
@@ -112,8 +112,8 @@ object frmTestOmniCollection: TfrmTestOmniCollection
     Caption = 'Collection class'
     ItemIndex = 0
     Items.Strings = (
-      'TOmniBaseCollection'
-      'TOmniCollection')
+      '.Take'
+      '.TryTake')
     TabOrder = 9
   end
   object btn1to7: TButton

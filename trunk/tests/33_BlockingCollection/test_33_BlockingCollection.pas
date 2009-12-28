@@ -1,4 +1,4 @@
-unit test_32_Collections;
+unit test_33_BlockingCollection;
 
 interface
 
@@ -13,10 +13,11 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlContainers,
+  OtlLockingContainers,
   OtlEventMonitor;
 
 type
-  TfrmTestOmniCollection = class(TForm)
+  TfrmTestOmniBlockingCollection = class(TForm)
     btn1to1         : TButton;
     btn1to7         : TButton;
     btn2to2         : TButton;
@@ -38,12 +39,12 @@ type
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure StartTest(Sender: TObject);
   private
-    FChanCollection: TOmniBaseCollection;
-    FDstCollection : TOmniBaseCollection;
+    FChanCollection: TOmniBlockingCollection;
+    FDstCollection : TOmniBlockingCollection;
     FForwarders    : array of IOmniTaskControl;
     FNumWorkers    : TGp4AlignedInt;
     FReaders       : array of IOmniTaskControl;
-    FSrcCollection : TOmniBaseCollection;
+    FSrcCollection : TOmniBlockingCollection;
     FStartTime     : int64;
     procedure CheckResult;
     procedure Log(const msg: string); overload;
@@ -56,11 +57,10 @@ type
     procedure StopWorkers;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
   strict protected
-    function CreateCollection: TOmniBaseCollection;
   end; { TfrmTestOtlCollections }
 
 var
-  frmTestOmniCollection: TfrmTestOmniCollection;
+  frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection;
 
 implementation
 
@@ -78,55 +78,106 @@ var
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseCollection;
-  srcColl : TOmniBaseCollection;
-  value   : TOmniValue;
+  chanColl  : TOmniBlockingCollection;
+  srcColl   : TOmniBlockingCollection;
+  useTryTake: boolean;
+  value     : TOmniValue;
+
+  function MyTake: boolean;
+  begin
+    repeat
+      if srcColl.TryTake(value) then begin
+        Result := true;
+        Exit;
+      end
+      else if srcColl.IsCompleted then begin
+        Result := false;
+        Exit;
+      end
+      else
+        DSiYield;
+    until false;
+  end; { MyTake }
+
 begin
-  value := task.ParamByName['Source'];  srcColl := TOmniBaseCollection(value.AsObject);
-  value := task.ParamByName['Channel']; chanColl := TOmniBaseCollection(value.AsObject);
-  while not GStopForwarders do
-    while srcColl.TryDequeue(value) do begin
-      chanColl.Enqueue(value);
-      if GForwardersCount.Increment = CCountThreadedTest then begin
-        GStopForwarders := true;
-        break; //while
-      end;
+  value := task.ParamByName['Source'];     srcColl := TOmniBlockingCollection(value.AsObject);
+  value := task.ParamByName['Channel'];    chanColl := TOmniBlockingCollection(value.AsObject);
+  useTryTake := task.ParamByName['UseTryTake'];
+  repeat
+    if useTryTake then begin
+      if not MyTake then
+        break //repeat
+    end
+    else if not srcColl.Take(value) then
+      break; //repeat
+    chanColl.Add(value);
+    if GForwardersCount.Increment = CCountThreadedTest then begin
+      GStopForwarders := true;
+      chanColl.CompleteAdding;
+      break; //repeat
     end;
+  until false;
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseCollection;
-  dstColl : TOmniBaseCollection;
-  value   : TOmniValue;
+  chanColl  : TOmniBlockingCollection;
+  dstColl   : TOmniBlockingCollection;
+  useTryTake: boolean;
+  value     : TOmniValue;
+
+  function MyTake: boolean;
+  begin
+    repeat
+      if chanColl.TryTake(value) then begin
+        Result := true;
+        Exit;
+      end
+      else if chanColl.IsCompleted then begin
+        Result := false;
+        Exit;
+      end
+      else
+        DSiYield;
+    until false;
+  end; { MyTake }
+
+  
 begin
-  value := task.ParamByName['Channel'];     chanColl := TOmniBaseCollection(value.AsObject);
-  value := task.ParamByName['Destination']; dstColl := TOmniBaseCollection(value.AsObject);
-  while not GStopReaders do
-    while chanColl.TryDequeue(value) do begin
-      dstColl.Enqueue(value);
-      if GReadersCount.Increment = CCountThreadedTest then begin
-        GStopReaders := true;
-        break; //while
-      end;
+  value := task.ParamByName['Channel'];     chanColl := TOmniBlockingCollection(value.AsObject);
+  value := task.ParamByName['Destination']; dstColl := TOmniBlockingCollection(value.AsObject);
+  useTryTake := task.ParamByName['UseTryTake'];
+  repeat
+    if useTryTake then begin
+      if not MyTake then
+        break; //repeat
+    end
+    else if not chanColl.Take(value) then
+      break; //repeat
+    dstColl.Add(value);
+    if GReadersCount.Increment = CCountThreadedTest then begin
+      GStopReaders := true;
+      dstColl.CompleteAdding;
+      break; //while
     end;
+  until false;
 end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
 
-procedure TfrmTestOmniCollection.btn1to7Click(Sender: TObject);
+procedure TfrmTestOmniBlockingCollection.btn1to7Click(Sender: TObject);
 begin
   PrepareTest(1, 7);
 end; { TfrmTestOtlCollections.btn1to7Click }
 
-procedure TfrmTestOmniCollection.btn7to1Click(Sender: TObject);
+procedure TfrmTestOmniBlockingCollection.btn7to1Click(Sender: TObject);
 begin
   PrepareTest(7, 1);
 end; { TfrmTestOtlCollections.btn7to1Click }
 
-procedure TfrmTestOmniCollection.btnTestClick(Sender: TObject);
+procedure TfrmTestOmniBlockingCollection.btnTestClick(Sender: TObject);
 var
-  coll : TOmniBaseCollection;
+  coll : TOmniBlockingCollection;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -134,27 +185,29 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := CreateCollection;
-  try
-    for loop := 1 to 10 do begin
+  for loop := 1 to 10 do begin
+    coll := TOmniBlockingCollection.Create;
+    try
       for i := 1 to CCountSingleTest do
-        coll.Enqueue(i);
+        coll.Add(i);
+      coll.CompleteAdding;
       for i := 1 to CCountSingleTest do begin
-        qi := coll.Dequeue;
+        if not coll.Take(qi) then
+          raise Exception.CreateFmt('Take failed at element %d', [i]);
         if qi.AsInteger <> i then
           raise Exception.CreateFmt('Expected %d', [i]);
       end;
-      if coll.TryDequeue(value) then
+      if coll.TryTake(value) then
         raise Exception.Create('Collection is not empty at the end');
-    end;
-  finally FreeAndNil(coll); end;
+    finally FreeAndNil(coll); end;
+  end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBlockingCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestClick }
 
-procedure TfrmTestOmniCollection.btnTestIntfClick(Sender: TObject);
+procedure TfrmTestOmniBlockingCollection.btnTestIntfClick(Sender: TObject);
 var
-  coll : TOmniBaseCollection;
+  coll : TOmniBlockingCollection;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -162,25 +215,27 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := CreateCollection;
+  coll := TOmniBlockingCollection.Create;
   try
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
-        coll.Enqueue(CreateCounter(i));
+        coll.Add(CreateCounter(i));
+      coll.CompleteAdding;
       for i := 1 to CCountSingleTest do begin
-        qi := coll.Dequeue;
+        if not coll.Take(qi) then
+          raise Exception.CreateFmt('Take failed at element %d', [i]);
         if (qi.AsInterface as IOmniCounter).Value <> i then
           raise Exception.CreateFmt('Expected %d', [i]);
       end;
-      if coll.TryDequeue(value) then
+      if coll.TryTake(value) then
         raise Exception.Create('Collection is not empty at the end');
     end; //for loop
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBlockingCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestIntfClick }
 
-procedure TfrmTestOmniCollection.CheckResult;
+procedure TfrmTestOmniBlockingCollection.CheckResult;
 var
   i: integer;
   testList: TGpIntegerList;
@@ -189,7 +244,7 @@ begin
   try
     testList := TGpIntegerList.Create;
     try
-      while FDstCollection.TryDequeue(value) do
+      while FDstCollection.Take(value) do
         testList.Add(value.AsInteger);
       testList.Sorted := true;
       if testList.Count <> CCountThreadedTest then
@@ -201,30 +256,22 @@ begin
   finally StopWorkers; end;
 end; { TfrmTestOtlCollections.CheckResult }
 
-function TfrmTestOmniCollection.CreateCollection: TOmniBaseCollection;
-begin
-  if rgCollectionType.ItemIndex = 0 then
-    Result := TOmniBaseCollection.Create
-  else
-    Result := TOmniCollection.Create;
-end; { TfrmTestOtlCollections.CreateCollection }
-
-procedure TfrmTestOmniCollection.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+procedure TfrmTestOmniBlockingCollection.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   StopWorkers;
 end; { TfrmTestOtlCollections.FormCloseQuery }
 
-procedure TfrmTestOmniCollection.Log(const msg: string);
+procedure TfrmTestOmniBlockingCollection.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('[hh:nn:ss] ', Now) + msg);
 end; { TfrmTestOtlCollections.Log }
 
-procedure TfrmTestOmniCollection.Log(const msg: string; const params: array of const);
+procedure TfrmTestOmniBlockingCollection.Log(const msg: string; const params: array of const);
 begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
 
-procedure TfrmTestOmniCollection.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
+procedure TfrmTestOmniBlockingCollection.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
   time: int64;
 begin
@@ -237,7 +284,7 @@ begin
   end;
 end; { TfrmTestOtlCollections.OtlMonitorTaskTerminated }
 
-procedure TfrmTestOmniCollection.PrepareForwarders(numForwarders: integer);
+procedure TfrmTestOmniBlockingCollection.PrepareForwarders(numForwarders: integer);
 var
   iForwarder: integer;
 begin
@@ -247,12 +294,13 @@ begin
       CreateTask(ForwarderWorker, Format('Forwarder %d', [iForwarder]))
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
+      .SetParameter('UseTryTake', rgCollectionType.ItemIndex = 1)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareForwarders }
 
-procedure TfrmTestOmniCollection.PrepareReaders(numReaders: integer);
+procedure TfrmTestOmniBlockingCollection.PrepareReaders(numReaders: integer);
 var
   iReader: integer;
 begin
@@ -262,12 +310,13 @@ begin
       CreateTask(ReaderWorker, Format('Reader %d', [iReader]))
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
+      .SetParameter('UseTryTake', rgCollectionType.ItemIndex = 1)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareReaders }
 
-procedure TfrmTestOmniCollection.PrepareTest(numForwarders, numReaders: integer);
+procedure TfrmTestOmniBlockingCollection.PrepareTest(numForwarders, numReaders: integer);
 var
   i: integer;
 begin
@@ -278,23 +327,24 @@ begin
   GForwardersCount.Value := 0;
   GReadersCount.Value := 0;
   Log('%d -> %d', [numForwarders, numReaders]);
-  FSrcCollection := CreateCollection;
-  FDstCollection := CreateCollection;
-  FChanCollection := CreateCollection;
+  FSrcCollection := TOmniBlockingCollection.Create;
+  FDstCollection := TOmniBlockingCollection.Create;
+  FChanCollection := TOmniBlockingCollection.Create;
   FNumWorkers.Value := numForwarders + numReaders;
   for i := 1 to CCountThreadedTest do
-    FSrcCollection.Enqueue(i);
+    FSrcCollection.Add(i);
+  FSrcCollection.CompleteAdding;
   FStartTime := DSiTimeGetTime64;
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);
 end; { TfrmTestOtlCollections.PrepareTest }
 
-procedure TfrmTestOmniCollection.StartTest(Sender: TObject);
+procedure TfrmTestOmniBlockingCollection.StartTest(Sender: TObject);
 begin
   PrepareTest(TButton(Sender).Tag, TButton(Sender).Tag);
 end; { TfrmTestOtlCollections.StartTest }
 
-procedure TfrmTestOmniCollection.StopForwarders;
+procedure TfrmTestOmniBlockingCollection.StopForwarders;
 var
   iForwarder: integer;
 begin
@@ -306,7 +356,7 @@ begin
   SetLength(FForwarders, 0);
 end; { TfrmTestOtlCollections.StopForwarders }
 
-procedure TfrmTestOmniCollection.StopReaders;
+procedure TfrmTestOmniBlockingCollection.StopReaders;
 var
   iReader: integer;
 begin
@@ -318,7 +368,7 @@ begin
   SetLength(FReaders, 0);
 end; { TfrmTestOtlCollections.StopReaders }
 
-procedure TfrmTestOmniCollection.StopWorkers;
+procedure TfrmTestOmniBlockingCollection.StopWorkers;
 begin
   StopForwarders;
   StopReaders;
@@ -327,7 +377,7 @@ begin
   FreeAndNil(FChanCollection);
 end; { TfrmTestOtlCollections.StopWorkers }
 
-procedure TfrmTestOmniCollection.WMRestartTest(var msg: TMessage);
+procedure TfrmTestOmniBlockingCollection.WMRestartTest(var msg: TMessage);
 begin
   PrepareTest(Random(8)+1, Random(8)+1);
 end; { TfrmTestOtlCollections.WMRestartTest }
