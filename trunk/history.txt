@@ -2,6 +2,9 @@
 - Implemented dynamically allocated, O(1) enqueue and dequeue, threadsafe,
   microlocking queue. Class TOmniBaseCollection contains base implementation
   while TOmniCollection adds notification support.
+- Big class rename: TOmniBaseStack -> TOmniBaseBoundedStack,
+  TOmniStack -> TOmniBoundedStack, TOmniBaseQueue -> TOmniBaseBoundedQueue,
+  TOmniQueue -> TOmniBoundedQueue.
 
 1.04b: 2009-12-18
 - [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.

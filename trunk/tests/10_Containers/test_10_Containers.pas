@@ -76,16 +76,16 @@ type
     procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; msg: TOmniMessage);
   private
     FAllTestsStart   : int64;
-    FBaseQueue       : TOmniBaseQueue;
-    FBaseStack       : TOmniBaseStack;
+    FBaseQueue       : TOmniBaseBoundedQueue;
+    FBaseStack       : TOmniBaseBoundedStack;
     FCounter         : IOmniCounter;
     FNumReaders      : integer;
     FNumWriters      : integer;
-    FQueue           : TOmniQueue;
+    FQueue           : TOmniBoundedQueue;
     FQueuedTests     : TGpIntegerObjectList;
     FReaders         : array [1..4] of IOmniTaskControl;
     FReaderThroughput: integer;
-    FStack           : TOmniStack;
+    FStack           : TOmniBoundedStack;
     FTestName        : string;
     FWriters         : array [1..4] of IOmniTaskControl;
     FWriterThroughput: integer;
@@ -144,19 +144,19 @@ type
 
   TCommTester = class(TOmniWorker)
   strict private
-    ctBaseQueue: TOmniBaseQueue;
-    ctBaseStack: TOmniBaseStack;
-    ctQueue    : TOmniQueue;
-    ctStack    : TOmniStack;
+    ctBaseQueue: TOmniBaseBoundedQueue;
+    ctBaseStack: TOmniBaseBoundedStack;
+    ctQueue    : TOmniBoundedQueue;
+    ctStack    : TOmniBoundedStack;
   strict protected
     procedure Fail(const reason: string);
   public
-    constructor Create(baseStack: TOmniBaseStack; baseQueue: TOmniBaseQueue; stack:
-      TOmniStack; queue: TOmniQueue);
-    property BaseQueue: TOmniBaseQueue read ctBaseQueue;
-    property BaseStack: TOmniBaseStack read ctBaseStack;
-    property Queue: TOmniQueue read ctQueue;
-    property Stack: TOmniStack read ctStack;
+    constructor Create(baseStack: TOmniBaseBoundedStack; baseQueue: TOmniBaseBoundedQueue; stack:
+      TOmniBoundedStack; queue: TOmniBoundedQueue);
+    property BaseQueue: TOmniBaseBoundedQueue read ctBaseQueue;
+    property BaseStack: TOmniBaseBoundedStack read ctBaseStack;
+    property Queue: TOmniBoundedQueue read ctQueue;
+    property Stack: TOmniBoundedStack read ctStack;
   end; { TCommTester }
 
   TCommWriter = class(TCommTester)
@@ -253,7 +253,7 @@ end;
 
 procedure TfrmTestOtlContainers.btnQueueCorrectnessTestClick(Sender: TObject);
 var
-  container: TOmniBaseQueue;
+  container: TOmniBaseBoundedQueue;
 begin
   Log('Writing to queue');
   if Sender = btnBaseQueueCorrectnessTest then
@@ -287,7 +287,7 @@ end;
 
 procedure TfrmTestOtlContainers.btnStackCorrectnessTestClick(Sender: TObject);
 var
-  container: TOmniBaseStack;
+  container: TOmniBaseBoundedStack;
 begin
   Log('Writing to stack');
   if Sender = btnBaseStackCorrectnessTest then
@@ -308,12 +308,12 @@ end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
-  FBaseStack := TOmniBaseStack.Create;
+  FBaseStack := TOmniBaseBoundedStack.Create;
   FBaseStack.Initialize(CTestQueueLength, SizeOf(integer));
-  FStack := TOmniStack.Create(CTestQueueLength, SizeOf(integer));
-  FBaseQueue := TOmniBaseQueue.Create;
+  FStack := TOmniBoundedStack.Create(CTestQueueLength, SizeOf(integer));
+  FBaseQueue := TOmniBaseBoundedQueue.Create;
   FBaseQueue.Initialize(CTestQueueLength, SizeOf(integer));
-  FQueue := TOmniQueue.Create(CTestQueueLength, SizeOf(integer));
+  FQueue := TOmniBoundedQueue.Create(CTestQueueLength, SizeOf(integer));
   FCounter := CreateCounter;
   FQueuedTests := TGpIntegerObjectList.Create(false);
   AllocateTasks(1, 1);
@@ -555,8 +555,8 @@ end;
 
 { TCommTester }
 
-constructor TCommTester.Create(baseStack: TOmniBaseStack; baseQueue: TOmniBaseQueue;
-  stack: TOmniStack; queue: TOmniQueue);
+constructor TCommTester.Create(baseStack: TOmniBaseBoundedStack; baseQueue: TOmniBaseBoundedQueue;
+  stack: TOmniBoundedStack; queue: TOmniBoundedQueue);
 begin
   inherited Create;
   ctStack := stack;
@@ -700,13 +700,13 @@ end;
 
 procedure TCommWriter.OMStartQueueWrite(var msg: TOmniMessage);
 var
-  container: TOmniBaseQueue;
+  container: TOmniBaseBoundedQueue;
   iRepeat  : integer;
   item     : integer;
   numItems : integer;
 begin
   numItems := msg.MsgData[0];
-  container := TOmniBaseQueue(cardinal(msg.MsgData[1]));
+  container := TOmniBaseBoundedQueue(cardinal(msg.MsgData[1]));
   for iRepeat := 1 to 2 do begin
     if not container.IsEmpty then begin
       Fail('Queue is not empty at the beginning');
@@ -783,13 +783,13 @@ end;
 
 procedure TCommWriter.OMStartStackWrite(var msg: TOmniMessage);
 var
-  container: TOmniBaseStack;
+  container: TOmniBaseBoundedStack;
   iRepeat  : integer;
   item     : integer;
   numItems : integer;
 begin
   numItems := msg.MsgData[0];
-  container := TOmniBaseStack(cardinal(msg.MsgData[1]));
+  container := TOmniBaseBoundedStack(cardinal(msg.MsgData[1]));
   for iRepeat := 1 to 2 do begin
     if not container.IsEmpty then begin
       Fail('Stack is not empty at the beginning');
@@ -906,13 +906,13 @@ end;
 
 procedure TCommReader.OMStartQueueRead(var msg: TOmniMessage);
 var
-  container: TOmniBaseQueue;
+  container: TOmniBaseBoundedQueue;
   item     : integer;
   numItems : integer;
   stItem   : integer;
 begin
   numItems := msg.MsgData[0];
-  container := TOmniBaseQueue(cardinal(msg.MsgData[1]));
+  container := TOmniBaseBoundedQueue(cardinal(msg.MsgData[1]));
   if not container.IsFull then
     Fail('Queue is not full at the beginning')
   else begin
@@ -980,13 +980,13 @@ end;
 
 procedure TCommReader.OMStartStackRead(var msg: TOmniMessage);
 var
-  container: TOmniBaseStack;
+  container: TOmniBaseBoundedStack;
   item     : integer;
   numItems : integer;
   stItem   : integer;
 begin
   numItems := msg.MsgData[0];
-  container := TOmniBaseStack(cardinal(msg.MsgData[1]));
+  container := TOmniBaseBoundedStack(cardinal(msg.MsgData[1]));
   if not container.IsFull then
     Fail('Stack is not full at the beginning')
   else begin

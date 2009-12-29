@@ -1,4 +1,4 @@
-///<summary>Locking/blocking containters. Part of the OmniThreadLibrary project.</summary>
+///<summary>Locking/blocking collections. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -30,15 +30,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2009-12-27
-///   Version           : 0.1
+///   Last modification : 2009-12-29
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.1: 2009-12-27
-///       - Created.
+///     1.0: 2009-12-29
+///       - Released.
 ///</para></remarks>
 
-unit OtlLockingContainers;
+unit OtlCollections;
 
 interface
 
@@ -74,7 +74,7 @@ type
 
   TOmniBlockingCollection = class(TInterfacedObject, IOmniBlockingCollection)
   strict private
-    obcCollection     : TOmniCollection;
+    obcCollection     : TOmniQueue;
     obcCompleted      : boolean;
     obcCompletedSignal: TDSiEventHandle;
   public
@@ -137,7 +137,7 @@ end; { TOmniBlockingCollectionEnumerator.MoveNext }
 constructor TOmniBlockingCollection.Create;
 begin
   inherited Create;
-  obcCollection := TOmniCollection.Create;
+  obcCollection := TOmniQueue.Create;
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
 end; { TOmniBlockingCollection.Create }
 
