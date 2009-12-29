@@ -38,12 +38,12 @@ type
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure StartTest(Sender: TObject);
   private
-    FChanCollection: TOmniBaseCollection;
-    FDstCollection : TOmniBaseCollection;
+    FChanCollection: TOmniBaseQueue;
+    FDstCollection : TOmniBaseQueue;
     FForwarders    : array of IOmniTaskControl;
     FNumWorkers    : TGp4AlignedInt;
     FReaders       : array of IOmniTaskControl;
-    FSrcCollection : TOmniBaseCollection;
+    FSrcCollection : TOmniBaseQueue;
     FStartTime     : int64;
     procedure CheckResult;
     procedure Log(const msg: string); overload;
@@ -56,7 +56,7 @@ type
     procedure StopWorkers;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
   strict protected
-    function CreateCollection: TOmniBaseCollection;
+    function CreateCollection: TOmniBaseQueue;
   end; { TfrmTestOtlCollections }
 
 var
@@ -78,12 +78,12 @@ var
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseCollection;
-  srcColl : TOmniBaseCollection;
+  chanColl: TOmniBaseQueue;
+  srcColl : TOmniBaseQueue;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Source'];  srcColl := TOmniBaseCollection(value.AsObject);
-  value := task.ParamByName['Channel']; chanColl := TOmniBaseCollection(value.AsObject);
+  value := task.ParamByName['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
+  value := task.ParamByName['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
   while not GStopForwarders do
     while srcColl.TryDequeue(value) do begin
       chanColl.Enqueue(value);
@@ -96,12 +96,12 @@ end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseCollection;
-  dstColl : TOmniBaseCollection;
+  chanColl: TOmniBaseQueue;
+  dstColl : TOmniBaseQueue;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Channel'];     chanColl := TOmniBaseCollection(value.AsObject);
-  value := task.ParamByName['Destination']; dstColl := TOmniBaseCollection(value.AsObject);
+  value := task.ParamByName['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
+  value := task.ParamByName['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
   while not GStopReaders do
     while chanColl.TryDequeue(value) do begin
       dstColl.Enqueue(value);
@@ -126,7 +126,7 @@ end; { TfrmTestOtlCollections.btn7to1Click }
 
 procedure TfrmTestOmniCollection.btnTestClick(Sender: TObject);
 var
-  coll : TOmniBaseCollection;
+  coll : TOmniBaseQueue;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -149,12 +149,12 @@ begin
     end;
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBaseQueue, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestClick }
 
 procedure TfrmTestOmniCollection.btnTestIntfClick(Sender: TObject);
 var
-  coll : TOmniBaseCollection;
+  coll : TOmniBaseQueue;
   i    : integer;
   loop : integer;
   qi   : TOmniValue;
@@ -177,7 +177,7 @@ begin
     end; //for loop
   finally FreeAndNil(coll); end;
   time := DSiTimeGetTime64 - time;
-  Log('TOmniBaseCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
+  Log('TOmniBaseQueue, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestIntfClick }
 
 procedure TfrmTestOmniCollection.CheckResult;
@@ -201,12 +201,12 @@ begin
   finally StopWorkers; end;
 end; { TfrmTestOtlCollections.CheckResult }
 
-function TfrmTestOmniCollection.CreateCollection: TOmniBaseCollection;
+function TfrmTestOmniCollection.CreateCollection: TOmniBaseQueue;
 begin
   if rgCollectionType.ItemIndex = 0 then
-    Result := TOmniBaseCollection.Create
+    Result := TOmniBaseQueue.Create
   else
-    Result := TOmniCollection.Create;
+    Result := TOmniQueue.Create;
 end; { TfrmTestOtlCollections.CreateCollection }
 
 procedure TfrmTestOmniCollection.FormCloseQuery(Sender: TObject; var CanClose: boolean);

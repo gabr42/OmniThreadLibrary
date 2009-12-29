@@ -13,7 +13,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlContainers,
-  OtlLockingContainers,
+  OtlCollections,
   OtlEventMonitor;
 
 type

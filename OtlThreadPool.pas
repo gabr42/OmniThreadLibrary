@@ -185,6 +185,7 @@ uses
   Messages,
   Classes,
   Contnrs,
+  Variants,
 {$IFNDEF Unicode} // D2009+ provides own TStringBuilder class 
   HVStringBuilder,
 {$ENDIF}
