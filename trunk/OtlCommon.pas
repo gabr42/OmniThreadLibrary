@@ -109,7 +109,7 @@ type
     function  GetAsInteger: integer; inline;
     function  GetAsInterface: IInterface; inline;
     function  GetAsObject: TObject; inline;
-    function  GetAsPointer: pointer; inline;
+    function  GetAsPointer: pointer; 
     function  GetAsString: string;
     function  GetAsVariant: Variant; 
     function  GetAsVariantArr(idx: integer): Variant; inline;
@@ -714,7 +714,7 @@ end; { TOmniValue.Clear }
 function TOmniValue.GetAsBoolean: boolean;
 begin
   if ovType <> ovtBoolean then
-    Exception.Create('TOmniValue cannot be converted to boolean');
+    raise Exception.Create('TOmniValue cannot be converted to boolean');
   Result := PByte(RawData)^ <> 0;
 end; { TOmniValue.GetAsBoolean }
 
@@ -746,7 +746,7 @@ end; { TOmniValue.GetAsExtended }
 function TOmniValue.GetAsInt64: int64;
 begin
   if ovType <> ovtInteger then
-    Exception.Create('TOmniValue cannot be converted to int64');
+    raise Exception.Create('TOmniValue cannot be converted to int64');
   Result := ovData;
 end; { TOmniValue.GetAsInt64 }
 
@@ -758,21 +758,21 @@ end; { TOmniValue.GetAsInteger }
 function TOmniValue.GetAsInterface: IInterface;
 begin
   if ovType <> ovtInterface then
-    Exception.Create('TOmniValue cannot be converted to interface');
+    raise Exception.Create('TOmniValue cannot be converted to interface');
   Result := ovIntf;
 end; { TOmniValue.GetAsInterface }
 
 function TOmniValue.GetAsObject: TObject;
 begin
   if ovType <> ovtObject then
-    Exception.Create('TOmniValue cannot be converted to object');
+    raise Exception.Create('TOmniValue cannot be converted to object');
   Result := TObject(RawData^);
 end; { TOmniValue.GetAsObject }
 
 function TOmniValue.GetAsPointer: pointer;
 begin
-  if ovType <> ovtPointer then
-    Exception.Create('TOmniValue cannot be converted to pointer');
+  if not (ovType in [ovtPointer, ovtObject]) then
+    raise Exception.Create('TOmniValue cannot be converted to pointer');
   Result := pointer(RawData^);
 end; { TOmniValue.GetAsPointer }
 
@@ -793,7 +793,7 @@ end; { TOmniValue.GetAsString }
 function TOmniValue.GetAsVariant: Variant;
 begin
   if ovType <> ovtVariant then
-    Exception.Create('TOmniValue cannot be converted to variant');
+    raise Exception.Create('TOmniValue cannot be converted to variant');
   Result := (ovIntf as IOmniVariantData).Value;
 end; { TOmniValue.GetAsVariant }
 
