@@ -34,7 +34,11 @@
     <DelphiCompile Include="OmniThreadLibraryRuntime.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <DCCReference Include="$(SystemRoot)\rtl.dcp" />
+    <DCCReference Include="$(SystemRoot)\vcl.dcp" />
+    <DCCReference Include="$(SystemRoot)\vclx.dcp" />
     <DCCReference Include="..\Otl.pas" />
+    <DCCReference Include="..\OtlCollections.pas" />
     <DCCReference Include="..\OtlComm.pas" />
     <DCCReference Include="..\OtlCommBufferTest.pas" />
     <DCCReference Include="..\OtlCommon.pas" />
@@ -54,8 +58,5 @@
     <DCCReference Include="..\src\HVStringBuilder.pas" />
     <DCCReference Include="..\src\HVStringData.pas" />
     <DCCReference Include="..\src\SpinLock.pas" />
-    <DCCReference Include="..\tests\1_HelloWorld\rtl.dcp" />
-    <DCCReference Include="..\tests\1_HelloWorld\vcl.dcp" />
-    <DCCReference Include="..\tests\1_HelloWorld\vclx.dcp" />
   </ItemGroup>
 </Project>

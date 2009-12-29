@@ -50,6 +50,7 @@ contains
   OtlEventMonitor in '..\OtlEventMonitor.pas',
   DSiWin32 in '..\src\DSiWin32.pas',
   OtlSync in '..\OtlSync.pas',
-  OtlHooks in '..\OtlHooks.pas';
+  OtlHooks in '..\OtlHooks.pas',
+  OtlCollections in '..\OtlCollections.pas';
 
 end.
