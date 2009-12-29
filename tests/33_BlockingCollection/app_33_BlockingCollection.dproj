@@ -42,9 +42,6 @@
     <DelphiCompile Include="app_33_BlockingCollection.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="test_32_Collections.pas">
-      <Form>frmTestOtlCollections</Form>
-    </DCCReference>
     <DCCReference Include="test_33_BlockingCollection.pas">
       <Form>frmTestOtlCollections</Form>
     </DCCReference>
