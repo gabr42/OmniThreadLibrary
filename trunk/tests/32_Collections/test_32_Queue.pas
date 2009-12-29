@@ -1,4 +1,4 @@
-unit test_32_Collections;
+unit test_32_Queue;
 
 interface
 
@@ -16,7 +16,7 @@ uses
   OtlEventMonitor;
 
 type
-  TfrmTestOmniCollection = class(TForm)
+  TfrmTestOmniQueue = class(TForm)
     btn1to1         : TButton;
     btn1to7         : TButton;
     btn2to2         : TButton;
@@ -60,7 +60,7 @@ type
   end; { TfrmTestOtlCollections }
 
 var
-  frmTestOmniCollection: TfrmTestOmniCollection;
+  frmTestOmniQueue: TfrmTestOmniQueue;
 
 implementation
 
@@ -114,17 +114,17 @@ end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
 
-procedure TfrmTestOmniCollection.btn1to7Click(Sender: TObject);
+procedure TfrmTestOmniQueue.btn1to7Click(Sender: TObject);
 begin
   PrepareTest(1, 7);
 end; { TfrmTestOtlCollections.btn1to7Click }
 
-procedure TfrmTestOmniCollection.btn7to1Click(Sender: TObject);
+procedure TfrmTestOmniQueue.btn7to1Click(Sender: TObject);
 begin
   PrepareTest(7, 1);
 end; { TfrmTestOtlCollections.btn7to1Click }
 
-procedure TfrmTestOmniCollection.btnTestClick(Sender: TObject);
+procedure TfrmTestOmniQueue.btnTestClick(Sender: TObject);
 var
   coll : TOmniBaseQueue;
   i    : integer;
@@ -152,7 +152,7 @@ begin
   Log('TOmniBaseQueue, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestClick }
 
-procedure TfrmTestOmniCollection.btnTestIntfClick(Sender: TObject);
+procedure TfrmTestOmniQueue.btnTestIntfClick(Sender: TObject);
 var
   coll : TOmniBaseQueue;
   i    : integer;
@@ -180,7 +180,7 @@ begin
   Log('TOmniBaseQueue, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestIntfClick }
 
-procedure TfrmTestOmniCollection.CheckResult;
+procedure TfrmTestOmniQueue.CheckResult;
 var
   i: integer;
   testList: TGpIntegerList;
@@ -201,7 +201,7 @@ begin
   finally StopWorkers; end;
 end; { TfrmTestOtlCollections.CheckResult }
 
-function TfrmTestOmniCollection.CreateCollection: TOmniBaseQueue;
+function TfrmTestOmniQueue.CreateCollection: TOmniBaseQueue;
 begin
   if rgCollectionType.ItemIndex = 0 then
     Result := TOmniBaseQueue.Create
@@ -209,22 +209,22 @@ begin
     Result := TOmniQueue.Create;
 end; { TfrmTestOtlCollections.CreateCollection }
 
-procedure TfrmTestOmniCollection.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+procedure TfrmTestOmniQueue.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   StopWorkers;
 end; { TfrmTestOtlCollections.FormCloseQuery }
 
-procedure TfrmTestOmniCollection.Log(const msg: string);
+procedure TfrmTestOmniQueue.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(FormatDateTime('[hh:nn:ss] ', Now) + msg);
 end; { TfrmTestOtlCollections.Log }
 
-procedure TfrmTestOmniCollection.Log(const msg: string; const params: array of const);
+procedure TfrmTestOmniQueue.Log(const msg: string; const params: array of const);
 begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
 
-procedure TfrmTestOmniCollection.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
+procedure TfrmTestOmniQueue.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
   time: int64;
 begin
@@ -237,7 +237,7 @@ begin
   end;
 end; { TfrmTestOtlCollections.OtlMonitorTaskTerminated }
 
-procedure TfrmTestOmniCollection.PrepareForwarders(numForwarders: integer);
+procedure TfrmTestOmniQueue.PrepareForwarders(numForwarders: integer);
 var
   iForwarder: integer;
 begin
@@ -252,7 +252,7 @@ begin
   end;
 end; { TfrmTestOtlCollections.PrepareForwarders }
 
-procedure TfrmTestOmniCollection.PrepareReaders(numReaders: integer);
+procedure TfrmTestOmniQueue.PrepareReaders(numReaders: integer);
 var
   iReader: integer;
 begin
@@ -267,7 +267,7 @@ begin
   end;
 end; { TfrmTestOtlCollections.PrepareReaders }
 
-procedure TfrmTestOmniCollection.PrepareTest(numForwarders, numReaders: integer);
+procedure TfrmTestOmniQueue.PrepareTest(numForwarders, numReaders: integer);
 var
   i: integer;
 begin
@@ -289,12 +289,12 @@ begin
   PrepareForwarders(numForwarders);
 end; { TfrmTestOtlCollections.PrepareTest }
 
-procedure TfrmTestOmniCollection.StartTest(Sender: TObject);
+procedure TfrmTestOmniQueue.StartTest(Sender: TObject);
 begin
   PrepareTest(TButton(Sender).Tag, TButton(Sender).Tag);
 end; { TfrmTestOtlCollections.StartTest }
 
-procedure TfrmTestOmniCollection.StopForwarders;
+procedure TfrmTestOmniQueue.StopForwarders;
 var
   iForwarder: integer;
 begin
@@ -306,7 +306,7 @@ begin
   SetLength(FForwarders, 0);
 end; { TfrmTestOtlCollections.StopForwarders }
 
-procedure TfrmTestOmniCollection.StopReaders;
+procedure TfrmTestOmniQueue.StopReaders;
 var
   iReader: integer;
 begin
@@ -318,7 +318,7 @@ begin
   SetLength(FReaders, 0);
 end; { TfrmTestOtlCollections.StopReaders }
 
-procedure TfrmTestOmniCollection.StopWorkers;
+procedure TfrmTestOmniQueue.StopWorkers;
 begin
   StopForwarders;
   StopReaders;
@@ -327,7 +327,7 @@ begin
   FreeAndNil(FChanCollection);
 end; { TfrmTestOtlCollections.StopWorkers }
 
-procedure TfrmTestOmniCollection.WMRestartTest(var msg: TMessage);
+procedure TfrmTestOmniQueue.WMRestartTest(var msg: TMessage);
 begin
   PrepareTest(Random(8)+1, Random(8)+1);
 end; { TfrmTestOtlCollections.WMRestartTest }

@@ -1,7 +1,7 @@
-object frmTestOmniCollection: TfrmTestOmniCollection
+object frmTestOmniQueue: TfrmTestOmniQueue
   Left = 0
   Top = 0
-  Caption = 'TOmniCollection tester'
+  Caption = 'TOmniQueue tester'
   ClientHeight = 410
   ClientWidth = 630
   Color = clBtnFace
@@ -109,11 +109,11 @@ object frmTestOmniCollection: TfrmTestOmniCollection
     Top = 293
     Width = 138
     Height = 60
-    Caption = 'Collection class'
+    Caption = 'Queue class'
     ItemIndex = 0
     Items.Strings = (
-      'TOmniBaseCollection'
-      'TOmniCollection')
+      'TOmniBaseQueue'
+      'TOmniQueue')
     TabOrder = 9
   end
   object btn1to7: TButton
