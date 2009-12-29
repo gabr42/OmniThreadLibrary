@@ -1,4 +1,4 @@
-///<summary>Locking collections. Part of the OmniThreadLibrary project.</summary>
+///<summary>Locking/blocking containters. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -38,18 +38,16 @@
 ///       - Created.
 ///</para></remarks>
 
-unit OtlCollections;
-
-///  - BlockingCollection
-///    http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
-///    http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx
+unit OtlLockingContainers;
 
 interface
 
 uses
   Windows,
   SysUtils,
-  OtlCommon;
+  DSiWin32,
+  OtlCommon,
+  OtlContainers;
 
 type
   ECollectionCompleted = class(Exception);
@@ -60,6 +58,10 @@ type
     property Current: TOmniValue read GetCurrent;
   end; { IOmniBlockingCollectionEnumerator }
 
+  ///<summary>Blocking collection
+  ///- http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
+  ///- http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx
+  ///</summary>
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
@@ -70,17 +72,6 @@ type
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
   end; { IOmniBlockingCollection }
 
-function CreateBlockingCollection: IOmniBlockingCollection;
-
-implementation
-
-uses
-  Classes,
-  DSiWin32,
-  OtlContainerObserver,
-  OtlContainers;
-
-type
   TOmniBlockingCollection = class(TInterfacedObject, IOmniBlockingCollection)
   strict private
     obcCollection     : TOmniCollection;
@@ -89,12 +80,12 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(const value: TOmniValue);
-    procedure CompleteAdding;
-    function  GetEnumerator: IOmniBlockingCollectionEnumerator;
-    function  IsCompleted: boolean;
-    function  Take(var value: TOmniValue): boolean;
-    function  TryAdd(const value: TOmniValue): boolean;
+    procedure Add(const value: TOmniValue); inline;
+    procedure CompleteAdding; inline;
+    function  GetEnumerator: IOmniBlockingCollectionEnumerator; inline;
+    function  IsCompleted: boolean; inline;
+    function  Take(var value: TOmniValue): boolean; inline;
+    function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
   end; { TOmniBlockingCollection }
 
@@ -104,10 +95,18 @@ type
     obceValue         : TOmniValue;
   public
     constructor Create(collection: TOmniBlockingCollection);
-    function GetCurrent: TOmniValue;
-    function MoveNext: boolean;
+    function GetCurrent: TOmniValue; inline;
+    function MoveNext: boolean; inline;
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
+
+function CreateBlockingCollection: IOmniBlockingCollection;
+
+implementation
+
+uses
+  Classes,
+  OtlContainerObserver;
 
 { exports }
 
@@ -157,8 +156,10 @@ end; { TOmniBlockingCollection.Add }
 
 procedure TOmniBlockingCollection.CompleteAdding;
 begin
-  obcCompleted := true;
-  SetEvent(obcCompletedSignal);
+  if not obcCompleted then begin
+    obcCompleted := true;
+    Win32Check(SetEvent(obcCompletedSignal));
+  end;
 end; { TOmniBlockingCollection.CompleteAdding }
 
 function TOmniBlockingCollection.GetEnumerator: IOmniBlockingCollectionEnumerator;
@@ -217,7 +218,7 @@ var
 begin { TOmniBlockingCollection.TryTake }
   if obcCollection.TryDequeue(value) then
     Result := true
-  else if IsCompleted then
+  else if IsCompleted or (timeout_ms = 0) then
     Result := false
   else begin
     observer := CreateContainerWindowsEventObserver;

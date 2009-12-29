@@ -73,7 +73,7 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
-  {:Lock-free, single writer, single reader, size-limited stack.
+  {:Lock-free, single writer, single reader, bounded stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
     procedure Empty;
@@ -84,7 +84,7 @@ type
     function  Push(const value): boolean;
   end; { IOmniStack }
 
-  {:Lock-free, single writer, single reader ring buffer.
+  {:Lock-free, single writer, single reader ring buffer (bounded queue).
   }
   IOmniQueue = interface ['{AE6454A2-CDB4-43EE-9F1B-5A7307593EE9}']
     function  Dequeue(var value): boolean;
@@ -216,6 +216,7 @@ type
   POmniTaggedValue = ^TOmniTaggedValue;
 
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
+  // TODO 1 -oPrimoz Gabrijelcic : Rename!
   TOmniBaseCollection = class
   strict private // keep 4-aligned
     obcCachedBlock: POmniTaggedValue;
@@ -1195,7 +1196,7 @@ end; { TOmniCollection.Enqueue }
 
 function TOmniCollection.TryDequeue(var value: TOmniValue): boolean;
 begin
-  Result := TryDequeue(value);
+  Result := inherited TryDequeue(value);
   if Result then
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
 end; { TOmniCollection.TryDequeue }

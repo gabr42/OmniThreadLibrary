@@ -55,6 +55,7 @@ type
     procedure StopForwarders;
     procedure StopReaders;
     procedure StopWorkers;
+    function  UseTryTake: boolean;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
   strict protected
   end; { TfrmTestOtlCollections }
@@ -294,7 +295,7 @@ begin
       CreateTask(ForwarderWorker, Format('Forwarder %d', [iForwarder]))
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
-      .SetParameter('UseTryTake', rgCollectionType.ItemIndex = 1)
+      .SetParameter('UseTryTake', UseTryTake)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -310,7 +311,7 @@ begin
       CreateTask(ReaderWorker, Format('Reader %d', [iReader]))
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
-      .SetParameter('UseTryTake', rgCollectionType.ItemIndex = 1)
+      .SetParameter('UseTryTake', UseTryTake)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -376,6 +377,16 @@ begin
   FreeAndNil(FDstCollection);
   FreeAndNil(FChanCollection);
 end; { TfrmTestOtlCollections.StopWorkers }
+
+function TfrmTestOmniBlockingCollection.UseTryTake: boolean;
+begin
+  if rgCollectionType.ItemIndex = 0 then
+    Result := false
+  else if rgCollectionType.ItemIndex = 1 then
+    Result := true
+  else
+    Result := Random(2) = 1;
+end; { TfrmTestOmniBlockingCollection.UseTryTake }
 
 procedure TfrmTestOmniBlockingCollection.WMRestartTest(var msg: TMessage);
 begin

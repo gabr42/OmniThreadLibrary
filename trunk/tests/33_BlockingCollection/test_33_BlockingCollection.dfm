@@ -108,12 +108,13 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Left = 8
     Top = 293
     Width = 138
-    Height = 60
+    Height = 78
     Caption = 'Collection class'
     ItemIndex = 0
     Items.Strings = (
       '.Take'
-      '.TryTake')
+      '.TryTake'
+      'random')
     TabOrder = 9
   end
   object btn1to7: TButton
