@@ -219,7 +219,6 @@ type
   POmniTaggedValue = ^TOmniTaggedValue;
 
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
-  // TODO 1 -oPrimoz Gabrijelcic : Rename!
   TOmniBaseQueue = class
   strict private // keep 4-aligned
     obcCachedBlock: POmniTaggedValue;
