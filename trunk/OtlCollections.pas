@@ -30,10 +30,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2009-12-29
-///   Version           : 1.0
+///   Last modification : 2009-12-30
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2009-12-30
+///       - Number of producer/consumers can be passed to TOmniBlockingCollection
+///         constructor. TryTake will then detect the deadlock state when all producer/
+///         consumers are inside the TryTake and the collection is empty and will
+///         automatically complete the collection.
 ///     1.0: 2009-12-29
 ///       - Released.
 ///</para></remarks>
@@ -47,7 +52,7 @@ uses
   SysUtils,
   DSiWin32,
   OtlCommon,
-  OtlContainers;
+  OtlContainers, OtlSync;
 
 type
   ECollectionCompleted = class(Exception);
@@ -77,8 +82,9 @@ type
     obcCollection     : TOmniQueue;
     obcCompleted      : boolean;
     obcCompletedSignal: TDSiEventHandle;
+    obcResourceCount  : TOmniResourceCount;
   public
-    constructor Create;
+    constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding; inline;
@@ -87,6 +93,7 @@ type
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
+    property CompletedSignal: THandle read obcCompletedSignal;
   end; { TOmniBlockingCollection }
 
   TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniBlockingCollectionEnumerator)
@@ -100,20 +107,12 @@ type
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
 
-function CreateBlockingCollection: IOmniBlockingCollection;
-
 implementation
 
 uses
   Classes,
+  GpStuff,
   OtlContainerObserver;
-
-{ exports }
-
-function CreateBlockingCollection: IOmniBlockingCollection;
-begin
-  Result := TOmniBlockingCollection.Create;
-end; { CreateBlockingCollection }
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -134,9 +133,14 @@ end; { TOmniBlockingCollectionEnumerator.MoveNext }
 
 { TOmniBlockingCollection }
 
-constructor TOmniBlockingCollection.Create;
+///If numProducersConsumers > 0, collection will automatically enter 'completed' state
+///when this number of .Take calls is simultaneously blocked because the collection is
+///empty.
+constructor TOmniBlockingCollection.Create(numProducersConsumers: integer);
 begin
   inherited Create;
+  if numProducersConsumers > 0 then
+    obcResourceCount := TOmniResourceCount.Create(numProducersConsumers);
   obcCollection := TOmniQueue.Create;
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
 end; { TOmniBlockingCollection.Create }
@@ -145,6 +149,7 @@ destructor TOmniBlockingCollection.Destroy;
 begin
   DSiCloseHandleAndNull(obcCompletedSignal);
   FreeAndNil(obcCollection);
+  FreeAndNil(obcResourceCount);
   inherited Destroy;
 end; { TOmniBlockingCollection.Destroy }
 
@@ -188,9 +193,10 @@ end; { TOmniBlockingCollection.TryAdd }
 function TOmniBlockingCollection.TryTake(var value: TOmniValue;
   timeout_ms: cardinal): boolean;
 var
+  awaited    : DWORD;
   observer   : TOmniContainerWindowsEventObserver;
   startTime  : int64;
-  waitHandles: array [0..1] of THandle;
+  waitHandles: array [0..2] of THandle;
 
   function Elapsed: boolean;
   begin
@@ -200,7 +206,7 @@ var
       Result := (startTime + timeout_ms) < DSiTimeGetTime64;
   end; { Elapsed }
 
-  function TimeLeft: DWORD;
+  function TimeLeft_ms: DWORD;
   var
     intTime: integer;
   begin
@@ -221,29 +227,50 @@ begin { TOmniBlockingCollection.TryTake }
   else if IsCompleted or (timeout_ms = 0) then
     Result := false
   else begin
-    observer := CreateContainerWindowsEventObserver;
+    if assigned(obcResourceCount) then
+      obcResourceCount.Allocate;
     try
-      obcCollection.ContainerSubject.Attach(observer, coiNotifyOnAllInserts);
+      observer := CreateContainerWindowsEventObserver;
       try
-        startTime := DSiTimeGetTime64;
-        waitHandles[0] := obcCompletedSignal;
-        waitHandles[1] := observer.GetEvent;
-        Result := false;
-        while not (IsCompleted or Elapsed) do begin
-          if obcCollection.TryDequeue(value) then begin
-            Result := true;
-            break; //while
+        obcCollection.ContainerSubject.Attach(observer, coiNotifyOnAllInserts);
+        try
+          startTime := DSiTimeGetTime64;
+          waitHandles[0] := obcCompletedSignal;
+          waitHandles[1] := observer.GetEvent;
+          if assigned(obcResourceCount) then
+            waitHandles[2] := obcResourceCount.Handle;
+          Result := false;
+          while not (IsCompleted or Elapsed) do begin
+            if obcCollection.TryDequeue(value) then begin
+              Result := true;
+              break; //while
+            end;
+            awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
+                         @waitHandles, false, TimeLeft_ms);
+            if awaited <> WAIT_OBJECT_1 then begin
+              if awaited = WAIT_OBJECT_2 then begin
+// TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+OutputDebugString(PChar(Format('CompleteAdding', [])));
+                CompleteAdding;
+              end;
+              Result := false;
+              break; //while
+            end;
           end;
-          if WaitForMultipleObjects(2, @waitHandles, false, TimeLeft) <> WAIT_OBJECT_1 then begin
-            Result := false;
-            break; //while
-          end;
+        finally
+          obcCollection.ContainerSubject.Detach(observer, coiNotifyOnAllInserts);
         end;
-      finally
-        obcCollection.ContainerSubject.Detach(observer, coiNotifyOnAllInserts);
-      end;
-    finally FreeAndNil(observer); end;
+      finally FreeAndNil(observer); end;
+    finally
+      if assigned(obcResourceCount) then
+        obcResourceCount.Release;
+    end;
   end;
+
+  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+  if not Result then
+    OutputDebugString(PChar(Format('Take = false in thread %d', [GetCurrentThreadID])));
+
 end; { TOmniBlockingCollection.TryTake }
 
 end.
