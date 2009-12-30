@@ -249,8 +249,6 @@ begin { TOmniBlockingCollection.TryTake }
                          @waitHandles, false, TimeLeft_ms);
             if awaited <> WAIT_OBJECT_1 then begin
               if awaited = WAIT_OBJECT_2 then begin
-// TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-OutputDebugString(PChar(Format('CompleteAdding', [])));
                 CompleteAdding;
               end;
               Result := false;
@@ -266,11 +264,6 @@ OutputDebugString(PChar(Format('CompleteAdding', [])));
         obcResourceCount.Release;
     end;
   end;
-
-  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-  if not Result then
-    OutputDebugString(PChar(Format('Take = false in thread %d', [GetCurrentThreadID])));
-
 end; { TOmniBlockingCollection.TryTake }
 
 end.
