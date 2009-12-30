@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2009-03-30
-///   Version           : 1.0
+///   Last modification : 2009-12-30
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2009-12-30
+///       - Implemented resource counter with empty state signalling - TOmniResourceCount.
 ///     1.0: 2008-08-26
 ///       - TOmniCS and IOmniCriticalSection imported from the OtlCommon unit.
 ///       - [GJ] Added very simple (and very fast) multi-reader-exclusive-writer TOmniMREW.
@@ -52,7 +54,9 @@ unit OtlSync;
 interface
 
 uses
-  SyncObjs;
+  SyncObjs,
+  DSiWin32,
+  GpStuff;
 
 type
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
@@ -61,6 +65,8 @@ type
     function  GetSyncObj: TSynchroObject;
   end; { IOmniCriticalSection }
 
+  ///<summary>Simple critical section wrapper. Critical section is automatically
+  ///    initialised on first use.</summary>
   TOmniCS = record
   strict private
     ocsSync: IOmniCriticalSection;
@@ -72,6 +78,7 @@ type
     property SyncObj: TSynchroObject read GetSyncObj;
   end; { TOmniCS }
 
+  ///<summary>Very lightweight multiple-readers-exclusive-writer lock.</summary>
   TOmniMREW = record
   strict private
     omrewReference: integer;      //Reference.Bit0 is 'writing in progress' flag
@@ -81,6 +88,35 @@ type
     procedure ExitReadLock; inline;
     procedure ExitWriteLock; inline;
   end; { TOmniMREW }
+
+  IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
+    function  GetHandle: THandle;
+    //
+    function  Allocate: cardinal; 
+    function  Release: cardinal;
+    function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
+    property Handle: THandle read GetHandle;
+  end; { IOmniResourceCount }
+
+  ///<summary>Kind of an inverse semaphore. Gets signalled when count drops to 0.
+  ///   Allocate decrements the count (and blocks if initial count is 0), Release
+  ///   increments the count.</summary>
+  ///<since>2009-12-30</since>
+  TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
+  strict private
+    orcHandle      : TDSiEventHandle;
+    orcLock        : TOmniCS;
+    orcNumResources: TGp4AlignedInt;
+  protected
+    function GetHandle: THandle;
+  public
+    constructor Create(initialCount: cardinal);
+    destructor  Destroy; override;
+    function  Allocate: cardinal; inline;
+    function  Release: cardinal;
+    function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
+    property Handle: THandle read GetHandle;
+  end; { TOmniResourceCount }
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 
@@ -269,5 +305,84 @@ procedure TOmniMREW.ExitWriteLock;
 begin
   omrewReference := 0;
 end; { TOmniMREW.ExitWriteLock }
+
+{ TOmniResourceCount }
+
+constructor TOmniResourceCount.Create(initialCount: cardinal);
+begin
+  inherited Create;
+  orcHandle := CreateEvent(nil, true, (initialCount = 0), nil);
+  orcNumResources.Value := initialCount;
+end; { TOmniResourceCount.Create }
+
+destructor TOmniResourceCount.Destroy;
+begin
+  DSiCloseHandleAndNull(orcHandle);
+  inherited;
+end; { TOmniResourceCount.Destroy }
+
+///<summary>Allocates resource and returns number of remaining resources.
+///  If the initial number of resources is 0, then the call will block until a resource
+///  becomes available.
+///  If there are no remaining resources (Result is 0), sets externally visible event.
+///</summary>
+function TOmniResourceCount.Allocate: cardinal;
+begin
+  TryAllocate(Result, INFINITE);
+end; { TOmniResourceCount.Allocate }
+
+function TOmniResourceCount.GetHandle: THandle;
+begin
+  Result := orcHandle;
+end; { TOmniResourceCount.GetHandle }
+
+///<summary>Releases resource and returns number of remaining resources.
+///  Resets the externally visible event if necessary.
+///</summary>
+function TOmniResourceCount.Release: cardinal;
+begin
+  orcLock.Acquire;
+  try
+    Result := cardinal(orcNumResources.Increment);
+    if Result = 1 then
+      ResetEvent(orcHandle);
+  finally orcLock.Release; end;
+end; { TOmniResourceCount.Release }
+
+///<summary>Like Allocate, but with a timeout.</summary>
+function TOmniResourceCount.TryAllocate(var resourceCount: cardinal;
+  timeout_ms: cardinal): boolean;
+var
+  startTime_ms: int64;
+  waitTime_ms : int64;
+begin
+  Result := false;
+  startTime_ms := DSiTimeGetTime64;
+  orcLock.Acquire;
+  repeat
+    if orcNumResources.Value = 0 then begin
+      orcLock.Release;
+      if timeout_ms <= 0 then
+        Exit;
+      if timeout_ms = INFINITE then
+        waitTime_ms := INFINITE
+      else begin
+        waitTime_ms := startTime_ms + timeout_ms - DSiTimeGetTime64;
+        if waitTime_ms <= 0 then
+          Exit;
+      end;
+      if WaitForSingleObject(orcHandle, waitTime_ms) <> WAIT_OBJECT_0 then
+        Exit;
+      orcLock.Acquire;
+    end;
+    if orcNumResources.Value > 0 then begin
+      resourceCount := cardinal(orcNumResources.Decrement);
+      if resourceCount = 0 then 
+        SetEvent(orcHandle);
+      break; //repeat
+    end;
+  until false;
+  orcLock.Release; 
+end; { TOmniResourceCount.TryAllocate }
 
 end.
