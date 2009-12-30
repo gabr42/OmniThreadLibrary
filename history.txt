@@ -4,6 +4,9 @@
 - Implemented dynamically allocated, O(1) enqueue and dequeue, threadsafe,
   microlocking queue. Class TOmniBaseQueue contains base implementation
   while TOmniQueue adds notification support.
+- Implemented resource counter with empty state signalling TOmniResourceCount.
+- New unit OtlCollection which contains blocking collection implementation
+  TOmniBlockingCollection.
 - Set package names and designtime/runtime type in D2009/D2010 packages.
 - New demos:
   - 32_Queue: Stress test for new TOmniBaseQueue and TOmniQueue.

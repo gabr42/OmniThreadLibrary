@@ -39,6 +39,7 @@ object frmTreeScanDemo: TfrmTreeScanDemo
     Width = 97
     Height = 25
     Caption = 'Sequential scan'
+    Enabled = False
     TabOrder = 2
     OnClick = btnSeqScanClick
   end
@@ -48,6 +49,7 @@ object frmTreeScanDemo: TfrmTreeScanDemo
     Width = 97
     Height = 25
     Caption = 'Parallel scan'
+    Enabled = False
     TabOrder = 3
     OnClick = btnParaScanClick
   end

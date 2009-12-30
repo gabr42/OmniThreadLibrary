@@ -101,8 +101,8 @@ end; { TfrmTreeScanDemo.btnBuildTreeClick }
 
 procedure TfrmTreeScanDemo.btnParaScanClick(Sender: TObject);
 begin
-  ParaFind(FNumNodes div 4 * 2);
   ParaFind(2);
+  ParaFind(FNumNodes div 4 * 2);
   ParaFind(FNumNodes div 2 * 2);
   ParaFind(FNumNodes div 2 * 2 - 1);
 end; { TfrmTreeScanDemo.btnParaScanClick }
@@ -158,6 +158,8 @@ begin
   RemoveEmptyLeaves(FRootNode);
   FNumNodes := nodeValue div 2;
   Log('Created tree with %d nodes', [FNumNodes]);
+  btnParaScan.Enabled := true;
+  btnSeqScan.Enabled := true;
 end; { TfrmTreeScanDemo.CreateTree }
 
 procedure TfrmTreeScanDemo.DestroyNode(var node: TNode);
@@ -202,37 +204,42 @@ end; { TfrmTreeScanDemo.ParaFind }
 
 function TfrmTreeScanDemo.ParaScan(node: TNode; value: integer): TNode;
 var
+  awaited     : DWORD;
   countWorkers: IOmniCounter;
-  iTask     : integer;
-  nodeQueue : TOmniBlockingCollection;
-  scanResult: TOmniWaitableValue;
+  iTask       : integer;
+  nodeQueue   : TOmniBlockingCollection;
+  numTasks    : integer;
+  scanResult  : TOmniWaitableValue;
 begin
+  // This approach only works if node is guaranteed to exist in the tree!
   Result := nil;
-  nodeQueue := TOmniBlockingCollection.Create;
+  numTasks := Length(DSiGetProcessAffinity);
+  nodeQueue := TOmniBlockingCollection.Create(numTasks);
   try
     nodeQueue.Add(FRootNode);
-    countWorkers := CreateCounter(Length(DSiGetProcessAffinity));
+    countWorkers := CreateCounter(numTasks);
     scanResult := TOmniWaitableValue.Create;
     try
-      for iTask := 1 to Length(DSiGetProcessAffinity) do begin
+      scanResult.Value.AsPointer := nil;
+      for iTask := 1 to numTasks do begin
         CreateTask(ParaScanWorker, 'Parallel scan worker #' + IntToStr(iTask))
-          .SetParameter(nodeQueue)
-          .SetParameter(scanResult)
-          .SetParameter(value)
+          .SetParameters([nodeQueue, scanResult, value])
           .WithCounter(countWorkers)
           .Unobserved
           .Run;
       end;
-      if not scanResult.WaitFor(10*1000) then begin
+      if WaitForSingleObject(nodeQueue.CompletedSignal, 10*1000) <> WAIT_OBJECT_0 then begin
         Log('Catastrophic failure, parallel scan did not complete in 10 seconds', []);
+        nodeQueue.CompleteAdding;
         Result := nil;
       end
-      else
+      else begin
+        // wait for all workers to complete and release references to nodeQueue
+        while countWorkers.Value > 0 do
+          Sleep(1);
         Result := scanResult.Value.AsPointer;
+      end;
     finally FreeAndNil(scanResult); end;
-    // wait for all workers to complete and release references to nodeQueue
-    while countWorkers.Value > 0 do
-      Sleep(1);
   finally FreeAndNil(nodeQueue); end;
 end; { TfrmTreeScanDemo.ParaScan }
 
@@ -245,6 +252,7 @@ var
   scanValue : integer;
   value     : TOmniValue;
 begin
+  try
   try
     nodeQueue := TOmniBlockingCollection(task.Param[0].AsPointer);
     scanResult := TOmniWaitableValue(task.Param[1].AsPointer);
@@ -260,6 +268,13 @@ begin
         nodeQueue.TryAdd(node.Child[iNode]);
     end;
   finally task.Counter.Decrement; end;
+
+  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+  OutputDebugString(PChar(Format('Worker %d terminating', [GetCurrentThreadID])));
+  except
+    on E: Exception do
+      Sleep(0);
+  end;
 end; { TfrmTreeScanDemo.ParaScanWorker }
 
 procedure TfrmTreeScanDemo.RemoveEmptyLeaves(node: TNode);
