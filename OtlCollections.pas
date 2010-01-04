@@ -52,7 +52,8 @@ uses
   SysUtils,
   DSiWin32,
   OtlCommon,
-  OtlContainers, OtlSync;
+  OtlContainers,
+  OtlSync;
 
 type
   ECollectionCompleted = class(Exception);
