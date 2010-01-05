@@ -9,10 +9,13 @@
 - Implemented resource counter with empty state signalling TOmniResourceCount.
 - New unit OtlCollection which contains blocking collection implementation
   TOmniBlockingCollection.
+- Implemented IOmniEnvironment interface and function Environment returning
+  some information on system and process.
 - Set package names and designtime/runtime type in D2009/D2010 packages.
 - New demos:
   - 32_Queue: Stress test for new TOmniBaseQueue and TOmniQueue.
-  - 33_BlockingCollection: Stress test for new TOmniBlockingCollection.
+  - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demos
+    the use of Environment to set process affinity.
   - 34_TreeScan: Parallel tree scan using TOmniBlockingCollection.
 
 TODO: Add new tests to D2009/2010.
