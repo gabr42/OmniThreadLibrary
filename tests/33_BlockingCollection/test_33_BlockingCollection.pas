@@ -14,7 +14,7 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlCollections,
-  OtlEventMonitor;
+  OtlEventMonitor, Spin;
 
 type
   TfrmTestOmniBlockingCollection = class(TForm)
@@ -31,11 +31,15 @@ type
     lbLog           : TListBox;
     OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
+    lblNumCPU: TLabel;
+    inpNumCPU: TSpinEdit;
+    procedure FormCreate(Sender: TObject);
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure inpNumCPUChange(Sender: TObject);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure StartTest(Sender: TObject);
   private
@@ -166,6 +170,12 @@ end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
 
+procedure TfrmTestOmniBlockingCollection.FormCreate(Sender: TObject);
+begin
+//  inpNumCPU.MaxValue := Environment.Process.Affinity.Count;
+//  inpNumCPU.Value := inpNumCPU.MaxValue;
+end; { TfrmTestOmniBlockingCollection.FormCreate }
+
 procedure TfrmTestOmniBlockingCollection.btn1to7Click(Sender: TObject);
 begin
   PrepareTest(1, 7);
@@ -261,6 +271,11 @@ procedure TfrmTestOmniBlockingCollection.FormCloseQuery(Sender: TObject; var Can
 begin
   StopWorkers;
 end; { TfrmTestOtlCollections.FormCloseQuery }
+
+procedure TfrmTestOmniBlockingCollection.inpNumCPUChange(Sender: TObject);
+begin
+//  Environment.Process.Affinity.Count := inpNumCPU.Value;
+end; { TfrmTestOmniBlockingCollection.inpNumCPUChange }
 
 procedure TfrmTestOmniBlockingCollection.Log(const msg: string);
 begin

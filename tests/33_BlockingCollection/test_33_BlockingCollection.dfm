@@ -2,7 +2,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Left = 0
   Top = 0
   Caption = 'TOmniBlockingCollection tester'
-  ClientHeight = 410
+  ClientHeight = 443
   ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -12,20 +12,29 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Font.Style = []
   OldCreateOrder = False
   OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
   DesignSize = (
     630
-    410)
+    443)
   PixelsPerInch = 96
   TextHeight = 13
+  object lblNumCPU: TLabel
+    Left = 16
+    Top = 384
+    Width = 48
+    Height = 13
+    Caption = 'Num CPU:'
+  end
   object lbLog: TListBox
     Left = 152
     Top = 0
     Width = 478
-    Height = 410
+    Height = 443
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
+    ExplicitHeight = 410
   end
   object btnTest: TButton
     Left = 8
@@ -78,13 +87,14 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   end
   object btnTestIntf: TButton
     Left = 8
-    Top = 377
+    Top = 410
     Width = 138
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
+    ExplicitTop = 377
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -134,6 +144,17 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Caption = '7 -> 1'
     TabOrder = 11
     OnClick = btn7to1Click
+  end
+  object inpNumCPU: TSpinEdit
+    Left = 68
+    Top = 381
+    Width = 49
+    Height = 22
+    MaxValue = 0
+    MinValue = 1
+    TabOrder = 12
+    Value = 0
+    OnChange = inpNumCPUChange
   end
   object OtlMonitor: TOmniEventMonitor
     OnTaskTerminated = OtlMonitorTaskTerminated

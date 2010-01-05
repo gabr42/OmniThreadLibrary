@@ -45,6 +45,8 @@
 ///       - Renamed: IInterfaceDictionary -> IOmniInterfaceDictionary,
 ///         IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
 ///         TInterfaceDictionaryPair -> TOmniInterfaceDictionaryPair.
+///       - Implemented IOmniEnvironment interface and function Environment returning
+///         some information on system and process.
 ///     1.06: 2009-12-21
 ///       - Added pointer conversions and AsPointer cast to TOmniValue.
 ///     1.05: 2009-11-15
@@ -86,6 +88,7 @@ uses
   SysUtils,
   Classes,
   Variants,
+  DSiWin32,
   GpStuff;
 
 const
@@ -249,8 +252,53 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { IOmniInterfaceDictionary }
 
+  IOmniAffinity = interface ['{8A6DDC70-F705-4577-869B-6810E776132B}']
+    function  GetAsString: string;
+    function  GetCount: integer;
+    function  GetMask: DWORD;
+    procedure SetAsString(const value: string);
+    procedure SetCount(const value: integer);
+    procedure SetMask(const value: DWORD);
+  //
+    property AsString: string read GetAsString write SetAsString;
+    property Count: integer read GetCount write SetCount;
+    property Mask: DWORD read GetMask write SetMask;
+  end; { IOmniAffinity }
+
+  TOmniProcessMemoryCounters = TProcessMemoryCounters;
+
+  TOmniProcessTimes = record
+    CreationTime: TDateTime;
+    UserTime    : int64;
+    KernelTime  : int64;
+  end; { TOmniProcessTimes }
+
+  TOmniProcessPriorityClass = (pcIdle, pcBelowNormal, pcNormal, pcAboveNormal, pcHigh,
+    pcRealtime);
+
+  IOmniProcessEnvironment = interface ['{98D6BDA3-840B-4E19-B01D-633E6A239FE9}']
+    function  GetAffinity: IOmniAffinity;
+    function  GetMemory: TOmniProcessMemoryCounters;
+    function  GetPriorityClass: TOmniProcessPriorityClass;
+    function  GetTimes: TOmniProcessTimes;
+  //
+    property Affinity: IOmniAffinity read GetAffinity;
+    property Memory: TOmniProcessMemoryCounters read GetMemory;
+    property PriorityClass: TOmniProcessPriorityClass read GetPriorityClass;
+    property Times: TOmniProcessTimes read GetTimes;
+  end; { IOmniProcessEnvironment }
+
+  IOmniEnvironment = interface ['{4F9594E2-8B88-483C-9616-85B50493406D}']
+    function  GetProcess: IOmniProcessEnvironment;
+    function  GetSystemAffinity: IOmniAffinity;
+  //
+    property Process: IOmniProcessEnvironment read GetProcess;
+    property SystemAffinity: IOmniAffinity read GetSystemAffinity;
+  end; { IOmniEnvironment }
+
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
+  function  Environment: IOmniEnvironment;
   procedure SetThreadName(const name: string);
   function  VarToObj(const v: Variant): TObject; inline;
 
@@ -260,7 +308,6 @@ var
 implementation
 
 uses
-  DSiWin32,
   GpStringHash;
 
 type
@@ -386,6 +433,59 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { TOmniInterfaceDictionary }
 
+  TOmniAffinityTarget = (atSystem, atProcess);
+
+  TOmniAffinity = class(TInterfacedObject, IOmniAffinity)
+  strict private
+    oaTarget: TOmniAffinityTarget;
+  protected
+    function  GetAsString: string;
+    function  GetCount: integer;
+    function  GetMask: DWORD;
+    procedure SetAsString(const value: string);
+    procedure SetCount(const value: integer);
+    procedure SetMask(const value: DWORD);
+  public
+    constructor Create(target: TOmniAffinityTarget);
+    property AsString: string read GetAsString write SetAsString;
+    property Count: integer read GetCount write SetCount;
+    property Mask: DWORD read GetMask write SetMask;
+  end; { TOmniAffinity }
+
+  TOmniProcessEnvironment = class(TInterfacedObject, IOmniProcessEnvironment)
+  strict private
+    opeAffinity: IOmniAffinity;
+  protected
+    function  GetAffinity: IOmniAffinity;
+    function  GetMemory: TOmniProcessMemoryCounters;
+    function  GetPriorityClass: TOmniProcessPriorityClass;
+    function  GetTimes: TOmniProcessTimes;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    property Affinity: IOmniAffinity read GetAffinity;
+    property Memory: TOmniProcessMemoryCounters read GetMemory;
+    property PriorityClass: TOmniProcessPriorityClass read GetPriorityClass;
+    property Times: TOmniProcessTimes read GetTimes;
+  end; { TOmniProcessEnvironment }
+
+  TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
+  strict private
+    oeProcessEnv    : TOmniProcessEnvironment;
+    oeSystemAffinity: TOmniAffinity;
+  protected
+    function  GetProcess: IOmniProcessEnvironment;
+    function  GetSystemAffinity: IOmniAffinity;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    property Process: IOmniProcessEnvironment read GetProcess;
+    property SystemAffinity: IOmniAffinity read GetSystemAffinity;
+  end; { TOmniEnvironment }
+
+var
+  GEnvironment: IOmniEnvironment;
+
 { exports }
 
 function CreateCounter(initialValue: integer): IOmniCounter;
@@ -397,6 +497,13 @@ function CreateInterfaceDictionary: IOmniInterfaceDictionary;
 begin
   Result := TOmniInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
+
+function Environment: IOmniEnvironment;
+begin
+  if not assigned(GEnvironment) then
+    GEnvironment := TOmniEnvironment.Create;
+  Result := GEnvironment;
+end; { Environment }
 
 procedure SetThreadName(const name: string);
 type
@@ -1163,6 +1270,155 @@ procedure TOmniExtendedData.SetValue(const value: Extended);
 begin
   oedValue := value;
 end; { TOmniExtendedData.SetValue }
+
+{ TOmniAffinity }
+
+constructor TOmniAffinity.Create(target: TOmniAffinityTarget);
+begin
+  Assert(target in [atSystem, atProcess]);
+  inherited Create;
+  oaTarget := target;
+end; { TOmniAffinity.Create }
+
+function TOmniAffinity.GetAsString: string;
+begin
+  Result := DSiAffinityMaskToString(Mask);
+end; { TOmniAffinity.GetAsString }
+
+function TOmniAffinity.GetCount: integer;
+var
+  affMask: DWORD;
+begin
+  Result := 0;
+  affMask := Mask;
+  while affMask <> 0 do begin
+    if Odd(affMask) then
+      Inc(Result);
+    affMask := affMask SHR 1;
+  end;
+end; { TOmniAffinity.GetCount }
+
+function TOmniAffinity.GetMask: DWORD;
+begin
+  case oaTarget of
+    atSystem:
+      Result := DSiGetSystemAffinityMask;
+    atProcess:
+      Result := DSiGetProcessAffinityMask;
+    else
+      Result := 0; // to keep compiler happy
+  end;
+end; { TOmniAffinity.GetMask }
+
+procedure TOmniAffinity.SetAsString(const value: string);
+begin
+  case oaTarget of
+    atSystem:
+      raise Exception.Create('TOmniAffinity.SetMask: Cannot modify system affinity mask.');
+    atProcess:
+      DSiSetProcessAffinity(value);
+  end;
+end; { TOmniAffinity.SetAsString }
+
+procedure TOmniAffinity.SetCount(const value: integer);
+var
+  affMask: string;
+  numCore: integer;
+  pCore  : integer;
+  sysMask: string;
+begin
+  sysMask := DSiGetSystemAffinity;
+  affMask := '';
+  numCore := value;
+  while (numCore > 0) and (sysMask <> '') do begin
+    pCore := Random(Length(sysMask)) + 1;
+    affMask := affMask + sysMask[pCore];
+    Delete(sysMask, pCore, 1);
+    Dec(numCore);
+  end;
+  AsString := affMask;
+end; { TOmniAffinity.SetCount }
+
+procedure TOmniAffinity.SetMask(const value: DWORD);
+begin
+  AsString := DSiAffinityMaskToString(value);
+end; { TOmniAffinity.SetMask }
+
+{ TOmniProcessEnvironment }
+
+constructor TOmniProcessEnvironment.Create;
+begin
+  inherited Create;
+  opeAffinity := TOmniAffinity.Create(atProcess);
+end; { TOmniProcessEnvironment.Create }
+
+destructor TOmniProcessEnvironment.Destroy;
+begin
+  FreeAndNil(opeAffinity);
+  inherited;
+end; { TOmniProcessEnvironment.Destroy }
+
+function TOmniProcessEnvironment.GetAffinity: IOmniAffinity;
+begin
+  Result := opeAffinity;
+end; { TOmniProcessEnvironment.GetAffinity }
+
+function TOmniProcessEnvironment.GetMemory: TOmniProcessMemoryCounters;
+begin
+  if not DSiGetProcessMemory(Result) then
+    FillChar(Result, SizeOf(Result), 0);
+end; { TOmniProcessEnvironment.GetMemory }
+
+function TOmniProcessEnvironment.GetPriorityClass: TOmniProcessPriorityClass;
+var
+  priority: DWORD;
+begin
+  priority := Windows.GetPriorityClass(GetCurrentProcess);
+  if priority = $8000 then
+    Result := pcAboveNormal
+  else if priority = $4000 then
+    Result := pcBelowNormal
+  else if priority = $80 then
+    Result := pcHigh
+  else if priority = $40 then
+    Result := pcIdle
+  else if priority = $100 then
+    Result := pcRealtime
+  else
+    Result := pcNormal;
+end; { TOmniProcessEnvironment.GetPriorityClass }
+
+function TOmniProcessEnvironment.GetTimes: TOmniProcessTimes;
+begin
+  if not DSiGetProcessTimes(Result.CreationTime, Result.UserTime, Result.KernelTime) then
+    FillChar(Result, SizeOf(Result), 0);
+end; { TOmniProcessEnvironment.GetTimes }
+
+{ TOmniEnvironment }
+
+constructor TOmniEnvironment.Create;
+begin
+  inherited Create;
+  oeProcessEnv := TOmniProcessEnvironment.Create;
+  oeSystemAffinity := TOmniAffinity.Create(atSystem);
+end; { TOmniEnvironment.Create }
+
+destructor TOmniEnvironment.Destroy;
+begin
+  FreeAndNil(oeSystemAffinity);
+  FreeAndNil(oeProcessEnv);
+  inherited;
+end; { TOmniEnvironment.Destroy }
+
+function TOmniEnvironment.GetProcess: IOmniProcessEnvironment;
+begin
+  Result := oeProcessEnv;
+end; { TOmniEnvironment.GetProcess }
+
+function TOmniEnvironment.GetSystemAffinity: IOmniAffinity;
+begin
+  Result := oeSystemAffinity;
+end; { TOmniEnvironment.GetSystemAffinity }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
