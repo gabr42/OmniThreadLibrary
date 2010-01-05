@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2009-12-30
-///   Version           : 1.01
+///   Last modification : 2010-01-05
+///   Version           : 1.01a
 ///</para><para>
 ///   History:
+///     1.01a: 2010-01-05
+///       - Better behaviour when running on a single core.
 ///     1.01: 2009-12-30
 ///       - Number of producer/consumers can be passed to TOmniBlockingCollection
 ///         constructor. TryTake will then detect the deadlock state when all producer/
@@ -53,6 +55,7 @@ uses
   DSiWin32,
   OtlCommon,
   OtlContainers,
+  OtlContainerObserver,
   OtlSync;
 
 type
@@ -83,7 +86,9 @@ type
     obcCollection     : TOmniQueue;
     obcCompleted      : boolean;
     obcCompletedSignal: TDSiEventHandle;
+    obcObserver       : TOmniContainerWindowsEventObserver;
     obcResourceCount  : TOmniResourceCount;
+    obcSingleThreaded : boolean;
   public
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
@@ -112,8 +117,7 @@ implementation
 
 uses
   Classes,
-  GpStuff,
-  OtlContainerObserver;
+  GpStuff;
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -144,10 +148,17 @@ begin
     obcResourceCount := TOmniResourceCount.Create(numProducersConsumers);
   obcCollection := TOmniQueue.Create;
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
+  obcObserver := CreateContainerWindowsEventObserver;
+  obcSingleThreaded := (Environment.Process.Affinity.Count = 1);
+  if obcSingleThreaded then
+    obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
 end; { TOmniBlockingCollection.Create }
 
 destructor TOmniBlockingCollection.Destroy;
 begin
+  if assigned(obcCollection) and assigned(obcObserver) and obcSingleThreaded then
+    obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
+  FreeAndNil(obcObserver);
   DSiCloseHandleAndNull(obcCompletedSignal);
   FreeAndNil(obcCollection);
   FreeAndNil(obcResourceCount);
@@ -195,7 +206,6 @@ function TOmniBlockingCollection.TryTake(var value: TOmniValue;
   timeout_ms: cardinal): boolean;
 var
   awaited    : DWORD;
-  observer   : TOmniContainerWindowsEventObserver;
   startTime  : int64;
   waitHandles: array [0..2] of THandle;
 
@@ -231,35 +241,34 @@ begin { TOmniBlockingCollection.TryTake }
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
     try
-      observer := CreateContainerWindowsEventObserver;
+      if not obcSingleThreaded then
+        obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
       try
-        obcCollection.ContainerSubject.Attach(observer, coiNotifyOnAllInserts);
-        try
-          startTime := DSiTimeGetTime64;
-          waitHandles[0] := obcCompletedSignal;
-          waitHandles[1] := observer.GetEvent;
-          if assigned(obcResourceCount) then
-            waitHandles[2] := obcResourceCount.Handle;
-          Result := false;
-          while not (IsCompleted or Elapsed) do begin
-            if obcCollection.TryDequeue(value) then begin
-              Result := true;
-              break; //while
-            end;
-            awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
-                         @waitHandles, false, TimeLeft_ms);
-            if awaited <> WAIT_OBJECT_1 then begin
-              if awaited = WAIT_OBJECT_2 then begin
-                CompleteAdding;
-              end;
-              Result := false;
-              break; //while
-            end;
+        startTime := DSiTimeGetTime64;
+        waitHandles[0] := obcCompletedSignal;
+        waitHandles[1] := obcObserver.GetEvent;
+        if assigned(obcResourceCount) then
+          waitHandles[2] := obcResourceCount.Handle;
+        Result := false;
+        while not (IsCompleted or Elapsed) do begin
+          if obcCollection.TryDequeue(value) then begin
+            Result := true;
+            break; //while
           end;
-        finally
-          obcCollection.ContainerSubject.Detach(observer, coiNotifyOnAllInserts);
+          awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
+                       @waitHandles, false, TimeLeft_ms);
+          if awaited <> WAIT_OBJECT_1 then begin
+            if awaited = WAIT_OBJECT_2 then begin
+              CompleteAdding;
+            end;
+            Result := false;
+            break; //while
+          end;
         end;
-      finally FreeAndNil(observer); end;
+      finally
+        if not obcSingleThreaded then
+          obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
+      end;
     finally
       if assigned(obcResourceCount) then
         obcResourceCount.Release;
