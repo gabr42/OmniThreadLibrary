@@ -243,15 +243,12 @@ type
     function  Count: integer; 
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
-  end; { IInterfaceHash }
+  end; { IInterfaceDictionary }
 
-  function CreateCounter(initialValue: integer = 0): IOmniCounter;
-
-  function CreateInterfaceDictionary: IInterfaceDictionary;
-
+  function  CreateCounter(initialValue: integer = 0): IOmniCounter;
+  function  CreateInterfaceDictionary: IInterfaceDictionary;
   procedure SetThreadName(const name: string);
-
-  function VarToObj(const v: Variant): TObject; inline;
+  function  VarToObj(const v: Variant): TObject; inline;
 
 var
   OtlUID: TGp8AlignedInt64;
@@ -1164,7 +1161,7 @@ begin
 end; { TOmniExtendedData.SetValue }
 
 initialization
-  Assert(SizeOf(TObject) = SizeOf(cardinal));
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
+  Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
+  Assert(SizeOf(pointer) = SizeOf(cardinal)); 
   Assert(SizeOf(pointer) = 4);
 end.
