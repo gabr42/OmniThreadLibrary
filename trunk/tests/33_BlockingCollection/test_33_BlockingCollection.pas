@@ -274,7 +274,7 @@ end; { TfrmTestOtlCollections.FormCloseQuery }
 
 procedure TfrmTestOmniBlockingCollection.inpNumCPUChange(Sender: TObject);
 begin
-//  Environment.Process.Affinity.Count := inpNumCPU.Value;
+  Environment.Process.Affinity.Count := inpNumCPU.Value;
 end; { TfrmTestOmniBlockingCollection.inpNumCPUChange }
 
 procedure TfrmTestOmniBlockingCollection.Log(const msg: string);
