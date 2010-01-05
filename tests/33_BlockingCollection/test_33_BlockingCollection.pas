@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Contnrs,
+  Dialogs, StdCtrls, ExtCtrls, Contnrs, Spin,
   DSiWin32,
   GpLists,
   GpStuff,
@@ -14,7 +14,7 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlCollections,
-  OtlEventMonitor, Spin;
+  OtlEventMonitor;
 
 type
   TfrmTestOmniBlockingCollection = class(TForm)
@@ -172,8 +172,8 @@ end; { ReaderWorker }
 
 procedure TfrmTestOmniBlockingCollection.FormCreate(Sender: TObject);
 begin
-//  inpNumCPU.MaxValue := Environment.Process.Affinity.Count;
-//  inpNumCPU.Value := inpNumCPU.MaxValue;
+  inpNumCPU.MaxValue := Environment.Process.Affinity.Count;
+  inpNumCPU.Value := inpNumCPU.MaxValue;
 end; { TfrmTestOmniBlockingCollection.FormCreate }
 
 procedure TfrmTestOmniBlockingCollection.btn1to7Click(Sender: TObject);

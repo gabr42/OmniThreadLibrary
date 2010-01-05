@@ -462,7 +462,6 @@ type
     function  GetTimes: TOmniProcessTimes;
   public
     constructor Create;
-    destructor  Destroy; override;
     property Affinity: IOmniAffinity read GetAffinity;
     property Memory: TOmniProcessMemoryCounters read GetMemory;
     property PriorityClass: TOmniProcessPriorityClass read GetPriorityClass;
@@ -471,14 +470,13 @@ type
 
   TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
   strict private
-    oeProcessEnv    : TOmniProcessEnvironment;
-    oeSystemAffinity: TOmniAffinity;
+    oeProcessEnv    : IOmniProcessEnvironment;
+    oeSystemAffinity: IOmniAffinity;
   protected
     function  GetProcess: IOmniProcessEnvironment;
     function  GetSystemAffinity: IOmniAffinity;
   public
     constructor Create;
-    destructor  Destroy; override;
     property Process: IOmniProcessEnvironment read GetProcess;
     property SystemAffinity: IOmniAffinity read GetSystemAffinity;
   end; { TOmniEnvironment }
@@ -1352,12 +1350,6 @@ begin
   opeAffinity := TOmniAffinity.Create(atProcess);
 end; { TOmniProcessEnvironment.Create }
 
-destructor TOmniProcessEnvironment.Destroy;
-begin
-  FreeAndNil(opeAffinity);
-  inherited;
-end; { TOmniProcessEnvironment.Destroy }
-
 function TOmniProcessEnvironment.GetAffinity: IOmniAffinity;
 begin
   Result := opeAffinity;
@@ -1402,13 +1394,6 @@ begin
   oeProcessEnv := TOmniProcessEnvironment.Create;
   oeSystemAffinity := TOmniAffinity.Create(atSystem);
 end; { TOmniEnvironment.Create }
-
-destructor TOmniEnvironment.Destroy;
-begin
-  FreeAndNil(oeSystemAffinity);
-  FreeAndNil(oeProcessEnv);
-  inherited;
-end; { TOmniEnvironment.Destroy }
 
 function TOmniEnvironment.GetProcess: IOmniProcessEnvironment;
 begin
