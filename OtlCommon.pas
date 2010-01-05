@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-12-21
-///   Version           : 1.06
+///   Last modification : 2010-01-05
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2010-01-05
+///       - Renamed: IInterfaceDictionary -> IOmniInterfaceDictionary,
+///         IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
+///         TInterfaceDictionaryPair -> TOmniInterfaceDictionaryPair.
 ///     1.06: 2009-12-21
 ///       - Added pointer conversions and AsPointer cast to TOmniValue.
 ///     1.05: 2009-11-15
@@ -218,7 +222,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { IOmniCounter }
 
-  TInterfaceDictionaryPair = class
+  TOmniInterfaceDictionaryPair = class
   strict private
     idpKey  : int64;
     idpValue: IInterface;
@@ -227,26 +231,26 @@ type
   public
     property Key: int64 read idpKey;
     property Value: IInterface read idpValue;
-  end; { TInterfaceDictionaryPair }
+  end; { TOmniInterfaceDictionaryPair }
 
-  IInterfaceDictionaryEnumerator = interface
-    function  GetCurrent: TInterfaceDictionaryPair;
+  IOmniInterfaceDictionaryEnumerator = interface
+    function  GetCurrent: TOmniInterfaceDictionaryPair;
     function  MoveNext: boolean;
-    property Current: TInterfaceDictionaryPair read GetCurrent;
-  end; { IInterfaceDictionaryEnumerator }
+    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
+  end; { IOmniInterfaceDictionaryEnumerator }
 
-  IInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
-    function  GetEnumerator: IInterfaceDictionaryEnumerator;
+  IOmniInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
+    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer; 
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
-  end; { IInterfaceDictionary }
+  end; { IOmniInterfaceDictionary }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
-  function  CreateInterfaceDictionary: IInterfaceDictionary;
+  function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   procedure SetThreadName(const name: string);
   function  VarToObj(const v: Variant): TObject; inline;
 
@@ -348,22 +352,22 @@ type
   TBucketArray = array of PHashItem;
   PBucketArray = ^TBucketArray;
 
-  TInterfaceDictionaryEnumerator = class(TInterfacedObject, IInterfaceDictionaryEnumerator)
+  TOmniInterfaceDictionaryEnumerator = class(TInterfacedObject, IOmniInterfaceDictionaryEnumerator)
   strict private
     ideBuckets  : PBucketArray;
     ideBucketIdx: integer;
     ideCurrent  : PHashItem;
     ideItem     : PHashItem;
-    idePair     : TInterfaceDictionaryPair;
+    idePair     : TOmniInterfaceDictionaryPair;
   public
     constructor Create(buckets: PBucketArray);
     destructor  Destroy; override;
-    function  GetCurrent: TInterfaceDictionaryPair;
+    function  GetCurrent: TOmniInterfaceDictionaryPair;
     function  MoveNext: boolean;
-    property Current: TInterfaceDictionaryPair read GetCurrent;
-  end; { IInterfaceDictionaryEnumerator }
+    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
+  end; { IOmniInterfaceDictionaryEnumerator }
 
-  TInterfaceDictionary = class(TInterfacedObject, IInterfaceDictionary)
+  TOmniInterfaceDictionary = class(TInterfacedObject, IOmniInterfaceDictionary)
   strict private
     idBuckets: TBucketArray;
     idCount  : integer;
@@ -377,10 +381,10 @@ type
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer; inline;
-    function  GetEnumerator: IInterfaceDictionaryEnumerator;
+    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
-  end; { TInterfaceDictionary }
+  end; { TOmniInterfaceDictionary }
 
 { exports }
 
@@ -389,9 +393,9 @@ begin
   Result := TOmniCounter.Create(initialValue);
 end; { CreateCounter }
 
-function CreateInterfaceDictionary: IInterfaceDictionary;
+function CreateInterfaceDictionary: IOmniInterfaceDictionary;
 begin
-  Result := TInterfaceDictionary.Create;
+  Result := TOmniInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
 
 procedure SetThreadName(const name: string);
@@ -533,37 +537,37 @@ begin
   ocValue.Value := value;
 end; { TOmniCounter.SetValue }
 
-{ TInterfaceDictionaryPair }
+{ TOmniInterfaceDictionaryPair }
 
-procedure TInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
+procedure TOmniInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
 begin
   idpKey := key;
   idpValue := value;
-end; { TInterfaceDictionaryPair.SetKeyValue }
+end; { TOmniInterfaceDictionaryPair.SetKeyValue }
 
-{ TInterfaceDictionaryEnumerator }
+{ TOmniInterfaceDictionaryEnumerator }
 
-constructor TInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
+constructor TOmniInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
 begin
   ideBuckets := buckets;
   ideBucketIdx := Low(ideBuckets^);
   ideItem := nil;
-  idePair := TInterfaceDictionaryPair.Create;
-end; { TInterfaceDictionaryEnumerator.Create }
+  idePair := TOmniInterfaceDictionaryPair.Create;
+end; { TOmniInterfaceDictionaryEnumerator.Create }
 
-destructor TInterfaceDictionaryEnumerator.Destroy;
+destructor TOmniInterfaceDictionaryEnumerator.Destroy;
 begin
   FreeAndNil(idePair);
   inherited Destroy;
-end; { TInterfaceDictionaryEnumerator.Destroy }
+end; { TOmniInterfaceDictionaryEnumerator.Destroy }
 
-function TInterfaceDictionaryEnumerator.GetCurrent: TInterfaceDictionaryPair;
+function TOmniInterfaceDictionaryEnumerator.GetCurrent: TOmniInterfaceDictionaryPair;
 begin
   idePair.SetKeyValue(ideCurrent^.Key, ideCurrent^.Value);
   Result := idePair;
-end; { TInterfaceDictionaryEnumerator.GetCurrent }
+end; { TOmniInterfaceDictionaryEnumerator.GetCurrent }
 
-function TInterfaceDictionaryEnumerator.MoveNext: boolean;
+function TOmniInterfaceDictionaryEnumerator.MoveNext: boolean;
 begin
   Result := false;
   while not assigned(ideItem) do begin
@@ -575,23 +579,23 @@ begin
   ideCurrent := ideItem;
   ideItem := ideItem^.Next;
   Result := true;
-end; { TInterfaceDictionaryEnumerator.MoveNext }
+end; { TOmniInterfaceDictionaryEnumerator.MoveNext }
 
 { TInterfaceHash }
 
-constructor TInterfaceDictionary.Create;
+constructor TOmniInterfaceDictionary.Create;
 begin
   inherited Create;
   Resize(1);
-end; { TInterfaceDictionary.Create }
+end; { TOmniInterfaceDictionary.Create }
 
-destructor TInterfaceDictionary.Destroy;
+destructor TOmniInterfaceDictionary.Destroy;
 begin
   Clear;
   inherited Destroy;
-end; { TInterfaceDictionary.Destroy }
+end; { TOmniInterfaceDictionary.Destroy }
 
-procedure TInterfaceDictionary.Add(const key: int64; const value: IInterface);
+procedure TOmniInterfaceDictionary.Add(const key: int64; const value: IInterface);
 var
   bucket: PHashItem;
   hash  : integer;
@@ -605,9 +609,9 @@ begin
   Inc(idCount);
   if idCount > (1.5 * Length(idBuckets)) then
     Resize(idCount * 2);
-end; { TInterfaceDictionary.Add }
+end; { TOmniInterfaceDictionary.Add }
 
-procedure TInterfaceDictionary.Clear;
+procedure TOmniInterfaceDictionary.Clear;
 var
   bucket : PHashItem;
   iBucket: integer;
@@ -623,14 +627,14 @@ begin
     idBuckets[iBucket] := nil;
   end;
   idCount := 0;
-end; { TInterfaceDictionary.Clear }
+end; { TOmniInterfaceDictionary.Clear }
 
-function TInterfaceDictionary.Count: integer;
+function TOmniInterfaceDictionary.Count: integer;
 begin
   Result := idCount;
-end; { TInterfaceDictionary.Count }
+end; { TOmniInterfaceDictionary.Count }
 
-function TInterfaceDictionary.Find(const key: int64): PPHashItem;
+function TOmniInterfaceDictionary.Find(const key: int64): PPHashItem;
 var
   hash: integer;
 begin
@@ -642,19 +646,19 @@ begin
     else
       Result := @Result^.Next;
   end;
-end; { TInterfaceDictionary.Find }
+end; { TOmniInterfaceDictionary.Find }
 
-function TInterfaceDictionary.GetEnumerator: IInterfaceDictionaryEnumerator;
+function TOmniInterfaceDictionary.GetEnumerator: IOmniInterfaceDictionaryEnumerator;
 begin
-  Result := TInterfaceDictionaryEnumerator.Create(@idBuckets);
-end; { TInterfaceDictionary.GetEnumerator }
+  Result := TOmniInterfaceDictionaryEnumerator.Create(@idBuckets);
+end; { TOmniInterfaceDictionary.GetEnumerator }
 
-function TInterfaceDictionary.HashOf(const key: int64): integer;
+function TOmniInterfaceDictionary.HashOf(const key: int64): integer;
 begin
   Result := key mod Length(idBuckets);
-end; { TInterfaceDictionary.HashOf }
+end; { TOmniInterfaceDictionary.HashOf }
 
-procedure TInterfaceDictionary.Remove(const key: int64);
+procedure TOmniInterfaceDictionary.Remove(const key: int64);
 var
   bucket    : PHashItem;
   bucketHead: PPHashItem;
@@ -666,9 +670,9 @@ begin
     Dispose(bucket);
     Dec(idCount);
   end;
-end; { TInterfaceDictionary.Remove }
+end; { TOmniInterfaceDictionary.Remove }
 
-procedure TInterfaceDictionary.Resize(size: Cardinal);
+procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
 var
   bucket    : PHashItem;
   iBucket   : integer;
@@ -686,9 +690,9 @@ begin
        bucket := bucket.Next;
     end;
   end;
-end; { TInterfaceDictionary.Resize }
+end; { TOmniInterfaceDictionary.Resize }
 
-function TInterfaceDictionary.ValueOf(const key: int64): IInterface;
+function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
 var
   bucketHead: PHashItem;
 begin
@@ -697,7 +701,7 @@ begin
     Result := bucketHead^.Value
   else
     Result := nil;
-end; { TInterfaceDictionary.ValueOf }
+end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
 
