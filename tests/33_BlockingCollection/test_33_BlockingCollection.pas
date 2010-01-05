@@ -28,11 +28,11 @@ type
     btnTest         : TButton;
     btnTestIntf     : TButton;
     cbRepeat        : TCheckBox;
+    inpNumCPU       : TSpinEdit;
+    lblNumCPU       : TLabel;
     lbLog           : TListBox;
     OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
-    lblNumCPU: TLabel;
-    inpNumCPU: TSpinEdit;
     procedure FormCreate(Sender: TObject);
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
@@ -61,7 +61,6 @@ type
     procedure StopWorkers;
     function  UseTryTake: boolean;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
-  strict protected
   end; { TfrmTestOtlCollections }
 
 var

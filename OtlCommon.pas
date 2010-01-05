@@ -439,7 +439,7 @@ type
   strict private
     oaTarget: TOmniAffinityTarget;
   protected
-    function  GetAsString: string;
+    function GetAsString: string;
     function  GetCount: integer;
     function  GetMask: DWORD;
     procedure SetAsString(const value: string);
