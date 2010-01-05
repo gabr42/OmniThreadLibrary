@@ -72,8 +72,8 @@ type
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
     tedMessageWindow           : THandle;
-    tedMonitoredPools          : IInterfaceDictionary;
-    tedMonitoredTasks          : IInterfaceDictionary;
+    tedMonitoredPools          : IOmniInterfaceDictionary;
+    tedMonitoredTasks          : IOmniInterfaceDictionary;
     tedOnPoolThreadCreated     : TOmniPoolThreadEvent;
     tedOnPoolThreadDestroying  : TOmniPoolThreadEvent;
     tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
@@ -135,7 +135,7 @@ end; { TOmniEventMonitor.Create }
 
 destructor TOmniEventMonitor.Destroy;
 var
-  intfKV: TInterfaceDictionaryPair;
+  intfKV: TOmniInterfaceDictionaryPair;
 begin
   for intfKV in tedMonitoredTasks do 
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;

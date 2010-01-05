@@ -1,6 +1,8 @@
-- Big class rename: TOmniBaseStack -> TOmniBaseBoundedStack,
+- Big rename: TOmniBaseStack -> TOmniBaseBoundedStack,
   TOmniStack -> TOmniBoundedStack, TOmniBaseQueue -> TOmniBaseBoundedQueue,
-  TOmniQueue -> TOmniBoundedQueue.
+  TOmniQueue -> TOmniBoundedQueue, IInterfaceDictionary -> IOmniInterfaceDictionary,
+  IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
+  TInterfaceDictionaryPair -> TOmniInterfaceDictionaryPair.
 - Implemented dynamically allocated, O(1) enqueue and dequeue, threadsafe,
   microlocking queue. Class TOmniBaseQueue contains base implementation
   while TOmniQueue adds notification support.
