@@ -204,7 +204,6 @@ end; { TfrmTreeScanDemo.ParaFind }
 
 function TfrmTreeScanDemo.ParaScan(node: TNode; value: integer): TNode;
 var
-  awaited     : DWORD;
   countWorkers: IOmniCounter;
   iTask       : integer;
   nodeQueue   : TOmniBlockingCollection;
