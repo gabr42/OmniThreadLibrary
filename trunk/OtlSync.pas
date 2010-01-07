@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2010, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2009-12-30
-///   Version           : 1.01
+///   Last modification : 2010-01-07
+///   Version           : 1.01a
 ///</para><para>
 ///   History:
+///     1.01a: 2010-01-07
+///       - "Wait when no resources" state in TOmniResourceCount was not properly
+///         implemented.
 ///     1.01: 2009-12-30
 ///       - Implemented resource counter with empty state signalling - TOmniResourceCount.
 ///     1.0: 2008-08-26
@@ -104,6 +107,7 @@ type
   ///<since>2009-12-30</since>
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
   strict private
+    orcAvailable   : TDSiEventHandle;
     orcHandle      : TDSiEventHandle;
     orcLock        : TOmniCS;
     orcNumResources: TGp4AlignedInt;
@@ -312,12 +316,14 @@ constructor TOmniResourceCount.Create(initialCount: cardinal);
 begin
   inherited Create;
   orcHandle := CreateEvent(nil, true, (initialCount = 0), nil);
+  orcAvailable := CreateEvent(nil, true, (initialCount <> 0), nil);
   orcNumResources.Value := initialCount;
 end; { TOmniResourceCount.Create }
 
 destructor TOmniResourceCount.Destroy;
 begin
   DSiCloseHandleAndNull(orcHandle);
+  DSiCloseHandleAndNull(orcAvailable);
   inherited;
 end; { TOmniResourceCount.Destroy }
 
@@ -344,8 +350,10 @@ begin
   orcLock.Acquire;
   try
     Result := cardinal(orcNumResources.Increment);
-    if Result = 1 then
+    if Result = 1 then begin
       ResetEvent(orcHandle);
+      SetEvent(orcAvailable);
+    end;
   finally orcLock.Release; end;
 end; { TOmniResourceCount.Release }
 
@@ -371,14 +379,16 @@ begin
         if waitTime_ms <= 0 then
           Exit;
       end;
-      if WaitForSingleObject(orcHandle, waitTime_ms) <> WAIT_OBJECT_0 then
+      if WaitForSingleObject(orcAvailable, waitTime_ms) <> WAIT_OBJECT_0 then
         Exit;
       orcLock.Acquire;
     end;
     if orcNumResources.Value > 0 then begin
       resourceCount := cardinal(orcNumResources.Decrement);
-      if resourceCount = 0 then 
+      if resourceCount = 0 then begin
         SetEvent(orcHandle);
+        ResetEvent(orcAvailable);
+      end;
       break; //repeat
     end;
   until false;
