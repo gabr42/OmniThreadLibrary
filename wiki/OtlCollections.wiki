@@ -1,0 +1,19 @@
+#summary Locking/blocking collections.
+#sidebar TableOfContents
+
+= Classes =
+
+||*!IOmniBlockingCollectionEnumerator* || Blocking collection enumerator interface.||
+||*!IOmniBlockingCollection* || Blocking collection interface.||
+||*!TOmniBlockingCollectionEnumerator* || Blocking collection enumerator.||
+||*!TOmniBlockingCollection* || Blocking collection implementation.||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCollections.pas]
+
+= More information =
+
+[http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx What’s new for the coordination data structures in Beta 2?]
+
+[http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx BlockingCollection(Of T) Class (MSDN)]
