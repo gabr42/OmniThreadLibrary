@@ -1,7 +1,7 @@
 #summary OmniThreadLibrary internals
 #sidebar TableOfContents
 
-= OmniThreadLibrary folder structure =
+= !OmniThreadLibrary folder structure =
 
 ||*\* || OmniThreadLibrary units and changelog. ||
 ||*doc\* || Visio generated charts representing internal structure of the communication subsystem. ||
@@ -12,7 +12,7 @@
 ||*tests\* || Test/demo applications.||
 ||*wiki\* || This wiki.||
 
-= OmniThreadLibrary units =
+= !OmniThreadLibrary units =
 
 ||*OtlCollections.pas* || Locking/blocking collections.||
 ||*OtlComm.pas* || Two-way intraprocess communication channel.||
