@@ -1,5 +1,5 @@
 #summary Locking/blocking collections.
-#sidebar TableOfContents
+#sidebar TableOfContentsInt
 
 = Interfaces =
 

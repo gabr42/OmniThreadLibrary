@@ -1,5 +1,5 @@
 #summary Two-way intraprocess communication channel.
-#sidebar TableOfContents
+#sidebar TableOfContentsInt
 
 = Records =
 
