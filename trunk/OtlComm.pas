@@ -1,4 +1,4 @@
-///<summary>Two-way interprocess communication channel. Part of the OmniThreadLibrary project.</summary>
+///<summary>Two-way intraprocess communication channel. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
