@@ -1,0 +1,4 @@
+#summary Communication ring buffer unit test.
+#sidebar TableOfContentsInt
+
+This unit contains only one test which is executed directly from the initialization section.
