@@ -71,6 +71,8 @@ const
   //Max send wait time
   CMaxSendWaitTime_ms = 100;
 
+  CDefaultQueueSize = 1000;
+
 type
   {$A4}
   TOmniMessage = record
@@ -80,10 +82,6 @@ type
     constructor Create(aMsgID: word); overload;
   end; { TOmniMessage }
 
-const
-  CDefaultQueueSize = 1000;
-
-type
   TOmniMessageQueue = class;
 
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
@@ -113,7 +111,7 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
-  {:Fixed-size ring buffer of TOmniValues references.
+  {:Fixed-size ring buffer of TOmniMessage data.
     WARNING Supports only one writer and one reader WARNING
   }
   // TODO 1 -oPrimoz Gabrijelcic : Check if 1 reader/1 write warning still applies.
