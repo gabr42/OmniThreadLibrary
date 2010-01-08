@@ -3,16 +3,16 @@
 
 = Records =
 
-||*TOmniMessage* || Message-carrying packet. ||
+||TOmniMessage || Message-carrying packet. ||
 
 = Interfaces =
 
-||*IOmniCommunicationEndpoint* || Communication endpoint. ||
-||*IOmniTwoWayChannel* || Bidirectional channel consisting of two communication endpoints. ||
+||IOmniCommunicationEndpoint || Communication endpoint. ||
+||IOmniTwoWayChannel || Bidirectional channel consisting of two communication endpoints. ||
 
 = Classes =
 
-||*TOmniMessageQueue* || Fixed-size ring buffer of TOmniMessage data. ||
+||TOmniMessageQueue || Fixed-size ring buffer of TOmniMessage data. ||
 
 = Global Methods =
 
