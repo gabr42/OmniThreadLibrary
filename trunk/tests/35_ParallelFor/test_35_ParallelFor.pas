@@ -1,4 +1,4 @@
-unit test_34_TreeScan;
+unit test_35_ParallelFor;
 
 interface
 
@@ -15,7 +15,7 @@ type
     function ToString: string; {$IF CompilerVersion >= 20}reintroduce;{$IFEND}
   end;
 
-  TfrmTreeScanDemo = class(TForm)
+  TfrmParallelForDemo = class(TForm)
     btnBuildTree: TButton;
     btnParaScan : TButton;
     btnSeqScan  : TButton;
@@ -36,15 +36,14 @@ type
     procedure Log(const msg: string; const params: array of const);
     procedure ParaFind(value: integer);
     function  ParaScan(node: TNode; value: integer): TNode;
-    procedure ParaScanWorker(const task: IOmniTask);
     procedure RemoveEmptyLeaves(node: TNode);
     procedure SeqFind(value: integer);
     function  SeqScan(node: TNode; value: integer): TNode;
   public
-  end; { TfrmTreeScanDemo }
+  end; { TfrmParallelForDemo }
 
 var
-  frmTreeScanDemo: TfrmTreeScanDemo;
+  frmParallelForDemo: TfrmParallelForDemo;
 
 implementation
 
@@ -53,7 +52,8 @@ uses
   OtlCommon,
   OtlContainers,
   OtlCollections,
-  OtlTaskControl;
+  OtlTaskControl,
+  OtlParallel;
 
 {$R *.dfm}
 
@@ -85,37 +85,37 @@ begin
   Result := Result + ']';
 end; { TNode.ToString }
 
-{ TfrmTreeScanDemo }
+{ TfrmParallelForDemo }
 
-procedure TfrmTreeScanDemo.btnBuildLargeClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnBuildLargeClick(Sender: TObject);
 begin
   DestroyTree;
   CreateTree(CNumNodesLarge);
-end; { TfrmTreeScanDemo.btnBuildLargeClick }
+end; { TfrmParallelForDemo.btnBuildLargeClick }
 
-procedure TfrmTreeScanDemo.btnBuildTreeClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnBuildTreeClick(Sender: TObject);
 begin
   DestroyTree;
   CreateTree(CNumNodes);
-end; { TfrmTreeScanDemo.btnBuildTreeClick }
+end; { TfrmParallelForDemo.btnBuildTreeClick }
 
-procedure TfrmTreeScanDemo.btnParaScanClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
   ParaFind(2);
   ParaFind(FNumNodes div 4 * 2);
   ParaFind(FNumNodes div 2 * 2);
   ParaFind(FNumNodes div 2 * 2 - 1);
-end; { TfrmTreeScanDemo.btnParaScanClick }
+end; { TfrmParallelForDemo.btnParaScanClick }
 
-procedure TfrmTreeScanDemo.btnSeqScanClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnSeqScanClick(Sender: TObject);
 begin
   SeqFind(2);
   SeqFind(FNumNodes div 4 * 2);
   SeqFind(FNumNodes div 2 * 2);
   SeqFind(FNumNodes div 2 * 2 - 1);
-end; { TfrmTreeScanDemo.btnSeqScanClick }
+end; { TfrmParallelForDemo.btnSeqScanClick }
 
-function TfrmTreeScanDemo.CreateNode(availNodes: integer; nodeValue: integer): TNode;
+function TfrmParallelForDemo.CreateNode(availNodes: integer; nodeValue: integer): TNode;
 var
   numChild: integer;
 begin
@@ -126,9 +126,9 @@ begin
     numChild := availNodes;
   if numChild > 0 then
     SetLength(Result.Child, numChild);
-end; { TfrmTreeScanDemo.CreateNode }
+end; { TfrmParallelForDemo.CreateNode }
 
-procedure TfrmTreeScanDemo.CreateTree(maxNodes: integer);
+procedure TfrmParallelForDemo.CreateTree(maxNodes: integer);
 var
   iNode      : integer;
   node       : PNode;
@@ -160,35 +160,35 @@ begin
   Log('Created tree with %d nodes', [FNumNodes]);
   btnParaScan.Enabled := true;
   btnSeqScan.Enabled := true;
-end; { TfrmTreeScanDemo.CreateTree }
+end; { TfrmParallelForDemo.CreateTree }
 
-procedure TfrmTreeScanDemo.DestroyNode(var node: TNode);
+procedure TfrmParallelForDemo.DestroyNode(var node: TNode);
 var
   iChild: integer;
 begin
   for iChild := 0 to node.NumChild - 1 do
     DestroyNode(node.Child[iChild]);
   FreeAndNil(node);
-end; { TfrmTreeScanDemo.DestroyNode }
+end; { TfrmParallelForDemo.DestroyNode }
 
-procedure TfrmTreeScanDemo.DestroyTree;
+procedure TfrmParallelForDemo.DestroyTree;
 begin
   if assigned(FRootNode) then
     DestroyNode(FRootNode);
-end; { TfrmTreeScanDemo.DestroyTree }
+end; { TfrmParallelForDemo.DestroyTree }
 
-procedure TfrmTreeScanDemo.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+procedure TfrmParallelForDemo.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   DestroyTree;
   CanClose := true;
-end; { TfrmTreeScanDemo.FormCloseQuery }
+end; { TfrmParallelForDemo.FormCloseQuery }
 
-procedure TfrmTreeScanDemo.Log(const msg: string; const params: array of const);
+procedure TfrmParallelForDemo.Log(const msg: string; const params: array of const);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format(msg, params));
-end; { TfrmTreeScanDemo.Log }
+end; { TfrmParallelForDemo.Log }
 
-procedure TfrmTreeScanDemo.ParaFind(value: integer);
+procedure TfrmParallelForDemo.ParaFind(value: integer);
 var
   node     : TNode;
   startTime: integer;
@@ -200,74 +200,35 @@ begin
     Log('Found in %d ms; node = %s', [DSiTimeGetTime64 - startTime, node.ToString])
   else
     Log('Not found in %d ms', [DSiTimeGetTime64 - startTime]);
-end; { TfrmTreeScanDemo.ParaFind }
+end; { TfrmParallelForDemo.ParaFind }
 
-function TfrmTreeScanDemo.ParaScan(node: TNode; value: integer): TNode;
+function TfrmParallelForDemo.ParaScan(node: TNode; value: integer): TNode;
 var
-  countWorkers: IOmniCounter;
-  iTask       : integer;
-  nodeQueue   : TOmniBlockingCollection;
-  numTasks    : integer;
-  scanResult  : TOmniWaitableValue;
+  nodeResult: TNode;
+  nodeQueue : TOmniBlockingCollection;
 begin
-  Result := nil;
-  numTasks := Environment.Process.Affinity.Count;
-  nodeQueue := TOmniBlockingCollection.Create(numTasks);
+  nodeResult := nil;
+  nodeQueue := TOmniBlockingCollection.Create;
   try
     nodeQueue.Add(FRootNode);
-    countWorkers := CreateCounter(numTasks);
-    scanResult := TOmniWaitableValue.Create;
-    try
-      scanResult.Value.AsPointer := nil;
-      for iTask := 1 to numTasks do begin
-        CreateTask(ParaScanWorker, 'Parallel scan worker #' + IntToStr(iTask))
-          .SetParameters([nodeQueue, scanResult, value])
-          .WithCounter(countWorkers)
-          .Unobserved
-          .Run;
-      end;
-      if WaitForSingleObject(nodeQueue.CompletedSignal, 10*1000) <> WAIT_OBJECT_0 then begin
-        Log('Catastrophic failure, parallel scan did not complete in 10 seconds', []);
-        nodeQueue.CompleteAdding;
-        Result := nil;
-      end
-      else begin
-        // wait for all workers to complete and release references to nodeQueue
-        while countWorkers.Value > 0 do
-          Sleep(1);
-        Result := scanResult.Value.AsPointer;
-      end;
-    finally FreeAndNil(scanResult); end;
+    ParallelFor(nodeQueue.GetEnumerator).Timeout(10*1000).Execute(
+      procedure (const elem: TOmniValue)
+      var
+        iNode: integer;
+      begin
+        node := TNode(elem.AsPointer);
+        if node.Value = value then begin
+          nodeResult := node;
+          nodeQueue.CompleteAdding;
+        end
+        else for iNode := 0 to node.NumChild - 1 do
+          nodeQueue.TryAdd(node.Child[iNode]);
+      end);
   finally FreeAndNil(nodeQueue); end;
-end; { TfrmTreeScanDemo.ParaScan }
+  Result := nodeResult;
+end; { TfrmParallelForDemo.ParaScan }
 
-procedure TfrmTreeScanDemo.ParaScanWorker(const task: IOmniTask);
-var
-  iNode     : integer;
-  node      : TNode;
-  nodeQueue : TOmniBlockingCollection;
-  scanResult: TOmniWaitableValue;
-  scanValue : integer;
-  value     : TOmniValue;
-begin
-  try
-    nodeQueue := TOmniBlockingCollection(task.Param[0].AsPointer);
-    scanResult := TOmniWaitableValue(task.Param[1].AsPointer);
-    scanValue := task.Param[2];
-    for value in nodeQueue do begin
-      node := TNode(value.AsPointer);
-      if node.Value = scanValue then begin
-        scanResult.Value := node;
-        scanResult.Signal;
-        nodeQueue.CompleteAdding;
-      end
-      else for iNode := 0 to node.NumChild - 1 do
-        nodeQueue.TryAdd(node.Child[iNode]);
-    end;
-  finally task.Counter.Decrement; end;
-end; { TfrmTreeScanDemo.ParaScanWorker }
-
-procedure TfrmTreeScanDemo.RemoveEmptyLeaves(node: TNode);
+procedure TfrmParallelForDemo.RemoveEmptyLeaves(node: TNode);
 var
   highestChild: integer;
   iNode       : integer;
@@ -281,9 +242,9 @@ begin
   end;
   if (highestChild + 1) <> node.NumChild then
     SetLength(node.Child, highestChild + 1);
-end; { TfrmTreeScanDemo.RemoveEmptyLeaves }
+end; { TfrmParallelForDemo.RemoveEmptyLeaves }
 
-procedure TfrmTreeScanDemo.SeqFind(value: integer);
+procedure TfrmParallelForDemo.SeqFind(value: integer);
 var
   node     : TNode;
   startTime: integer;
@@ -295,9 +256,9 @@ begin
     Log('Found in %d ms; node = %s', [DSiTimeGetTime64 - startTime, node.ToString])
   else
     Log('Not found in %d ms', [DSiTimeGetTime64 - startTime]);
-end; { TfrmTreeScanDemo.SeqFind }
+end; { TfrmParallelForDemo.SeqFind }
 
-function TfrmTreeScanDemo.SeqScan(node: TNode; value: integer): TNode;
+function TfrmParallelForDemo.SeqScan(node: TNode; value: integer): TNode;
 var
   iNode: integer;
 begin
@@ -311,7 +272,7 @@ begin
         break; //for iNode
     end;
   end;
-end; { TfrmTreeScanDemo.SeqScan }
+end; { TfrmParallelForDemo.SeqScan }
 
 end.
 
