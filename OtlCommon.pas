@@ -1,4 +1,4 @@
-///<summary>Stuff common for the OmniThreadLibrary project.</summary>
+///<summary>Stuff common to the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
