@@ -498,8 +498,6 @@ end; { CreateInterfaceDictionary }
 
 function Environment: IOmniEnvironment;
 begin
-  if not assigned(GEnvironment) then
-    GEnvironment := TOmniEnvironment.Create;
   Result := GEnvironment;
 end; { Environment }
 
@@ -1409,4 +1407,5 @@ initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
   Assert(SizeOf(pointer) = SizeOf(cardinal)); 
   Assert(SizeOf(pointer) = 4);
+  GEnvironment := TOmniEnvironment.Create;
 end.
