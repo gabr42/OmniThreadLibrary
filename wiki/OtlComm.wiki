@@ -24,11 +24,6 @@
 
 ||CreateTwoWayChannel|| Bidirectional channel factory. ||
 
-{{{
-function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize; 
-  taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
-}}}
-
 = Source =
 
 [http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlComm.pas]

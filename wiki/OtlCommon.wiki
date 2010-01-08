@@ -1,0 +1,48 @@
+#summary Common/unclassified stuff.
+#sidebar TableOfContentsInt
+
+= Constants =
+
+||[EXIT_OK]|| ||
+||[EXIT_EXCEPTION]|| ||
+||[EXIT_THREADPOOL_QUEUE_TOO_LONG]|| ||
+||[EXIT_THREADPOOL_STALE_TASK]|| ||
+||[EXIT_THREADPOOL_CANCELLED]|| ||
+||[EXIT_THREADPOOL_INTERNAL_ERROR]|| ||
+
+= Enumerations =
+
+||[TOmniProcessPriorityClass]|| ||
+
+= Records =
+
+||[TOmniValue]|| ||
+||[TOmniProcessMemoryCounters]|| ||
+||[TOmniProcessTimes]|| ||
+
+= Interfaces =
+
+||[IOmniCounter]|| ||
+||[IOmniInterfaceDictionaryEnumerator]|| ||
+||[IOmniInterfaceDictionary]|| ||
+||[IOmniAffinity]|| ||
+||[IOmniProcessEnvironment]|| ||
+||[IOmniEnvironment]|| ||
+
+= Classes =
+
+||[TOmniWaitableValue]|| ||
+||[TOmniValueContainer]|| ||
+||[TOmniInterfaceDictionaryPair]|| ||
+
+= Global Functions =
+
+||[CreateCounter]|| IOmniCounter factory.||
+||[CreateInterfaceDictionary]|| IOmniInterfaceDictionary factory.||
+||[Environment]|| IOmniEnvironment singleton.||
+||[SetThreadName]|| ||
+||[VarToObj]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]
