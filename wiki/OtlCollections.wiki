@@ -3,10 +3,10 @@
 
 = Classes =
 
-||*!IOmniBlockingCollectionEnumerator* || Blocking collection enumerator interface.||
-||*!IOmniBlockingCollection* || Blocking collection interface.||
-||*!TOmniBlockingCollectionEnumerator* || Blocking collection enumerator.||
-||*!TOmniBlockingCollection* || Blocking collection implementation.||
+||*IOmniBlockingCollectionEnumerator* || Blocking collection enumerator interface.||
+||*IOmniBlockingCollection* || Blocking collection interface.||
+||*TOmniBlockingCollectionEnumerator* || Blocking collection enumerator.||
+||*TOmniBlockingCollection* || Blocking collection implementation.||
 
 = Source =
 
