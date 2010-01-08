@@ -21,11 +21,13 @@ type
     function  Timeout(timeout_ms: integer): IOmniParallelLoop;
   end;
 
-function ParallelFor(enum: IOmniValueEnumerator): IOmniParallelLoop;
+  Parallel = class
+    class function ForEach(enum: IOmniValueEnumerator): IOmniParallelLoop;
+  end;
 
 implementation
 
-function ParallelFor(enum: IOmniValueEnumerator): IOmniParallelLoop;
+class function Parallel.ForEach(enum: IOmniValueEnumerator): IOmniParallelLoop;
 begin
   Result := nil;
 end;
