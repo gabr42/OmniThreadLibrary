@@ -14,7 +14,7 @@
 
 ||[TOmniMessageQueue]|| Fixed-size ring buffer of TOmniMessage data. ||
 
-= Global Methods =
+= Global Functions =
 
 ||CreateTwoWayChannel|| Bidirectional channel factory. ||
 
