@@ -1,6 +1,12 @@
 #summary Two-way intraprocess communication channel.
 #sidebar TableOfContentsInt
 
+= Constants =
+
+||[COtlReservedMsgID]|| Message ID reserved for internal messaging. ||
+||[CMaxSendWaitTime_ms]|| Default SendWait timeout. ||
+||[CDefaultQueueSize]|| Default queue size (counted in number of messages). ||
+
 = Records =
 
 ||[TOmniMessage]|| Message-carrying packet. ||
