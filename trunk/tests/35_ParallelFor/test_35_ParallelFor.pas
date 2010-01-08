@@ -35,7 +35,7 @@ type
     procedure DestroyTree;
     procedure Log(const msg: string; const params: array of const);
     procedure ParaFind(value: integer);
-    function  ParaScan(node: TNode; value: integer): TNode;
+    function ParaScan(rootNode: TNode; value: integer): TNode;
     procedure RemoveEmptyLeaves(node: TNode);
     procedure SeqFind(value: integer);
     function  SeqScan(node: TNode; value: integer): TNode;
@@ -202,7 +202,7 @@ begin
     Log('Not found in %d ms', [DSiTimeGetTime64 - startTime]);
 end; { TfrmParallelForDemo.ParaFind }
 
-function TfrmParallelForDemo.ParaScan(node: TNode; value: integer): TNode;
+function TfrmParallelForDemo.ParaScan(rootNode: TNode; value: integer): TNode;
 var
   nodeResult: TNode;
   nodeQueue : TOmniBlockingCollection;
@@ -210,10 +210,11 @@ begin
   nodeResult := nil;
   nodeQueue := TOmniBlockingCollection.Create;
   try
-    nodeQueue.Add(FRootNode);
-    ParallelFor(nodeQueue.GetEnumerator).Timeout(10*1000).Execute(
+    nodeQueue.Add(rootNode);
+    Parallel.ForEach(nodeQueue.GetEnumerator).Timeout(10*1000).Execute(
       procedure (const elem: TOmniValue)
       var
+        node : TNode;
         iNode: integer;
       begin
         node := TNode(elem.AsPointer);
@@ -221,7 +222,7 @@ begin
           nodeResult := node;
           nodeQueue.CompleteAdding;
         end
-        else for iNode := 0 to node.NumChild - 1 do
+        else for iNode := 0 to rootNode.NumChild - 1 do
           nodeQueue.TryAdd(node.Child[iNode]);
       end);
   finally FreeAndNil(nodeQueue); end;

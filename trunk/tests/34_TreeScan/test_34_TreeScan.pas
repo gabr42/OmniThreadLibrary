@@ -35,7 +35,7 @@ type
     procedure DestroyTree;
     procedure Log(const msg: string; const params: array of const);
     procedure ParaFind(value: integer);
-    function  ParaScan(node: TNode; value: integer): TNode;
+    function  ParaScan(rootNode: TNode; value: integer): TNode;
     procedure ParaScanWorker(const task: IOmniTask);
     procedure RemoveEmptyLeaves(node: TNode);
     procedure SeqFind(value: integer);
@@ -202,7 +202,7 @@ begin
     Log('Not found in %d ms', [DSiTimeGetTime64 - startTime]);
 end; { TfrmTreeScanDemo.ParaFind }
 
-function TfrmTreeScanDemo.ParaScan(node: TNode; value: integer): TNode;
+function TfrmTreeScanDemo.ParaScan(rootNode: TNode; value: integer): TNode;
 var
   countWorkers: IOmniCounter;
   iTask       : integer;
@@ -214,7 +214,7 @@ begin
   numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
   try
-    nodeQueue.Add(FRootNode);
+    nodeQueue.Add(rootNode);
     countWorkers := CreateCounter(numTasks);
     scanResult := TOmniWaitableValue.Create;
     try
