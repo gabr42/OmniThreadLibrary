@@ -3,11 +3,11 @@
 
 = !OmniThreadLibrary folder structure =
 
-||*\* || OmniThreadLibrary units and changelog. ||
+||*\* || !OmniThreadLibrary units and changelog. ||
 ||*doc\* || Visio generated charts representing internal structure of the communication subsystem. ||
 ||*fastmm4\* || Latest release of the FastMM4 memory manager.||
 ||*packages\* || Packages for various Delphi IDEs.||
-||*res\* || OmniThreadLibrary logo.||
+||*res\* || !OmniThreadLibrary logo.||
 ||*src\* || 3rd party units.||
 ||*tests\* || Test/demo applications.||
 ||*wiki\* || This wiki.||
