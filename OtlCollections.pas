@@ -61,10 +61,8 @@ uses
 type
   ECollectionCompleted = class(Exception);
 
-  IOmniBlockingCollectionEnumerator = interface ['{7A5AA8F4-5ED8-40C3-BDC3-1F991F652F9E}']
-    function  GetCurrent: TOmniValue;
-    function  MoveNext: boolean;
-    property Current: TOmniValue read GetCurrent;
+  IOmniBlockingCollectionEnumerator = interface(IOmniValueEnumerator)
+    ['{7A5AA8F4-5ED8-40C3-BDC3-1F991F652F9E}']
   end; { IOmniBlockingCollectionEnumerator }
 
   ///<summary>Blocking collection

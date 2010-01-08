@@ -185,6 +185,12 @@ type
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
   end; { TOmniValue }
 
+  IOmniValueEnumerator = interface ['{F60EBBD8-2F87-4ACD-A014-452F296F4699}']
+    function  GetCurrent: TOmniValue;
+    function  MoveNext: boolean;
+    property Current: TOmniValue read GetCurrent;
+  end;
+
   TOmniWaitableValue = class
   public
     Handle: THandle;
