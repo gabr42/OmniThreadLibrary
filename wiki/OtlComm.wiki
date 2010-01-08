@@ -1,0 +1,28 @@
+#summary Two-way intraprocess communication channel.
+#sidebar TableOfContents
+
+= Records =
+
+||*TOmniMessage* || Message-carrying packet. ||
+
+= Interfaces =
+
+||*IOmniCommunicationEndpoint* || Communication endpoint. ||
+||*IOmniTwoWayChannel* || Bidirectional channel consisting of two communication endpoints. ||
+
+= Classes =
+
+||*TOmniMessageQueue* || Fixed-size ring buffer of TOmniMessage data. ||
+
+= Global Methods =
+
+||CreateTwoWayChannel || Bidirectional channel factory. ||
+
+{{{
+function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize; 
+  taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
+}}}
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlComm.pas]
