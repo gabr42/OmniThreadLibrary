@@ -1,10 +1,13 @@
 #summary Locking/blocking collections.
 #sidebar TableOfContents
 
-= Classes =
+= Interfaces =
 
 ||*IOmniBlockingCollectionEnumerator* || Blocking collection enumerator interface.||
 ||*IOmniBlockingCollection* || Blocking collection interface.||
+
+= Classes =
+
 ||*TOmniBlockingCollectionEnumerator* || Blocking collection enumerator.||
 ||*TOmniBlockingCollection* || Blocking collection implementation.||
 
