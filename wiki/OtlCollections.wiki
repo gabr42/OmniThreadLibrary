@@ -3,13 +3,13 @@
 
 = Interfaces =
 
-||IOmniBlockingCollectionEnumerator || Blocking collection enumerator interface.||
-||IOmniBlockingCollection || Blocking collection interface.||
+||[IOmniBlockingCollectionEnumerator]|| Blocking collection enumerator interface.||
+||[IOmniBlockingCollection]|| Blocking collection interface.||
 
 = Classes =
 
-||TOmniBlockingCollectionEnumerator || Blocking collection enumerator.||
-||TOmniBlockingCollection || Blocking collection implementation.||
+||[TOmniBlockingCollectionEnumerator]|| Blocking collection enumerator.||
+||[TOmniBlockingCollection]|| Blocking collection implementation.||
 
 = Source =
 
