@@ -18,8 +18,8 @@
     the use of Environment to set process affinity.
   - 34_TreeScan: Parallel tree scan using TOmniBlockingCollection.
 
-TODO: Add new tests to D2009/2010.
-TODO: Add Environment class with global methods to access num CPUs, memory sizes etc
+TODO: Add new tests to 2010.
+TODO: Cannot be compiled with /dLogThreadPool.
 
 1.04b: 2009-12-18
 - [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.

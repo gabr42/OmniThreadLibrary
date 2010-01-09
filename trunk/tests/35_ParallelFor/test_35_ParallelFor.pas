@@ -204,15 +204,17 @@ end; { TfrmParallelForDemo.ParaFind }
 
 function TfrmParallelForDemo.ParaScan(rootNode: TNode; value: integer): TNode;
 var
-  nodeResult: TNode;
   nodeQueue : TOmniBlockingCollection;
+  nodeResult: TNode;
+  numTasks  : integer;
 begin
   nodeResult := nil;
-  nodeQueue := TOmniBlockingCollection.Create;
+  numTasks := Environment.Process.Affinity.Count;
+  nodeQueue := TOmniBlockingCollection.Create(numTasks);
   try
     nodeQueue.Add(rootNode);
-    Parallel.ForEach(nodeQueue.GetEnumerator).Timeout(10*1000).Execute(
-      procedure (const elem: TOmniValue)
+    Parallel.ForEach(nodeQueue.GetEnumerator).NumTasks(numTasks).Timeout(10*1000).Execute(
+      procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
       var
         node : TNode;
         iNode: integer;
@@ -221,6 +223,7 @@ begin
         if node.Value = value then begin
           nodeResult := node;
           nodeQueue.CompleteAdding;
+          loop.Stop;
         end
         else for iNode := 0 to rootNode.NumChild - 1 do
           nodeQueue.TryAdd(node.Child[iNode]);
