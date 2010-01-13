@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2010, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2009-12-12
-///   Version           : 1.06
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2010-01-13
+///       - Defined IOmniTask.Implementor property.
 ///     1.06: 2009-12-12
 ///       - Defined IOmniTask.RegisterWaitObject/UnregisterWaitObject.
 ///       - Implemented TOmniWaitObjectList.
@@ -105,6 +107,7 @@ type
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetCounter: IOmniCounter;
+    function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetParam(idxParam: integer): TOmniValue;
@@ -129,6 +132,7 @@ type
     procedure UnregisterWaitObject(waitObject: THandle);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
+    property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;

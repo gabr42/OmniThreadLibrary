@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2010, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-12-18
-///   Version           : 1.14a
+///   Last modification : 2010-01-13
+///   Version           : 1.15
 ///</para><para>
 ///   History:
+///     1.15: 2010-01-13
+///       - Implemented IOmniTask.GetImplementor.
 ///     1.14a: 2009-12-18
 ///       - Worked around a change in Delphi 2010 update 4.
 ///     1.14: 2009-12-12
@@ -478,6 +480,7 @@ type
     procedure DispatchOmniMessage(msg: TOmniMessage);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
+    function  GetImplementor: TObject;
     procedure GetMethodAddrAndSignature(const methodName: string;
       var methodAddress: pointer; var methodSignature: TOmniInvokeType);
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
@@ -532,6 +535,7 @@ type
     function WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
+    property Implementor: TObject read GetImplementor;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TaskException: pointer read oteException write oteException;
@@ -556,6 +560,7 @@ type
   protected
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
+    function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam(idxParam: integer): TOmniValue; inline;
@@ -584,6 +589,7 @@ type
     procedure UnregisterWaitObject(waitObject: THandle);
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
+    property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param[idxParam: integer]: TOmniValue read GetParam;
@@ -965,6 +971,11 @@ function TOmniTask.GetCounter: IOmniCounter;
 begin
   Result := otSharedInfo_ref.Counter;
 end; { TOmniTask.GetCounter }
+
+function TOmniTask.GetImplementor: TObject;
+begin
+  Result := otExecutor_ref.Implementor;
+end; { TOmniTask.GetImplementor }
 
 function TOmniTask.GetLock: TSynchroObject;
 begin
@@ -1494,6 +1505,16 @@ begin
     UniqueString(Result);
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.GetExitMessage }
+
+function TOmniTaskExecutor.GetImplementor: TObject;
+begin
+  case oteExecutorType of
+    etWorker:
+      Result := oteWorkerIntf.Implementor;
+    else
+      Result := nil;
+  end;
+end; { TOmniTaskExecutor.GetImplementor }
 
 procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
   methodAddress: pointer; var methodSignature: TOmniInvokeType);

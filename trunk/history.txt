@@ -9,6 +9,8 @@
 - Implemented resource counter with empty state signalling TOmniResourceCount.
 - New unit OtlCollection which contains blocking collection implementation
   TOmniBlockingCollection.
+- IOmniTask implements Implementor property which points back to the worker instance
+  (but only if worker is TOmniWorker-based).
 - Implemented IOmniEnvironment interface and function Environment returning
   some information on system and process.
 - Set package names and designtime/runtime type in D2009/D2010 packages.
