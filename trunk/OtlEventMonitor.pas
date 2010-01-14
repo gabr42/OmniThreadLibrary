@@ -79,7 +79,7 @@ type
     tedOnPoolThreadKilled      : TOmniPoolThreadEvent;
     tedOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
     tedOnTaskMessage           : TOmniTaskMessageEvent;
-    tedOnTaskUndeliveredMessage: TOmniTaskEvent;
+    tedOnTaskUndeliveredMessage: TOmniTaskMessageEvent;
     tedOnTaskTerminated        : TOmniTaskEvent;
     tedCurrentMsg              : TOmniMessage;
   strict protected
@@ -100,11 +100,12 @@ type
       write tedOnPoolThreadKilled;
     property OnPoolWorkItemCompleted: TOmniPoolWorkItemEvent read tedOnPoolWorkItemEvent
       write tedOnPoolWorkItemEvent;
-    property OnTaskMessage: TOmniTaskMessageEvent read tedOnTaskMessage write tedOnTaskMessage;
-    property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated write
-      tedOnTaskTerminated;
-    property OnTaskUndeliveredMessage: TOmniTaskEvent read tedOnTaskUndeliveredMessage
-      write tedOnTaskUndeliveredMessage;
+    property OnTaskMessage: TOmniTaskMessageEvent read tedOnTaskMessage
+      write tedOnTaskMessage;
+    property OnTaskTerminated: TOmniTaskEvent read tedOnTaskTerminated
+      write tedOnTaskTerminated;
+    property OnTaskUndeliveredMessage: TOmniTaskMessageEvent
+      read tedOnTaskUndeliveredMessage write tedOnTaskUndeliveredMessage;
   end; { TOmniEventMonitor }
 
 var
@@ -220,7 +221,7 @@ begin { TOmniEventMonitor.WndProc }
         endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
         while endpoint.Receive(tedCurrentMsg) do
           if Assigned(tedOnTaskUndeliveredMessage) then
-            tedOnTaskUndeliveredMessage(task);
+            tedOnTaskUndeliveredMessage(task, tedCurrentMsg);
         if Assigned(tedOnTaskTerminated) then
           OnTaskTerminated(task);
         Detach(task);
