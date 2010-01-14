@@ -13,6 +13,10 @@
   (but only if worker is TOmniWorker-based).
 - Implemented IOmniEnvironment interface and function Environment returning
   some information on system and process.
+- Implemented IOmniTaskControl.UserData[]. The application can store any values
+  in this array. It can be accessed via the integer or string index.
+- Implemented TOmniValue.IsInteger.
+- Refactored and enhanced TOmniValueContainer.
 - Set package names and designtime/runtime type in D2009/D2010 packages.
 - Bugs fixed:
   - TOmniEventMonitor.OnTaskUndeliveredMessage was missing 'message' parameter.

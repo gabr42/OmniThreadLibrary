@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-13
-///   Version           : 1.15
+///   Last modification : 2010-01-14
+///   Version           : 1.16
 ///</para><para>
 ///   History:
+///     1.16: 2010-01-14
+///       - Implemented IOmniTaskControl.UserData[]. The application can store any values
+///         in this array. It can be accessed via the integer or string index.
 ///     1.15: 2010-01-13
 ///       - Implemented IOmniTask.GetImplementor.
 ///     1.14a: 2009-12-18
@@ -227,6 +230,8 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetUniqueID: int64;
+    function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
+    procedure SetUserDataVal(const idxData: TOmniValue; const value: TOmniValue);
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
@@ -255,10 +260,11 @@ type
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
+    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
     function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
-    function  SetQueueSize(numMessages: integer): IOmniTaskControl;
+    function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
@@ -274,6 +280,7 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property UniqueID: int64 read GetUniqueID;
+    property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
   end; { IOmniTaskControl }
 
   // Implementation details, needed by the OtlEventMonitor. Not for public consumption.
@@ -640,6 +647,7 @@ type
     otcQueueLength    : integer;
     otcSharedInfo     : TOmniSharedTaskInfo;
     otcThread         : TOmniThread;
+    otcUserData       : TOmniValueContainer;
   strict protected
     procedure CreateInternalMonitor;
     function  CreateTask: IOmniTask;
@@ -659,8 +667,10 @@ type
     function  GetTerminatedEvent: THandle;
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64; inline;
+    function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
+    procedure SetUserDataVal(const idxData: TOmniValue; const value: TOmniValue);
   public
     {$IFDEF OTL_Anonymous}
     constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
@@ -699,6 +709,7 @@ type
     function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
     function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
+    function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl;
@@ -715,6 +726,7 @@ type
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property SharedInfo: TOmniSharedTaskInfo read otcSharedInfo;
     property UniqueID: int64 read GetUniqueID;
+    property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
   end; { TOmniTaskControl }
 
   TOmniTaskControlList = class;
@@ -1974,6 +1986,7 @@ begin
   end;
   FreeAndNil(otcParameters);
   FreeAndNil(otcSharedInfo);
+  FreeAndNil(otcUserData);
   inherited Destroy;
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
 end; { TOmniTaskControl.Destroy }
@@ -2093,6 +2106,16 @@ begin
   Result := otcSharedInfo.UniqueID;
 end; { TOmniTaskControl.GetUniqueID }
 
+function TOmniTaskControl.GetUserDataVal(const idxData: TOmniValue): TOmniValue;
+begin
+  if idxData.IsInteger then
+    Result := otcUserData.ParamByIdx(idxData)
+  else if idxData.IsString then
+    Result := otcUserData.ParamByName(idxData)
+  else
+    raise Exception.Create('UserData can only be indexed by integer or string.');  
+end; { TOmniTaskControl.GetUserDataVal }
+
 procedure TOmniTaskControl.Initialize;
 begin
   otcExecutor.Options := [tcoForceExecution];
@@ -2105,6 +2128,7 @@ begin
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
+  otcUserData := TOmniValueContainer.Create;
 end; { TOmniTaskControl.Initialize }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
@@ -2325,6 +2349,24 @@ begin
   otcExecutor.Asy_SetTimer(interval_ms, timerMessageName);
   Result := Self;
 end; { TOmniTaskControl.SetTimer }
+
+function TOmniTaskControl.SetUserData(const idxData: TOmniValue; const value:
+  TOmniValue): IOmniTaskControl;
+begin
+  SetUserDataVal(idxData, value);
+  Result := Self;
+end; { TOmniTaskControl.SetUserData }
+
+procedure TOmniTaskControl.SetUserDataVal(const idxData: TOmniValue; const value:
+  TOmniValue);
+begin
+  if idxData.IsInteger then
+    otcUserData.Insert(idxData, value)
+  else if idxData.IsString then
+    otcUserData.Add(value, idxData)
+  else
+    raise Exception.Create('UserData can only be indexed by integer or string.');
+end; { TOmniTaskControl.SetUserDataInt }
 
 function TOmniTaskControl.SilentExceptions: IOmniTaskControl;
 begin

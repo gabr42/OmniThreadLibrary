@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-05
-///   Version           : 1.07
+///   Last modification : 2010-01-14
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2010-01-14
+///       - Added TOmniValue.IsInteger.
+///       - Refactored and enhanced TOmniValueContainer.
 ///     1.07: 2010-01-05
 ///       - Renamed: IInterfaceDictionary -> IOmniInterfaceDictionary,
 ///         IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
@@ -138,6 +141,7 @@ type
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFloating: boolean; inline;
+    function IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
     function  IsPointer: boolean; inline;
@@ -189,7 +193,7 @@ type
     function  GetCurrent: TOmniValue;
     function  MoveNext: boolean;
     property Current: TOmniValue read GetCurrent;
-  end;
+  end; { IOmniValueEnumerator }
 
   TOmniWaitableValue = class
   public
@@ -206,20 +210,22 @@ type
   TOmniValueContainer = class
   strict private
     ovcCanModify: boolean;
-    ovcNames    : TStringList;
+    ovcNames    : array of string;
     ovcValues   : array of TOmniValue;
+    ovcCount    : integer;
   strict protected
     procedure Clear;
-    procedure Grow;
+    procedure Grow(requiredIdx: integer = -1);
   public
     constructor Create;
-    destructor  Destroy; override;
     procedure Add(const paramValue: TOmniValue; paramName: string = '');
     procedure Assign(const parameters: array of TOmniValue);
+    function  IndexOfName(const paramName: string): integer;
+    procedure Insert(paramIdx: integer; const value: TOmniValue);
     function  IsLocked: boolean; inline;
     procedure Lock; inline;
-    function ParamByIdx(paramIdx: integer): TOmniValue;
-    function ParamByName(const paramName: string): TOmniValue;
+    function  ParamByIdx(paramIdx: integer): TOmniValue;
+    function  ParamByName(const paramName: string): TOmniValue;
   end; { TOmniValueContainer }
 
   IOmniCounter = interface ['{3A73CCF3-EDC5-484F-8459-532B8C715E3C}']
@@ -541,30 +547,26 @@ end; { VarToObj }
 constructor TOmniValueContainer.Create;
 begin
   inherited Create;
-  ovcNames := TStringList.Create;
   ovcCanModify := true;
+  ovcCount := 0;
 end; { TOmniValueContainer.Create }
 
-destructor TOmniValueContainer.Destroy;
-begin
-  FreeAndNil(ovcNames);
-  inherited Destroy;
-end; { TOmniValueContainer.Destroy }
-
-procedure TOmniValueContainer.Add(const paramValue: TOmniValue; paramName: string = '');
+procedure TOmniValueContainer.Add(const paramValue: TOmniValue; paramName: string);
 var
   idxParam: integer;
+  newParam: boolean;
 begin
   if not ovcCanModify then
     raise Exception.Create('TOmniValueContainer: Locked');
-  if paramName = '' then
-    paramName := IntToStr(ovcNames.Count);
-  idxParam := ovcNames.IndexOf(paramName); 
-  if idxParam < 0 then begin
-    idxParam := ovcNames.Add(paramName);
-    if ovcNames.Count > Length(ovcValues) then
-      Grow;
+  newParam := (paramName = '') or (Asgn(idxParam, IndexOfName(paramName)) < 0);
+  if newParam then begin
+    idxParam := ovcCount;
+    Inc(ovcCount);
   end;
+  if idxParam > High(ovcValues) then
+    Grow;
+  if newParam then
+    ovcNames[idxParam] := paramName;
   ovcValues[idxParam] := paramValue;
 end; { TOmniValueContainer.Add }
 
@@ -575,29 +577,57 @@ begin
   if not ovcCanModify then
     raise Exception.Create('TOmniValueContainer: Already locked');
   Clear;
-  SetLength(ovcValues, Length(parameters));
+  Grow(Length(parameters)-1);
   for value in parameters do
     Add(value);
 end; { TOmniValueContainer.Assign }
 
 procedure TOmniValueContainer.Clear;
 begin
+  SetLength(ovcNames, 0);
   SetLength(ovcValues, 0);
-  ovcNames.Clear;
+  ovcCount := 0;
 end; { TOmniValueContainer.Clear }
 
-procedure TOmniValueContainer.Grow;
+procedure TOmniValueContainer.Grow(requiredIdx: integer = -1);
 var
   iValue   : integer;
+  newLength: integer;
+  tmpNames : array of string;
   tmpValues: array of TOmniValue;
 begin
+  Assert(Length(ovcNames) = Length(ovcValues));
+  SetLength(tmpNames, Length(ovcNames));
   SetLength(tmpValues, Length(ovcValues));
-  for iValue := 0 to High(ovcValues) - 1 do
+  for iValue := 0 to High(ovcValues) - 1 do begin
+    tmpNames[iValue] := ovcNames[iValue];
     tmpValues[iValue] := ovcValues[iValue];
-  SetLength(ovcValues, 2*Length(ovcValues)+1);
-  for iValue := 0 to High(tmpValues) - 1 do
+  end;
+  newLength := 2*Length(ovcValues)+1;
+  if newLength <= requiredIdx then
+    newLength := requiredIdx + 1;
+  SetLength(ovcNames, newLength);
+  SetLength(ovcValues, newLength);
+  for iValue := 0 to High(tmpValues) - 1 do begin
+    ovcNames[iValue] := tmpNames[iValue];
     ovcValues[iValue] := tmpValues[iValue];
+  end;
 end; { TOmniValueContainer.Grow }
+
+function TOmniValueContainer.IndexOfName(const paramName: string): integer;
+begin
+  for Result := 0 to ovcCount - 1 do
+    if SameText(paramName, ovcNames[Result]) then
+      Exit;
+  Result := -1;
+end; { TOmniValueContainer.IndexOfName }
+
+procedure TOmniValueContainer.Insert(paramIdx: integer; const value: TOmniValue);
+begin
+  if paramIdx > High(ovcValues) then 
+    Grow(paramIdx);
+  ovcValues[paramIdx] := value;
+end; { TOmniValueContainer.Insert }
 
 function TOmniValueContainer.IsLocked: boolean;
 begin
@@ -616,7 +646,7 @@ end; { TOmniValueContainer.ParamByIdx }
 
 function TOmniValueContainer.ParamByName(const paramName: string): TOmniValue;
 begin
-  Result := ovcValues[ovcNames.IndexOf(paramName)];
+  Result := ovcValues[IndexOfName(paramName)];
 end; { TOmniValueContainer.ParamByName }
 
 { TOmniCounter }
@@ -934,6 +964,11 @@ function TOmniValue.IsFloating: boolean;
 begin
   Result := (ovType in [ovtDouble, ovtExtended]);
 end; { TOmniValue.IsFloating }
+
+function TOmniValue.IsInteger: boolean;
+begin
+  Result := (ovType = ovtInteger);
+end; { TOmniValue.IsInteger }
 
 function TOmniValue.IsInterface: boolean;
 begin
