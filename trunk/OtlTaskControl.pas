@@ -231,7 +231,6 @@ type
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
-    function  GetSharedInfo: TOmniSharedTaskInfo;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
@@ -274,9 +273,15 @@ type
     property ExitMessage: string read GetExitMessage;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
-    property SharedInfo: TOmniSharedTaskInfo read GetSharedInfo;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTaskControl }
+
+  // Implementation details, needed by the OtlEventMonitor. Not for public consumption.
+  IOmniTaskControlSharedInfo = interface(IOmniTaskControl) ['{5C3262CC-C941-406B-81CC-0E3B608E9077}']
+    function  GetSharedInfo: TOmniSharedTaskInfo;
+  //
+    property SharedInfo: TOmniSharedTaskInfo read GetSharedInfo;
+  end; { IOmniTaskControlSharedInfo }
 
   IOmniTaskControlListEnumerator = interface
     function GetCurrent: IOmniTaskControl;
@@ -618,7 +623,7 @@ type
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
   strict private
     {$IFDEF OTL_Anonymous}
     otcOnMessageRef   : TOmniOnMessageFunction;

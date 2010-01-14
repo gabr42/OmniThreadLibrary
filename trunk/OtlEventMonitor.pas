@@ -176,6 +176,7 @@ end; { TOmniEventMonitor.Monitor }
 
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
+  endpoint     : IOmniCommunicationEndpoint;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
   timeStart    : int64;
@@ -212,10 +213,12 @@ begin { TOmniEventMonitor.WndProc }
     if assigned(OnTaskTerminated) then begin
       task := tedMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
-        while task.SharedInfo.CommChannel.Endpoint1.Receive(tedCurrentMsg) do
+        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
+        while endpoint.Receive(tedCurrentMsg) do
           if Assigned(tedOnTaskMessage) then
             tedOnTaskMessage(task, tedCurrentMsg);
-        while task.SharedInfo.CommChannel.Endpoint2.Receive(tedCurrentMsg) do
+        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
+        while endpoint.Receive(tedCurrentMsg) do
           if Assigned(tedOnTaskUndeliveredMessage) then
             tedOnTaskUndeliveredMessage(task);
         if Assigned(tedOnTaskTerminated) then
