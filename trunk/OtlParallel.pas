@@ -31,12 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-01-08
-///   Version           : 0.1
+///   Last modification : 2010-01-14
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.1: 2010-01-08
-///       - Created.
+///     1.0: 2010-01-14
+///       - Released.
 ///</para></remarks>
 
 // http://msdn.microsoft.com/en-us/magazine/cc163340.aspx
@@ -56,6 +56,7 @@ type
 
   TOmniSimpleLoopDelegate = reference to procedure(const value: TOmniValue);
 
+  // *** assumes that the enumerator's Take method is threadsafe ***
   IOmniParallelLoop = interface ['{ACBFF35A-FED9-4630-B442-1C8B6AD2AABF}']
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
     procedure Execute(loopBody: TOmniSimpleLoopDelegate); overload;
@@ -65,18 +66,30 @@ type
   end; { IOmniParallelLoop }
 
   Parallel = class
-    class function ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop;
+    class function ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
   end; { Parallel }
 
 implementation
 
+uses
+  Windows,
+  SysUtils,
+  GpStuff,
+  OtlSync,
+  OtlTask,
+  OtlTaskControl;
+
+{ TODO 3 -ogabr : Should work with thread-unsafe enumerators }
+
 type
   TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop)
   strict private
-    oplEnumerator: IOmniValueEnumerator;
-    oplNumTasks  : integer;
+    oplBody    : TOmniLoopDelegate;
+    oplEnumGen : IOmniValueEnumerable;
+    oplNumTasks: integer;
+    oplStopped : boolean;
   public
-    constructor Create(enum: IOmniValueEnumerator);
+    constructor Create(const enumGen: IOmniValueEnumerable);
     procedure Execute(loopBody: TOmniSimpleLoopDelegate); overload;
     procedure Execute(loopBody: TOmniLoopDelegate); overload;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
@@ -86,39 +99,66 @@ type
 
 { Parallel }
 
-class function Parallel.ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop;
+class function Parallel.ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
 begin
-  Result := TOmniParallelLoop.Create(enum);
+  { TODO 3 -ogabr : In Delphi 2010 RTTI to be used to get to the GetEnumerator from base object }
+  Result := TOmniParallelLoop.Create(enumGen);
 end; { Parallel.ForEach }
 
 { TOmniParallelLoop }
 
-constructor TOmniParallelLoop.Create(enum: IOmniValueEnumerator);
+constructor TOmniParallelLoop.Create(const enumGen: IOmniValueEnumerable);
 begin
   inherited Create;
-  oplEnumerator := enum;
+  oplEnumGen := enumGen;
   oplNumTasks := Environment.Process.Affinity.Count;
 end; { TOmniParallelLoop.Create }
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniLoopDelegate);
+var
+  countStopped: IOmniResourceCount;
+  iTask       : integer;
 begin
-  { TODO : Implement }
+  oplStopped := false;
+  oplBody := loopBody;
+  countStopped := TOmniResourceCount.Create(oplNumTasks);
+  for iTask := 1 to oplNumTasks do
+    CreateTask(
+      procedure (const task: IOmniTask)
+      var
+        value     : TOmniValue;
+        enumerator: IOmniValueEnumerator;
+      begin
+        enumerator := oplEnumGen.GetEnumerator;
+        while (not oplStopped) and enumerator.Take(value) do
+          oplBody(Self, value);
+        countStopped.Allocate;
+      end,
+      'Parallel.ForEach worker #' + IntToStr(iTask)
+    ).Unobserved
+     .Run;
+  WaitForSingleObject(countStopped.Handle, INFINITE);
 end; { TOmniParallelLoop.Execute }
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniSimpleLoopDelegate);
 begin
-  { TODO : Implement }
+  Execute(
+    procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
+    begin
+      loopBody(elem);
+    end);
 end; { TOmniParallelLoop.Execute }
 
 function TOmniParallelLoop.NumTasks(taskCount: integer): IOmniParallelLoop;
 begin
+  Assert(taskCount > 0);
   oplNumTasks := taskCount;
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
 
 procedure TOmniParallelLoop.Stop;
 begin
-  { TODO : Implement }
+  oplStopped := true;
 end; { TOmniParallelLoop.Stop }
 
 function TOmniParallelLoop.Timeout(timeout_ms: Integer): IOmniParallelLoop;

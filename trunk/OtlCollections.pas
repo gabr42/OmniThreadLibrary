@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-01-05
-///   Version           : 1.01a
+///   Last modification : 2010-01-14
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2010-01-14
+///       - Small changes required for the interoperability with the Parallel.ForEach.
 ///     1.01a: 2010-01-05
 ///       - Better behaviour when running on a single core.
 ///     1.01: 2009-12-30
@@ -53,6 +55,7 @@ uses
   Windows,
   SysUtils,
   DSiWin32,
+  GpStuff,
   OtlCommon,
   OtlContainers,
   OtlContainerObserver,
@@ -61,25 +64,23 @@ uses
 type
   ECollectionCompleted = class(Exception);
 
-  IOmniBlockingCollectionEnumerator = interface(IOmniValueEnumerator)
-    ['{7A5AA8F4-5ED8-40C3-BDC3-1F991F652F9E}']
-  end; { IOmniBlockingCollectionEnumerator }
-
   ///<summary>Blocking collection
   ///- http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
   ///- http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx
   ///</summary>
-  IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
+  IOmniBlockingCollection = interface(IGpTraceable) ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
-    function  GetEnumerator: IOmniBlockingCollectionEnumerator;
+    function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
     function  Take(var value: TOmniValue): boolean;
     function  TryAdd(const value: TOmniValue): boolean;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
   end; { IOmniBlockingCollection }
 
-  TOmniBlockingCollection = class(TInterfacedObject, IOmniBlockingCollection)
+  TOmniBlockingCollection = class(TGpTraceable,
+                                  IOmniBlockingCollection,
+                                  IOmniValueEnumerable)
   strict private
     obcCollection     : TOmniQueue;
     obcCompleted      : boolean;
@@ -92,7 +93,7 @@ type
     destructor  Destroy; override;
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding; inline;
-    function  GetEnumerator: IOmniBlockingCollectionEnumerator; inline;
+    function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
@@ -100,7 +101,8 @@ type
     property CompletedSignal: THandle read obcCompletedSignal;
   end; { TOmniBlockingCollection }
 
-  TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniBlockingCollectionEnumerator)
+  TOmniBlockingCollectionEnumerator = class(TInterfacedObject,
+                                            IOmniValueEnumerator)
   strict private
     obceCollection_ref: TOmniBlockingCollection;
     obceValue         : TOmniValue;
@@ -108,14 +110,14 @@ type
     constructor Create(collection: TOmniBlockingCollection);
     function GetCurrent: TOmniValue; inline;
     function MoveNext: boolean; inline;
+    function Take(var value: TOmniValue): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
 
 implementation
 
 uses
-  Classes,
-  GpStuff;
+  Classes;
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -133,6 +135,13 @@ function TOmniBlockingCollectionEnumerator.MoveNext: boolean;
 begin
   Result := obceCollection_ref.Take(obceValue);
 end; { TOmniBlockingCollectionEnumerator.MoveNext }
+
+function TOmniBlockingCollectionEnumerator.Take(var value: TOmniValue): boolean;
+begin
+  Result := MoveNext;
+  if Result then
+    value := obceValue;
+end; { TOmniBlockingCollectionEnumerator.Take }
 
 { TOmniBlockingCollection }
 
@@ -177,7 +186,7 @@ begin
   end;
 end; { TOmniBlockingCollection.CompleteAdding }
 
-function TOmniBlockingCollection.GetEnumerator: IOmniBlockingCollectionEnumerator;
+function TOmniBlockingCollection.GetEnumerator: IOmniValueEnumerator;
 begin
   Result := TOmniBlockingCollectionEnumerator.Create(Self);
 end; { TOmniBlockingCollection.GetEnumerator }

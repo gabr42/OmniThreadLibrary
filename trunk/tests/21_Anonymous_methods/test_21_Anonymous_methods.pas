@@ -36,7 +36,7 @@ procedure TfrmAnonymousMethodsDemo.btnHelloClick(Sender: TObject);
 begin
   btnHello.Enabled := false;
   OTLMonitor.Monitor(CreateTask(
-    procedure (task: IOmniTask) begin
+    procedure (const task: IOmniTask) begin
       task.Comm.Send(0, Format('Hello, world! Reporting from thread %d', [GetCurrentThreadID]));
     end,
     'HelloWorld')).Run;
