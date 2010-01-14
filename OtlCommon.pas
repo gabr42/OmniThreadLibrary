@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2010, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -44,6 +44,7 @@
 ///     1.08: 2010-01-14
 ///       - Added TOmniValue.IsInteger.
 ///       - Refactored and enhanced TOmniValueContainer.
+///       - Defined IOmniValueEnumerable interface.
 ///     1.07: 2010-01-05
 ///       - Renamed: IInterfaceDictionary -> IOmniInterfaceDictionary,
 ///         IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
@@ -192,8 +193,13 @@ type
   IOmniValueEnumerator = interface ['{F60EBBD8-2F87-4ACD-A014-452F296F4699}']
     function  GetCurrent: TOmniValue;
     function  MoveNext: boolean;
+    function  Take(var value: TOmniValue): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { IOmniValueEnumerator }
+
+  IOmniValueEnumerable = interface ['{50C1C176-C61F-41F5-AA0B-6FD215E5159F}']
+    function  GetEnumerator: IOmniValueEnumerator;
+  end; { IOmniValueEnumerable }
 
   TOmniWaitableValue = class
   public

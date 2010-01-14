@@ -35,7 +35,7 @@ type
     procedure DestroyTree;
     procedure Log(const msg: string; const params: array of const);
     procedure ParaFind(value: integer);
-    function ParaScan(rootNode: TNode; value: integer): TNode;
+    function  ParaScan(rootNode: TNode; value: integer): TNode;
     procedure RemoveEmptyLeaves(node: TNode);
     procedure SeqFind(value: integer);
     function  SeqScan(node: TNode; value: integer): TNode;
@@ -204,31 +204,32 @@ end; { TfrmParallelForDemo.ParaFind }
 
 function TfrmParallelForDemo.ParaScan(rootNode: TNode; value: integer): TNode;
 var
-  nodeQueue : TOmniBlockingCollection;
+  nodeQueue : IOmniBlockingCollection;
   nodeResult: TNode;
   numTasks  : integer;
 begin
   nodeResult := nil;
   numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
-  try
-    nodeQueue.Add(rootNode);
-    Parallel.ForEach(nodeQueue.GetEnumerator).NumTasks(numTasks).Timeout(10*1000).Execute(
-      procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
-      var
-        node : TNode;
-        iNode: integer;
-      begin
-        node := TNode(elem.AsPointer);
-        if node.Value = value then begin
-          nodeResult := node;
-          nodeQueue.CompleteAdding;
-          loop.Stop;
-        end
-        else for iNode := 0 to rootNode.NumChild - 1 do
-          nodeQueue.TryAdd(node.Child[iNode]);
-      end);
-  finally FreeAndNil(nodeQueue); end;
+  nodeQueue.Add(rootNode);
+  Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
+    .NumTasks(numTasks)
+    .Timeout(10*1000)
+    .Execute(
+    procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
+    var
+      node : TNode;
+      iNode: integer;
+    begin
+      node := TNode(elem.AsPointer);
+      if node.Value = value then begin
+        nodeResult := node;
+        nodeQueue.CompleteAdding;
+        loop.Stop;
+      end
+      else for iNode := 0 to node.NumChild - 1 do
+        nodeQueue.TryAdd(node.Child[iNode]);
+    end);
   Result := nodeResult;
 end; { TfrmParallelForDemo.ParaScan }
 
