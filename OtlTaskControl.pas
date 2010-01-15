@@ -131,6 +131,7 @@
 ///    http://blogs.msdn.com/pfxteam/archive/2009/06/22/9791840.aspx
   
 // TODO 3 -oPrimoz Gabrijelcic : Implement multiple timers.
+// TODO 3 -oPrimoz Gabrijelcic : Add general way to map unique  ID  into  a  task  controller/task  interface.
 
 // TODO 3 -oPrimoz Gabrijelcic : Implement message bus (subscribe/publish)
 // http://209.85.129.132/search?q=cache:B2PbIgFSyLcJ:www.dojotoolkit.org/book/dojo-book-0-9/part-3-programmatic-dijit-and-dojo/event-system/publish-and-subscribe-events+dojo+subscribe+publish&hl=sl&client=opera&strip=1
