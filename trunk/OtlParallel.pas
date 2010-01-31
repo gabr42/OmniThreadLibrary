@@ -132,9 +132,9 @@ type
     oplStopped   : boolean;
   public
     constructor Create(const enumGen: IOmniValueEnumerable);
-    function Aggregate(aggregator: TOmniAggregatorDelegate):
+    function  Aggregate(aggregator: TOmniAggregatorDelegate):
       IOmniParallelAggregatorLoop; overload;
-    function Aggregate(aggregator: TOmniAggregatorDelegate;
+    function  Aggregate(aggregator: TOmniAggregatorDelegate;
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
@@ -159,11 +159,13 @@ end; { Parallel.Join }
 
 class function Parallel.ForEach(low, high: int64): IOmniParallelLoop;
 begin
+  raise ENotSupportedException.Create('Not implemented');
   { TODO 1 : Implement: Parallel.ForEach }
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const tasks: array of TProc);
 begin
+  raise ENotSupportedException.Create('Not implemented');
   { TODO 1 : Implement: Parallel.Join }
 end; { Parallel.Join }
 
