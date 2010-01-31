@@ -83,7 +83,7 @@ type
   TOmniIteratorDelegate = reference to procedure(const loop: IOmniParallelLoop;
     const value: TOmniValue);
   TOmniIteratorAggregateDelegate = reference to function(const loop: IOmniParallelLoop;
-    const value: TOmniValue): TOmnIValue;
+    const value: TOmniValue): TOmniValue;
 
   TOmniSimpleIteratorDelegate = reference to procedure(const value: TOmniValue);
   TOmniSimpleIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
@@ -178,7 +178,7 @@ end; { TOmniParallelLoop.Create }
 function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate):
   IOmniParallelAggregatorLoop;
 begin
-  // TODO -cMM: TOmniParallelLoop.Aggregate default body inserted
+  Result := Aggregate(aggregator, TOmniValue.Null);
 end; { TOmniParallelLoop.Aggregate }
 
 function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate;
@@ -189,7 +189,11 @@ end; { TOmniParallelLoop.Aggregate }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue;
 begin
-  // TODO -cMM: TOmniParallelLoop.Execute default body inserted
+  Result := Execute(
+    function(const loop: IOmniParallelLoop; const value: TOmniValue): TOmniValue
+    begin
+      Result := loopBody(value);
+    end);
 end; { TOmniParallelLoop.Execute }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
