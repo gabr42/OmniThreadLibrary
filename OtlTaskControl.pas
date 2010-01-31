@@ -375,7 +375,6 @@ type
 
 {$IFDEF OTL_Anonymous}
 type
-  TOmniTaskFunction = reference to procedure(const task: IOmniTask);
   function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
 {$ENDIF OTL_Anonymous}
 
