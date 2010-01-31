@@ -78,7 +78,8 @@ uses
 type
   IOmniParallelLoop = interface;
 
-  TOmniAggregatorDelegate = reference to function(const aggregate, value: TOmniValue): TOmniValue;
+  TOmniAggregatorDelegate = reference to procedure(var aggregate: TOmniValue;
+    const value: TOmniValue);
 
   TOmniIteratorDelegate = reference to procedure(const loop: IOmniParallelLoop;
     const value: TOmniValue);
