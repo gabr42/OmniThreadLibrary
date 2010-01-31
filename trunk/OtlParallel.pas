@@ -96,8 +96,8 @@ type
 
   // *** assumes that the enumerator's Take method is threadsafe ***
   IOmniParallelLoop = interface ['{ACBFF35A-FED9-4630-B442-1C8B6AD2AABF}']
-    function  Aggregate(aggregator: TOmniIteratorAggregateDelegate): IOmniParallelAggregatorLoop ; overload;
-    function  Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+    function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop ; overload;
+    function  Aggregate(aggregator: TOmniAggregatorDelegate;
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniSimpleIteratorDelegate); overload;
@@ -125,15 +125,16 @@ uses
 type
   TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop, IOmniParallelAggregatorLoop)
   strict private
-    oplBody    : TOmniIteratorDelegate;
-    oplEnumGen : IOmniValueEnumerable;
-    oplNumTasks: integer;
-    oplStopped : boolean;
+    oplAggregate : TOmniValue;
+    oplAggregator: TOmniAggregatorDelegate;
+    oplEnumGen   : IOmniValueEnumerable;
+    oplNumTasks  : integer;
+    oplStopped   : boolean;
   public
     constructor Create(const enumGen: IOmniValueEnumerable);
-    function Aggregate(aggregator: TOmniIteratorAggregateDelegate):
+    function Aggregate(aggregator: TOmniAggregatorDelegate):
       IOmniParallelAggregatorLoop; overload;
-    function Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+    function Aggregate(aggregator: TOmniAggregatorDelegate;
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
@@ -175,16 +176,17 @@ begin
   oplNumTasks := Environment.Process.Affinity.Count;
 end; { TOmniParallelLoop.Create }
 
-function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate):
+function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate):
   IOmniParallelAggregatorLoop;
 begin
   Result := Aggregate(aggregator, TOmniValue.Null);
 end; { TOmniParallelLoop.Aggregate }
 
-function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate;
   defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop;
 begin
-  // TODO -cMM: TOmniParallelLoop.Aggregate default body inserted
+  oplAggregator := aggregator;
+  oplAggregate := defaultAggregateValue;
 end; { TOmniParallelLoop.Aggregate }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue;
@@ -197,8 +199,37 @@ begin
 end; { TOmniParallelLoop.Execute }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+var
+  countStopped : IOmniResourceCount;
+  iTask        : integer;
+  lockAggregate: IOmniCriticalSection;
 begin
-  // TODO -cMM: TOmniParallelLoop.Execute default body inserted
+  oplStopped := false;
+  countStopped := TOmniResourceCount.Create(oplNumTasks);
+  lockAggregate := CreateOmniCriticalSection;
+  for iTask := 1 to oplNumTasks do
+    CreateTask(
+      procedure (const task: IOmniTask)
+      var
+        aggregate : TOmniValue;
+        value     : TOmniValue;
+        enumerator: IOmniValueEnumerator;
+      begin
+        aggregate := TOmniValue.Null;
+        enumerator := oplEnumGen.GetEnumerator;
+        while (not oplStopped) and enumerator.Take(value) do
+          oplAggregator(aggregate, loopBody(Self, value));
+        task.Lock.Acquire;
+        try
+          oplAggregator(oplAggregate, aggregate);
+        finally task.Lock.Release; end;
+        countStopped.Allocate;
+      end,
+      'Parallel.ForEach worker #' + IntToStr(iTask)
+    ).WithLock(lockAggregate)
+     .Unobserved
+     .Schedule;
+  WaitForSingleObject(countStopped.Handle, INFINITE);
 end; { TOmniParallelLoop.Execute }
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
@@ -207,7 +238,6 @@ var
   iTask       : integer;
 begin
   oplStopped := false;
-  oplBody := loopBody;
   countStopped := TOmniResourceCount.Create(oplNumTasks);
   for iTask := 1 to oplNumTasks do
     CreateTask(
@@ -218,7 +248,7 @@ begin
       begin
         enumerator := oplEnumGen.GetEnumerator;
         while (not oplStopped) and enumerator.Take(value) do
-          oplBody(Self, value);
+          loopBody(Self, value);
         countStopped.Allocate;
       end,
       'Parallel.ForEach worker #' + IntToStr(iTask)

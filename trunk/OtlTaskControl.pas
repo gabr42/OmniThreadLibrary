@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-14
-///   Version           : 1.16
+///   Last modification : 2010-01-31
+///   Version           : 1.17
 ///</para><para>
 ///   History:
+///     1.17: 2010-01-31
+///       - Added WithLock overload.
 ///     1.16: 2010-01-14
 ///       - Implemented IOmniTaskControl.UserData[]. The application can store any values
 ///         in this array. It can be accessed via the integer or string index.
@@ -275,7 +277,8 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
-    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl;
+    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
+    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload;
   //
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
@@ -374,7 +377,6 @@ type
 //  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
 
 {$IFDEF OTL_Anonymous}
-type
   function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
 {$ENDIF OTL_Anonymous}
 
@@ -719,7 +721,8 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
-    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl;
+    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
+    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload; inline;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -2428,6 +2431,11 @@ begin
   otcSharedInfo.Lock := lock;
   otcDestroyLock := autoDestroyLock;
   Result := Self;
+end; { TOmniTaskControl.WithLock }
+
+function TOmniTaskControl.WithLock(const lock: IOmniCriticalSection): IOmniTaskControl;
+begin
+  Result := WithLock(lock.GetSyncObj, false);
 end; { TOmniTaskControl.WithLock }
 
 { TOmniThread }
