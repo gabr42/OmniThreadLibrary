@@ -159,8 +159,9 @@ end; { Parallel.Join }
 
 class function Parallel.ForEach(low, high: int64): IOmniParallelLoop;
 begin
-  raise ENotSupportedException.Create('Not implemented');
   { TODO 1 : Implement: Parallel.ForEach }
+  // this is just a temporary implementation and will be changed
+  Result := Parallel.ForEach(CreateEnumerableRange(low, high));
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const tasks: array of TProc);
