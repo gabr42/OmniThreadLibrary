@@ -315,6 +315,7 @@ type
   end; { IOmniEnvironment }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
+  function  CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   function  Environment: IOmniEnvironment;
   procedure SetThreadName(const name: string);
@@ -405,6 +406,32 @@ type
     function Increment: integer;
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
+
+  PGp4AlignedInt = ^TGp4AlignedInt;
+
+  TOmniRangeEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
+  strict private
+    oreCurrent  : int64;
+    oreHigh     : int64;
+    oreIncrement: boolean;
+    oreLow      : PGp4AlignedInt;
+  public
+    constructor Create(low: PGp4AlignedInt; high: int64; increment: boolean);
+    function  GetCurrent: TOmniValue;
+    function  MoveNext: boolean;
+    function  Take(var value: TOmniValue): boolean;
+    property Current: TOmniValue read GetCurrent;
+  end; { TOmniRangeEnumerator }
+
+  TOmniEnumerableRange = class(TInterfacedObject, IOmniValueEnumerable)
+    function  GetEnumerator: IOmniValueEnumerator;
+  strict private
+    oerHigh     : int64;
+    oerIncrement: boolean;
+    oerLow      : TGp4AlignedInt;
+  public
+    constructor Create(low, high: int64);
+  end; { TOmniEnumerableRange }
 
   PPHashItem = ^PHashItem;
   PHashItem = ^THashItem;
@@ -508,6 +535,11 @@ function CreateCounter(initialValue: integer): IOmniCounter;
 begin
   Result := TOmniCounter.Create(initialValue);
 end; { CreateCounter }
+
+function CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
+begin
+  Result := TOmniEnumerableRange.Create(low, high);
+end; { CreateEnumerableRange }
 
 function CreateInterfaceDictionary: IOmniInterfaceDictionary;
 begin
@@ -681,6 +713,56 @@ procedure TOmniCounter.SetValue(const value: integer);
 begin
   ocValue.Value := value;
 end; { TOmniCounter.SetValue }
+
+{ TOmniRangeEnumerator }
+
+constructor TOmniRangeEnumerator.Create(low: PGp4AlignedInt; high: int64; increment:
+  boolean);
+begin
+  inherited Create;
+  oreLow := low;
+  oreHigh := high;
+  oreIncrement := increment;
+end; { TOmniRangeEnumerator.Create }
+
+function TOmniRangeEnumerator.GetCurrent: TOmniValue;
+begin
+  Result := oreCurrent;
+end; { TOmniRangeEnumerator.GetCurrent }
+
+function TOmniRangeEnumerator.MoveNext: boolean;
+begin
+  if oreIncrement then begin
+    oreCurrent := oreLow^.Increment;
+    Result := (oreCurrent <= oreHigh);
+  end
+  else begin
+    oreCurrent := oreLow^.Decrement;
+    Result := (oreCurrent >= oreHigh);
+  end;
+end; { TOmniRangeEnumerator.MoveNext }
+
+function TOmniRangeEnumerator.Take(var value: TOmniValue): boolean;
+begin
+  Result := MoveNext;
+  if Result then
+    value := oreCurrent;
+end; { TOmniRangeEnumerator.Take }
+
+{ TOmniEnumerableRange }
+
+constructor TOmniEnumerableRange.Create(low, high: int64);
+begin
+  inherited Create;
+  oerLow.Value := low;
+  oerHigh := high;
+  oerIncrement := (low <= high);
+end; { TOmniEnumerableRange.Create }
+
+function TOmniEnumerableRange.GetEnumerator: IOmniValueEnumerator;
+begin
+  Result := TOmniRangeEnumerator.Create(@oerLow, oerHigh, oerIncrement);
+end; { TOmniEnumerableRange.GetEnumerator }
 
 { TOmniInterfaceDictionaryPair }
 
@@ -1452,7 +1534,7 @@ end; { TOmniEnvironment.GetSystemAffinity }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
-  Assert(SizeOf(pointer) = SizeOf(cardinal)); 
+  Assert(SizeOf(pointer) = SizeOf(cardinal));
   Assert(SizeOf(pointer) = 4);
   GEnvironment := TOmniEnvironment.Create;
 end.
