@@ -364,7 +364,7 @@ type
     procedure SetName(const value: string);
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactory);
     procedure SetWaitOnTerminate_sec(value: integer);
-    function WorkerObj: TOTPWorker;
+    function  WorkerObj: TOTPWorker;
   public
     constructor Create(const name: string);
     destructor  Destroy; override;

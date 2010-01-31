@@ -8,19 +8,41 @@ uses
   OtlTask;
 
 type
+  TNode = class;
+
+  TNodeChildEnumerator = record
+  strict private
+    FNode   : TNode;
+    FNodeIdx: integer;
+  public
+    constructor Create(node: TNode);
+    function  GetCurrent: TNode;
+    function  MoveNext: boolean;
+    property Current: TNode read GetCurrent;
+  end; { TNodeChildEnumerator }
+
+  TNodeChildEnumeratorFactory = record
+  strict private
+    FNode: TNode;
+  public
+    constructor Create(node: TNode);
+    function GetEnumerator: TNodeChildEnumerator;
+  end; { TNodeChildEnumeratorFactory }
+
   TNode = class
     Value: integer;
     Child: array of TNode;
-    function NumChild: integer;
-    function ToString: string; {$IF CompilerVersion >= 20}reintroduce;{$IFEND}
-  end;
+    function  NumChild: integer;
+    function  ToString: string; {$IF CompilerVersion >= 20}reintroduce;{$IFEND}
+    function  Children: TNodeChildEnumeratorFactory;
+  end; { TNode }
 
   TfrmParallelForDemo = class(TForm)
-    btnBuildTree: TButton;
-    btnParaScan : TButton;
-    btnSeqScan  : TButton;
-    lbLog       : TListBox;
     btnBuildLarge: TButton;
+    btnBuildTree : TButton;
+    btnParaScan  : TButton;
+    btnSeqScan   : TButton;
+    lbLog        : TListBox;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
     procedure btnParaScanClick(Sender: TObject);
@@ -67,6 +89,11 @@ type
   
 { TNode }
 
+function TNode.Children: TNodeChildEnumeratorFactory;
+begin
+  Result := TNodeChildEnumeratorFactory.Create(Self);
+end;
+
 function TNode.NumChild: integer;
 begin
   Result := Length(Child);
@@ -103,6 +130,7 @@ procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
   ParaFind(2);
   ParaFind(FNumNodes div 4 * 2);
+  { TODO 5 -oPrimoz Gabrijelcic : Why big time difference between the next two? }
   ParaFind(FNumNodes div 2 * 2);
   ParaFind(FNumNodes div 2 * 2 - 1);
 end; { TfrmParallelForDemo.btnParaScanClick }
@@ -213,13 +241,12 @@ begin
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
   nodeQueue.Add(rootNode);
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
-    .NumTasks(numTasks)
-    .Timeout(10*1000)
+    .NumTasks(numTasks) // must be same number of task as in nodeQueue to ensure stopping
     .Execute(
     procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
     var
-      node : TNode;
-      iNode: integer;
+      childNode: TNode;
+      node     : TNode;
     begin
       node := TNode(elem.AsPointer);
       if node.Value = value then begin
@@ -227,8 +254,8 @@ begin
         nodeQueue.CompleteAdding;
         loop.Stop;
       end
-      else for iNode := 0 to node.NumChild - 1 do
-        nodeQueue.TryAdd(node.Child[iNode]);
+      else for childNode in node.Children do
+        nodeQueue.TryAdd(childNode);
     end);
   Result := nodeResult;
 end; { TfrmParallelForDemo.ParaScan }
@@ -278,6 +305,37 @@ begin
     end;
   end;
 end; { TfrmParallelForDemo.SeqScan }
+
+{ TNodeChildEnumerator }
+
+constructor TNodeChildEnumerator.Create(node: TNode);
+begin
+  FNode := node;
+  FNodeIdx := -1;
+end; { TNodeChildEnumerator.Create }
+
+function TNodeChildEnumerator.GetCurrent: TNode;
+begin
+  Result := FNode.Child[FNodeIdx];
+end; { TNodeChildEnumerator.GetCurrent }
+
+function TNodeChildEnumerator.MoveNext: boolean;
+begin
+  Inc(FNodeIdx);
+  Result := (FNodeIdx <= High(FNode.Child));
+end; { TNodeChildEnumerator.MoveNext }
+
+{ TNodeChildEnumeratorFactory }
+
+constructor TNodeChildEnumeratorFactory.Create(node: TNode);
+begin
+  FNode := node;
+end;
+
+function TNodeChildEnumeratorFactory.GetEnumerator: TNodeChildEnumerator;
+begin
+  Result := TNodeChildEnumerator.Create(FNode);
+end;
 
 end.
 

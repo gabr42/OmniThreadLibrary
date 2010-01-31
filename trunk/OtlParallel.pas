@@ -1,5 +1,5 @@
 ///<summary>High-level parallel execution management.
-///    Part of the OmniThreadLibrary project.</summary>
+///    Part of the OmniThreadLibrary project. Requires Delphi 2009 or newer.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -40,70 +40,131 @@
 ///</para></remarks>
 
 // http://msdn.microsoft.com/en-us/magazine/cc163340.aspx
+// http://blogs.msdn.com/pfxteam/archive/2007/11/29/6558543.aspx
+// http://cis.jhu.edu/~dsimcha/parallelFuture.html
+
+(* Things to consider:
+   - Introduce cancellation token.
+   - Common look and feel for all control structures in Parallel.
+   - Support for simpler IEnumerable source (with "lock and fetch a packet" approach).
+   - All Parallel stuff should have a "chunk" option (or default).
+       int P = 2 * Environment.ProcessorCount; // assume twice the procs for
+                                               // good work distribution
+       int Chunk = N / P;                      // size of a work chunk
+   - Parallel.ForRange(start, stop[, step])
+     - can be converted into normal enumerable style (at least for now)
+   - Parallel.Do (fork/join)
+
+   Can something like this be implemented?:
+     "To scale well on multiple processors, TPL uses work-stealing techniques to
+      dynamically adapt and distribute work items over the worker threads. The library
+      has a task manager that, by default, uses one worker thread per processor. This
+      ensures minimal thread switching by the OS. Each worker thread has its own local
+      task queue of work to be done. Each worker usually just pushes new tasks onto its
+      own queue and pops work whenever a task is done. When its local queue is empty,
+      a worker looks for work itself and tries to "steal" work from the queues of
+      other workers."
+*)
 
 unit OtlParallel;
 
 interface
 
 uses
-  OtlCommon;
+  SysUtils,
+  OtlCommon,
+  OtlTask;
 
 type
   IOmniParallelLoop = interface;
 
-  TOmniLoopDelegate = reference to procedure(const loop: IOmniParallelLoop;
-    const value: TOmniValue);
+  TOmniAggregatorDelegate = reference to function(const aggregate, value: TOmniValue): TOmniValue;
 
-  TOmniSimpleLoopDelegate = reference to procedure(const value: TOmniValue);
+  TOmniIteratorDelegate = reference to procedure(const loop: IOmniParallelLoop;
+    const value: TOmniValue);
+  TOmniIteratorAggregateDelegate = reference to function(const loop: IOmniParallelLoop;
+    const value: TOmniValue): TOmnIValue;
+
+  TOmniSimpleIteratorDelegate = reference to procedure(const value: TOmniValue);
+  TOmniSimpleIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
+
+  // *** assumes that the enumerator's Take method is threadsafe ***
+  IOmniParallelAggregatorLoop = interface ['{E430F270-1C5D-49A7-92E3-283753801764}']
+    function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
+    function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
+  end; { IOmniParallelAggregatorLoop }
 
   // *** assumes that the enumerator's Take method is threadsafe ***
   IOmniParallelLoop = interface ['{ACBFF35A-FED9-4630-B442-1C8B6AD2AABF}']
+    function  Aggregate(aggregator: TOmniIteratorAggregateDelegate): IOmniParallelAggregatorLoop ; overload;
+    function  Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+      defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
+    procedure Execute(loopBody: TOmniIteratorDelegate); overload;
+    procedure Execute(loopBody: TOmniSimpleIteratorDelegate); overload;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
-    procedure Execute(loopBody: TOmniSimpleLoopDelegate); overload;
-    procedure Execute(loopBody: TOmniLoopDelegate); overload;
     procedure Stop;
-    function  Timeout(timeout_ms: integer): IOmniParallelLoop;
   end; { IOmniParallelLoop }
 
   Parallel = class
-    class function ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
+    class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
+    class function  ForEach(low, high: int64): IOmniParallelLoop; overload;
+    class procedure Join(const task1, task2: TProc); overload;
+    class procedure Join(const tasks: array of TProc); overload;
   end; { Parallel }
 
 implementation
 
 uses
   Windows,
-  SysUtils,
   GpStuff,
   OtlSync,
-  OtlTask,
   OtlTaskControl;
 
 { TODO 3 -ogabr : Should work with thread-unsafe enumerators }
 
 type
-  TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop)
+  TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop, IOmniParallelAggregatorLoop)
   strict private
-    oplBody    : TOmniLoopDelegate;
+    oplBody    : TOmniIteratorDelegate;
     oplEnumGen : IOmniValueEnumerable;
     oplNumTasks: integer;
     oplStopped : boolean;
   public
     constructor Create(const enumGen: IOmniValueEnumerable);
-    procedure Execute(loopBody: TOmniSimpleLoopDelegate); overload;
-    procedure Execute(loopBody: TOmniLoopDelegate); overload;
+    function Aggregate(aggregator: TOmniIteratorAggregateDelegate):
+      IOmniParallelAggregatorLoop; overload;
+    function Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+      defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
+    function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
+    function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
+    procedure Execute(loopBody: TOmniSimpleIteratorDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
     procedure Stop;
-    function  Timeout(timeout_ms: Integer): IOmniParallelLoop;
   end; { TOmniParallelLoop }
 
 { Parallel }
 
 class function Parallel.ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
 begin
-  { TODO 3 -ogabr : In Delphi 2010 RTTI to be used to get to the GetEnumerator from base object }
+  { TODO 3 -ogabr : In Delphi 2010 RTTI could be used to get to the GetEnumerator from base object }
   Result := TOmniParallelLoop.Create(enumGen);
 end; { Parallel.ForEach }
+
+class procedure Parallel.Join(const task1, task2: TProc);
+begin
+  Join([task1, task2]);
+end; { Parallel.Join }
+
+class function Parallel.ForEach(low, high: int64): IOmniParallelLoop;
+begin
+  { TODO 1 : Implement: Parallel.ForEach }
+end; { Parallel.ForEach }
+
+class procedure Parallel.Join(const tasks: array of TProc);
+begin
+  { TODO 1 : Implement: Parallel.Join }
+end; { Parallel.Join }
 
 { TOmniParallelLoop }
 
@@ -114,7 +175,29 @@ begin
   oplNumTasks := Environment.Process.Affinity.Count;
 end; { TOmniParallelLoop.Create }
 
-procedure TOmniParallelLoop.Execute(loopBody: TOmniLoopDelegate);
+function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate):
+  IOmniParallelAggregatorLoop;
+begin
+  // TODO -cMM: TOmniParallelLoop.Aggregate default body inserted
+end; { TOmniParallelLoop.Aggregate }
+
+function TOmniParallelLoop.Aggregate(aggregator: TOmniIteratorAggregateDelegate;
+  defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop;
+begin
+  // TODO -cMM: TOmniParallelLoop.Aggregate default body inserted
+end; { TOmniParallelLoop.Aggregate }
+
+function TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue;
+begin
+  // TODO -cMM: TOmniParallelLoop.Execute default body inserted
+end; { TOmniParallelLoop.Execute }
+
+function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+begin
+  // TODO -cMM: TOmniParallelLoop.Execute default body inserted
+end; { TOmniParallelLoop.Execute }
+
+procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 var
   countStopped: IOmniResourceCount;
   iTask       : integer;
@@ -136,11 +219,11 @@ begin
       end,
       'Parallel.ForEach worker #' + IntToStr(iTask)
     ).Unobserved
-     .Run;
+     .Schedule;
   WaitForSingleObject(countStopped.Handle, INFINITE);
 end; { TOmniParallelLoop.Execute }
 
-procedure TOmniParallelLoop.Execute(loopBody: TOmniSimpleLoopDelegate);
+procedure TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorDelegate);
 begin
   Execute(
     procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
@@ -160,11 +243,5 @@ procedure TOmniParallelLoop.Stop;
 begin
   oplStopped := true;
 end; { TOmniParallelLoop.Stop }
-
-function TOmniParallelLoop.Timeout(timeout_ms: Integer): IOmniParallelLoop;
-begin
-  { TODO : Implement }
-  Result := Self;
-end; { TOmniParallelLoop.Timeout }
 
 end.
