@@ -56,9 +56,6 @@
        int P = 2 * Environment.ProcessorCount; // assume twice the procs for
                                                // good work distribution
        int Chunk = N / P;                      // size of a work chunk
-   - Parallel.ForRange(start, stop[, step])
-     - can be converted into normal enumerable style (at least for now)
-   - Parallel.Do (fork/join)
 
    Can something like this be implemented?:
      "To scale well on multiple processors, TPL uses work-stealing techniques to
