@@ -50,8 +50,8 @@ begin
   numPrimes :=
     Parallel.ForEach(1, inpMaxPrime.Value)
     .NumTasks(inpNumCPU.Value)
-    .Aggregate(procedure (var aggregate: TOmniValue; const value: TOmniValue) begin
-      aggregate.AsInteger := aggregate.AsInteger + value.AsInteger;
+    .Aggregate(procedure (var aggregate: int64; value: int64) begin
+      aggregate := aggregate + value;
     end)
     .Execute(function (const value: TOmniValue): TOmniValue begin
       if IsPrime(value) then
