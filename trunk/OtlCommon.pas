@@ -43,6 +43,8 @@
 ///   History:
 ///     1.09: 2010-02-01
 ///       - TOmniValue getters know how to process empty TOmniValue.
+///       - Added Environment.Thread interface.
+///       - Environment.SystemAffinity moved to Environment.System.Affinity.
 ///     1.08: 2010-01-14
 ///       - Added TOmniValue.IsInteger.
 ///       - Refactored and enhanced TOmniValueContainer.
@@ -308,12 +310,28 @@ type
     property Times: TOmniProcessTimes read GetTimes;
   end; { IOmniProcessEnvironment }
 
+  IOmniSystemEnvironment = interface ['{9BE1EFE3-4ABB-4C2F-B2A4-B014D0949FEC}']
+    function GetAffinity: IOmniAffinity;
+  //
+    property Affinity: IOmniAffinity read GetAffinity;
+  end; { IOmniSystemEnvironment }
+
+  IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
+    function  GetAffinity: IOmniAffinity;
+    function  GetID: cardinal;
+  //
+    property Affinity: IOmniAffinity read GetAffinity;
+    property ID: cardinal read GetID;
+  end; { IOmniThreadEnvironment }
+
   IOmniEnvironment = interface ['{4F9594E2-8B88-483C-9616-85B50493406D}']
     function  GetProcess: IOmniProcessEnvironment;
-    function  GetSystemAffinity: IOmniAffinity;
+    function  GetSystem: IOmniSystemEnvironment;
+    function  GetThread: IOmniThreadEnvironment;
   //
     property Process: IOmniProcessEnvironment read GetProcess;
-    property SystemAffinity: IOmniAffinity read GetSystemAffinity;
+    property System: IOmniSystemEnvironment read GetSystem;
+    property Thread: IOmniThreadEnvironment read GetThread;
   end; { IOmniEnvironment }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
@@ -480,7 +498,7 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { TOmniInterfaceDictionary }
 
-  TOmniAffinityTarget = (atSystem, atProcess);
+  TOmniAffinityTarget = (atSystem, atProcess, atThread);
 
   TOmniAffinity = class(TInterfacedObject, IOmniAffinity)
   strict private
@@ -515,17 +533,43 @@ type
     property Times: TOmniProcessTimes read GetTimes;
   end; { TOmniProcessEnvironment }
 
+  TOmniSystemEnvironment = class(TInterfacedObject, IOmniSystemEnvironment)
+  strict private
+    oseAffinity: IOmniAffinity;
+  protected
+    function  GetAffinity: IOmniAffinity;
+  public
+    constructor Create;
+    property Affinity: IOmniAffinity read GetAffinity;
+  end; { TOmniSystemEnvironment }
+
+  TOmniThreadEnvironment = class(TInterfacedObject, IOmniThreadEnvironment)
+  strict private
+    oteAffinity: IOmniAffinity;
+    oteThreadID: cardinal;
+  protected
+    function  GetAffinity: IOmniAffinity;
+    function GetID: cardinal;
+  public
+    constructor Create;
+    property Affinity: IOmniAffinity read GetAffinity;
+    property ID: cardinal read GetID;
+  end; { TOmniThreadEnvironment }
+
   TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
   strict private
-    oeProcessEnv    : IOmniProcessEnvironment;
-    oeSystemAffinity: IOmniAffinity;
+    oeProcessEnv: IOmniProcessEnvironment;
+    oeSystemEnv : IOmniSystemEnvironment;
+    oeThreadEnv : IOmniThreadEnvironment;
   protected
     function  GetProcess: IOmniProcessEnvironment;
-    function  GetSystemAffinity: IOmniAffinity;
+    function  GetSystem: IOmniSystemEnvironment;
+    function  GetThread: IOmniThreadEnvironment;
   public
     constructor Create;
     property Process: IOmniProcessEnvironment read GetProcess;
-    property SystemAffinity: IOmniAffinity read GetSystemAffinity;
+    property System: IOmniSystemEnvironment read GetSystem;
+    property Thread: IOmniThreadEnvironment read GetThread;
   end; { TOmniEnvironment }
 
 var
@@ -1421,7 +1465,7 @@ end; { TOmniExtendedData.SetValue }
 
 constructor TOmniAffinity.Create(target: TOmniAffinityTarget);
 begin
-  Assert(target in [atSystem, atProcess]);
+  Assert(target in [atSystem, atProcess, atThread]);
   inherited Create;
   oaTarget := target;
 end; { TOmniAffinity.Create }
@@ -1451,6 +1495,8 @@ begin
       Result := DSiGetSystemAffinityMask;
     atProcess:
       Result := DSiGetProcessAffinityMask;
+    atThread:
+      Result := DSiGetThreadAffinityMask;
     else
       Result := 0; // to keep compiler happy
   end;
@@ -1463,6 +1509,8 @@ begin
       raise Exception.Create('TOmniAffinity.SetMask: Cannot modify system affinity mask.');
     atProcess:
       DSiSetProcessAffinity(value);
+    atThread:
+      DSiSetThreadAffinity(value);
   end;
 end; { TOmniAffinity.SetAsString }
 
@@ -1534,13 +1582,43 @@ begin
     FillChar(Result, SizeOf(Result), 0);
 end; { TOmniProcessEnvironment.GetTimes }
 
+{ TOmniSystemEnvironment }
+
+constructor TOmniSystemEnvironment.Create;
+begin
+  oseAffinity := TOmniAffinity.Create(atSystem);
+end; { TOmniSystemEnvironment.Create }
+
+function TOmniSystemEnvironment.GetAffinity: IOmniAffinity;
+begin
+  Result := oseAffinity;
+end; { TOmniSystemEnvironment.GetAffinity }
+
+{ TOmniThreadEnvironment }
+
+constructor TOmniThreadEnvironment.Create;
+begin
+  oteAffinity := TOmniAffinity.Create(atThread);
+  oteThreadID := GetCurrentThreadID;
+end; { TOmniThreadEnvironment.Create }
+
+function TOmniThreadEnvironment.GetAffinity: IOmniAffinity;
+begin
+  Result := oteAffinity;
+end; { TOmniThreadEnvironment.GetAffinity }
+
+function TOmniThreadEnvironment.GetID: cardinal;
+begin
+  Result := oteThreadID;
+end; { TOmniThreadEnvironment.GetID }
+
 { TOmniEnvironment }
 
 constructor TOmniEnvironment.Create;
 begin
   inherited Create;
   oeProcessEnv := TOmniProcessEnvironment.Create;
-  oeSystemAffinity := TOmniAffinity.Create(atSystem);
+  oeSystemEnv := TOmniSystemEnvironment.Create;
 end; { TOmniEnvironment.Create }
 
 function TOmniEnvironment.GetProcess: IOmniProcessEnvironment;
@@ -1548,10 +1626,17 @@ begin
   Result := oeProcessEnv;
 end; { TOmniEnvironment.GetProcess }
 
-function TOmniEnvironment.GetSystemAffinity: IOmniAffinity;
+function TOmniEnvironment.GetSystem: IOmniSystemEnvironment;
 begin
-  Result := oeSystemAffinity;
-end; { TOmniEnvironment.GetSystemAffinity }
+  Result := oeSystemEnv;
+end; { TOmniEnvironment.GetSystem }
+
+function TOmniEnvironment.GetThread: IOmniThreadEnvironment;
+begin
+  if assigned(oeThreadEnv) and (oeThreadEnv.ID <> GetCurrentThreadID) then
+    oeThreadEnv := TOmniThreadEnvironment.Create;
+  Result := oeThreadEnv;
+end; { TOmniEnvironment.GetThread }
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
