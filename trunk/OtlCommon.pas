@@ -549,7 +549,7 @@ type
     oteThreadID: cardinal;
   protected
     function  GetAffinity: IOmniAffinity;
-    function GetID: cardinal;
+    function  GetID: cardinal;
   public
     constructor Create;
     property Affinity: IOmniAffinity read GetAffinity;
