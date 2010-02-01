@@ -3,7 +3,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
   Top = 0
   Caption = 'Parallel..Aggregate demo'
   ClientHeight = 243
-  ClientWidth = 450
+  ClientWidth = 474
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,6 +11,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
@@ -20,18 +21,32 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Height = 13
     Caption = 'Sum numbers from 1 to '
   end
+  object lblCountPrimes: TLabel
+    Left = 16
+    Top = 56
+    Width = 110
+    Height = 13
+    Caption = 'Count primes from 1 to'
+  end
+  object Label3: TLabel
+    Left = 406
+    Top = 21
+    Width = 48
+    Height = 13
+    Caption = 'Num CPU:'
+  end
   object inpMaxSummand: TSpinEdit
     Left = 136
     Top = 13
-    Width = 57
+    Width = 73
     Height = 22
     MaxValue = 0
     MinValue = 0
     TabOrder = 0
-    Value = 100
+    Value = 1000000
   end
   object btnSumParallel: TButton
-    Left = 279
+    Left = 295
     Top = 11
     Width = 75
     Height = 25
@@ -41,20 +56,58 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
   end
   object lbLog: TListBox
     Left = 0
-    Top = 64
-    Width = 450
-    Height = 179
+    Top = 88
+    Width = 474
+    Height = 155
     Align = alBottom
     ItemHeight = 13
     TabOrder = 2
   end
-  object btnSumSerial: TButton
-    Left = 198
+  object btnSumSequential: TButton
+    Left = 214
     Top = 11
     Width = 75
     Height = 25
-    Caption = 'Serial'
+    Caption = 'Sequential'
     TabOrder = 3
-    OnClick = btnSumSerialClick
+    OnClick = btnSumSequentialClick
+  end
+  object inpNumCPU: TSpinEdit
+    Left = 406
+    Top = 40
+    Width = 57
+    Height = 22
+    MaxValue = 0
+    MinValue = 1
+    TabOrder = 4
+    Value = 0
+  end
+  object inpMaxPrime: TSpinEdit
+    Left = 136
+    Top = 53
+    Width = 73
+    Height = 22
+    MaxValue = 0
+    MinValue = 0
+    TabOrder = 5
+    Value = 1000000
+  end
+  object btnCountParallel: TButton
+    Left = 296
+    Top = 51
+    Width = 75
+    Height = 25
+    Caption = 'Parallel'
+    TabOrder = 6
+    OnClick = btnCountParallelClick
+  end
+  object btnCountSequential: TButton
+    Left = 215
+    Top = 51
+    Width = 75
+    Height = 25
+    Caption = 'Sequential'
+    TabOrder = 7
+    OnClick = btnCountSequentialClick
   end
 end

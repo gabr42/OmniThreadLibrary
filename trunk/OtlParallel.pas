@@ -44,6 +44,7 @@
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
 
 (* Things to consider:
+   - Provide optimal execution paths when executing on one core.
    - Introduce cancellation token.
    - Common look and feel for all control structures in Parallel.
    - Support for simpler IEnumerable source (with "lock and fetch a packet" approach).

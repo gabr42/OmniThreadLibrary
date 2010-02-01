@@ -8,18 +8,25 @@ uses
 
 type
   TfrmParallelAggregateDemo = class(TForm)
-    Label1: TLabel;
-    inpMaxSummand: TSpinEdit;
+    btnCountParallel: TButton;
+    btnCountSequential: TButton;
     btnSumParallel: TButton;
+    btnSumSequential: TButton;
+    inpMaxPrime: TSpinEdit;
+    inpMaxSummand: TSpinEdit;
+    inpNumCPU: TSpinEdit;
+    Label1: TLabel;
+    Label3: TLabel;
+    lblCountPrimes: TLabel;
     lbLog: TListBox;
-    btnSumSerial: TButton;
+    procedure btnCountParallelClick(Sender: TObject);
+    procedure btnCountSequentialClick(Sender: TObject);
     procedure btnSumParallelClick(Sender: TObject);
-    procedure btnSumSerialClick(Sender: TObject);
+    procedure btnSumSequentialClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
+    function  IsPrime(i: integer): boolean;
     procedure Log(const msg: string; const params: array of const);
-    { Private declarations }
-  public
-    { Public declarations }
   end;
 
 var
@@ -34,6 +41,43 @@ uses
 
 {$R *.dfm}
 
+procedure TfrmParallelAggregateDemo.btnCountParallelClick(Sender: TObject);
+var
+  numPrimes: integer;
+  start    : int64;
+begin
+  start := DSiTimeGetTime64;
+  numPrimes :=
+    Parallel.ForEach(1, inpMaxPrime.Value)
+    .NumTasks(inpNumCPU.Value)
+    .Aggregate(procedure (var aggregate: TOmniValue; const value: TOmniValue) begin
+      aggregate.AsInteger := aggregate.AsInteger + value.AsInteger;
+    end)
+    .Execute(function (const value: TOmniValue): TOmniValue begin
+      if IsPrime(value) then
+        Result := 1
+      else
+        Result := 0;
+    end);
+  start := DSiTimeGetTime64 - start;
+  Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxSummand.Value, start]);
+end;
+
+procedure TfrmParallelAggregateDemo.btnCountSequentialClick(Sender: TObject);
+var
+  i        : integer;
+  numPrimes: integer;
+  start    : int64;
+begin
+  start := DSiTimeGetTime64;
+  numPrimes := 0;
+  for i := 1 to inpMaxPrime.Value do
+    if IsPrime(i) then
+      Inc(numPrimes);
+  start := DSiTimeGetTime64 - start;
+  Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxSummand.Value, start]);
+end;
+
 procedure TfrmParallelAggregateDemo.btnSumParallelClick(Sender: TObject);
 var
   start: int64;
@@ -42,6 +86,7 @@ begin
   start := DSiTimeGetTime64;
   sum :=
     Parallel.ForEach(1, inpMaxSummand.Value)
+    .NumTasks(inpNumCPU.Value)
     .Aggregate(procedure (var aggregate: TOmniValue; const value: TOmniValue) begin
       aggregate.AsInt64 := aggregate.AsInt64 + value.AsInt64;
     end)
@@ -52,7 +97,7 @@ begin
   Log('Sum(1..%d) = %d; calculation took %d ms', [inpMaxSummand.Value, sum, start]);
 end;
 
-procedure TfrmParallelAggregateDemo.btnSumSerialClick(Sender: TObject);
+procedure TfrmParallelAggregateDemo.btnSumSequentialClick(Sender: TObject);
 var
   i    : integer;
   start: int64;
@@ -64,6 +109,23 @@ begin
     Inc(sum, i);
   start := DSiTimeGetTime64 - start;
   Log('Sum(1..%d) = %d; calculation took %d ms', [inpMaxSummand.Value, sum, start]);
+end;
+
+procedure TfrmParallelAggregateDemo.FormCreate(Sender: TObject);
+begin
+  inpNumCPU.MaxValue := Environment.Process.Affinity.Count;
+  inpNumCPU.Value := inpNumCPU.MaxValue;
+end;
+
+function TfrmParallelAggregateDemo.IsPrime(i: integer): boolean;
+var
+  j: integer;
+begin
+  Result := false;
+  for j := 2 to Round(Sqrt(i)) do
+    if (i mod j) = 0 then
+      Exit;
+  Result := true;
 end;
 
 procedure TfrmParallelAggregateDemo.Log(const msg: string; const params: array of const);
