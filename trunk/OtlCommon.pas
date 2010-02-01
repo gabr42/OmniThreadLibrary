@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-14
-///   Version           : 1.08
+///   Last modification : 2010-02-01
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2010-02-01
+///       - TOmniValue getters know how to process empty TOmniValue.
 ///     1.08: 2010-01-14
 ///       - Added TOmniValue.IsInteger.
 ///       - Refactored and enhanced TOmniValueContainer.
@@ -120,29 +122,29 @@ type
     function  GetAsInteger: integer; inline;
     function  GetAsInterface: IInterface; inline;
     function  GetAsObject: TObject; inline;
-    function  GetAsPointer: pointer; 
+    function  GetAsPointer: pointer;
     function  GetAsString: string;
-    function  GetAsVariant: Variant; 
+    function  GetAsVariant: Variant;
     function  GetAsVariantArr(idx: integer): Variant; inline;
-    function  GetAsWideString: WideString; 
+    function  GetAsWideString: WideString;
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
-    procedure SetAsExtended(value: Extended); 
+    procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
     procedure SetAsInteger(const value: integer); inline;
     procedure SetAsInterface(const value: IInterface); inline;
     procedure SetAsObject(const value: TObject); inline;
     procedure SetAsPointer(const value: pointer); inline;
-    procedure SetAsString(const value: string); 
-    procedure SetAsVariant(const value: Variant); 
-    procedure SetAsWideString(const value: WideString); 
+    procedure SetAsString(const value: string);
+    procedure SetAsVariant(const value: Variant);
+    procedure SetAsWideString(const value: WideString);
   public
     procedure Clear; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFloating: boolean; inline;
-    function IsInteger: boolean; inline;
+    function  IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
     function  IsPointer: boolean; inline;
@@ -757,6 +759,10 @@ begin
   oerLow.Value := low;
   oerHigh := high;
   oerIncrement := (low <= high);
+  if oerIncrement then
+    oerLow.Decrement
+  else
+    oerLow.Increment;
 end; { TOmniEnumerableRange.Create }
 
 function TOmniEnumerableRange.GetEnumerator: IOmniValueEnumerator;
@@ -973,9 +979,12 @@ end; { TOmniValue.GetAsExtended }
 
 function TOmniValue.GetAsInt64: int64;
 begin
-  if ovType <> ovtInteger then
+  if IsInteger then
+    Result := ovData
+  else if IsEmpty then
+    Result := 0
+  else
     raise Exception.Create('TOmniValue cannot be converted to int64');
-  Result := ovData;
 end; { TOmniValue.GetAsInt64 }
 
 function TOmniValue.GetAsInteger: integer;
@@ -985,23 +994,32 @@ end; { TOmniValue.GetAsInteger }
 
 function TOmniValue.GetAsInterface: IInterface;
 begin
-  if ovType <> ovtInterface then
+  if IsInterface then
+    Result := ovIntf
+  else if IsEmpty then
+    Result := nil
+  else
     raise Exception.Create('TOmniValue cannot be converted to interface');
-  Result := ovIntf;
 end; { TOmniValue.GetAsInterface }
 
 function TOmniValue.GetAsObject: TObject;
 begin
-  if ovType <> ovtObject then
+  if IsObject then
+    Result := TObject(RawData^)
+  else if IsEmpty then
+    Result := nil
+  else
     raise Exception.Create('TOmniValue cannot be converted to object');
-  Result := TObject(RawData^);
 end; { TOmniValue.GetAsObject }
 
 function TOmniValue.GetAsPointer: pointer;
 begin
-  if not (ovType in [ovtPointer, ovtObject]) then
+  if IsPointer or IsObject then
+    Result := pointer(RawData^)
+  else if IsEmpty then
+    Result := nil
+  else
     raise Exception.Create('TOmniValue cannot be converted to pointer');
-  Result := pointer(RawData^);
 end; { TOmniValue.GetAsPointer }
 
 function TOmniValue.GetAsString: string;
@@ -1020,9 +1038,12 @@ end; { TOmniValue.GetAsString }
 
 function TOmniValue.GetAsVariant: Variant;
 begin
-  if ovType <> ovtVariant then
+  if IsVariant then
+    Result := (ovIntf as IOmniVariantData).Value
+  else if IsEmpty then
+    Result := Variants.Null
+  else
     raise Exception.Create('TOmniValue cannot be converted to variant');
-  Result := (ovIntf as IOmniVariantData).Value;
 end; { TOmniValue.GetAsVariant }
 
 function TOmniValue.GetAsVariantArr(idx: integer): Variant;
