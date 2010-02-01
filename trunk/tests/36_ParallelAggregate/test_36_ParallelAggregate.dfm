@@ -20,13 +20,6 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Height = 13
     Caption = 'Sum numbers from 1 to '
   end
-  object Label2: TLabel
-    Left = 296
-    Top = 16
-    Width = 34
-    Height = 13
-    Caption = 'Result:'
-  end
   object inpMaxSummand: TSpinEdit
     Left = 136
     Top = 13
@@ -35,32 +28,33 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     MaxValue = 0
     MinValue = 0
     TabOrder = 0
-    Value = 0
+    Value = 100
   end
-  object btnSumNumbers: TButton
-    Left = 199
+  object btnSumParallel: TButton
+    Left = 279
     Top = 11
     Width = 75
     Height = 25
-    Caption = 'Execute'
+    Caption = 'Parallel'
     TabOrder = 1
-    OnClick = btnSumNumbersClick
+    OnClick = btnSumParallelClick
   end
-  object Button2: TButton
-    Left = 216
-    Top = 155
-    Width = 75
-    Height = 25
-    Caption = 'Button2'
+  object lbLog: TListBox
+    Left = 0
+    Top = 64
+    Width = 450
+    Height = 179
+    Align = alBottom
+    ItemHeight = 13
     TabOrder = 2
   end
-  object outSum: TEdit
-    Left = 336
-    Top = 13
-    Width = 97
-    Height = 21
-    ParentColor = True
-    ReadOnly = True
+  object btnSumSerial: TButton
+    Left = 198
+    Top = 11
+    Width = 75
+    Height = 25
+    Caption = 'Serial'
     TabOrder = 3
+    OnClick = btnSumSerialClick
   end
 end

@@ -191,6 +191,7 @@ function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate;
 begin
   oplAggregator := aggregator;
   oplAggregate := defaultAggregateValue;
+  Result := Self;
 end; { TOmniParallelLoop.Aggregate }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue;
@@ -234,6 +235,7 @@ begin
      .Unobserved
      .Schedule;
   WaitForSingleObject(countStopped.Handle, INFINITE);
+  Result := oplAggregate;
 end; { TOmniParallelLoop.Execute }
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
