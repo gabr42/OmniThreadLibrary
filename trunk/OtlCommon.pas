@@ -1633,7 +1633,7 @@ end; { TOmniEnvironment.GetSystem }
 
 function TOmniEnvironment.GetThread: IOmniThreadEnvironment;
 begin
-  if assigned(oeThreadEnv) and (oeThreadEnv.ID <> GetCurrentThreadID) then
+  if (not assigned(oeThreadEnv)) or (oeThreadEnv.ID <> GetCurrentThreadID) then
     oeThreadEnv := TOmniThreadEnvironment.Create;
   Result := oeThreadEnv;
 end; { TOmniEnvironment.GetThread }
