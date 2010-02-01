@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2009 Primoz Gabrijelcic
+   (c) 2010 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2009-11-16
-   Version           : 1.19a
+   Last modification : 2010-02-01
+   Version           : 1.20
 </pre>*)(*
    History:
+     1.20: 2010-02-01
+       - OpenArrayToVarArray supports vtUnicodeString variant type.
      1.19a: 2009-11-16
        - IGpTraceable needs GUID.
      1.19: 2009-07-15
@@ -474,6 +476,10 @@ begin
         vtInterface:  Result[i] := integer(VInterface);
         vtWideString: Result[i] := WideString(VWideString);
         vtInt64:      Result[i] := VInt64^;
+        {$IFDEF UNICODE}
+        vtUnicodeString:
+                      Result[i] := string(VUnicodeString);
+        {$ENDIF UNICODE}
       else
         raise Exception.Create ('OpenArrayToVarArray: invalid data type')
       end; //case
