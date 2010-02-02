@@ -6,6 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
   OtlCommon,
+  OtlSync,
   OtlTask,
   OtlTaskControl,
   OtlEventMonitor;
@@ -20,8 +21,8 @@ type
     procedure btnStopTasksClick(Sender: TObject);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
   strict private
-    FCounter: IOmniCounter;
-    FTerminate: THandle;
+    FCounter  : IOmniCounter;
+    FTerminate: IOmniCancellationToken;
   private
     procedure Log(const msg: string);
   public
@@ -51,8 +52,10 @@ procedure TfrmTestTerminateWhen.btnStartTasksClick(Sender: TObject);
 var
   i: integer;
 begin
+  if assigned(FCounter) and (FCounter.Value > 0) then
+    btnStopTasksClick(Sender);
   FCounter := CreateCounter(10);
-  FTerminate := CreateEvent(nil, true, false, nil); // must be 'manual reset' or only one task will be stopped
+  FTerminate := CreateOmniCancellationToken;
   for i := 1 to FCounter.Value do begin
     Log(Format('Task started: %d',
       [CreateTask(TMyWorker.Create()).TerminateWhen(FTerminate).WithCounter(FCounter).
@@ -62,7 +65,9 @@ end;
 
 procedure TfrmTestTerminateWhen.btnStopTasksClick(Sender: TObject);
 begin
-  Win32Check(SetEvent(FTerminate));
+  if not assigned(FTerminate) then
+    Exit;
+  FTerminate.Signal;
   while FCounter.Value > 0 do begin // ugly, I know
     Sleep(10);
     Application.ProcessMessages;

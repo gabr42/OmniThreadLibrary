@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-31
-///   Version           : 1.17
+///   Last modification : 2010-02-02
+///   Version           : 1.18
 ///</para><para>
 ///   History:
+///     1.18: 2010-02-02
+///       - TerminateWhen accepts cancellation token.
 ///     1.17: 2010-01-31
 ///       - Added WithLock overload.
 ///     1.16: 2010-01-14
@@ -272,7 +274,8 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
-    function  TerminateWhen(event: THandle): IOmniTaskControl;
+    function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
+    function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
@@ -547,8 +550,8 @@ type
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_UnregisterWaitObject(waitObject: THandle);
     procedure EmptyMessageQueues(const task: IOmniTask);
-    procedure TerminateWhen(handle: THandle);
-    function WaitForInit: boolean;
+    procedure TerminateWhen(handle: THandle); overload;
+    function  WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
     property Implementor: TObject read GetImplementor;
@@ -650,6 +653,7 @@ type
     otcParameters     : TOmniValueContainer;
     otcQueueLength    : integer;
     otcSharedInfo     : TOmniSharedTaskInfo;
+    otcTerminateTokens: TInterfaceList;
     otcThread         : TOmniThread;
     otcUserData       : TOmniValueContainer;
   strict protected
@@ -716,7 +720,8 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
-    function  TerminateWhen(event: THandle): IOmniTaskControl;
+    function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
+    function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
     function  WaitForInit: boolean;
@@ -1992,6 +1997,7 @@ begin
   FreeAndNil(otcParameters);
   FreeAndNil(otcSharedInfo);
   FreeAndNil(otcUserData);
+  FreeAndNil(otcTerminateTokens);
   inherited Destroy;
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
 end; { TOmniTaskControl.Destroy }
@@ -2401,6 +2407,15 @@ end; { TOmniTaskControl.Terminate }
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
 begin
   otcExecutor.TerminateWhen(event);
+  Result := Self;
+end; { TOmniTaskControl.TerminateWhen }
+
+function TOmniTaskControl.TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl;
+begin
+  if not assigned(otcTerminateTokens) then
+    otcTerminateTokens := TInterfaceList.Create;
+  otcTerminateTokens.Add(token);
+  otcExecutor.TerminateWhen(token.Handle);
   Result := Self;
 end; { TOmniTaskControl.TerminateWhen }
 

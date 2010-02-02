@@ -16,7 +16,8 @@
 - Implemented IOmniTaskControl.UserData[]. The application can store any values
   in this array. It can be accessed via the integer or string index.
 - Implemented TOmniValue.IsInteger.
-- Implemented IOmniCancellationToken.
+- Implemented IOmniCancellationToken, used in Parallel infrastructure and in
+  IOmniTaskControl.TerminateWhen.
 - Implemented Parallel.ForEach wrapper (Delphi 2009 and newer).
 - Implemented Parallel.Join wrapper (Delphi 2009 and newer).
 - Refactored and enhanced TOmniValueContainer.
