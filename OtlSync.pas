@@ -169,7 +169,7 @@ type
     function  GetHandle: THandle; inline;
   public
     constructor Create;
-    destructor Destroy;
+    destructor  Destroy; override;
     function  IsSignaled: boolean; inline;
     procedure Signal; inline;
     property Handle: THandle read GetHandle;
@@ -308,7 +308,7 @@ end; { TOmniCriticalSection.Release }
 
 constructor TOmniCancellationToken.Create;
 begin
-  octEvent := CreateEvent(nil, false, false, nil);
+  octEvent := CreateEvent(nil, true, false, nil);
 end; { TOmniCancellationToken.Create }
 
 destructor TOmniCancellationToken.Destroy;
