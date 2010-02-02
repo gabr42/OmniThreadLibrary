@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-01-07
-///   Version           : 1.01a
+///   Last modification : 2010-02-02
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2010-02-02
+///       - Implemented IOmniCancellationToken.
 ///     1.01a: 2010-01-07
 ///       - "Wait when no resources" state in TOmniResourceCount was not properly
 ///         implemented.
@@ -122,7 +124,15 @@ type
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
 
+  IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
+    function  GetHandle: THandle;
+  //
+    procedure Signal;
+    property Handle: THandle read GetHandle;
+  end; { IOmniCancellationToken }
+
 function CreateOmniCriticalSection: IOmniCriticalSection;
+function CreateOmniCancellationToken: IOmniCancellationToken;
 
 // Intel Atomic functions support
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
@@ -150,12 +160,28 @@ type
     procedure Release; inline;
   end; { TOmniCriticalSection }
 
+  TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
+  private
+    octEvent: TDSiEventHandle;
+  protected
+    function  GetHandle: THandle; inline;
+  public
+    constructor Create;
+    procedure Signal; inline;
+    property Handle: THandle read GetHandle;
+  end; { TOmniCancellationToken }
+
 { exports }
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 begin
   Result := TOmniCriticalSection.Create;
 end; { CreateOmniCriticalSection }
+
+function CreateOmniCancellationToken: IOmniCancellationToken;
+begin
+  Result := TOmniCancellationToken.Create;
+end; { CreateOmniCancellationToken }
 
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean;
 //ATOMIC FUNCTION
@@ -273,6 +299,23 @@ procedure TOmniCriticalSection.Release;
 begin
   ocsCritSect.Release;
 end; { TOmniCriticalSection.Release }
+
+{ TOmniCancellationToken }
+
+constructor TOmniCancellationToken.Create;
+begin
+  octEvent := CreateEvent(nil, false, false, nil);
+end; { TOmniCancellationToken.Create }
+
+function TOmniCancellationToken.GetHandle: THandle;
+begin
+  Result := octEvent;
+end; { TOmniCancellationToken.GetHandle }
+
+procedure TOmniCancellationToken.Signal;
+begin
+  SetEvent(octEvent);
+end; { TOmniCancellationToken.Signal }
 
 { TOmniMREW }
 
