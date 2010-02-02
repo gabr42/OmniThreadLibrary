@@ -127,6 +127,7 @@ type
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
     function  GetHandle: THandle;
   //
+    function  IsSignaled: boolean;
     procedure Signal;
     property Handle: THandle read GetHandle;
   end; { IOmniCancellationToken }
@@ -162,11 +163,13 @@ type
 
   TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
   private
-    octEvent: TDSiEventHandle;
+    octEvent     : TDSiEventHandle;
+    octIsSignaled: boolean;
   protected
     function  GetHandle: THandle; inline;
   public
     constructor Create;
+    function IsSignaled: boolean; inline;
     procedure Signal; inline;
     property Handle: THandle read GetHandle;
   end; { TOmniCancellationToken }
@@ -312,8 +315,14 @@ begin
   Result := octEvent;
 end; { TOmniCancellationToken.GetHandle }
 
+function TOmniCancellationToken.IsSignaled: boolean;
+begin
+  Result := octIsSignaled;
+end; { TOmniCancellationToken.IsSignaled }
+
 procedure TOmniCancellationToken.Signal;
 begin
+  octIsSignaled := true;
   SetEvent(octEvent);
 end; { TOmniCancellationToken.Signal }
 
