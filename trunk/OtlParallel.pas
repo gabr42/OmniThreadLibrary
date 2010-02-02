@@ -32,10 +32,10 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
 ///   Last modification : 2010-01-14
-///   Version           : 1.0
+///   Version           : 1.01
 ///</para><para>
 ///   History:
-///     1.01: 2010-02-01
+///     1.01: 2010-02-02
 ///       - Implemented ForEach(rangeLow, rangeHigh).
 ///       - Implemented ForEach.Aggregate.
 ///       - ForEach optimized for execution on single-core computer.
@@ -50,8 +50,6 @@
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
 
 (* Things to consider:
-   - Add TMethod version of Aggregate and Execute.
-   - Common look and feel for all control structures in Parallel.
    - Support for simpler IEnumerable source (with "lock and fetch a packet" approach).
    - All Parallel stuff should have a "chunk" option (or default).
        int P = 2 * Environment.ProcessorCount; // assume twice the procs for
