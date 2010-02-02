@@ -40,6 +40,7 @@
 ///       - Implemented ForEach.Aggregate.
 ///       - ForEach optimized for execution on single-core computer.
 ///       - Implemented Parallel.Join.
+///       - Removed Stop method. Loop can be cancelled with a cancellation token.
 ///     1.0: 2010-01-14
 ///       - Released.
 ///</para></remarks>
@@ -49,7 +50,7 @@
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
 
 (* Things to consider:
-   - Introduce cancellation token.
+   - Add TMethod version of Aggregate and Execute.
    - Common look and feel for all control structures in Parallel.
    - Support for simpler IEnumerable source (with "lock and fetch a packet" approach).
    - All Parallel stuff should have a "chunk" option (or default).
@@ -75,6 +76,7 @@ interface
 uses
   SysUtils,
   OtlCommon,
+  OtlSync,
   OtlTask;
 
 type
@@ -85,18 +87,17 @@ type
   TOmniAggregatorIntDelegate = reference to procedure(var aggregate: int64;
     value: int64);
 
-  TOmniIteratorDelegate = reference to procedure(const loop: IOmniParallelLoop;
-    const value: TOmniValue);
-  TOmniIteratorAggregateDelegate = reference to function(const loop: IOmniParallelLoop;
-    const value: TOmniValue): TOmniValue;
+  TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
+  TOmniIteratorIntDelegate = reference to procedure(const value: int64);
 
-  TOmniSimpleIteratorDelegate = reference to procedure(const value: TOmniValue);
-  TOmniSimpleIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
+  TOmniIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
+  TOmniIteratorAggregateIntDelegate = reference to function(const value: int64): int64;
 
-  // *** assumes that the enumerator's Take method is threadsafe ***
-  IOmniParallelAggregatorLoop = interface ['{E430F270-1C5D-49A7-92E3-283753801764}']
+  // *** all loops assume that the enumerator's Take method is threadsafe ***
+
+  IOmniParallelAggregatorLoop = interface ['{C21B781A-5A41-4BB6-9B45-F3E6AC14BE11}']
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
-    function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
+    function  Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64; overload;
   end; { IOmniParallelAggregatorLoop }
 
   // *** assumes that the enumerator's Take method is threadsafe ***
@@ -108,9 +109,9 @@ type
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate;
       defaultAggregateValue: int64): IOmniParallelAggregatorLoop; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
-    procedure Execute(loopBody: TOmniSimpleIteratorDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
+    function  CancelWith(token: IOmniCancellationToken): IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
-    procedure Stop;
   end; { IOmniParallelLoop }
 
   Parallel = class
@@ -127,7 +128,6 @@ implementation
 uses
   Windows,
   GpStuff,
-  OtlSync,
   OtlTaskControl;
 
 { TODO 3 -ogabr : Should work with thread-unsafe enumerators }
@@ -135,27 +135,25 @@ uses
 type
   TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop, IOmniParallelAggregatorLoop)
   strict private
-    oplAggregate : TOmniValue;
-    oplAggregator: TOmniAggregatorDelegate;
-    oplEnumGen   : IOmniValueEnumerable;
-    oplNumTasks  : integer;
-    oplStopped   : boolean;
+    oplAggregate        : TOmniValue;
+    oplAggregator       : TOmniAggregatorDelegate;
+    oplCancellationToken: IOmniCancellationToken;
+    oplEnumGen          : IOmniValueEnumerable;
+    oplNumTasks         : integer;
+  strict protected
+    function Stopped: boolean;
   public
     constructor Create(const enumGen: IOmniValueEnumerable);
-    function  Aggregate(aggregator: TOmniAggregatorDelegate):
-      IOmniParallelAggregatorLoop; overload;
-    function  Aggregate(aggregator: TOmniAggregatorIntDelegate):
-      IOmniParallelAggregatorLoop; overload;
-    function  Aggregate(aggregator: TOmniAggregatorDelegate;
-      defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
-    function  Aggregate(aggregator: TOmniAggregatorIntDelegate;
-      defaultAggregateValue: int64): IOmniParallelAggregatorLoop; overload;
-    function  Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue; overload;
+    function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
+    function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
+    function  Aggregate(aggregator: TOmniAggregatorIntDelegate): IOmniParallelAggregatorLoop; overload;
+    function  Aggregate(aggregator: TOmniAggregatorIntDelegate; defaultAggregateValue: int64): IOmniParallelAggregatorLoop; overload;
+    function  CancelWith(token: IOmniCancellationToken): IOmniParallelLoop;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
-    procedure Execute(loopBody: TOmniSimpleIteratorDelegate); overload;
+    function  Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
-    procedure Stop;
   end; { TOmniParallelLoop }
 
 { Parallel }
@@ -267,14 +265,11 @@ begin
     defaultAggregateValue);
 end; { TOmniParallelLoop.Aggregate }
 
-function TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorAggregateDelegate): TOmniValue;
+function TOmniParallelLoop.CancelWith(token: IOmniCancellationToken): IOmniParallelLoop;
 begin
-  Result := Execute(
-    function(const loop: IOmniParallelLoop; const value: TOmniValue): TOmniValue
-    begin
-      Result := loopBody(value);
-    end);
-end; { TOmniParallelLoop.Execute }
+  oplCancellationToken := token;
+  Result := Self;
+end; { TOmniParallelLoop.CancelWith }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
 var
@@ -285,12 +280,11 @@ var
   lockAggregate: IOmniCriticalSection;
   value        : TOmniValue;
 begin
-  oplStopped := false;
   if (oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1) then begin
     aggregate := TOmniValue.Null;
     enumerator := oplEnumGen.GetEnumerator;
-    while (not oplStopped) and enumerator.Take(value) do
-      oplAggregator(oplAggregate, loopBody(Self, value));
+    while (not Stopped) and enumerator.Take(value) do
+      oplAggregator(oplAggregate, loopBody(value));
     Result := oplAggregate;
   end
   else begin
@@ -306,8 +300,8 @@ begin
         begin
           aggregate := TOmniValue.Null;
           enumerator := oplEnumGen.GetEnumerator;
-          while (not oplStopped) and enumerator.Take(value) do
-            oplAggregator(aggregate, loopBody(Self, value));
+          while (not Stopped) and enumerator.Take(value) do
+            oplAggregator(aggregate, loopBody(value));
           task.Lock.Acquire;
           try
             oplAggregator(oplAggregate, aggregate);
@@ -323,6 +317,15 @@ begin
   end;
 end; { TOmniParallelLoop.Execute }
 
+function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64;
+begin
+  Result := Execute(
+    function(const value: TOmniValue): TOmniValue
+    begin
+      Result := loopBody(value);
+    end);
+end; { TOmniParallelLoop.Execute }
+
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 var
   countStopped: IOmniResourceCount;
@@ -330,11 +333,10 @@ var
   iTask       : integer;
   value       : TOmniValue;
 begin
-  oplStopped := false;
   if (oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1) then begin
     enumerator := oplEnumGen.GetEnumerator;
-    while (not oplStopped) and enumerator.Take(value) do
-      loopBody(Self, value);
+    while (not Stopped) and enumerator.Take(value) do
+      loopBody(value);
   end
   else begin
     countStopped := TOmniResourceCount.Create(oplNumTasks);
@@ -346,8 +348,8 @@ begin
           enumerator: IOmniValueEnumerator;
         begin
           enumerator := oplEnumGen.GetEnumerator;
-          while (not oplStopped) and enumerator.Take(value) do
-            loopBody(Self, value);
+          while (not Stopped) and enumerator.Take(value) do
+            loopBody(value);
           countStopped.Allocate;
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask)
@@ -357,10 +359,10 @@ begin
   end;
 end; { TOmniParallelLoop.Execute }
 
-procedure TOmniParallelLoop.Execute(loopBody: TOmniSimpleIteratorDelegate);
+procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorIntDelegate);
 begin
   Execute(
-    procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
+    procedure (const elem: TOmniValue)
     begin
       loopBody(elem);
     end);
@@ -373,9 +375,9 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
 
-procedure TOmniParallelLoop.Stop;
+function TOmniParallelLoop.Stopped: boolean;
 begin
-  oplStopped := true;
-end; { TOmniParallelLoop.Stop }
+  Result := (assigned(oplCancellationToken) and oplCancellationToken.IsSignaled);
+end; { TOmniParallelLoop.Stopped }
 
 end.

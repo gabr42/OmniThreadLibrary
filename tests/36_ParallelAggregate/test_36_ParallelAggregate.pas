@@ -50,15 +50,17 @@ begin
   numPrimes :=
     Parallel.ForEach(1, inpMaxPrime.Value)
     .NumTasks(inpNumCPU.Value)
-    .Aggregate(procedure (var aggregate: int64; value: int64) begin
-      aggregate := aggregate + value;
-    end)
-    .Execute(function (const value: TOmniValue): TOmniValue begin
-      if IsPrime(value) then
-        Result := 1
-      else
-        Result := 0;
-    end);
+    .Aggregate(
+      procedure (var aggregate: int64; value: int64) begin
+        aggregate := aggregate + value;
+      end)
+    .Execute(
+      function (const value: TOmniValue): TOmniValue begin
+        if IsPrime(value) then
+          Result := 1
+        else
+          Result := 0;
+      end);
   start := DSiTimeGetTime64 - start;
   Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxSummand.Value, start]);
 end;
@@ -85,14 +87,19 @@ var
 begin
   start := DSiTimeGetTime64;
   sum :=
-    Parallel.ForEach(1, inpMaxSummand.Value)
+    Parallel
+    .ForEach(1, inpMaxSummand.Value)
     .NumTasks(inpNumCPU.Value)
-    .Aggregate(procedure (var aggregate: TOmniValue; const value: TOmniValue) begin
-      aggregate.AsInt64 := aggregate.AsInt64 + value.AsInt64;
-    end)
-    .Execute(function (const value: TOmniValue): TOmniValue begin
-      Result := value;
-    end);
+    .Aggregate(
+      procedure (var aggregate: int64; value: int64)
+      begin
+        aggregate := aggregate + value;
+      end)
+    .Execute(
+      function (const value: int64): int64
+      begin
+        Result := value;
+      end);
   start := DSiTimeGetTime64 - start;
   Log('Sum(1..%d) = %d; calculation took %d ms', [inpMaxSummand.Value, sum, start]);
 end;
