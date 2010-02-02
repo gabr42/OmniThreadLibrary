@@ -72,6 +72,7 @@ implementation
 uses
   DSiWin32,
   OtlCommon,
+  OtlSync,
   OtlContainers,
   OtlCollections,
   OtlTaskControl,
@@ -232,31 +233,34 @@ end; { TfrmParallelForDemo.ParaFind }
 
 function TfrmParallelForDemo.ParaScan(rootNode: TNode; value: integer): TNode;
 var
-  nodeQueue : IOmniBlockingCollection;
-  nodeResult: TNode;
-  numTasks  : integer;
+  cancelToken: IOmniCancellationToken;
+  nodeQueue  : IOmniBlockingCollection;
+  nodeResult : TNode;
+  numTasks   : integer;
 begin
   nodeResult := nil;
+  cancelToken := CreateOmniCancellationToken;
   numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
   nodeQueue.Add(rootNode);
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
     .NumTasks(numTasks) // must be same number of task as in nodeQueue to ensure stopping
+    .CancelWith(cancelToken)
     .Execute(
-    procedure (const loop: IOmniParallelLoop; const elem: TOmniValue)
-    var
-      childNode: TNode;
-      node     : TNode;
-    begin
-      node := TNode(elem.AsPointer);
-      if node.Value = value then begin
-        nodeResult := node;
-        nodeQueue.CompleteAdding;
-        loop.Stop;
-      end
-      else for childNode in node.Children do
-        nodeQueue.TryAdd(childNode);
-    end);
+      procedure (const elem: TOmniValue)
+      var
+        childNode: TNode;
+        node     : TNode;
+      begin
+        node := TNode(elem.AsObject);
+        if node.Value = value then begin
+          nodeResult := node;
+          nodeQueue.CompleteAdding;
+          cancelToken.Signal;
+        end
+        else for childNode in node.Children do
+          nodeQueue.TryAdd(childNode);
+      end);
   Result := nodeResult;
 end; { TfrmParallelForDemo.ParaScan }
 
