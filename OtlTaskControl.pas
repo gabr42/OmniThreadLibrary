@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-02
-///   Version           : 1.18
+///   Last modification : 2010-02-03
+///   Version           : 1.19
 ///</para><para>
 ///   History:
+///     1.19: 2010-02-03
+///       - IOmniTaskControl and IOmniTask implement CancellationToken property.
 ///     1.18: 2010-02-02
 ///       - TerminateWhen accepts cancellation token.
 ///     1.17: 2010-01-31
@@ -231,6 +233,7 @@ type
 {$ENDIF OTL_Anonymous}
 
   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+    function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
     function  GetExitMessage: string;
@@ -283,6 +286,7 @@ type
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload;
   //
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -347,6 +351,8 @@ type
 
   TOmniSharedTaskInfo = class
   strict private
+    ostiCancellationToken : IOmniCancellationToken;
+  strict private
     ostiChainIgnoreErrors : boolean;
     ostiChainTo           : IOmniTaskControl;
     ostiCommChannel       : IOmniTwoWayChannel;
@@ -359,7 +365,10 @@ type
     ostiTerminateEvent    : THandle;
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
+  strict protected
+    function GetCancellationToken: IOmniCancellationToken;
   public
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
     property ChainTo: IOmniTaskControl read ostiChainTo write ostiChainTo;
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
@@ -577,6 +586,7 @@ type
     otSharedInfo_ref: TOmniSharedTaskInfo;
     otThreadData    : IInterface;
   protected
+    function  GetCancellationToken: IOmniCancellationToken; inline;
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetCounter: IOmniCounter;
     function  GetImplementor: TObject;
@@ -606,6 +616,7 @@ type
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure UnregisterWaitObject(waitObject: THandle);
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
     property Implementor: TObject read GetImplementor;
@@ -665,6 +676,7 @@ type
   protected
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
+    function GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
@@ -728,6 +740,7 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload; inline;
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -988,6 +1001,11 @@ begin
   if assigned(chainTo) then
     chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
 end; { TOmniTask.Execute }
+
+function TOmniTask.GetCancellationToken: IOmniCancellationToken;
+begin
+  Result := otSharedInfo_ref.CancellationToken;
+end; { TOmniTask.GetCancellationToken }
 
 function TOmniTask.GetComm: IOmniCommunicationEndpoint;
 begin
@@ -2066,6 +2084,11 @@ begin
   {$ENDIF OTL_Anonymous}
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
+function TOmniTaskControl.GetCancellationToken: IOmniCancellationToken;
+begin
+  Result := otcSharedInfo.CancellationToken;
+end; { TOmniTaskControl.GetCancellationToken }
+
 function TOmniTaskControl.GetComm: IOmniCommunicationEndpoint;
 begin
   EnsureCommChannel;
@@ -2703,6 +2726,24 @@ procedure TOmniTaskControlEventMonitor.ForwardTaskTerminated(
 begin
   (task as IOmniTaskControlInternals).ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.ForwardTaskTerminated }
+
+{ TOmniSharedTaskInfo }
+
+function TOmniSharedTaskInfo.GetCancellationToken: IOmniCancellationToken;
+var
+  token: IOmniCancellationToken;
+begin
+  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
+    'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  if not assigned(ostiCancellationToken) then begin
+    token := CreateOmniCancellationToken;
+    if InterlockedCompareExchange(PInteger(@ostiCancellationToken)^, integer(token), 0) = 0 then
+      pointer(token) := nil;
+  end;
+  Result := ostiCancellationToken;
+
+  
+end; { TOmniSharedTaskInfo.GetCancellationToken }
 
 initialization
   GTaskControlEventMonitor := TOmniTaskControlEventMonitor.Create;

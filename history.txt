@@ -18,6 +18,8 @@
 - Implemented TOmniValue.IsInteger.
 - Implemented IOmniCancellationToken, used in Parallel infrastructure and in
   IOmniTaskControl.TerminateWhen.
+- IOmniTaskControl and IOmniTask implement CancellationToken: IOmniCancellationToken
+  property which can be used by the task and task controller.
 - Implemented Parallel.ForEach wrapper (Delphi 2009 and newer).
 - Implemented Parallel.Join wrapper (Delphi 2009 and newer).
 - Refactored and enhanced TOmniValueContainer.

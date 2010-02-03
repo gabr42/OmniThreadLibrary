@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-02-02
-///   Version           : 1.02
+///   Last modification : 2010-02-03
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2010-02-03
+///       - IOmniCancellationToken extended with the Clear method.
 ///     1.02: 2010-02-02
 ///       - Implemented IOmniCancellationToken.
 ///     1.01a: 2010-01-07
@@ -127,6 +129,7 @@ type
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
     function  GetHandle: THandle;
   //
+    procedure Clear;
     function  IsSignaled: boolean;
     procedure Signal;
     property Handle: THandle read GetHandle;
@@ -170,6 +173,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+    procedure Clear; inline;
     function  IsSignaled: boolean; inline;
     procedure Signal; inline;
     property Handle: THandle read GetHandle;
@@ -315,6 +319,12 @@ destructor TOmniCancellationToken.Destroy;
 begin
   DSiCloseHandleAndNull(octEvent);
 end; { TOmniCancellationToken.Destroy }
+
+procedure TOmniCancellationToken.Clear;
+begin
+  octIsSignaled := false;
+  ResetEvent(octEvent);
+end; { TOmniCancellationToken.Clear }
 
 function TOmniCancellationToken.GetHandle: THandle;
 begin
