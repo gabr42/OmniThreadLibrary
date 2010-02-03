@@ -206,7 +206,7 @@ type
     property  ContainerSubject: TOmniContainerSubject read oqContainerSubject;
   end; { TOmniBoundedQueue }
 
-  TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving, tagRemoved,
+  TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving,
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying
     {$IFDEF DEBUG_OMNI_QUEUE}, tagStartOfList, tagSentinel{$ENDIF});
 
@@ -233,7 +233,6 @@ type
     procedure LeaveWriter; inline;
     procedure ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean = false);
     procedure EnterWriter; 
-    procedure WaitForAllRemoved(const lastSlot: POmniTaggedValue);
   public
     constructor Create;
     destructor  Destroy; override;
@@ -823,7 +822,6 @@ tags:
   tagAllocating
   tagAllocated
   tagRemoving
-  tagRemoved
   tagEndOfList
   tagExtending
   tagBlockPointer
@@ -864,7 +862,6 @@ Dequeue:
   if tag = tagAllocated then
     increment head
     get value
-    store tagRemoved
   else
     if first slot in new block is allocated
       set head to new block's slot 1
@@ -1091,14 +1088,15 @@ begin
         head^.Value.AsInterface._Release;
         head^.Value.RawZero;
       end;
-      {$IFNDEF DEBUG_OMNI_QUEUE} head^.Tag := tagRemoved; {$ELSE} Assert(head^.CASTag(tagRemoving, tagRemoved)); {$ENDIF}
     end
     else begin // releasing memory
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
       next := POmniTaggedValue(head^.Value.AsPointer);
       if next^.Tag <> tagAllocated then begin
+        // TODO 1 -oPrimoz Gabrijelcic : This never happens! Verify and remove!
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next^.Tag = tagFree); {$ENDIF}
         obcHeadPointer := next; // release the lock
+        Result := false; // nothing to dequeue
       end
       else begin
         Inc(next);
@@ -1109,10 +1107,11 @@ begin
           next^.Value.AsInterface._Release;
           next^.Value.RawZero;
         end;
-        {$IFNDEF DEBUG_OMNI_QUEUE} next^.Tag := tagRemoved; {$ELSE} Assert(next^.CASTag(tagAllocated, tagRemoved)); {$ENDIF DEBUG}
       end;
       // At this moment, another thread may still be dequeueing from one of the previous
-      // slots and memory should not yet be released!
+      // slots and memory should not yet be released! Even worse - another thread may be
+      // trying to *enqueue* somewhere inside the current memory block and we definitely
+      // don't want to recycle this memory block and allow that thread to succeed!
       LeaveReader;
       EnterWriter;
       ReleaseBlock(head);
@@ -1122,38 +1121,6 @@ begin
   end;
   LeaveReader;
 end; { TOmniBaseQueue.TryDequeue }
-
-procedure TOmniBaseQueue.WaitForAllRemoved(const lastSlot: POmniTaggedValue);
-var
-  firstRemoving: POmniTaggedValue;
-  scan         : POmniTaggedValue;
-  sentinel     : POmniTaggedValue;
-begin
-  {$IFDEF DEBUG_OMNI_QUEUE}
-  Assert(assigned(lastSlot));
-  Assert(lastSlot^.Tag in [tagEndOfList, tagDestroying]);
-  {$ENDIF Debug}
-  sentinel := lastSlot;
-  Dec(sentinel, CCollNumSlots - 1);
-  repeat
-    firstRemoving := nil;
-    scan := lastSlot;
-    Dec(scan);
-    repeat
-      {$IFDEF DEBUG_OMNI_QUEUE} Assert(scan^.Tag in [tagRemoving, tagRemoved]); {$ENDIF}
-      if scan^.Tag = tagRemoving then
-        firstRemoving := scan;
-      if scan = sentinel then
-        break;
-      Dec(scan);
-    until false;
-    sentinel := firstRemoving;
-    if assigned(firstRemoving) then
-      asm pause; end
-    else
-      break; //repeat
-  until false;
-end; { TOmniBaseQueue.WaitForAllRemoved }
 
 { initialization }
 

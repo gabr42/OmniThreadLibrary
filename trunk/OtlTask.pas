@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-12-12
-///   Version           : 1.07
+///   Last modification : 2010-02-03
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2010-02-03
+///       - Defined IOmniTask.CancellationToken property.
 ///     1.07: 2010-01-13
 ///       - Defined IOmniTask.Implementor property.
 ///     1.06: 2009-12-12
@@ -79,6 +81,7 @@ uses
   SyncObjs,
   GpLists,
   OtlCommon,
+  OtlSync,
   OtlComm;
 
 type
@@ -105,6 +108,7 @@ type
   end; { TOmniWaitObjectList }
 
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
+    function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetCounter: IOmniCounter;
     function  GetImplementor: TObject;
@@ -130,6 +134,7 @@ type
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure UnregisterWaitObject(waitObject: THandle);
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
     property Implementor: TObject read GetImplementor;
