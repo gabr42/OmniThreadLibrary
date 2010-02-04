@@ -863,11 +863,8 @@ Dequeue:
     increment head
     get value
   else
-    if first slot in new block is allocated
-      set head to new block's slot 1
-      get value
-    else
-      set head to new block
+    set head to new block's slot 1
+    get value
     leave GC
     writelock GC
     release original block
@@ -1092,21 +1089,14 @@ begin
     else begin // releasing memory
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
       next := POmniTaggedValue(head^.Value.AsPointer);
-      if next^.Tag <> tagAllocated then begin
-        // TODO 1 -oPrimoz Gabrijelcic : This never happens! Verify and remove!
-        {$IFDEF DEBUG_OMNI_QUEUE} Assert(next^.Tag = tagFree); {$ENDIF}
-        obcHeadPointer := next; // release the lock
-        Result := false; // nothing to dequeue
-      end
-      else begin
-        Inc(next);
-        obcHeadPointer := next; // release the lock
-        Dec(next);
-        value := next^.Value;
-        if value.IsInterface then begin
-          next^.Value.AsInterface._Release;
-          next^.Value.RawZero;
-        end;
+      Assert(next^.Tag = tagAllocated);
+      Inc(next);
+      obcHeadPointer := next; // release the lock
+      Dec(next);
+      value := next^.Value;
+      if value.IsInterface then begin
+        next^.Value.AsInterface._Release;
+        next^.Value.RawZero;
       end;
       // At this moment, another thread may still be dequeueing from one of the previous
       // slots and memory should not yet be released! Even worse - another thread may be
