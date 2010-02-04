@@ -20,3 +20,7 @@
 [http://17slon.com/blogs/gabr/2008/11/background-file-scanning-with.html Background file scanning]
 
 [http://17slon.com/blogs/gabr/2009/02/building-connection-pool.html Building a connection pool]
+
+[http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore]
+
+[http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-2.html Dynamically allocated queue]

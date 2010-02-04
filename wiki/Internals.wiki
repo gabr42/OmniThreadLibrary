@@ -27,21 +27,3 @@
 ||*OtlTask.pas* || Task interface.||
 ||*OtlTaskControl.pas* || Task controller.||
 ||*OtlThreadPool.pas* || Thread pool.||
-
-= Blog articles about OTL internals =
-
-[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-internals-otltask.html Task control interface]
-
-[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-internals-otlcomm.html Communication subsystem]
-
-Lock-free stack tetralogy: [http://17slon.com/blogs/gabr/2008/07/implementing-lock-free-stack.html Implementing lock-free stack], [http://17slon.com/blogs/gabr/2008/07/lock-free-stack-problem.html Lock-free stack problem], [http://17slon.com/blogs/gabr/2008/07/working-lock-free-stack-implementation.html A working lock-free stack implementation], [http://17slon.com/blogs/gabr/2008/07/lock-free-queue-finally.html Lock-free queue]
-
-[http://17slon.com/blogs/gabr/2008/07/omnithreadlibrary-internals.html Containers]
-
-[http://17slon.com/blogs/gabr/2008/10/erlangenizing-omnithreadlibrary.html Calling OmniThreadLibrary methods by name]
-
-[http://17slon.com/blogs/gabr/2008/10/omnithreadlibrary-using-rtti-to-call.html Using RTTI to call task methods]
-
-[http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore]
-
-Blocking queue trilogy: [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore], [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-2.html Dynamically allocated queue], (part 3 not published yet).
