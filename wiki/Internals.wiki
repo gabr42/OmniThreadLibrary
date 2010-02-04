@@ -43,3 +43,5 @@ Lock-free stack tetralogy: [http://17slon.com/blogs/gabr/2008/07/implementing-lo
 [http://17slon.com/blogs/gabr/2008/10/omnithreadlibrary-using-rtti-to-call.html Using RTTI to call task methods]
 
 [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore]
+
+Blocking queue trilogy: [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore], [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-2.html Dynamically allocated queue], (part 3 not published yet).
