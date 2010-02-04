@@ -29,7 +29,7 @@
   - TOmniEventMonitor.OnTaskUndeliveredMessage was missing 'message' parameter.
 - New demos:
   - 32_Queue: Stress test for new TOmniBaseQueue and TOmniQueue.
-  - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demos
+  - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demoes
     the use of Environment to set process affinity.
   - 34_TreeScan: Parallel tree scan using TOmniBlockingCollection.
   - 35_ParallelFor: Parallel tree scan using Parallel.ForEach (Delphi 2009 and newer).
