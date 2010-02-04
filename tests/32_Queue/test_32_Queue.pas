@@ -75,6 +75,7 @@ const
 var
   GForwardersCount: TGp4AlignedInt;
   GReadersCount   : TGp4AlignedInt;
+  GStartedWorkers : TGp4AlignedInt;
   GStopForwarders : boolean;
   GStopReaders    : boolean;
 
@@ -89,6 +90,7 @@ var
 begin
   value := task.ParamByName['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
   value := task.ParamByName['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
+  GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopForwarders do
     while srcColl.TryDequeue(value) do begin
@@ -109,6 +111,7 @@ var
 begin
   value := task.ParamByName['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
   value := task.ParamByName['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
+  GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopReaders do
     while chanColl.TryDequeue(value) do begin
@@ -285,6 +288,7 @@ begin
   GStopReaders := false;
   GForwardersCount.Value := 0;
   GReadersCount.Value := 0;
+  GStartedWorkers.Value := 0;
   Log('%d -> %d', [numForwarders, numReaders]);
   FSrcCollection := CreateCollection;
   FDstCollection := CreateCollection;
@@ -294,7 +298,8 @@ begin
     FSrcCollection.Enqueue(i);
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);
-  Sleep(500);
+  while GStartedWorkers.Value < (numForwarders + numReaders) do
+    DSiYield;
   FStartTime := DSiTimeGetTime64;
   StartReaders;
   StartForwarders;
