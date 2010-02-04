@@ -32,6 +32,9 @@
   - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demos
     the use of Environment to set process affinity.
   - 34_TreeScan: Parallel tree scan using TOmniBlockingCollection.
+  - 35_ParallelFor: Parallel tree scan using Parallel.ForEach (Delphi 2009 and newer).
+  - 36_ParallelAggregate: Parallel calculations using Parallel.ForEach.Aggregate
+    (Delphi 2009 and newer).
 
 TODO: Add new tests to 2010.
 TODO: Cannot be compiled with /dLogThreadPool.
