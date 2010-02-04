@@ -161,7 +161,7 @@ type
       almostFullLoadFactor: real = CAlmostFullLoadFactor);
     destructor  Destroy; override;
     function Pop(var value): boolean;
-    function Push(const value): boolean; 
+    function Push(const value): boolean;
     property ContainerSubject: TOmniContainerSubject read osContainerSubject;
   end; { TOmniBoundedStack }
 
@@ -213,9 +213,9 @@ type
     {$IFDEF DEBUG_OMNI_QUEUE}, tagStartOfList, tagSentinel{$ENDIF});
 
   TOmniTaggedValue = packed record
+    Value   : TOmniValue;    //aligned for faster data access
     Tag     : TOmniQueueTag;
-//    Stuffing: word;
-    Value   : TOmniValue;
+    Stuffing: word;
     function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;
   end; { TOmniTaggedValue }
   POmniTaggedValue = ^TOmniTaggedValue;
@@ -230,11 +230,11 @@ type
     obcRemoveCount: TGp4AlignedInt;
   strict protected
     function  AllocateBlock: POmniTaggedValue;
-    procedure EnterReader; 
+    procedure EnterReader;
     procedure LeaveReader; inline;
     procedure LeaveWriter; inline;
     procedure ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean = false);
-    procedure EnterWriter; 
+    procedure EnterWriter;
   public
     constructor Create;
     destructor  Destroy; override;
@@ -939,7 +939,7 @@ begin
   Assert(Result^.Tag = tagFree);
   Result^.Tag := tagStartOfList;
   Inc(Result, CCollNumSlots + 1);
-  Assert(Result^.Tag = tagFree);    
+  Assert(Result^.Tag = tagFree);
   Result^.Tag := tagSentinel;
   Dec(Result, CCollNumSlots);
   {$ENDIF}
@@ -976,7 +976,7 @@ begin
   if tag = tagFree then begin // enqueueing
     Inc(obcTailPointer); // release the lock
     tail^.Value := value; // this works because the slot was initialized to zero when allocating
-//    {$IFDEF DEBUG_OMNI_QUEUE} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
+    {$IFDEF DEBUG_OMNI_QUEUE} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
     {$IFNDEF DEBUG_OMNI_QUEUE} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
   end
   else begin // allocating memory
@@ -1163,4 +1163,5 @@ initialization
   Assert(CCollBlockSize = (65536 {$IFDEF DEBUG_OMNI_QUEUE} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
   InitializeTimingInfo;
 end.
+
 
