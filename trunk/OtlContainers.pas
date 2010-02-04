@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009 Primoz Gabrijelcic
+///Copyright (c) 2010 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2009-12-25
-///   Version           : 2.0
+///   Last modification : 2010-02-04
+///   Version           : 2.01
 ///</para><para>
 ///   History:
+///     2.01: 2010-02-04
+///       - Uses CAS8 instead of CAS32.
 ///     2.0: 2009-12-25
 ///       - Implemented dynamically allocated, O(1) enqueue and dequeue, threadsafe,
 ///         microlocking queue. Class TOmniBaseQueue contains base implementation
@@ -212,9 +214,9 @@ type
 
   TOmniTaggedValue = packed record
     Tag     : TOmniQueueTag;
-    Stuffing: word;
+//    Stuffing: word;
     Value   : TOmniValue;
-    function CASTag(oldTag, newTag: TOmniQueueTag): boolean;
+    function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;
   end; { TOmniTaggedValue }
   POmniTaggedValue = ^TOmniTaggedValue;
 
@@ -877,14 +879,8 @@ Dequeue:
 { TOmniTaggedValue }
 
 function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniQueueTag): boolean;
-var
-  newValue: DWORD;
-  oldValue: DWORD;
 begin
-  oldValue := PDWORD(@Tag)^ AND $FFFFFF00 OR DWORD(ORD(oldTag));
-  newValue := oldValue AND $FFFFFF00 OR DWORD(Ord(newTag));
-  {$IFDEF DEBUG_OMNI_QUEUE} Assert(cardinal(@Tag) mod 4 = 0); {$ENDIF}
-  Result := CAS32(oldValue, newValue, Tag);
+  Result := CAS8(Ord(oldTag), Ord(newTag), Tag);
 end; { TOmniTaggedValue.CASTag }
 
 { TOmniBaseQueue }
@@ -980,7 +976,7 @@ begin
   if tag = tagFree then begin // enqueueing
     Inc(obcTailPointer); // release the lock
     tail^.Value := value; // this works because the slot was initialized to zero when allocating
-    {$IFDEF DEBUG_OMNI_QUEUE} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
+//    {$IFDEF DEBUG_OMNI_QUEUE} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
     {$IFNDEF DEBUG_OMNI_QUEUE} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
   end
   else begin // allocating memory
