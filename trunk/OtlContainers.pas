@@ -976,7 +976,7 @@ begin
     end
     else if tag = tagExtending then
       DSIYield
-    else
+    else // very temporary condition, retry quickly
       asm pause; end;
   until false;
   {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer); {$ENDIF}
@@ -1014,7 +1014,7 @@ begin
     if value >= 0 then
       if obcRemoveCount.CAS(value, value + 1) then
         break
-    else 
+    else
       DSiYield; // let the GC do its work
   until false;
 end; { TOmniBaseQueue.EnterReader }
@@ -1022,7 +1022,7 @@ end; { TOmniBaseQueue.EnterReader }
 procedure TOmniBaseQueue.EnterWriter;
 begin
   while not ((obcRemoveCount.Value = 0) and (obcRemoveCount.CAS(0, -1))) do
-    asm pause; end;
+   DSiYield;
 end; { TOmniBaseQueue.EnterWriter }
 
 procedure TOmniBaseQueue.LeaveReader;

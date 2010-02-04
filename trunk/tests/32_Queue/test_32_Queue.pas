@@ -51,6 +51,8 @@ type
     procedure PrepareForwarders(numForwarders: integer);
     procedure PrepareReaders(numReaders: integer);
     procedure PrepareTest(numForwarders, numReaders: integer);
+    procedure StartReaders;
+    procedure StartForwarders;
     procedure StopForwarders;
     procedure StopReaders;
     procedure StopWorkers;
@@ -68,6 +70,8 @@ const
   CCountThreadedTest = 1000000;
   CCountSingleTest   = 100000;
 
+  MSG_START = 42;
+
 var
   GForwardersCount: TGp4AlignedInt;
   GReadersCount   : TGp4AlignedInt;
@@ -79,11 +83,13 @@ var
 procedure ForwarderWorker(const task: IOmniTask);
 var
   chanColl: TOmniBaseQueue;
+  msg     : TOmniMessage;
   srcColl : TOmniBaseQueue;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
   value := task.ParamByName['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
+  Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopForwarders do
     while srcColl.TryDequeue(value) do begin
       chanColl.Enqueue(value);
@@ -98,10 +104,12 @@ procedure ReaderWorker(const task: IOmniTask);
 var
   chanColl: TOmniBaseQueue;
   dstColl : TOmniBaseQueue;
+  msg     : TOmniMessage;
   value   : TOmniValue;
 begin
   value := task.ParamByName['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
   value := task.ParamByName['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
+  Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopReaders do
     while chanColl.TryDequeue(value) do begin
       dstColl.Enqueue(value);
@@ -284,10 +292,29 @@ begin
   FNumWorkers.Value := numForwarders + numReaders;
   for i := 1 to CCountThreadedTest do
     FSrcCollection.Enqueue(i);
-  FStartTime := DSiTimeGetTime64;
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);
+  Sleep(500);
+  FStartTime := DSiTimeGetTime64;
+  StartReaders;
+  StartForwarders;
 end; { TfrmTestOtlCollections.PrepareTest }
+
+procedure TfrmTestOmniQueue.StartForwarders;
+var
+  iForwarder: integer;
+begin
+  for iForwarder := Low(FForwarders) to High(FForwarders) do
+    FForwarders[iForwarder].Comm.Send(MSG_START);
+end; { TfrmTestOmniQueue.StartForwarders }
+
+procedure TfrmTestOmniQueue.StartReaders;
+var
+  iReader: integer;
+begin
+  for iReader := Low(FReaders) to High(FReaders) do
+    FReaders[iReader].Comm.Send(MSG_START);
+end; { TfrmTestOmniQueue.StartReaders }
 
 procedure TfrmTestOmniQueue.StartTest(Sender: TObject);
 begin
