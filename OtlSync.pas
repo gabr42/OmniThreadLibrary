@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-02-03
-///   Version           : 1.03
+///   Last modification : 2010-02-04
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2010-02-04
+///       - Implemented CAS8 and CAS16.
 ///     1.03: 2010-02-03
 ///       - IOmniCancellationToken extended with the Clear method.
 ///     1.02: 2010-02-02
@@ -139,6 +141,8 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 
 // Intel Atomic functions support
+function CAS8(const oldValue, newValue: byte; var destination): boolean;
+function CAS16(const oldValue, newValue: word; var destination): boolean;
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
 function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
@@ -191,6 +195,18 @@ begin
   Result := TOmniCancellationToken.Create;
 end; { CreateOmniCancellationToken }
 
+function CAS8(const oldValue, newValue: byte; var destination): boolean;
+asm
+  lock cmpxchg byte ptr [destination], newValue
+  setz  al
+end; { CAS8 }
+
+function CAS16(const oldValue, newValue: word; var destination): boolean;
+asm
+  lock cmpxchg word ptr [destination], newValue
+  setz  al
+end; { CAS16 }
+
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean;
 //ATOMIC FUNCTION
 //begin
@@ -236,7 +252,7 @@ asm
   setz  al
   pop   ebx
   pop   edi
-end; { AtomicCmpXchg8b }
+end; { CAS64 }
 
 function GetThreadId: cardinal;
 //result := GetCurrentThreadId;
