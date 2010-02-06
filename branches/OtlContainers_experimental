@@ -1030,9 +1030,10 @@ end; { TOmniBaseQueue.ReleaseBlock }
 
 function TOmniBaseQueue.TryDequeue(var value: TOmniValue): boolean;
 var
-  head: POmniTaggedValue;
-  next: POmniTaggedValue;
-  tag : TOmniQueueTag;
+  head  : POmniTaggedValue;
+  header: POmniTaggedValue;
+  next  : POmniTaggedValue;
+  tag   : TOmniQueueTag;
 begin
   Result := true;
   EnterReader;
@@ -1054,6 +1055,7 @@ begin
     else
       DSiYield;
   until false;
+  LeaveReader;
   if Result then begin // dequeueing
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer); {$ENDIF}
     if tag = tagAllocated then begin
@@ -1078,18 +1080,15 @@ begin
         next^.Value.AsInterface._Release;
         next^.Value.RawZero;
       end;
-      // At this moment, another thread may still be dequeueing from one of the previous
-      // slots and memory should not yet be released! Even worse - another thread may be
-      // trying to *enqueue* somewhere inside the current memory block and we definitely
-      // don't want to recycle this memory block and allow that thread to succeed!
-      LeaveReader;
-      EnterWriter;
-      ReleaseBlock(head);
-      LeaveWriter;
-      Exit;
+    end;
+    header := head;
+    Dec(header, head^.Offset);
+    if InterlockedDecrement(PInteger(header)^) = 0 then begin
+      { TODO 1 -ogabr : pretty this up }
+      Inc(header, CCollNumSlots);
+      ReleaseBlock(header);
     end;
   end;
-  LeaveReader;
 end; { TOmniBaseQueue.TryDequeue }
 
 { initialization }
