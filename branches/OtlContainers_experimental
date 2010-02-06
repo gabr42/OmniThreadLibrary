@@ -261,8 +261,12 @@ uses
   SysUtils;
 
 const
-  CCollNumSlots = 4*1024;
-  CCollBlockSize = SizeOf(TOmniTaggedValue) * CCollNumSlots; //64 KB
+  {$IFDEF DEBUG_OMNI_QUEUE}
+  CCollBlockSize = 128 * SizeOf(TOmniTaggedValue);
+  {$ELSE}
+  CCollBlockSize = 64 * 1024;
+  {$ENDIF DEBUG_OMNI_QUEUE}
+  CCollNumSlots = CCollBlockSize div SizeOf(TOmniTaggedValue);
 
 { TOmniBaseBoundedStack }
 
@@ -1133,6 +1137,7 @@ begin
 end; { TOmniQueue.TryDequeue }
 
 initialization
+  Assert(CCollBlockSize mod SizeOf(TOmniTaggedValue) = 0);
   Assert(SizeOf(TOmniTaggedValue) = 16);
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   InitializeTimingInfo;
