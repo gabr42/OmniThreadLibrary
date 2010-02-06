@@ -212,9 +212,9 @@ type
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying, tagHeader);
 
   TOmniTaggedValue = packed record
-    Value   : TOmniValue;    //aligned for faster data access
+    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be 4-aligned
     Tag     : TOmniQueueTag;
-    Stuffing: word;
+    Offset  : word;
     function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;
   end; { TOmniTaggedValue }
   POmniTaggedValue = ^TOmniTaggedValue;
@@ -925,7 +925,8 @@ end; { TOmniBaseQueue.Destroy }
 function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
 var
   cached: POmniTaggedValue;
-  pEOL  : POmniTaggedValue;
+  iSlot : integer;
+  pSlot : POmniTaggedValue;
 begin
   cached := obcCachedBlock;
   if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
@@ -936,10 +937,14 @@ begin
     Result := AllocMem(CCollBlockSize);
   Assert(Ord(tagFree) = 0);
   Result^.Tag := tagHeader;
+  PInteger(Result)^ := CCollNumSlots - 1; // don't count the header
   Inc(Result);
-  pEOL := Result;
-  Inc(pEOL, CCollNumSlots - 2);
-  pEOL^.Tag := tagEndOfList;
+  pSlot := Result;
+  for iSlot := 1 to CCollNumSlots - 2 do begin
+    pSlot^.Offset := iSlot;
+    Inc(pSlot);
+  end;
+  pSlot^.Tag := tagEndOfList;
 end; { TOmniBaseQueue.AllocateBlock }
 
 procedure TOmniBaseQueue.Enqueue(const value: TOmniValue);
@@ -970,7 +975,6 @@ begin
   if tag = tagFree then begin // enqueueing
     Inc(obcTailPointer); // release the lock
     tail^.Value := value; // this works because the slot was initialized to zero when allocating
-    {$IFDEF DEBUG_OMNI_QUEUE} tail^.Stuffing := GetCurrentThreadID AND $FFFF; {$ENDIF}
     {$IFNDEF DEBUG_OMNI_QUEUE} tail^.Tag := tagAllocated; {$ELSE} Assert(tail^.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
   end
   else begin // allocating memory
