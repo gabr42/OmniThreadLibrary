@@ -209,8 +209,7 @@ type
   end; { TOmniBoundedQueue }
 
   TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving,
-    tagEndOfList, tagExtending, tagBlockPointer, tagDestroying
-    {$IFDEF DEBUG_OMNI_QUEUE}, tagStartOfList, tagSentinel{$ENDIF});
+    tagEndOfList, tagExtending, tagBlockPointer, tagDestroying);
 
   TOmniTaggedValue = packed record
     Value   : TOmniValue;    //aligned for faster data access
@@ -262,7 +261,7 @@ uses
   SysUtils;
 
 const
-  CCollNumSlots = 4*1024 {$IFDEF DEBUG_OMNI_QUEUE} - 3 {$ENDIF};
+  CCollNumSlots = 4*1024;
   CCollBlockSize = SizeOf(TOmniTaggedValue) * CCollNumSlots; //64 KB
 
 { TOmniBaseBoundedStack }
@@ -927,22 +926,11 @@ begin
   cached := obcCachedBlock;
   if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
     Result := cached;
-    ZeroMemory(Result, CCollBlockSize {$IFDEF DEBUG_OMNI_QUEUE} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
+    ZeroMemory(Result, CCollBlockSize);
   end
   else
-    Result := AllocMem(CCollBlockSize {$IFDEF DEBUG_OMNI_QUEUE} + 3*SizeOf(TOmniTaggedValue){$ENDIF});
+    Result := AllocMem(CCollBlockSize);
   Assert(Ord(tagFree) = 0);
-  {$IFDEF DEBUG_OMNI_QUEUE}
-  Assert(Result^.Tag = tagFree);
-  Result^.Tag := tagSentinel;
-  Inc(Result);
-  Assert(Result^.Tag = tagFree);
-  Result^.Tag := tagStartOfList;
-  Inc(Result, CCollNumSlots + 1);
-  Assert(Result^.Tag = tagFree);
-  Result^.Tag := tagSentinel;
-  Dec(Result, CCollNumSlots);
-  {$ENDIF}
   pEOL := Result;
   Inc(pEOL, CCollNumSlots - 1);
   {$IFDEF DEBUG_OMNI_QUEUE} Assert(Result^.Tag = tagFree); {$ENDIF}
@@ -985,11 +973,6 @@ begin
     Inc(extension);             // skip allocated slot
     obcTailPointer := extension; // release the lock
     Dec(extension);
-    {$IFDEF DEBUG_OMNI_QUEUE} // create backlink
-    Dec(extension);
-    extension^.Value.AsPointer := tail;
-    Inc(extension);
-    {$ENDIF}
     {$IFNDEF DEBUG_OMNI_QUEUE} extension^.Tag := tagAllocated; {$ELSE} Assert(extension^.CASTag(tagFree, tagAllocated)); {$ENDIF}
     extension^.Value := value;  // this works because the slot was initialized to zero when allocating
     tail^.Value := extension;
@@ -1030,18 +1013,7 @@ end; { TOmniBaseQueue.LeaveWriter }
 
 procedure TOmniBaseQueue.ReleaseBlock(lastSlot: POmniTaggedValue; forceFree: boolean);
 begin
-  {$IFDEF DEBUG_OMNI_QUEUE}
-  Inc(lastSlot);
-  Assert(lastSlot^.Tag = tagSentinel);
-  Dec(lastSlot);
-  {$ENDIF}
   Dec(lastSlot, CCollNumSlots - 1);
-  {$IFDEF DEBUG_OMNI_QUEUE}
-  Dec(lastSlot);
-  Assert(lastSlot^.Tag = tagStartOfList);
-  Dec(lastSlot);
-  Assert(lastSlot^.Tag = tagSentinel);
-  {$ENDIF};
   if forceFree or assigned(obcCachedBlock) or (not CAS32(nil, lastSlot, obcCachedBlock)) then
     FreeMem(lastSlot);
 end; { TOmniBaseQueue.ReleaseBlock }
@@ -1157,10 +1129,8 @@ begin
 end; { TOmniQueue.TryDequeue }
 
 initialization
-  Assert(SizeOf(TOmniValue) = 13);
   Assert(SizeOf(TOmniTaggedValue) = 16);
   Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Assert(CCollBlockSize = (65536 {$IFDEF DEBUG_OMNI_QUEUE} - 3*SizeOf(TOmniTaggedValue){$ENDIF}));
   InitializeTimingInfo;
 end.
 
