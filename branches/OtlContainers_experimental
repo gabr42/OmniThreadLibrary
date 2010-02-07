@@ -231,12 +231,18 @@ type
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
   TOmniBaseQueue = class
   strict private // keep 4-aligned
-    obcCachedBlock: POmniTaggedValue;
     obcHeadPointer: TOmniTaggedPointer;
     obcTailPointer: TOmniTaggedPointer;
+    obcMemCache   : TOmniBaseBoundedStack;
+  strict protected
+    {$IFDEF DEBUG_OMNI_QUEUE}
+    procedure Assert(condition: boolean);
+    {$ENDIF DEBUG_OMNI_QUEUE}
   strict protected
     function  AllocateBlock: POmniTaggedValue;
     function  NextSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
+    procedure PartitionMemory(memory: POmniTaggedValue);
+    procedure PreallocateMemory;
     function  PrevSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
     procedure ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean = false);
   public
@@ -902,11 +908,14 @@ end; { TOmniTaggedPointer.CAS }
 { TOmniBaseQueue }
 
 constructor TOmniBaseQueue.Create;
+var
+  cachedBlock: POmniTaggedValue;
 begin
   inherited;
+  obcMemCache := TOmniBaseBoundedStack.Create;
+  obcMemCache.Initialize(2, SizeOf(POmniTaggedValue));
   Assert(cardinal(@obcHeadPointer) mod 4 = 0);
   Assert(cardinal(@obcTailPointer) mod 4 = 0);
-  Assert(cardinal(obcCachedBlock) mod 4 = 0);
   obcHeadPointer.Slot := NextSlot(AllocateBlock); //point to the sentinel
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
@@ -918,6 +927,8 @@ begin
   {$IFDEF DEBUG_OMNI_QUEUE}
   Assert(obcTailPointer.Tag = tagFree);
   {$ENDIF DEBUG_OMNI_QUEUE}
+  cachedBlock := AllocateBlock;
+  obcMemCache.Push(cachedBlock);
 end; { TOmniBaseQueue.Create }
 
 function TOmniBaseQueue.Dequeue: TOmniValue;
@@ -947,39 +958,27 @@ begin
       Inc(pSlot);
     end;
   end;
-  if assigned(obcCachedBlock) then
-    FreeMem(obcCachedBlock);
+  while obcMemCache.Pop(pBlock) do
+    FreeMem(pBlock);
+  FreeAndNil(obcMemCache);
   inherited;
 end; { TOmniBaseQueue.Destroy }
 
 function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
-var
-  cached: POmniTaggedValue;
-  iSlot : integer;
-  pSlot : POmniTaggedValue;
 begin
-  cached := obcCachedBlock;
-  if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
-    Result := cached;
-    ZeroMemory(Result, CCollBlockSize);
-  end
-  else
+  if not obcMemCache.Pop(Result) then begin
     Result := AllocMem(CCollBlockSize);
-  Assert(Ord(tagFree) = 0);
-  Result.Tag := tagHeader;
-  PInteger(Result)^ := CCollNumSlots - 1; // don't count the header
-  pSlot := Result;
-  Inc(pSlot);
-  pSlot.Tag := tagSentinel;
-  pSlot.Offset := 1;
-  Inc(pSlot);
-  for iSlot := 2 to CCollNumSlots - 2 do begin
-    pSlot.Offset := iSlot;
-    Inc(pSlot);
+    PartitionMemory(Result);
   end;
-  pSlot.Tag := tagEndOfList;
-  pSlot.Offset := CCollNumSlots - 1;
 end; { TOmniBaseQueue.AllocateBlock }
+
+{$IFDEF DEBUG_OMNI_QUEUE}
+procedure TOmniBaseQueue.Assert(condition: boolean);
+begin
+  if not condition then
+    asm int 3; end;
+end; { TOmniBaseQueue.Assert }
+{$ENDIF DEBUG_OMNI_QUEUE}
 
 procedure TOmniBaseQueue.Enqueue(const value: TOmniValue);
 var
@@ -1030,7 +1029,7 @@ begin
     tail.Tag := tagBlockPointer; {$ELSE} Assert(tail.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
     Inc(extension, 2); // get to the first free slot
     Assert(obcTailPointer.CAS(tail, tagExtending, extension, extension.Tag)); // release the lock
-    { TODO 5 -ogabr : Now may be good time to preallocate another block }
+    PreallocateMemory;
   end;
 end; { TOmniBaseQueue.Enqueue }
 
@@ -1039,6 +1038,37 @@ begin
   Result := slot;
   Inc(Result);
 end; { TOmniBaseQueue.NextSlot }
+
+procedure TOmniBaseQueue.PartitionMemory(memory: POmniTaggedValue);
+var
+  iSlot: integer;
+begin
+  Assert(Ord(tagFree) = 0);
+  memory.Tag := tagHeader;
+  PInteger(memory)^ := CCollNumSlots - 1; // don't count the header
+  Inc(memory);
+  memory.Tag := tagSentinel;
+  memory.Offset := 1;
+  Inc(memory);
+  for iSlot := 2 to CCollNumSlots - 2 do begin
+    memory.Offset := iSlot;
+    Inc(memory);
+  end;
+  memory.Tag := tagEndOfList;
+  memory.Offset := CCollNumSlots - 1;
+end; { TOmniBaseQueue.PartitionMemory }
+
+procedure TOmniBaseQueue.PreallocateMemory;
+var
+  memory: POmniTaggedValue;
+begin
+  if not obcMemCache.IsFull then begin
+    memory := AllocMem(CCollBlockSize);
+    PartitionMemory(memory);
+    if not obcMemCache.Push(memory) then
+      FreeMem(memory);
+  end;
+end; { TOmniBaseQueue.PreallocateMemory }
 
 function TOmniBaseQueue.PrevSlot(slot: POmniTaggedValue): POmniTaggedValue;
 begin
@@ -1049,8 +1079,14 @@ end; { TOmniBaseQueue.PrevSlot }
 procedure TOmniBaseQueue.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
 begin
   {$IFDEF DEBUG_OMNI_QUEUE}Assert(firstSlot.Tag = tagHeader);{$ENDIF DEBUG_OMNI_QUEUE}
-  if forceFree or assigned(obcCachedBlock) or (not CAS32(nil, firstSlot, obcCachedBlock)) then
-    FreeMem(firstSlot);
+  if forceFree or (not obcMemCache.IsEmpty) then
+    FreeMem(firstSlot)
+  else begin
+    ZeroMemory(firstSlot, CCollBlockSize);
+    PartitionMemory(firstSlot);
+    if not obcMemCache.Push(firstSlot) then
+      FreeMem(firstSlot);
+  end;
 end; { TOmniBaseQueue.ReleaseBlock }
 
 function TOmniBaseQueue.TryDequeue(var value: TOmniValue): boolean;
