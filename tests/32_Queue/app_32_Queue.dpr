@@ -1,7 +1,6 @@
 program app_32_Queue;
 
 uses
-  FastMM4,
   Forms,
   test_32_Queue in 'test_32_Queue.pas' {frmTestOmniQueue};
 

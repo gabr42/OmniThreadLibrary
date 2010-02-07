@@ -38,7 +38,7 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
-			<DCC_Define>DEBUG;FullDebugMode;ShowThreadNames;DEBUG_OMNI_QUEUE;$(DCC_Define)</DCC_Define>
+			<DCC_Define>DEBUG;xFullDebugMode;ShowThreadNames;DEBUG_OMNI_QUEUE;$(DCC_Define)</DCC_Define>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_ObjPath)</DCC_ObjPath>
