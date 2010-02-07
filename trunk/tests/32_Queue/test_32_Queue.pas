@@ -28,7 +28,6 @@ type
     btnTestIntf     : TButton;
     cbRepeat        : TCheckBox;
     lbLog           : TListBox;
-    OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
@@ -147,6 +146,7 @@ begin
   time := DSiTimeGetTime64;
   coll := CreateCollection;
   try
+{ TODO 1 -ogabr : testing, remove }
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
         coll.Enqueue(i);
@@ -256,9 +256,9 @@ begin
   for iForwarder := Low(FForwarders) to High(FForwarders) do begin
     FForwarders[iForwarder] :=
       CreateTask(ForwarderWorker, Format('Forwarder %d', [iForwarder]))
+      .OnTerminated(OtlMonitorTaskTerminated)
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
-      .MonitorWith(OtlMonitor)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareForwarders }
@@ -271,9 +271,9 @@ begin
   for iReader := Low(FReaders) to High(FReaders) do begin
     FReaders[iReader] :=
       CreateTask(ReaderWorker, Format('Reader %d', [iReader]))
+      .OnTerminated(OtlMonitorTaskTerminated)
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
-      .MonitorWith(OtlMonitor)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareReaders }

@@ -134,9 +134,4 @@ object frmTestOmniQueue: TfrmTestOmniQueue
     TabOrder = 11
     OnClick = btn7to1Click
   end
-  object OtlMonitor: TOmniEventMonitor
-    OnTaskTerminated = OtlMonitorTaskTerminated
-    Left = 224
-    Top = 8
-  end
 end
