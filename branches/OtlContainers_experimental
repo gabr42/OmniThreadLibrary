@@ -210,7 +210,7 @@ type
 
   TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving,
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying, tagHeader,
-    tagSentinel, tagInvalid);
+    tagSentinel);
 
   TOmniTaggedValue = packed record
     Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be 4-aligned
@@ -907,14 +907,17 @@ begin
   Assert(cardinal(@obcHeadPointer) mod 4 = 0);
   Assert(cardinal(@obcTailPointer) mod 4 = 0);
   Assert(cardinal(obcCachedBlock) mod 4 = 0);
-  obcHeadPointer.Slot := NextSlot(NextSlot(AllocateBlock)); //point to the first data slot
+  obcHeadPointer.Slot := NextSlot(AllocateBlock); //point to the sentinel
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
-  Assert(obcHeadPointer.Tag = tagFree);
-  Assert(PrevSlot(obcHeadPointer.Slot).Tag = tagSentinel);
-  Assert(PrevSlot(PrevSlot(obcHeadPointer.Slot)).Tag = tagHeader);
+  Assert(obcHeadPointer.Tag = tagSentinel);
+  Assert(PrevSlot(obcHeadPointer.Slot).Tag = tagHeader);
   {$ENDIF DEBUG_OMNI_QUEUE}
-  obcTailPointer := obcHeadPointer;
+  obcTailPointer.Slot := NextSlot(obcHeadPointer.Slot);
+  obcTailPointer.Tag := obcTailPointer.Slot.Tag;
+  {$IFDEF DEBUG_OMNI_QUEUE}
+  Assert(obcTailPointer.Tag = tagFree);
+  {$ENDIF DEBUG_OMNI_QUEUE}
 end; { TOmniBaseQueue.Create }
 
 function TOmniBaseQueue.Dequeue: TOmniValue;
@@ -985,7 +988,7 @@ var
   tag      : TOmniQueueTag;
   tail     : POmniTaggedValue;
 begin
-  {$IFDEF DEBUG_OMNI_QUEUE} tag := tagInvalid; {$ENDIF} // to keep compiler happy
+  {$IFDEF DEBUG_OMNI_QUEUE} tag := tagSentinel; {$ENDIF} // to keep compiler happy
   repeat
     tail := obcTailPointer.Slot;
     if (obcTailPointer.Tag = tagFree)
@@ -1059,7 +1062,7 @@ var
   tag          : TOmniQueueTag;
 begin
   {$IFDEF DEBUG_OMNI_QUEUE} head := nil; caughtTheTail := false; {$ENDIF} // to keep compiler happy
-  tag := tagInvalid;
+  tag := tagSentinel;
   Result := true;
   while Result and (tag = tagSentinel) do begin
     repeat
@@ -1112,7 +1115,7 @@ begin
           end;
         end;
         if caughtTheTail then begin
-          Assert(obcHeadPointer.CAS(head, tagRemoving, next, tagSentinel)); // release the lock
+          Assert(obcHeadPointer.CAS(head, tagRemoving, head, tagSentinel)); // release the lock; as this is the last element, don't move forward
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
@@ -1121,7 +1124,7 @@ begin
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
         next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
-        {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagHeader); {$ENDIF}
+        {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
         Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel));
         tag := tagSentinel; // retry
       end;
