@@ -1079,16 +1079,16 @@ begin
         head.Tag := tagRemoving;
         break; //repeat
       end
-      else if (obcHeadPointer.Tag = tagSentinel)
-              and obcHeadPointer.CAS(head, tagSentinel, head, tagRemoving) then
-      begin
-        if caughtTheTail then
-          Result := false
-        else begin
+      else if (obcHeadPointer.Tag = tagSentinel) then begin
+        if caughtTheTail then begin
+          Result := false;
+          break; //repeat
+        end
+        else if obcHeadPointer.CAS(head, tagSentinel, head, tagRemoving) then begin
           tag := tagSentinel;
           head.Tag := tagRemoving;
-        end;
-        break; //repeat
+          break; //repeat
+        end
       end
       else if (obcHeadPointer.Tag = tagBlockPointer)
               and obcHeadPointer.CAS(head, tagBlockPointer, head, tagDestroying) then
