@@ -146,7 +146,6 @@ begin
   time := DSiTimeGetTime64;
   coll := CreateCollection;
   try
-{ TODO 1 -ogabr : testing, remove }
     for loop := 1 to 10 do begin
       for i := 1 to CCountSingleTest do
         coll.Enqueue(i);
