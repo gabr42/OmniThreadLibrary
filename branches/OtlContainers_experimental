@@ -210,7 +210,7 @@ type
 
   TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving,
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying, tagHeader,
-    tagSentinel {$IFDEF DEBUG_OMNI_QUEUE}, tagInvalid{$ENDIF});
+    tagSentinel, tagInvalid);
 
   TOmniTaggedValue = packed record
     Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be 4-aligned
@@ -907,11 +907,12 @@ begin
   Assert(cardinal(@obcHeadPointer) mod 4 = 0);
   Assert(cardinal(@obcTailPointer) mod 4 = 0);
   Assert(cardinal(obcCachedBlock) mod 4 = 0);
-  obcHeadPointer.Slot := AllocateBlock;
+  obcHeadPointer.Slot := NextSlot(NextSlot(AllocateBlock)); //point to the first data slot
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
   Assert(obcHeadPointer.Tag = tagFree);
-  Assert(PrevSlot(obcHeadPointer.Slot).Tag = tagHeader);
+  Assert(PrevSlot(obcHeadPointer.Slot).Tag = tagSentinel);
+  Assert(PrevSlot(PrevSlot(obcHeadPointer.Slot)).Tag = tagHeader);
   {$ENDIF DEBUG_OMNI_QUEUE}
   obcTailPointer := obcHeadPointer;
 end; { TOmniBaseQueue.Create }
@@ -1050,8 +1051,6 @@ begin
 end; { TOmniBaseQueue.ReleaseBlock }
 
 function TOmniBaseQueue.TryDequeue(var value: TOmniValue): boolean;
-label
-  retry;
 var
   caughtTheTail: boolean;
   head         : POmniTaggedValue;
@@ -1059,77 +1058,77 @@ var
   next         : POmniTaggedValue;
   tag          : TOmniQueueTag;
 begin
-  {$IFDEF DEBUG_OMNI_QUEUE} head := nil; tag := tagInvalid; caughtTheTail := false; {$ENDIF} // to keep compiler happy
-retry:
+  {$IFDEF DEBUG_OMNI_QUEUE} head := nil; caughtTheTail := false; {$ENDIF} // to keep compiler happy
+  tag := tagInvalid;
   Result := true;
-  repeat
-    if obcHeadPointer.Tag = tagFree then begin
-      Result := false;
-      break; //repeat
-    end;
-    head := obcHeadPointer.Slot;
-    caughtTheTail := NextSlot(obcHeadPointer.Slot) = obcTailPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
-    if (obcHeadPointer.Tag = tagAllocated)
-       and obcHeadPointer.CAS(head, tagAllocated, head, tagRemoving) then
-    begin
-      tag := tagAllocated;
-      head.Tag := tagRemoving;
-      break; //repeat
-    end
-    else if (obcHeadPointer.Tag = tagSentinel)
-            and obcHeadPointer.CAS(head, tagSentinel, head, tagRemoving) then
-    begin
-      if caughtTheTail then
-        Result := false
-      else begin
-        tag := tagSentinel;
+  while Result and (tag = tagSentinel) do begin
+    repeat
+      if obcHeadPointer.Tag = tagFree then begin
+        Result := false;
+        break; //repeat
+      end;
+      head := obcHeadPointer.Slot;
+      caughtTheTail := NextSlot(obcHeadPointer.Slot) = obcTailPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
+      if (obcHeadPointer.Tag = tagAllocated)
+         and obcHeadPointer.CAS(head, tagAllocated, head, tagRemoving) then
+      begin
+        tag := tagAllocated;
         head.Tag := tagRemoving;
-      end;
-      break; //repeat
-    end
-    else if (obcHeadPointer.Tag = tagBlockPointer)
-            and obcHeadPointer.CAS(head, tagBlockPointer, head, tagDestroying) then
-    begin
-      tag := tagBlockPointer;
-      head.Tag := tagDestroying;
-      break; //repeat
-    end
-    else
-      DSiYield;
-  until false;
-  if Result then begin // dequeueing
-    {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
-    header := head;
-    Dec(header, header.Offset);
-    {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
-    if tag in [tagSentinel, tagAllocated] then begin
-      next := NextSlot(head);
-      if tag <> tagSentinel then begin // sentinel doesn't contain any useful value
-        value := head.Value;
-        if value.IsInterface then begin
-          head.Value.AsInterface._Release;
-          head.Value.RawZero;
+        break; //repeat
+      end
+      else if (obcHeadPointer.Tag = tagSentinel)
+              and obcHeadPointer.CAS(head, tagSentinel, head, tagRemoving) then
+      begin
+        if caughtTheTail then
+          Result := false
+        else begin
+          tag := tagSentinel;
+          head.Tag := tagRemoving;
         end;
-      end;
-      if caughtTheTail then begin
-        Assert(obcHeadPointer.CAS(head, tagRemoving, next, tagSentinel)); // release the lock
-        header := nil; // do NOT decrement the counter; this slot will be retagged again
+        break; //repeat
+      end
+      else if (obcHeadPointer.Tag = tagBlockPointer)
+              and obcHeadPointer.CAS(head, tagBlockPointer, head, tagDestroying) then
+      begin
+        tag := tagBlockPointer;
+        head.Tag := tagDestroying;
+        break; //repeat
       end
       else
-        Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); // release the lock
-    end
-    else begin // releasing memory
-      {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
-      next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
-      {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagHeader); {$ENDIF}
-      Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel));
-      tag := tagSentinel; // retry
+        DSiYield;
+    until false;
+    if Result then begin // dequeueing
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
+      header := head;
+      Dec(header, header.Offset);
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
+      if tag in [tagSentinel, tagAllocated] then begin
+        next := NextSlot(head);
+        if tag <> tagSentinel then begin // sentinel doesn't contain any useful value
+          value := head.Value;
+          if value.IsInterface then begin
+            head.Value.AsInterface._Release;
+            head.Value.RawZero;
+          end;
+        end;
+        if caughtTheTail then begin
+          Assert(obcHeadPointer.CAS(head, tagRemoving, next, tagSentinel)); // release the lock
+          header := nil; // do NOT decrement the counter; this slot will be retagged again
+        end
+        else
+          Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); // release the lock
+      end
+      else begin // releasing memory
+        {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
+        next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
+        {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagHeader); {$ENDIF}
+        Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel));
+        tag := tagSentinel; // retry
+      end;
+      if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then
+        ReleaseBlock(header);
     end;
-    if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then
-      ReleaseBlock(header);
-    if tag = tagSentinel then
-      goto retry;
-  end;
+  end; //while Result and (tag = tagSentinel)
 end; { TOmniBaseQueue.TryDequeue }
 
 { initialization }
