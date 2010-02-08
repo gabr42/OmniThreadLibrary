@@ -856,7 +856,7 @@ slot contains:
 TOmniValues are 4-aligned
 
 block is initialized to:
-[tagHeader, num blocks, 0] [tagSentinel, 0, 1] [tagFree 0, 2] .. [tagFree, 0, numBlocks-2] [tagEndOfList, 0, numBlocks-1]
+[tagHeader, num slots - 1, 0] [tagSentinel, 0, 1] [tagFree 0, 2] .. [tagFree, 0, num slots - 2] [tagEndOfList, 0, num slots - 1]
 
 Enqueue:
   repeat
