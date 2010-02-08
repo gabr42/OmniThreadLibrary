@@ -828,12 +828,6 @@ end; { TOmniBoundedQueue.Enqueue }
 TOmniQueue
 ===============
 
-slot contains:
-  tag = 1 byte
-  2 bytes left empty
-  TOmniValue = 13 bytes
-tags are 4-aligned
-
 tags:
   tagFree
   tagAllocating
@@ -843,52 +837,93 @@ tags:
   tagExtending
   tagBlockPointer
   tagDestroying
+  tagHeader
+  tagSentinel
+
+header contains:
+  head
+    slot = 4 bytes
+    tag  = 4 bytes
+  tail
+    slot = 4 bytes
+    tag  = 4 bytes
+all are 4-aligned
+
+slot contains:
+  TOmniValue = 13 bytes
+  tag        = 1 byte
+  offset     = 2 bytes
+TOmniValues are 4-aligned
+
+block is initialized to:
+[tagHeader, num blocks, 0] [tagSentinel, 0, 1] [tagFree 0, 2] .. [tagFree, 0, numBlocks-2] [tagEndOfList, 0, numBlocks-1]
 
 Enqueue:
-  readlock GC
   repeat
-    fetch tag from current tail
-    if tag = tagFree and CAS(tag, tagAllocating) then
-      break
-    if tag = tagEndOfList and CAS(tag, tagExtending) then
-      break
-    yield
+      tail = header.tail.slot
+      old_tag = header.tail.tag
+      if header.tail.CAS(tail, tagFree, tail, tagAllocating) then
+          tail.tag = tagAllocating
+          break
+      else if header.tail.CAS(tail, tagEndOfList, tail, tagExtending) then
+          tail.tag = tagExtending
+          break
+      else
+          yield
   forever
-  if tag = tagFree then
-    increment tail
-    store (tagAllocated, value) into locked slot
+  if old_tag = tagFree then
+      store <value, tagAllocated> into slot
+      header.tail.CAS(tail, tagAllocating, NextSlot(tail), NextSlot(tail).tag)
   else
-    allocate and initialize new block
-      last entry has tagEndOfList tag, others have tagFree
-    set tail to new block's slot 1
-    store (tagAllocated, value) into new block's slot 0
-    store (tagBlockPointer, pointer to new block) into locked slot
-  leave GC
+      allocate block // from cache, if possible
+      next = second data slot in the new block
+      set next to <tagAllocated, value>
+      set last slot in the original block to <new block address, tagBlockPointer>
+      header.tail.CAS(tail, tagExtending, next, next.tag)
+      // queue is now unlocked
+      preallocate block
 
 Dequeue:
-  readlock GC
   repeat
-    fetch tag from current head
-    if tag = tagFree then
-      return Empty
-    if tag = tagAllocated and CAS(tag, tagRemoving) then
-      break
-    if tag = tagBlockPointer and CAS(tag, tagDestroying) then
-    yield
+      if header.head.tag = tagFree then
+          return false
+      head = header.head.slot
+      old_tag = header.head.tag
+      caughtTheTail := NextSlot(header.head.slot) = header.tail.slot;
+      if head.head.CAS(head, tagAllocated, head, tagRemoving) then
+          head.tag = tagRemovings
+          break
+      else if header.head.Tag = tagSentinel then
+          if caughtTheTail then
+              return false
+          else if header.head.CAS(head, tagSentinel, head, tagRemoving) then
+              head.tag = tagRemoving
+              break
+      else if header.head.CAS(head, tagBlockPointer, head, tagDestrogin) then
+          head.tag = tagDestroying
+          break
+      else
+          yield
   forever
-  if tag = tagAllocated then
-    increment head
-    get value
+  firstSlot = head - head.Offset // point to first slot
+  if old_tag in [tagSentinel, tagAllocated] then
+      next = NextSlot(head)
+      if tag = tagAllocated then
+          fetch stored value
+      if caughtTheTail then
+          header.head.CAS(head, tagRemoving, head, tagSentinel)
+          firstSlot = nil // do not decrement the header counter
+      else
+          header.head.CAS(head, tagRemoving, next, next.tag)
   else
-    set head to new block's slot 1
-    get value
-    leave GC
-    writelock GC
-    release original block
-    leave GC
-    exit
-
-  leave GC
+      next = head.value // points to the next block's sentinel
+      header.head.CAS(head, tagDestroying, next, tagSentinel)
+      old_tag = tagSentinel // force retry
+  // queue is now unlocked
+  if assigned(firstSlot) and (InterlockedDecrement(firstSlot.value) = 0) then
+      release block
+  if old_tag = tagSentinel
+      retry from beginning
 *)
 
 { TOmniTaggedValue }
@@ -1163,7 +1198,7 @@ begin
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
       if tag in [tagSentinel, tagAllocated] then begin
         next := NextSlot(head);
-        if tag <> tagSentinel then begin // sentinel doesn't contain any useful value
+        if tag = tagAllocated then begin // sentinel doesn't contain any useful value
           value := head.Value;
           if value.IsInterface then begin
             head.Value.AsInterface._Release;
