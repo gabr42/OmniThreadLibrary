@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Contnrs,
+  Dialogs, StdCtrls, ExtCtrls, Contnrs, Spin,
   DSiWin32,
   GpLists,
   GpStuff,
@@ -12,8 +12,7 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlContainers,
-  OtlEventMonitor;
+  OtlContainers;
 
 type
   TfrmTestOmniQueue = class(TForm)
@@ -27,16 +26,23 @@ type
     btnTest         : TButton;
     btnTestIntf     : TButton;
     cbRepeat        : TCheckBox;
+    inpBlockSize    : TEdit;
+    lblBlockSize    : TLabel;
     lbLog           : TListBox;
     rgCollectionType: TRadioGroup;
+    spinBlockSize   : TSpinButton;
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure FormCreate(Sender: TObject);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
+    procedure spinBlockSizeDownClick(Sender: TObject);
+    procedure spinBlockSizeUpClick(Sender: TObject);
     procedure StartTest(Sender: TObject);
   private
+    FBlockSize     : integer;
     FChanCollection: TOmniBaseQueue;
     FDstCollection : TOmniBaseQueue;
     FForwarders    : array of IOmniTaskControl;
@@ -45,13 +51,14 @@ type
     FSrcCollection : TOmniBaseQueue;
     FStartTime     : int64;
     procedure CheckResult;
+    procedure DisplayParameters;
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const params: array of const); overload;
     procedure PrepareForwarders(numForwarders: integer);
     procedure PrepareReaders(numReaders: integer);
     procedure PrepareTest(numForwarders, numReaders: integer);
-    procedure StartReaders;
     procedure StartForwarders;
+    procedure StartReaders;
     procedure StopForwarders;
     procedure StopReaders;
     procedure StopWorkers;
@@ -214,15 +221,29 @@ end; { TfrmTestOtlCollections.CheckResult }
 function TfrmTestOmniQueue.CreateCollection: TOmniBaseQueue;
 begin
   if rgCollectionType.ItemIndex = 0 then
-    Result := TOmniBaseQueue.Create
+    Result := TOmniBaseQueue.Create(FBlockSize*1024)
   else
-    Result := TOmniQueue.Create;
+    Result := TOmniQueue.Create(FBlockSize*1024);
 end; { TfrmTestOtlCollections.CreateCollection }
+
+procedure TfrmTestOmniQueue.DisplayParameters;
+begin
+  if FBlockSize >= 1024 then
+    inpBlockSize.Text := Format('%d MB', [FBlockSize div 1024])
+  else
+    inpBlockSize.Text := Format('%d KB', [FBlockSize]);
+end; { TfrmTestOmniQueue.DisplayParameters }
 
 procedure TfrmTestOmniQueue.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   StopWorkers;
 end; { TfrmTestOtlCollections.FormCloseQuery }
+
+procedure TfrmTestOmniQueue.FormCreate(Sender: TObject);
+begin
+  FBlockSize := 64;
+  DisplayParameters;
+end; { TfrmTestOmniQueue.FormCreate }
 
 procedure TfrmTestOmniQueue.Log(const msg: string);
 begin
@@ -303,6 +324,20 @@ begin
   StartReaders;
   StartForwarders;
 end; { TfrmTestOtlCollections.PrepareTest }
+
+procedure TfrmTestOmniQueue.spinBlockSizeDownClick(Sender: TObject);
+begin
+  if FBlockSize > 1 then
+    FBlockSize := FBlockSize div 2;
+  DisplayParameters;
+end; { TfrmTestOmniQueue.spinBlockSizeDownClick }
+
+procedure TfrmTestOmniQueue.spinBlockSizeUpClick(Sender: TObject);
+begin
+  if FBlockSize < 1024 then
+    FBlockSize := FBlockSize * 2;
+  DisplayParameters;
+end; { TfrmTestOmniQueue.spinBlockSizeUpClick }
 
 procedure TfrmTestOmniQueue.StartForwarders;
 var
