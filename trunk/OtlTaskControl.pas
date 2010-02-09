@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-03
-///   Version           : 1.19
+///   Last modification : 2010-02-09
+///   Version           : 1.20
 ///</para><para>
 ///   History:
+///     1.20: 2010-02-09
+///       - Added IOmniTaskControl.OnMessage(msgID, handler).
 ///     1.19: 2010-02-03
 ///       - IOmniTaskControl and IOmniTask implement CancellationToken property.
 ///     1.18: 2010-02-02
@@ -225,12 +227,32 @@ type
 
   IOmniTaskGroup = interface;
 
-  TOmniTaskTerminatedEvent = procedure(const task: IOmniTaskControl) of object;
   TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
+  TOmniTaskTerminatedEvent = procedure(const task: IOmniTaskControl) of object;
 {$IFDEF OTL_Anonymous}
   TOmniOnMessageFunction = reference to procedure(const task: IOmniTaskControl; const msg: TOmniMessage);
   TOmniOnTerminatedFunction = reference to procedure(const task: IOmniTaskControl);
 {$ENDIF OTL_Anonymous}
+
+  TOmniMessageExec = class
+  strict private
+    omeOnMessage   : TOmniExecutable;
+    omeOnTerminated: TOmniExecutable;
+  public
+    procedure SetOnMessage(exec: TOmniTaskMessageEvent); overload;
+    procedure SetOnTerminated(exec: TOmniTaskTerminatedEvent); overload;
+    procedure OnMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
+    procedure OnTerminated(const task: IOmniTaskControl);
+  public
+    constructor Create(exec: TOmniTaskMessageEvent); overload;
+    constructor Create(exec: TOmniTaskTerminatedEvent); overload;
+    {$IFDEF OTL_Anonymous}
+    constructor Create(exec: TOmniOnMessageFunction); overload;
+    constructor Create(exec: TOmniOnTerminatedFunction); overload;
+    procedure SetOnMessage(exec: TOmniOnMessageFunction); overload;
+    procedure SetOnTerminated(exec: TOmniOnTerminatedFunction); overload;
+    {$ENDIF OTL_Anonymous}
+  end; { TOmniMessageExec }
 
   IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetCancellationToken: IOmniCancellationToken;
@@ -257,9 +279,11 @@ type
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     {$IFDEF OTL_Anonymous}
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
     function  RemoveMonitor: IOmniTaskControl;
@@ -650,23 +674,19 @@ type
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
   strict private
-    {$IFDEF OTL_Anonymous}
-    otcOnMessageRef   : TOmniOnMessageFunction;
-    otcOnTerminatedRef: TOmniOnTerminatedFunction;
-    {$ENDIF OTL_Anonymous}
-  strict private
-    otcDestroyLock    : boolean;
-    otcEventMonitor   : TObject{TOmniEventMonitor};
-    otcExecutor       : TOmniTaskExecutor;
-    otcOnMessage      : TOmniTaskMessageEvent;
-    otcOnTerminated   : TOmniTaskTerminatedEvent;
-    otcOwningPool     : IOmniThreadPool;
-    otcParameters     : TOmniValueContainer;
-    otcQueueLength    : integer;
-    otcSharedInfo     : TOmniSharedTaskInfo;
-    otcTerminateTokens: TInterfaceList;
-    otcThread         : TOmniThread;
-    otcUserData       : TOmniValueContainer;
+    otcDestroyLock     : boolean;
+    otcEventMonitor    : TObject{TOmniEventMonitor};
+    otcExecutor        : TOmniTaskExecutor;
+    otcOnMessageExec   : TOmniMessageExec;
+    otcOnMessageList   : TGpIntegerObjectList;
+    otcOnTerminatedExec: TOmniMessageExec;
+    otcOwningPool      : IOmniThreadPool;
+    otcParameters      : TOmniValueContainer;
+    otcQueueLength     : integer;
+    otcSharedInfo      : TOmniSharedTaskInfo;
+    otcTerminateTokens : TInterfaceList;
+    otcThread          : TOmniThread;
+    otcUserData        : TOmniValueContainer;
   strict protected
     procedure CreateInternalMonitor;
     function  CreateTask: IOmniTask;
@@ -676,7 +696,7 @@ type
   protected
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
-    function GetCancellationToken: IOmniCancellationToken;
+    function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
@@ -695,6 +715,7 @@ type
     {$IFDEF OTL_Anonymous}
     constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
   public
@@ -716,6 +737,7 @@ type
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
@@ -2016,6 +2038,9 @@ begin
   FreeAndNil(otcSharedInfo);
   FreeAndNil(otcUserData);
   FreeAndNil(otcTerminateTokens);
+  FreeAndNil(otcOnMessageList);
+  FreeAndNil(otcOnMessageExec);
+  FreeAndNil(otcOnTerminatedExec);
   inherited Destroy;
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
 end; { TOmniTaskControl.Destroy }
@@ -2065,23 +2090,20 @@ begin
 end; { TOmniTaskControl.EnsureCommChannel }
 
 procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
+var
+  exec: TOmniMessageExec;
 begin
-  if assigned(otcOnMessage) then
-    otcOnMessage(Self, msg);
-  {$IFDEF OTL_Anonymous}
-  if assigned(otcOnMessageRef) then
-    otcOnMessageRef(Self, msg);
-  {$ENDIF OTL_Anonymous}
+  exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+  if assigned(exec) then
+    exec.OnMessage(Self, msg)
+  else if assigned(otcOnMessageExec) then
+    otcOnMessageExec.OnMessage(Self, msg);
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
-  if assigned(otcOnTerminated) then
-    otcOnTerminated(Self);
-  {$IFDEF OTL_Anonymous}
-  if assigned(otcOnTerminatedRef) then
-    otcOnTerminatedRef(Self);
-  {$ENDIF OTL_Anonymous}
+  if assigned(otcOnTerminatedExec) then
+    otcOnTerminatedExec.OnTerminated(Self);
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
 function TOmniTaskControl.GetCancellationToken: IOmniCancellationToken;
@@ -2163,6 +2185,7 @@ begin
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
   otcUserData := TOmniValueContainer.Create;
+  otcOnMessageList := TGpIntegerObjectList.Create(true);
 end; { TOmniTaskControl.Initialize }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
@@ -2229,7 +2252,17 @@ end; { TOmniTaskControl.MsgWait }
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent):
     IOmniTaskControl;
 begin
-  otcOnMessage := eventHandler;
+  otcOnMessageExec.SetOnMessage(eventHandler);
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
+  IOmniTaskControl;
+begin
+  if not assigned(otcOnMessageExec) then
+    otcOnMessageExec := TOmniMessageExec.Create;
+  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -2238,7 +2271,17 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction):
     IOmniTaskControl;
 begin
-  otcOnMessageRef := eventHandler;
+  if not assigned(otcOnMessageExec) then
+    otcOnMessageExec := TOmniMessageExec.Create;
+  otcOnMessageExec.SetOnMessage(eventHandler);
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction):
+  IOmniTaskControl;
+begin
+  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -2247,7 +2290,9 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
   IOmniTaskControl;
 begin
-  otcOnTerminated := eventHandler;
+  if not assigned(otcOnTerminatedExec) then
+    otcOnTerminatedExec := TOmniMessageExec.Create;
+  otcOnTerminatedExec.SetOnTerminated(eventHandler);
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
@@ -2255,7 +2300,7 @@ end; { TOmniTaskControl.OnTerminated }
 {$IFDEF OTL_Anonymous}
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
 begin
-  otcOnTerminatedRef := eventHandler;
+  otcOnTerminatedExec.SetOnTerminated(eventHandler);
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
@@ -2741,9 +2786,80 @@ begin
       pointer(token) := nil;
   end;
   Result := ostiCancellationToken;
-
-  
 end; { TOmniSharedTaskInfo.GetCancellationToken }
+
+{ TOmniMessageExec }
+
+constructor TOmniMessageExec.Create(exec: TOmniTaskMessageEvent);
+begin
+  inherited Create;
+  SetOnMessage(exec);
+end; { TOmniMessageExec.Create }
+
+constructor TOmniMessageExec.Create(exec: TOmniTaskTerminatedEvent);
+begin
+  inherited Create;
+  SetOnTerminated(exec);
+end; { TOmniMessageExec.Create }
+
+procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
+  const msg: TOmniMessage);
+begin
+  case omeOnMessage.Kind of
+    {$IFDEF OTL_Anonymous}
+    oekDelegate: TOmniOnMessageFunction(TProc(omeOnMessage))(task, msg);
+    {$ENDIF OTL_Anonymous}
+    oekMethod: TOmniTaskMessageEvent(TMethod(omeOnMessage))(task, msg);
+    else raise Exception.CreateFmt('TOmniMessageExec.OnMessage: Unexpected kind %s',
+      [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
+  end;
+end; { TOmniMessageExec.OnMessage }
+
+procedure TOmniMessageExec.OnTerminated(const task: IOmniTaskControl);
+begin
+  case omeOnTerminated.Kind of
+    {$IFDEF OTL_Anonymous}
+    oekDelegate: TOmniOnTerminatedFunction(TProc(omeOnTerminated))(task);
+    {$ENDIF OTL_Anonymous}
+    oekMethod: TOmniTaskTerminatedEvent(TMethod(omeOnTerminated))(task);
+    else raise Exception.CreateFmt('TOmniMessageExec.OnTerminated: Unexpected kind %s',
+      [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnTerminated.Kind))]);
+  end;
+end; { TOmniMessageExec.OnTerminate }
+
+procedure TOmniMessageExec.SetOnMessage(exec: TOmniTaskMessageEvent);
+begin
+  omeOnMessage := TMethod(exec);
+end; { TOmniMessageExec.SetOnMessage }
+
+procedure TOmniMessageExec.SetOnTerminated(exec: TOmniTaskTerminatedEvent);
+begin
+  omeOnTerminated := TMethod(exec);
+end; { TOmniMessageExec.SetOnTerminated }
+
+{$IFDEF OTL_Anonymous}
+constructor TOmniMessageExec.Create(exec: TOmniOnMessageFunction);
+begin
+  inherited Create;
+  SetOnMessage(exec);
+end; { TOmniMessageExec.Create }
+
+constructor TOmniMessageExec.Create(exec: TOmniOnTerminatedFunction);
+begin
+  inherited Create;
+  SetOnTerminated(exec);
+end; { TOmniMessageExec.Create }
+
+procedure TOmniMessageExec.SetOnMessage(exec: TOmniOnMessageFunction);
+begin
+  omeOnMessage := TProc(exec);
+end; { TOmniMessageExec.SetOnMessage }
+
+procedure TOmniMessageExec.SetOnTerminated(exec: TOmniOnTerminatedFunction);
+begin
+  omeOnTerminated := TProc(exec);
+end; { TOmniMessageExec.SetOnTerminated }
+{$ENDIF OTL_Anonymous}
 
 initialization
   GTaskControlEventMonitor := TOmniTaskControlEventMonitor.Create;

@@ -20,6 +20,7 @@
   IOmniTaskControl.TerminateWhen.
 - IOmniTaskControl and IOmniTask implement CancellationToken: IOmniCancellationToken
   property which can be used by the task and task controller.
+- IOmniTaskControl implements OnMessage(msgID, handler).
 - Implemented Parallel.ForEach wrapper (Delphi 2009 and newer).
 - Implemented Parallel.Join wrapper (Delphi 2009 and newer).
 - Refactored and enhanced TOmniValueContainer.

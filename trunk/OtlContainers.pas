@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2010-02-08
-///   Version           : 2.02
+///   Last modification : 2010-02-09
+///   Version           : 2.02a
 ///</para><para>
 ///   History:
+///     2.02a: 2010-02-09
+///       - Require head/tail pointer in the dynamic queue to be 8-aligned.
 ///     2.02: 2010-02-08
 ///       - New ABA- and MREW-free dynamic queue algorithm.
 ///       - Dynamic queue parameters are settable in the constructor.
@@ -234,9 +236,9 @@ type
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
   TOmniBaseQueue = class
   strict private // keep 4-aligned
-    obcCachedBlock: POmniTaggedValue;
     obcHeadPointer: TOmniTaggedPointer;
     obcTailPointer: TOmniTaggedPointer;
+    obcCachedBlock: POmniTaggedValue;
   strict private
     obcBlockSize: integer;
     obcNumSlots : integer;
@@ -969,15 +971,11 @@ end; { TOmniBaseQueue.Destroy }
 function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
 var
   cached: POmniTaggedValue;
-  path: integer;
 begin
   cached := obcCachedBlock;
-  if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then begin
-    path := 1;
-    Result := cached;
-  end
+  if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then
+    Result := cached
   else begin
-    path := 2;
     Result := AllocMem(obcBlockSize);
     PartitionMemory(Result);
   end;
@@ -1071,8 +1069,8 @@ end; { TOmniBaseQueue.Enqueue }
 
 procedure TOmniBaseQueue.Initialize;
 begin
-  Assert(cardinal(@obcHeadPointer) mod 4 = 0);
-  Assert(cardinal(@obcTailPointer) mod 4 = 0);
+  Assert(cardinal(@obcHeadPointer) mod 8 = 0);
+  Assert(cardinal(@obcTailPointer) mod 8 = 0);
   Assert(cardinal(@obcCachedBlock) mod 4 = 0);
   obcHeadPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
