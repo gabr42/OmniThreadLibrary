@@ -147,7 +147,8 @@ function CAS32(const oldValue, newValue: cardinal; var destination): boolean; ov
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
 function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
   newReference: cardinal; var destination): boolean;
-procedure Move64(var Source, Destination);
+procedure Move64(var Source, Destination); overload;
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); stdcall; overload;
 procedure Move128(var Source, Destination);
 
 function GetThreadId: cardinal;
@@ -263,6 +264,14 @@ asm
   movq  xmm0, qword [Source]
   movq  qword [Destination], xmm0
 end;
+
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); stdcall; overload;
+//Move 8 bytes atomically into 8-byte Destination!
+asm
+  movq  xmm0, qword [newData]
+  mov   eax, Destination
+  movq  qword [eax], xmm0
+end; { Move64 }
 
 procedure Move128(var Source, Destination);
 //Move 16 bytes atomicly from Source to 16-byte aligned to Destination!

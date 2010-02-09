@@ -35,7 +35,9 @@
 ///</para><para>
 ///   History:
 ///     2.02a: 2010-02-09
-///       - Require head/tail pointer in the dynamic queue to be 8-aligned.
+///       - Dynamically allocate head/tail structures so that they are allways 8-allocated.
+///       - Optimized algorithm using atomic move instead of atomic compare-and-swap in
+///         some places (thanks to GJ).
 ///     2.02: 2010-02-08
 ///       - New ABA- and MREW-free dynamic queue algorithm.
 ///       - Dynamic queue parameters are settable in the constructor.
@@ -229,19 +231,21 @@ type
     Slot    : POmniTaggedValue;
     Tag     : TOmniQueueTag;
     Stuffing: array [1..3] of byte; // record size must be congruent to 0 (mod 4)
-    function CAS(oldSlot: POmniTaggedValue; oldTag: TOmniQueueTag;
+    function  CAS(oldSlot: POmniTaggedValue; oldTag: TOmniQueueTag;
       newSlot: POmniTaggedValue; newTag: TOmniQueueTag): boolean; inline;
+    procedure Move(newSlot: POmniTaggedValue; newTag: TOmniQueueTag); inline;
   end; { TOmniTaggedPointer }
+  POmniTaggedPointer = ^TOmniTaggedPointer;
 
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
   TOmniBaseQueue = class
   strict private // keep 4-aligned
-    obcHeadPointer: TOmniTaggedPointer;
-    obcTailPointer: TOmniTaggedPointer;
     obcCachedBlock: POmniTaggedValue;
   strict private
-    obcBlockSize: integer;
-    obcNumSlots : integer;
+    obcBlockSize  : integer;
+    obcHeadPointer: POmniTaggedPointer;
+    obcNumSlots   : integer;
+    obcTailPointer: POmniTaggedPointer;
   strict protected
     {$IFDEF DEBUG_OMNI_QUEUE}
     procedure Assert(condition: boolean);
@@ -943,6 +947,11 @@ begin
   Result := CAS64(oldSlot, cardinal(oldTag), newSlot, cardinal(newTag), Self);
 end; { TOmniTaggedPointer.CAS }
 
+procedure TOmniTaggedPointer.Move(newSlot: POmniTaggedValue; newTag: TOmniQueueTag);
+begin
+  Move64(newSlot, ord(newTag), Self);
+end; { TOmniTaggedPointer.Move }
+
 { TOmniBaseQueue }
 
 constructor TOmniBaseQueue.Create(blockSize: integer; numCachedBlocks: integer);
@@ -1012,6 +1021,8 @@ begin
   end;
   if assigned(obcCachedBlock) then
     FreeMem(obcCachedBlock);
+  FreeMem(obcHeadPointer);
+  FreeMem(obcTailPointer);
 end; { TOmniBaseQueue.Cleanup }
 
 procedure TOmniBaseQueue.Enqueue(const value: TOmniValue);
@@ -1047,8 +1058,10 @@ begin
   if tag = tagFree then begin // enqueueing
     next := NextSlot(tail);
     tail.Value := value; // this works because the slot was initialized to zero when allocating
-    {$IFNDEF DEBUG_OMNI_QUEUE} tail.Tag := tagAllocated; {$ELSE} Assert(tail.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
-    Assert(obcTailPointer.CAS(tail, tagAllocating, next, next.Tag)); //release the lock
+    {$IFNDEF DEBUG_OMNI_QUEUE}
+    tail.Tag := tagAllocated; {$ELSE} Assert(tail.CASTag(tagAllocating, tagAllocated)); {$ENDIF}
+    {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+    obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagAllocating, next, next.Tag)); {$ENDIF}
   end
   else begin // allocating memory
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagEndOfList); {$ENDIF}
@@ -1060,17 +1073,20 @@ begin
     Dec(extension);             // forward reference points to the sentinel
     tail.Value := extension;
     {$IFNDEF DEBUG_OMNI_QUEUE}
-    tail.Tag := tagBlockPointer; {$ELSE} Assert(tail.CASTag(tagExtending, tagBlockPointer)); {$ENDIF DEBUG}
+    tail.Tag := tagBlockPointer; {$ELSE} Assert(tail.CASTag(tagExtending, tagBlockPointer)); {$ENDIF}
     Inc(extension, 2); // get to the first free slot
-    Assert(obcTailPointer.CAS(tail, tagExtending, extension, extension.Tag)); // release the lock
+    {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+    obcTailPointer.Move(extension, extension.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagExtending, extension, extension.Tag)); {$ENDIF}
     PreallocateMemory;
   end;
 end; { TOmniBaseQueue.Enqueue }
 
 procedure TOmniBaseQueue.Initialize;
 begin
-  Assert(cardinal(@obcHeadPointer) mod 8 = 0);
-  Assert(cardinal(@obcTailPointer) mod 8 = 0);
+  obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
+  obcTailPointer := AllocMem(SizeOf(TOmniTaggedPointer));
+  Assert(cardinal(obcHeadPointer) mod 8 = 0);
+  Assert(cardinal(obcTailPointer) mod 8 = 0);
   Assert(cardinal(@obcCachedBlock) mod 4 = 0);
   obcHeadPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
@@ -1204,17 +1220,20 @@ begin
           end;
         end;
         if caughtTheTail then begin
-          Assert(obcHeadPointer.CAS(head, tagRemoving, head, tagSentinel)); // release the lock; as this is the last element, don't move forward
+          {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock; as this is the last element, don't move forward
+          obcHeadPointer.Move(head, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, head, tagSentinel)); {$ENDIF}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
-          Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); // release the lock
+          {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+          obcHeadPointer.Move(next, next.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); {$ENDIF}
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
         next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
-        Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel));
+        {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+        obcHeadPointer.Move(next, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel)); {$ENDIF}
         tag := tagSentinel; // retry
       end;
       if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then
