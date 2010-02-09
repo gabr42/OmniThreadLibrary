@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-01
-///   Version           : 1.09
+///   Last modification : 2010-02-09
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2010-02-09
+///       - Implemented TOmniExecutor - a record that can store TProcedure, TMethod, or
+///         TProc.
 ///     1.09: 2010-02-01
 ///       - TOmniValue getters know how to process empty TOmniValue.
 ///       - Added Environment.Thread interface.
@@ -86,6 +89,9 @@
 ///</para></remarks>
 
 {$WARN SYMBOL_PLATFORM OFF}
+{$IF CompilerVersion >= 20}
+  {$DEFINE OTL_Anonymous}
+{$IFEND}
 
 unit OtlCommon;
 
@@ -334,6 +340,49 @@ type
     property Thread: IOmniThreadEnvironment read GetThread;
   end; { IOmniEnvironment }
 
+  TOmniExecutableKind = (oekNull, oekProcedure, oekMethod {$IFDEF OTL_Anonymous},
+    oekDelegate{$ENDIF});
+
+  TOmniExecutable = record
+  strict private
+    {$IFDEF OTL_Anonymous}
+    oeDelegate: TProc;
+    function  GetDelegate: TProc; inline;
+    procedure SetDelegate(const value: TProc); inline;
+    {$ENDIF OTL_Anonymous}
+  strict private
+    oeMethod   : TMethod;
+    oeProcedure: TProcedure;
+    oeKind     : TOmniExecutableKind;
+    procedure CheckKind(kind: TOmniExecutableKind); inline;
+    function  GetMethod: TMethod; inline;
+    function  GetProc: TProcedure; inline;
+    procedure SetMethod(const value: TMethod); inline;
+    procedure SetProc(const value: TProcedure); inline;
+  public
+    class operator Explicit(const a: TOmniExecutable): TMethod; inline;
+    class operator Explicit(const a: TOmniExecutable): TProcedure; inline;
+    class operator Explicit(const a: TMethod): TOmniExecutable; inline;
+    class operator Explicit(const a: TProcedure): TOmniExecutable; inline;
+    class operator Implicit(const a: TMethod): TOmniExecutable; inline;
+    class operator Implicit(const a: TProcedure): TOmniExecutable; inline;
+    class operator Implicit(const a: TOmniExecutable): TMethod; inline;
+    class operator Implicit(const a: TOmniExecutable): TProcedure; inline;
+    procedure Clear; inline;
+    function  IsNull: boolean; inline;
+    property Kind: TOmniExecutableKind read oeKind;
+    property Method: TMethod read GetMethod write SetMethod;
+    property Proc: TProcedure read GetProc write SetProc;
+  public
+    {$IFDEF OTL_Anonymous}
+    class operator Explicit(const a: TOmniExecutable): TProc; inline;
+    class operator Explicit(const a: TProc): TOmniExecutable; inline;
+    class operator Implicit(const a: TOmniExecutable): TProc; inline;
+    class operator Implicit(const a: TProc): TOmniExecutable; inline;
+    property Delegate: TProc read GetDelegate write SetDelegate;
+    {$ENDIF OTL_Anonymous}
+  end; { TOmniExecutable }
+
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
@@ -347,6 +396,7 @@ var
 implementation
 
 uses
+  TypInfo,
   GpStringHash;
 
 type
@@ -1637,6 +1687,124 @@ begin
     oeThreadEnv := TOmniThreadEnvironment.Create;
   Result := oeThreadEnv;
 end; { TOmniEnvironment.GetThread }
+
+{ TOmniExecutable }
+
+procedure TOmniExecutable.CheckKind(kind: TOmniExecutableKind);
+begin
+  if oeKind <> kind then
+    raise Exception.CreateFmt('TOmniExecutable: Wrong kind of executable %s, expected %s',
+      [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(oeKind)),
+       GetEnumName(TypeInfo(TOmniExecutableKind), Ord(kind))]);
+end; { TOmniExecutable.CheckKind }
+
+procedure TOmniExecutable.Clear;
+begin
+  oeKind := oekNull;
+end; { TOmniExecutable.IsNull }
+
+class operator TOmniExecutable.Explicit(const a: TProcedure): TOmniExecutable;
+begin
+  Result.Proc := a;
+end; { TOmniExecutable.Explicit }
+
+class operator TOmniExecutable.Explicit(const a: TMethod): TOmniExecutable;
+begin
+  Result.Method := a;
+end; { TOmniExecutable.Explicit }
+
+class operator TOmniExecutable.Explicit(const a: TOmniExecutable): TMethod;
+begin
+  Result := a.Method;
+end; { TOmniExecutable.Explicit }
+
+class operator TOmniExecutable.Explicit(const a: TOmniExecutable): TProcedure;
+begin
+  Result := a.Proc;
+end; { TOmniExecutable.Explicit }
+
+function TOmniExecutable.IsNull: boolean;
+begin
+  Result := (oeKind = oekNull);
+end; { TOmniExecutable.IsNull }
+
+class operator TOmniExecutable.Implicit(const a: TProcedure): TOmniExecutable;
+begin
+  Result.Proc := a;
+end; { TOmniExecutable.Implicit }
+
+class operator TOmniExecutable.Implicit(const a: TMethod): TOmniExecutable;
+begin
+  Result.Method := a;
+end; { TOmniExecutable.Implicit }
+
+class operator TOmniExecutable.Implicit(const a: TOmniExecutable): TProcedure;
+begin
+  Result := a.Proc;
+end; { TOmniExecutable.Implicit }
+
+class operator TOmniExecutable.Implicit(const a: TOmniExecutable): TMethod;
+begin
+  Result := a.Method;
+end; { TOmniExecutable.Implicit }
+
+function TOmniExecutable.GetMethod: TMethod;
+begin
+  CheckKind(oekMethod);
+  Result := oeMethod;
+end; { TOmniExecutable.Method }
+
+function TOmniExecutable.GetProc: TProcedure;
+begin
+  CheckKind(oekProcedure);
+  Result := oeProcedure;
+end; { TOmniExecutable.Proc }
+
+procedure TOmniExecutable.SetMethod(const value: TMethod);
+begin
+  oeKind := oekMethod;
+  oeMethod := value;
+end; { TOmniExecutable.SetMethod }
+
+procedure TOmniExecutable.SetProc(const value: TProcedure);
+begin
+  oeKind := oekProcedure;
+  oeProcedure := value;
+end; { TOmniExecutable.SetProc }
+
+{$IFDEF OTL_Anonymous}
+class operator TOmniExecutable.Explicit(const a: TOmniExecutable): TProc;
+begin
+  Result := a.Delegate;
+end; { TOmniExecutable.Explicit }
+
+class operator TOmniExecutable.Implicit(const a: TProc): TOmniExecutable;
+begin
+  Result.Delegate := a;
+end; { TOmniExecutable.Implicit }
+
+class operator TOmniExecutable.Implicit(const a: TOmniExecutable): TProc;
+begin
+  Result := a.Delegate;
+end; { TOmniExecutable.Implicit }
+
+function TOmniExecutable.GetDelegate: TProc;
+begin
+  CheckKind(oekDelegate);
+  Result := oeDelegate;
+end; { TOmniExecutable.GetDelegate }
+
+procedure TOmniExecutable.SetDelegate(const value: TProc);
+begin
+  oeKind := oekDelegate;
+  oeDelegate := value;
+end; { TOmniExecutable.SetDelegate }
+
+class operator TOmniExecutable.Explicit(const a: TProc): TOmniExecutable;
+begin
+  Result.Delegate := a;
+end; { TOmniExecutable.Explicit }
+{$ENDIF OTL_Anonymous}
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj

@@ -147,6 +147,9 @@ function CAS32(const oldValue, newValue: cardinal; var destination): boolean; ov
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
 function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
   newReference: cardinal; var destination): boolean;
+procedure Move64(var Source, Destination);
+procedure Move128(var Source, Destination);
+
 function GetThreadId: cardinal;
 function GetCPUTimeStamp: int64;
 
@@ -253,6 +256,20 @@ asm
   pop   ebx
   pop   edi
 end; { CAS64 }
+
+procedure Move64(var Source, Destination);
+//Move 8 bytes atomicly from Source 8-byte aligned to Destination!
+asm
+  movq  xmm0, qword [Source]
+  movq  qword [Destination], xmm0
+end;
+
+procedure Move128(var Source, Destination);
+//Move 16 bytes atomicly from Source to 16-byte aligned to Destination!
+asm
+  movdqa  xmm0, dqword [Source]
+  movdqa  dqword [Destination], xmm0
+end;
 
 function GetThreadId: cardinal;
 //result := GetCurrentThreadId;
