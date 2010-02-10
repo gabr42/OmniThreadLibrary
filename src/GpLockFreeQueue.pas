@@ -111,12 +111,6 @@ asm
 end; { CAS8 }
 
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean;
-//ATOMIC FUNCTION
-//begin
-//  result := oldValue = PPointer(destination)^;
-//  if result then
-//    PPointer(destination)^ := newValue;
-//end;
 asm
   lock cmpxchg dword ptr [destination], newValue
   setz  al
