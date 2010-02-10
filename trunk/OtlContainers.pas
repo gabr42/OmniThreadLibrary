@@ -1038,8 +1038,6 @@ begin
             and obcTailPointer.CAS(tail, tagEndOfList, tail, tagExtending)
     then
       break //repeat
-    else if obcTailPointer.Tag = tagExtending then
-      DSIYield
     else // very temporary condition, retry quickly
       asm pause; end;
   until false;
@@ -1184,7 +1182,7 @@ begin
         break; //repeat
       end
       else
-        DSiYield;
+        asm pause; end;
     until false;
     if Result then begin // dequeueing
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
