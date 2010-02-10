@@ -1,4 +1,5 @@
 ///<summary>Synchronisation primitives. Part of the OmniThreadLibrary project.</summary>
+///<remarks>Move* family of functions require Pentium 4 processor (or newer).</remarks>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -148,7 +149,7 @@ function CAS32(const oldValue: pointer; newValue: pointer; var destination): boo
 function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
   newReference: cardinal; var destination): boolean;
 procedure Move64(var Source, Destination); overload;
-procedure Move64(newData: pointer; newReference: cardinal; var Destination); stdcall; overload;
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload;
 procedure Move128(var Source, Destination);
 
 function GetThreadId: cardinal;
@@ -265,12 +266,13 @@ asm
   movq  qword [Destination], xmm0
 end;
 
-procedure Move64(newData: pointer; newReference: cardinal; var Destination); stdcall; overload;
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload;
 //Move 8 bytes atomically into 8-byte Destination!
 asm
-  movq  xmm0, qword [newData]
-  mov   eax, Destination
-  movq  qword [eax], xmm0
+  movd  xmm0, edx
+  movd  xmm1, eax
+  punpckldq xmm0, xmm1
+  movq  qword [Destination], xmm0
 end; { Move64 }
 
 procedure Move128(var Source, Destination);
@@ -283,8 +285,8 @@ end;
 function GetThreadId: cardinal;
 //result := GetCurrentThreadId;
 asm
-  mov   eax, fs:[$18]                                           //eax := thread information block
-  mov   eax, [eax + $24]                                        //eax := thread id
+  mov   eax, fs:[$18]      //eax := thread information block
+  mov   eax, [eax + $24]   //eax := thread id
 end; { GetThreadId }
 
 function GetCPUTimeStamp: int64;
