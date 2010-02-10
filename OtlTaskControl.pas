@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2010-02-09
-///   Version           : 1.20
+///   Version           : 1.20a
 ///</para><para>
 ///   History:
+///     1.20a: 2010-02-10
+///       - Internal message forwarders must be destroyed during task termination.
 ///     1.20: 2010-02-09
 ///       - Added IOmniTaskControl.OnMessage(msgID, handler).
 ///     1.19: 2010-02-03
@@ -239,13 +241,13 @@ type
     omeOnMessage   : TOmniExecutable;
     omeOnTerminated: TOmniExecutable;
   public
+    constructor Create(exec: TOmniTaskMessageEvent); overload;
+    constructor Create(exec: TOmniTaskTerminatedEvent); overload;
     procedure SetOnMessage(exec: TOmniTaskMessageEvent); overload;
     procedure SetOnTerminated(exec: TOmniTaskTerminatedEvent); overload;
     procedure OnMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OnTerminated(const task: IOmniTaskControl);
   public
-    constructor Create(exec: TOmniTaskMessageEvent); overload;
-    constructor Create(exec: TOmniTaskTerminatedEvent); overload;
     {$IFDEF OTL_Anonymous}
     constructor Create(exec: TOmniOnMessageFunction); overload;
     constructor Create(exec: TOmniOnTerminatedFunction); overload;
@@ -2469,6 +2471,9 @@ begin
       otcOwningPool := nil;
     end;
   end;
+  otcOnMessageList.Clear;
+  FreeAndNil(otcOnMessageExec);
+  FreeAndNil(otcOnTerminatedExec);
   RaiseTaskException;
 end; { TOmniTaskControl.Terminate }
 
