@@ -41,6 +41,7 @@
 
 // The following code requires at least Pentium 4 processor because SSE2 instructions are
 // used in the Move64 function.
+{ $DEFINE LFQ_DontUseMove64} // define to not use SSE2-specific stuff
 
 unit GpLockFreeQueue;
 
@@ -338,15 +339,27 @@ begin
         if tag = tagAllocated then // sentinel doesn't contain any useful value
           value := head.Value;
         if caughtTheTail then begin
+          {$IFNDEF LFQ_DontUseMove64}
           Move64(head, Ord(tagSentinel), obcHeadPointer^); // release the lock; as this is the last element, don't move forward
+          {$ELSE}
+          CAS64(head, Ord(tagRemoving), head, Ord(tagSentinel), obcHeadPointer^);
+          {$ENDIF LFQ_DontUseMove64}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
+          {$IFNDEF LFQ_DontUseMove64}
           Move64(next, Ord(next.Tag), obcHeadPointer^); // release the lock
+          {$ELSE}
+          CAS64(head, Ord(tagRemoving), next, Ord(next.Tag), obcHeadPointer^);
+          {$ENDIF LFQ_DontUseMove64}
       end
       else begin // releasing memory
         next := PGpLFQueueTaggedValue(head.Value); // next points to the sentinel
+        {$IFNDEF LFQ_DontUseMove64}
         Move64(next, Ord(tagSentinel), obcHeadPointer^); // release the lock
+        {$ELSE}
+        CAS64(head, Ord(tagDestroying), next, Ord(tagSentinel), obcHeadPointer^);
+        {$ENDIF LFQ_DontUseMove64}
         tag := tagSentinel; // retry
       end;
       if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then
@@ -378,7 +391,11 @@ begin
     next := NextSlot(tail);
     tail.Value := value;
     tail.Tag := tagAllocated;
+    {$IFNDEF LFQ_DontUseMove64}
     Move64(next, Ord(next.Tag), obcTailPointer^); // release the lock
+    {$ELSE}
+    CAS64(tail, Ord(tagAllocating), next, Ord(next.Tag), obcTailPointer^);
+    {$ENDIF LFQ_DontUseMove64}
   end
   else begin // allocating memory
     extension := AllocateBlock; // returns pointer to the header
@@ -389,7 +406,11 @@ begin
     tail.Value := int64(extension);
     tail.Tag := tagBlockPointer;
     Inc(extension, 2); // get to the first free slot
+    {$IFNDEF LFQ_DontUseMove64}
     Move64(extension, Ord(extension.Tag), obcTailPointer^); // release the lock
+    {$ELSE}
+    CAS64(tail, Ord(tagExtending), extension, Ord(extension.Tag), obcTailPointer^);
+    {$ENDIF LFQ_DontUseMove64}
     PreallocateMemory;
   end;
 end; { TGpLockFreeQueue.Enqueue }

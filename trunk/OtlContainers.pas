@@ -1,5 +1,5 @@
 ﻿///<summary>Microlocking containers. Part of the OmniThreadLibrary project.</summary>
-///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer).</remarks>
+///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer) unless OTL_OLDCPU is defined.</remarks>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -65,6 +65,7 @@
 ///</para></remarks>
 
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
+//DEFINE OTL_OLDCPU to not use Move64 (SSE2) code
 
 unit OtlContainers;
 
@@ -929,6 +930,10 @@ Dequeue:
       retry from beginning
 *)
 
+{$DEFINE USE_MOVE64}
+{$IFDEF DEBUG_OMNI_QUEUE}{$UNDEF USE_MOVE64}{$ENDIF}
+{$IFDEF OTL_OLDCPU}{$UNDEF USE_MOVE64}{$ENDIF}
+
 { TOmniTaggedValue }
 
 function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniQueueTag): boolean;
@@ -1047,7 +1052,7 @@ begin
     tail.Value := value; // this works because the slot was initialized to zero when allocating
     {$IFNDEF DEBUG_OMNI_QUEUE}
     tail.Tag := tagAllocated; {$ELSE} Assert(tail.CASTag(tagFree, tagAllocated)); {$ENDIF}
-    {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+    {$IFDEF USE_MOVE64} // release the lock
     obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagAllocating, next, next.Tag)); {$ENDIF}
   end
   else begin // allocating memory
@@ -1062,7 +1067,7 @@ begin
     {$IFNDEF DEBUG_OMNI_QUEUE}
     tail.Tag := tagBlockPointer; {$ELSE} Assert(tail.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
     Inc(extension, 2); // get to the first free slot
-    {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+    {$IFDEF USE_MOVE64} // release the lock
     obcTailPointer.Move(extension, extension.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagExtending, extension, extension.Tag)); {$ENDIF}
     PreallocateMemory;
   end;
@@ -1199,19 +1204,19 @@ begin
           end;
         end;
         if caughtTheTail then begin
-          {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock; as this is the last element, don't move forward
+          {$IFDEF USE_MOVE64} // release the lock; as this is the last element, don't move forward
           obcHeadPointer.Move(head, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, head, tagSentinel)); {$ENDIF}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
-          {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+          {$IFDEF USE_MOVE64} // release the lock
           obcHeadPointer.Move(next, next.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); {$ENDIF}
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
         next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
-        {$IFNDEF DEBUG_OMNI_QUEUE} // release the lock
+        {$IFDEF USE_MOVE64} // release the lock
         obcHeadPointer.Move(next, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel)); {$ENDIF}
         tag := tagSentinel; // retry
       end;
