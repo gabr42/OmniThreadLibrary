@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2010-02-09
-///   Version           : 2.02a
+///   Last modification : 2010-02-18
+///   Version           : 2.03
 ///</para><para>
 ///   History:
+///     2.03: 2010-02-18
+///       - Reversed head and tail because they were used illogically.
 ///     2.02a: 2010-02-09
 ///       - Dynamically allocate head/tail structures so that they are allways 8-allocated.
 ///       - Optimized algorithm using atomic move instead of atomic compare-and-swap in
@@ -832,7 +834,7 @@ begin
   end;
 end; { TOmniBoundedQueue.Enqueue }
 
-(*
+(*                  
 TOmniQueue
 ===============
 
@@ -849,10 +851,10 @@ tags:
   tagSentinel
 
 header contains:
-  head
+  tail
     slot = 4 bytes
     tag  = 4 bytes
-  tail
+  head
     slot = 4 bytes
     tag  = 4 bytes
 all are 4-aligned
@@ -868,60 +870,60 @@ block is initialized to:
 
 Enqueue:
   repeat
-      tail = header.tail.slot
-      old_tag = header.tail.tag
-      if header.tail.CAS(tail, tagFree, tail, tagAllocating) then
+      head = header.head.slot
+      old_tag = header.head.tag
+      if header.head.CAS(head, tagFree, head, tagAllocating) then
           break
-      else if header.tail.CAS(tail, tagEndOfList, tail, tagExtending) then
+      else if header.head.CAS(head, tagEndOfList, head, tagExtending) then
           break
       else
           yield
   forever
-  if header.tail.tag = tagAllocating then
+  if header.head.tag = tagAllocating then
       store <value, tagAllocated> into slot
-      header.tail.CAS(tail, tagAllocating, NextSlot(tail), NextSlot(tail).tag)
+      header.head.CAS(head, tagAllocating, NextSlot(head), NextSlot(head).tag)
   else
       allocate block // from cache, if possible
       next = second data slot in the new block
       set next to <tagAllocated, value>
       set last slot in the original block to <new block address, tagBlockPointer>
-      header.tail.CAS(tail, tagExtending, next, next.tag)
+      header.head.CAS(head, tagExtending, next, next.tag)
       // queue is now unlocked
       preallocate block
 
 Dequeue:
   repeat
-      head = header.head.slot
-      old_tag = header.head.tag
-      caughtTheTail := NextSlot(header.head.slot) = header.tail.slot;
-      if head.head.CAS(head, tagAllocated, head, tagRemoving) then
-          head.tag = tagRemovings
+      tail = header.tail.slot
+      old_tag = header.tail.tag
+      caughtTheHead := NextSlot(header.tail.slot) = header.head.slot;
+      if tail.tail.CAS(tail, tagAllocated, tail, tagRemoving) then
+          tail.tag = tagRemovings
           break
-      else if header.head.Tag = tagSentinel then
-          if caughtTheTail then
+      else if header.tail.Tag = tagSentinel then
+          if caughtTheHead then
               return false
-          else if header.head.CAS(head, tagSentinel, head, tagRemoving) then
-              head.tag = tagRemoving
+          else if header.tail.CAS(tail, tagSentinel, tail, tagRemoving) then
+              tail.tag = tagRemoving
               break
-      else if header.head.CAS(head, tagBlockPointer, head, tagDestrogin) then
-          head.tag = tagDestroying
+      else if header.tail.CAS(tail, tagBlockPointer, tail, tagDestrogin) then
+          tail.tag = tagDestroying
           break
       else
           yield
   forever
-  firstSlot = head - head.Offset // point to first slot
+  firstSlot = tail - tail.Offset // point to first slot
   if old_tag in [tagSentinel, tagAllocated] then
-      next = NextSlot(head)
+      next = NextSlot(tail)
       if tag = tagAllocated then
           fetch stored value
-      if caughtTheTail then
-          header.head.CAS(head, tagRemoving, head, tagSentinel)
+      if caughtTheHead then
+          header.tail.CAS(tail, tagRemoving, tail, tagSentinel)
           firstSlot = nil // do not decrement the header counter
       else
-          header.head.CAS(head, tagRemoving, next, next.tag)
+          header.tail.CAS(tail, tagRemoving, next, next.tag)
   else
-      next = head.value // points to the next block's sentinel
-      header.head.CAS(head, tagDestroying, next, tagSentinel)
+      next = tail.value // points to the next block's sentinel
+      header.tail.CAS(tail, tagDestroying, next, tagSentinel)
       old_tag = tagSentinel // force retry
   // queue is now unlocked
   if assigned(firstSlot) and (InterlockedDecrement(firstSlot.value) = 0) then
@@ -1005,7 +1007,7 @@ var
   pBlock: POmniTaggedValue;
   pSlot : POmniTaggedValue;
 begin
-  pSlot := obcHeadPointer.Slot;
+  pSlot := obcTailPointer.Slot;
   while assigned(pSlot) do begin
     if pSlot.Tag in [tagBlockPointer, tagEndOfList] then begin
       pBlock := pSlot;
@@ -1023,73 +1025,73 @@ begin
   end;
   if assigned(obcCachedBlock) then
     FreeMem(obcCachedBlock);
-  FreeMem(obcHeadPointer);
   FreeMem(obcTailPointer);
+  FreeMem(obcHeadPointer);
 end; { TOmniBaseQueue.Cleanup }
 
 procedure TOmniBaseQueue.Enqueue(const value: TOmniValue);
 var
   extension: POmniTaggedValue;
   next     : POmniTaggedValue;
-  tail     : POmniTaggedValue;
+  head     : POmniTaggedValue;
 begin
   repeat
-    tail := obcTailPointer.Slot;
-    if (obcTailPointer.Tag = tagFree)
-       and obcTailPointer.CAS(tail, tagFree, tail, tagAllocating)
+    head := obcHeadPointer.Slot;
+    if (obcHeadPointer.Tag = tagFree)
+       and obcHeadPointer.CAS(head, tagFree, head, tagAllocating)
     then
       break //repeat
-    else if (obcTailPointer.Tag = tagEndOfList)
-            and obcTailPointer.CAS(tail, tagEndOfList, tail, tagExtending)
+    else if (obcHeadPointer.Tag = tagEndOfList)
+            and obcHeadPointer.CAS(head, tagEndOfList, head, tagExtending)
     then
       break //repeat
     else // very temporary condition, retry quickly
       asm pause; end;
   until false;
-  {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
-  if obcTailPointer.Tag = tagAllocating then begin // enqueueing
-    next := NextSlot(tail);
-    tail.Value := value; // this works because the slot was initialized to zero when allocating
+  {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
+  if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
+    next := NextSlot(head);
+    head.Value := value; // this works because the slot was initialized to zero when allocating
     {$IFNDEF DEBUG_OMNI_QUEUE}
-    tail.Tag := tagAllocated; {$ELSE} Assert(tail.CASTag(tagFree, tagAllocated)); {$ENDIF}
+    head.Tag := tagAllocated; {$ELSE} Assert(head.CASTag(tagFree, tagAllocated)); {$ENDIF}
     {$IFDEF USE_MOVE64} // release the lock
-    obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagAllocating, next, next.Tag)); {$ENDIF}
+    obcHeadPointer.Move(next, next.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagAllocating, next, next.Tag)); {$ENDIF}
   end
   else begin // allocating memory
-    {$IFDEF DEBUG_OMNI_QUEUE} Assert(obcTailPointer.Tag = tagExtending); {$ENDIF}
+    {$IFDEF DEBUG_OMNI_QUEUE} Assert(obcHeadPointer.Tag = tagExtending); {$ENDIF}
     extension := AllocateBlock; // returns pointer to the header
     Inc(extension, 2);          // move over header and sentinel to the first data slot
     {$IFNDEF DEBUG_OMNI_QUEUE}
     extension.Tag := tagAllocated; {$ELSE} Assert(extension.CASTag(tagFree, tagAllocated)); {$ENDIF}
     extension.Value := value;   // this works because the slot was initialized to zero when allocating
     Dec(extension);             // forward reference points to the sentinel
-    tail.Value := extension;
+    head.Value := extension;
     {$IFNDEF DEBUG_OMNI_QUEUE}
-    tail.Tag := tagBlockPointer; {$ELSE} Assert(tail.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
+    head.Tag := tagBlockPointer; {$ELSE} Assert(head.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
     Inc(extension, 2); // get to the first free slot
     {$IFDEF USE_MOVE64} // release the lock
-    obcTailPointer.Move(extension, extension.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagExtending, extension, extension.Tag)); {$ENDIF}
+    obcHeadPointer.Move(extension, extension.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagExtending, extension, extension.Tag)); {$ENDIF}
     PreallocateMemory;
   end;
 end; { TOmniBaseQueue.Enqueue }
 
 procedure TOmniBaseQueue.Initialize;
 begin
-  obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
   obcTailPointer := AllocMem(SizeOf(TOmniTaggedPointer));
-  Assert(cardinal(obcHeadPointer) mod 8 = 0);
+  obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
   Assert(cardinal(obcTailPointer) mod 8 = 0);
+  Assert(cardinal(obcHeadPointer) mod 8 = 0);
   Assert(cardinal(@obcCachedBlock) mod 4 = 0);
-  obcHeadPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
-  obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
-  {$IFDEF DEBUG_OMNI_QUEUE}
-  Assert(obcHeadPointer.Tag = tagSentinel);
-  Assert(PrevSlot(obcHeadPointer.Slot).Tag = tagHeader);
-  {$ENDIF DEBUG_OMNI_QUEUE}
-  obcTailPointer.Slot := NextSlot(obcHeadPointer.Slot);
+  obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
-  Assert(obcTailPointer.Tag = tagFree);
+  Assert(obcTailPointer.Tag = tagSentinel);
+  Assert(PrevSlot(obcTailPointer.Slot).Tag = tagHeader);
+  {$ENDIF DEBUG_OMNI_QUEUE}
+  obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
+  obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
+  {$IFDEF DEBUG_OMNI_QUEUE}
+  Assert(obcHeadPointer.Tag = tagFree);
   {$ENDIF DEBUG_OMNI_QUEUE}
   obcCachedBlock := AllocateBlock; // pre-allocate memory
 end; { TOmniBaseQueue.Initialize }
@@ -1152,8 +1154,8 @@ end; { TOmniBaseQueue.ReleaseBlock }
 
 function TOmniBaseQueue.TryDequeue(var value: TOmniValue): boolean;
 var
-  caughtTheTail: boolean;
-  head         : POmniTaggedValue;
+  caughtTheHead: boolean;
+  tail         : POmniTaggedValue;
   header       : POmniTaggedValue;
   next         : POmniTaggedValue;
   tag          : TOmniQueueTag;
@@ -1162,26 +1164,26 @@ begin
   Result := true;
   while Result and (tag = tagSentinel) do begin
     repeat
-      head := obcHeadPointer.Slot;
-      caughtTheTail := NextSlot(obcHeadPointer.Slot) = obcTailPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
-      if (obcHeadPointer.Tag = tagAllocated)
-         and obcHeadPointer.CAS(head, tagAllocated, head, tagRemoving) then
+      tail := obcTailPointer.Slot;
+      caughtTheHead := NextSlot(obcTailPointer.Slot) = obcHeadPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
+      if (obcTailPointer.Tag = tagAllocated)
+         and obcTailPointer.CAS(tail, tagAllocated, tail, tagRemoving) then
       begin
         tag := tagAllocated;
         break; //repeat
       end
-      else if (obcHeadPointer.Tag = tagSentinel) then begin
-        if caughtTheTail then begin
+      else if (obcTailPointer.Tag = tagSentinel) then begin
+        if caughtTheHead then begin
           Result := false;
           break; //repeat
         end
-        else if obcHeadPointer.CAS(head, tagSentinel, head, tagRemoving) then begin
+        else if obcTailPointer.CAS(tail, tagSentinel, tail, tagRemoving) then begin
           tag := tagSentinel;
           break; //repeat
         end
       end
-      else if (obcHeadPointer.Tag = tagBlockPointer)
-              and obcHeadPointer.CAS(head, tagBlockPointer, head, tagDestroying) then
+      else if (obcTailPointer.Tag = tagBlockPointer)
+              and obcTailPointer.CAS(tail, tagBlockPointer, tail, tagDestroying) then
       begin
         tag := tagBlockPointer;
         break; //repeat
@@ -1190,34 +1192,34 @@ begin
         asm pause; end;
     until false;
     if Result then begin // dequeueing
-      {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
-      header := head;
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
+      header := tail;
       Dec(header, header.Offset);
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
       if tag in [tagSentinel, tagAllocated] then begin
-        next := NextSlot(head);
+        next := NextSlot(tail);
         if tag = tagAllocated then begin // sentinel doesn't contain any useful value
-          value := head.Value;
+          value := tail.Value;
           if value.IsInterface then begin
-            head.Value.AsInterface._Release;
-            head.Value.RawZero;
+            tail.Value.AsInterface._Release;
+            tail.Value.RawZero;
           end;
         end;
-        if caughtTheTail then begin
+        if caughtTheHead then begin
           {$IFDEF USE_MOVE64} // release the lock; as this is the last element, don't move forward
-          obcHeadPointer.Move(head, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, head, tagSentinel)); {$ENDIF}
+          obcTailPointer.Move(tail, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, tail, tagSentinel)); {$ENDIF}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
           {$IFDEF USE_MOVE64} // release the lock
-          obcHeadPointer.Move(next, next.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagRemoving, next, next.Tag)); {$ENDIF}
+          obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag)); {$ENDIF}
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
-        next := POmniTaggedValue(head.Value.AsPointer); // next points to the sentinel
+        next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
         {$IFDEF USE_MOVE64} // release the lock
-        obcHeadPointer.Move(next, tagSentinel); {$ELSE} Assert(obcHeadPointer.CAS(head, tagDestroying, next, tagSentinel)); {$ENDIF}
+        obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
         tag := tagSentinel; // retry
       end;
       if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then

@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-02-10
-///   Last modification : 2010-02-10
-///   Version           : 1.0
+///   Last modification : 2010-02-18
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2010-02-18
+///       - Reversed head and tail because they were used illogically.    
 ///     1.0: 2010-02-10
 ///       - Initial implementation, based on the TOmniBaseQueue from the OmniThreadLibrary.
 ///</para></remarks>
@@ -78,9 +80,9 @@ type
   strict private
     obcBlockSize  : integer;
     obcCachedBlock: PGpLFQueueTaggedValue;
-    obcHeadPointer: PGpLFQueueTaggedPointer;
-    obcNumSlots   : integer;
     obcTailPointer: PGpLFQueueTaggedPointer;
+    obcNumSlots   : integer;
+    obcHeadPointer: PGpLFQueueTaggedPointer;
   strict protected
     function  AllocateBlock: PGpLFQueueTaggedValue;
     procedure Cleanup; virtual;
@@ -157,10 +159,10 @@ tags:
   tagSentinel
 
 header contains:
-  head
+  tail
     slot = 4 bytes
     tag  = 4 bytes
-  tail
+  head
     slot = 4 bytes
     tag  = 4 bytes
 all are 4-aligned
@@ -176,60 +178,60 @@ block is initialized to:
 
 Enqueue:
   repeat
-      tail = header.tail.slot
-      old_tag = header.tail.tag
-      if header.tail.CAS(tail, tagFree, tail, tagAllocating) then
+      head = header.head.slot
+      old_tag = header.head.tag
+      if header.head.CAS(head, tagFree, head, tagAllocating) then
           break
-      else if header.tail.CAS(tail, tagEndOfList, tail, tagExtending) then
+      else if header.head.CAS(head, tagEndOfList, head, tagExtending) then
           break
       else
           yield
   forever
-  if header.tail.tag = tagAllocating then
+  if header.head.tag = tagAllocating then
       store <value, tagAllocated> into slot
-      header.tail.CAS(tail, tagAllocating, NextSlot(tail), NextSlot(tail).tag)
+      header.head.CAS(head, tagAllocating, NextSlot(head), NextSlot(head).tag)
   else
       allocate block // from cache, if possible
       next = second data slot in the new block
       set next to <tagAllocated, value>
       set last slot in the original block to <new block address, tagBlockPointer>
-      header.tail.CAS(tail, tagExtending, next, next.tag)
+      header.head.CAS(head, tagExtending, next, next.tag)
       // queue is now unlocked
       preallocate block
 
 Dequeue:
   repeat
-      head = header.head.slot
-      old_tag = header.head.tag
-      caughtTheTail := NextSlot(header.head.slot) = header.tail.slot;
-      if head.head.CAS(head, tagAllocated, head, tagRemoving) then
-          head.tag = tagRemovings
+      tail = header.tail.slot
+      old_tag = header.tail.tag
+      caughtTheHead := NextSlot(header.tail.slot) = header.head.slot;
+      if tail.tail.CAS(tail, tagAllocated, tail, tagRemoving) then
+          tail.tag = tagRemovings
           break
-      else if header.head.Tag = tagSentinel then
-          if caughtTheTail then
+      else if header.tail.Tag = tagSentinel then
+          if caughtTheHead then
               return false
-          else if header.head.CAS(head, tagSentinel, head, tagRemoving) then
-              head.tag = tagRemoving
+          else if header.tail.CAS(tail, tagSentinel, tail, tagRemoving) then
+              tail.tag = tagRemoving
               break
-      else if header.head.CAS(head, tagBlockPointer, head, tagDestrogin) then
-          head.tag = tagDestroying
+      else if header.tail.CAS(tail, tagBlockPointer, tail, tagDestrogin) then
+          tail.tag = tagDestroying
           break
       else
           yield
   forever
-  firstSlot = head - head.Offset // point to first slot
+  firstSlot = tail - tail.Offset // point to first slot
   if old_tag in [tagSentinel, tagAllocated] then
-      next = NextSlot(head)
+      next = NextSlot(tail)
       if tag = tagAllocated then
           fetch stored value
-      if caughtTheTail then
-          header.head.CAS(head, tagRemoving, head, tagSentinel)
+      if caughtTheHead then
+          header.tail.CAS(tail, tagRemoving, tail, tagSentinel)
           firstSlot = nil // do not decrement the header counter
       else
-          header.head.CAS(head, tagRemoving, next, next.tag)
+          header.tail.CAS(tail, tagRemoving, next, next.tag)
   else
-      next = head.value // points to the next block's sentinel
-      header.head.CAS(head, tagDestroying, next, tagSentinel)
+      next = tail.value // points to the next block's sentinel
+      header.tail.CAS(tail, tagDestroying, next, tagSentinel)
       old_tag = tagSentinel // force retry
   // queue is now unlocked
   if assigned(firstSlot) and (InterlockedDecrement(firstSlot.value) = 0) then
@@ -275,7 +277,7 @@ var
   pBlock: PGpLFQueueTaggedValue;
   pSlot : PGpLFQueueTaggedValue;
 begin
-  pSlot := obcHeadPointer.Slot;
+  pSlot := obcTailPointer.Slot;
   while assigned(pSlot) do begin
     if pSlot.Tag in [tagBlockPointer, tagEndOfList] then begin
       pBlock := pSlot;
@@ -288,14 +290,14 @@ begin
   end;
   if assigned(obcCachedBlock) then
     FreeMem(obcCachedBlock);
-  FreeMem(obcHeadPointer);
   FreeMem(obcTailPointer);
+  FreeMem(obcHeadPointer);
 end; { TGpLockFreeQueue.Cleanup }
 
 function TGpLockFreeQueue.Dequeue(var value: int64): boolean;
 var
-  caughtTheTail: boolean;
-  head         : PGpLFQueueTaggedValue;
+  caughtTheHead: boolean;
+  tail         : PGpLFQueueTaggedValue;
   header       : PGpLFQueueTaggedValue;
   next         : PGpLFQueueTaggedValue;
   tag          : TGpLFQueueTag;
@@ -304,26 +306,26 @@ begin
   Result := true;
   while Result and (tag = tagSentinel) do begin
     repeat
-      head := obcHeadPointer.Slot;
-      caughtTheTail := NextSlot(obcHeadPointer.Slot) = obcTailPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
-      if (obcHeadPointer.Tag = tagAllocated)
-         and CAS64(head, Ord(tagAllocated), head, Ord(tagRemoving), obcHeadPointer^) then
+      tail := obcTailPointer.Slot;
+      caughtTheHead := NextSlot(obcTailPointer.Slot) = obcHeadPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
+      if (obcTailPointer.Tag = tagAllocated)
+         and CAS64(tail, Ord(tagAllocated), tail, Ord(tagRemoving), obcTailPointer^) then
       begin
         tag := tagAllocated;
         break; //repeat
       end
-      else if (obcHeadPointer.Tag = tagSentinel) then begin
-        if caughtTheTail then begin
+      else if (obcTailPointer.Tag = tagSentinel) then begin
+        if caughtTheHead then begin
           Result := false;
           break; //repeat
         end
-        else if CAS64(head, Ord(tagSentinel), head, Ord(tagRemoving), obcHeadPointer^) then begin
+        else if CAS64(tail, Ord(tagSentinel), tail, Ord(tagRemoving), obcTailPointer^) then begin
           tag := tagSentinel;
           break; //repeat
         end
       end
-      else if (obcHeadPointer.Tag = tagBlockPointer)
-              and CAS64(head, Ord(tagBlockPointer), head, Ord(tagDestroying), obcHeadPointer^) then
+      else if (obcTailPointer.Tag = tagBlockPointer)
+              and CAS64(tail, Ord(tagBlockPointer), tail, Ord(tagDestroying), obcTailPointer^) then
       begin
         tag := tagBlockPointer;
         break; //repeat
@@ -332,33 +334,33 @@ begin
         asm pause; end;
     until false;
     if Result then begin // dequeueing
-      header := head;
+      header := tail;
       Dec(header, header.Offset);
       if tag in [tagSentinel, tagAllocated] then begin
-        next := NextSlot(head);
+        next := NextSlot(tail);
         if tag = tagAllocated then // sentinel doesn't contain any useful value
-          value := head.Value;
-        if caughtTheTail then begin
+          value := tail.Value;
+        if caughtTheHead then begin
           {$IFNDEF LFQ_DontUseMove64}
-          Move64(head, Ord(tagSentinel), obcHeadPointer^); // release the lock; as this is the last element, don't move forward
+          Move64(tail, Ord(tagSentinel), obcTailPointer^); // release the lock; as this is the last element, don't move forward
           {$ELSE}
-          CAS64(head, Ord(tagRemoving), head, Ord(tagSentinel), obcHeadPointer^);
+          CAS64(tail, Ord(tagRemoving), tail, Ord(tagSentinel), obcTailPointer^);
           {$ENDIF LFQ_DontUseMove64}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
           {$IFNDEF LFQ_DontUseMove64}
-          Move64(next, Ord(next.Tag), obcHeadPointer^); // release the lock
+          Move64(next, Ord(next.Tag), obcTailPointer^); // release the lock
           {$ELSE}
-          CAS64(head, Ord(tagRemoving), next, Ord(next.Tag), obcHeadPointer^);
+          CAS64(tail, Ord(tagRemoving), next, Ord(next.Tag), obcTailPointer^);
           {$ENDIF LFQ_DontUseMove64}
       end
       else begin // releasing memory
-        next := PGpLFQueueTaggedValue(head.Value); // next points to the sentinel
+        next := PGpLFQueueTaggedValue(tail.Value); // next points to the sentinel
         {$IFNDEF LFQ_DontUseMove64}
-        Move64(next, Ord(tagSentinel), obcHeadPointer^); // release the lock
+        Move64(next, Ord(tagSentinel), obcTailPointer^); // release the lock
         {$ELSE}
-        CAS64(head, Ord(tagDestroying), next, Ord(tagSentinel), obcHeadPointer^);
+        CAS64(tail, Ord(tagDestroying), next, Ord(tagSentinel), obcTailPointer^);
         {$ENDIF LFQ_DontUseMove64}
         tag := tagSentinel; // retry
       end;
@@ -372,29 +374,29 @@ procedure TGpLockFreeQueue.Enqueue(const value: int64);
 var
   extension: PGpLFQueueTaggedValue;
   next     : PGpLFQueueTaggedValue;
-  tail     : PGpLFQueueTaggedValue;
+  head     : PGpLFQueueTaggedValue;
 begin
   repeat
-    tail := obcTailPointer.Slot;
-    if (obcTailPointer.Tag = tagFree)
-       and CAS64(tail, Ord(tagFree), tail, Ord(tagAllocating), obcTailPointer^)
+    head := obcHeadPointer.Slot;
+    if (obcHeadPointer.Tag = tagFree)
+       and CAS64(head, Ord(tagFree), head, Ord(tagAllocating), obcHeadPointer^)
     then
       break //repeat
-    else if (obcTailPointer.Tag = tagEndOfList)
-            and CAS64(tail, Ord(tagEndOfList), tail, Ord(tagExtending), obcTailPointer^)
+    else if (obcHeadPointer.Tag = tagEndOfList)
+            and CAS64(head, Ord(tagEndOfList), head, Ord(tagExtending), obcHeadPointer^)
     then
       break //repeat
     else  // very temporary condition, retry quickly
       asm pause; end;
   until false;
-  if obcTailPointer.Tag = tagAllocating then begin // enqueueing
-    next := NextSlot(tail);
-    tail.Value := value;
-    tail.Tag := tagAllocated;
+  if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
+    next := NextSlot(head);
+    head.Value := value;
+    head.Tag := tagAllocated;
     {$IFNDEF LFQ_DontUseMove64}
-    Move64(next, Ord(next.Tag), obcTailPointer^); // release the lock
+    Move64(next, Ord(next.Tag), obcHeadPointer^); // release the lock
     {$ELSE}
-    CAS64(tail, Ord(tagAllocating), next, Ord(next.Tag), obcTailPointer^);
+    CAS64(head, Ord(tagAllocating), next, Ord(next.Tag), obcHeadPointer^);
     {$ENDIF LFQ_DontUseMove64}
   end
   else begin // allocating memory
@@ -403,13 +405,13 @@ begin
     extension.Tag := tagAllocated;
     extension.Value := value;
     Dec(extension);             // forward reference points to the sentinel
-    tail.Value := int64(extension);
-    tail.Tag := tagBlockPointer;
+    head.Value := int64(extension);
+    head.Tag := tagBlockPointer;
     Inc(extension, 2); // get to the first free slot
     {$IFNDEF LFQ_DontUseMove64}
-    Move64(extension, Ord(extension.Tag), obcTailPointer^); // release the lock
+    Move64(extension, Ord(extension.Tag), obcHeadPointer^); // release the lock
     {$ELSE}
-    CAS64(tail, Ord(tagExtending), extension, Ord(extension.Tag), obcTailPointer^);
+    CAS64(head, Ord(tagExtending), extension, Ord(extension.Tag), obcHeadPointer^);
     {$ENDIF LFQ_DontUseMove64}
     PreallocateMemory;
   end;
@@ -417,15 +419,15 @@ end; { TGpLockFreeQueue.Enqueue }
 
 procedure TGpLockFreeQueue.Initialize;
 begin
-  obcHeadPointer := AllocMem(SizeOf(TGpLFQueueTaggedPointer));
   obcTailPointer := AllocMem(SizeOf(TGpLFQueueTaggedPointer));
-  Assert(cardinal(obcHeadPointer) mod 8 = 0);
+  obcHeadPointer := AllocMem(SizeOf(TGpLFQueueTaggedPointer));
   Assert(cardinal(obcTailPointer) mod 8 = 0);
+  Assert(cardinal(obcHeadPointer) mod 8 = 0);
   Assert(cardinal(@obcCachedBlock) mod 4 = 0);
-  obcHeadPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
-  obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
-  obcTailPointer.Slot := NextSlot(obcHeadPointer.Slot);
+  obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
+  obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
+  obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
   obcCachedBlock := AllocateBlock; // pre-allocate memory
 end; { TGpLockFreeQueue.Initialize }
 
