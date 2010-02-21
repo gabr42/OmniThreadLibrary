@@ -33,7 +33,7 @@ procedure TfrmAnonymousEventMonitorDemo.btnHelloClick(Sender: TObject);
 begin
   btnHello.Enabled := false;
   FAnonTask := CreateTask(
-    procedure (task: IOmniTask) begin
+    procedure (const task: IOmniTask) begin
       task.Comm.Send(0, Format('Hello, world! Reporting from thread %d',
         [GetCurrentThreadID]));
     end,
