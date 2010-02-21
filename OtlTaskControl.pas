@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-09
-///   Version           : 1.20a
+///   Last modification : 2010-02-21
+///   Version           : 1.20b
 ///</para><para>
 ///   History:
+///     1.20b: 2010-02-21
+///       - TOmniTaskControl.otcOnTerminatedExec was not created when OnTerminated
+///         function was called with a "reference to function" parameter.
+///       - Fixed to compile with D2009.
 ///     1.20a: 2010-02-10
 ///       - Internal message forwarders must be destroyed during task termination.
 ///     1.20: 2010-02-09
@@ -2303,6 +2307,8 @@ end; { TOmniTaskControl.OnTerminated }
 {$IFDEF OTL_Anonymous}
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
 begin
+  if not assigned(otcOnTerminatedExec) then
+    otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
   CreateInternalMonitor;
   Result := Self;
@@ -2857,13 +2863,17 @@ begin
 end; { TOmniMessageExec.Create }
 
 procedure TOmniMessageExec.SetOnMessage(exec: TOmniOnMessageFunction);
+var
+  pExec: TProc absolute exec;
 begin
-  omeOnMessage := TProc(exec);
+  omeOnMessage.Delegate := pExec;
 end; { TOmniMessageExec.SetOnMessage }
 
 procedure TOmniMessageExec.SetOnTerminated(exec: TOmniOnTerminatedFunction);
+var
+  pExec: TProc absolute exec;
 begin
-  omeOnTerminated := TProc(exec);
+  omeOnTerminated.Delegate := pExec;
 end; { TOmniMessageExec.SetOnTerminated }
 {$ENDIF OTL_Anonymous}
 
