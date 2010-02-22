@@ -37,9 +37,6 @@
   - 36_ParallelAggregate: Parallel calculations using Parallel.ForEach.Aggregate
     (Delphi 2009 and newer).
 
-TODO: Add new tests to 2010.
-TODO: Cannot be compiled with /dLogThreadPool.
-
 1.04b: 2009-12-18
 - [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
 - [ahwux] Added missing task interface cleanup to OnTerminated in demo 18.
