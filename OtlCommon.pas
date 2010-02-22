@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-09
-///   Version           : 1.10
+///   Last modification : 2010-02-22
+///   Version           : 1.10a
 ///</para><para>
 ///   History:
+///     1.10a: 2010-02-22
+///       - D2009-compatible way of setting a delegate in TOmniExecutable.
 ///     1.10: 2010-02-09
 ///       - Implemented TOmniExecutor - a record that can store TProcedure, TMethod, or
 ///         TProc.
@@ -348,7 +350,6 @@ type
     {$IFDEF OTL_Anonymous}
     oeDelegate: TProc;
     function  GetDelegate: TProc; inline;
-    procedure SetDelegate(const value: TProc); inline;
     {$ENDIF OTL_Anonymous}
   strict private
     oeMethod   : TMethod;
@@ -375,11 +376,13 @@ type
     property Proc: TProcedure read GetProc write SetProc;
   public
     {$IFDEF OTL_Anonymous}
+    class procedure AnonCopy(var Dest; const Source); static;
     class operator Explicit(const a: TOmniExecutable): TProc; inline;
     class operator Explicit(const a: TProc): TOmniExecutable; inline;
     class operator Implicit(const a: TOmniExecutable): TProc; inline;
     class operator Implicit(const a: TProc): TOmniExecutable; inline;
-    property Delegate: TProc read GetDelegate write SetDelegate;
+    procedure SetDelegate(const source);
+    property Delegate: TProc read GetDelegate;
     {$ENDIF OTL_Anonymous}
   end; { TOmniExecutable }
 
@@ -1773,14 +1776,25 @@ begin
 end; { TOmniExecutable.SetProc }
 
 {$IFDEF OTL_Anonymous}
+class procedure TOmniExecutable.AnonCopy(var Dest; const Source);
+begin
+  IInterface(Source)._AddRef;
+  Pointer(Dest) := Pointer(Source);
+end; { TOmniExecutable.AnonCopy }
+
 class operator TOmniExecutable.Explicit(const a: TOmniExecutable): TProc;
 begin
   Result := a.Delegate;
 end; { TOmniExecutable.Explicit }
 
+class operator TOmniExecutable.Explicit(const a: TProc): TOmniExecutable;
+begin
+  Result.SetDelegate(a);
+end; { TOmniExecutable.Explicit }
+
 class operator TOmniExecutable.Implicit(const a: TProc): TOmniExecutable;
 begin
-  Result.Delegate := a;
+  Result.SetDelegate(a);
 end; { TOmniExecutable.Implicit }
 
 class operator TOmniExecutable.Implicit(const a: TOmniExecutable): TProc;
@@ -1794,16 +1808,11 @@ begin
   Result := oeDelegate;
 end; { TOmniExecutable.GetDelegate }
 
-procedure TOmniExecutable.SetDelegate(const value: TProc);
+procedure TOmniExecutable.SetDelegate(const source);
 begin
   oeKind := oekDelegate;
-  oeDelegate := value;
+  AnonCopy(oeDelegate, source);
 end; { TOmniExecutable.SetDelegate }
-
-class operator TOmniExecutable.Explicit(const a: TProc): TOmniExecutable;
-begin
-  Result.Delegate := a;
-end; { TOmniExecutable.Explicit }
 {$ENDIF OTL_Anonymous}
 
 initialization
