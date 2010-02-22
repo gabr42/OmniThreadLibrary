@@ -460,7 +460,7 @@ end; { TOTPWorkItem.TerminateTask }
 constructor TOTPWorkerThread.Create(const ThreadDataFactory: TOTPThreadDataFactory);
 begin
   inherited Create(true);
-{$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
   owtThreadDataFactory := ThreadDataFactory;
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
@@ -470,8 +470,7 @@ end; { TOTPWorkerThread.Create }
 
 destructor TOTPWorkerThread.Destroy;
 begin
-{$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);
-  {$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);{$ENDIF LogThreadPool}
   FreeAndNil(owtWorkItemLock);
   DSiCloseHandleAndNull(owtTerminateEvent);
   DSiCloseHandleAndNull(owtNewWorkEvent);
@@ -483,8 +482,7 @@ procedure TOTPWorkerThread.Asy_Stop;
 var
   task: IOmniTask;
 begin
-{$IFDEF LogThreadPool}Log('Stop thread %s', [Description]);
-  {$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('Stop thread %s', [Description]);{$ENDIF LogThreadPool}
   if assigned(owtWorkItemLock) then begin // Stop may be called during Cancel[All] and owtWorkItemLock may already be destroyed
     owtWorkItemLock.Acquire;
     try
@@ -502,14 +500,12 @@ end; { TOTPWorkerThread.Asy_Stop }
 /// <since>2008-07-26</since>
 function TOTPWorkerThread.Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
 begin
-{$IFDEF LogThreadPool}Log('Asy_TerminateWorkItem thread %s', [Description]);
-  {$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('Asy_TerminateWorkItem thread %s', [Description]);{$ENDIF LogThreadPool}
   Result := false;
   owtWorkItemLock.Acquire;
   try
     if assigned(WorkItem_ref) then begin
-{$IFDEF LogThreadPool}Log('Thread %s has work item', [Description]);
-      {$ENDIF LogThreadPool}
+      {$IFDEF LogThreadPool}Log('Thread %s has work item', [Description]);{$ENDIF LogThreadPool}
       workItem := WorkItem_ref;
       WorkItem_ref := nil;
       if assigned(workItem) and assigned(workItem.task) and
@@ -541,8 +537,7 @@ procedure TOTPWorkerThread.Execute;
 var
   msg: TOmniMessage;
 begin
-{$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);
-  {$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('>>>Execute thread %s', [Description]);{$ENDIF LogThreadPool}
   SendThreadNotifications(tntCreate, 'OtlThreadPool worker');
   try
     Comm.Send(MSG_THREAD_CREATED, threadID);
@@ -566,8 +561,7 @@ begin
       end; // while Comm.ReceiveWait()
     finally Comm.Send(MSG_THREAD_DESTROYING, threadID); end;
   finally SendThreadNotifications(tntDestroy, 'OtlThreadPool worker'); end;
-{$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);
-  {$ENDIF LogThreadPool}
+  {$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);{$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Execute }
 
 procedure TOTPWorkerThread.ExecuteWorkItem(workItem: TOTPWorkItem);
@@ -586,14 +580,14 @@ begin
   task := WorkItem_ref.task;
   try
     try
-{$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);
+      {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);
       DSiGetThreadTimes(creationTime, startUserTime, startKernelTime); {$ENDIF LogThreadPool}
       if assigned(task) then
         with (task as IOmniTaskExecutor) do begin
           SetThreadData(owtThreadData);
           Execute;
         end;
-{$IFDEF LogThreadPool}DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
+      {$IFDEF LogThreadPool}DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
       Log(
         'Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms',
         [Description, WorkItem_ref.Description, Round
@@ -601,7 +595,7 @@ begin
           ((stopKernelTime - startKernelTime) / 10000)]); {$ENDIF LogThreadPool}
     except
       on E: Exception do begin
-{$IFDEF LogThreadPool}Log(
+        {$IFDEF LogThreadPool}Log(
           'Thread %s caught exception %s during exection of %s',
           [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
         owtRemoveFromPool := true;
@@ -615,7 +609,7 @@ begin
     workItem := WorkItem_ref;
     WorkItem_ref := nil;
     if assigned(workItem) then begin // not already canceled
-{$IFDEF LogThreadPool}Log(
+      {$IFDEF LogThreadPool}Log(
         'Thread %s sending notification of completed work item %s',
         [Description, workItem.Description]); {$ENDIF LogThreadPool}
       Comm.Send(MSG_COMPLETED, workItem);
@@ -1103,7 +1097,7 @@ begin
     owIdleWorkers.Delete(owIdleWorkers.Count - 1);
     owRunningWorkers.Add(worker);
     CountRunning.Increment;
-      {$IFDEF LogThreadPool}Log(
+    {$IFDEF LogThreadPool}Log(
       'Allocated thread from idle pool, num idle = %d, num running = %d[%d]',
       [owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting.Value]);
     {$ENDIF LogThreadPool}
