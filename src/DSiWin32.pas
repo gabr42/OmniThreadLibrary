@@ -6,10 +6,14 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja
    Creation date     : 2002-10-09
-   Last modification : 2009-11-24
-   Version           : 1.53a
+   Last modification : 2010-02-01
+   Version           : 1.53c
 </pre>*)(*
    History:
+     1.53c: 2010-02-01
+       - DSiGetProcAddress made public.
+     1.53b: 2009-12-15
+       - Fixed Delphi 5 compilation.
      1.53a: 2009-11-24
        - Fixed TDSiRegistry.ReadVariant and WriteVariant to work with varUString
          (also fixes all sorts of TDSiRegistry problems in Delphi 2010.)
@@ -1115,6 +1119,7 @@ type
     var lpcbNeeded: DWORD): BOOL; stdcall;
   function  DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
+  function  DSiGetProcAddress(const libFileName, procName: string): FARPROC;
   function  DSiGetProcessImageFileName(hProcess: THandle; lpImageFileName: PChar;
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
@@ -1245,8 +1250,6 @@ const
   GSHEmptyRecycleBin: TSHEmptyRecycleBin = nil;
   GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
   GWow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection = nil;
-
-  function DSiGetProcAddress(const libFileName, procName: string): FARPROC; forward;
 
 { Helpers }
 
@@ -3817,7 +3820,7 @@ const
   var
     idWindow: DWORD;
   begin
-    GetWindowThreadProcessId(hWindow, idWindow);
+    GetWindowThreadProcessId(hWindow, @idWindow);
     if idWindow = DWORD(lParam) then
       PostMessage(hWindow, WM_CLOSE, 0, 0);
     Result := true;

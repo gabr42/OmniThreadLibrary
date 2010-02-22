@@ -1,7 +1,7 @@
 (*:Preallocated hasher.
    @author Primoz Gabrijelcic
    @desc <pre>
-Copyright (c) 2008, Primoz Gabrijelcic
+Copyright (c) 2010, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2008-11-09
-   Version           : 1.05a
+   Last modification : 2010-01-26
+   Version           : 1.05b
 </pre>*)(*
    History:
+     1.05b: 2010-01-26
+       - Fixed a bug in TGpStringTable.SetValue.
      1.05: 2008-11-09
        - Fixed a bug in TGpStringTable.Grow and TGpStringDictionary.Grow which caused
          random memory overwrites.
@@ -757,13 +759,15 @@ end; { TGpStringTable.GetValue }
 
 procedure TGpStringTable.SetValue(index: cardinal; const value: int64);
 var
+  lenStr: cardinal;
   pData: PByte;
-begin 
+begin
   pData := pointer(cardinal(stData) + index);
   CheckPointer(pData, SizeOf(cardinal));
+  lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
-  CheckPointer(pData, PCardinal(pData)^);
-  Inc(pData, PCardinal(pData)^);
+  CheckPointer(pData, lenStr);
+  Inc(pData, lenStr);
   CheckPointer(pData, SizeOf(int64));
   PInt64(pData)^ := value;
 end; { TGpStringTable.SetValue }
