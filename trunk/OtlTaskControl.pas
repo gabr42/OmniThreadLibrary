@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-21
-///   Version           : 1.20b
+///   Last modification : 2010-02-22
+///   Version           : 1.20c
 ///</para><para>
 ///   History:
+///     1.20c: 2010-02-22
+///       - A better fix for the D2009 compilation issues, thanks to Serg.
 ///     1.20b: 2010-02-21
 ///       - TOmniTaskControl.otcOnTerminatedExec was not created when OnTerminated
 ///         function was called with a "reference to function" parameter.
@@ -245,6 +247,7 @@ type
   strict private
     omeOnMessage   : TOmniExecutable;
     omeOnTerminated: TOmniExecutable;
+    class procedure AnonCopy(var Dest; const Source); static;
   public
     constructor Create(exec: TOmniTaskMessageEvent); overload;
     constructor Create(exec: TOmniTaskTerminatedEvent); overload;
@@ -2862,17 +2865,25 @@ begin
   SetOnTerminated(exec);
 end; { TOmniMessageExec.Create }
 
+class procedure TOmniMessageExec.AnonCopy(var Dest; const Source);
+begin
+  IInterface(Source)._AddRef;
+  Pointer(Dest) := Pointer(Source);
+end; { TOmniMessageExec.AnonCopy }
+
 procedure TOmniMessageExec.SetOnMessage(exec: TOmniOnMessageFunction);
 var
-  pExec: TProc absolute exec;
+  pExec: TProc;
 begin
+  AnonCopy(pExec, exec);
   omeOnMessage.Delegate := pExec;
 end; { TOmniMessageExec.SetOnMessage }
 
 procedure TOmniMessageExec.SetOnTerminated(exec: TOmniOnTerminatedFunction);
 var
-  pExec: TProc absolute exec;
+  pExec: TProc;
 begin
+  AnonCopy(pExec, exec);
   omeOnTerminated.Delegate := pExec;
 end; { TOmniMessageExec.SetOnTerminated }
 {$ENDIF OTL_Anonymous}
