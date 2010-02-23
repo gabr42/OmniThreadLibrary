@@ -23,4 +23,6 @@
 
 [http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html Inverse semaphore]
 
-[http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-2.html Dynamically allocated queue]
+[http://17slon.com/blogs/gabr/2010/02/dynamic-lock-free-queue-doing-it-right.html Dynamically allocated queue]
+
+[http://17slon.com/blogs/gabr/2010/02/three-steps-to-blocking-collection-3.html Blocking collection]
