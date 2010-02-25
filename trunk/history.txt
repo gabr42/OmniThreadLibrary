@@ -1,3 +1,4 @@
+1.05: 
 - Big rename: TOmniBaseStack -> TOmniBaseBoundedStack,
   TOmniStack -> TOmniBoundedStack, TOmniBaseQueue -> TOmniBaseBoundedQueue,
   TOmniQueue -> TOmniBoundedQueue, IInterfaceDictionary -> IOmniInterfaceDictionary,
@@ -25,9 +26,9 @@
 - Implemented Parallel.Join wrapper (Delphi 2009 and newer).
 - Refactored and enhanced TOmniValueContainer.
 - TOmniTaskFunction now takes 'const' parameter.
-- Set package names and designtime/runtime type in D2009/D2010 packages.
 - Bugs fixed:
   - TOmniEventMonitor.OnTaskUndeliveredMessage was missing 'message' parameter.
+  - Set package names and designtime/runtime type in D2009/D2010 packages.
 - New demos:
   - 32_Queue: Stress test for new TOmniBaseQueue and TOmniQueue.
   - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demoes
