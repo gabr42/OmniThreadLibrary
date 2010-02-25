@@ -1,4 +1,4 @@
-1.05: 
+1.05: 2010-02-25
 - Big rename: TOmniBaseStack -> TOmniBaseBoundedStack,
   TOmniStack -> TOmniBoundedStack, TOmniBaseQueue -> TOmniBaseBoundedQueue,
   TOmniQueue -> TOmniBoundedQueue, IInterfaceDictionary -> IOmniInterfaceDictionary,
@@ -37,6 +37,7 @@
   - 35_ParallelFor: Parallel tree scan using Parallel.ForEach (Delphi 2009 and newer).
   - 36_ParallelAggregate: Parallel calculations using Parallel.ForEach.Aggregate
     (Delphi 2009 and newer).
+  - 37_ParallelJoin: Parallel.Join demo.
 
 1.04b: 2009-12-18
 - [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
