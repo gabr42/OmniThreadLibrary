@@ -55,6 +55,7 @@
        int P = 2 * Environment.ProcessorCount; // assume twice the procs for
                                                // good work distribution
        int Chunk = N / P;                      // size of a work chunk
+   - Probably we need Parallel.Join.MonitorWith or something like that.
 
    Can something like this be implemented?:
      "To scale well on multiple processors, TPL uses work-stealing techniques to
@@ -177,18 +178,38 @@ end; { Parallel.Join }
 class procedure Parallel.Join(const tasks: array of TOmniTaskFunction);
 var
   countStopped: TOmniResourceCount;
+  firstTask   : IOmniTaskControl;
+  prevTask    : IOmniTaskControl;
   proc        : TOmniTaskFunction;
+  task        : IOmniTaskControl;
 begin
-  countStopped := TOmniResourceCount.Create(Length(tasks));
-  for proc in tasks do
-    CreateTask(
-      procedure (const task: IOmniTask) begin
-        proc(task);
-        countStopped.Allocate;
-      end
-    ).Unobserved
-     .Schedule;
-  WaitForSingleObject(countStopped.Handle, INFINITE);
+  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
+    prevTask := nil;
+    for proc in tasks do begin
+      task := CreateTask(proc).Unobserved;
+      if assigned(prevTask) then
+        prevTask.ChainTo(task);
+      prevTask := task;
+      if not assigned(firstTask) then
+        firstTask := task;
+    end;
+    if assigned(firstTask) then begin
+      firstTask.Run;
+      prevTask.WaitFor(INFINITE);
+    end;
+  end
+  else begin
+    countStopped := TOmniResourceCount.Create(Length(tasks));
+    for proc in tasks do
+      CreateTask(
+        procedure (const task: IOmniTask) begin
+          proc(task);
+          countStopped.Allocate;
+        end
+      ).Unobserved
+       .Schedule;
+    WaitForSingleObject(countStopped.Handle, INFINITE);
+  end;
 end; { Parallel.Join }
 
 class procedure Parallel.Join(const task1, task2: TProc);
@@ -201,7 +222,7 @@ var
   countStopped: TOmniResourceCount;
   proc        : TProc;
 begin
-  if (Environment.Thread.Affinity.Count = 1) or (Length(tasks) = 1) then begin
+  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
     for proc in tasks do
       proc;
   end
