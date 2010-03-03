@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-22
-///   Version           : 1.20d
+///   Last modification : 2010-03-03
+///   Version           : 1.20e
 ///</para><para>
 ///   History:
+///     1.20e: 2010-03-03
+///       - TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) was broken.
+///       - TOmniTaskControl.OnMessage/OnTerminate uses event monitor created in the
+///         context of the task controller thread (was using global event monitor created
+///         in the main thread).
 ///     1.20d: 2010-02-22
 ///        - D2009 compilation hack moved to OtlCommon.
 ///     1.20c: 2010-02-22
@@ -855,11 +860,21 @@ type
     procedure ForwardTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure ForwardTaskTerminated(const task: IOmniTaskControl);
   public
-    constructor Create; reintroduce;
+    constructor Create(AOwner: TComponent); override; 
   end; { TOmniTaskControlEventMonitor }
 
+  TOmniTaskControlEventMonitorPool = class
+  strict private
+    monitorPool: TOmniEventMonitorPool;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Allocate: TOmniTaskControlEventMonitor;
+    procedure Release(monitor: TOmniTaskControlEventMonitor);
+  end; { TOmniTaskControlEventMonitorPool }
+
 var
-  GTaskControlEventMonitor: TOmniTaskControlEventMonitor;
+  GTaskControlEventMonitorPool: TOmniTaskControlEventMonitorPool;
 
 { exports }
 
@@ -2023,6 +2038,8 @@ begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
   if assigned(otcEventMonitor) then begin
     RemoveMonitor;
+    if assigned(GTaskControlEventMonitorPool) then
+      GTaskControlEventMonitorPool.Release(TOmniTaskControlEventMonitor(otcEventMonitor));
     otcEventMonitor := nil;
   end;
   if assigned(otcThread) then begin
@@ -2073,7 +2090,7 @@ end; { TOmniTaskControl.ChainTo }
 procedure TOmniTaskControl.CreateInternalMonitor;
 begin
   if not assigned(otcEventMonitor) then begin
-    otcEventMonitor := GTaskControlEventMonitor;
+    otcEventMonitor := GTaskControlEventMonitorPool.Allocate;
     TOmniEventMonitor(otcEventMonitor).Monitor(Self);
   end;
 end; { TOmniTaskControl.CreateInternalMonitor }
@@ -2263,6 +2280,8 @@ end; { TOmniTaskControl.MsgWait }
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent):
     IOmniTaskControl;
 begin
+  if not assigned(otcOnMessageExec) then
+    otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
   CreateInternalMonitor;
   Result := Self;
@@ -2271,8 +2290,6 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
   IOmniTaskControl;
 begin
-  if not assigned(otcOnMessageExec) then
-    otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
   Result := Self;
@@ -2769,9 +2786,9 @@ end; { TOmniTaskGroup.WaitForAll }
 
 { TOmniTaskControlEventMonitor }
 
-constructor TOmniTaskControlEventMonitor.Create;
+constructor TOmniTaskControlEventMonitor.Create(AOwner: TComponent);
 begin
-  inherited Create(nil);
+  inherited Create(AOwner);
   OnTaskMessage := ForwardTaskMessage;
   OnTaskTerminated := ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.Create }
@@ -2787,6 +2804,31 @@ procedure TOmniTaskControlEventMonitor.ForwardTaskTerminated(
 begin
   (task as IOmniTaskControlInternals).ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.ForwardTaskTerminated }
+
+{ TOmniTaskControlEventMonitorPool }
+
+constructor TOmniTaskControlEventMonitorPool.Create;
+begin
+  inherited Create;
+  monitorPool := TOmniEventMonitorPool.Create;
+  monitorPool.MonitorClass := TOmniTaskControlEventMonitor;
+end; { TOmniTaskControlEventMonitorPool.Create }
+
+destructor TOmniTaskControlEventMonitorPool.Destroy;
+begin
+  FreeAndNil(monitorPool);
+  inherited;
+end; { TOmniTaskControlEventMonitorPool.Destroy }
+
+function TOmniTaskControlEventMonitorPool.Allocate: TOmniTaskControlEventMonitor;
+begin
+  Result := monitorPool.Allocate as TOmniTaskControlEventMonitor;
+end; { TOmniTaskControlEventMonitorPool.Allocate }
+
+procedure TOmniTaskControlEventMonitorPool.Release(monitor: TOmniTaskControlEventMonitor);
+begin
+  monitorPool.Release(monitor);
+end; { TOmniTaskControlEventMonitorPool.Release }
 
 { TOmniSharedTaskInfo }
 
@@ -2878,7 +2920,7 @@ end; { TOmniMessageExec.SetOnTerminated }
 {$ENDIF OTL_Anonymous}
 
 initialization
-  GTaskControlEventMonitor := TOmniTaskControlEventMonitor.Create;
+  GTaskControlEventMonitorPool := TOmniTaskControlEventMonitorPool.Create;
 finalization
-  FreeAndNil(GTaskControlEventMonitor);
+  FreeAndNil(GTaskControlEventMonitorPool);
 end.
