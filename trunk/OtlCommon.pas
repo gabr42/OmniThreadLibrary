@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-22
-///   Version           : 1.10a
+///   Last modification : 2010-03-03
+///   Version           : 1.10b
 ///</para><para>
 ///   History:
+///     1.10b: 2010-03-03
+///       - Replacement AnonCopy, by Serg.
 ///     1.10a: 2010-02-22
 ///       - D2009-compatible way of setting a delegate in TOmniExecutable.
 ///     1.10: 2010-02-09
@@ -1777,9 +1779,15 @@ end; { TOmniExecutable.SetProc }
 
 {$IFDEF OTL_Anonymous}
 class procedure TOmniExecutable.AnonCopy(var Dest; const Source);
+var
+  P: Pointer;
 begin
-  IInterface(Source)._AddRef;
-  Pointer(Dest) := Pointer(Source);
+  P:= Pointer(Dest);
+  if Pointer(Source) <> nil then
+    IInterface(Source)._AddRef;
+  Pointer(Dest):= Pointer(Source);
+  if P <> nil then
+    IInterface(P)._Release;
 end; { TOmniExecutable.AnonCopy }
 
 class operator TOmniExecutable.Explicit(const a: TOmniExecutable): TProc;
