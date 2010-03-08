@@ -1,3 +1,11 @@
+1.05a: 2010-03-08
+- Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
+  was broken.
+- Bug fixed: TOmniTaskControl.OnMessage/OnTerminate uses event monitor 
+  created in the context of the task controller thread (was using global 
+  event monitor created in the main thread).
+- Implemented TOmniEventMonitorPool, per-thread TOmniEventMonitor allocator.
+
 1.05: 2010-02-25
 - Big rename: TOmniBaseStack -> TOmniBaseBoundedStack,
   TOmniStack -> TOmniBoundedStack, TOmniBaseQueue -> TOmniBaseBoundedQueue,
