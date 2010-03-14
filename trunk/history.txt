@@ -1,3 +1,7 @@
+- TOmniMessageQueueTee
+- IOmniCommDispatchingObserver
+- TOmniCounter, auto-initialized wrapper around the IOmniCounter
+
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
   was broken.
