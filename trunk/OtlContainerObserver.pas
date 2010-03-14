@@ -142,8 +142,8 @@ type
   strict protected
     function  GetHandle: THandle; override;
   public
-    procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
+    procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
 
@@ -331,7 +331,7 @@ begin
   csListLocks[interest].EnterReadLock;
   try
     list := csObserverLists[interest];
-    for iObserver := 0 to list.Count - 1 do 
+    for iObserver := 0 to list.Count - 1 do
       TOmniContainerObserver(list[iObserver]).Activate;
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}

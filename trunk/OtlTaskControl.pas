@@ -37,15 +37,10 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-03
-///   Version           : 1.20e
+///   Last modification : 2010-02-22
+///   Version           : 1.20d
 ///</para><para>
 ///   History:
-///     1.20e: 2010-03-03
-///       - TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) was broken.
-///       - TOmniTaskControl.OnMessage/OnTerminate uses event monitor created in the
-///         context of the task controller thread (was using global event monitor created
-///         in the main thread).
 ///     1.20d: 2010-02-22
 ///        - D2009 compilation hack moved to OtlCommon.
 ///     1.20c: 2010-02-22

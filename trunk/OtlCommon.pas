@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-03
-///   Version           : 1.10b
+///   Last modification : 2010-03-10
+///   Version           : 1.11
 ///</para><para>
 ///   History:
+///     1.11: 2010-03-10
+///       - Implemented TOmniCounter, auto-initialized wrapper around the IOmniCounter.
 ///     1.10b: 2010-03-03
 ///       - Replacement AnonCopy, by Serg.
 ///     1.10a: 2010-02-22
@@ -257,6 +259,18 @@ type
     property Value: integer read GetValue write SetValue;
   end; { IOmniCounter }
 
+  TOmniCounter = record
+  strict private
+    ocCounter: IOmniCounter;
+    function  GetValue: integer;
+    procedure SetValue(const value: integer);
+  public
+    procedure Initialize;
+    function  Increment: integer;
+    function  Decrement: integer;
+    property Value: integer read GetValue write SetValue;
+  end; { TOmniCounter }
+
   TOmniInterfaceDictionaryPair = class
   strict private
     idpKey  : int64;
@@ -469,7 +483,7 @@ type
     property Value: Extended read GetValue write SetValue;
   end; { TOmniExtendedData }
 
-  TOmniCounter = class(TInterfacedObject, IOmniCounter)
+  TOmniCounterImpl = class(TInterfacedObject, IOmniCounter)
   strict private
     ocValue: TGp4AlignedInt;
   protected
@@ -480,7 +494,7 @@ type
     function Decrement: integer;
     function Increment: integer;
     property Value: integer read GetValue write SetValue;
-  end; { TOmniCounter }
+  end; { TOmniCounterImpl }
 
   PGp4AlignedInt = ^TGp4AlignedInt;
 
@@ -634,7 +648,7 @@ var
 
 function CreateCounter(initialValue: integer): IOmniCounter;
 begin
-  Result := TOmniCounter.Create(initialValue);
+  Result := TOmniCounterImpl.Create(initialValue);
 end; { CreateCounter }
 
 function CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
@@ -790,30 +804,68 @@ end; { TOmniValueContainer.ParamByName }
 
 { TOmniCounter }
 
-constructor TOmniCounter.Create(initialValue: integer);
-begin
-  Value := initialValue;
-end; { TOmniCounter.Create }
-
 function TOmniCounter.Decrement: integer;
 begin
-  Result := ocValue.Decrement;
+  Initialize;
+  Result := ocCounter.Decrement;
 end; { TOmniCounter.Decrement }
 
 function TOmniCounter.GetValue: integer;
 begin
-  Result := ocValue;
-end; { TOmniCounter.GetValue }
+  Initialize;
+  Result := ocCounter.GetValue;
+end;
 
 function TOmniCounter.Increment: integer;
 begin
-  Result := ocValue.Increment;
+  Initialize;
+  Result := ocCounter.Increment;
 end; { TOmniCounter.Increment }
+
+procedure TOmniCounter.Initialize;
+var
+  countIntf: IOmniCounter;
+begin
+  Assert(cardinal(@ocCounter) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
+  if not assigned(ocCounter) then begin
+    countIntf := CreateCounter;
+    if InterlockedCompareExchange(PInteger(@ocCounter)^, integer(countIntf), 0) = 0 then
+      pointer(countIntf) := nil;
+  end;
+end; { TOmniCounter.Initialize }
 
 procedure TOmniCounter.SetValue(const value: integer);
 begin
-  ocValue.Value := value;
+  Initialize;
+  ocCounter.SetValue(value);
 end; { TOmniCounter.SetValue }
+
+{ TOmniCounterImpl }
+
+constructor TOmniCounterImpl.Create(initialValue: integer);
+begin
+  Value := initialValue;
+end; { TOmniCounterImpl.Create }
+
+function TOmniCounterImpl.Decrement: integer;
+begin
+  Result := ocValue.Decrement;
+end; { TOmniCounterImpl.Decrement }
+
+function TOmniCounterImpl.GetValue: integer;
+begin
+  Result := ocValue;
+end; { TOmniCounterImpl.GetValue }
+
+function TOmniCounterImpl.Increment: integer;
+begin
+  Result := ocValue.Increment;
+end; { TOmniCounterImpl.Increment }
+
+procedure TOmniCounterImpl.SetValue(const value: integer);
+begin
+  ocValue.Value := value;
+end; { TOmniCounterImpl.SetValue }
 
 { TOmniRangeEnumerator }
 
@@ -1821,6 +1873,7 @@ begin
   oeKind := oekDelegate;
   AnonCopy(oeDelegate, source);
 end; { TOmniExecutable.SetDelegate }
+
 {$ENDIF OTL_Anonymous}
 
 initialization
