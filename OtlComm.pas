@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2010, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2009-11-13
-///   Version           : 1.05
+///   Last modification : 2010-03-08
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2010-03-08
+///       - Implemented TOmniMessageQueueTee and IOmniCommDispatchingObserver.
 ///     1.05: 2009-11-13
 ///       - Default queue size reduced to 1000 messages.
 ///     1.04: 2009-04-05
@@ -57,11 +59,13 @@ unit OtlComm;
 interface
 
 uses
+  Classes,
   SyncObjs,
   SpinLock,
   GpStuff,
   DSiWin32,
   OtlCommon,
+  OtlSync,
   OtlContainerObserver,
   OtlContainers;
 
@@ -132,6 +136,24 @@ type
     property EventObserver: TOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
+  TOmniMessageQueueTee = class
+  strict private
+    obqtQueueList: TList;
+    obqtQueueLock: TOmniCS;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Attach(const queue: TOmniMessageQueue);
+    procedure Detach(const queue: TOmniMessageQueue);
+    function Enqueue(const value: TOmniMessage): boolean;
+  end; { TOmniMessageQueueTee }
+
+  IOmniCommDispatchingObserver = interface ['{3DCC4745-14E1-4AE2-B2B3-D4B9E36CF483}']
+  end; { IOmniCommDispatchingObserver }
+
+  function CreateDispatchingObserver(queue: TOmniMessageQueue; dispatchTo: TObject):
+    IOmniCommDispatchingObserver;
+
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
     taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
 
@@ -139,6 +161,7 @@ implementation
 
 uses
   Windows,
+  Messages,
   SysUtils,
   Variants,
   {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
@@ -207,7 +230,26 @@ type
     function Endpoint2: IOmniCommunicationEndpoint; inline;
   end; { TOmniTwoWayChannel }
 
+  TOmniCommDispatchingObserverImpl = class(TInterfacedObject, IOmniCommDispatchingObserver)
+  strict private
+    cdoDispatchTo : TObject;
+    cdoDispatchWnd: HWND;
+    cdoObserver   : TOmniContainerWindowsMessageObserver;
+    cdoQueue      : TOmniMessageQueue;
+  strict protected
+    procedure WndProc(var msg: TMessage);
+  public
+    constructor Create(queue: TOmniMessageQueue; dispatchTo: TObject);
+    destructor  Destroy; override;
+  end; { TOmniCommDispatchingObserverImpl }
+
 { exports }
+
+function CreateDispatchingObserver(queue: TOmniMessageQueue; dispatchTo: TObject):
+  IOmniCommDispatchingObserver;
+begin
+  Result := TOmniCommDispatchingObserverImpl.Create(queue, dispatchTo);
+end; { CreateDispatchingObserver }
 
 function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
   taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
@@ -558,6 +600,87 @@ begin
   else
     raise Exception.Create('TOmniTwoWayChannel.OtherEndpoint: Invalid endpoint!');
 end; { TOmniTwoWayChannel.OtherEndpoint }
+
+{ TOmniMessageQueueTee }
+
+constructor TOmniMessageQueueTee.Create;
+begin
+  inherited Create;
+  obqtQueueList := TList.Create;
+end; { TOmniMessageQueueTee.Create }
+
+destructor TOmniMessageQueueTee.Destroy;
+begin
+  FreeAndNil(obqtQueueList);
+  inherited;
+end; { TOmniMessageQueueTee.Destroy }
+
+procedure TOmniMessageQueueTee.Attach(const queue: TOmniMessageQueue);
+begin
+  obqtQueueLock.Acquire;
+  try
+    obqtQueueList.Add(queue);
+  finally obqtQueueLock.Release; end;
+end; { TOmniMessageQueueTee.Attach }
+
+procedure TOmniMessageQueueTee.Detach(const queue: TOmniMessageQueue);
+begin
+  obqtQueueLock.Acquire;
+  try
+    obqtQueueList.Remove(queue);
+  finally obqtQueueLock.Release; end;
+end; { TOmniMessageQueueTee.Detach }
+
+function TOmniMessageQueueTee.Enqueue(const value: TOmniMessage): boolean;
+var
+  pQueue: pointer;
+begin
+  Result := true;
+  obqtQueueLock.Acquire;
+  try
+    for pQueue in obqtQueueList do
+      Result := Result and TOmniMessageQueue(pQueue).Enqueue(value);
+  finally obqtQueueLock.Release; end;
+end; { TOmniMessageQueueTee.Enqueue }
+
+{ TOmniCommDispatchingObserverImpl }
+
+constructor TOmniCommDispatchingObserverImpl.Create(queue: TOmniMessageQueue;
+  dispatchTo: TObject);
+begin
+  inherited Create;
+  cdoDispatchTo := dispatchTo;
+  cdoQueue := queue;
+  cdoDispatchWnd := DSiAllocateHWnd(WndProc);
+  Win32Check(cdoDispatchWnd <> 0);
+  cdoObserver := CreateContainerWindowsMessageObserver(cdoDispatchWnd, WM_USER, 0, 0);
+  cdoQueue.ContainerSubject.Attach(cdoObserver, coiNotifyOnAllInserts);
+end; { TOmniCommDispatchingObserverImpl.Create }
+
+destructor TOmniCommDispatchingObserverImpl.Destroy;
+begin
+  if assigned(cdoQueue) then
+    cdoQueue.ContainerSubject.Detach(cdoObserver, coiNotifyOnAllInserts);
+  FreeAndNil(cdoObserver);
+  if cdoDispatchWnd <> 0 then begin
+    DSiDeallocateHWnd(cdoDispatchWnd);
+    cdoDispatchWnd := 0;
+  end;
+  inherited;
+end; { TOmniCommDispatchingObserverImpl.Destroy }
+
+procedure TOmniCommDispatchingObserverImpl.WndProc(var msg: TMessage);
+var
+  omsg: TOmniMessage;
+begin
+  if msg.msg = WM_USER then begin
+    while cdoQueue.TryDequeue(omsg) do
+      cdoDispatchTo.Dispatch(omsg);
+    msg.Result := 0;
+  end
+  else
+    msg.Result := DefWindowProc(cdoDispatchWnd, msg.Msg, msg.WParam, msg.LParam);
+end; { TOmniCommDispatchingObserverImpl.WndProc }
 
 end.
 
