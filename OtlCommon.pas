@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-10
-///   Version           : 1.11
+///   Last modification : 2010-03-16
+///   Version           : 1.12
 ///</para><para>
 ///   History:
+///     1.12: 2010-03-16
+///       - Implemented TOmniMessageID record, used internally to implement timers.
 ///     1.11: 2010-03-10
 ///       - Implemented TOmniCounter, auto-initialized wrapper around the IOmniCounter.
 ///     1.10b: 2010-03-03
@@ -401,6 +403,27 @@ type
     property Delegate: TProc read GetDelegate;
     {$ENDIF OTL_Anonymous}
   end; { TOmniExecutable }
+
+  TOmniMessageIDType = (mitInteger, mitString, mitPointer);
+
+  ///<summary>Describes 'smart' IOmniTaskControl message (either message ID, method name,
+  ///    or method pointer.</summary>
+  ///<since>2010-03-16</since>
+  TOmniMessageID = record
+  strict private
+    omidInteger    : integer;
+    omidMessageType: TOmniMessageIDType;
+    omidPointer    : pointer;
+    omidString     : string;
+  public
+    class operator Implicit(const a: integer): TOmniMessageID; inline;
+    class operator Implicit(const a: pointer): TOmniMessageID; inline;
+    class operator Implicit(const a: string): TOmniMessageID; inline;
+    class operator Implicit(const a: TOmniMessageID): integer; inline;
+    class operator Implicit(const a: TOmniMessageID): string; inline;
+    class operator Implicit(const a: TOmniMessageID): pointer; inline;
+    property MessageType: TOmniMessageIDType read omidMessageType;
+  end; { TOmniMessageID }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
@@ -1875,6 +1898,45 @@ begin
 end; { TOmniExecutable.SetDelegate }
 
 {$ENDIF OTL_Anonymous}
+
+{ TOmniMessageID }
+
+class operator TOmniMessageID.Implicit(const a: integer): TOmniMessageID;
+begin
+  Result.omidMessageType := mitInteger;
+  Result.omidInteger := a;
+end; { TOmniMessageID.Implicit }
+
+class operator TOmniMessageID.Implicit(const a: pointer): TOmniMessageID;
+begin
+  Result.omidMessageType := mitPointer;
+  Result.omidPointer := a;
+end; { TOmniMessageID.Implicit }
+
+class operator TOmniMessageID.Implicit(const a: string): TOmniMessageID;
+begin
+  Result.omidMessageType := mitString;
+  Result.omidString := a;
+  UniqueString(Result.omidString);
+end; { TOmniMessageID.Implicit }
+
+class operator TOmniMessageID.Implicit(const a: TOmniMessageID): integer;
+begin
+  Assert(a.omidMessageType = mitInteger);
+  Result := a.omidInteger;
+end; { TOmniMessageID.Implicit }
+
+class operator TOmniMessageID.Implicit(const a: TOmniMessageID): string;
+begin
+  Assert(a.omidMessageType = mitString);
+  Result := a.omidString;
+end; { TOmniMessageID.Implicit }
+
+class operator TOmniMessageID.Implicit(const a: TOmniMessageID): pointer;
+begin
+  Assert(a.omidMessageType = mitPointer);
+  Result := a.omidPointer;
+end; { TOmniMessageID.Implicit }         
 
 initialization
   Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj

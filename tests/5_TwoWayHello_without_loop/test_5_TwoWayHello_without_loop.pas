@@ -14,6 +14,7 @@ uses
 const
   MSG_CHANGE_MESSAGE = 1;
   MSG_SEND_MESSAGE   = 2;
+  MSG_TIMER_1        = 3;
 
 type
   TAsyncHello = class(TOmniWorker)
@@ -23,6 +24,7 @@ type
     function  Initialize: boolean; override;
     procedure OMChangeMessage(var msg: TOmniMessage); message MSG_CHANGE_MESSAGE;
     procedure OMSendMessage(var msg: TOmniMessage); message MSG_SEND_MESSAGE;
+    procedure OMTimer2(var msg: TOmniMessage); message MSG_TIMER_1;
   end;
 
   TfrmTestTwoWayHello = class(TForm)
@@ -77,12 +79,12 @@ var
   worker: IOmniWorker;
 begin
   worker := TAsyncHello.Create;
-  FHelloTask :=
-    OmniEventMonitor1.Monitor(CreateTask(worker, 'Hello')).
-    SetTimer(1000, MSG_SEND_MESSAGE).
-    SetParameter('Delay', 1000).
-    SetParameter('Message', 'Hello').
-    Run;
+  FHelloTask := OmniEventMonitor1.Monitor(CreateTask(worker, 'Hello'))
+    .SetTimer(1000, MSG_SEND_MESSAGE)
+    .SetTimer(1, 1200, MSG_TIMER_1)
+    .SetParameter('Delay', 1000)
+    .SetParameter('Message', 'Hello')
+    .Run;
 end;
 
 procedure TfrmTestTwoWayHello.actStartHelloUpdate(Sender: TObject);
@@ -134,6 +136,12 @@ end;
 procedure TAsyncHello.OMSendMessage(var msg: TOmniMessage);
 begin
   Task.Comm.Send(0, aiMessage);
+end;
+
+procedure TAsyncHello.OMTimer2(var msg: TOmniMessage);
+begin
+  Task.ClearTimer(1);
+  Task.Comm.Send(1, 'One-shot timer');
 end;
 
 initialization
