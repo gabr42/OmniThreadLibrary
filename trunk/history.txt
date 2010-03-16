@@ -1,6 +1,9 @@
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver
 - TOmniCounter, auto-initialized wrapper around the IOmniCounter
+- TOmniMessageID record, used internally to implement timers.
+- Added support for multiple simultaneous timers. SetTimer takes additional 'timerID'
+  parameter. The old SetTimer assumes timerID = 0.
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 

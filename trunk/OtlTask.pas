@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-03
-///   Version           : 1.08
+///   Last modification : 2010-03-16
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2010-03-16
+///       - Added support for multiple simultaneous timers. SetTimer takes additional
+///         'timerID' parameter. The old SetTimer assumes timerID = 0.
 ///     1.08: 2010-02-03
 ///       - Defined IOmniTask.CancellationToken property.
 ///     1.07: 2010-01-13
@@ -120,14 +123,15 @@ type
     function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
   //
+    procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
-    procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
-    procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
+    procedure SetTimer(interval_ms: cardinal); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID); overload;
+    procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID); overload;
     procedure StopTimer;
     procedure Terminate;
     function  Terminated: boolean;

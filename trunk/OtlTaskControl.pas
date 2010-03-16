@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-02-22
-///   Version           : 1.20d
+///   Last modification : 2010-03-16
+///   Version           : 1.21
 ///</para><para>
 ///   History:
+///     1.21: 2010-03-16
+///       - Added support for multiple simultaneous timers. SetTimer takes additional
+///         'timerID' parameter. The old SetTimer assumes timerID = 0.
 ///     1.20d: 2010-02-22
 ///        - D2009 compilation hack moved to OtlCommon.
 ///     1.20c: 2010-02-22
@@ -278,6 +281,7 @@ type
   //
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    function  ClearTimer(timerID: integer): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
@@ -306,9 +310,9 @@ type
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
     function  SetQueueSize(numMessages: integer): IOmniTaskControl;
-    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
-    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
-    function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload;
+    function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
@@ -490,6 +494,18 @@ type
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
+  TOmniTaskTimerInfo = class
+  strict private
+    ottiInterval_ms: cardinal;
+    ottiMessageID  : TOmniMessageID;
+    ottiTimerID    : integer;
+  public
+    constructor Create(timerID: integer; interval_ms: cardinal; messageID: TOmniMessageID);
+    property Interval_ms: cardinal read ottiInterval_ms write ottiInterval_ms;
+    property MessageID: TOmniMessageID read ottiMessageID write ottiMessageID;
+    property TimerID: integer read ottiTimerID write ottiTimerID;
+  end; { TOmniTaskTimerInfo }
+
   TOmniTaskExecutor = class
   strict private type
     TOmniMessageInfo = record
@@ -508,6 +524,7 @@ type
   strict private // those must be 4-aligned, keep them on the top
     oteInternalLock      : TOmniCS;
     oteOptionsLock       : TOmniCS;
+    oteTimerLock         : TOmniCS;
   strict private
     oteCommList          : TInterfaceList;
     oteCommRebuildHandles: THandle;
@@ -518,7 +535,6 @@ type
     {$IFDEF OTL_Anonymous}
     oteFunc              : TOmniTaskFunction;
     {$ENDIF OTL_Anonymous}
-    oteLastTimer_ms      : int64;
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
     oteMsgInfo           : TOmniMessageInfo;
@@ -526,16 +542,16 @@ type
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
-    oteTimerInterval_ms  : TGp4AlignedInt;
-    oteTimerMessageID    : TGp4AlignedInt;
-    oteTimerMessageMethod: TGp4AlignedInt;
-    oteTimerMessageName  : string;
+    oteTimers            : TGpInt64ObjectList; 
     oteWakeMask          : DWORD;
     oteWaitHandlesGen    : int64;
     oteWaitObjectList    : TOmniWaitObjectList;
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
+  private
+    procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
+      TOmniMessageID);
   strict protected
     procedure CallOmniTimer;
     procedure Cleanup;
@@ -549,22 +565,15 @@ type
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
       var msgName: string; var msgData: TOmniValue);
     function  GetOptions: TOmniTaskControlOptions;
-    function  GetTimerInterval_ms: cardinal; inline;
-    function  GetTimerMessageID: integer; inline;
-    function  GetTimerMessageMethod: pointer;
-    function  GetTimerMessageName: string;
+    function  HaveElapsedTimer: boolean;
     procedure Initialize;
+    procedure InsertTimer(wakeUpTime_ms: int64; timerInfo: TOmniTaskTimerInfo);
+    function  LocateTimer(timerID: integer): integer;
     procedure ProcessThreadMessages;
     procedure RaiseInvalidSignature(const methodName: string);
     procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
       TOmniMessageInfo);
     procedure SetOptions(const value: TOmniTaskControlOptions);
-    procedure SetTimerInt(interval_ms: cardinal; timerMsgID: integer; const timerMsgName:
-      string; const timerMsgMethod: pointer);
-    procedure SetTimerInterval_ms(const value: cardinal);
-    procedure SetTimerMessageID(const value: integer);
-    procedure SetTimerMessageMethod(const value: pointer);
-    procedure SetTimerMessageName(const value: string);
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
   protected
@@ -588,9 +597,8 @@ type
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer); overload;
-    procedure Asy_SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
-    procedure Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string); overload;
+    procedure Asy_SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
+      TOmniMessageID); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
     procedure Asy_UnregisterWaitObject(waitObject: THandle);
     procedure EmptyMessageQueues(const task: IOmniTask);
@@ -602,11 +610,6 @@ type
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TaskException: pointer read oteException write oteException;
-    property TimerInterval_ms: cardinal read GetTimerInterval_ms write SetTimerInterval_ms;
-    property TimerMessageID: integer read GetTimerMessageID write SetTimerMessageID;
-    property TimerMessageMethod: pointer read GetTimerMessageMethod write
-      SetTimerMessageMethod;
-    property TimerMessageName: string read GetTimerMessageName write SetTimerMessageName;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
     property WorkerInitialized: THandle read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
@@ -637,15 +640,17 @@ type
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
+    procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
-    procedure SetTimer(interval_ms: cardinal; timerMessageID: integer = -1); overload;
-    procedure SetTimer(interval_ms: cardinal; const timerMethod: pointer); overload;
-    procedure SetTimer(interval_ms: cardinal; const timerMessageName: string); overload;
+    procedure SetTimer(interval_ms: cardinal); overload;
+    procedure SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID); overload;
+    procedure SetTimer(timerID: integer; interval_ms: cardinal;
+      const timerMessage: TOmniMessageID); overload;
     function  Stopped: boolean;
     procedure StopTimer;
     function  Terminated: boolean;
@@ -736,6 +741,7 @@ type
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
+    function  ClearTimer(timerID: integer = 0): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
@@ -759,9 +765,11 @@ type
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
     function  SetQueueSize(numMessages: integer): IOmniTaskControl;
-    function  SetTimer(interval_ms: cardinal; timerMessageID: integer = -1): IOmniTaskControl; overload;
-    function  SetTimer(interval_ms: cardinal; const timerMethod: pointer): IOmniTaskControl; overload;
-    function  SetTimer(interval_ms: cardinal; const timerMessageName: string): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal): IOmniTaskControl; overload;
+    function  SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID):
+      IOmniTaskControl; overload;
+    function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
+      TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
@@ -987,7 +995,12 @@ begin
   otSharedInfo_ref := sharedInfo;
 end; { TOmniTask.Create }
 
-procedure TOmniTask.Enforced(forceExecution: boolean);
+procedure TOmniTask.ClearTimer(timerID: integer);
+begin
+  SetTimer(timerID, 0, 0);
+end; { TOmniTask.ClearTimer }
+
+procedure TOmniTask.Enforced(forceExecution: boolean = true);
 begin
   if forceExecution then
     otExecutor_ref.Options := otExecutor_ref.Options + [tcoForceExecution]
@@ -1120,24 +1133,25 @@ begin
   otExecutor_ref.Asy_SetExitStatus(exitCode, exitMessage);
 end; { TOmniTask.SetExitStatus }
 
-procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMethod: pointer);
-begin
-  otExecutor_ref.Asy_SetTimer(interval_ms, timerMethod);
-end; { TOmniTask.SetTimer }
-
-procedure TOmniTask.SetTimer(interval_ms: cardinal; timerMessageID: integer);
-begin
-  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageID);
-end; { TOmniTask.SetTimer }
-
 procedure TOmniTask.SetThreadData(const value: IInterface);
 begin
   otThreadData := value;
 end; { TOmniTask.SetThreadData }
 
-procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMessageName: string);
+procedure TOmniTask.SetTimer(interval_ms: cardinal);
 begin
-  otExecutor_ref.Asy_SetTimer(interval_ms, timerMessageName);
+  SetTimer(interval_ms, -1);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID);
+begin
+  SetTimer(0, interval_ms, timerMessage);
+end; { TOmniTask.SetTimer }
+
+procedure TOmniTask.SetTimer(timerID: integer; interval_ms: cardinal;
+  const timerMessage: TOmniMessageID);
+begin
+  otExecutor_ref.Asy_SetTimer(timerID, interval_ms, timerMessage);
 end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
@@ -1229,6 +1243,17 @@ begin
   oiiAddress := methodAddr;
   oiiSignature := methodSignature;
 end; { TOmniInvokeInfo.Create }
+
+{ TOmniTaskTimerInfo }
+
+constructor TOmniTaskTimerInfo.Create(timerID: integer; interval_ms: cardinal;
+  messageID: TOmniMessageID);
+begin
+  inherited Create;
+  ottiTimerID := timerID;
+  ottiInterval_ms := interval_ms;
+  ottiMessageID := messageID;
+end; { TOmniTaskTimerInfo.Create }
 
 { TOmniTaskExecutor }
 
@@ -1345,20 +1370,14 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_SetExitStatus }
 
-procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; timerMsgID: integer);
+procedure TOmniTaskExecutor.Asy_SetTimer(timerID: integer; interval_ms: cardinal; const
+  timerMessage: TOmniMessageID);
 begin
-  SetTimerInt(interval_ms, timerMsgID, '', nil);
-end; { TOmniTaskExecutor.Asy_SetTimer }
-
-procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal;
-  const timerMethod: pointer);
-begin
-  SetTimerInt(interval_ms, -1, '', timerMethod);
-end; { TOmniTaskExecutor.Asy_SetTimer }
-
-procedure TOmniTaskExecutor.Asy_SetTimer(interval_ms: cardinal; const timerMsgName: string);
-begin
-  SetTimerInt(interval_ms, -1, timerMsgName, nil);
+  oteTimerLock.Acquire;
+  try
+    SetTimer(timerID, interval_ms, timerMessage);
+  finally oteTimerLock.Release; end;
+  SetEvent(oteCommRebuildHandles);
 end; { TOmniTaskExecutor.Asy_SetTimer }
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
@@ -1391,27 +1410,28 @@ end; { TOmniTaskExecutor.Asy_UnregisterWaitObject }
 
 procedure TOmniTaskExecutor.CallOmniTimer;
 var
-  msg           : TOmniMessage;
-  timerMsgID    : integer;
-  timerMsgMethod: pointer;
-  timerMsgName  : string;
+  msg      : TOmniMessage;
+  timerInfo: TOmniTaskTimerInfo;
 begin
-  oteInternalLock.Acquire;
+  oteTimerLock.Acquire;
   try
-    timerMsgName := oteTimerMessageName;
-    UniqueString(timerMsgName);
-    timerMsgID := integer(oteTimerMessageID.Value);
-    timerMsgMethod := pointer(oteTimerMessageMethod.Value);
-  finally oteInternalLock.Release; end;
-  if (timerMsgID >= 0) or (timerMsgName <> '') or (timerMsgMethod <> nil) then begin
-    if timerMsgID >= 0 then begin
-      msg.MsgID := timerMsgID;
-      msg.MsgData := TOmniValue.Null;
-    end
-    else if timerMsgName <> '' then
-      msg := TOmniInternalStringMsg.CreateMessage(timerMsgName, TOmniValue.Null)
-    else
-      msg := TOmniInternalAddressMsg.CreateMessage(timerMsgMethod, TOmniValue.Null);
+    timerInfo := TOmniTaskTimerInfo(oteTimers.Objects[0]);
+    SetTimer(timerInfo.TimerID, timerInfo.Interval_ms, timerInfo.MessageID); // rearm
+  finally oteTimerLock.Release; end;
+  if (timerInfo.MessageID.MessageType <> mitInteger) or (integer(timerInfo.MessageID) >= 0) then begin
+    case timerInfo.MessageID.MessageType of
+      mitInteger:
+        begin
+          msg.MsgID := timerInfo.MessageID;
+          msg.MsgData := TOmniValue.Null;
+        end;
+      mitString:
+        msg := TOmniInternalStringMsg.CreateMessage(timerInfo.MessageID, TOmniValue.Null);
+      mitPointer:
+        msg := TOmniInternalAddressMsg.CreateMessage(timerInfo.MessageID, TOmniValue.Null);
+      else
+        raise Exception.Create('TOmniTaskExecutor.CallOmniTimer: Invalid message type');
+    end;
     DispatchOmniMessage(msg);
   end
   else if assigned(WorkerIntf) then
@@ -1421,6 +1441,7 @@ end; { TOmniTaskExecutor.CallOmniTimer }
 procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
+  FreeAndNil(oteTimers);
 end; { TOmniTaskExecutor.Cleanup }
 
 function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask; var
@@ -1468,11 +1489,8 @@ begin
   else if awaited = WAIT_IO_COMPLETION then
     // do-nothing
   else if awaited = WAIT_TIMEOUT then begin
-    if (TimerInterval_ms > 0) and ((DSiTimeGetTime64 - oteLastTimer_ms) >= TimerInterval_ms) then
-    begin
+    if HaveElapsedTimer then
       CallOmniTimer;
-      oteLastTimer_ms := DSiTimeGetTime64;
-    end;
   end //WAIT_TIMEOUT
   else //errors
     RaiseLastOSError;
@@ -1502,7 +1520,6 @@ begin
     else
       oteMsgInfo.WaitFlags := 0;
     RebuildWaitHandles(task, oteMsgInfo);
-    oteLastTimer_ms := DSiTimeGetTime64;
     MainMessageLoop(task, oteMsgInfo);
   finally
     if assigned(WorkerIntf) then begin
@@ -1735,38 +1752,42 @@ begin
   finally oteOptionsLock.Release; end;
 end; { TOmniTaskExecutor.GetOptions }
 
-function TOmniTaskExecutor.GetTimerInterval_ms: cardinal;
+function TOmniTaskExecutor.HaveElapsedTimer: boolean;
 begin
-  Result := oteTimerInterval_ms.Value;
-end; { TOmniTaskExecutor.GetTimerInterval_ms }
-
-function TOmniTaskExecutor.GetTimerMessageID: integer;
-begin
-  Result := integer(oteTimerMessageID.Value);
-end; { TOmniTaskExecutor.GetTimerMessageID }
-
-function TOmniTaskExecutor.GetTimerMessageMethod: pointer;
-begin
-  Result := pointer(oteTimerMessageMethod.Value);
-end; { TOmniTaskExecutor.GetTimerMessageMethod }
-
-function TOmniTaskExecutor.GetTimerMessageName: string;
-begin
-  oteInternalLock.Acquire;
+  oteTimerLock.Acquire;
   try
-    Result := oteTimerMessageName;
-    UniqueString(Result);
-  finally oteInternalLock.Release; end;
-end; { TOmniTaskExecutor.GetTimerMessageName }
+    Result := (oteTimers.Count > 0) and (oteTimers[0] <= DSiTimeGetTime64);
+  finally oteTimerLock.Release; end;
+end; { TOmniTaskExecutor.HaveElapsedTimer }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
+  oteTimers := TGpInt64ObjectList.Create;
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
-  oteTimerMessageID.Value := -1;
 end; { TOmniTaskExecutor.Initialize }
+
+procedure TOmniTaskExecutor.InsertTimer(wakeUpTime_ms: int64; timerInfo: TOmniTaskTimerInfo);
+var
+  idxTimer: integer;
+begin
+  // expects the caller to take care of the synchronicity
+  idxTimer := 0;
+  while (idxTimer < oteTimers.Count) and (wakeUpTime_ms > oteTimers[idxTimer]) do
+    Inc(idxTimer);
+  oteTimers.InsertObject(idxTimer, wakeUpTime_ms, timerInfo);
+end; { TOmniTaskExecutor.InsertTimer }
+
+function TOmniTaskExecutor.LocateTimer(timerID: integer): integer;
+begin
+  // expects the caller to take care of the synchronicity
+  for Result := 0 to oteTimers.Count - 1 do
+    if TOmniTaskTimerInfo(oteTimers.Objects[Result]).TimerID = timerID then
+      Exit;
+  Result := -1;
+end; { TOmniTaskExecutor.LocateTimer }
 
 procedure TOmniTaskExecutor.MainMessageLoop(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
@@ -1902,53 +1923,28 @@ begin
   finally oteOptionsLock.Release; end;
 end; { TOmniTaskExecutor.SetOptions }
 
-procedure TOmniTaskExecutor.SetTimerInterval_ms(const value: cardinal);
+procedure TOmniTaskExecutor.SetTimer(timerID: integer; interval_ms: cardinal; const
+  timerMessage: TOmniMessageID);
+var
+  idxTimer : integer;
+  timerInfo: TOmniTaskTimerInfo;
 begin
-  if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerInterval_ms: ' +
-      'Timer support is only available when working with an IOmniWorker');
-  oteTimerInterval_ms.Value := value;
-end; { TOmniTaskExecutor.SetTimerInterval_ms }
-
-procedure TOmniTaskExecutor.SetTimerInt(interval_ms: cardinal; timerMsgID: integer; const
-  timerMsgName: string; const timerMsgMethod: pointer);
-begin
-  oteInternalLock.Acquire;
-  try
-    oteTimerMessageID.Value := timerMsgID;
-    oteTimerInterval_ms.Value := interval_ms;
-    oteTimerMessageMethod.Value := integer(timerMsgMethod);
-    oteTimerMessageName := timerMsgName;
-    UniqueString(oteTimerMessageName);
-    oteLastTimer_ms := DSiTimeGetTime64;
-  finally oteInternalLock.Release; end;
-  SetEvent(oteCommRebuildHandles);
-end; { TOmniTaskExecutor.SetTimerInt }
-
-procedure TOmniTaskExecutor.SetTimerMessageID(const value: integer);
-begin
-  if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
-      'Timer support is only available when working with an IOmniWorker');
-  oteTimerMessageID.Value := value;
-end; { TOmniTaskExecutor.SetTimerMessageID }
-
-procedure TOmniTaskExecutor.SetTimerMessageMethod(const value: pointer);
-begin
-  if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
-      'Timer support is only available when working with an IOmniWorker');
-  oteTimerMessageMethod.Value := integer(value);
-end; { TOmniTaskExecutor.SetTimerMessageMethod }
-
-procedure TOmniTaskExecutor.SetTimerMessageName(const value: string);
-begin
-  if oteExecutorType <> etWorker then
-    raise Exception.Create('TOmniTaskExecutor.SetTimerMessageID: ' +
-      'Timer support is only available when working with an IOmniWorker');
-    oteTimerMessageName := value;
-    UniqueString(oteTimerMessageName);
-end; { TOmniTaskExecutor.SetTimerMessageName }
+  // expects the caller to take care of the synchronicity
+  idxTimer := LocateTimer(timerID);
+  if interval_ms = 0 then begin // delete the timer
+    if idxTimer >= 0 then
+      oteTimers.Delete(idxTimer)
+    else
+      Exit; // no change, don't rebuild handles
+  end
+  else begin
+    if idxTimer < 0 then // new timer
+      timerInfo := TOmniTaskTimerInfo.Create(timerID, interval_ms, timerMessage)
+    else // rearm
+      timerInfo := TOmniTaskTimerInfo(oteTimers.ExtractObject(idxTimer));
+    InsertTimer(DSiTimeGetTime64 + interval_ms, timerInfo);
+  end;
+end; { TOmniTaskExecutor.SetTimer }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
 begin
@@ -1974,14 +1970,17 @@ function TOmniTaskExecutor.TimeUntilNextTimer_ms: cardinal;
 var
   timeout_ms: int64;
 begin
-  if TimerInterval_ms <= 0 then
-    Result := INFINITE
-  else begin
-    timeout_ms := TimerInterval_ms - (DSiTimeGetTime64 - oteLastTimer_ms);
-    if timeout_ms < 0 then
-      timeout_ms := 0;
-    Result := timeout_ms;
-  end;
+  oteTimerLock.Acquire;
+  try
+    if oteTimers.Count = 0 then
+      Result := INFINITE
+    else begin
+      timeout_ms := oteTimers[0] - DSiTimeGetTime64;
+      if timeout_ms < 0 then
+        timeout_ms := 0;
+      Result := timeout_ms;
+    end;
+  finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.TimeUntilNextTimer_ms }
 
 function TOmniTaskExecutor.WaitForInit: boolean;
@@ -2081,6 +2080,12 @@ begin
   otcSharedInfo.ChainIgnoreErrors := ignoreErrors;
   Result := Self;
 end; { TOmniTaskControl.ChainTo }
+
+function TOmniTaskControl.ClearTimer(timerID: integer = 0): IOmniTaskControl;
+begin
+  SetTimer(timerID, 0, 0);
+  Result := Self;
+end; { TOmniTaskControl.ClearTimer }
 
 procedure TOmniTaskControl.CreateInternalMonitor;
 begin
@@ -2433,24 +2438,21 @@ begin
   Result := Self;
 end; { TOmniTaskControl.SetQueueSize }
 
-function TOmniTaskControl.SetTimer(interval_ms: cardinal; timerMessageID: integer):
-  IOmniTaskControl;
+function TOmniTaskControl.SetTimer(interval_ms: cardinal): IOmniTaskControl;
 begin
-  otcExecutor.Asy_SetTimer(interval_ms, timerMessageID);
-  Result := Self;
+  Result := SetTimer(interval_ms, -1);
 end; { TOmniTaskControl.SetTimer }
 
-function TOmniTaskControl.SetTimer(interval_ms: cardinal; const timerMethod: pointer):
-  IOmniTaskControl;
+function TOmniTaskControl.SetTimer(interval_ms: cardinal; const timerMessage:
+  TOmniMessageID): IOmniTaskControl;
 begin
-  otcExecutor.Asy_SetTimer(interval_ms, timerMethod);
-  Result := Self;
+  Result := SetTimer(0, interval_ms, timerMessage);
 end; { TOmniTaskControl.SetTimer }
 
-function TOmniTaskControl.SetTimer(interval_ms: cardinal; const timerMessageName: string):
-  IOmniTaskControl;
+function TOmniTaskControl.SetTimer(timerID: integer; interval_ms: cardinal; const
+  timerMessage: TOmniMessageID): IOmniTaskControl;
 begin
-  otcExecutor.Asy_SetTimer(interval_ms, timerMessageName);
+  otcExecutor.Asy_SetTimer(timerID, interval_ms, timerMessage);
   Result := Self;
 end; { TOmniTaskControl.SetTimer }
 
@@ -2912,6 +2914,12 @@ procedure TOmniMessageExec.SetOnTerminated(exec: TOmniOnTerminatedFunction);
 begin
   omeOnTerminated.SetDelegate(exec);
 end; { TOmniMessageExec.SetOnTerminated }
+
+destructor TOmniTaskTimerInfo.Destroy;
+begin
+  inherited Destroy;
+end;
+
 {$ENDIF OTL_Anonymous}
 
 initialization
