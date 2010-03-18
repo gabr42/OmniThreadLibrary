@@ -12,28 +12,37 @@
 
 = Enumerations =
 
+||[TOmniExecutableKind]|| ||
+||[TOmniMessageIDType]|| ||
 ||[TOmniProcessPriorityClass]|| ||
 
 = Records =
 
-||[TOmniValue]|| ||
+||[TOmniCounter]|| ||
+||[TOmniExecutable]|| ||
+||[TOmniMessageID]|| ||
 ||[TOmniProcessMemoryCounters]|| ||
 ||[TOmniProcessTimes]|| ||
+||[TOmniValue]|| ||
 
 = Interfaces =
 
-||[IOmniCounter]|| ||
-||[IOmniInterfaceDictionaryEnumerator]|| ||
-||[IOmniInterfaceDictionary]|| ||
 ||[IOmniAffinity]|| ||
-||[IOmniProcessEnvironment]|| ||
+||[IOmniCounter]|| ||
 ||[IOmniEnvironment]|| ||
+||[IOmniInterfaceDictionary]|| ||
+||[IOmniInterfaceDictionaryEnumerator]|| ||
+||[IOmniProcessEnvironment]|| ||
+||[IOmniSystemEnvironment]|| ||
+||[IOmniThreadEnvironment]|| ||
+||[IOmniValueEnumerable]|| ||
+||[IOmniValueEnumerator]|| ||
 
 = Classes =
 
-||[TOmniWaitableValue]|| ||
-||[TOmniValueContainer]|| ||
 ||[TOmniInterfaceDictionaryPair]|| ||
+||[TOmniValueContainer]|| ||
+||[TOmniWaitableValue]|| ||
 
 = Global Functions =
 
@@ -42,6 +51,10 @@
 ||[Environment]|| IOmniEnvironment singleton.||
 ||[SetThreadName]|| ||
 ||[VarToObj]|| ||
+
+= Global Variables =
+
+||[OtlUID]|| ||
 
 = Source =
 
