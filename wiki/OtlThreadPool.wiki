@@ -1,0 +1,36 @@
+#summary Thread pool.
+#sidebar TableOfContentsInt
+
+= Constants =
+
+||[CDefaultIdleWorkerThreadTimeout_sec]|| ||
+||[CDefaultWaitOnTerminate_sec]|| ||
+||[CMaxConcurrentWorkers]|| ||
+
+= Enumerations =
+
+||[TThreadPoolOperation]|| ||
+
+= Method Types =
+
+||[TOTPThreadDataFactory]|| ||
+||[TOTPWorkerThreadEvent]|| ||
+
+= Interfaces =
+
+||[IOmniThreadPool]|| ||
+||[IOmniThreadPoolMonitor]|| ||
+||[IOmniThreadPoolScheduler]|| ||
+
+= Classes =
+
+||[TOmniThreadPoolMonitorInfo]|| ||
+
+= Global Functions =
+
+||[CreateThreadPool]|| ||
+||[GlobalOmniThreadPool]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

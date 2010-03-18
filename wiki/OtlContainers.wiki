@@ -1,0 +1,48 @@
+#summary Microlocking containers. 
+#sidebar TableOfContentsInt
+
+= Constants =
+
+||[CAlmostFullLoadFactor]|| ||
+||[CPartlyEmptyLoadFactor]|| ||
+
+= Enumerations =
+
+||[IOmniStack]|| ||
+||[IOmniQueue]|| ||
+||[TOmniQueueTag]|| ||
+
+= Records =
+
+||[POmniLinkedData]|| ||
+||[POmniRingBuffer]|| ||
+||[POmniTaggedPointer]|| ||
+||[POmniTaggedValue]]|| ||
+||[PReferencedPtr]|| ||
+||[TOmniLinkedData]|| ||
+||[TOmniRingBuffer]|| ||
+||[TOmniTaggedPointer]|| ||
+||[TOmniTaggedValue]|| ||
+||[TReferencedPtr]|| ||
+||[TReferencedPtrBuffer]|| ||
+
+= Interfaces =
+
+
+= Classes =
+
+||[TOmniBaseBoundedQueue]|| ||
+||[TOmniBaseBoundedStack]|| ||
+||[TOmniBaseQueue]|| ||
+||[TOmniBoundedQueue]|| ||
+||[TOmniBoundedStack]|| ||
+||[TOmniQueue]|| ||
+
+= Global Functions =
+
+
+= Global Variables =
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

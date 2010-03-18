@@ -1,0 +1,25 @@
+#summary Event dispatching component. 
+#sidebar TableOfContentsInt
+
+= Events =
+
+||[TOmniTaskEvent]|| ||
+||[TOmniTaskMessageEvent]|| ||
+||[TOmniPoolThreadEvent]|| ||
+||[TOmniPoolWorkItemEvent]|| ||
+
+= Classes =
+
+||[TOmniEventMonitor]|| ||
+||[TOmniEventMonitorClass]|| ||
+||[TOmniEventMonitorPool]|| ||
+
+= Global Variables =
+
+||[COmniTaskMsg_NewMessage]|| ||
+||[COmniTaskMsg_Terminated]|| ||
+||[COmniPoolMsg]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

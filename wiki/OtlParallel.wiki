@@ -1,0 +1,28 @@
+#summary High-level parallel execution management.
+#sidebar TableOfContentsInt
+
+= Enumerations =
+
+||[TOmniContainerObserverInterest]|| ||
+
+= Delegates =
+
+||[TOmniAggregatorDelegate]|| ||
+||[TOmniAggregatorIntDelegate]|| ||
+||[TOmniIteratorAggregateDelegate]|| ||
+||[TOmniIteratorAggregateIntDelegate]|| ||
+||[TOmniIteratorDelegate]|| ||
+||[TOmniIteratorIntDelegate]|| ||
+
+= Interfaces =
+
+||[IOmniParallelAggregatorLoop]|| ||
+||[IOmniParallelLoop]|| ||
+
+= Classes =
+
+||[Parallel]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

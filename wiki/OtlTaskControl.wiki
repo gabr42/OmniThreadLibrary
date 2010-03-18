@@ -1,0 +1,68 @@
+#summary Task control encapsulation. 
+#sidebar TableOfContentsInt
+
+= Enumerations =
+
+||[TOmniExecutorType]|| ||
+||[TOmniInternalMessageType]|| ||
+||[TOmniInvokeType]|| ||
+||[TOmniTaskControlOption]|| ||
+||[TOTLThreadPriority]|| ||
+
+= Sets =
+
+||[TOmniTaskControlOptions]|| ||
+
+= Method Types =
+
+||[TOmniInvokeSignature_Self]|| ||
+||[TOmniInvokeSignature_Self_Object]|| ||
+||[TOmniInvokeSignature_Self_OmniValue]|| ||
+||[TOmniOnMessageFunction]|| ||
+||[TOmniOnTerminatedFunction]|| ||
+||[TOmniTaskMessageEvent]|| ||
+||[TOmniTaskMethod]|| ||
+||[TOmniTaskProcedure]|| ||
+||[TOmniTaskTerminatedEvent]|| ||
+
+= Interfaces =
+
+||[IOmniTaskControl]|| ||
+||[IOmniTaskControlInternals]|| ||
+||[IOmniTaskControlList]|| ||
+||[IOmniTaskControlListEnumerator]|| ||
+||[IOmniTaskControlMonitor]|| ||
+||[IOmniTaskControlSharedInfo]|| ||
+||[IOmniTaskGroup]|| ||
+||[IOmniWorker]|| ||
+
+= Classes =
+
+||[TOmniInternalAddressMsg]|| ||
+||[TOmniInternalMessage]|| ||
+||[TOmniInternalStringMsg]|| ||
+||[TOmniInvokeInfo]|| ||
+||[TOmniMessageExec]|| ||
+||[TOmniSharedTaskInfo]|| ||
+||[TOmniTask]|| ||
+||[TOmniTaskControl]|| ||
+||[TOmniTaskControlList]|| ||
+||[TOmniTaskControlListEnumerator]|| ||
+||[TOmniTaskExecutor]|| ||
+||[TOmniTaskGroup]|| ||
+||[TOmniTaskTimerInfo]|| ||
+||[TOmniThread]|| ||
+||[TOmniWorker]|| ||
+
+= Global Functions =
+
+||[CreateTask]|| ||
+||[CreateTask]|| ||
+||[CreateTask]|| ||
+||[CreateTask]|| ||
+||[CreateTaskControlList]|| ||
+||[CreateTaskGroup]|| ||
+  
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

@@ -1,0 +1,10 @@
+#summary Component registration unit. 
+#sidebar TableOfContentsInt
+
+= Global Functions =
+
+||[Register]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

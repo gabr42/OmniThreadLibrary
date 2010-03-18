@@ -1,0 +1,24 @@
+#summary Task interface.
+#sidebar TableOfContentsInt
+
+= Enumerations =
+
+||[TOmniContainerObserverInterest]|| ||
+
+= Method Types =
+
+||[TOmniTaskFunction]|| ||
+||[TOmniWaitObjectMethod]|| ||
+
+= Interfaces =
+
+||[IOmniTask]|| ||
+||[IOmniTaskExecutor]|| ||
+
+= Classes =
+
+||[TOmniWaitObjectList]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

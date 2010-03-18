@@ -1,0 +1,22 @@
+#summary Observer pattern interface for the containers unit.
+#sidebar TableOfContentsInt
+
+= Enumerations =
+
+||[TOmniContainerObserverInterest]|| ||
+
+= Classes =
+
+||[TOmniContainerObserver]|| ||
+||[TOmniContainerWindowsEventObserver]|| ||
+||[TOmniContainerWindowsMessageObserver]|| ||
+||[TOmniContainerSubject]|| ||
+
+= Global Functions =
+
+||[CreateContainerWindowsEventObserver]|| ||
+||[CreateContainerWindowsMessageObserver]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

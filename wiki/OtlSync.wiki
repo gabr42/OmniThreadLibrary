@@ -1,0 +1,37 @@
+#summary Synchronisation primitives.
+#sidebar TableOfContentsInt
+
+
+= Records =
+
+||[TOmniCS]|| ||
+||[TOmniMREW]|| ||
+
+= Interfaces =
+
+||[IOmniCancellationToken]|| ||
+||[IOmniCriticalSection]|| ||
+||[IOmniResourceCount]|| ||
+
+= Classes =
+
+||[TOmniResourceCount]|| ||
+
+= Global Functions =
+
+||[CAS16]|| ||
+||[CAS32]|| ||
+||[CAS32]|| ||
+||[CAS64]|| ||
+||[CAS8]|| ||
+||[CreateOmniCancellationToken]|| ||
+||[CreateOmniCriticalSection]|| ||
+||[GetCPUTimeStamp]|| ||
+||[GetThreadId]|| ||
+||[Move128]|| ||
+||[Move64]|| ||
+||[Move64]|| ||
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]

@@ -1,0 +1,32 @@
+#summary Various hooks for simpler integration with other tools.
+#sidebar TableOfContentsInt
+
+= Enumerations =
+
+||[TThreadNotificationType]|| ||
+
+= Method Types =
+
+||[TExceptionFilterMeth]|| ||
+||[TExceptionFilterProc]|| ||
+||[TThreadNotificationMeth]|| ||
+||[TThreadNotificationProc]|| ||
+
+= Global Functions =
+
+||[FilterException]|| ||
+||[RegisterExceptionFilter]|| ||
+||[RegisterExceptionFilter]|| ||
+||[RegisterThreadNotification]|| ||
+||[RegisterThreadNotification]|| ||
+||[SendThreadNotifications]|| ||
+||[UnregisterExceptionFilter]|| ||
+||[UnregisterExceptionFilter]|| ||
+||[UnregisterThreadNotification]|| ||
+||[UnregisterThreadNotification]|| ||
+
+= Global Variables =
+
+= Source =
+
+[http://code.google.com/p/omnithreadlibrary/source/browse/trunk/OtlCommon.pas]
