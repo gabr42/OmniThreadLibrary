@@ -13,16 +13,19 @@
 
 = Interfaces =
 
+||[IOmniCommDispatchingObserver]|| ||
 ||[IOmniCommunicationEndpoint]|| Communication endpoint. ||
 ||[IOmniTwoWayChannel]|| Bidirectional channel consisting of two communication endpoints. ||
 
 = Classes =
 
 ||[TOmniMessageQueue]|| Fixed-size ring buffer of TOmniMessage data. ||
+||[TOmniMessageQueueTee]|| ||
 
 = Global Functions =
 
-||CreateTwoWayChannel|| Bidirectional channel factory. ||
+||[CreateDispatchingObserver]|| ||
+||[CreateTwoWayChannel]|| Bidirectional channel factory. ||
 
 = Source =
 
