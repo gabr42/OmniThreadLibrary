@@ -1,4 +1,4 @@
-///<summary>Task control encapsulation. Part of the OmniThreadLibrary project.</summary>
+///<summary>Thread pool. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
