@@ -1,9 +1,12 @@
 #summary Locking/blocking collections.
 #sidebar TableOfContentsInt
 
+= Exceptions =
+
+||[ECollectionCompleted]|| ||
+
 = Interfaces =
 
-||[IOmniBlockingCollectionEnumerator]|| Blocking collection enumerator interface.||
 ||[IOmniBlockingCollection]|| Blocking collection interface.||
 
 = Classes =
