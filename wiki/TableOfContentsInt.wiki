@@ -12,6 +12,7 @@
     * [OtlContainers]
     * [OtlEventMonitor]
     * [OtlHooks]
+    * [OtlParallel]
     * [OtlRegister]
     * [OtlSync]
     * [OtlTask]
