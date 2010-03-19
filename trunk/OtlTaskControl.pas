@@ -2914,12 +2914,6 @@ procedure TOmniMessageExec.SetOnTerminated(exec: TOmniOnTerminatedFunction);
 begin
   omeOnTerminated.SetDelegate(exec);
 end; { TOmniMessageExec.SetOnTerminated }
-
-destructor TOmniTaskTimerInfo.Destroy;
-begin
-  inherited Destroy;
-end;
-
 {$ENDIF OTL_Anonymous}
 
 initialization
