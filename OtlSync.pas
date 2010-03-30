@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-02-04
-///   Version           : 1.04
+///   Last modification : 2010-03-30
+///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.04a: 2010-03-30
+///       - Prevent race condition in a rather specialized usage of TOmniResourceCount.
 ///     1.04: 2010-02-04
 ///       - Implemented CAS8 and CAS16.
 ///     1.03: 2010-02-03
@@ -492,14 +494,16 @@ begin
           Exit;
       end;
       if WaitForSingleObject(orcAvailable, waitTime_ms) <> WAIT_OBJECT_0 then
-        Exit;
+        Exit; // skip final Release
       orcLock.Acquire;
     end;
     if orcNumResources.Value > 0 then begin
       resourceCount := cardinal(orcNumResources.Decrement);
       if resourceCount = 0 then begin
-        SetEvent(orcHandle);
+        orcLock.Release; //prevent race condition - another thread may wait on orcHandle and destroy this instance
         ResetEvent(orcAvailable);
+        SetEvent(orcHandle);
+        Exit; // skip final Release
       end;
       break; //repeat
     end;
