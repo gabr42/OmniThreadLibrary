@@ -32,10 +32,12 @@ type
     SaveDialog: TSaveDialog;
     btnScheduleUnobserved: TButton;
     btnScheduleObserved: TButton;
+    btnScheduleAndWait: TButton;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
     procedure btnScheduleAndCancelClick(Sender: TObject);
+    procedure btnScheduleAndWaitClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
     procedure btnScheduleObservedClick(Sender: TObject);
     procedure btnScheduleUnobservedClick(Sender: TObject);
@@ -121,7 +123,7 @@ begin
     Log('three should enter thread queue, one should be rejected (queue too long).')
   else
     Log('some should enter thread queue, some should be rejected (queue too long).');
-  for iTask := 1 to numTasks do 
+  for iTask := 1 to numTasks do
     CreateTask(THelloWorker.Create(Handle, delay_ms)).MonitorWith(OmniTED).Schedule;
 end;
 
@@ -147,6 +149,21 @@ begin
     Log(Format('Task %d was cancelled', [taskID]))
   else
     Log(Format('Task %d was killed', [taskID]));
+end;
+
+procedure TfrmTestOtlThreadPool.btnScheduleAndWaitClick(Sender: TObject);
+var
+  iTask    : integer;
+  waitGroup: IOmniTaskGroup;
+begin
+  GlobalOmniThreadPool.MaxQueued := 2;
+  Log('Scheduling 3 tasks. Two should execute immediately, one should enter thread queue.');
+  waitGroup := CreateTaskGroup;
+  for iTask := 1 to 3 do
+    CreateTask(THelloWorker.Create(Handle, 1000)).Unobserved.Join(waitGroup).Schedule;
+  Log('Waiting on those three tasks. Should take 2 seconds (one for already executing tasks, another for the waiting one)');
+  waitGroup.WaitForAll;
+  Log('All tasks completed');
 end;
 
 procedure TfrmTestOtlThreadPool.btnScheduleClick(Sender: TObject);
