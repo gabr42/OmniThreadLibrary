@@ -27,7 +27,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-    ExplicitHeight = 397
   end
   object btnRunTask: TButton
     Left = 8
