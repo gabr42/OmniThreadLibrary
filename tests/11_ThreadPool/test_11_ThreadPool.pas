@@ -71,6 +71,7 @@ uses
 
 const
   MSG_HELLO = 1;
+  MSG_SLEEP = 2;
 
 type
   THelloWorker = class(TOmniWorker)
@@ -82,6 +83,7 @@ type
     constructor Create(formHandle: THandle; delay_ms: integer = 1000);
     destructor  Destroy; override;
     function  Initialize: boolean; override;
+    procedure SleepTask(var msg: TMessage); message MSG_SLEEP;
     procedure Cleanup; override;
   end;
 
@@ -305,7 +307,6 @@ end;
 
 procedure THelloWorker.Cleanup;
 begin
-  Sleep(FDelay_ms);
   task.Comm.Send(MSG_HELLO, Format('Task %d signing off from thread %d', [task.UniqueID, GetCurrentThreadID]));
 end;
 
@@ -314,7 +315,15 @@ begin
   FTaskID := task.UniqueID;
   task.Comm.Send(MSG_HELLO,
     Format('Hello, world! Task %d reporting live from thread %d', [task.UniqueID, GetCurrentThreadID]));
-  Result := false;
+  Task.SetTimer(1, MSG_SLEEP);
+  Result := true;
+end;
+
+procedure THelloWorker.SleepTask(var msg: TMessage);
+begin
+  Task.SetTimer(0);
+  Sleep(FDelay_ms);
+  Task.Terminate;
 end;
 
 end.
