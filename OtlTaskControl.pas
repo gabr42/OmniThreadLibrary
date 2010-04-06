@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-16
-///   Version           : 1.21
+///   Last modification : 2010-04-06
+///   Version           : 1.21a
 ///</para><para>
 ///   History:
+///     1.21a: 2010-04-06
+///       - [LN] Bug fixed: TOmniTaskControl.WaitFor would hang if thread was 
+///         terminated externally.
 ///     1.21: 2010-03-16
 ///       - Added support for multiple simultaneous timers. SetTimer takes additional
 ///         'timerID' parameter. The old SetTimer assumes timerID = 0.

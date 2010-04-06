@@ -262,7 +262,7 @@ begin { TOmniBlockingCollection.TryTake }
             Result := true;
             break; //while
           end;
-          awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
+          awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
                        @waitHandles, false, TimeLeft_ms);
           if awaited <> WAIT_OBJECT_1 then begin
             if awaited = WAIT_OBJECT_2 then 
