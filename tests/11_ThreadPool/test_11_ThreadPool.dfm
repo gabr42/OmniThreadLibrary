@@ -2,7 +2,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Left = 0
   Top = 0
   Caption = 'OtlThreadPool tester'
-  ClientHeight = 397
+  ClientHeight = 441
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,18 +15,19 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   OnCreate = FormCreate
   DesignSize = (
     611
-    397)
+    441)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 143
     Top = 0
     Width = 468
-    Height = 397
+    Height = 441
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
+    ExplicitHeight = 397
   end
   object btnRunTask: TButton
     Left = 8
@@ -102,13 +103,14 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 364
+    Top = 408
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
     TabOrder = 9
     OnClick = btnSaveLogClick
+    ExplicitTop = 364
   end
   object btnScheduleUnobserved: TButton
     Left = 8
@@ -127,6 +129,15 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Caption = 'Schedule observed'
     TabOrder = 11
     OnClick = btnScheduleObservedClick
+  end
+  object btnScheduleAndWait: TButton
+    Left = 8
+    Top = 360
+    Width = 129
+    Height = 25
+    Caption = 'Schedule and wait'
+    TabOrder = 12
+    OnClick = btnScheduleAndWaitClick
   end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
