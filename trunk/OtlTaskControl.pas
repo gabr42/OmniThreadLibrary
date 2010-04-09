@@ -2528,7 +2528,7 @@ end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
 begin
-  Result := (WaitForSingleObject(otcSharedInfo.TerminatedEvent, maxWait_ms) = WAIT_OBJECT_0);
+  Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
 end; { TOmniTaskControl.WaitFor }
 
 function TOmniTaskControl.WaitForInit: boolean;
