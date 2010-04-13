@@ -20,6 +20,7 @@ type
   TOmniDataPackage = class abstract
   public
     function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
+    function  HasData: boolean; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniDataPackage }
 
@@ -44,22 +45,25 @@ type
   TOmniDataManager = class abstract
   public
     function  CreateLocalQueue: TOmniLocalQueue; virtual; abstract;
+    function  GetNext(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniDataManager }
 
-function CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
-function CreateSourceProvider(enumerable: IOmniValueEnumerable): TOmniSourceProvider; overload;
-function CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
+function  CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
+function  CreateSourceProvider(enumerable: IOmniValueEnumerable): TOmniSourceProvider; overload;
+function  CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
 
 {$IFDEF OTL_ERTTI}
-function CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
+function  CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
 {$ENDIF OTL_ERTTI}
 
-function CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
+function  CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
 
 implementation
 
 uses
   SysUtils,
+  Classes,
+  Contnrs,
   DSiWin32,
   OtlSync;
 
@@ -72,6 +76,7 @@ type
     idpStep: integer;
   public
     function  GetNext(var value: TOmniValue): boolean; override;
+    function  HasData: boolean; override;
     procedure Initialize(low, high, step: integer);
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
@@ -103,21 +108,43 @@ type
   TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
   end; { TOmniDelphiEnumeratorProvider }
 
+  TOmniBaseDataManager = class;
+
+  ///<summary>Local queue implementation.</summary>
+  TOmniLocalQueueImpl = class(TOmniLocalQueue)
+  strict private
+    lqiDataManager_ref: TOmniBaseDataManager;
+    lqiDataPackage    : TOmniDataPackage;
+  public
+    constructor Create(owner: TOmniBaseDataManager);
+    destructor  Destroy; override;
+    function  GetNext(var value: TOmniValue): boolean; override;
+  end; { TOmniLocalQueueImpl }
+
+  ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
-    dmSourceProvider: TOmniSourceProvider;
+    dmQueueList         : TObjectList;
+    dmQueueLock         : TOmniCS;
+    dmSourceProvider_ref: TOmniSourceProvider;
   public
     constructor Create(sourceProvider: TOmniSourceProvider);
-    function CreateLocalQueue: TOmniLocalQueue; override;
-    property SourceProvider: TOmniSourceProvider read dmSourceProvider;
+    destructor  Destroy; override;
+    function  CreateLocalQueue: TOmniLocalQueue; override;
+    procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
+    property SourceProvider: TOmniSourceProvider read dmSourceProvider_ref;
   end; { TOmniBaseDataManager }
 
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
+  public
+    function  GetNext(package: TOmniDataPackage): boolean; override;
   end; { TOmniCountableDataManager }
 
   ///<summary>Data manager for unbounded data.</summary>
   TOmniHeuristicDataManager = class(TOmniBaseDataManager)
+  public
+    function  GetNext(package: TOmniDataPackage): boolean; override;
   end; { TOmniHeuristicDataManager }
 
 { exports }
@@ -159,12 +186,21 @@ end; { CreateDataManager }
 
 function TOmniIntegerDataPackage.GetNext(var value: TOmniValue): boolean;
 begin
-  value.AsInt64 := idpLow.Add(idpStep);
-  if idpStep > 0 then
-    Result := (value.AsInt64 <= idpHigh)
-  else
-    Result := (value.AsInt64 >= idpHigh);
+  if not HasData then
+    Result := false
+  else begin
+    value.AsInt64 := idpLow.Add(idpStep);
+    if idpStep > 0 then
+      Result := (value.AsInt64 <= idpHigh)
+    else
+      Result := (value.AsInt64 >= idpHigh);
+  end;
 end; { TOmniIntegerDataPackage.GetNext }
+
+function TOmniIntegerDataPackage.HasData: boolean;
+begin
+  Result := idpStep <> 0;
+end; { TOmniIntegerDataPackage.HasData }
 
 procedure TOmniIntegerDataPackage.Initialize(low, high, step: integer);
 begin
@@ -245,20 +281,76 @@ begin
     irpCount.Value := (irpLow - irpHigh - irpStep) div (-irpStep);
 end; { TOmniIntegerRangeProvider.RecalcCount }
 
+{ TOmniLocalQueueImpl }
+
+constructor TOmniLocalQueueImpl.Create(owner: TOmniBaseDataManager);
+begin
+  inherited Create;
+  lqiDataManager_ref := owner;
+  lqiDataPackage := lqiDataManager_ref.SourceProvider.CreateDataPackage;
+end; { TOmniLocalQueueImpl.Create }
+
+destructor TOmniLocalQueueImpl.Destroy;
+begin
+  FreeAndNil(lqiDataPackage);
+  if assigned(lqiDataManager_ref) then
+    lqiDataManager_ref.LocalQueueDestroyed(Self);
+  inherited;
+end; { TOmniLocalQueueImpl.Destroy }
+
+function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
+begin
+  Result := lqiDataPackage.GetNext(value);
+  if not Result then
+    Result := lqiDataManager_ref.GetNext(lqiDataPackage);
+end; { TOmniLocalQueueImpl.GetNext }
+
 { TOmniBaseDataManager }
 
 constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider);
 begin
   inherited Create;
-  dmSourceProvider := sourceProvider;
+  dmSourceProvider_ref := sourceProvider;
+  dmQueueList := TObjectList.Create;
 end; { TOmniBaseDataManager.Create }
+
+destructor TOmniBaseDataManager.Destroy;
+begin
+  FreeAndNil(dmQueueList);
+  inherited;
+end; { TOmniBaseDataManager.Destroy }
+
+procedure TOmniBaseDataManager.LocalQueueDestroyed(queue: TOmniLocalQueue);
+begin
+  dmQueueLock.Acquire;
+  try
+    dmQueueList.Extract(queue);
+  finally dmQueueLock.Release; end;
+end; { TOmniBaseDataManager.LocalQueueDestroyed }
 
 function TOmniBaseDataManager.CreateLocalQueue: TOmniLocalQueue;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.CreateLocalQueue
-  // asynch!
-  Result := nil;
-  // hook into queue destructions and remove queue from the pool when it is destroyed
+  Result := TOmniLocalQueueImpl.Create(Self);
+  dmQueueLock.Acquire;
+  try
+    dmQueueList.Add(Result);
+  finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.CreateLocalQueue }
+
+{ TOmniCountableDataManager }
+
+function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniCountableDataManager.GetNext
+  Result := false;
+end; { TOmniCountableDataManager.GetNext }
+
+{ TOmniHeuristicDataManager }
+
+function TOmniHeuristicDataManager.GetNext(package: TOmniDataPackage): boolean;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniHeuristicDataManager.GetNext
+  Result := false;
+end; { TOmniHeuristicDataManager.GetNext }
 
 end.
