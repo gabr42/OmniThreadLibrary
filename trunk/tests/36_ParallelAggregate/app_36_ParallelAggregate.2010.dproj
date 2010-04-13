@@ -42,6 +42,7 @@
 			<DCCReference Include="test_36_ParallelAggregate.pas">
 				<Form>frmParallelAggregateDemo</Form>
 			</DCCReference>
+			<DCCReference Include="..\..\OtlDataManager.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

@@ -72,11 +72,15 @@ unit OtlParallel;
 
 interface
 
+// TODO 3 -oPrimoz Gabrijelcic : <T> version of Aggregate/Execute would be useful
+// TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
+
 uses
   SysUtils,
   OtlCommon,
   OtlSync,
-  OtlTask;
+  OtlTask,
+  OtlDataManager;
 
 type
   IOmniParallelLoop = interface;
@@ -115,7 +119,8 @@ type
 
   Parallel = class
     class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: int64): IOmniParallelLoop; overload;
+    class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
+    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
     class procedure Join(const task1, task2: TProc); overload;
     class procedure Join(const tasks: array of TOmniTaskFunction); overload;
@@ -127,7 +132,6 @@ implementation
 uses
   Windows,
   GpStuff,
-  OtlDataManager,
   OtlTaskControl;
 
 { TODO 3 -ogabr : Should work with thread-unsafe enumerators }
@@ -140,10 +144,12 @@ type
     oplCancellationToken: IOmniCancellationToken;
     oplEnumGen          : IOmniValueEnumerable;
     oplNumTasks         : integer;
+    oplSourceProvider   : TOmniSourceProvider;
   strict protected
     function Stopped: boolean;
   public
-    constructor Create(const enumGen: IOmniValueEnumerable);
+    constructor Create(const enumGen: IOmniValueEnumerable); overload;
+    constructor Create(const sourceProvider: TOmniSourceProvider); overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate): IOmniParallelAggregatorLoop; overload;
@@ -164,11 +170,21 @@ begin
   Result := TOmniParallelLoop.Create(enumGen);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach(low, high: int64): IOmniParallelLoop;
+class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
 begin
-       { TODO 1 : Implement: Parallel.ForEach }
+  { TODO 1 : Implement: Parallel.ForEach }
   // this is just a temporary implementation and will be changed
   Result := Parallel.ForEach(CreateEnumerableRange(low, high));
+  // 1.000.000 primes =  78 ms / no aggregation =  80 ms / sum = 48 ms
+  // 3.000.000 primes = 275 ms / no aggregation = 265 ms / sum = 137 ms
+  // 5.000.000 primes = 519 ms / no aggregation = 491 ms / sum = 221 ms
+  // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
+//  Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop;
+begin
+  Result := TOmniParallelLoop.Create(sourceProvider);
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
@@ -250,6 +266,13 @@ begin
   oplNumTasks := Environment.Process.Affinity.Count;
 end; { TOmniParallelLoop.Create }
 
+constructor TOmniParallelLoop.Create(const sourceProvider: TOmniSourceProvider);
+begin
+  inherited Create;
+  oplSourceProvider := sourceProvider;
+  oplNumTasks := Environment.Process.Affinity.Count;
+end; { TOmniParallelLoop.Create }
+
 function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate):
   IOmniParallelAggregatorLoop;
 begin
@@ -295,6 +318,7 @@ function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TO
 var
   aggregate    : TOmniValue;
   countStopped : IOmniResourceCount;
+  dataManager  : TOmniDataManager;
   enumerator   : IOmniValueEnumerator;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
@@ -307,7 +331,7 @@ begin
       oplAggregator(oplAggregate, loopBody(value));
     Result := oplAggregate;
   end
-  else begin
+  else if assigned(oplEnumGen) then begin //old school
     countStopped := TOmniResourceCount.Create(oplNumTasks);
     lockAggregate := CreateOmniCriticalSection;
     for iTask := 1 to oplNumTasks do
@@ -334,6 +358,39 @@ begin
        .Schedule;
     WaitForSingleObject(countStopped.Handle, INFINITE);
     Result := oplAggregate;
+  end
+  else begin
+    countStopped := TOmniResourceCount.Create(oplNumTasks);
+    lockAggregate := CreateOmniCriticalSection;
+    dataManager := CreateDataManager(oplSourceProvider);
+    try
+      for iTask := 1 to oplNumTasks do
+        CreateTask(
+          procedure (const task: IOmniTask)
+          var
+            aggregate : TOmniValue;
+            localQueue: TOmniLocalQueue;
+            value     : TOmniValue;
+          begin
+            aggregate := TOmniValue.Null;
+            localQueue := dataManager.CreateLocalQueue;
+            try
+              while (not Stopped) and localQueue.GetNext(value) do
+                oplAggregator(aggregate, loopBody(value));
+            finally FreeAndNil(localQueue); end;
+            task.Lock.Acquire;
+            try
+              oplAggregator(oplAggregate, aggregate);
+            finally task.Lock.Release; end;
+            countStopped.Allocate;
+          end,
+          'Parallel.ForEach worker #' + IntToStr(iTask)
+        ).WithLock(lockAggregate)
+         .Unobserved
+         .Schedule;
+      WaitForSingleObject(countStopped.Handle, INFINITE);
+    finally FreeAndNil(dataManager); end;
+    Result := oplAggregate;
   end;
 end; { TOmniParallelLoop.Execute }
 
@@ -349,6 +406,7 @@ end; { TOmniParallelLoop.Execute }
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 var
   countStopped: IOmniResourceCount;
+  dataManager : TOmniDataManager;
   enumerator  : IOmniValueEnumerator;
   iTask       : integer;
   value       : TOmniValue;
@@ -358,14 +416,14 @@ begin
     while (not Stopped) and enumerator.Take(value) do
       loopBody(value);
   end
-  else begin
+  else if assigned(oplEnumGen) then begin //old school
     countStopped := TOmniResourceCount.Create(oplNumTasks);
     for iTask := 1 to oplNumTasks do
       CreateTask(
         procedure (const task: IOmniTask)
         var
-          value     : TOmniValue;
           enumerator: IOmniValueEnumerator;
+          value     : TOmniValue;
         begin
           enumerator := oplEnumGen.GetEnumerator;
           while (not Stopped) and enumerator.Take(value) do
@@ -376,6 +434,30 @@ begin
       ).Unobserved
        .Schedule;
     WaitForSingleObject(countStopped.Handle, INFINITE);
+  end
+  else begin
+    // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?
+    dataManager := CreateDataManager(oplSourceProvider);
+    try
+      countStopped := TOmniResourceCount.Create(oplNumTasks);
+      for iTask := 1 to oplNumTasks do
+        CreateTask(
+          procedure (const task: IOmniTask)
+          var
+            localQueue: TOmniLocalQueue;
+            value     : TOmniValue;
+          begin
+            localQueue := dataManager.CreateLocalQueue;
+            try
+              while (not Stopped) and localQueue.GetNext(value) do
+                loopBody(value);
+            finally FreeAndNil(localQueue); end;
+          end,
+          'Parallel.ForEach worker #' + IntToStr(iTask)
+        ).Unobserved
+         .Schedule;
+      WaitForSingleObject(countStopped.Handle, INFINITE);
+    finally FreeAndNil(dataManager); end;
   end;
 end; { TOmniParallelLoop.Execute }
 
