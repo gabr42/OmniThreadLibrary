@@ -4,6 +4,8 @@ unit OtlDataManager;
   {$DEFINE OTL_ERTTI}
 {$IFEND}
 
+// TODO 1 -oPrimoz Gabrijelcic : Add logging for debugging and performance tuning
+
 interface
 
 uses
@@ -28,6 +30,7 @@ type
   TOmniLocalQueue = class abstract
   public
     function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
+    function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniLocalQueue }
 
   ///<summary>Wrapper around the data source. All methods can and will be called from
@@ -37,7 +40,7 @@ type
     function  Count: int64; virtual; abstract;
     function  CreateDataPackage: TOmniDataPackage; virtual; abstract;
     function  GetCapabilities: TOmniSourceProviderCapabilities; virtual; abstract;
-    function  GetPackage(dataCount: integer; var package: TOmniDataPackage): boolean; virtual; abstract;
+    function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniSourceProvider }
 
   ///<summary>Data manager. CreateLocalQueue method will be called from the context of
@@ -56,7 +59,7 @@ function  CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; ov
 function  CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
 {$ENDIF OTL_ERTTI}
 
-function  CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
+function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer): TOmniDataManager;
 
 implementation
 
@@ -96,7 +99,7 @@ type
     function  Count: int64; override;
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
-    function  GetPackage(dataCount: integer; var package: TOmniDataPackage): boolean; override;
+    function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerRangeProvider }
 
   TOmniValueEnumerableProvider = class(TOmniSourceProvider)
@@ -119,25 +122,31 @@ type
     constructor Create(owner: TOmniBaseDataManager);
     destructor  Destroy; override;
     function  GetNext(var value: TOmniValue): boolean; override;
+    function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniLocalQueueImpl }
 
   ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
+    dmNumWorkers        : integer;
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
     dmSourceProvider_ref: TOmniSourceProvider;
   public
-    constructor Create(sourceProvider: TOmniSourceProvider);
+    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     destructor  Destroy; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
+    function StealPackage(package: TOmniDataPackage): boolean;
     property SourceProvider: TOmniSourceProvider read dmSourceProvider_ref;
   end; { TOmniBaseDataManager }
 
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
+  strict private
+    cdmWorkerPacketSize: integer;
   public
+    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
   end; { TOmniCountableDataManager }
 
@@ -174,12 +183,13 @@ begin
 end; { CreateSourceProvider }
 {$ENDIF OTL_ERTTI}
 
-function CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
+function CreateDataManager(sourceProvider: TOmniSourceProvider;
+  numWorkers: integer): TOmniDataManager;
 begin
   if spcCountable in sourceProvider.GetCapabilities then
-    Result := TOmniCountableDataManager.Create(sourceProvider)
+    Result := TOmniCountableDataManager.Create(sourceProvider, numWorkers)
   else
-    Result := TOmniHeuristicDataManager.Create(sourceProvider);
+    Result := TOmniHeuristicDataManager.Create(sourceProvider, numWorkers);
 end; { CreateDataManager }
 
 { TOmniIntegerDataPackage }
@@ -250,7 +260,7 @@ begin
 end; { TOmniIntegerRangeProvider.GetCapabilities }
 
 function TOmniIntegerRangeProvider.GetPackage(dataCount: integer;
-  var package: TOmniDataPackage): boolean;
+  package: TOmniDataPackage): boolean;
 var
   high      : int64;
   intPackage: TOmniIntegerDataPackage absolute package;
@@ -292,9 +302,9 @@ end; { TOmniLocalQueueImpl.Create }
 
 destructor TOmniLocalQueueImpl.Destroy;
 begin
-  FreeAndNil(lqiDataPackage);
   if assigned(lqiDataManager_ref) then
     lqiDataManager_ref.LocalQueueDestroyed(Self);
+  FreeAndNil(lqiDataPackage); // keep this destruction order! (see Split for more info)
   inherited;
 end; { TOmniLocalQueueImpl.Destroy }
 
@@ -305,13 +315,23 @@ begin
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
 end; { TOmniLocalQueueImpl.GetNext }
 
+function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
+begin
+  // this method is called when queue list is locked, therefore lqiDataPackage is
+  // guaranteed to still be created
+  {$IFDEF Debug} Assert(assigned(lqiDataPackage)); {$ENDIF}
+  Result := lqiDataPackage.Split(package);
+end; { TOmniLocalQueueImpl.Split }
+
 { TOmniBaseDataManager }
 
-constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider);
+constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider; numWorkers:
+  integer);
 begin
   inherited Create;
   dmSourceProvider_ref := sourceProvider;
   dmQueueList := TObjectList.Create;
+  dmNumWorkers := numWorkers;
 end; { TOmniBaseDataManager.Create }
 
 destructor TOmniBaseDataManager.Destroy;
@@ -337,12 +357,45 @@ begin
   finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.CreateLocalQueue }
 
+function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
+var
+  pQueue: pointer;
+begin
+  // try to steal package from other workers
+  // TODO 5 -oPrimoz Gabrijelcic : This code tries to steal from self, too - could this be easily bypassed?
+  Result := true;
+  dmQueueLock.Acquire;
+  try
+    for pQueue in dmQueueList do
+      if TOmniLocalQueue(pQueue).Split(package) then
+        Exit;
+  finally dmQueueLock.Release; end;
+  Result := false;
+end; { TOmniBaseDataManager.StealPackage }
+
 { TOmniCountableDataManager }
 
-function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
+constructor TOmniCountableDataManager.Create(sourceProvider: TOmniSourceProvider;
+  numWorkers: integer);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniCountableDataManager.GetNext
-  Result := false;
+  inherited Create(sourceProvider, numWorkers);
+  if numWorkers = 1 then
+    cdmWorkerPacketSize := SourceProvider.Count
+  else
+    cdmWorkerPacketSize := (SourceProvider.Count - 1) div numWorkers;
+end; { TOmniCountableDataManager.Create }
+
+function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
+var
+  dataCount: integer;
+begin
+  if package.HasData then
+    dataCount := cdmWorkerPacketSize
+  else // fast spin-up
+    dataCount := 1;
+  Result := SourceProvider.GetPackage(dataCount, package);
+  if not Result then
+    Result := StealPackage(package);
 end; { TOmniCountableDataManager.GetNext }
 
 { TOmniHeuristicDataManager }

@@ -174,12 +174,12 @@ class function Parallel.ForEach(low, high: integer; step: integer): IOmniParalle
 begin
   { TODO 1 : Implement: Parallel.ForEach }
   // this is just a temporary implementation and will be changed
-  Result := Parallel.ForEach(CreateEnumerableRange(low, high));
+//  Result := Parallel.ForEach(CreateEnumerableRange(low, high));
   // 1.000.000 primes =  78 ms / no aggregation =  80 ms / sum = 48 ms
   // 3.000.000 primes = 275 ms / no aggregation = 265 ms / sum = 137 ms
   // 5.000.000 primes = 519 ms / no aggregation = 491 ms / sum = 221 ms
   // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
-//  Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
+  Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop;
@@ -362,7 +362,7 @@ begin
   else begin
     countStopped := TOmniResourceCount.Create(oplNumTasks);
     lockAggregate := CreateOmniCriticalSection;
-    dataManager := CreateDataManager(oplSourceProvider);
+    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
       for iTask := 1 to oplNumTasks do
         CreateTask(
@@ -437,7 +437,7 @@ begin
   end
   else begin
     // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?
-    dataManager := CreateDataManager(oplSourceProvider);
+    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
       countStopped := TOmniResourceCount.Create(oplNumTasks);
       for iTask := 1 to oplNumTasks do
