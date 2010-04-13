@@ -11,30 +11,39 @@ uses
   OtlCommon;
 
 type
+  ///<summary>Source provider capabilities.</summary>
   TOmniSourceProviderCapability = (spcCountable);
   TOmniSourceProviderCapabilities = set of TOmniSourceProviderCapability;
 
   ///<summary>Wrapper around a (type specific) data package. Split method will be
   ///    called from the context of a non-owning thread!</summary>
   TOmniDataPackage = class abstract
+  public
     function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniDataPackage }
 
+  ///<summary>A data package queue between a single worker and shared data manager.</summary>
   TOmniLocalQueue = class abstract
+  public
     function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
   end; { TOmniLocalQueue }
 
   ///<summary>Wrapper around the data source. All methods can and will be called from
   ///    multiple threads at the same time!</summary>
   TOmniSourceProvider = class abstract
+  public
     function  Count: int64; virtual; abstract;
     function  CreateDataPackage: TOmniDataPackage; virtual; abstract;
     function  GetCapabilities: TOmniSourceProviderCapabilities; virtual; abstract;
     function  GetPackage(dataCount: integer; var package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniSourceProvider }
 
-  TOmniDataManager = class
+  ///<summary>Data manager. CreateLocalQueue method will be called from the context of
+  ///    a non-owning thread!</summary>
+  TOmniDataManager = class abstract
+  public
+    function  CreateLocalQueue: TOmniLocalQueue; virtual; abstract;
   end; { TOmniDataManager }
 
 function CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
@@ -45,6 +54,8 @@ function CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; ove
 function CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
 {$ENDIF OTL_ERTTI}
 
+function CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
+
 implementation
 
 uses
@@ -53,6 +64,7 @@ uses
   OtlSync;
 
 type
+  ///<summary>Integer range data package.</summary>
   TOmniIntegerDataPackage = class(TOmniDataPackage)
   strict private
     idpHigh: int64;
@@ -64,6 +76,7 @@ type
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
 
+  ///<summary>Integer range source provider.</summary>
   TOmniIntegerRangeProvider = class(TOmniSourceProvider)
   strict private
     irpCount: TGp4AlignedInt;
@@ -90,6 +103,23 @@ type
   TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
   end; { TOmniDelphiEnumeratorProvider }
 
+  TOmniBaseDataManager = class abstract (TOmniDataManager)
+  strict private
+    dmSourceProvider: TOmniSourceProvider;
+  public
+    constructor Create(sourceProvider: TOmniSourceProvider);
+    function CreateLocalQueue: TOmniLocalQueue; override;
+    property SourceProvider: TOmniSourceProvider read dmSourceProvider;
+  end; { TOmniBaseDataManager }
+
+  ///<summary>Data manager for countable data.</summary>
+  TOmniCountableDataManager = class(TOmniBaseDataManager)
+  end; { TOmniCountableDataManager }
+
+  ///<summary>Data manager for unbounded data.</summary>
+  TOmniHeuristicDataManager = class(TOmniBaseDataManager)
+  end; { TOmniHeuristicDataManager }
+
 { exports }
 
 function CreateSourceProvider(low, high, step: integer): TOmniSourceProvider;
@@ -100,19 +130,30 @@ end; { CreateSourceProvider }
 function CreateSourceProvider(enumerable: IOmniValueEnumerable): TOmniSourceProvider;
 begin
 //  Result := TOmniValueEnumerableProvider.Create(enumerable);
+  Result := nil;
 end; { CreateSourceProvider }
 
 function CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
 begin
 //  Result := TOmniEnumerableProvider.Create(enumerable);
+  Result := nil;
 end; { CreateSourceProvider }
 
 {$IFDEF OTL_ERTTI}
 function CreateSourceProvider(enumerable: TObject): TOmniSourceProvider;
 begin
 //  Result := TOmniDelphiEnumeratorProvider.Create(enumerable);
+  Result := nil;
 end; { CreateSourceProvider }
 {$ENDIF OTL_ERTTI}
+
+function CreateDataManager(sourceProvider: TOmniSourceProvider): TOmniDataManager;
+begin
+  if spcCountable in sourceProvider.GetCapabilities then
+    Result := TOmniCountableDataManager.Create(sourceProvider)
+  else
+    Result := TOmniHeuristicDataManager.Create(sourceProvider);
+end; { CreateDataManager }
 
 { TOmniIntegerDataPackage }
 
@@ -203,5 +244,21 @@ begin
   else
     irpCount.Value := (irpLow - irpHigh - irpStep) div (-irpStep);
 end; { TOmniIntegerRangeProvider.RecalcCount }
+
+{ TOmniBaseDataManager }
+
+constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider);
+begin
+  inherited Create;
+  dmSourceProvider := sourceProvider;
+end; { TOmniBaseDataManager.Create }
+
+function TOmniBaseDataManager.CreateLocalQueue: TOmniLocalQueue;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.CreateLocalQueue
+  // asynch!
+  Result := nil;
+  // hook into queue destructions and remove queue from the pool when it is destroyed
+end; { TOmniBaseDataManager.CreateLocalQueue }
 
 end.

@@ -29,8 +29,8 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Caption = 'Count primes from 1 to'
   end
   object Label3: TLabel
-    Left = 406
-    Top = 21
+    Left = 409
+    Top = 5
     Width = 48
     Height = 13
     Caption = 'Num CPU:'
@@ -73,8 +73,8 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     OnClick = btnSumSequentialClick
   end
   object inpNumCPU: TSpinEdit
-    Left = 406
-    Top = 40
+    Left = 409
+    Top = 24
     Width = 57
     Height = 22
     MaxValue = 0
@@ -109,5 +109,14 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Caption = 'Sequential'
     TabOrder = 7
     OnClick = btnCountSequentialClick
+  end
+  object btnCountParaNoAggreg: TButton
+    Left = 377
+    Top = 51
+    Width = 75
+    Height = 25
+    Caption = 'Par. w/o agg'
+    TabOrder = 8
+    OnClick = btnCountParaNoAggregClick
   end
 end
