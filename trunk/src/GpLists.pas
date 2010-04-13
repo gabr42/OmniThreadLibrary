@@ -959,8 +959,8 @@ type
     dlloPrevious: TGpDoublyLinkedListObject;
   protected
     procedure LinkAfter(list: TGpDoublyLinkedList; obj: TGpDoublyLinkedListObject);
-    function NextUnsafe: TGpDoublyLinkedListObject;
-    function PreviousUnsafe: TGpDoublyLinkedListObject;
+    function  NextUnsafe: TGpDoublyLinkedListObject;
+    function  PreviousUnsafe: TGpDoublyLinkedListObject;
     procedure Unlink;
   public
     destructor Destroy; override;

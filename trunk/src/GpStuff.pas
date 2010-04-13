@@ -6,10 +6,14 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2010-02-01
-   Version           : 1.20
+   Last modification : 2010-04-13
+   Version           : 1.21
 </pre>*)(*
    History:
+     1.21: 2010-04-13
+       - Implemented overloads for Increment and Decrement in TGp4AlignedInt and
+         TGp8AlignedInt64.
+       - Implemented Add/Subtract methods in TGp4AlignedInt and TGp8AlignedInt64.
      1.20: 2010-02-01
        - OpenArrayToVarArray supports vtUnicodeString variant type.
      1.19a: 2009-11-16
@@ -98,10 +102,14 @@ type
     function  GetValue: integer; inline;
     procedure SetValue(value: integer); inline;
   public
-    function Addr: PInteger; inline;
-    function CAS(oldValue, newValue: integer): boolean;
-    function Decrement: integer; inline;
-    function Increment: integer; inline;
+    function  Add(value: integer): integer; inline;
+    function  Addr: PInteger; inline;
+    function  CAS(oldValue, newValue: integer): boolean;
+    function  Decrement: integer; overload; inline;
+    function  Decrement(value: integer): integer; overload; inline;
+    function  Increment: integer; overload; inline;
+    function  Increment(value: integer): integer; overload; inline;
+    function  Subtract(value: integer): integer; inline;
     class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
     class operator Equal(const ai: TGp4AlignedInt; i: integer): boolean; inline;
     class operator GreaterThan(const ai: TGp4AlignedInt; i: integer): boolean; inline;
@@ -124,16 +132,20 @@ type
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
-    function Addr: PInt64; inline;
-    function CAS(oldValue, newValue: int64): boolean;
-    function Decrement: int64; inline;
-    function Increment: int64; inline;
+    function  Add(value: int64): int64; inline;
+    function  Addr: PInt64; inline;
+    function  CAS(oldValue, newValue: int64): boolean;
+    function  Decrement: int64; overload; inline;
+    function  Decrement(value: int64): int64; overload; inline;
+    function  Increment: int64; overload; inline;
+    function  Increment(value: int64): int64; overload; inline;
+    function  Subtract(value: int64): int64; inline;
     property Value: int64 read GetValue write SetValue;
   end; { TGp8AlignedInt64 }
 
   TGpObjectListHelper = class helper for TObjectList
   public
-    function CardCount: cardinal;
+    function  CardCount: cardinal;
   end; { TGpObjectListHelper }
 {$ENDIF GpStuff_AlignedInt}
 
@@ -537,6 +549,11 @@ end; { TableFindNE }
 
 { TGpAlignedInt }
 
+function TGp4AlignedInt.Add(value: integer): integer;
+begin
+  Result := InterlockedExchangeAdd(Addr^, value);
+end; { TGp4AlignedInt.Add }
+
 function TGp4AlignedInt.Addr: PInteger;
 begin
   Assert(SizeOf(pointer) = SizeOf(cardinal));
@@ -553,6 +570,11 @@ begin
   Result := InterlockedDecrement(Addr^);
 end; { TGp4AlignedInt.Decrement }
 
+function TGp4AlignedInt.Decrement(value: integer): integer;
+begin
+  Result := Subtract(value) - value;
+end; { TGp4AlignedInt.Decrement }
+
 function TGp4AlignedInt.GetValue: integer;
 begin
   Result := Addr^;
@@ -563,10 +585,20 @@ begin
   Result := InterlockedIncrement(Addr^);
 end; { TGp4AlignedInt.Increment }
 
+function TGp4AlignedInt.Increment(value: integer): integer;
+begin
+  Result := Add(value) + value;
+end; { TGp4AlignedInt.Increment }
+
 procedure TGp4AlignedInt.SetValue(value: integer);
 begin
   Addr^ := value;
 end; { TGp4AlignedInt.SetValue }
+
+function TGp4AlignedInt.Subtract(value: integer): integer;
+begin
+  Result := InterlockedExchangeAdd(Addr^, -value);
+end; { TGp4AlignedInt.Subtract }
 
 class operator TGp4AlignedInt.Add(const ai: TGp4AlignedInt; i: integer): cardinal;
 begin
@@ -627,6 +659,11 @@ end; { TGp4AlignedInt.Subtract }
 
 { TGp8AlignedInt64 }
 
+function TGp8AlignedInt64.Add(value: int64): int64;
+begin
+  Result := DSiInterlockedExchangeAdd64(Addr^, value);
+end; { TGp8AlignedInt64.Add }
+
 function TGp8AlignedInt64.Addr: PInt64;
 begin
   Assert(SizeOf(pointer) = SizeOf(cardinal));
@@ -643,6 +680,11 @@ begin
   Result := DSiInterlockedDecrement64(Addr^);
 end; { TGp8AlignedInt64.Decrement }
 
+function TGp8AlignedInt64.Decrement(value: int64): int64;
+begin
+  Result := Subtract(value) - value;
+end; { TGp8AlignedInt64.Decrement }
+
 function TGp8AlignedInt64.GetValue: int64;
 begin
   Result := Addr^;
@@ -653,10 +695,20 @@ begin
   Result := DSiInterlockedIncrement64(Addr^);
 end; { TGp8AlignedInt64.Increment }
 
+function TGp8AlignedInt64.Increment(value: int64): int64;
+begin
+  Result := Add(value) + value;
+end; { TGp8AlignedInt64.Increment }
+
 procedure TGp8AlignedInt64.SetValue(value: int64);
 begin
   Addr^ := value;
 end; { TGp8AlignedInt64.SetValue }
+
+function TGp8AlignedInt64.Subtract(value: int64): int64;
+begin
+  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
+end; { TGp8AlignedInt64.Subtract }
 
 {$ENDIF GpStuff_AlignedInt}
 

@@ -29,10 +29,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2010-01-26
-   Version           : 1.05b
+   Last modification : 2010-04-09
+   Version           : 1.06a
 </pre>*)(*
    History:
+     1.06a: 2010-04-09
+       - Unicode fixes in TGpStringTable.
+     1.06: 2010-03-04
+       - String hashing function made public.
      1.05b: 2010-01-26
        - Fixed a bug in TGpStringTable.SetValue.
      1.05: 2008-11-09
@@ -260,6 +264,7 @@ type
   end; { TGpStringDictionary }
 
 function GetGoodHashSize(dataSize: cardinal): cardinal;
+function HashOf(const key: string): cardinal;
 
 implementation
 
@@ -628,11 +633,11 @@ var
   lenStr: cardinal;
 begin
   lenStr := PCardinal(steTable)^;
-  SetLength(steCurrent.kvKey, lenStr);
+  SetLength(steCurrent.kvKey, lenStr * SizeOf(char));
   Inc(steTable, SizeOf(cardinal));
   if Length(steCurrent.kvKey) > 0 then begin
-    Move(steTable^, steCurrent.kvKey[1], lenStr*SizeOf(char));
-    Inc(steTable, lenStr*SizeOf(char));
+    Move(steTable^, steCurrent.kvKey[1], lenStr * SizeOf(char));
+    Inc(steTable, lenStr * SizeOf(char));
   end;
   steCurrent.kvValue := PInt64(steTable)^;
   Inc(steTable, SizeOf(int64));
@@ -669,13 +674,13 @@ begin
   if key = '' then
     raise Exception.Create('TGpStringTable.Add: Cannot store empty key');
   Result := cardinal(stDataTail) - cardinal(stData);
-  requiredSize := Result + SizeOf(cardinal) + cardinal(Length(key)*SizeOf(char)) + SizeOf(int64);
+  requiredSize := Result + SizeOf(cardinal) + cardinal(Length(key) * SizeOf(char)) + SizeOf(int64);
   if requiredSize > stDataSize then
     Grow(requiredSize);
   PCardinal(stDataTail)^ := Length(key);
   Inc(stDataTail, SizeOf(cardinal));
-  Move(key[1], stDataTail^, Length(key)*SizeOf(char));
-  Inc(stDataTail, Length(key)*SizeOf(char));
+  Move(key[1], stDataTail^, Length(key) * SizeOf(char));
+  Inc(stDataTail, Length(key) * SizeOf(char));
   PInt64(stDataTail)^ := value;
   Inc(stDataTail, SizeOf(int64));
 end; { TGpStringTable.Add }
@@ -710,11 +715,11 @@ begin
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
-  CheckPointer(pData, lenStr);
+  CheckPointer(pData, lenStr * SizeOf(char));
   SetLength(key, lenStr);
   if lenStr > 0 then begin
-    Move(pData^, key[1], lenStr*SizeOf(char));
-    Inc(pData, lenStr*SizeOf(char));
+    Move(pData^, key[1], lenStr * SizeOf(char));
+    Inc(pData, lenStr * SizeOf(char));
   end;
   CheckPointer(pData, SizeOf(int64));
   value := PInt64(pData)^;
@@ -736,10 +741,10 @@ begin
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
-  CheckPointer(pData, lenStr);
+  CheckPointer(pData, lenStr * SizeOf(char));
   SetLength(Result, lenStr);
   if lenStr > 0 then
-    Move(pData^, Result[1], lenStr*SizeOf(char));
+    Move(pData^, Result[1], lenStr * SizeOf(char));
 end; { TGpStringTable.GetKey }
 
 function TGpStringTable.GetValue(index: cardinal): int64;
@@ -751,8 +756,8 @@ begin
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
-  CheckPointer(pData, lenStr);
-  Inc(pData, lenStr);
+  CheckPointer(pData, lenStr * SizeOf(char));
+  Inc(pData, lenStr * SizeOf(char));
   CheckPointer(pData, SizeOf(int64));
   Result := PInt64(pData)^;
 end; { TGpStringTable.GetValue }
@@ -766,8 +771,8 @@ begin
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
-  CheckPointer(pData, lenStr);
-  Inc(pData, lenStr);
+  CheckPointer(pData, lenStr * SizeOf(char));
+  Inc(pData, lenStr * SizeOf(char));
   CheckPointer(pData, SizeOf(int64));
   PInt64(pData)^ := value;
 end; { TGpStringTable.SetValue }

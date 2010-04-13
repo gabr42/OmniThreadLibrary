@@ -6,10 +6,14 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja
    Creation date     : 2002-10-09
-   Last modification : 2010-02-01
-   Version           : 1.53c
+   Last modification : 2010-04-12
+   Version           : 1.55
 </pre>*)(*
    History:
+     1.55: 2010-04-12
+       - Implemented DSiHasElapsed64 and DSiElapsedTime64.
+     1.54: 2010-04-08
+       - Implemented DSiLogonAs and DSiVerifyPassword.
      1.53c: 2010-02-01
        - DSiGetProcAddress made public.
      1.53b: 2009-12-15
@@ -731,6 +735,10 @@ const
     const domain: string = '.'): boolean;
   function  DSiIncrementWorkingSet(incMinSize, incMaxSize: integer): boolean;
   function  DSiIsDebugged: boolean;
+  function  DSiLogonAs(const username, password: string;
+    var logonHandle: THandle): boolean; overload;
+  function  DSiLogonAs(const username, password, domain: string;
+    var logonHandle: THandle): boolean; overload;
   function  DSiOpenURL(const URL: string; newBrowser: boolean = false): boolean;
   procedure DSiProcessThreadMessages;
   function  DSiRealModuleName: string;
@@ -925,6 +933,8 @@ type
   function  DSiIsDiskInDrive(disk: char): boolean;
   function  DSiIsWinNT: boolean;
   function  DSiIsWow64: boolean;
+  function  DSiVerifyPassword(const username, password: string;
+    const domain: string = '.'): boolean;
 
 { Install }
 
@@ -1073,7 +1083,9 @@ type
   //Following three functions are based on GetTickCount
   function  DSiElapsedSince(midTime, startTime: int64): int64;
   function  DSiElapsedTime(startTime: int64): int64;
-  function  DSiHasElapsed(startTime: int64; timeout: DWORD): boolean;
+  function  DSiElapsedTime64(startTime: int64): int64;
+  function  DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
+  function  DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
 
   function  DSiFileTimeToDateTime(fileTime: TFileTime): TDateTime; overload;
   function  DSiFileTimeToDateTime(fileTime: TFileTime; var dateTime: TDateTime): boolean; overload;
@@ -3139,9 +3151,7 @@ const
       Result := DSiExecute(commandLine, visibility, workDir, wait)
     else begin
       Result := MaxInt;
-      if DSiLogonUser(PChar(username), PChar(domain), PChar(password),
-           LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, logonHandle) then
-      begin
+      if DSiLogonAs(username, password, password, logonHandle) then begin
         if workDir = '' then
           GetDir(0, useWorkDir)
         else
@@ -3619,28 +3629,14 @@ const
   // Returns True if user can be impersonated. Always True on 9x architecture.
   function DSiImpersonateUser(const username, password, domain: string): boolean;
   var
-    dsiDomain  : string;
-    dsiUsername: string;
     lastError  : DWORD;
     logonHandle: THandle;
-    posDomain  : integer;
   begin
     if not DSiIsWinNT then
       Result := true
     else begin
       Result := false;
-      dsiDomain := domain;
-      dsiUsername := username;
-      if dsiDomain = '.' then begin
-        posDomain := Pos('\', dsiUsername);
-        if posDomain > 0 then begin
-          dsiDomain := Copy(dsiUsername, 1, posDomain-1);
-          Delete(dsiUsername, 1, posDomain);
-        end;
-      end;
-      if DSiLogonUser(PChar(dsiUsername), PChar(dsiDomain), PChar(password),
-           LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, logonHandle) then
-      begin
+      if DSiLogonAs(username, password, domain, logonHandle) then begin
         Result := DSiImpersonateLoggedOnUser(logonHandle);
         lastError := GetLastError;
         CloseHandle(logonHandle);
@@ -3692,6 +3688,41 @@ const
       Result := (DWORD(p) < kernelHandle);
     end;
   end; { DSiIsDebugged }
+
+  function DSiLogonAs(const username, password: string;
+    var logonHandle: THandle): boolean; overload;
+  begin
+    Result := DSiLogonAs(username, password, '.', logonHandle);
+  end; { DSiLogonAs }
+  
+  {:A simple wrapper arount the LogonUser API that handles 'domain\user' input in the
+    'username' field.
+    @author  gabr
+    @since   2010-04-08
+  }
+  function DSiLogonAs(const username, password, domain: string;
+    var logonHandle: THandle): boolean; overload;
+  var
+    dsiDomain  : string;
+    dsiUsername: string;
+    posDomain  : integer;
+  begin
+    if not DSiIsWinNT then
+      Result := true
+    else begin
+      dsiDomain := domain;
+      dsiUsername := username;
+      if dsiDomain = '.' then begin
+        posDomain := Pos('\', dsiUsername);
+        if posDomain > 0 then begin
+          dsiDomain := Copy(dsiUsername, 1, posDomain-1);
+          Delete(dsiUsername, 1, posDomain);
+        end;
+      end;
+      Result := DSiLogonUser(PChar(dsiUsername), PChar(dsiDomain), PChar(password),
+        LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, logonHandle);
+    end;
+  end; { DSiLogonAs }
 
   {ln}
   function DSiOpenURL(const URL: string; newBrowser: boolean): boolean;
@@ -5195,6 +5226,20 @@ var
       Result := isWow64;
   end; { DSiIsWow64 }
 
+  {:Verifies local password.
+    @author  gabr
+    @since   2010-04-08
+  }
+  function DSiVerifyPassword(const username, password: string;
+    const domain: string): boolean;
+  var
+    logonHandle: THandle;
+  begin
+    Result := DSiLogonAs(username, password, domain, logonHandle);
+    if Result then
+      CloseHandle(logonHandle);
+  end; { DSiVerifyPassword }
+
 { Install }
 
   function UninstallRoot: HKEY;
@@ -5753,11 +5798,19 @@ var
     Result := midTime - startTime;
   end; { TDSiRegistry.DSiElapsedSince }
 
-  {gp}
+  {:Returns time elapsed since startTime, which must be a result of the GetTickCount.
+  }
   function DSiElapsedTime(startTime: int64): int64;
   begin
     Result := DSiElapsedSince(GetTickCount, startTime);
   end; { DSiElapsedTime }
+
+  {:Returns time elapsed since startTime, which must be a result of the DSiTimeGetTime64.
+  }
+  function DSiElapsedTime64(startTime: int64): int64;
+  begin
+    Result := DSiTimeGetTime64 - startTime;
+  end; { DSiElapsedTime64 }
 
   {:Converts time from Windows TFileTime format to Delphi TDateTime format.
     @returns 0 if conversion failed.
@@ -5795,16 +5848,31 @@ var
     Result := Result div 10;
   end; { DSiFileTimeToMicroSeconds }
 
-  {gp}
-  function DSiHasElapsed(startTime: int64; timeout: DWORD): boolean;
+  {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
+    returned from the GetTickCount.
+  }
+  function DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
   begin
-    if timeout = 0 then
+    if timeout_ms = 0 then
       Result := true
-    else if timeout = INFINITE then
+    else if timeout_ms = INFINITE then
       Result := false
     else
-      Result := (DSiElapsedTime(startTime) > timeout);
+      Result := (DSiElapsedTime(startTime) > timeout_ms);
   end; { DSiHasElapsed }
+
+  {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
+    returned from the DSiTimeGetTime64.
+  }
+  function DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
+  begin
+    if timeout_ms = 0 then
+      Result := true
+    else if timeout_ms = INFINITE then
+      Result := false
+    else
+      Result := (DSiElapsedTime64(startTime) > timeout_ms);
+  end; { DSiHasElapsed64 }
 
   {:Converts value returned from QueryPerformanceCounter to milliseconds.
     @author  gabr
