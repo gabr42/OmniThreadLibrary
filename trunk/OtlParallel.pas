@@ -172,12 +172,11 @@ end; { Parallel.ForEach }
 
 class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
 begin
-  { TODO 1 : Implement: Parallel.ForEach }
   // this is just a temporary implementation and will be changed
 //  Result := Parallel.ForEach(CreateEnumerableRange(low, high));
-  // 1.000.000 primes =  78 ms / no aggregation =  80 ms / sum = 48 ms
-  // 3.000.000 primes = 275 ms / no aggregation = 265 ms / sum = 137 ms
-  // 5.000.000 primes = 519 ms / no aggregation = 491 ms / sum = 221 ms
+  // 1.000.000 primes =  78/ 77 ms / no aggregation =  80/ 77 ms / sum =  48/ 24 ms
+  // 3.000.000 primes = 275/284 ms / no aggregation = 265/282 ms / sum = 137/ 93 ms
+  // 5.000.000 primes = 519/543 ms / no aggregation = 491/516 ms / sum = 221/212 ms
   // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
   Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
 end; { Parallel.ForEach }
@@ -324,7 +323,7 @@ var
   lockAggregate: IOmniCriticalSection;
   value        : TOmniValue;
 begin
-  if (oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1) then begin
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
     aggregate := TOmniValue.Null;
     enumerator := oplEnumGen.GetEnumerator;
     while (not Stopped) and enumerator.Take(value) do
@@ -411,7 +410,7 @@ var
   iTask       : integer;
   value       : TOmniValue;
 begin
-  if (oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1) then begin
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
     enumerator := oplEnumGen.GetEnumerator;
     while (not Stopped) and enumerator.Take(value) do
       loopBody(value);
@@ -452,6 +451,7 @@ begin
               while (not Stopped) and localQueue.GetNext(value) do
                 loopBody(value);
             finally FreeAndNil(localQueue); end;
+            countStopped.Allocate;
           end,
           'Parallel.ForEach worker #' + IntToStr(iTask)
         ).Unobserved

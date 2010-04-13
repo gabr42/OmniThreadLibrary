@@ -14,7 +14,10 @@ uses
 
 type
   ///<summary>Source provider capabilities.</summary>
-  TOmniSourceProviderCapability = (spcCountable);
+  TOmniSourceProviderCapability = (
+    spcCountable,  // source provider that knows how many data it holds
+    spcFast        // source provider operations are O(1)
+  );
   TOmniSourceProviderCapabilities = set of TOmniSourceProviderCapability;
 
   ///<summary>Wrapper around a (type specific) data package. Split method will be
@@ -64,6 +67,7 @@ function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: int
 implementation
 
 uses
+  Windows,
   SysUtils,
   Classes,
   Contnrs,
@@ -74,9 +78,12 @@ type
   ///<summary>Integer range data package.</summary>
   TOmniIntegerDataPackage = class(TOmniDataPackage)
   strict private
-    idpHigh: int64;
-    idpLow : TGp8AlignedInt64;
-    idpStep: integer;
+    idpHigh    : int64;
+    idpHighSign: int64;
+    idpLow     : TGp8AlignedInt64;
+    idpSign    : integer;
+    idpStep    : integer;
+    idpStepAbs : integer;
   public
     function  GetNext(var value: TOmniValue): boolean; override;
     function  HasData: boolean; override;
@@ -137,14 +144,15 @@ type
     destructor  Destroy; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
-    function StealPackage(package: TOmniDataPackage): boolean;
+    function  StealPackage(package: TOmniDataPackage): boolean;
     property SourceProvider: TOmniSourceProvider read dmSourceProvider_ref;
   end; { TOmniBaseDataManager }
 
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
   strict private
-    cdmWorkerPacketSize: integer;
+    cdmInitialPacketSize: int64;
+    cdmWorkerPacketSize : int64;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
@@ -218,18 +226,40 @@ begin
   idpLow.Value := low;
   idpHigh := high;
   idpStep := step;
+  idpStepAbs := Abs(step);
+  if idpStep > 0 then
+    idpSign := 1
+  else
+    idpSign := -1;
+  idpHighSign := idpHigh * idpSign;
 end; { TOmniIntegerDataPackage.Initialize }
 
 function TOmniIntegerDataPackage.Split(package: TOmniDataPackage): boolean;
 var
+  high      : integer;
   intPackage: TOmniIntegerDataPackage absolute package;
-  value     : TOmniValue;
+  low       : integer;
+  midSteps  : integer;
 begin
-  // TODO 3 -oPrimoz Gabrijelcic : Can benefit from overloaded GetNext returning integer.
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
-  Result := GetNext(value);
-  if Result then
-    intPackage.Initialize(value, value, 1);
+  if not HasData then
+    Result := false
+  else begin
+    low := idpLow.Value;
+    if (low * idpSign) > idpHighSign then
+      Result := false
+    else begin
+      midSteps := (((idpHigh + idpLow.Value) div 2) div idpStep) * idpStep;
+      low := idpLow.Add(midSteps);
+      high := low + midSteps;
+      Result := (low * idpSign <= idpHighSign);
+      if Result and (high * idpSign > idpHighSign) then
+        high := (idpHigh div idpStepAbs) * idpStepAbs;
+      if Result then begin
+        intPackage.Initialize(low, high, idpStep);
+      end;
+    end;
+  end;
 end; { TOmniIntegerDataPackage.Split }
 
 { TOmniIntegerRangeProvider }
@@ -256,7 +286,7 @@ end; { TOmniIntegerRangeProvider.CreateDataPackage }
 
 function TOmniIntegerRangeProvider.GetCapabilities: TOmniSourceProviderCapabilities;
 begin
-  Result := [spcCountable];
+  Result := [spcCountable, spcFast];
 end; { TOmniIntegerRangeProvider.GetCapabilities }
 
 function TOmniIntegerRangeProvider.GetPackage(dataCount: integer;
@@ -311,8 +341,11 @@ end; { TOmniLocalQueueImpl.Destroy }
 function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
 begin
   Result := lqiDataPackage.GetNext(value);
-  if not Result then
+  if not Result then begin
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
+    if Result then // somebody may have stolen it; if that happens, terminate and don't fight for the remaining data
+      Result := lqiDataPackage.GetNext(value);
+  end;
 end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
@@ -367,8 +400,9 @@ begin
   dmQueueLock.Acquire;
   try
     for pQueue in dmQueueList do
-      if TOmniLocalQueue(pQueue).Split(package) then
+      if TOmniLocalQueue(pQueue).Split(package) then begin
         Exit;
+      end;
   finally dmQueueLock.Release; end;
   Result := false;
 end; { TOmniBaseDataManager.StealPackage }
@@ -379,10 +413,18 @@ constructor TOmniCountableDataManager.Create(sourceProvider: TOmniSourceProvider
   numWorkers: integer);
 begin
   inherited Create(sourceProvider, numWorkers);
-  if numWorkers = 1 then
-    cdmWorkerPacketSize := SourceProvider.Count
-  else
+  if numWorkers = 1 then begin
+    cdmInitialPacketSize := SourceProvider.Count;
+    cdmWorkerPacketSize := cdmInitialPacketSize;
+  end
+  else if spcFast in sourceProvider.GetCapabilities then begin
+    cdmInitialPacketSize := (SourceProvider.Count + numWorkers - 1) div numWorkers;
+    cdmWorkerPacketSize := cdmInitialPacketSize;
+  end
+  else begin
+    cdmInitialPacketSize := 1;
     cdmWorkerPacketSize := (SourceProvider.Count - 1) div numWorkers;
+  end;
 end; { TOmniCountableDataManager.Create }
 
 function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
@@ -392,7 +434,7 @@ begin
   if package.HasData then
     dataCount := cdmWorkerPacketSize
   else // fast spin-up
-    dataCount := 1;
+    dataCount := cdmInitialPacketSize;
   Result := SourceProvider.GetPackage(dataCount, package);
   if not Result then
     Result := StealPackage(package);
