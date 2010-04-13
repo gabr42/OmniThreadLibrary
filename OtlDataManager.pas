@@ -14,10 +14,8 @@ type
   TOmniSourceProviderCapability = (spcCountable);
   TOmniSourceProviderCapabilities = set of TOmniSourceProviderCapability;
 
-// TODO 1 -oPrimoz Gabrijelcic : Handle negative step!
-
   ///<summary>Wrapper around a (type specific) data package. Split method will be
-  ///    called from a context of a non-owning thread!</summary>
+  ///    called from the context of a non-owning thread!</summary>
   TOmniDataPackage = class abstract
     function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
@@ -39,7 +37,7 @@ type
   TOmniDataManager = class
   end; { TOmniDataManager }
 
-function CreateSourceProvider(low, high: int64; step: int64 = 1): TOmniSourceProvider; overload;
+function CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
 function CreateSourceProvider(enumerable: IOmniValueEnumerable): TOmniSourceProvider; overload;
 function CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
 
@@ -59,24 +57,24 @@ type
   strict private
     idpHigh: int64;
     idpLow : TGp8AlignedInt64;
-    idpStep: int64;
+    idpStep: integer;
   public
     function  GetNext(var value: TOmniValue): boolean; override;
-    procedure Initialize(low, high, step: int64);
+    procedure Initialize(low, high, step: integer);
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
 
   TOmniIntegerRangeProvider = class(TOmniSourceProvider)
   strict private
-    irpCount: TGp8AlignedInt64;
-    irpHigh : int64;
+    irpCount: TGp4AlignedInt;
+    irpHigh : integer;
     irpLock : TOmniCS;
-    irpLow  : int64;
-    irpStep : int64;
+    irpLow  : integer;
+    irpStep : integer;
   strict protected
     procedure RecalcCount; inline;
   public
-    constructor Create(low, high, step: int64);
+    constructor Create(low, high, step: integer);
     function  Count: int64; override;
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
@@ -94,7 +92,7 @@ type
 
 { exports }
 
-function CreateSourceProvider(low, high, step: int64): TOmniSourceProvider;
+function CreateSourceProvider(low, high, step: integer): TOmniSourceProvider;
 begin
   Result := TOmniIntegerRangeProvider.Create(low, high, step);
 end; { CreateSourceProvider }
@@ -120,13 +118,16 @@ end; { CreateSourceProvider }
 
 function TOmniIntegerDataPackage.GetNext(var value: TOmniValue): boolean;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : Problem! Multiple GetNext calls when idpLow > idpHigh can wrap around idpLow (if idpHigh is close to High(int64))
-  value.AsInt64 := idpLow.Increment(idpStep) - idpStep;
-  Result := (value.AsInt64 <= idpHigh);
+  value.AsInt64 := idpLow.Add(idpStep);
+  if idpStep > 0 then
+    Result := (value.AsInt64 <= idpHigh)
+  else
+    Result := (value.AsInt64 >= idpHigh);
 end; { TOmniIntegerDataPackage.GetNext }
 
-procedure TOmniIntegerDataPackage.Initialize(low, high, step: int64);
+procedure TOmniIntegerDataPackage.Initialize(low, high, step: integer);
 begin
+  {$IFDEF Debug}Assert(step <> 0);{$ENDIF}
   idpLow.Value := low;
   idpHigh := high;
   idpStep := step;
@@ -139,16 +140,17 @@ var
 begin
   // TODO 3 -oPrimoz Gabrijelcic : Can benefit from overloaded GetNext returning integer.
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
-  Result := intPackage.GetNext(value);
+  Result := GetNext(value);
   if Result then
     intPackage.Initialize(value, value, 1);
 end; { TOmniIntegerDataPackage.Split }
 
 { TOmniIntegerRangeProvider }
 
-constructor TOmniIntegerRangeProvider.Create(low, high, step: int64);
+constructor TOmniIntegerRangeProvider.Create(low, high, step: integer);
 begin
   inherited Create;
+  {$IFDEF Debug}Assert(step <> 0);{$ENDIF}
   irpLow := low;
   irpHigh := high;
   irpStep := step;
@@ -177,6 +179,7 @@ var
   intPackage: TOmniIntegerDataPackage absolute package;
 begin
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
+  {$IFDEF Debug}Assert(dataCount > 0);{$ENDIF}
   if irpCount.Value <= 0 then
     Result := false
   else begin
@@ -195,7 +198,10 @@ end; { TOmniIntegerRangeProvider.GetPackage }
 
 procedure TOmniIntegerRangeProvider.RecalcCount;
 begin
-  irpCount.Value := (irpHigh - irpLow + irpStep) div irpStep;
+  if irpStep > 0 then
+    irpCount.Value := (irpHigh - irpLow + irpStep) div irpStep
+  else
+    irpCount.Value := (irpLow - irpHigh - irpStep) div (-irpStep);
 end; { TOmniIntegerRangeProvider.RecalcCount }
 
 end.

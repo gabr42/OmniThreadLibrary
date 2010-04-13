@@ -127,6 +127,7 @@ implementation
 uses
   Windows,
   GpStuff,
+  OtlDataManager,
   OtlTaskControl;
 
 { TODO 3 -ogabr : Should work with thread-unsafe enumerators }
@@ -165,7 +166,7 @@ end; { Parallel.ForEach }
 
 class function Parallel.ForEach(low, high: int64): IOmniParallelLoop;
 begin
-  { TODO 1 : Implement: Parallel.ForEach }
+       { TODO 1 : Implement: Parallel.ForEach }
   // this is just a temporary implementation and will be changed
   Result := Parallel.ForEach(CreateEnumerableRange(low, high));
 end; { Parallel.ForEach }

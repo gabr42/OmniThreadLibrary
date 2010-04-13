@@ -1,4 +1,4 @@
-///<summary>Stuff common to the OmniThreadLibrary project.</summary>
+//<summary>Stuff common to the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -215,6 +215,7 @@ type
     property Current: TOmniValue read GetCurrent;
   end; { IOmniValueEnumerator }
 
+  // TODO 1 -oPrimoz Gabrijelcic : Could IEnumerable be reused for that? -Using this enumerator tells the code that enumerator is threadsafe!
   IOmniValueEnumerable = interface ['{50C1C176-C61F-41F5-AA0B-6FD215E5159F}']
     function  GetEnumerator: IOmniValueEnumerator;
   end; { IOmniValueEnumerable }
@@ -536,13 +537,13 @@ type
   end; { TOmniRangeEnumerator }
 
   TOmniEnumerableRange = class(TInterfacedObject, IOmniValueEnumerable)
-    function  GetEnumerator: IOmniValueEnumerator;
   strict private
     oerHigh     : int64;
     oerIncrement: boolean;
     oerLow      : TGp4AlignedInt;
   public
     constructor Create(low, high: int64);
+    function  GetEnumerator: IOmniValueEnumerator;
   end; { TOmniEnumerableRange }
 
   PPHashItem = ^PHashItem;
@@ -908,6 +909,7 @@ end; { TOmniRangeEnumerator.GetCurrent }
 
 function TOmniRangeEnumerator.MoveNext: boolean;
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : This will stop working if oreHigh = High(int64) !!
   if oreIncrement then begin
     oreCurrent := oreLow^.Increment;
     Result := (oreCurrent <= oreHigh);
