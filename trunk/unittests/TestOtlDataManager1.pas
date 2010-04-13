@@ -50,8 +50,11 @@ begin
 end;
 
 procedure TestTOmniIntegerDataPackage.TestCreation;
+var
+  value: TOmniValue;
 begin
   Initialize(1, 3, 1);
+  CheckFalse(FOmniDataPackage.GetNext(value));
   Cleanup;
 end;
 
