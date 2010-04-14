@@ -285,9 +285,9 @@ begin
     if (low * idpSign) > idpHighSign then
       Result := false
     else begin
-      midSteps := (((idpHigh + idpLow.Value) div 2) div idpStep) * idpStep;
+      midSteps := (((idpHigh - idpLow.Value + 1) div 2) div idpStep) * idpStep;
       low := idpLow.Add(midSteps);
-      high := low + midSteps;
+      high := low + midSteps - idpStep;
       Result := (low * idpSign <= idpHighSign);
       if Result and (high * idpSign > idpHighSign) then
         high := (idpHigh div idpStepAbs) * idpStepAbs;
