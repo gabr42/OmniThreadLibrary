@@ -166,6 +166,7 @@ type
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
     dmNumWorkers        : integer;
+    dmPacketSizes       : array of integer;
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
     dmSourceProvider_ref: TOmniSourceProvider;
@@ -173,6 +174,7 @@ type
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     destructor  Destroy; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
+    function  GetDataCountForGeneration(generation: integer): integer;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
     function  StealPackage(package: TOmniDataPackage): boolean;
     property SourceProvider: TOmniSourceProvider read dmSourceProvider_ref;
@@ -180,8 +182,6 @@ type
 
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
-  strict private
-    cdmPacketSizes: array of integer;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
@@ -515,6 +515,23 @@ begin
   dmSourceProvider_ref := sourceProvider;
   dmQueueList := TObjectList.Create;
   dmNumWorkers := numWorkers;
+  if (numWorkers = 1) or ([spcFast, spcCountable] <= sourceProvider.GetCapabilities) then begin
+    SetLength(dmPacketSizes, 1);
+    dmPacketSizes[0] := (SourceProvider.Count + numWorkers - 1) div numWorkers;
+  end
+  else begin
+    SetLength(dmPacketSizes, 4);
+    dmPacketSizes[0] := 1; // guesswork
+    dmPacketSizes[1] := 8;
+    dmPacketSizes[2] := 27;
+    if spcCountable in sourceProvider.GetCapabilities then begin
+      dmPacketSizes[3] := (SourceProvider.Count - (8+27)*numWorkers - 1) div numWorkers;
+      if dmPacketSizes[3] <= 0 then
+        SetLength(dmPacketSizes, Length(dmPacketSizes) - 1);
+    end
+    else
+      dmPacketSizes[3] := High(integer); // heuristic limiter will take care of this
+  end;
 end; { TOmniBaseDataManager.Create }
 
 destructor TOmniBaseDataManager.Destroy;
@@ -540,6 +557,14 @@ begin
   finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.CreateLocalQueue }
 
+function TOmniBaseDataManager.GetDataCountForGeneration(generation: integer): integer;
+begin
+  if generation >= High(dmPacketSizes) then
+    Result := dmPacketSizes[High(dmPacketSizes)]
+  else
+    Result := dmPacketSizes[generation];
+end; { TOmniBaseDataManager.GetDataCountForGeneration }
+
 function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
 var
   pQueue: pointer;
@@ -563,19 +588,6 @@ constructor TOmniCountableDataManager.Create(sourceProvider: TOmniSourceProvider
   numWorkers: integer);
 begin
   inherited Create(sourceProvider, numWorkers);
-  if (numWorkers = 1) or (spcFast in sourceProvider.GetCapabilities) then begin
-    SetLength(cdmPacketSizes, 1);
-    cdmPacketSizes[0] := (SourceProvider.Count + numWorkers - 1) div numWorkers;
-  end
-  else begin
-    SetLength(cdmPacketSizes, 4);
-    cdmPacketSizes[0] := 1; // guesswork
-    cdmPacketSizes[1] := 8;
-    cdmPacketSizes[2] := 27;
-    cdmPacketSizes[3] := (SourceProvider.Count - (8+27)*numWorkers - 1) div numWorkers;
-    if cdmPacketSizes[3] < 0 then
-      SetLength(cdmPacketSizes, Length(cdmPacketSizes) - 1);
-  end;
 end; { TOmniCountableDataManager.Create }
 
 function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
@@ -583,11 +595,7 @@ var
   dataCount : integer;
   intPackage: TOmniDataPackageBase absolute package;
 begin
-  if intPackage.Generation >= High(cdmPacketSizes) then
-    dataCount := cdmPacketSizes[High(cdmPacketSizes)]
-  else
-    dataCount := cdmPacketSizes[intPackage.Generation];
-  Result := SourceProvider.GetPackage(dataCount, package);
+  Result := SourceProvider.GetPackage(GetDataCountForGeneration(intPackage.Generation), package);
   if not Result then
     Result := StealPackage(package);
   if Result then
