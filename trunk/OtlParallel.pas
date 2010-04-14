@@ -119,7 +119,7 @@ type
 
   Parallel = class
     class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
-    class function ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
+    class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
@@ -144,6 +144,7 @@ type
     oplAggregator       : TOmniAggregatorDelegate;
     oplCancellationToken: IOmniCancellationToken;
     oplEnumGen          : IOmniValueEnumerable;
+    oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplSourceProvider   : TOmniSourceProvider;
   strict protected
@@ -151,7 +152,9 @@ type
     function  Take(const enumerator: IOmniValueEnumerator; var value: TOmniValue): boolean; inline;
   public
     constructor Create(const enumGen: IOmniValueEnumerable); overload;
-    constructor Create(const sourceProvider: TOmniSourceProvider); overload;
+    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean);
+      overload;
+    destructor Destroy; override;
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate): IOmniParallelAggregatorLoop; overload;
@@ -177,17 +180,17 @@ end; { Parallel.ForEach }
 
 class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
 begin
-  Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
+  Result := TOmniParallelLoop.Create(CreateSourceProvider(low, high, step), true);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop;
 begin
-  Result := TOmniParallelLoop.Create(sourceProvider);
+  Result := TOmniParallelLoop.Create(sourceProvider, false);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop;
 begin
-  Result := Parallel.ForEach(CreateSourceProvider(enum));
+  Result := TOmniParallelLoop.Create(CreateSourceProvider(enum), true);
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
@@ -269,12 +272,21 @@ begin
   oplNumTasks := Environment.Process.Affinity.Count;
 end; { TOmniParallelLoop.Create }
 
-constructor TOmniParallelLoop.Create(const sourceProvider: TOmniSourceProvider);
+constructor TOmniParallelLoop.Create(const sourceProvider: TOmniSourceProvider;
+  managedProvider: boolean);
 begin
   inherited Create;
   oplSourceProvider := sourceProvider;
   oplNumTasks := Environment.Process.Affinity.Count;
+  oplManagedProvider := managedProvider;
 end; { TOmniParallelLoop.Create }
+
+destructor TOmniParallelLoop.Destroy;
+begin
+  if oplManagedProvider then
+    FreeAndNil(oplSourceProvider);
+  inherited;
+end; { TOmniParallelLoop.Destroy }
 
 function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate):
   IOmniParallelAggregatorLoop;
