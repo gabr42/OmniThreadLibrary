@@ -16,6 +16,8 @@ type
 
   // Test methods for class TOmniDataPackage
   TestTOmniIntegerDataPackage = class(TestTTOmniIntegerData)
+  protected
+    function GetNext(pkg: TOmniDataPackage; cnt: integer): string;
   published
     procedure TestCreation;
     procedure TestSplit;
@@ -23,7 +25,6 @@ type
 
   // Test methods for class TOmniSourceProvider
   TestTOmniIntegerSourceProvider = class(TestTTOmniIntegerData)
-  strict protected
   public
     procedure TestLoop(low, high, step, count: integer);
   published
@@ -49,6 +50,22 @@ begin
   FOmniDataPackage := FOmniSourceProvider.CreateDataPackage;
 end;
 
+function TestTOmniIntegerDataPackage.GetNext(pkg: TOmniDataPackage; cnt: integer): string;
+var
+  iData: integer;
+  value: TOmniValue;
+begin
+  Result := '';
+  for iData := 1 to cnt do begin
+    if iData > 1 then
+      Result := Result + '/';
+    if pkg.GetNext(value) then
+      Result := Result + value
+    else
+      Result := Result + '-';
+  end;
+end;
+
 procedure TestTOmniIntegerDataPackage.TestCreation;
 var
   value: TOmniValue;
@@ -59,72 +76,39 @@ begin
 end;
 
 procedure TestTOmniIntegerDataPackage.TestSplit;
-var
-  pkg2 : TOmniDataPackage;
-  value: TOmniValue;
+
+  procedure Split(low, high, step, fetch1: integer; const result1: string;
+    splitok: boolean; fetch2: integer; const result2: string; fetch3: integer;
+    const result3: string);
+  var
+    pkg2 : TOmniDataPackage;
+    value: TOmniValue;
+  begin
+    Initialize(low, high, step);
+    try
+      CheckTrue(FOmniSourceProvider.GetPackage(FOmniSourceProvider.Count, FOmniDataPackage));
+      if fetch1 > 0 then
+        CheckEquals(result1, GetNext(FOmniDataPackage, fetch1));
+      pkg2 := FOmniSourceProvider.CreateDataPackage;
+      try
+        Check(assigned(pkg2));
+        if splitOK then begin
+          CheckTrue(FOmniDataPackage.Split(pkg2));
+          CheckEquals(result2, GetNext(pkg2, fetch2));
+        end
+        else
+          CheckFalse(FOmniDataPackage.Split(pkg2));
+      finally pkg2.Free; end;
+      CheckEquals(result3, GetNext(FOmniDataPackage, fetch3));
+    finally Cleanup; end;
+  end;
+
 begin
-  Initialize(1, 3, 1);
-  CheckTrue(FOmniSourceProvider.GetPackage(FOmniSourceProvider.Count, FOmniDataPackage));
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(1, value.AsInteger);
-  pkg2 := FOmniSourceProvider.CreateDataPackage;
-  Check(assigned(pkg2));
-  CheckTrue(FOmniDataPackage.Split(pkg2));
-  CheckTrue(pkg2.GetNext(value));
-  CheckEquals(2, value.AsInteger);
-  CheckFalse(pkg2.GetNext(value));
-  pkg2.Free;
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(3, value.AsInteger);
-  CheckFalse(FOmniDataPackage.GetNext(value));
-  Cleanup;
-
-  Initialize(1, 3, 1);
-  CheckTrue(FOmniSourceProvider.GetPackage(FOmniSourceProvider.Count, FOmniDataPackage));
-  pkg2 := FOmniSourceProvider.CreateDataPackage;
-  Check(assigned(pkg2));
-  CheckTrue(FOmniDataPackage.Split(pkg2));
-  CheckTrue(pkg2.GetNext(value));
-  CheckEquals(1, value.AsInteger);
-  CheckFalse(pkg2.GetNext(value));
-  pkg2.Free;
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(2, value.AsInteger);
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(3, value.AsInteger);
-  CheckFalse(FOmniDataPackage.GetNext(value));
-  Cleanup;
-
-  Initialize(1, 3, 1);
-  CheckTrue(FOmniSourceProvider.GetPackage(FOmniSourceProvider.Count, FOmniDataPackage));
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(1, value.AsInteger);
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(2, value.AsInteger);
-  pkg2 := FOmniSourceProvider.CreateDataPackage;
-  Check(assigned(pkg2));
-  CheckTrue(FOmniDataPackage.Split(pkg2));
-  CheckFalse(pkg2.GetNext(value));
-  pkg2.Free;
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(3, value.AsInteger);
-  CheckFalse(FOmniDataPackage.GetNext(value));
-  Cleanup;
-
-  Initialize(1, 3, 1);
-  CheckTrue(FOmniSourceProvider.GetPackage(FOmniSourceProvider.Count, FOmniDataPackage));
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(1, value.AsInteger);
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(2, value.AsInteger);
-  CheckTrue(FOmniDataPackage.GetNext(value));
-  CheckEquals(3, value.AsInteger);
-  pkg2 := FOmniSourceProvider.CreateDataPackage;
-  Check(assigned(pkg2));
-  CheckFalse(FOmniDataPackage.Split(pkg2));
-  pkg2.Free;
-  CheckFalse(FOmniDataPackage.GetNext(value));
-  Cleanup;
+  Split(1, 3,  1, 1, '1',     true,  2, '2/-', 2, '3/-');
+  Split(1, 3,  1, 0, '',      true,  2, '1/2', 2, '3/-');
+  Split(1, 3,  1, 2, '1/2',   true,  2, '3/-', 1, '-');
+  Split(1, 3,  1, 3, '1/2/3', false, 0, '',    1, '-');
+  Split(1, 10, 2, 1, '1',     true,  2, '3/5', 3, '7/9/-');
 end;
 
 procedure TestTOmniIntegerSourceProvider.TestLoop(low, high, step, count: integer);
