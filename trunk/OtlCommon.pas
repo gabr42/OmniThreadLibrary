@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-16
-///   Version           : 1.12
+///   Last modification : 2010-04-14
+///   Version           : 1.13
 ///</para><para>
 ///   History:
+///     1.13: 2010-04-14
+///       - Removed TOmniEnumerableRange and associated code.
 ///     1.12: 2010-03-16
 ///       - Implemented TOmniMessageID record, used internally to implement timers.
 ///     1.11: 2010-03-10
@@ -427,7 +429,6 @@ type
   end; { TOmniMessageID }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
-  function  CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   function  Environment: IOmniEnvironment;
   procedure SetThreadName(const name: string);
@@ -521,30 +522,6 @@ type
   end; { TOmniCounterImpl }
 
   PGp4AlignedInt = ^TGp4AlignedInt;
-
-  TOmniRangeEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
-  strict private
-    oreCurrent  : int64;
-    oreHigh     : int64;
-    oreIncrement: boolean;
-    oreLow      : PGp4AlignedInt;
-  public
-    constructor Create(low: PGp4AlignedInt; high: int64; increment: boolean);
-    function  GetCurrent: TOmniValue;
-    function  MoveNext: boolean;
-    function  Take(var value: TOmniValue): boolean;
-    property Current: TOmniValue read GetCurrent;
-  end; { TOmniRangeEnumerator }
-
-  TOmniEnumerableRange = class(TInterfacedObject, IOmniValueEnumerable)
-  strict private
-    oerHigh     : int64;
-    oerIncrement: boolean;
-    oerLow      : TGp4AlignedInt;
-  public
-    constructor Create(low, high: int64);
-    function  GetEnumerator: IOmniValueEnumerator;
-  end; { TOmniEnumerableRange }
 
   PPHashItem = ^PHashItem;
   PHashItem = ^THashItem;
@@ -674,11 +651,6 @@ function CreateCounter(initialValue: integer): IOmniCounter;
 begin
   Result := TOmniCounterImpl.Create(initialValue);
 end; { CreateCounter }
-
-function CreateEnumerableRange(low, high: int64): IOmniValueEnumerable;
-begin
-  Result := TOmniEnumerableRange.Create(low, high);
-end; { CreateEnumerableRange }
 
 function CreateInterfaceDictionary: IOmniInterfaceDictionary;
 begin
@@ -893,58 +865,7 @@ end; { TOmniCounterImpl.SetValue }
 
 { TOmniRangeEnumerator }
 
-constructor TOmniRangeEnumerator.Create(low: PGp4AlignedInt; high: int64; increment:
-  boolean);
-begin
-  inherited Create;
-  oreLow := low;
-  oreHigh := high;
-  oreIncrement := increment;
-end; { TOmniRangeEnumerator.Create }
-
-function TOmniRangeEnumerator.GetCurrent: TOmniValue;
-begin
-  Result := oreCurrent;
-end; { TOmniRangeEnumerator.GetCurrent }
-
-function TOmniRangeEnumerator.MoveNext: boolean;
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : This will stop working if oreHigh = High(int64) !!
-  if oreIncrement then begin
-    oreCurrent := oreLow^.Increment;
-    Result := (oreCurrent <= oreHigh);
-  end
-  else begin
-    oreCurrent := oreLow^.Decrement;
-    Result := (oreCurrent >= oreHigh);
-  end;
-end; { TOmniRangeEnumerator.MoveNext }
-
-function TOmniRangeEnumerator.Take(var value: TOmniValue): boolean;
-begin
-  Result := MoveNext;
-  if Result then
-    value := oreCurrent;
-end; { TOmniRangeEnumerator.Take }
-
 { TOmniEnumerableRange }
-
-constructor TOmniEnumerableRange.Create(low, high: int64);
-begin
-  inherited Create;
-  oerLow.Value := low;
-  oerHigh := high;
-  oerIncrement := (low <= high);
-  if oerIncrement then
-    oerLow.Decrement
-  else
-    oerLow.Increment;
-end; { TOmniEnumerableRange.Create }
-
-function TOmniEnumerableRange.GetEnumerator: IOmniValueEnumerator;
-begin
-  Result := TOmniRangeEnumerator.Create(@oerLow, oerHigh, oerIncrement);
-end; { TOmniEnumerableRange.GetEnumerator }
 
 { TOmniInterfaceDictionaryPair }
 
