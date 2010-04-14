@@ -104,10 +104,10 @@ begin
   pkg2 := FOmniSourceProvider.CreateDataPackage;
   Check(assigned(pkg2));
   CheckTrue(FOmniDataPackage.Split(pkg2));
-  CheckTrue(pkg2.GetNext(value));
-  CheckEquals(3, value.AsInteger);
   CheckFalse(pkg2.GetNext(value));
   pkg2.Free;
+  CheckTrue(FOmniDataPackage.GetNext(value));
+  CheckEquals(3, value.AsInteger);
   CheckFalse(FOmniDataPackage.GetNext(value));
   Cleanup;
 
