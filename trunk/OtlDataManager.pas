@@ -181,8 +181,7 @@ type
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
   strict private
-    cdmInitialPacketSize: int64;
-    cdmWorkerPacketSize : int64;
+    cdmPacketSizes: array of integer;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
@@ -564,17 +563,18 @@ constructor TOmniCountableDataManager.Create(sourceProvider: TOmniSourceProvider
   numWorkers: integer);
 begin
   inherited Create(sourceProvider, numWorkers);
-  if numWorkers = 1 then begin
-    cdmInitialPacketSize := SourceProvider.Count;
-    cdmWorkerPacketSize := cdmInitialPacketSize;
-  end
-  else if spcFast in sourceProvider.GetCapabilities then begin
-    cdmInitialPacketSize := (SourceProvider.Count + numWorkers - 1) div numWorkers;
-    cdmWorkerPacketSize := cdmInitialPacketSize;
+  if (numWorkers = 1) or (spcFast in sourceProvider.GetCapabilities) then begin
+    SetLength(cdmPacketSizes, 1);
+    cdmPacketSizes[0] := (SourceProvider.Count + numWorkers - 1) div numWorkers;
   end
   else begin
-    cdmInitialPacketSize := 1;
-    cdmWorkerPacketSize := (SourceProvider.Count - 1) div numWorkers;
+    SetLength(cdmPacketSizes, 4);
+    cdmPacketSizes[0] := 1; // guesswork
+    cdmPacketSizes[1] := 8;
+    cdmPacketSizes[2] := 27;
+    cdmPacketSizes[3] := (SourceProvider.Count - (8+27)*numWorkers - 1) div numWorkers;
+    if cdmPacketSizes[3] < 0 then
+      SetLength(cdmPacketSizes, Length(cdmPacketSizes) - 1);
   end;
 end; { TOmniCountableDataManager.Create }
 
@@ -583,10 +583,10 @@ var
   dataCount : integer;
   intPackage: TOmniDataPackageBase absolute package;
 begin
-  if intPackage.Generation > 0 then
-    dataCount := cdmWorkerPacketSize
-  else // fast spin-up
-    dataCount := cdmInitialPacketSize;
+  if intPackage.Generation >= High(cdmPacketSizes) then
+    dataCount := cdmPacketSizes[High(cdmPacketSizes)]
+  else
+    dataCount := cdmPacketSizes[intPackage.Generation];
   Result := SourceProvider.GetPackage(dataCount, package);
   if not Result then
     Result := StealPackage(package);
