@@ -210,14 +210,20 @@ type
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
   end; { TOmniValue }
 
+  ///<summary>Slightly different from the IEnumerable:
+  ///    - Returns TOmniValue.
+  ///    - Must ensure correct operation of multiple simultaneous enumerators.
+  ///    - TryTake must be implemented to support mutable collections (as TOmniBlockingCollection).
+  ///      For non-mutable collections TryTake can simply return false if the collection
+  ///      is empty.
+  ///</summary>
   IOmniValueEnumerator = interface ['{F60EBBD8-2F87-4ACD-A014-452F296F4699}']
     function  GetCurrent: TOmniValue;
     function  MoveNext: boolean;
-    function  Take(var value: TOmniValue): boolean;
+    function  TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { IOmniValueEnumerator }
 
-  // TODO 1 -oPrimoz Gabrijelcic : Could IEnumerable be reused for that? -Using this enumerator tells the code that enumerator is threadsafe!
   IOmniValueEnumerable = interface ['{50C1C176-C61F-41F5-AA0B-6FD215E5159F}']
     function  GetEnumerator: IOmniValueEnumerator;
   end; { IOmniValueEnumerable }
@@ -862,10 +868,6 @@ procedure TOmniCounterImpl.SetValue(const value: integer);
 begin
   ocValue.Value := value;
 end; { TOmniCounterImpl.SetValue }
-
-{ TOmniRangeEnumerator }
-
-{ TOmniEnumerableRange }
 
 { TOmniInterfaceDictionaryPair }
 

@@ -111,6 +111,7 @@ type
     function GetCurrent: TOmniValue; inline;
     function MoveNext: boolean; inline;
     function Take(var value: TOmniValue): boolean;
+    function TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
 
@@ -142,6 +143,14 @@ begin
   if Result then
     value := obceValue;
 end; { TOmniBlockingCollectionEnumerator.Take }
+
+function TOmniBlockingCollectionEnumerator.TryTake(var value: TOmniValue;
+  timeout_ms: cardinal): boolean;
+begin
+  Result := obceCollection_ref.TryTake(obceValue, timeout_ms);
+  if Result then
+    value := obceValue;
+end; { TOmniBlockingCollectionEnumerator.TryTake }
 
 { TOmniBlockingCollection }
 

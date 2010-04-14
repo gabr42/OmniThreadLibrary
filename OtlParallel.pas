@@ -119,6 +119,7 @@ type
 
   Parallel = class
     class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
+    class function ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
@@ -147,6 +148,7 @@ type
     oplSourceProvider   : TOmniSourceProvider;
   strict protected
     function Stopped: boolean;
+    function  Take(const enumerator: IOmniValueEnumerator; var value: TOmniValue): boolean; inline;
   public
     constructor Create(const enumGen: IOmniValueEnumerable); overload;
     constructor Create(const sourceProvider: TOmniSourceProvider); overload;
@@ -167,23 +169,25 @@ type
 class function Parallel.ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
 begin
   { TODO 3 -ogabr : In Delphi 2010 RTTI could be used to get to the GetEnumerator from base object }
-  Result := TOmniParallelLoop.Create(enumGen);
+  // small tree = 14 ms, 81 ms, 133 ms, 192 ms
+  // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
+//    Result := TOmniParallelLoop.Create(enumGen);
+  Result := Parallel.ForEach(enumGen.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
 begin
-  // this is just a temporary implementation and will be changed
-//  Result := Parallel.ForEach(CreateEnumerableRange(low, high));
-  // 1.000.000 primes =  78/ 77 ms / no aggregation =  80/ 77 ms / sum =  48/ 24 ms
-  // 3.000.000 primes = 275/284 ms / no aggregation = 265/282 ms / sum = 137/ 93 ms
-  // 5.000.000 primes = 519/543 ms / no aggregation = 491/516 ms / sum = 221/212 ms
-  // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
   Result := Parallel.ForEach(CreateSourceProvider(low, high, step));
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop;
 begin
   Result := TOmniParallelLoop.Create(sourceProvider);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop;
+begin
+  Result := Parallel.ForEach(CreateSourceProvider(enum));
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
@@ -326,7 +330,7 @@ begin
   if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
     aggregate := TOmniValue.Null;
     enumerator := oplEnumGen.GetEnumerator;
-    while (not Stopped) and enumerator.Take(value) do
+    while (not Stopped) and Take(enumerator, value) do
       oplAggregator(oplAggregate, loopBody(value));
     Result := oplAggregate;
   end
@@ -343,7 +347,7 @@ begin
         begin
           aggregate := TOmniValue.Null;
           enumerator := oplEnumGen.GetEnumerator;
-          while (not Stopped) and enumerator.Take(value) do
+          while (not Stopped) and Take(enumerator, value) do
             oplAggregator(aggregate, loopBody(value));
           task.Lock.Acquire;
           try
@@ -412,7 +416,7 @@ var
 begin
   if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
     enumerator := oplEnumGen.GetEnumerator;
-    while (not Stopped) and enumerator.Take(value) do
+    while (not Stopped) and Take(enumerator, value) do
       loopBody(value);
   end
   else if assigned(oplEnumGen) then begin //old school
@@ -425,7 +429,7 @@ begin
           value     : TOmniValue;
         begin
           enumerator := oplEnumGen.GetEnumerator;
-          while (not Stopped) and enumerator.Take(value) do
+          while (not Stopped) and Take(enumerator, value) do
             loopBody(value);
           countStopped.Allocate;
         end,
@@ -481,5 +485,14 @@ function TOmniParallelLoop.Stopped: boolean;
 begin
   Result := (assigned(oplCancellationToken) and oplCancellationToken.IsSignaled);
 end; { TOmniParallelLoop.Stopped }
+
+// TODO 1 -oPrimoz Gabrijelcic : Check if still required
+function TOmniParallelLoop.Take(const enumerator: IOmniValueEnumerator;
+  var value: TOmniValue): boolean;
+begin
+  Result := enumerator.MoveNext;
+  if Result then
+    value := enumerator.Current;
+end; { TOmniParallelLoop.Take }
 
 end.
