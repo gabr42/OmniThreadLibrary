@@ -19,9 +19,7 @@ type
     Label3: TLabel;
     lblCountPrimes: TLabel;
     lbLog: TListBox;
-    btnCountParaNoAggreg: TButton;
     procedure btnCountParallelClick(Sender: TObject);
-    procedure btnCountParaNoAggregClick(Sender: TObject);
     procedure btnCountSequentialClick(Sender: TObject);
     procedure btnSumParallelClick(Sender: TObject);
     procedure btnSumSequentialClick(Sender: TObject);
@@ -65,21 +63,6 @@ begin
       end);
   start := DSiTimeGetTime64 - start;
   Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxPrime.Value, start]);
-end;
-
-procedure TfrmParallelAggregateDemo.btnCountParaNoAggregClick(Sender: TObject);
-var
-  start: int64;
-begin
-  start := DSiTimeGetTime64;
-  Parallel.ForEach(1, inpMaxPrime.Value)
-  .NumTasks(inpNumCPU.Value)
-  .Execute(
-    procedure (const value: TOmniValue) begin
-      IsPrime(value);
-    end);
-  start := DSiTimeGetTime64 - start;
-  Log('calculation took %d ms', [start]);
 end;
 
 procedure TfrmParallelAggregateDemo.btnCountSequentialClick(Sender: TObject);
