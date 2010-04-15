@@ -62,4 +62,13 @@ object frmParallelForDemo: TfrmParallelForDemo
     TabOrder = 4
     OnClick = btnBuildLargeClick
   end
+  object btnParallelFor: TButton
+    Left = 8
+    Top = 304
+    Width = 97
+    Height = 25
+    Caption = 'Parallel for'
+    TabOrder = 5
+    OnClick = btnParallelForClick
+  end
 end
