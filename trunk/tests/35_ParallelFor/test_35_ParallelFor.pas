@@ -131,24 +131,19 @@ end; { TfrmParallelForDemo.btnBuildTreeClick }
 
 procedure TfrmParallelForDemo.btnParallelForClick(Sender: TObject);
 var
-  cancelToken: IOmniCancellationToken;
-  i          : integer;
-  nodeQueue  : IOmniBlockingCollection;
-  nodeResult : TNode;
-  numTasks   : integer;
-  outList    : TGpIntegerList;
-  outQueue   : IOmniBlockingCollection;
-  value: TOmniValue;
+  i        : integer;
+  nodeQueue: IOmniBlockingCollection;
+  outList  : TGpIntegerList;
+  outQueue : IOmniBlockingCollection;
+  value    : TOmniValue;
 begin
-  nodeResult := nil;
-  numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create;
-  for i := 1 to 10000 do
+  for i := 1 to 1000 do
     nodeQueue.Add(i);
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
-    .NumTasks(numTasks)
+    .NumTasks(2)
     .Execute(
       procedure (const elem: TOmniValue)
       begin
@@ -160,9 +155,9 @@ begin
     while outQueue.Take(value) do
       outList.Add(value);
     outList.Sort;
-    for i := 1 to 10000 do
+    for i := 1 to 1000 do
       Assert(outList[i-1] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
-        [i, outList[i-1], i-1, outList[i-2], i+1, outList[i]]));
+        [i-1, outList[i-2], i, outList[i-1], i+1, outList[i]]));
   finally FreeAndNil(outList); end;
 end;
 
