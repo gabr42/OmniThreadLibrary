@@ -61,7 +61,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Height = 155
     Align = alBottom
     ItemHeight = 13
-    TabOrder = 8
+    TabOrder = 7
   end
   object btnSumSequential: TButton
     Left = 214
@@ -80,7 +80,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     MaxValue = 0
     MinValue = 1
     TabOrder = 2
-    Value = 1
+    Value = 0
   end
   object inpMaxPrime: TSpinEdit
     Left = 136
@@ -109,14 +109,5 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Caption = 'Sequential'
     TabOrder = 5
     OnClick = btnCountSequentialClick
-  end
-  object btnCountParaNoAggreg: TButton
-    Left = 377
-    Top = 51
-    Width = 75
-    Height = 25
-    Caption = 'Par. w/o agg'
-    TabOrder = 7
-    OnClick = btnCountParaNoAggregClick
   end
 end

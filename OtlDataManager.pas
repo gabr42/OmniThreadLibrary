@@ -14,7 +14,8 @@ type
   ///<summary>Source provider capabilities.</summary>
   TOmniSourceProviderCapability = (
     spcCountable,  // source provider that knows how many data it holds
-    spcFast        // source provider operations are O(1)
+    spcFast,       // source provider operations are O(1)
+    spcDataLimit   // data package can only hold limited amount of data
   );
   TOmniSourceProviderCapabilities = set of TOmniSourceProviderCapability;
 
@@ -41,6 +42,7 @@ type
     function  CreateDataPackage: TOmniDataPackage; virtual; abstract;
     function  GetCapabilities: TOmniSourceProviderCapabilities; virtual; abstract;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; virtual; abstract;
+    function  GetPackageSizeLimit: integer; virtual; abstract;
   end; { TOmniSourceProvider }
 
   ///<summary>Data manager. All methods can and will be called from multiple threads
@@ -107,13 +109,14 @@ type
     irpLow  : integer;
     irpStep : integer;
   strict protected
-    procedure RecalcCount; inline;
+    function  CalcCount(low, high, step: integer): integer; inline;
   public
     constructor Create(low, high, step: integer);
     function  Count: int64; override;
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
+    function GetPackageSizeLimit: integer; override;
   end; { TOmniIntegerRangeProvider }
 
   ///<summary>Data package storing a list of TOmniValues.</summary>
@@ -140,6 +143,7 @@ type
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
+    function GetPackageSizeLimit: integer; override;
   end; { TOmniValueEnumeratorProvider }
 
   TOmniEnumerableProvider = class(TOmniSourceProvider)
@@ -170,6 +174,8 @@ type
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
     dmSourceProvider_ref: TOmniSourceProvider;
+  strict protected
+    procedure InitializePacketSizes;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     destructor  Destroy; override;
@@ -183,13 +189,15 @@ type
   ///<summary>Data manager for countable data.</summary>
   TOmniCountableDataManager = class(TOmniBaseDataManager)
   public
-    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
   end; { TOmniCountableDataManager }
 
   ///<summary>Data manager for unbounded data.</summary>
   TOmniHeuristicDataManager = class(TOmniBaseDataManager)
+  private
+    hdmEstimatedPackageSize: TGp4AlignedInt;
   public
+    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
     function  GetNext(package: TOmniDataPackage): boolean; override;
   end; { TOmniHeuristicDataManager }
 
@@ -306,8 +314,16 @@ begin
   irpLow := low;
   irpHigh := high;
   irpStep := step;
-  RecalcCount;
+  irpCount.Value := CalcCount(low, high, step);
 end; { TOmniIntegerRangeProvider.Create }
+
+function TOmniIntegerRangeProvider.CalcCount(low, high, step: integer): integer;
+begin
+  if step > 0 then
+    Result := (high - low + step) div step
+  else
+    Result := (low - high - step) div (-step);
+end; { TOmniIntegerRangeProvider.CalcCount }
 
 function TOmniIntegerRangeProvider.Count: int64;
 begin
@@ -324,8 +340,8 @@ begin
   Result := [spcCountable, spcFast];
 end; { TOmniIntegerRangeProvider.GetCapabilities }
 
-function TOmniIntegerRangeProvider.GetPackage(dataCount: integer;
-  package: TOmniDataPackage): boolean;
+function TOmniIntegerRangeProvider.GetPackage(dataCount: integer; package:
+  TOmniDataPackage): boolean;
 var
   high      : int64;
   intPackage: TOmniIntegerDataPackage absolute package;
@@ -342,19 +358,16 @@ begin
       high := irpLow + (dataCount - 1) * irpStep;
       intPackage.Initialize(irpLow, high, irpStep);
       irpLow := high + irpStep;
-      RecalcCount;
+      irpCount.Value := CalcCount(irpLow, irpHigh, irpStep);
     finally irpLock.Release; end;
     Result := true;
   end;
 end; { TOmniIntegerRangeProvider.GetPackage }
 
-procedure TOmniIntegerRangeProvider.RecalcCount;
+function TOmniIntegerRangeProvider.GetPackageSizeLimit: integer;
 begin
-  if irpStep > 0 then
-    irpCount.Value := (irpHigh - irpLow + irpStep) div irpStep
-  else
-    irpCount.Value := (irpLow - irpHigh - irpStep) div (-irpStep);
-end; { TOmniIntegerRangeProvider.RecalcCount }
+  raise Exception.Create('No limit for TOmniIntegerRangeProvider packages');
+end; { TOmniIntegerRangeProvider.GetPackageSizeLimit }
 
 { TOmniValueEnumeratorDataPackage }
 
@@ -448,11 +461,11 @@ end; { TOmniValueEnumeratorProvider.CreateDataPackage }
 
 function TOmniValueEnumeratorProvider.GetCapabilities: TOmniSourceProviderCapabilities;
 begin
-  Result := [];
+  Result := [spcDataLimit];
 end; { TOmniValueEnumeratorProvider.GetCapabilities }
 
-function TOmniValueEnumeratorProvider.GetPackage(dataCount: integer;
-  package: TOmniDataPackage): boolean;
+function TOmniValueEnumeratorProvider.GetPackage(dataCount: integer; package:
+  TOmniDataPackage): boolean;
 var
   iData     : integer;
   intPackage: TOmniValueEnumeratorDataPackage absolute package;
@@ -470,6 +483,11 @@ begin
     Result := true;
   end;
 end; { TOmniValueEnumeratorProvider.GetPackage }
+
+function TOmniValueEnumeratorProvider.GetPackageSizeLimit: integer;
+begin
+  Result := CMaxValueEnumeratorDataPackageSize;
+end; { TOmniValueEnumeratorProvider.GetPackageSizeLimit }
 
 { TOmniLocalQueueImpl }
 
@@ -515,23 +533,7 @@ begin
   dmSourceProvider_ref := sourceProvider;
   dmQueueList := TObjectList.Create;
   dmNumWorkers := numWorkers;
-  if (numWorkers = 1) or ([spcFast, spcCountable] <= sourceProvider.GetCapabilities) then begin
-    SetLength(dmPacketSizes, 1);
-    dmPacketSizes[0] := (SourceProvider.Count + numWorkers - 1) div numWorkers;
-  end
-  else begin
-    SetLength(dmPacketSizes, 4);
-    dmPacketSizes[0] := 1; // guesswork
-    dmPacketSizes[1] := 8;
-    dmPacketSizes[2] := 27;
-    if spcCountable in sourceProvider.GetCapabilities then begin
-      dmPacketSizes[3] := (SourceProvider.Count - (8+27)*numWorkers - 1) div numWorkers;
-      if dmPacketSizes[3] <= 0 then
-        SetLength(dmPacketSizes, Length(dmPacketSizes) - 1);
-    end
-    else
-      dmPacketSizes[3] := High(integer); // heuristic limiter will take care of this
-  end;
+  InitializePacketSizes;
 end; { TOmniBaseDataManager.Create }
 
 destructor TOmniBaseDataManager.Destroy;
@@ -565,6 +567,31 @@ begin
     Result := dmPacketSizes[generation];
 end; { TOmniBaseDataManager.GetDataCountForGeneration }
 
+procedure TOmniBaseDataManager.InitializePacketSizes;
+var
+  iGen        : integer;
+  maxDataCount: integer;
+begin
+  if (dmNumWorkers = 1) or ([spcFast, spcCountable] <= sourceProvider.GetCapabilities) then begin
+    SetLength(dmPacketSizes, 1);
+    dmPacketSizes[0] := (SourceProvider.Count + dmNumWorkers - 1) div dmNumWorkers;
+  end
+  else begin
+    SetLength(dmPacketSizes, 5);
+    if spcCountable in sourceProvider.GetCapabilities then
+      maxDataCount := sourceProvider.GetPackageSizeLimit
+    else
+      maxDataCount := High(integer);
+    for iGen := 0 to 4 do begin
+      dmPacketSizes[iGen] := Round(Exp(2 * iGen * Ln(3))); // 3^(2*iGen)
+      if dmPacketSizes[iGen] > maxDataCount then begin
+        SetLength(dmPacketSizes, iGen);
+        break; //for iGen
+      end;
+    end;
+  end;
+end; { TOmniBaseDataManager.InitializePacketSizes }
+
 function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
 var
   pQueue: pointer;
@@ -584,18 +611,13 @@ end; { TOmniBaseDataManager.StealPackage }
 
 { TOmniCountableDataManager }
 
-constructor TOmniCountableDataManager.Create(sourceProvider: TOmniSourceProvider;
-  numWorkers: integer);
-begin
-  inherited Create(sourceProvider, numWorkers);
-end; { TOmniCountableDataManager.Create }
-
 function TOmniCountableDataManager.GetNext(package: TOmniDataPackage): boolean;
 var
-  dataCount : integer;
-  intPackage: TOmniDataPackageBase absolute package;
+  dataCount  : integer;
+  intPackage : TOmniDataPackageBase absolute package;
 begin
-  Result := SourceProvider.GetPackage(GetDataCountForGeneration(intPackage.Generation), package);
+  dataCount := GetDataCountForGeneration(intPackage.Generation);
+  Result := SourceProvider.GetPackage(dataCount, package);
   if not Result then
     Result := StealPackage(package);
   if Result then
@@ -604,10 +626,70 @@ end; { TOmniCountableDataManager.GetNext }
 
 { TOmniHeuristicDataManager }
 
-function TOmniHeuristicDataManager.GetNext(package: TOmniDataPackage): boolean;
+const
+  CFetchTimeout_ms = 10;
+
+constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider;
+  numWorkers: integer);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniHeuristicDataManager.GetNext
-  Result := false;
+  inherited Create(sourceProvider, numWorkers);
+  hdmEstimatedPackageSize.Value := GetDataCountForGeneration(High(integer)); // hope for the best
+end; { TOmniHeuristicDataManager.Create }
+
+function TOmniHeuristicDataManager.GetNext(package: TOmniDataPackage): boolean;
+const
+  CDataLimit = Trunc(High(integer) / CFetchTimeout_ms);
+var
+  dataPerMs : cardinal;
+  dataSize  : integer;
+  intPackage: TOmniDataPackageBase absolute package;
+  time      : int64;
+begin
+  // the goal is to fetch as much (but not exceeding <fetch_limit>) data as possible in
+  // <fetch_timeout> milliseconds; highest amount of data is limited by the
+  // GetDataCountForGeneration method.
+  dataSize := GetDataCountForGeneration(intPackage.Generation);
+
+//  OutputDebugString(PChar(Format('%d: DS = %d, ES = %d', [GetCurrentThreadID, dataSize, hdmEstimatedPackageSize.Value])));
+
+  if dataSize > hdmEstimatedPackageSize.Value then
+    dataSize := hdmEstimatedPackageSize.Value;
+
+//  OutputDebugString(PChar(Format('%d: DS = %d', [GetCurrentThreadID, dataSize])));
+
+  time := DSiTimeGetTime64;
+  Result := SourceProvider.GetPackage(dataSize, package);
+  time := DSiTimeGetTime64 - time;
+
+  if Result then begin
+//    OutputDebugString(PChar(Format('%d: T = %d', [GetCurrentThreadID, time])));
+
+    if time = 0 then
+      dataPerMs := CDataLimit
+    else begin
+      dataPerMs := Round(dataSize / time);
+      if dataPerMs >= CDataLimit then
+        dataPerMs := CDataLimit;
+    end;
+
+//    OutputDebugString(PChar(Format('%d: D/ms = %d', [GetCurrentThreadID, dataPerMs])));
+
+    // average over last four fetches for dynamic adaptation
+    try
+      hdmEstimatedPackageSize.Value := Round((hdmEstimatedPackageSize.Value / 4 * 3) + (dataPerMs / 4) * CFetchTimeout_ms);
+    except
+      sleep(0);
+      hdmEstimatedPackageSize.Value := Round((hdmEstimatedPackageSize.Value / 4 * 3) + (dataPerMs / 4) * CFetchTimeout_ms);
+    end;
+
+//    OutputDebugString(PChar(Format('%d: ES = %d', [GetCurrentThreadID, hdmEstimatedPackageSize.Value])));
+  end;
+
+  // TODO 1 -oPrimoz Gabrijelcic : Same as above! Merge!
+  if not Result then
+    Result := StealPackage(package);
+  if Result then
+    intPackage.NextGeneration;
 end; { TOmniHeuristicDataManager.GetNext }
 
 end.
