@@ -43,8 +43,10 @@ type
     btnParaScan  : TButton;
     btnSeqScan   : TButton;
     lbLog        : TListBox;
+    btnParallelFor: TButton;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
+    procedure btnParallelForClick(Sender: TObject);
     procedure btnParaScanClick(Sender: TObject);
     procedure btnSeqScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -76,7 +78,7 @@ uses
   OtlContainers,
   OtlCollections,
   OtlTaskControl,
-  OtlParallel;
+  OtlParallel, gplists;
 
 {$R *.dfm}
 
@@ -126,6 +128,43 @@ begin
   DestroyTree;
   CreateTree(CNumNodes);
 end; { TfrmParallelForDemo.btnBuildTreeClick }
+
+procedure TfrmParallelForDemo.btnParallelForClick(Sender: TObject);
+var
+  cancelToken: IOmniCancellationToken;
+  i          : integer;
+  nodeQueue  : IOmniBlockingCollection;
+  nodeResult : TNode;
+  numTasks   : integer;
+  outList    : TGpIntegerList;
+  outQueue   : IOmniBlockingCollection;
+  value: TOmniValue;
+begin
+  nodeResult := nil;
+  numTasks := Environment.Process.Affinity.Count;
+  nodeQueue := TOmniBlockingCollection.Create;
+  for i := 1 to 10000 do
+    nodeQueue.Add(i);
+  nodeQueue.CompleteAdding;
+  outQueue := TOmniBlockingCollection.Create;
+  Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
+    .NumTasks(numTasks)
+    .Execute(
+      procedure (const elem: TOmniValue)
+      begin
+        outQueue.Add(elem);
+      end);
+  outQueue.CompleteAdding;
+  outList := TGpIntegerList.Create;
+  try
+    while outQueue.Take(value) do
+      outList.Add(value);
+    outList.Sort;
+    for i := 1 to 10000 do
+      Assert(outList[i-1] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
+        [i, outList[i-1], i-1, outList[i-2], i+1, outList[i]]));
+  finally FreeAndNil(outList); end;
+end;
 
 procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
