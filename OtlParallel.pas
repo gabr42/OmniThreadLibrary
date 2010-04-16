@@ -171,10 +171,6 @@ type
 
 class function Parallel.ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
 begin
-  { TODO 3 -ogabr : In Delphi 2010 RTTI could be used to get to the GetEnumerator from base object }
-  // small tree = 14 ms, 81 ms, 133 ms, 192 ms
-  // large tree = 14 ms, 824 ms, 1398 ms 1912 ms
-//    Result := TOmniParallelLoop.Create(enumGen);
   Result := Parallel.ForEach(enumGen.GetEnumerator);
 end; { Parallel.ForEach }
 

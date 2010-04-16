@@ -1272,7 +1272,7 @@ begin
   Result := inherited TryDequeue(value);
   if Result then
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-end; { TOmniQueue.TryDequeue }
+    end; { TOmniQueue.TryDequeue }
 
 initialization
   Assert(SizeOf(TOmniTaggedValue) = 16);

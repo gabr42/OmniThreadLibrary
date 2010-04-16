@@ -73,12 +73,14 @@ implementation
 
 uses
   DSiWin32,
+  GpLists,
+  GpStreams, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlSync,
   OtlContainers,
   OtlCollections,
   OtlTaskControl,
-  OtlParallel, gplists;
+  OtlParallel;
 
 {$R *.dfm}
 
@@ -138,27 +140,35 @@ var
   value    : TOmniValue;
 begin
   nodeQueue := TOmniBlockingCollection.Create;
-  for i := 1 to 1000 do
+  for i := 1 to 100000 do
     nodeQueue.Add(i);
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
-    .NumTasks(2)
+    .NumTasks(8)
     .Execute(
       procedure (const elem: TOmniValue)
       begin
         outQueue.Add(elem);
       end);
   outQueue.CompleteAdding;
-  outList := TGpIntegerList.Create;
   try
-    while outQueue.Take(value) do
-      outList.Add(value);
-    outList.Sort;
-    for i := 1 to 1000 do
-      Assert(outList[i-1] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
-        [i-1, outList[i-2], i, outList[i-1], i+1, outList[i]]));
-  finally FreeAndNil(outList); end;
+    outList := TGpIntegerList.Create;
+    try
+      while outQueue.Take(value) do
+        outList.Add(value);
+      outList.Sort;
+      outList.Sorted := false;
+      outList.Insert(0, 0);
+      for i := 1 to 100000 do
+        Assert(outList[i] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
+          [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
+    finally FreeAndNil(outList); end;
+    Log('OK', []);
+  except
+    on E: Exception do
+      Log(E.Message, []);
+  end;
 end;
 
 procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);

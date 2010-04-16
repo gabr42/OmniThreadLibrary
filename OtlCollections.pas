@@ -101,17 +101,15 @@ type
     property CompletedSignal: THandle read obcCompletedSignal;
   end; { TOmniBlockingCollection }
 
-  TOmniBlockingCollectionEnumerator = class(TInterfacedObject,
-                                            IOmniValueEnumerator)
+  TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
   strict private
     obceCollection_ref: TOmniBlockingCollection;
     obceValue         : TOmniValue;
   public
     constructor Create(collection: TOmniBlockingCollection);
-    function GetCurrent: TOmniValue; inline;
-    function MoveNext: boolean; inline;
-    function Take(var value: TOmniValue): boolean;
-    function TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
+    function  GetCurrent: TOmniValue; inline;
+    function  MoveNext: boolean; inline;
+    function  TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
 
@@ -137,19 +135,10 @@ begin
   Result := obceCollection_ref.Take(obceValue);
 end; { TOmniBlockingCollectionEnumerator.MoveNext }
 
-function TOmniBlockingCollectionEnumerator.Take(var value: TOmniValue): boolean;
-begin
-  Result := MoveNext;
-  if Result then
-    value := obceValue;
-end; { TOmniBlockingCollectionEnumerator.Take }
-
 function TOmniBlockingCollectionEnumerator.TryTake(var value: TOmniValue;
   timeout_ms: cardinal): boolean;
 begin
-  Result := obceCollection_ref.TryTake(obceValue, timeout_ms);
-  if Result then
-    value := obceValue;
+  Result := obceCollection_ref.TryTake(value, timeout_ms);
 end; { TOmniBlockingCollectionEnumerator.TryTake }
 
 { TOmniBlockingCollection }

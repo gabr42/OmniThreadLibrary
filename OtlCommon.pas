@@ -216,6 +216,8 @@ type
   ///    - TryTake must be implemented to support mutable collections (as TOmniBlockingCollection).
   ///      For non-mutable collections TryTake can simply return false if the collection
   ///      is empty.
+  ///    - TryTake must be threadsafe - when used in Parallel.For, data manager will call
+  ///      it simultaneously from multiple threads at the same time.
   ///</summary>
   IOmniValueEnumerator = interface ['{F60EBBD8-2F87-4ACD-A014-452F296F4699}']
     function  GetCurrent: TOmniValue;
