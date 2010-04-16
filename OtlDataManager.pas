@@ -439,6 +439,10 @@ var
 begin
   {$IFDEF Debug} Assert(package is TOmniValueEnumeratorDataPackage); {$ENDIF}
   Result := false;
+
+  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+  Exit;
+
   for iValue := 1 to intPackage.Prepare(vedpApproxCount.Value div 2) do begin
     if not GetNext(value) then
       break; //for
