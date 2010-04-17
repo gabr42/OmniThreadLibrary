@@ -143,7 +143,6 @@ type
     oplAggregate        : TOmniValue;
     oplAggregator       : TOmniAggregatorDelegate;
     oplCancellationToken: IOmniCancellationToken;
-    oplEnumGen          : IOmniValueEnumerable;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplSourceProvider   : TOmniSourceProvider;
@@ -151,7 +150,6 @@ type
     function Stopped: boolean;
     function  Take(const enumerator: IOmniValueEnumerator; var value: TOmniValue): boolean; inline;
   public
-    constructor Create(const enumGen: IOmniValueEnumerable); overload;
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean);
       overload;
     destructor Destroy; override;
@@ -261,13 +259,6 @@ end; { Parallel.Join }
 
 { TOmniParallelLoop }
 
-constructor TOmniParallelLoop.Create(const enumGen: IOmniValueEnumerable);
-begin
-  inherited Create;
-  oplEnumGen := enumGen;
-  oplNumTasks := Environment.Process.Affinity.Count;
-end; { TOmniParallelLoop.Create }
-
 constructor TOmniParallelLoop.Create(const sourceProvider: TOmniSourceProvider;
   managedProvider: boolean);
 begin
@@ -327,47 +318,19 @@ end; { TOmniParallelLoop.CancelWith }
 
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
 var
-  aggregate    : TOmniValue;
   countStopped : IOmniResourceCount;
   dataManager  : TOmniDataManager;
-  enumerator   : IOmniValueEnumerator;
   iTask        : integer;
+  localQueue   : TOmniLocalQueue;
   lockAggregate: IOmniCriticalSection;
   value        : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
-    aggregate := TOmniValue.Null;
-    enumerator := oplEnumGen.GetEnumerator;
-    while (not Stopped) and Take(enumerator, value) do
-      oplAggregator(oplAggregate, loopBody(value));
-    Result := oplAggregate;
-  end
-  else if assigned(oplEnumGen) then begin //old school
-    countStopped := TOmniResourceCount.Create(oplNumTasks);
-    lockAggregate := CreateOmniCriticalSection;
-    for iTask := 1 to oplNumTasks do
-      CreateTask(
-        procedure (const task: IOmniTask)
-        var
-          aggregate : TOmniValue;
-          value     : TOmniValue;
-          enumerator: IOmniValueEnumerator;
-        begin
-          aggregate := TOmniValue.Null;
-          enumerator := oplEnumGen.GetEnumerator;
-          while (not Stopped) and Take(enumerator, value) do
-            oplAggregator(aggregate, loopBody(value));
-          task.Lock.Acquire;
-          try
-            oplAggregator(oplAggregate, aggregate);
-          finally task.Lock.Release; end;
-          countStopped.Allocate;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask)
-      ).WithLock(lockAggregate)
-       .Unobserved
-       .Schedule;
-    WaitForSingleObject(countStopped.Handle, INFINITE);
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
+    localQueue := dataManager.CreateLocalQueue;
+    try
+      while (not Stopped) and localQueue.GetNext(value) do
+        oplAggregator(oplAggregate, loopBody(value));
+    finally FreeAndNil(localQueue); end;
     Result := oplAggregate;
   end
   else begin
@@ -418,33 +381,16 @@ procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 var
   countStopped: IOmniResourceCount;
   dataManager : TOmniDataManager;
-  enumerator  : IOmniValueEnumerator;
   iTask       : integer;
+  localQueue  : TOmniLocalQueue;
   value       : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and assigned(oplEnumGen) then begin
-    enumerator := oplEnumGen.GetEnumerator;
-    while (not Stopped) and Take(enumerator, value) do
-      loopBody(value);
-  end
-  else if assigned(oplEnumGen) then begin //old school
-    countStopped := TOmniResourceCount.Create(oplNumTasks);
-    for iTask := 1 to oplNumTasks do
-      CreateTask(
-        procedure (const task: IOmniTask)
-        var
-          enumerator: IOmniValueEnumerator;
-          value     : TOmniValue;
-        begin
-          enumerator := oplEnumGen.GetEnumerator;
-          while (not Stopped) and Take(enumerator, value) do
-            loopBody(value);
-          countStopped.Allocate;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask)
-      ).Unobserved
-       .Schedule;
-    WaitForSingleObject(countStopped.Handle, INFINITE);
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
+    localQueue := dataManager.CreateLocalQueue;
+    try
+      while (not Stopped) and localQueue.GetNext(value) do
+        loopBody(value);
+    finally FreeAndNil(localQueue); end;
   end
   else begin
     // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?
