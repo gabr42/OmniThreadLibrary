@@ -122,11 +122,14 @@ type
   ///<summary>Data package storing a list of TOmniValues.</summary>
   TOmniValueEnumeratorDataPackage = class(TOmniDataPackageBase)
   strict private
+    const CMaxValueEnumeratorDataPackageSize = 1024; // pretty arbitrary, should do some performance tests
+  strict private
     vedpApproxCount: TGp4AlignedInt;
     vedpDataQueue  : TOmniBaseBoundedQueue;
   public
     constructor Create;
     destructor  Destroy; override;
+    class function GetPackageSizeLimit: integer;
     procedure Add(const value: TOmniValue);
     function  GetNext(var value: TOmniValue): boolean; override;
     function  Prepare(dataCount: integer): integer;
@@ -143,7 +146,7 @@ type
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
-    function GetPackageSizeLimit: integer; override;
+    function  GetPackageSizeLimit: integer; override;
   end; { TOmniValueEnumeratorProvider }
 
   TOmniEnumerableProvider = class(TOmniSourceProvider)
@@ -198,7 +201,9 @@ type
 
   ///<summary>Data manager for unbounded data.</summary>
   TOmniHeuristicDataManager = class(TOmniBaseDataManager)
-  private
+  strict private
+    const CFetchTimeout_ms = 10;
+  strict private
     hdmEstimatedPackageSize: TGp4AlignedInt;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
@@ -376,9 +381,6 @@ end; { TOmniIntegerRangeProvider.GetPackageSizeLimit }
 
 { TOmniValueEnumeratorDataPackage }
 
-const
-  CMaxValueEnumeratorDataPackageSize = 1024; // pretty arbitrary, should do some performance tests
-
 constructor TOmniValueEnumeratorDataPackage.Create;
 begin
   inherited Create;
@@ -403,7 +405,7 @@ begin
   Assert(vedpDataQueue.Enqueue(tmp));
   tmp.RawZero;
   vedpApproxCount.Increment;
-  {$IFDEF Debug} Assert(not vedpDataQueue.IsFull); {$ENDIF} // full queue causes problems
+  {$IFDEF Debug} Assert(not vedpDataQueue.IsFull); {$ENDIF} // full queue corrupts data
 end; { TOmniValueEnumeratorDataPackage.Add }
 
 function TOmniValueEnumeratorDataPackage.GetNext(var value: TOmniValue): boolean;
@@ -419,6 +421,11 @@ begin
     tmp.AsInterface._Release;
   vedpApproxCount.Decrement;
 end; { TOmniValueEnumeratorDataPackage.GetNext }
+
+class function TOmniValueEnumeratorDataPackage.GetPackageSizeLimit: integer;
+begin
+  Result := CMaxValueEnumeratorDataPackageSize;
+end; { TOmniValueEnumeratorDataPackage.GetPackageSizeLimit }
 
 function TOmniValueEnumeratorDataPackage.Prepare(dataCount: integer): integer;
 begin
@@ -496,7 +503,7 @@ end; { TOmniValueEnumeratorProvider.GetPackage }
 
 function TOmniValueEnumeratorProvider.GetPackageSizeLimit: integer;
 begin
-  Result := CMaxValueEnumeratorDataPackageSize;
+  Result := TOmniValueEnumeratorDataPackage.GetPackageSizeLimit;
 end; { TOmniValueEnumeratorProvider.GetPackageSizeLimit }
 
 { TOmniLocalQueueImpl }
@@ -642,9 +649,6 @@ begin
 end; { TOmniCountableDataManager.GetNextFromProvider }
 
 { TOmniHeuristicDataManager }
-
-const
-  CFetchTimeout_ms = 10;
 
 constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider;
   numWorkers: integer);

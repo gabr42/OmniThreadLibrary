@@ -64,11 +64,19 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnParallelFor: TButton
     Left = 8
-    Top = 304
+    Top = 281
     Width = 97
     Height = 25
     Caption = 'Parallel for'
     TabOrder = 5
     OnClick = btnParallelForClick
+  end
+  object cbRepeat: TCheckBox
+    Left = 8
+    Top = 312
+    Width = 97
+    Height = 17
+    Caption = 'Repeat'
+    TabOrder = 6
   end
 end

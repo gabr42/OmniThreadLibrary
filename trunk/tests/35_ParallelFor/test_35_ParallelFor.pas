@@ -44,6 +44,7 @@ type
     btnSeqScan   : TButton;
     lbLog        : TListBox;
     btnParallelFor: TButton;
+    cbRepeat: TCheckBox;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
     procedure btnParallelForClick(Sender: TObject);
@@ -64,6 +65,7 @@ type
     procedure SeqFind(value: integer);
     function  SeqScan(node: TNode; value: integer): TNode;
   public
+    procedure WMUser(var msg: TMessage); message WM_USER;
   end; { TfrmParallelForDemo }
 
 var
@@ -135,7 +137,7 @@ procedure TfrmParallelForDemo.btnParallelForClick(Sender: TObject);
 var
   i        : integer;
   nodeQueue: IOmniBlockingCollection;
-  outList  : TGpIntegerList;
+  outList  : TGpInt64List;
   outQueue : IOmniBlockingCollection;
   value    : TOmniValue;
 begin
@@ -149,11 +151,11 @@ begin
     .Execute(
       procedure (const elem: TOmniValue)
       begin
-        outQueue.Add(elem);
+        outQueue.Add((int64(elem) SHL 32) OR GetCurrentThreadID);
       end);
   outQueue.CompleteAdding;
   try
-    outList := TGpIntegerList.Create;
+    outList := TGpInt64List.Create;
     try
       while outQueue.Take(value) do
         outList.Add(value);
@@ -161,10 +163,12 @@ begin
       outList.Sorted := false;
       outList.Insert(0, 0);
       for i := 1 to 100000 do
-        Assert(outList[i] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
+        Assert(outList[i] SHR 32 = i, Format('[%x] = %x; [%x] = %x; [%x] = %x',
           [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
     finally FreeAndNil(outList); end;
-    Log('OK', []);
+    Log(FormatDateTime('hh:nn:ss', Now) + ' OK', []);
+    if cbRepeat.Checked then
+      PostMessage(Handle, WM_USER, 0, 0);
   except
     on E: Exception do
       Log(E.Message, []);
@@ -353,6 +357,11 @@ begin
     end;
   end;
 end; { TfrmParallelForDemo.SeqScan }
+
+procedure TfrmParallelForDemo.WMUser(var msg: TMessage);
+begin
+  btnParallelFor.Click;
+end;
 
 { TNodeChildEnumerator }
 
