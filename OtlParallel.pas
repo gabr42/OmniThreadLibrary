@@ -172,14 +172,10 @@ type
   TOmniParallelLoop<T> = class(TInterfacedObject, IOmniParallelLoop<T>,
                                  IOmniParallelAggregatorLoop<T>)
   strict private
-    oplAggregate        : TOmniValue;
-    oplAggregator       : TOmniAggregatorDelegate;
-    oplCancellationToken: IOmniCancellationToken;
-    oplManagedProvider  : boolean;
-    oplNumTasks         : integer;
-    oplSourceProvider   : TOmniSourceProvider;
-  strict protected
-    function  Stopped: boolean;
+    oplAggregator     : IOmniParallelAggregatorLoop;
+    oplManagedProvider: boolean;
+    oplParallel       : IOmniParallelLoop;
+    oplSourceProvider : TOmniSourceProvider;
   public
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean);
     destructor  Destroy; override;
@@ -503,8 +499,8 @@ constructor TOmniParallelLoop<T>.Create(const sourceProvider: TOmniSourceProvide
 begin
   inherited Create;
   oplSourceProvider := sourceProvider;
-  oplNumTasks := Environment.Process.Affinity.Count;
   oplManagedProvider := managedProvider;
+  oplParallel := Parallel.ForEach(sourceProvider);
 end; { TOmniParallelLoop<T>.Create }
 
 destructor TOmniParallelLoop<T>.Destroy;
@@ -512,7 +508,7 @@ begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   inherited;
-end; { TOmniParallelLoop<T>.Destroy }
+end; { TOmniParallelLoop }
 
 function TOmniParallelLoop<T>.Aggregate(aggregator: TOmniAggregatorDelegate):
   IOmniParallelAggregatorLoop<T>;
@@ -523,127 +519,42 @@ end; { TOmniParallelLoop<T>.Aggregate }
 function TOmniParallelLoop<T>.Aggregate(aggregator: TOmniAggregatorDelegate;
   defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop<T>;
 begin
-  oplAggregator := aggregator;
-  oplAggregate := defaultAggregateValue;
+  oplAggregator := oplParallel.Aggregate(aggregator, defaultAggregateValue);
   Result := Self;
 end; { TOmniParallelLoop<T>.Aggregate }
 
 function TOmniParallelLoop<T>.CancelWith(token: IOmniCancellationToken): IOmniParallelLoop<T>;
 begin
-  oplCancellationToken := token;
+  oplParallel.CancelWith(token);
   Result := Self;
 end; { TOmniParallelLoop<T>.CancelWith }
 
 function TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue;
-var
-  countStopped : IOmniResourceCount;
-  dataManager  : TOmniDataManager;
-  iTask        : integer;
-  localQueue   : TOmniLocalQueue;
-  lockAggregate: IOmniCriticalSection;
-  value        : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      localQueue := dataManager.CreateLocalQueue;
-      try
-        while (not Stopped) and localQueue.GetNext(value) do
-          oplAggregator(oplAggregate, loopBody(T(value.AsObject)));
-      finally FreeAndNil(localQueue); end;
-    finally FreeAndNil(dataManager); end;
-    Result := oplAggregate;
-  end
-  else begin
-    countStopped := TOmniResourceCount.Create(oplNumTasks);
-    lockAggregate := CreateOmniCriticalSection;
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      for iTask := 1 to oplNumTasks do
-        CreateTask(
-          procedure (const task: IOmniTask)
-          var
-            aggregate : TOmniValue;
-            localQueue: TOmniLocalQueue;
-            value     : TOmniValue;
-          begin
-            aggregate := TOmniValue.Null;
-            localQueue := dataManager.CreateLocalQueue;
-            try
-              while (not Stopped) and localQueue.GetNext(value) do
-                oplAggregator(aggregate, loopBody(T(value.AsObject)));
-            finally FreeAndNil(localQueue); end;
-            task.Lock.Acquire;
-            try
-              oplAggregator(oplAggregate, aggregate);
-            finally task.Lock.Release; end;
-            countStopped.Allocate;
-          end,
-          'Parallel.ForEach worker #' + IntToStr(iTask)
-        ).WithLock(lockAggregate)
-         .Unobserved
-         .Schedule;
-      WaitForSingleObject(countStopped.Handle, INFINITE);
-    finally FreeAndNil(dataManager); end;
-    Result := oplAggregate;
-  end;
+  oplAggregator
+    .Execute(
+      function (const value: TOmniValue): TOmniValue
+      begin
+        Result := loopBody(T(value.AsObject));
+      end
+    );
 end; { TOmniParallelLoop<T>.Execute }
 
 procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorDelegate<T>);
-var
-  countStopped: IOmniResourceCount;
-  dataManager : TOmniDataManager;
-  iTask       : integer;
-  localQueue  : TOmniLocalQueue;
-  value       : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      localQueue := dataManager.CreateLocalQueue;
-      try
-        while (not Stopped) and localQueue.GetNext(value) do
-          loopBody(T(value.AsObject));
-      finally FreeAndNil(localQueue); end;
-    finally FreeAndNil(dataManager); end;
-  end
-  else begin
-    // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      countStopped := TOmniResourceCount.Create(oplNumTasks);
-      for iTask := 1 to oplNumTasks do
-        CreateTask(
-          procedure (const task: IOmniTask)
-          var
-            localQueue: TOmniLocalQueue;
-            value     : TOmniValue;
-          begin
-            localQueue := dataManager.CreateLocalQueue;
-            try
-              while (not Stopped) and localQueue.GetNext(value) do
-                loopBody(T(value.AsObject));
-            finally FreeAndNil(localQueue); end;
-            countStopped.Allocate;
-          end,
-          'Parallel.ForEach worker #' + IntToStr(iTask)
-        ).Unobserved
-         .Schedule;
-      WaitForSingleObject(countStopped.Handle, INFINITE);
-    finally FreeAndNil(dataManager); end;
-  end;
+  oplParallel
+    .Execute(
+      procedure (const value: TOmniValue)
+      begin
+        loopBody(T(value.AsObject));
+      end
+    );
 end; { TOmniParallelLoop<T>.Execute }
 
 function TOmniParallelLoop<T>.NumTasks(taskCount: integer): IOmniParallelLoop<T>;
 begin
-  Assert(taskCount > 0);
-  oplNumTasks := taskCount;
+  oplParallel.NumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop<T>.taskCount }
-
-function TOmniParallelLoop<T>.Stopped: boolean;
-begin
-  Result := (assigned(oplCancellationToken) and oplCancellationToken.IsSignaled);
-end; { TOmniParallelLoop<T>.Stopped }
 
 end.
