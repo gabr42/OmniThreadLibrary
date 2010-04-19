@@ -82,6 +82,7 @@ uses
   OtlContainers,
   OtlCollections,
   OtlTaskControl,
+  OtlDataManager, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlParallel;
 
 {$R *.dfm}
@@ -137,22 +138,29 @@ procedure TfrmParallelForDemo.btnParallelForClick(Sender: TObject);
 var
   i        : integer;
   nodeQueue: IOmniBlockingCollection;
+  numCores : integer;
   outList  : TGpInt64List;
   outQueue : IOmniBlockingCollection;
+  testSize : integer;
+  time     : int64;
   value    : TOmniValue;
 begin
   nodeQueue := TOmniBlockingCollection.Create;
-  for i := 1 to 100000 do
-    nodeQueue.Add(i);
+  testSize := Random(200000)+1;
+  numCores := Random(Environment.Process.Affinity.Count*2)+1;
+  for i := 1 to testSize do
+    nodeQueue.Add(int64(i) SHL 32);
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
+  time := DSiTimeGetTime64;
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
-    .NumTasks(8)
+    .NumTasks(numCores)
     .Execute(
       procedure (const elem: TOmniValue)
       begin
-        outQueue.Add((int64(elem) SHL 32) OR GetCurrentThreadID);
+        outQueue.Add(int64(elem) OR GetCurrentThreadID);
       end);
+  time := DSiTimeGetTime64 - time;
   outQueue.CompleteAdding;
   try
     outList := TGpInt64List.Create;
@@ -162,16 +170,16 @@ begin
       outList.Sort;
       outList.Sorted := false;
       outList.Insert(0, 0);
-      for i := 1 to 100000 do
+      for i := 1 to testSize do
         Assert(outList[i] SHR 32 = i, Format('[%x] = %x; [%x] = %x; [%x] = %x',
           [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
     finally FreeAndNil(outList); end;
-    Log(FormatDateTime('hh:nn:ss', Now) + ' OK', []);
+    Log('1..%d /%d: OK %d ms', [testSize, numCores, time]);
     if cbRepeat.Checked then
       PostMessage(Handle, WM_USER, 0, 0);
   except
     on E: Exception do
-      Log(E.Message, []);
+      Log('1..%d /%d: %s', [testSize, numCores, E.Message]);
   end;
 end;
 
