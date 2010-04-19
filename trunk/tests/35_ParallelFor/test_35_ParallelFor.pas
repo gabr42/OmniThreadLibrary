@@ -299,16 +299,14 @@ begin
   numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
   nodeQueue.Add(rootNode);
-  Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
+  Parallel.ForEach<TNode>(nodeQueue as IOmniValueEnumerable)
     .NumTasks(numTasks) // must be same number of task as in nodeQueue to ensure stopping
     .CancelWith(cancelToken)
     .Execute(
-      procedure (const elem: TOmniValue)
+      procedure (const node: TNode)
       var
         childNode: TNode;
-        node     : TNode;
       begin
-        node := TNode(elem.AsObject);
         if node.Value = value then begin
           nodeResult := node;
           nodeQueue.CompleteAdding;
