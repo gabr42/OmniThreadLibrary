@@ -72,7 +72,6 @@ unit OtlParallel;
 
 interface
 
-// TODO 3 -oPrimoz Gabrijelcic : <T> version of Aggregate/Execute would be useful
 // TODO 3 -oPrimoz Gabrijelcic : How to enumerate over TList<T>?
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 
@@ -96,6 +95,7 @@ type
   TOmniIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
   TOmniIteratorAggregateDelegate<T> = reference to function(const value: T): TOmniValue;
   TOmniIteratorAggregateIntDelegate = reference to function(const value: int64): int64;
+  TOmniIteratorAggregateIntDelegate<T> = reference to function(const value: T): int64;
 
   IOmniParallelAggregatorLoop = interface
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
@@ -104,6 +104,7 @@ type
 
   IOmniParallelAggregatorLoop<T> = interface
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
+    function  Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>): TOmniValue; overload;
   end; { IOmniParallelAggregatorLoop<T> }
 
   IOmniParallelLoop = interface
@@ -123,7 +124,7 @@ type
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate;
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop<T>; overload;
-    procedure Execute(loopBody: TOmniIteratorDelegate<T>);
+    procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  CancelWith(token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
@@ -184,6 +185,7 @@ type
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop<T>; overload;
     function  CancelWith(token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
+    function  Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>): TOmniValue; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
@@ -531,25 +533,34 @@ end; { TOmniParallelLoop<T>.CancelWith }
 
 function TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue;
 begin
-  oplAggregator
-    .Execute(
-      function (const value: TOmniValue): TOmniValue
-      begin
-        Result := loopBody(T(value.AsObject));
-      end
-    );
+  Result := oplAggregator.Execute(
+    function (const value: TOmniValue): TOmniValue
+    begin
+      Result := loopBody(T(value.AsObject));
+    end
+  );
 end; { TOmniParallelLoop<T>.Execute }
 
 procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorDelegate<T>);
 begin
-  oplParallel
-    .Execute(
-      procedure (const value: TOmniValue)
-      begin
-        loopBody(T(value.AsObject));
-      end
-    );
+  oplParallel.Execute(
+    procedure (const value: TOmniValue)
+    begin
+      loopBody(T(value.AsObject));
+    end
+  );
 end; { TOmniParallelLoop<T>.Execute }
+
+function TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>):
+  TOmniValue;
+begin
+  Result := oplAggregator.Execute(
+    function (const value: TOmniValue): TOmniValue
+    begin
+      Result := loopBody(T(value.AsObject));
+    end
+  );
+end; { TOmniParallelLoop }
 
 function TOmniParallelLoop<T>.NumTasks(taskCount: integer): IOmniParallelLoop<T>;
 begin
