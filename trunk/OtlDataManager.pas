@@ -55,7 +55,7 @@ type
 
 function  CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
 function  CreateSourceProvider(enumerator: IOmniValueEnumerator): TOmniSourceProvider; overload;
-function  CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
+function  CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; overload;
 
 {$IFDEF OTL_ERTTI}
 function  CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
@@ -151,8 +151,8 @@ type
     function  GetPackageSizeLimit: integer; override;
   end; { TOmniValueEnumeratorProvider }
 
-  TOmniEnumerableProvider = class(TOmniSourceProvider)
-  end; { TOmniEnumerableProvider }
+  TOmniEnumeratorProvider = class(TOmniSourceProvider)
+  end; { TOmniEnumeratorProvider }
 
   TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
   end; { TOmniDelphiEnumeratorProvider }
@@ -226,9 +226,9 @@ begin
   Result := TOmniValueEnumeratorProvider.Create(enumerator);
 end; { CreateSourceProvider }
 
-function CreateSourceProvider(enumerable: IEnumerable): TOmniSourceProvider; overload;
+function CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; overload;
 begin
-//  Result := TOmniEnumerableProvider.Create(enumerable);
+//  Result := TOmniEnumeratorProvider.Create(enumerator);
   Result := nil;
 end; { CreateSourceProvider }
 
@@ -695,6 +695,6 @@ begin
   end;
 end; { TOmniHeuristicDataManager.GetNextFromProvider }
 
-{ TIntTest }
+{ TOmniSourceProviderFactory }
 
 end.
