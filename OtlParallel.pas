@@ -77,6 +77,7 @@ interface
 
 uses
   SysUtils,
+  Generics.Collections,
   OtlCommon,
   OtlSync,
   OtlTask,
@@ -132,12 +133,14 @@ type
   Parallel = class
     class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
+    class function  ForEach(const enumGen: IEnumerable): IOmniParallelLoop; overload;
+    class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
-    class function  ForEach<T>(const enumGen: IOmniValueEnumerable):
-      IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enum: IOmniValueEnumerator):
-      IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumGen: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumGen: TEnumerable<T>): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
     class procedure Join(const task1, task2: TProc); overload;
     class procedure Join(const tasks: array of TOmniTaskFunction); overload;
@@ -210,6 +213,16 @@ begin
   Result := TOmniParallelLoop.Create(CreateSourceProvider(low, high, step), true);
 end; { Parallel.ForEach }
 
+class function Parallel.ForEach(const enumGen: IEnumerable): IOmniParallelLoop;
+begin
+  Result := Parallel.ForEach(enumGen.GetEnumerator);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach(const enum: IEnumerator): IOmniParallelLoop;
+begin
+  Result := TOmniParallelLoop.Create(CreateSourceProvider(enum), true);
+end; { Parallel.ForEach }
+
 class function Parallel.ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop;
 begin
   Result := TOmniParallelLoop.Create(sourceProvider, false);
@@ -225,7 +238,7 @@ class function Parallel.ForEach<T>(const enumGen: IOmniValueEnumerable):
   IOmniParallelLoop<T>;
 begin
   // Assumes that enumerator's TryTake method is threadsafe!
-  Result := Parallel.ForEach<T>(enuMGen.GetEnumerator);
+  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enum: IOmniValueEnumerator):
@@ -233,6 +246,17 @@ class function Parallel.ForEach<T>(const enum: IOmniValueEnumerator):
 begin
   // Assumes that enumerator's TryTake method is threadsafe!
   Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enumGen: TEnumerable<T>): IOmniParallelLoop<T>;
+begin
+  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : don't know yet how to pull this through without rebuilding OtlDataManager from scratch
+  Result := nil;
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
