@@ -326,11 +326,14 @@ var
   value        : TOmniValue;
 begin
   if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
-    localQueue := dataManager.CreateLocalQueue;
+    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
-      while (not Stopped) and localQueue.GetNext(value) do
-        oplAggregator(oplAggregate, loopBody(value));
-    finally FreeAndNil(localQueue); end;
+      localQueue := dataManager.CreateLocalQueue;
+      try
+        while (not Stopped) and localQueue.GetNext(value) do
+          oplAggregator(oplAggregate, loopBody(value));
+      finally FreeAndNil(localQueue); end;
+    finally FreeAndNil(dataManager); end;
     Result := oplAggregate;
   end
   else begin
@@ -386,11 +389,14 @@ var
   value       : TOmniValue;
 begin
   if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
-    localQueue := dataManager.CreateLocalQueue;
+    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
-      while (not Stopped) and localQueue.GetNext(value) do
-        loopBody(value);
-    finally FreeAndNil(localQueue); end;
+      localQueue := dataManager.CreateLocalQueue;
+      try
+        while (not Stopped) and localQueue.GetNext(value) do
+          loopBody(value);
+      finally FreeAndNil(localQueue); end;
+    finally FreeAndNil(dataManager); end;
   end
   else begin
     // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?

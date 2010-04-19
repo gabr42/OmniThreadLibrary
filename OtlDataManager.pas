@@ -79,9 +79,11 @@ type
   TOmniDataPackageBase = class abstract(TOmniDataPackage)
   private
     dpbGeneration: integer;
+    dpbQueue     : TOmniLocalQueue;
   public
     procedure NextGeneration; inline;
     property Generation: integer read dpbGeneration;
+    property Queue: TOmniLocalQueue read dpbQueue write dpbQueue;
   end; { TOmniDataPackageBase }
 
   ///<summary>Integer range data package.</summary>
@@ -177,6 +179,7 @@ type
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
     dmSourceProvider_ref: TOmniSourceProvider;
+    dmStealIdx          : integer;
   strict protected
     procedure InitializePacketSizes;
   public
@@ -185,7 +188,7 @@ type
     function  CreateLocalQueue: TOmniLocalQueue; override;
     function  GetDataCountForGeneration(generation: integer): integer;
     function  GetNext(package: TOmniDataPackage): boolean; override;
-    function GetNextFromProvider(package: TOmniDataPackage;
+    function  GetNextFromProvider(package: TOmniDataPackage;
       generation: integer): boolean; virtual; abstract;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
     function  StealPackage(package: TOmniDataPackage): boolean;
@@ -448,11 +451,14 @@ begin
   Result := false;
 
   // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-  Exit;
+//  Exit;
 
   for iValue := 1 to intPackage.Prepare(vedpApproxCount.Value div 2) do begin
     if not GetNext(value) then
       break; //for
+    // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
+//    value.AsInt64 := value.AsInt64 + 1;
+//    asm sfence; end;
     intPackage.Add(value);
     Result := true;
   end;
@@ -513,6 +519,7 @@ begin
   inherited Create;
   lqiDataManager_ref := owner;
   lqiDataPackage := lqiDataManager_ref.SourceProvider.CreateDataPackage;
+  (lqiDataPackage as TOmniDataPackageBase).Queue := Self;
 end; { TOmniLocalQueueImpl.Create }
 
 destructor TOmniLocalQueueImpl.Destroy;
@@ -530,8 +537,10 @@ begin
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
     if Result then begin // somebody may have stolen it; if that happens, terminate and don't fight for the remaining data
       Result := lqiDataPackage.GetNext(value);
+      if Result then
     end;
-  end;
+  end
+  else
 end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
@@ -625,17 +634,22 @@ end; { TOmniBaseDataManager.InitializePacketSizes }
 
 function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
 var
-  pQueue: pointer;
+  iQueue  : integer;
+   queue   : TOmniLocalQueue;
+  queueCnt: integer;
 begin
   // try to steal package from other workers
-  // TODO 5 -oPrimoz Gabrijelcic : This code tries to steal from self, too - could this be easily bypassed?
   Result := true;
   dmQueueLock.Acquire;
   try
-    for pQueue in dmQueueList do
-      if TOmniLocalQueue(pQueue).Split(package) then begin
+    queueCnt := dmQueueList.Count;
+    for iQueue := dmStealIdx to dmStealIdx + queueCnt - 1 do begin
+      queue := TOmniLocalQueue(dmQueueList[iQueue mod queueCnt]);
+      if (TOmniDataPackageBase(package).Queue <> queue) and queue.Split(package) then begin
+        dmStealIdx := iQueue mod queueCnt;
         Exit;
       end;
+    end;
   finally dmQueueLock.Release; end;
   Result := false;
 end; { TOmniBaseDataManager.StealPackage }
@@ -687,5 +701,7 @@ begin
     hdmEstimatedPackageSize.Value := Round((hdmEstimatedPackageSize.Value / 4 * 3) + (dataPerMs / 4) * CFetchTimeout_ms);
   end;
 end; { TOmniHeuristicDataManager.GetNextFromProvider }
+
+{ TIntTest }
 
 end.
