@@ -62,14 +62,14 @@ object frmParallelForDemo: TfrmParallelForDemo
     TabOrder = 4
     OnClick = btnBuildLargeClick
   end
-  object btnParallelFor: TButton
+  object btnOmniValueEnum: TButton
     Left = 8
-    Top = 281
+    Top = 248
     Width = 97
     Height = 25
-    Caption = 'Parallel for'
+    Caption = 'OmniValueEnum'
     TabOrder = 5
-    OnClick = btnParallelForClick
+    OnClick = btnOmniValueEnumClick
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -78,5 +78,23 @@ object frmParallelForDemo: TfrmParallelForDemo
     Height = 17
     Caption = 'Repeat'
     TabOrder = 6
+  end
+  object btnIntegerEnum: TButton
+    Left = 8
+    Top = 216
+    Width = 97
+    Height = 25
+    Caption = 'IntegerEnum'
+    TabOrder = 7
+    OnClick = btnIntegerEnumClick
+  end
+  object btnEnumeratorEnum: TButton
+    Left = 8
+    Top = 280
+    Width = 97
+    Height = 25
+    Caption = 'IEnumeratorEnum'
+    TabOrder = 8
+    OnClick = btnEnumeratorEnumClick
   end
 end

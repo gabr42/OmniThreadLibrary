@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
-  OtlTask;
+  OtlTask,
+  OtlCollections;
 
 type
   TNode = class;
@@ -38,16 +39,20 @@ type
   end; { TNode }
 
   TfrmParallelForDemo = class(TForm)
-    btnBuildLarge: TButton;
-    btnBuildTree : TButton;
-    btnParaScan  : TButton;
-    btnSeqScan   : TButton;
-    lbLog        : TListBox;
-    btnParallelFor: TButton;
-    cbRepeat: TCheckBox;
+    btnBuildLarge   : TButton;
+    btnBuildTree    : TButton;
+    btnIntegerEnum  : TButton;
+    btnOmniValueEnum: TButton;
+    btnParaScan     : TButton;
+    btnSeqScan      : TButton;
+    cbRepeat        : TCheckBox;
+    lbLog           : TListBox;
+    btnEnumeratorEnum: TButton;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
-    procedure btnParallelForClick(Sender: TObject);
+    procedure btnEnumeratorEnumClick(Sender: TObject);
+    procedure btnIntegerEnumClick(Sender: TObject);
+    procedure btnOmniValueEnumClick(Sender: TObject);
     procedure btnParaScanClick(Sender: TObject);
     procedure btnSeqScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -64,6 +69,8 @@ type
     procedure RemoveEmptyLeaves(node: TNode);
     procedure SeqFind(value: integer);
     function  SeqScan(node: TNode; value: integer): TNode;
+    function  VerifyResult(outQueue: IOmniBlockingCollection; testSize, numCores: integer;
+      time: int64): boolean;
   public
     procedure WMUser(var msg: TMessage); message WM_USER;
   end; { TfrmParallelForDemo }
@@ -80,7 +87,6 @@ uses
   OtlCommon,
   OtlSync,
   OtlContainers,
-  OtlCollections,
   OtlTaskControl,
   OtlDataManager, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlParallel;
@@ -94,7 +100,56 @@ const
 
 type
   PNode = ^TNode;
-  
+
+  TListEnum = class(TInterfacedObject, IEnumerator)
+  strict private
+    FList_ref: TList;
+    FListEnum: TListEnumerator;
+  public
+    constructor Create(list: TList);
+    destructor  Destroy; override;
+    function  GetCurrent: TObject;
+    function  MoveNext: Boolean;
+    procedure Reset;
+    property Current: TObject read GetCurrent;
+  end;
+
+function CreateIEnumerator(li: TList): IEnumerator;
+begin
+  Result := TListEnum.Create(li);
+end; { CreateIEnumerator }
+
+{ TListEnumerator }
+
+constructor TListEnum.Create(list: TList);
+begin
+  inherited Create;
+  FList_ref := list;
+  Reset;
+end; { TListEnumerator.Create }
+
+destructor TListEnum.Destroy;
+begin
+  FreeAndNil(FListEnum);
+  inherited;
+end; { TListEnumerator.Destroy }
+
+function TListEnum.GetCurrent: TObject;
+begin
+  Result := TObject(FListEnum.Current);
+end; { TListEnumerator.GetCurrent }
+
+function TListEnum.MoveNext: Boolean;
+begin
+  Result := FListEnum.MoveNext;
+end; { TListEnumerator.MoveNext }
+
+procedure TListEnum.Reset;
+begin
+  FreeAndNil(FListEnum);
+  FListEnum := FList_ref.GetEnumerator;
+end; { TListEnumerator.Reset }
+
 { TNode }
 
 function TNode.Children: TNodeChildEnumeratorFactory;
@@ -134,54 +189,87 @@ begin
   CreateTree(CNumNodes);
 end; { TfrmParallelForDemo.btnBuildTreeClick }
 
-procedure TfrmParallelForDemo.btnParallelForClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnEnumeratorEnumClick(Sender: TObject);
+var
+  i       : integer;
+  nodeList: TList;
+  numCores: integer;
+  outQueue: IOmniBlockingCollection;
+  testSize: integer;
+  time    : int64;
+begin
+  nodeList := TList.Create;
+  try
+    testSize := Random(200000)+1;
+    numCores := Random(Environment.Process.Affinity.Count*2)+1;
+    for i := 1 to testSize do
+      nodeList.Add(pointer(i));
+    outQueue := TOmniBlockingCollection.Create;
+    time := DSiTimeGetTime64;
+    Parallel.ForEach<TObject>(CreateIEnumerator(nodeList))
+      .NumTasks(numCores)
+      .Execute(
+        procedure (const elem: TObject)
+        begin
+          outQueue.Add((int64(elem) SHL 32) OR GetCurrentThreadID);
+        end);
+    VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
+  finally FreeAndNil(nodeList); end;
+  if cbRepeat.Checked then
+    PostMessage(Handle, WM_USER, 2, 0);
+end; { TfrmParallelForDemo.btnEnumeratorEnumClick }
+
+procedure TfrmParallelForDemo.btnIntegerEnumClick(Sender: TObject);
+var
+  numCores: integer;
+  outQueue: IOmniBlockingCollection;
+  testSize: integer;
+  time    : int64;
+begin
+  testSize := Random(200000)+1;
+  numCores := Random(Environment.Process.Affinity.Count*2)+1;
+  outQueue := TOmniBlockingCollection.Create;
+  time := DSiTimeGetTime64;
+  Parallel.ForEach(1, testSize)
+    .NumTasks(numCores)
+    .Execute(
+      procedure (elem: int64)
+      begin
+        outQueue.Add((elem SHL 32) OR GetCurrentThreadID);
+      end);
+  VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
+  if cbRepeat.Checked then
+    PostMessage(Handle, WM_USER, 0, 0);
+end; { TfrmParallelForDemo.btnIntegerRenumClick }
+
+procedure TfrmParallelForDemo.btnOmniValueEnumClick(Sender: TObject);
 var
   i        : integer;
   nodeQueue: IOmniBlockingCollection;
   numCores : integer;
-  outList  : TGpInt64List;
   outQueue : IOmniBlockingCollection;
   testSize : integer;
   time     : int64;
-  value    : TOmniValue;
 begin
   nodeQueue := TOmniBlockingCollection.Create;
   testSize := Random(200000)+1;
   numCores := Random(Environment.Process.Affinity.Count*2)+1;
   for i := 1 to testSize do
-    nodeQueue.Add(int64(i) SHL 32);
+    nodeQueue.Add(i);
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
   time := DSiTimeGetTime64;
   Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
     .NumTasks(numCores)
     .Execute(
-      procedure (const elem: TOmniValue)
+      procedure (elem: int64)
       begin
-        outQueue.Add(int64(elem) OR GetCurrentThreadID);
+        outQueue.Add((elem SHL 32) OR GetCurrentThreadID);
       end);
-  time := DSiTimeGetTime64 - time;
-  outQueue.CompleteAdding;
-  try
-    outList := TGpInt64List.Create;
-    try
-      while outQueue.Take(value) do
-        outList.Add(value);
-      outList.Sort;
-      outList.Sorted := false;
-      outList.Insert(0, 0);
-      for i := 1 to testSize do
-        Assert(outList[i] SHR 32 = i, Format('[%x] = %x; [%x] = %x; [%x] = %x',
-          [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
-    finally FreeAndNil(outList); end;
-    Log('1..%d /%d: OK %d ms', [testSize, numCores, time]);
-    if cbRepeat.Checked then
-      PostMessage(Handle, WM_USER, 0, 0);
-  except
-    on E: Exception do
-      Log('1..%d /%d: %s', [testSize, numCores, E.Message]);
-  end;
-end;
+  VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
+  if cbRepeat.Checked then
+    PostMessage(Handle, WM_USER, 1, 0);
+end; { TfrmParallelForDemo.btnOmniValueEnumClick }
 
 procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
@@ -364,10 +452,43 @@ begin
   end;
 end; { TfrmParallelForDemo.SeqScan }
 
+function TfrmParallelForDemo.VerifyResult(outQueue: IOmniBlockingCollection; testSize,
+  numCores: integer; time: int64): boolean;
+var
+  i       : integer;
+  outList : TGpInt64List;
+  value   : TOmniValue;
+begin
+  Result := false;
+  outQueue.CompleteAdding;
+  try
+    outList := TGpInt64List.Create;
+    try
+      while outQueue.Take(value) do
+        outList.Add(value);
+      outList.Sort;
+      outList.Sorted := false;
+      outList.Insert(0, 0);
+      for i := 1 to testSize do
+        Assert(outList[i] SHR 32 = i, Format('[%x] = %x; [%x] = %x; [%x] = %x',
+          [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
+    finally FreeAndNil(outList); end;
+    Log('1..%d /%d: OK %d ms', [testSize, numCores, time]);
+    Result := true;
+  except
+    on E: Exception do
+      Log('1..%d /%d: %s', [testSize, numCores, E.Message]);
+  end;
+end; { TfrmParallelForDemo.VerifyResult }
+
 procedure TfrmParallelForDemo.WMUser(var msg: TMessage);
 begin
-  btnParallelFor.Click;
-end;
+  case msg.WParam of
+    0: btnIntegerEnum.Click;
+    1: btnOmniValueEnum.Click;
+    2: btnEnumeratorEnum.Click;
+  end;
+end; { TfrmParallelForDemo.WMUser }
 
 { TNodeChildEnumerator }
 
