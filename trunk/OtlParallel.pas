@@ -91,11 +91,11 @@ type
 
   TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
   TOmniIteratorDelegate<T> = reference to procedure(const value: T);
-  TOmniIteratorIntDelegate = reference to procedure(const value: int64);
+  TOmniIteratorIntDelegate = reference to procedure(value: int64);
 
   TOmniIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
   TOmniIteratorAggregateDelegate<T> = reference to function(const value: T): TOmniValue;
-  TOmniIteratorAggregateIntDelegate = reference to function(const value: int64): int64;
+  TOmniIteratorAggregateIntDelegate = reference to function(value: int64): int64;
   TOmniIteratorAggregateIntDelegate<T> = reference to function(const value: T): int64;
 
   IOmniParallelAggregatorLoop = interface
@@ -139,6 +139,8 @@ type
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
     class function  ForEach<T>(const enumGen: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumGen: IEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enumGen: TEnumerable<T>): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
@@ -257,6 +259,16 @@ class function Parallel.ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoo
 begin
   // TODO 1 -oPrimoz Gabrijelcic : don't know yet how to pull this through without rebuilding OtlDataManager from scratch
   Result := nil;
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enumGen: IEnumerable): IOmniParallelLoop<T>;
+begin
+  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>;
+begin
+  Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true );
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);

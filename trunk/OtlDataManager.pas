@@ -152,6 +152,16 @@ type
   end; { TOmniValueEnumeratorProvider }
 
   TOmniEnumeratorProvider = class(TOmniSourceProvider)
+  strict private
+    epEnumerator: IEnumerator;
+    epEnumLock  : TOmniCS;
+  public
+    constructor Create(enumerator: IEnumerator);
+    function  Count: int64; override;
+    function  CreateDataPackage: TOmniDataPackage; override;
+    function  GetCapabilities: TOmniSourceProviderCapabilities; override;
+    function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
+    function  GetPackageSizeLimit: integer; override;
   end; { TOmniEnumeratorProvider }
 
   TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
@@ -228,8 +238,7 @@ end; { CreateSourceProvider }
 
 function CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; overload;
 begin
-//  Result := TOmniEnumeratorProvider.Create(enumerator);
-  Result := nil;
+  Result := TOmniEnumeratorProvider.Create(enumerator);
 end; { CreateSourceProvider }
 
 {$IFDEF OTL_ERTTI}
@@ -505,6 +514,53 @@ begin
   Result := TOmniValueEnumeratorDataPackage.GetPackageSizeLimit;
 end; { TOmniValueEnumeratorProvider.GetPackageSizeLimit }
 
+{ TOmniEnumeratorProvider }
+
+constructor TOmniEnumeratorProvider.Create(enumerator: IEnumerator);
+begin
+  inherited Create;
+  epEnumerator := enumerator;
+end; { TOmniEnumeratorProvider.Create }
+
+function TOmniEnumeratorProvider.Count: int64;
+begin
+  raise Exception.Create('IEnumerable cannot be counted');
+end; { TOmniEnumeratorProvider.Count }
+
+function TOmniEnumeratorProvider.CreateDataPackage: TOmniDataPackage;
+begin
+  Result := TOmniValueEnumeratorDataPackage.Create;
+end; { TOmniEnumeratorProvider.CreateDataPackage }
+
+function TOmniEnumeratorProvider.GetCapabilities: TOmniSourceProviderCapabilities;
+begin
+  Result := [spcDataLimit];
+end; { TOmniEnumeratorProvider.GetCapabilities }
+
+function TOmniEnumeratorProvider.GetPackage(dataCount: integer;
+  package: TOmniDataPackage): boolean;
+var
+  iData     : integer;
+  intPackage: TOmniValueEnumeratorDataPackage absolute package;
+begin
+  Result := false;
+  epEnumLock.Acquire;
+  try
+    dataCount := intPackage.Prepare(dataCount);
+    for iData := 1 to dataCount do begin
+      if not epEnumerator.MoveNext then
+        break; //for iData
+      intPackage.Add(epEnumerator.Current);
+      Result := true;
+    end;
+  finally epEnumLock.Release; end;
+end; { TOmniEnumeratorProvider.GetPackage }
+
+function TOmniEnumeratorProvider.GetPackageSizeLimit: integer;
+begin
+  Result := TOmniValueEnumeratorDataPackage.GetPackageSizeLimit;
+end; { TOmniEnumeratorProvider.GetPackageSizeLimit }
+
 { TOmniLocalQueueImpl }
 
 constructor TOmniLocalQueueImpl.Create(owner: TOmniBaseDataManager);
@@ -694,7 +750,5 @@ begin
     hdmEstimatedPackageSize.Value := Round((hdmEstimatedPackageSize.Value / 4 * 3) + (dataPerMs / 4) * CFetchTimeout_ms);
   end;
 end; { TOmniHeuristicDataManager.GetNextFromProvider }
-
-{ TOmniSourceProviderFactory }
 
 end.
