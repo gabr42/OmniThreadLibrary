@@ -83,6 +83,7 @@ implementation
 uses
   DSiWin32,
   GpLists,
+  GpBits,
   GpStreams, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   OtlCommon,
   OtlSync,
@@ -211,10 +212,11 @@ begin
       .Execute(
         procedure (const elem: TObject)
         begin
-          outQueue.Add((int64(elem) SHL 32) OR GetCurrentThreadID);
+          outQueue.Add(((cardinal(elem) AND $F0000000) OR (int64(elem) AND $0FFFFFFF SHL 32)) OR GetCurrentThreadID);
         end);
     VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
   finally FreeAndNil(nodeList); end;
+  GLogger.Clear;
   if cbRepeat.Checked then
     PostMessage(Handle, WM_USER, 2, 0);
 end; { TfrmParallelForDemo.btnEnumeratorEnumClick }
@@ -255,7 +257,7 @@ begin
   testSize := Random(200000)+1;
   numCores := Random(Environment.Process.Affinity.Count*2)+1;
   for i := 1 to testSize do
-    nodeQueue.Add(i);
+    nodeQueue.Add(int64(i) SHL 32); // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
   time := DSiTimeGetTime64;
@@ -264,7 +266,7 @@ begin
     .Execute(
       procedure (elem: int64)
       begin
-        outQueue.Add((elem SHL 32) OR GetCurrentThreadID);
+        outQueue.Add((elem {SHL 32}) OR GetCurrentThreadID);
       end);
   VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
   if cbRepeat.Checked then
@@ -455,23 +457,51 @@ end; { TfrmParallelForDemo.SeqScan }
 function TfrmParallelForDemo.VerifyResult(outQueue: IOmniBlockingCollection; testSize,
   numCores: integer; time: int64): boolean;
 var
-  i       : integer;
-  outList : TGpInt64List;
-  value   : TOmniValue;
+  fstr: TGpBufferedStream;
+  i,j    : integer;
+  outList: TGpInt64List;
+  tmpList: TGpInt64List;
+  sl: TStringList;
+  value  : TOmniValue;
 begin
   Result := false;
   outQueue.CompleteAdding;
   try
     outList := TGpInt64List.Create;
     try
-      while outQueue.Take(value) do
+tmpList := TGpInt64List.Create;
+      while outQueue.Take(value) do begin
         outList.Add(value);
+tmpList.Add(value);
+end;
       outList.Sort;
       outList.Sorted := false;
       outList.Insert(0, 0);
-      for i := 1 to testSize do
-        Assert(outList[i] SHR 32 = i, Format('[%x] = %x; [%x] = %x; [%x] = %x',
-          [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
+      for i := 1 to testSize do try
+         Assert((outList[i] SHR 32) = i, Format('[%d] = %d/%d/%d; [%d] = %d/%d/%d; [%d] = %d/%d/%d',
+          [i-1, outList[i-1] SHR 32, outList[i-1] SHR 28 AND $F, outList[i-1] AND $0FFFFFFF,
+          i, outList[i] SHR 32, outList[i] SHR 28 AND $F, outList[i] AND $0FFFFFFF,
+          i+1, outList[i+1] SHR 32, outList[i+1] SHR 28 AND $F, outList[i+1] AND $0FFFFFFF]));
+      except
+        sl := TStringList.Create;
+        try
+          GLogger.GetEventList(sl);
+          sl.SaveToFile(Format('c:\0\events_%d.txt', [outList[i-1]]));
+fstr := TGpBufferedStream.Create(SafeCreateFileStream(Format('c:\0\list_%d.txt', [outList[i-1]]), fmCreate), 65536, true);
+for j := 0 to tmpList.Count - 1 do begin
+  fstr.WriteStr('+');
+  fstr.WriteStr(IntToStr(tmpList[j] SHR 32));
+  fstr.WriteStr('+');
+  fstr.WriteStr(IntToStr(tmpList[j] AND $F0000000 SHR 28));
+  fstr.WriteStr('/');
+  fstr.WriteStr(IntToStr(LowestBits64(tmpList[j], 28)));
+  fstr.Writeln('*');
+end;
+FreeAndNil(fstr);
+        finally FreeAndNil(sl); end;
+        raise;
+      end;
+FreeAndNil(tmpList);
     finally FreeAndNil(outList); end;
     Log('1..%d /%d: OK %d ms', [testSize, numCores, time]);
     Result := true;
