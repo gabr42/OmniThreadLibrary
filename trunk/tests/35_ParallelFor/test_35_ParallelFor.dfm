@@ -64,7 +64,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnOmniValueEnum: TButton
     Left = 8
-    Top = 248
+    Top = 249
     Width = 97
     Height = 25
     Caption = 'OmniValueEnum'

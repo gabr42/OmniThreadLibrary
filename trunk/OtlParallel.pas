@@ -50,22 +50,7 @@
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
 
 (* Things to consider:
-   - Support for simpler IEnumerable source (with "lock and fetch a packet" approach).
-   - All Parallel stuff should have a "chunk" option (or default).
-       int P = 2 * Environment.ProcessorCount; // assume twice the procs for
-                                               // good work distribution
-       int Chunk = N / P;                      // size of a work chunk
-   - Probably we need Parallel.Join.MonitorWith or something like that.
-
-   Can something like this be implemented?:
-     "To scale well on multiple processors, TPL uses work-stealing techniques to
-      dynamically adapt and distribute work items over the worker threads. The library
-      has a task manager that, by default, uses one worker thread per processor. This
-      ensures minimal thread switching by the OS. Each worker thread has its own local
-      task queue of work to be done. Each worker usually just pushes new tasks onto its
-      own queue and pops work whenever a task is done. When its local queue is empty,
-      a worker looks for work itself and tries to "steal" work from the queues of
-      other workers."
+  - Probably we need Parallel.Join.MonitorWith or something like that.
 *)
 
 unit OtlParallel;
@@ -74,6 +59,7 @@ interface
 
 // TODO 3 -oPrimoz Gabrijelcic : How to enumerate over TList<T>?
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
+// TODO 3 -oPrimoz Gabrijelcic : ForEach chaining (output of one ForEach goes into the next ForEach); must have a simple syntax and good task scheduler.
 
 uses
   SysUtils,
