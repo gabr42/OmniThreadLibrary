@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-04-14
-///   Version           : 1.13
+///   Last modification : 2010-05-06
+///   Version           : 1.14
 ///</para><para>
 ///   History:
+///     1.14: 2010-05-06
+///       - Implemented TOmniValue._AddRef, _Release, _ReleaseAndClear.
 ///     1.13: 2010-04-14
 ///       - Removed TOmniEnumerableRange and associated code.
 ///     1.12: 2010-03-16
@@ -158,6 +160,9 @@ type
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
   public
+    procedure _AddRef; inline;
+    procedure _Release; inline;
+    procedure _ReleaseAndClear; inline;
     procedure Clear; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
@@ -1296,6 +1301,26 @@ begin
   ovIntf := TOmniWideStringData.Create(value);
   ovType := ovtWideString;
 end; { TOmniValue.SetAsWideString }
+
+procedure TOmniValue._AddRef;
+begin
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then
+    ovIntf._AddRef;
+end; { TOmniValue._AddRef }
+
+procedure TOmniValue._Release;
+begin
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then
+    ovIntf._Release;
+end; { TOmniValue._Release }
+
+procedure TOmniValue._ReleaseAndClear;
+begin
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then begin
+    ovIntf._Release;
+    RawZero;
+  end;
+end; { TOmniValue._ReleaseAndClear }
 
 class operator TOmniValue.Equal(const a: TOmniValue; i: integer): boolean;
 begin

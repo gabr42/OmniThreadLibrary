@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2010-02-18
-///   Version           : 2.03
+///   Last modification : 2010-05-06
+///   Version           : 2.03a
 ///</para><para>
 ///   History:
+///     2.03a: 2010-05-06
+///       - Fixed memory leak in TOmni{Base}Queue when queueing String, WideString,
+///         Variant and Extended values.
 ///     2.03: 2010-02-18
 ///       - Reversed head and tail because they were used illogically.
 ///     2.02a: 2010-02-09
@@ -1016,10 +1019,8 @@ begin
       ReleaseBlock(pBlock, true);
     end
     else begin
-      if (pSlot.Tag = tagAllocated) and pSlot.Value.IsInterface then begin
-        pSlot.Value.AsInterface._Release;
-        pSlot.Value.RawZero;
-      end;
+      if (pSlot.Tag = tagAllocated) then
+        pSlot.Value._ReleaseAndClear;
       Inc(pSlot);
     end;
   end;
@@ -1200,10 +1201,7 @@ begin
         next := NextSlot(tail);
         if tag = tagAllocated then begin // sentinel doesn't contain any useful value
           value := tail.Value;
-          if value.IsInterface then begin
-            tail.Value.AsInterface._Release;
-            tail.Value.RawZero;
-          end;
+          tail.Value._ReleaseAndClear;
         end;
         if caughtTheHead then begin
           {$IFDEF USE_MOVE64} // release the lock; as this is the last element, don't move forward
@@ -1272,7 +1270,7 @@ begin
   Result := inherited TryDequeue(value);
   if Result then
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-    end; { TOmniQueue.TryDequeue }
+end; { TOmniQueue.TryDequeue }
 
 initialization
   Assert(SizeOf(TOmniTaggedValue) = 16);
