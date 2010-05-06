@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-08
-///   Version           : 1.06
+///   Last modification : 2010-05-06
+///   Version           : 1.06a
 ///</para><para>
 ///   History:
+///     1.06a: 2010-05-06
+///       - Fixed memory leak when sending String, WideString, Variant and Extended values
+///         over the communication channel.
 ///     1.06: 2010-03-08
 ///       - Implemented TOmniMessageQueueTee and IOmniCommDispatchingObserver.
 ///     1.05: 2009-11-13
@@ -316,8 +319,7 @@ var
   tmp: TOmniMessage;
 begin
   tmp := value;
-  if tmp.MsgData.IsInterface then
-    tmp.MsgData.AsInterface._AddRef;
+  tmp.MsgData._AddRef;
   Result := inherited Enqueue(tmp);
   if Result then
     tmp.MsgData.RawZero;
@@ -338,8 +340,7 @@ begin
   if not Result then
     Exit;
   msg := tmp;
-  if tmp.MsgData.IsInterface then
-    tmp.MsgData.AsInterface._Release;
+  tmp.MsgData._Release;
 end; { TOmniMessageQueue.TryDequeue }
 
 { TOmniCommunicationEndpoint }
