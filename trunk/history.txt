@@ -1,3 +1,7 @@
+?? bug in TOmniBaseBoundedQueue ??
+
+- Fixed memory leak when sending String, WideString, Variant and Extended values over the
+  communication channel and when queueing them into TOmni[Base]Queue.
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver
 - TOmniCounter, auto-initialized wrapper around the IOmniCounter

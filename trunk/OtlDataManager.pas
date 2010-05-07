@@ -7,7 +7,6 @@ unit OtlDataManager;
 interface
 
 uses
-  Classes, // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   GpStuff,
   OtlCommon,
   OtlContainers;
@@ -67,8 +66,8 @@ function  CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overlo
 
 function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer): TOmniDataManager;
 
+(*
 type
-  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   TOmniLogger = class
   strict private
     eventList: TOmniBaseQueue;
@@ -83,14 +82,15 @@ type
 
 var
   GLogger: TOmniLogger;
+*)
 
 implementation
 
 uses
   Windows,
   SysUtils,
-//  Classes,
   Contnrs,
+  Classes,
   DSiWin32,
   OtlSync;
 
@@ -138,7 +138,7 @@ type
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
-    function GetPackageSizeLimit: integer; override;
+    function  GetPackageSizeLimit: integer; override;
   end; { TOmniIntegerRangeProvider }
 
   ///<summary>Data package storing a list of TOmniValues.</summary>
@@ -148,7 +148,6 @@ type
   strict private
     vedpApproxCount: TGp4AlignedInt;
     vedpDataQueue  : TOmniBaseQueue; //TOmniBaseBoundedQueue;
-    PackageThreadID: cardinal; // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
   public
     constructor Create;
     destructor  Destroy; override;
@@ -419,7 +418,6 @@ begin
   inherited Create;
   vedpDataQueue := TOmniBaseQueue.Create; //TOmniBaseBoundedQueue.Create;
 //  vedpDataQueue.Initialize(CMaxValueEnumeratorDataPackageSize+1, SizeOf(TOmniValue));
-  PackageThreadID := GetCurrentThreadID;
 end; { TOmniValueEnumeratorDataPackage.Create }
 
 destructor TOmniValueEnumeratorDataPackage.Destroy;
@@ -436,9 +434,6 @@ begin
   tmp := value;
   if tmp.IsInterface then
     tmp.AsInterface._AddRef;
-//GLogger.Log('%d/%d -> Enqueue %d', [cardinal(tmp.AsPointer) SHR 28,
-//cardinal(tmp.AsPointer) AND $0FFFFFFF, PackageThreadID]);
-//  Assert(vedpDataQueue.Enqueue(tmp));
   vedpDataQueue.Enqueue(tmp);
   tmp.RawZero;
   vedpApproxCount.Increment;
@@ -450,10 +445,7 @@ var
   tmp: TOmniValue;
 begin
   tmp.RawZero;
-//  Result := vedpDataQueue.Dequeue(tmp);
   Result := vedpDataQueue.TryDequeue(tmp);
-//GLogger.Log('%d %d/%d <- Dequeue %d', [Ord(Result), cardinal(tmp.AsPointer) SHR 28,
-//cardinal(tmp.AsPointer) AND $0FFFFFFF, PackageThreadID]);
   if not Result then
     Exit;
   value := tmp;
@@ -486,20 +478,10 @@ var
 begin
   {$IFDEF Debug} Assert(package is TOmniValueEnumeratorDataPackage); {$ENDIF}
   Result := false;
-  // TODO 1 -oPrimoz Gabrijelcic : testing, remove!
-//  Exit;
-
   for iValue := 1 to intPackage.Prepare(vedpApproxCount.Value div 2) do begin
     if not GetNext(value) then
       break; //for
-
-//OutputDebugString(PChar(Format('%.8x => %.8x', [cardinal(value.AsPointer),
-//cardinal(((cardinal(value.AsPointer) SHR 29 + 1) SHL 29) OR (cardinal(value.AsPointer) AND $3FFFFFFF))])));
-//    GLogger.Log('%d/%d <- <package %d>', [cardinal(value.AsPointer) SHR 28,
-//       cardinal(value.AsPointer) AND $0FFFFFFF, PackageThreadID]);
-
-    intPackage.Add(TObject(((cardinal(value.AsPointer) SHR 28 + 1) SHL 28) OR (cardinal(value.AsPointer) AND $0FFFFFFF)));
-//    intPackage.Add(value);
+    intPackage.Add(value);
     Result := true;
   end;
 end; { TOmniValueEnumeratorDataPackage.Split }
@@ -588,8 +570,6 @@ begin
     for iData := 1 to dataCount do begin
       if not epEnumerator.MoveNext then
         break; //for iData
-//      GLogger.Log('<local package> <- %d/%d', [cardinal(epEnumerator.Current) SHR 28,
-//         cardinal(epEnumerator.Current) AND $0FFFFFFF]);
       intPackage.Add(epEnumerator.Current);
       Result := true;
     end;
@@ -623,20 +603,10 @@ function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
 begin
   Result := lqiDataPackage.GetNext(value);
   if not Result then begin
-//    GLogger.Log('<data package>.GetNext');
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
-    if Result then begin
+    if Result then
       Result := lqiDataPackage.GetNext(value);
-      if Result then
-//        GLogger.Log('%d/%d <- <local package>', [cardinal(value.AsPointer) SHR 28,
-//          cardinal(value.AsPointer) AND $0FFFFFFF]);
-    end
-//    else
-//      GLogger.Log('<data package>.GetNext failed');
-  end
-//  else
-//    GLogger.Log('%d/%d <- <local package>', [cardinal(value.AsPointer) SHR 28,
-//      cardinal(value.AsPointer) AND $0FFFFFFF]);
+  end;
 end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
@@ -798,6 +768,7 @@ begin
   end;
 end; { TOmniHeuristicDataManager.GetNextFromProvider }
 
+(*
 { TOmniLogger }
 
 constructor TOmniLogger.Create;
@@ -839,9 +810,10 @@ procedure TOmniLogger.Log(const msg: string);
 begin
   eventList.Enqueue(Format('[%d] %s', [GetCurrentThreadID, msg]));
 end; { TOmniLogger.Log }
+*)
 
 initialization
-  GLogger := TOmniLogger.Create;
+//  GLogger := TOmniLogger.Create;
 finalization
-  FreeAndNil(GLogger);
+//  FreeAndNil(GLogger);
 end.
