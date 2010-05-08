@@ -64,7 +64,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnOmniValueEnum: TButton
     Left = 8
-    Top = 249
+    Top = 184
     Width = 97
     Height = 25
     Caption = 'OmniValueEnum'
@@ -81,7 +81,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnIntegerEnum: TButton
     Left = 8
-    Top = 216
+    Top = 152
     Width = 97
     Height = 25
     Caption = 'IntegerEnum'
@@ -90,11 +90,28 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnEnumeratorEnum: TButton
     Left = 8
-    Top = 280
+    Top = 216
     Width = 97
     Height = 25
     Caption = 'IEnumeratorEnum'
     TabOrder = 8
     OnClick = btnEnumeratorEnumClick
+  end
+  object btnGetEnumeratorEnum: TButton
+    Left = 8
+    Top = 247
+    Width = 97
+    Height = 25
+    Caption = 'GetEnumerator'
+    TabOrder = 9
+    OnClick = btnGetEnumeratorEnumClick
+  end
+  object btnDelegateEnum: TButton
+    Left = 8
+    Top = 280
+    Width = 97
+    Height = 25
+    Caption = 'Delegate'
+    TabOrder = 10
   end
 end

@@ -55,6 +55,10 @@
 
 unit OtlParallel;
 
+{$IF CompilerVersion >= 21}
+  {$DEFINE OTL_ERTTI}
+{$IFEND}
+
 interface
 
 // TODO 3 -oPrimoz Gabrijelcic : How to enumerate over TList<T>?
@@ -63,6 +67,10 @@ interface
 
 uses
   SysUtils,
+  {$IFDEF OTL_ERTTI}
+  TypInfo,
+  RTTI,
+  {$ENDIF OTL_ERTTI}
   Generics.Collections,
   OtlCommon,
   OtlSync,
@@ -116,38 +124,68 @@ type
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
 
+  TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
+  TEnumeratorDelegate<T> = reference to function(var next: T): boolean;
+
   Parallel = class
-    class function  ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop; overload;
+    class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
-    class function  ForEach(const enumGen: IEnumerable): IOmniParallelLoop; overload;
+    class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
+    class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
-    class function  ForEach<T>(const enumGen: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enumGen: IEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enumGen: TEnumerable<T>): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
+    {$IFDEF OTL_ERTTI}
+    class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
+    class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
+    {$ENDIF OTL_ERTTI}
+//    class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
     class procedure Join(const task1, task2: TOmniTaskFunction); overload;
     class procedure Join(const task1, task2: TProc); overload;
     class procedure Join(const tasks: array of TOmniTaskFunction); overload;
     class procedure Join(const tasks: array of TProc); overload;
   end; { Parallel }
 
-type
+  TOmniDelegateEnumerator = class(TOmniValueEnumerator)
+  strict private
+    odeDelegate: TEnumeratorDelegate;
+    odeValue   : TOmniValue;
+  public
+    constructor Create(delegate: TEnumeratorDelegate);
+    function  GetCurrent: TOmniValue; override;
+    function  MoveNext: boolean; override;
+  end; { TOmniDelegateEnumerator }
+
   TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop, IOmniParallelAggregatorLoop)
+  {$IFDEF OTL_ERTTI}
+  strict private
+    oplDestroy    : TRttiMethod;
+    oplEnumerable : TValue;
+    oplGetCurrent : TRttiMethod;
+    oplMoveNext   : TRttiMethod;
+    oplRttiContext: TRttiContext;
+  public
+    constructor Create(enumerable: TObject); overload;
+  {$ENDIF OTL_ERTTI}
   strict private
     oplAggregate        : TOmniValue;
     oplAggregator       : TOmniAggregatorDelegate;
     oplCancellationToken: IOmniCancellationToken;
+    oplDelegateEnum     : TOmniDelegateEnumerator;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplSourceProvider   : TOmniSourceProvider;
   strict protected
     function  Stopped: boolean;
   public
-    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean);
+    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
+    constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
@@ -190,10 +228,11 @@ uses
 
 { Parallel }
 
-class function Parallel.ForEach(const enumGen: IOmniValueEnumerable): IOmniParallelLoop;
+class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
+  IOmniParallelLoop;
 begin
   // Assumes that enumerator's TryTake method is threadsafe!
-  Result := Parallel.ForEach(enumGen.GetEnumerator);
+  Result := Parallel.ForEach(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
@@ -201,9 +240,9 @@ begin
   Result := TOmniParallelLoop.Create(CreateSourceProvider(low, high, step), true);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach(const enumGen: IEnumerable): IOmniParallelLoop;
+class function Parallel.ForEach(const enumerable: IEnumerable): IOmniParallelLoop;
 begin
-  Result := Parallel.ForEach(enumGen.GetEnumerator);
+  Result := Parallel.ForEach(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enum: IEnumerator): IOmniParallelLoop;
@@ -222,11 +261,21 @@ begin
   Result := TOmniParallelLoop.Create(CreateSourceProvider(enum), true);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach<T>(const enumGen: IOmniValueEnumerable):
+class function Parallel.ForEach(const enumerable: TObject): IOmniParallelLoop;
+begin
+  Result := TOmniParallelLoop.Create(enumerable);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop;
+begin
+  Result := TOmniParallelLoop.Create(enumerator);
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enumerable: IOmniValueEnumerable):
   IOmniParallelLoop<T>;
 begin
   // Assumes that enumerator's TryTake method is threadsafe!
-  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
+  Result := Parallel.ForEach<T>(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enum: IOmniValueEnumerator):
@@ -236,9 +285,9 @@ begin
   Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach<T>(const enumGen: TEnumerable<T>): IOmniParallelLoop<T>;
+class function Parallel.ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>;
 begin
-  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
+  Result := Parallel.ForEach<T>(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>;
@@ -247,14 +296,20 @@ begin
   Result := nil;
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach<T>(const enumGen: IEnumerable): IOmniParallelLoop<T>;
+class function Parallel.ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>;
 begin
-  Result := Parallel.ForEach<T>(enumGen.GetEnumerator);
+  Result := Parallel.ForEach<T>(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>;
 begin
   Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true );
+end; { Parallel.ForEach }
+
+class function Parallel.ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>;
+begin
+  Result := nil;
+  // TODO 1 -oPrimoz Gabrijelcic : implement: Parallel.ForEach
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
@@ -338,10 +393,55 @@ begin
   oplManagedProvider := managedProvider;
 end; { TOmniParallelLoop.Create }
 
+{$IFDEF OTL_ERTTI}
+constructor TOmniParallelLoop.Create(enumerable: TObject);
+var
+  rm: TRttiMethod;
+  rt: TRttiType;
+begin
+  oplRttiContext := TRttiContext.Create;
+  rt := oplRttiContext.GetType(enumerable.ClassType);
+  Assert(assigned(rt));
+  rm := rt.GetMethod('GetEnumerator');
+  Assert(assigned(rm));
+  Assert(assigned(rm.ReturnType) and (rm.ReturnType.TypeKind = tkClass));
+  oplEnumerable := rm.Invoke(enumerable, []);
+  Assert(oplEnumerable.AsObject <> nil);
+  rt := oplRttiContext.GetType(oplEnumerable.TypeInfo);
+  oplMoveNext := rt.GetMethod('MoveNext');
+  Assert(assigned(oplMoveNext));
+  Assert((oplMoveNext.ReturnType.TypeKind = tkEnumeration) and SameText(oplMoveNext.ReturnType.Name, 'Boolean'));
+  oplGetCurrent := rt.GetMethod('GetCurrent');
+  Assert(assigned(oplGetCurrent));
+  oplDestroy := rt.GetMethod('Destroy');
+  Assert(assigned(oplDestroy));
+  Create(
+    function (var next: TOmniValue): boolean begin
+      Result := oplMoveNext.Invoke(oplEnumerable, []).AsBoolean;
+      if Result then
+        next := oplGetCurrent.Invoke(oplEnumerable, []);
+    end
+  );
+end; { TOmniParallelLoop.Create }
+{$ENDIF OTL_ERTTI}
+
+constructor TOmniParallelLoop.Create(const enumerator: TEnumeratorDelegate);
+begin
+  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
+  Create(CreateSourceProvider(oplDelegateEnum), true);
+end; { TOmniParallelLoop.Create }
+
 destructor TOmniParallelLoop.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
+  FreeAndNil(oplDelegateEnum);
+  {$IFDEF OTL_ERTTI}
+  if oplEnumerable.AsObject <> nil then begin
+    oplDestroy.Invoke(oplEnumerable, []);
+    oplRttiContext.Free;
+  end;
+  {$ENDIF OTL_ERTTI}
   inherited;
 end; { TOmniParallelLoop.Destroy }
 
@@ -589,5 +689,22 @@ begin
   oplParallel.NumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop<T>.taskCount }
+
+{ TOmniDelegateEnumerator }
+
+constructor TOmniDelegateEnumerator.Create(delegate: TEnumeratorDelegate);
+begin
+  odeDelegate := delegate;
+end; { TOmniDelegateEnumerator.Create }
+
+function TOmniDelegateEnumerator.GetCurrent: TOmniValue;
+begin
+  Result := odeValue;
+end; { TOmniDelegateEnumerator.GetCurrent }
+
+function TOmniDelegateEnumerator.MoveNext: boolean;
+begin
+  Result := odeDelegate(odeValue);
+end; { TOmniDelegateEnumerator.MoveNext }
 
 end.

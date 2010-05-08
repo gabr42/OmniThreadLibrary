@@ -1,9 +1,5 @@
 unit OtlDataManager;
 
-{$IF CompilerVersion >= 21}
-  {$DEFINE OTL_ERTTI}
-{$IFEND}
-
 interface
 
 uses
@@ -55,14 +51,9 @@ type
   end; { TOmniDataManager }
 
 function  CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
+function  CreateSourceProvider(enumerator: TOmniValueEnumerator): TOmniSourceProvider; overload;
 function  CreateSourceProvider(enumerator: IOmniValueEnumerator): TOmniSourceProvider; overload;
 function  CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; overload;
-
-// TODO 3 -oPrimoz Gabrijelcic : CreateSourceProvider(function GetNext: TOmniValue)
-
-{$IFDEF OTL_ERTTI}
-function  CreateSourceProvider(enumerable: TObject): TOmniSourceProvider; overload;
-{$ENDIF OTL_ERTTI}
 
 function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer): TOmniDataManager;
 
@@ -173,15 +164,19 @@ type
 
   TOmniEnumeratorProvider = class(TOmniSourceProvider)
   strict private
-    epEnumerator: IEnumerator;
-    epEnumLock  : TOmniCS;
+    epEnumeratorIntf: IEnumerator;
+    epEnumeratorObj : TOmniValueEnumerator;
+    epEnumLock      : TOmniCS;
   public
-    constructor Create(enumerator: IEnumerator);
+    constructor Create(enumerator: IEnumerator); overload;
+    constructor Create(enumerator: TOmniValueEnumerator); overload;
     function  Count: int64; override;
     function  CreateDataPackage: TOmniDataPackage; override;
     function  GetCapabilities: TOmniSourceProviderCapabilities; override;
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
     function  GetPackageSizeLimit: integer; override;
+    property EnumeratorIntf: IEnumerator read epEnumeratorIntf;
+    property EnumeratorObj: TOmniValueEnumerator read epEnumeratorObj;
   end; { TOmniEnumeratorProvider }
 
   TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
@@ -261,13 +256,10 @@ begin
   Result := TOmniEnumeratorProvider.Create(enumerator);
 end; { CreateSourceProvider }
 
-{$IFDEF OTL_ERTTI}
-function CreateSourceProvider(enumerable: TObject): TOmniSourceProvider;
+function CreateSourceProvider(enumerator: TOmniValueEnumerator): TOmniSourceProvider; overload;
 begin
-//  Result := TOmniDelphiEnumeratorProvider.Create(enumerable);
-  Result := nil;
+  Result := TOmniEnumeratorProvider.Create(enumerator);
 end; { CreateSourceProvider }
-{$ENDIF OTL_ERTTI}
 
 function CreateDataManager(sourceProvider: TOmniSourceProvider;
   numWorkers: integer): TOmniDataManager;
@@ -539,7 +531,13 @@ end; { TOmniValueEnumeratorProvider.GetPackageSizeLimit }
 constructor TOmniEnumeratorProvider.Create(enumerator: IEnumerator);
 begin
   inherited Create;
-  epEnumerator := enumerator;
+  epEnumeratorIntf := enumerator;
+end; { TOmniEnumeratorProvider.Create }
+
+constructor TOmniEnumeratorProvider.Create(enumerator: TOmniValueEnumerator);
+begin
+  inherited Create;
+  epEnumeratorObj := enumerator;
 end; { TOmniEnumeratorProvider.Create }
 
 function TOmniEnumeratorProvider.Count: int64;
@@ -567,11 +565,21 @@ begin
   epEnumLock.Acquire;
   try
     dataCount := intPackage.Prepare(dataCount);
-    for iData := 1 to dataCount do begin
-      if not epEnumerator.MoveNext then
-        break; //for iData
-      intPackage.Add(epEnumerator.Current);
-      Result := true;
+    if assigned(epEnumeratorObj) then begin
+      for iData := 1 to dataCount do begin
+        if not epEnumeratorObj.MoveNext then
+          break; //for iData
+        intPackage.Add(epEnumeratorObj.Current);
+        Result := true;
+      end;
+    end
+    else begin
+      for iData := 1 to dataCount do begin
+        if not epEnumeratorIntf.MoveNext then
+          break; //for iData
+        intPackage.Add(epEnumeratorIntf.Current);
+        Result := true;
+      end;
     end;
   finally epEnumLock.Release; end;
 end; { TOmniEnumeratorProvider.GetPackage }
