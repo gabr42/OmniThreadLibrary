@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-06
-///   Version           : 1.14
+///   Last modification : 2010-05-08
+///   Version           : 1.15
 ///</para><para>
 ///   History:
+///     1.15: 2010-05-08
+///       - Implemented conversions to/from TValue (Delphi 2010 and newer).
 ///     1.14: 2010-05-06
 ///       - Implemented TOmniValue._AddRef, _Release, _ReleaseAndClear.
 ///     1.13: 2010-04-14
@@ -104,6 +106,9 @@
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
 {$IFEND}
+{$IF CompilerVersion >= 21}
+  {$DEFINE OTL_ERTTI}
+{$IFEND}
 
 unit OtlCommon;
 
@@ -114,6 +119,9 @@ uses
   SysUtils,
   Classes,
   Variants,
+  {$IFDEF OTL_ERTTI}
+  RTTI,
+  {$ENDIF OTL_ERTTI}
   DSiWin32,
   GpStuff;
 
@@ -213,6 +221,15 @@ type
     property AsVariant: Variant read GetAsVariant write SetAsVariant;
     property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
+  {$IFDEF OTL_ERTTI}
+  private
+    function  GetAsTValue: TValue;
+    procedure SetAsTValue(const value: TValue);
+  public
+    class operator Implicit(const a: TValue): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): TValue; inline;
+    property AsTValue: TValue read GetAsTValue write SetAsTValue;
+  {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
 
   ///<summary>Slightly different from the IEnumerable:
@@ -234,6 +251,15 @@ type
   IOmniValueEnumerable = interface ['{50C1C176-C61F-41F5-AA0B-6FD215E5159F}']
     function  GetEnumerator: IOmniValueEnumerator;
   end; { IOmniValueEnumerable }
+
+  ///<summary>Abstract enumerator class, used as a base for internal classes passed to the
+  ///    OtlDataManager.</summary>
+  ///<since>2010-05-07</since>
+  TOmniValueEnumerator = class abstract
+    function  GetCurrent: TOmniValue; virtual; abstract;
+    function  MoveNext: boolean; virtual; abstract;
+    property Current: TOmniValue read GetCurrent;
+  end; { TOmniValueEnumerator }
 
   TOmniWaitableValue = class
   public
@@ -1142,6 +1168,35 @@ begin
   end;
 end; { TOmniValue.GetAsString }
 
+{$IFDEF OTL_ERTTI}
+function TOmniValue.GetAsTValue: TValue;
+begin
+  case ovType of
+    ovtNull:
+      Result := nil;
+    ovtBoolean:
+      Result := AsBoolean;
+    ovtInteger:
+      Result := AsInteger;
+    ovtDouble,
+    ovtExtended:
+      Result := AsExtended;
+    ovtString:
+      Result := AsString;
+    ovtObject:
+      Result := AsObject;
+    ovtInterface:
+      Result := TValue.From<IInterface>(AsInterface);
+    ovtVariant:
+      Result := TValue.FromVariant(AsVariant);
+    ovtWideString:
+      Result := AsWideString;
+    ovtPointer:
+      Result := AsPointer;
+  end;
+end; { TOmniValue.GetAsTValue }
+{$ENDIF OTL_ERRTI}
+
 function TOmniValue.GetAsVariant: Variant;
 begin
   if IsVariant then
@@ -1290,6 +1345,39 @@ begin
   ovType := ovtString;
 end; { TOmniValue.SetAsString }
 
+{$IFDEF OTL_ERTTI}
+procedure TOmniValue.SetAsTValue(const value: TValue);
+begin
+  case value.Kind of
+    tkInteger:
+      AsInteger := value.AsInteger;
+    tkChar,
+    tkString,
+    tkWChar,
+    tkLString,
+    tkWString,
+    tkUString:
+      AsString := value.AsString;
+    tkFloat:
+      AsExtended := value.AsExtended;
+    tkVariant:
+      AsVariant := value.AsVariant;
+    tkInterface:
+      AsInterface := value.AsInterface;
+    tkInt64:
+      AsInt64 := value.AsInt64;
+    tkPointer:
+    begin
+      Assert(SizeOf(pointer) = SizeOf(integer));
+      AsPointer := pointer(value.GetReferenceToRawData^);
+    end;
+    else
+      raise Exception.CreateFmt('TValue of type %d cannot be converted to TOmniValue',
+        [GetEnumName(TypeInfo(TTypeKind), Ord(value.Kind))]);
+  end;
+end; { TOmniValue.SetAsTValue }
+{$ENDIF OTL_ERTTI}
+
 procedure TOmniValue.SetAsVariant(const value: Variant);
 begin
   ovIntf := TOmniVariantData.Create(value);
@@ -1436,6 +1524,18 @@ class operator TOmniValue.Implicit(const a: TOmniValue): pointer;
 begin
   Result := a.AsPointer;
 end; { TOmniValue.Implicit }
+
+{$IFDEF OTL_ERTTI}
+class operator TOmniValue.Implicit(const a: TValue): TOmniValue;
+begin
+  Result.AsTValue := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): TValue;
+begin
+  Result := a.AsTValue;
+end; { TOmniValue.Implicit }
+{$ENDIF OTL_ERTTI}
 
 { TOmniWaitableValue }
 
