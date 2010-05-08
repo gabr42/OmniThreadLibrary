@@ -162,7 +162,7 @@ type
     function  MoveNext: boolean; override;
   end; { TOmniDelegateEnumerator }
 
-  TOmniParallelLoop = class(TInterfacedObject, IOmniParallelLoop, IOmniParallelAggregatorLoop)
+  TOmniParallelLoopBase = class(TInterfacedObject)
   {$IFDEF OTL_ERTTI}
   strict private
     oplDestroy    : TRttiMethod;
@@ -173,20 +173,26 @@ type
   public
     constructor Create(enumerable: TObject); overload;
   {$ENDIF OTL_ERTTI}
-  strict private
-    oplAggregate        : TOmniValue;
-    oplAggregator       : TOmniAggregatorDelegate;
-    oplCancellationToken: IOmniCancellationToken;
+  private
     oplDelegateEnum     : TOmniDelegateEnumerator;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplSourceProvider   : TOmniSourceProvider;
-  strict protected
-    function  Stopped: boolean;
   public
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
+  end; { TOmniParallelLoopBase }
+
+  TOmniParallelLoop = class(TOmniParallelLoopBase, IOmniParallelLoop,
+                                                   IOmniParallelAggregatorLoop)
+  strict private
+    oplAggregate        : TOmniValue;
+    oplAggregator       : TOmniAggregatorDelegate;
+    oplCancellationToken: IOmniCancellationToken;
+  strict protected
+    function  Stopped: boolean;
+  public
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate): IOmniParallelAggregatorLoop; overload;
@@ -199,15 +205,14 @@ type
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
   end; { TOmniParallelLoop }
 
-  TOmniParallelLoop<T> = class(TInterfacedObject, IOmniParallelLoop<T>,
-                                 IOmniParallelAggregatorLoop<T>)
+  TOmniParallelLoop<T> = class(TOmniParallelLoopBase, IOmniParallelLoop<T>,
+                                                      IOmniParallelAggregatorLoop<T>)
   strict private
-    oplAggregator     : IOmniParallelAggregatorLoop;
-    oplManagedProvider: boolean;
-    oplParallel       : IOmniParallelLoop;
-    oplSourceProvider : TOmniSourceProvider;
+    oplAggregator: IOmniParallelAggregatorLoop;
+    oplParallel  : IOmniParallelLoop;
   public
-    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean);
+    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
+    constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate;
@@ -308,8 +313,7 @@ end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>;
 begin
-  Result := nil;
-  // TODO 1 -oPrimoz Gabrijelcic : implement: Parallel.ForEach
+  Result := TOmniParallelLoop<T>.Create(enumerable);
 end; { Parallel.ForEach }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
@@ -382,19 +386,25 @@ begin
   end;
 end; { Parallel.Join }
 
-{ TOmniParallelLoop }
+{ TOmniParallelLoopBase }
 
-constructor TOmniParallelLoop.Create(const sourceProvider: TOmniSourceProvider;
+constructor TOmniParallelLoopBase.Create(const sourceProvider: TOmniSourceProvider;
   managedProvider: boolean);
 begin
   inherited Create;
   oplSourceProvider := sourceProvider;
   oplNumTasks := Environment.Process.Affinity.Count;
   oplManagedProvider := managedProvider;
-end; { TOmniParallelLoop.Create }
+end; { TOmniParallelLoopBase.Create }
+
+constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
+begin
+  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
+  Create(CreateSourceProvider(oplDelegateEnum), true);
+end; { TOmniParallelLoopBase.Create }
 
 {$IFDEF OTL_ERTTI}
-constructor TOmniParallelLoop.Create(enumerable: TObject);
+constructor TOmniParallelLoopBase.Create(enumerable: TObject);
 var
   rm: TRttiMethod;
   rt: TRttiType;
@@ -422,16 +432,10 @@ begin
         next := oplGetCurrent.Invoke(oplEnumerable, []);
     end
   );
-end; { TOmniParallelLoop.Create }
+end; { TOmniParallelLoopBase.Create }
 {$ENDIF OTL_ERTTI}
 
-constructor TOmniParallelLoop.Create(const enumerator: TEnumeratorDelegate);
-begin
-  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
-  Create(CreateSourceProvider(oplDelegateEnum), true);
-end; { TOmniParallelLoop.Create }
-
-destructor TOmniParallelLoop.Destroy;
+destructor TOmniParallelLoopBase.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
@@ -443,7 +447,9 @@ begin
   end;
   {$ENDIF OTL_ERTTI}
   inherited;
-end; { TOmniParallelLoop.Destroy }
+end; { TOmniParallelLoopBase.Destroy }
+
+{ TOmniParallelLoop }
 
 function TOmniParallelLoop.Aggregate(aggregator: TOmniAggregatorDelegate):
   IOmniParallelAggregatorLoop;
@@ -627,10 +633,17 @@ begin
   oplParallel := Parallel.ForEach(sourceProvider);
 end; { TOmniParallelLoop<T>.Create }
 
+constructor TOmniParallelLoop<T>.Create(const enumerator: TEnumeratorDelegate);
+begin
+  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
+  Create(CreateSourceProvider(oplDelegateEnum), true);
+end; { TOmniParallelLoop }
+
 destructor TOmniParallelLoop<T>.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
+  FreeAndNil(oplDelegateEnum);
   inherited;
 end; { TOmniParallelLoop }
 
