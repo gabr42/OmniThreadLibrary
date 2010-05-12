@@ -465,6 +465,7 @@ destructor TOmniParallelLoopBase.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
+  FreeAndNil(oplDelegateEnum);
   {$IFDEF OTL_ERTTI}
   if oplEnumerable.AsObject <> nil then begin
     oplDestroy.Invoke(oplEnumerable, []);
@@ -716,7 +717,7 @@ begin
   Result := InternalExecuteAggregate(
     function (const value: TOmniValue): TOmniValue
     begin
-      Result := loopBody(value.AsTValue.AsType<T>);
+      Result := loopBody(value.CastAs<T>);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -774,7 +775,7 @@ end; { TOmniDelegateEnumerator }
 
 function TOmniDelegateEnumerator<T>.GetCurrent: TOmniValue;
 begin
-  Result := TValue.From<T>(odeValue);
+  Result := TOmniValue.CastFrom<T>(odeValue);
 end; { TOmniDelegateEnumerator }
 
 function TOmniDelegateEnumerator<T>.MoveNext: boolean;
