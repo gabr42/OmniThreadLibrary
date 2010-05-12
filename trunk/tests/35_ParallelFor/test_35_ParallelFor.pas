@@ -217,8 +217,8 @@ begin
     i := 1;
     outQueue := TOmniBlockingCollection.Create;
     time := DSiTimeGetTime64;
-    Parallel.ForEach(
-      function (var value: TOmniValue): boolean
+    Parallel.ForEach<integer>(
+      function (var value: integer): boolean
       begin
         value := i;
         Result := (i <= testSize);
@@ -226,7 +226,7 @@ begin
       end)
       .NumTasks(numCores)
       .Execute(
-        procedure (const elem: TOmniValue)
+        procedure (const elem: integer)
         begin
           outQueue.Add(elem);
         end);
