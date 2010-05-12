@@ -37,12 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-08
-///   Version           : 1.15
+///   Last modification : 2010-05-12
+///   Version           : 1.16
 ///</para><para>
 ///   History:
+///     1.16: 2010-05-12
+///       - TOmniValue can be cast as Int64.
 ///     1.15: 2010-05-08
-///       - Implemented conversions to/from TValue (Delphi 2010 and newer).
+///       - Implemented conversions from/to TOmniValue to/from TValue (Delphi 2010 and newer).
 ///     1.14: 2010-05-06
 ///       - Implemented TOmniValue._AddRef, _Release, _ReleaseAndClear.
 ///     1.13: 2010-04-14
@@ -171,6 +173,7 @@ type
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
+    function  CastAsInt64: int64; inline;
     procedure Clear; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
@@ -1069,6 +1072,18 @@ begin
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
+
+function TOmniValue.CastAsInt64: int64;
+begin
+  case ovType of
+    ovtInterface, ovtExtended, ovtString, ovtWideString, ovtDouble:
+      raise Exception.Create('TOmniValue cannot be cast to Int64');
+    ovtVariant:
+      Result := AsVariant;
+    else
+      Result := ovData;
+  end;
+end; { TOmniValue.CastAsInt64 }
 
 procedure TOmniValue.Clear;
 begin
