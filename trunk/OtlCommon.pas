@@ -43,6 +43,7 @@
 ///   History:
 ///     1.16: 2010-05-12
 ///       - TOmniValue can be cast as Int64.
+///       - Implemented TOmniValue.CastFrom<T> and .CastAs<T>.
 ///     1.15: 2010-05-08
 ///       - Implemented conversions from/to TOmniValue to/from TValue (Delphi 2010 and newer).
 ///     1.14: 2010-05-06
@@ -112,6 +113,8 @@
   {$DEFINE OTL_ERTTI}
 {$IFEND}
 
+// TODO 1 -oPrimoz Gabrijelcic : Can CastAs<> and CastFrom<> work in Delphi 2009?
+
 unit OtlCommon;
 
 interface
@@ -121,6 +124,7 @@ uses
   SysUtils,
   Classes,
   Variants,
+  TypInfo,
   {$IFDEF OTL_ERTTI}
   RTTI,
   {$ENDIF OTL_ERTTI}
@@ -137,7 +141,13 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_EXCEPTION + 4;
 
 type
+  //:TOmniValue conversion exception.
+  EOmniValueConv = class(Exception);
+
   TOmniValue = packed record
+  private
+    class var DataSize: array [TTypeKind] of integer;
+    class constructor Create;
   private
     ovData: int64;
     ovIntf: IInterface;
@@ -231,6 +241,8 @@ type
   public
     class operator Implicit(const a: TValue): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): TValue; inline;
+    class function CastFrom<T>(const value: T): TOmniValue; static;
+    function CastAs<T>: T;
     property AsTValue: TValue read GetAsTValue write SetAsTValue;
   {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
@@ -482,7 +494,6 @@ var
 implementation
 
 uses
-  TypInfo,
   GpStringHash;
 
 type
@@ -1073,6 +1084,16 @@ end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
 
+class constructor TOmniValue.Create;
+begin
+  FillChar(DataSize, SizeOf(DataSize), 0);
+  DataSize[tkInteger] := SizeOf(integer);
+  DataSize[tkClass]   := SizeOf(TObject);
+  DataSize[tkMethod]  := SizeOf(TMethod);
+  DataSize[tkInt64]   := SizeOf(int64);
+  DataSize[tkPointer] := SizeOf(pointer);
+end; { TOmniValue.Create }
+
 function TOmniValue.CastAsInt64: int64;
 begin
   case ovType of
@@ -1084,6 +1105,56 @@ begin
       Result := ovData;
   end;
 end; { TOmniValue.CastAsInt64 }
+
+{$IFDEF OTL_ERTTI}
+function TOmniValue.CastAs<T>: T;
+var
+  ds      : integer;
+  maxValue: int64;
+  ti      : PTypeInfo;
+begin
+  ti := System.TypeInfo(T);
+  ds := DataSize[ti^.Kind];
+  if ds = 0 then // complicated stuff
+    Result := AsTValue.AsType<T>
+  else begin // simple types
+    maxValue := int64($FF) SHL ((ds-1) * 8);
+    if ovData > maxValue then
+      raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [ovData, ti^.Name]);
+    Move(ovData, Result, ds);
+  end;
+end; { TOmniValue.CastAs }
+
+class function TOmniValue.CastFrom<T>(const value: T): TOmniValue;
+var
+  data: int64;
+  ds  : integer;
+  ti  : PTypeInfo;
+begin
+  ti := System.TypeInfo(T);
+  ds := DataSize[ti^.Kind];
+  if ds = 0 then // complicated stuff
+    Result.AsTValue := TValue.From<T>(value)
+  else begin // simple types
+    data := 0;
+    Move(value, data, ds);
+    case ti^.Kind of
+      tkInteger:
+        Result.AsInteger := data;
+      tkClass:
+        Result.AsObject := TObject(data);
+      tkMethod:
+        Result.AsInt64 := data;
+      tkInt64:
+        Result.AsInt64 := data;
+      tkPointer:
+        Result.AsPointer := pointer(data);
+      else
+        raise Exception.CreateFmt('TOmniValue: CastFrom<%s> is broken!', [ti^.Name]);
+    end;
+  end;
+end; { TOmniValue.CastFrom }
+{$ENDIF OTL_ERTTI}
 
 procedure TOmniValue.Clear;
 begin
