@@ -99,7 +99,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object btnGetEnumeratorEnum: TButton
     Left = 8
-    Top = 247
+    Top = 248
     Width = 97
     Height = 25
     Caption = 'GetEnumerator'
@@ -113,5 +113,6 @@ object frmParallelForDemo: TfrmParallelForDemo
     Height = 25
     Caption = 'Delegate'
     TabOrder = 10
+    OnClick = btnDelegateEnumClick
   end
 end

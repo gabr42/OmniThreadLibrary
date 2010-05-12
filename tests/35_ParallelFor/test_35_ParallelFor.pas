@@ -52,6 +52,7 @@ type
     btnDelegateEnum: TButton;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
+    procedure btnDelegateEnumClick(Sender: TObject);
     procedure btnEnumeratorEnumClick(Sender: TObject);
     procedure btnGetEnumeratorEnumClick(Sender: TObject);
     procedure btnIntegerEnumClick(Sender: TObject);
@@ -200,6 +201,41 @@ begin
   CreateTree(CNumNodes);
 end; { TfrmParallelForDemo.btnBuildTreeClick }
 
+procedure TfrmParallelForDemo.btnDelegateEnumClick(Sender: TObject);
+var
+  i       : integer;
+  nodeList: TList;
+  numCores: integer;
+  outQueue: IOmniBlockingCollection;
+  testSize: integer;
+  time    : int64;
+begin
+  nodeList := TList.Create;
+  try
+    testSize := Random(200000)+1;
+    numCores := Random(Environment.Process.Affinity.Count*2)+1;
+    i := 1;
+    outQueue := TOmniBlockingCollection.Create;
+    time := DSiTimeGetTime64;
+    Parallel.ForEach(
+      function (var value: TOmniValue): boolean
+      begin
+        value := i;
+        Result := (i <= testSize);
+        Inc(i);
+      end)
+      .NumTasks(numCores)
+      .Execute(
+        procedure (const elem: TOmniValue)
+        begin
+          outQueue.Add(elem);
+        end);
+    VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
+  finally FreeAndNil(nodeList); end;
+  if cbRepeat.Checked then
+    PostMessage(Handle, WM_USER, 4, 0);
+end; { TfrmParallelForDemo.btnDelegateEnumClick }
+
 procedure TfrmParallelForDemo.btnEnumeratorEnumClick(Sender: TObject);
 var
   i       : integer;
@@ -217,10 +253,10 @@ begin
       nodeList.Add(pointer(i));
     outQueue := TOmniBlockingCollection.Create;
     time := DSiTimeGetTime64;
-    Parallel.ForEach<TObject>(CreateIEnumerator(nodeList))
+    Parallel.ForEach<pointer>(CreateIEnumerator(nodeList))
       .NumTasks(numCores)
       .Execute(
-        procedure (const elem: TObject)
+        procedure (const elem: pointer)
         begin
           outQueue.Add(elem);
         end);
@@ -247,17 +283,17 @@ begin
       nodeList.Add(pointer(i));
     outQueue := TOmniBlockingCollection.Create;
     time := DSiTimeGetTime64;
-    Parallel.ForEach(nodeList)
+    Parallel.ForEach<integer>(nodeList)
       .NumTasks(numCores)
       .Execute(
-        procedure (const elem: TOmniValue)
+        procedure (const elem: integer)
         begin
           outQueue.Add(elem);
         end);
     VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
   finally FreeAndNil(nodeList); end;
   if cbRepeat.Checked then
-    PostMessage(Handle, WM_USER, 2, 0);
+    PostMessage(Handle, WM_USER, 3, 0);
 end; { TfrmParallelForDemo.btnGetEnumeratorEnumClick }
 
 procedure TfrmParallelForDemo.btnIntegerEnumClick(Sender: TObject);
@@ -528,6 +564,8 @@ begin
     0: btnIntegerEnum.Click;
     1: btnOmniValueEnum.Click;
     2: btnEnumeratorEnum.Click;
+    3: btnGetEnumeratorEnum.Click;
+    4: btnDelegateEnum.Click;
   end;
 end; { TfrmParallelForDemo.WMUser }
 
@@ -555,12 +593,12 @@ end; { TNodeChildEnumerator.MoveNext }
 constructor TNodeChildEnumeratorFactory.Create(node: TNode);
 begin
   FNode := node;
-end;
+end; { TNodeChildEnumeratorFactory.Create }
 
 function TNodeChildEnumeratorFactory.GetEnumerator: TNodeChildEnumerator;
 begin
   Result := TNodeChildEnumerator.Create(FNode);
-end;
+end; { TNodeChildEnumeratorFactory.GetEnumerator }
 
 { TListEnumHelp }
 
@@ -568,12 +606,12 @@ constructor TListEnumHelp.Create(list: TList);
 begin
   inherited Create;
   lehList := list;
-end;
+end; { TListEnumHelp.Create }
 
 function TListEnumHelp.GetEnumerator: IEnumerator;
 begin
   Result := TListEnum.Create(lehList);
-end;
+end; { TListEnumHelp.GetEnumerator }
 
 end.
 

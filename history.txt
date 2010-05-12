@@ -1,7 +1,12 @@
 ?? bug in TOmniBaseBoundedQueue ??
 
-- Fixed memory leak when sending String, WideString, Variant and Extended values over the
-  communication channel and when queueing them into TOmni[Base]Queue.
+- TOmniValue:
+  - Fixed memory leak when sending String, WideString, Variant and Extended values over
+    the communication channel and when queueing them into TOmni[Base]Queue.
+  - Implemented _AddRef, _Release, _ReleaseAndClear.
+  - TOmniValue can be cast as Int64.
+  - Implemented conversions to/from TValue (Delphi 2010 and newer).
+
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver
 - TOmniCounter, auto-initialized wrapper around the IOmniCounter
