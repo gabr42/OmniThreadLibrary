@@ -139,7 +139,13 @@ type
     property EventObserver: TOmniContainerWindowsEventObserver read mqWinEventObserver;
   end; { TOmniMessageQueue }
 
-  TOmniMessageQueueTee = class
+  IOmniMessageQueueTee = interface ['{8A9526BF-71AA-4D78-BAE8-3490C3987327}']
+    procedure Attach(const queue: TOmniMessageQueue);
+    procedure Detach(const queue: TOmniMessageQueue);
+    function Enqueue(const value: TOmniMessage): boolean;
+  end;{ IOmniMessageQueueTee }
+
+  TOmniMessageQueueTee = class(TInterfacedObject, IOmniMessageQueueTee)
   strict private
     obqtQueueList: TList;
     obqtQueueLock: TOmniCS;

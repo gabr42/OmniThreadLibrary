@@ -50,6 +50,7 @@ type
     btnEnumeratorEnum: TButton;
     btnGetEnumeratorEnum: TButton;
     btnDelegateEnum: TButton;
+    btnTEnumeratorTEnum: TButton;
     procedure btnBuildLargeClick(Sender: TObject);
     procedure btnBuildTreeClick(Sender: TObject);
     procedure btnDelegateEnumClick(Sender: TObject);
@@ -60,6 +61,7 @@ type
     procedure btnParaScanClick(Sender: TObject);
     procedure btnSeqScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure btnTEnumeratorTEnumClick(Sender: TObject);
   private
     FNumNodes: integer;
     FRootNode: TNode;
@@ -87,7 +89,7 @@ implementation
 uses
   DSiWin32,
   GpLists,
-  GpBits,
+  Generics.Collections,
   OtlCommon,
   OtlSync,
   OtlContainers,
@@ -365,6 +367,36 @@ begin
   SeqFind(FNumNodes div 2 * 2 - 1);
 end; { TfrmParallelForDemo.btnSeqScanClick }
 
+procedure TfrmParallelForDemo.btnTEnumeratorTEnumClick(Sender: TObject);
+var
+  i       : integer;
+  nodeList: TList<integer>;
+  numCores: integer;
+  outQueue: IOmniBlockingCollection;
+  testSize: integer;
+  time    : int64;
+begin
+  nodeList := TList<integer>.Create;
+  try
+    testSize := Random(200000)+1;
+    numCores := Random(Environment.Process.Affinity.Count*2)+1;
+    for i := 1 to testSize do
+      nodeList.Add(i);
+    outQueue := TOmniBlockingCollection.Create;
+    time := DSiTimeGetTime64;
+    Parallel.ForEach<integer>(nodeList.GetEnumerator())
+      .NumTasks(numCores)
+      .Execute(
+        procedure (const elem: integer)
+        begin
+          outQueue.Add(elem);
+        end);
+    VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
+  finally FreeAndNil(nodeList); end;
+  if cbRepeat.Checked then
+    PostMessage(Handle, WM_USER, 5, 0);
+end; { TfrmParallelForDemo.btnTEnumeratorTEnumClick }
+
 function TfrmParallelForDemo.CreateNode(availNodes: integer; nodeValue: integer): TNode;
 var
   numChild: integer;
@@ -566,6 +598,7 @@ begin
     2: btnEnumeratorEnum.Click;
     3: btnGetEnumeratorEnum.Click;
     4: btnDelegateEnum.Click;
+    5: btnTEnumeratorTEnum.Click;
   end;
 end; { TfrmParallelForDemo.WMUser }
 
