@@ -55,7 +55,6 @@ uses
   Windows,
   SysUtils,
   DSiWin32,
-  GpStuff,
   OtlCommon,
   OtlContainers,
   OtlContainerObserver,
@@ -68,7 +67,7 @@ type
   ///- http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
   ///- http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx
   ///</summary>
-  IOmniBlockingCollection = interface(IGpTraceable) ['{208EFA15-1F8F-4885-A509-B00191145D38}']
+  IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
@@ -78,7 +77,7 @@ type
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
   end; { IOmniBlockingCollection }
 
-  TOmniBlockingCollection = class(TGpTraceable,
+  TOmniBlockingCollection = class(TInterfacedObject,
                                   IOmniBlockingCollection,
                                   IOmniValueEnumerable)
   strict private
