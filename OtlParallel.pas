@@ -65,8 +65,10 @@ interface
 // TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
 // TODO 3 -oPrimoz Gabrijelcic : How to enumerate over TList<T>?
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
+// TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."
 // TODO 3 -oPrimoz Gabrijelcic : ForEach chaining (output of one ForEach goes into the next ForEach); must have a simple syntax and good task scheduler.
 // TODO 3 -oPrimoz Gabrijelcic : Output queueing function (anonymous, same as the delegate enumerator)
+// TODO 3 -oPrimoz Gabrijelcic : Need a 'non blocking' option for the ForEach (and some kind of completion signalisation; maybe nonblocking mode would have to use blocking collection as an output? or is that too restrictive?)
 
 uses
   SysUtils,
@@ -228,8 +230,10 @@ type
                                                       IOmniParallelAggregatorLoop<T>)
   strict private
     oplDelegateEnum: TOmniDelegateEnumerator<T>;
+    oplEnumerator  : TEnumerator<T>;
   public
     constructor Create(const enumerator: TEnumeratorDelegate<T>); overload;
+    constructor Create(const enumerator: TEnumerator<T>); overload;
     destructor  Destroy; override;
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate;
@@ -309,15 +313,12 @@ end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : don't know yet how to pull this through without rebuilding OtlDataManager from scratch
-//  Result := Parallel.ForEach<T>(enumerable.GetEnumerator);
-  Result := nil;
+  Result := Parallel.ForEach<T>(enumerable.GetEnumerator());
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : don't know yet how to pull this through without rebuilding OtlDataManager from scratch
-  Result := nil;
+  Result := TOmniParallelLoop<T>.Create(enum);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>;
@@ -684,11 +685,25 @@ begin
   Create(CreateSourceProvider(oplDelegateEnum), true);
 end; { TOmniParallelLoop }
 
+constructor TOmniParallelLoop<T>.Create(const enumerator: TEnumerator<T>);
+begin
+  oplEnumerator := enumerator;
+  Create(
+    function(var next: T): boolean
+    begin
+      Result := oplEnumerator.MoveNext;
+      if Result then
+        next := oplEnumerator.Current;
+    end
+  );
+end; { TOmniParallelLoop<T>.Create }
+
 destructor TOmniParallelLoop<T>.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
+  FreeAndNil(oplEnumerator);
   inherited;
 end; { TOmniParallelLoop }
 
