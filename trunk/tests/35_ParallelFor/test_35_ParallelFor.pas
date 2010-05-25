@@ -312,7 +312,7 @@ begin
   Parallel.ForEach(1, testSize)
     .NumTasks(numCores)
     .Execute(
-      procedure (elem: int64)
+      procedure (const elem: integer)
       begin
         outQueue.Add(elem);
       end);
@@ -338,10 +338,10 @@ begin
   nodeQueue.CompleteAdding;
   outQueue := TOmniBlockingCollection.Create;
   time := DSiTimeGetTime64;
-  Parallel.ForEach(nodeQueue as IOmniValueEnumerable)
+  Parallel.ForEach<int64>(nodeQueue as IOmniValueEnumerable)
     .NumTasks(numCores)
     .Execute(
-      procedure (elem: int64)
+      procedure (const elem: int64)
       begin
         outQueue.Add(elem);
       end);

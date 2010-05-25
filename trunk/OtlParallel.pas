@@ -98,7 +98,6 @@ type
 
   TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
   TOmniIteratorDelegate<T> = reference to procedure(const value: T);
-  TOmniIteratorIntDelegate = reference to procedure(value: int64);
 
   TOmniIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
   TOmniIteratorAggregateDelegate<T> = reference to function(const value: T): TOmniValue;
@@ -162,7 +161,6 @@ type
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate;
       defaultAggregateValue: int64): IOmniParallelAggregatorLoop; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
-    procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Enumerate: IOmniParallelEnumerateLoop;
     function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop; { TODO 1 -ogabr : do we need TOmniBlockingCollection overload? }
@@ -198,7 +196,7 @@ type
     class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop; overload;
+    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
     class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
@@ -287,7 +285,6 @@ type
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
-    procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     function  ExecuteInto(loopBody: TOmniIteratorIntoDelegate): IOmniParallelIntoNextContinuation;
     function  ExecuteEnum(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
@@ -356,9 +353,9 @@ begin
   Result := Parallel.ForEach(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop;
+class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop<integer>;
 begin
-  Result := TOmniParallelLoop.Create(CreateSourceProvider(low, high, step), true);
+  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enumerable: IEnumerable): IOmniParallelLoop;
@@ -761,15 +758,6 @@ end; { TOmniParallelLoop.Execute }
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 begin
   InternalExecute(loopBody);
-end; { TOmniParallelLoop.Execute }
-
-procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorIntDelegate);
-begin
-  Execute(
-    procedure (const elem: TOmniValue)
-    begin
-      loopBody(elem);
-    end);
 end; { TOmniParallelLoop.Execute }
 
 function TOmniParallelLoop.Into(

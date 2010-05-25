@@ -23,7 +23,6 @@ object frmParallelForDemo: TfrmParallelForDemo
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-    ExplicitHeight = 337
   end
   object btnBuildTree: TButton
     Left = 8
