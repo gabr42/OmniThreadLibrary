@@ -31,7 +31,6 @@ object frmOderedForDemo: TfrmOderedForDemo
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 1
-    ExplicitWidth = 524
   end
   object btnOrderedPrimes: TButton
     Left = 8

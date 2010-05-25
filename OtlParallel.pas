@@ -62,13 +62,19 @@ unit OtlParallel;
 interface
 
 // TODO 1 -oPrimoz Gabrijelcic : At least some functionality should work in D2007.
+// TODO 1 -oPrimoz Gabrijelcic : Add (primitive!) Execute(method) and Execute(procedure)
 // TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
-// TODO 3 -oPrimoz Gabrijelcic : How to enumerate over TList<T>?
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
-// TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."
+// TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."? Better: Parallel.ForEach.NoWait and use for over the blocking collection. Add a demo.
 // TODO 3 -oPrimoz Gabrijelcic : ForEach chaining (output of one ForEach goes into the next ForEach); must have a simple syntax and good task scheduler.
-// TODO 3 -oPrimoz Gabrijelcic : Output queueing function (anonymous, same as the delegate enumerator)
+// TODO 3 -oPrimoz Gabrijelcic : Output queueing function (anonymous, same as the delegate enumerator). That has a meaning only if it preserves the input order.
 // TODO 3 -oPrimoz Gabrijelcic : Need a 'non blocking' option for the ForEach (and some kind of completion signalisation; maybe nonblocking mode would have to use blocking collection as an output? or is that too restrictive?)
+// TODO 3 -oPrimoz Gabrijelcic : Do we need another Int delegate using 'integer' instead of 'int64'?
+
+{ TODO 1 -ogabr : There's no need for the 'Int' version of the delegate - <integer> can handle that
+  Actually, it is a nice readability improvement. Could ForEach(range) return
+  IOmniParallelLoopt<integer>?
+}
 
 uses
   SysUtils,
@@ -79,11 +85,13 @@ uses
   Generics.Collections,
   OtlCommon,
   OtlSync,
+  OtlCollections,
   OtlTask,
   OtlDataManager;
 
 type
   IOmniParallelLoop = interface;
+  IOmniParallelLoop<T> = interface;
 
   TOmniAggregatorDelegate = reference to procedure(var aggregate: TOmniValue; const value: TOmniValue);
   TOmniAggregatorIntDelegate = reference to procedure(var aggregate: int64; value: int64);
@@ -97,6 +105,9 @@ type
   TOmniIteratorAggregateIntDelegate = reference to function(value: int64): int64;
   TOmniIteratorAggregateIntDelegate<T> = reference to function(const value: T): int64;
 
+  TOmniIteratorIntoDelegate = reference to procedure(const value: TOmniValue; var result: TOmniValue);
+  TOmniIteratorIntoDelegate<T> = reference to procedure(const value: T; var result: TOmniValue);
+
   IOmniParallelAggregatorLoop = interface
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64; overload;
@@ -106,6 +117,42 @@ type
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>): TOmniValue; overload;
   end; { IOmniParallelAggregatorLoop<T> }
+
+  IOmniParallelIntoLoop = interface
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate);
+  end; { IOmniParallelIntoLoop }
+
+  IOmniParallelIntoLoop<T> = interface
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>);
+  end; { IOmniParallelIntoLoop<T> }
+
+  IOmniParallelIntoNextContinuation = interface
+    function  ForEach: IOmniParallelLoop;
+  end; { IOmniParallelIntoNextContinuation }
+
+  IOmniParallelIntoNextContinuation<T> = interface
+    function  ForEach: IOmniParallelLoop<T>;
+  end; { IOmniParallelIntoNextContinuation }
+
+  IOmniParallelIntoNextLoop = interface
+    function  Execute(loopBody: TOmniIteratorIntoDelegate): IOmniParallelIntoNextContinuation;
+  end; { IOmniParallelIntoNextLoop }
+
+  IOmniParallelIntoNextLoop<T> = interface
+    function  Execute(loopBody: TOmniIteratorIntoDelegate<T>): IOmniParallelIntoNextContinuation<T>;
+  end; { IOmniParallelIntoNextLoop<T> }
+
+  IOmniParallelEnumerable = interface
+    function  GetEnumerator: IOmniValueEnumerator;
+  end; { IOmniParallelEnumerable }
+
+  IOmniParallelEnumerateLoop = interface
+    function  Execute(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
+  end; { IOmniParallelEnumerateLoop }
+
+  IOmniParallelEnumerateLoop<T> = interface
+    function  Execute(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable; { TODO 1 -ogabr : should that be IOmniParallelEnumerable<T> ? }
+  end; { IOmniParallelEnumerateLoop<T> }
 
   IOmniParallelLoop = interface
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
@@ -117,7 +164,13 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
+    function  Enumerate: IOmniParallelEnumerateLoop;
+    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop; { TODO 1 -ogabr : do we need TOmniBlockingCollection overload? }
+    function  IntoNext: IOmniParallelIntoNextLoop;
+    function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
+    function  OnStop(stopCode: TProc): IOmniParallelLoop;
+    function  PreserveOrder: IOmniParallelLoop;
   end; { IOmniParallelLoop }
 
   IOmniParallelLoop<T> = interface
@@ -126,7 +179,13 @@ type
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop<T>; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
+    function  Enumerate: IOmniParallelEnumerateLoop<T>;
+    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+    function  IntoNext: IOmniParallelIntoNextLoop<T>;
+    function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
+    function  PreserveOrder: IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
@@ -204,7 +263,7 @@ type
       TOmniValue);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetNumTasks(taskCount: integer);
-    function  Stopped: boolean;
+    function  Stopped: boolean; inline;
   public
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
@@ -212,22 +271,45 @@ type
   end; { TOmniParallelLoopBase }
 
   TOmniParallelLoop = class(TOmniParallelLoopBase, IOmniParallelLoop,
-                                                   IOmniParallelAggregatorLoop)
+                                                   IOmniParallelAggregatorLoop,
+                                                   IOmniParallelIntoLoop,
+                                                   IOmniParallelIntoNextLoop,
+                                                   IOmniParallelIntoNextContinuation,
+                                                   IOmniParallelEnumerateLoop,
+                                                   IOmniParallelEnumerable)
   public
     function  Aggregate(aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorDelegate; defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate): IOmniParallelAggregatorLoop; overload;
     function  Aggregate(aggregator: TOmniAggregatorIntDelegate; defaultAggregateValue: int64): IOmniParallelAggregatorLoop; overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
+    function  Enumerate: IOmniParallelEnumerateLoop;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateIntDelegate): int64; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
+    function  ExecuteInto(loopBody: TOmniIteratorIntoDelegate): IOmniParallelIntoNextContinuation;
+    function  ExecuteEnum(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
+    function  ForEach: IOmniParallelLoop;
+    function  GetEnumerator: IOmniValueEnumerator;
+    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop; { TODO 1 -ogabr : do we need TOmniBlockingCollection overload? }
+    function  IntoNext: IOmniParallelIntoNextLoop;
+    function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
+    function  OnStop(stopCode: TProc): IOmniParallelLoop;
+    function  PreserveOrder: IOmniParallelLoop;
+    function  IOmniParallelIntoNextLoop.Execute = ExecuteInto;
+    function  IOmniParallelEnumerateLoop.Execute = ExecuteEnum;
   end; { TOmniParallelLoop }
 
   TOmniParallelLoop<T> = class(TOmniParallelLoopBase, IOmniParallelLoop<T>,
-                                                      IOmniParallelAggregatorLoop<T>)
+                                                      IOmniParallelAggregatorLoop<T>,
+                                                      IOmniParallelIntoLoop<T>,
+                                                      IOmniParallelIntoNextLoop<T>,
+                                                      IOmniParallelIntoNextContinuation<T>,
+                                                      IOmniParallelEnumerateLoop<T>,
+                                                      IOmniParallelEnumerable) { TODO 1 -ogabr : of T? }
   strict private
     oplDelegateEnum: TOmniDelegateEnumerator<T>;
     oplEnumerator  : TEnumerator<T>;
@@ -239,10 +321,23 @@ type
     function  Aggregate(aggregator: TOmniAggregatorDelegate;
       defaultAggregateValue: TOmniValue): IOmniParallelAggregatorLoop<T>; overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
+    function  Enumerate: IOmniParallelEnumerateLoop<T>;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>): TOmniValue; overload;
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
+    function  ExecuteInto(loopBody: TOmniIteratorIntoDelegate<T>): IOmniParallelIntoNextContinuation<T>;
+    function  ExecuteEnum(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
+    function  ForEach: IOmniParallelLoop<T>;
+    function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
+    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+    function  IntoNext: IOmniParallelIntoNextLoop<T>;
+    function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
+    function  PreserveOrder: IOmniParallelLoop<T>;
+    function  IOmniParallelIntoNextLoop<T>.Execute = ExecuteInto;
+    function  IOmniParallelEnumerateLoop<T>.Execute = ExecuteEnum;
   end; { TOmniParallelLoop<T> }
 
 implementation
@@ -643,6 +738,12 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.CancelWith }
 
+function TOmniParallelLoop.Enumerate: IOmniParallelEnumerateLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.Enumerate }
+
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
 begin
   Result := InternalExecuteAggregate(loopBody);
@@ -671,11 +772,42 @@ begin
     end);
 end; { TOmniParallelLoop.Execute }
 
+function TOmniParallelLoop.Into(
+  queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.Into }
+
+function TOmniParallelLoop.IntoNext: IOmniParallelIntoNextLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.IntoNext }
+
+function TOmniParallelLoop.NoWait: IOmniParallelLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.NoWait }
+
 function TOmniParallelLoop.NumTasks(taskCount: integer): IOmniParallelLoop;
 begin
   SetNumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
+
+function TOmniParallelLoop.OnStop(stopCode: TProc): IOmniParallelLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.OnStop }
+
+function TOmniParallelLoop.PreserveOrder: IOmniParallelLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.PreserveOrder }
 
 { TOmniParalleLoop<T> }
 
@@ -747,6 +879,24 @@ begin
   );
 end; { TOmniParallelLoop<T>.Execute }
 
+function TOmniParallelLoop<T>.Enumerate: IOmniParallelEnumerateLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.Enumerate }
+
+procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorIntoDelegate<T>);
+begin
+  { TODO 1 -ogabr : implement }
+end; { TOmniParallelLoop<T>.Execute }
+
+function TOmniParallelLoop<T>.ExecuteEnum(
+  loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.ExecuteEnum }
+
 function TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorAggregateIntDelegate<T>):
   TOmniValue;
 begin
@@ -758,11 +908,92 @@ begin
   );
 end; { TOmniParallelLoop }
 
+function TOmniParallelLoop<T>.ExecuteInto(
+  loopBody: TOmniIteratorIntoDelegate<T>): IOmniParallelIntoNextContinuation<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.ExecuteInto }
+
+function TOmniParallelLoop<T>.ForEach: IOmniParallelLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.ForEach }
+
+function TOmniParallelLoop<T>.GetEnumerator: IOmniValueEnumerator;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := nil;
+end; { TOmniParallelLoop<T>.GetEnumerator }
+
+function TOmniParallelLoop<T>.Into(
+  queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.Into }
+
+function TOmniParallelLoop<T>.IntoNext: IOmniParallelIntoNextLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.IntoNext }
+
+function TOmniParallelLoop<T>.NoWait: IOmniParallelLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.NoWait }
+
 function TOmniParallelLoop<T>.NumTasks(taskCount: integer): IOmniParallelLoop<T>;
 begin
   SetNumTasks(taskCount);
   Result := Self;
-end; { TOmniParallelLoop<T>.taskCount }
+end; { TOmniParallelLoop<T>.NumTasks }
+
+function TOmniParallelLoop<T>.OnStop(stopCode: TProc): IOmniParallelLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.OnStop }
+
+function TOmniParallelLoop<T>.PreserveOrder: IOmniParallelLoop<T>;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop<T>.PreserveOrder }
+
+procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorIntoDelegate);
+begin
+  { TODO 1 -ogabr : implement }
+end; { TOmniParallelLoop.Execute }
+
+function TOmniParallelLoop.ExecuteEnum(
+  loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.ExecuteEnum }
+
+function TOmniParallelLoop.ExecuteInto(
+  loopBody: TOmniIteratorIntoDelegate): IOmniParallelIntoNextContinuation;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.ExecuteInto }
+
+function TOmniParallelLoop.ForEach: IOmniParallelLoop;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := Self;
+end; { TOmniParallelLoop.ForEach }
+
+function TOmniParallelLoop.GetEnumerator: IOmniValueEnumerator;
+begin
+  { TODO 1 -ogabr : implement }
+  Result := nil;
+end; { TOmniParallelLoop.GetEnumerator }
 
 { TOmniDelegateEnumerator }
 

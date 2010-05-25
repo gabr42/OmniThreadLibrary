@@ -78,7 +78,7 @@ var
 begin
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 1000).NoWait.Into(primeQueue).Execute(
-    procedure (value: int64; var res: TOmniValue)
+    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
     begin
       if IsPrime(value) then
         res := value;
@@ -93,8 +93,8 @@ var
   primeQueue: IOmniBlockingCollection;
 begin
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).Into(primeQueue).PreserveOrder.NoWait.Execute(
-    procedure (value: int64; var res: TOmniValue)
+  Parallel.ForEach(1, 1000).PreserveOrder.NoWait.Into(primeQueue).Execute(
+    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
     begin
       if IsPrime(value) then
         res := value;
@@ -109,18 +109,18 @@ var
   resultQueue: IOmniBlockingCollection;
 begin
   resultQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NoWait.Execute(
-    procedure (value: int64; var res: TOmniValue)
+  Parallel.ForEach(1, 1000).NoWait.IntoNext.Execute(
+    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
     begin
       if IsPrime(value) then
         res := value;
     end
   )
-  .ForEach.Into(resultQueue).NoWait.Execute(
-    procedure (value: int64; var res: TOmniValue)
+  .ForEach.NoWait.Into(resultQueue).Execute(
+    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
     begin
       // Sophie Germain primes
-      if IsPrime(2*value + 1) then
+      if IsPrime(2*value.AsInteger + 1) then
         res := value;
     end
   );
@@ -133,14 +133,13 @@ var
   prime: TOmniValue;
 begin
   for prime in
-    Parallel.ForEach(1, 1000).Execute(
-      procedure (value: int64; var res: TOmniValue)
+    Parallel.ForEach(1, 1000).Enumerate.Execute(
+      procedure (const value: TOmniValue; var res: TOmniValue)
       begin
         if IsPrime(value) then
           res := value;
       end
     )
-    .Enumerate // returns TOmniBlockingCollection
   do
     lbLog.Items.Add(IntToStr(prime));
 end;
