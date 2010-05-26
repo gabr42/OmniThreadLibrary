@@ -16,16 +16,16 @@ object frmOderedForDemo: TfrmOderedForDemo
   object btnUnorderedPrimes: TButton
     Left = 8
     Top = 8
-    Width = 97
+    Width = 122
     Height = 25
     Caption = 'Unordered primes'
     TabOrder = 0
     OnClick = btnUnorderedPrimesClick
   end
   object lbLog: TListBox
-    Left = 111
+    Left = 136
     Top = 0
-    Width = 522
+    Width = 497
     Height = 337
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]

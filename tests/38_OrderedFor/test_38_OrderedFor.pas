@@ -54,6 +54,7 @@ var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
 begin
+  lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 1000).NoWait
     .OnStop(
@@ -62,13 +63,17 @@ begin
         primeQueue.CompleteAdding;
       end)
     .Execute(
-      procedure (value: int64)
+      procedure (const value: integer)
       begin
-        if IsPrime(value) then
+        if IsPrime(value) then begin
           primeQueue.Add(value);
+//          Sleep(200);
+        end;
       end);
-  for prime in primeQueue do
+  for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
+    lbLog.Update;
+  end;
 end;
 
 procedure TfrmOderedForDemo.Button3Click(Sender: TObject);
@@ -76,9 +81,10 @@ var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
 begin
+  lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 1000).NoWait.Into(primeQueue).Execute(
-    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
+    procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
         res := value;
@@ -92,9 +98,10 @@ var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
 begin
+  lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 1000).PreserveOrder.NoWait.Into(primeQueue).Execute(
-    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
+    procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
         res := value;
@@ -108,19 +115,20 @@ var
   prime      : TOmniValue;
   resultQueue: IOmniBlockingCollection;
 begin
+  lbLog.Clear;
   resultQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 1000).NoWait.IntoNext.Execute(
-    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
+    procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
         res := value;
     end
   )
   .ForEach.NoWait.Into(resultQueue).Execute(
-    procedure (const value: TOmniValue; var res: TOmniValue) { TODO 1 -ogabr : change this back to value: integer when supported }
+    procedure (const value: integer; var res: TOmniValue)
     begin
       // Sophie Germain primes
-      if IsPrime(2*value.AsInteger + 1) then
+      if IsPrime(2*value + 1) then
         res := value;
     end
   );
@@ -132,6 +140,7 @@ procedure TfrmOderedForDemo.Button2Click(Sender: TObject);
 var
   prime: TOmniValue;
 begin
+  lbLog.Clear;
   for prime in
     Parallel.ForEach(1, 1000).Enumerate.Execute(
       procedure (const value: TOmniValue; var res: TOmniValue)
