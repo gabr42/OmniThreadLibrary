@@ -62,7 +62,8 @@ unit OtlParallel;
 interface
 
 // TODO 1 -oPrimoz Gabrijelcic : At least some functionality should work in D2007.
-// TODO 1 -oPrimoz Gabrijelcic : Add (primitive!) Execute(method) and Execute(procedure)
+// TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) Execute(method) and Execute(procedure)
+// TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) OnStop(method) and OnStop(procedure)
 // TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."? Better: Parallel.ForEach.NoWait and use for over the blocking collection. Add a demo.
@@ -227,6 +228,9 @@ type
     function  MoveNext: boolean; override;
   end; { TOmniDelegateEnumerator }
 
+  TOmniParallelLoopOption = (ploNoWait);
+  TOmniParallelLoopOptions = set of TOmniParallelLoopOption;
+
   TOmniParallelLoopBase = class(TInterfacedObject)
   {$IFDEF OTL_ERTTI}
   strict private
@@ -239,26 +243,32 @@ type
     constructor Create(enumerable: TObject); overload;
   {$ENDIF OTL_ERTTI}
   strict private
-    oplDelegateEnum     : TOmniDelegateEnumerator;
-  private
     oplAggregate        : TOmniValue;
     oplAggregator       : TOmniAggregatorDelegate;
     oplCancellationToken: IOmniCancellationToken;
+    oplCountStopped     : IOmniResourceCount;
+    oplDataManager      : TOmniDataManager;
+    oplDelegateEnum     : TOmniDelegateEnumerator;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
+    oplOnStop           : TProc;
+    oplOptions          : TOmniParallelLoopOptions;
     oplSourceProvider   : TOmniSourceProvider;
   strict protected
+    procedure DoOnStop;
     procedure InternalExecute(loopBody: TOmniIteratorDelegate);
     function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetNumTasks(taskCount: integer);
+    procedure SetOnStop(stopDelegate: TProc);
     function  Stopped: boolean; inline;
   public
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
+    property Options: TOmniParallelLoopOptions read oplOptions write oplOptions;
   end; { TOmniParallelLoopBase }
 
   TOmniParallelLoop = class(TOmniParallelLoopBase, IOmniParallelLoop,
@@ -535,6 +545,7 @@ begin
     end
   );
 end; { TOmniParallelLoopBase.Create }
+{$ENDIF OTL_ERTTI}
 
 constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
 begin
@@ -542,13 +553,12 @@ begin
   Create(CreateSourceProvider(oplDelegateEnum), true);
 end; { TOmniParallelLoopBase.Create }
 
-{$ENDIF OTL_ERTTI}
-
 destructor TOmniParallelLoopBase.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
+  FreeAndNil(oplDataManager);
   {$IFDEF OTL_ERTTI}
   if oplEnumerable.AsObject <> nil then begin
     oplDestroy.Invoke(oplEnumerable, []);
@@ -558,15 +568,22 @@ begin
   inherited;
 end; { TOmniParallelLoopBase.Destroy }
 
+procedure TOmniParallelLoopBase.DoOnStop;
+begin
+  if assigned(oplOnStop) then
+    oplOnStop();
+end; { TOmniParallelLoopBase.DoOnStop }
+
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
 var
-  countStopped: IOmniResourceCount;
   dataManager : TOmniDataManager;
   iTask       : integer;
   localQueue  : TOmniLocalQueue;
   value       : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
+     (not (ploNoWait in Options)) then
+  begin
     dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
       localQueue := dataManager.CreateLocalQueue;
@@ -577,43 +594,43 @@ begin
     finally FreeAndNil(dataManager); end;
   end
   else begin
-    // TODO 3 -oPrimoz Gabrijelcic : Replace this with a task pool?
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      countStopped := TOmniResourceCount.Create(oplNumTasks);
-      for iTask := 1 to oplNumTasks do
-        CreateTask(
-          procedure (const task: IOmniTask)
-          var
-            localQueue: TOmniLocalQueue;
-            value     : TOmniValue;
-          begin
-            localQueue := dataManager.CreateLocalQueue;
-            try
-              while (not Stopped) and localQueue.GetNext(value) do
-                loopBody(value);
-            finally FreeAndNil(localQueue); end;
-            countStopped.Allocate;
-          end,
-          'Parallel.ForEach worker #' + IntToStr(iTask)
-        ).Unobserved
-         .Schedule;
-      WaitForSingleObject(countStopped.Handle, INFINITE);
-    finally FreeAndNil(dataManager); end;
+    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
+    for iTask := 1 to oplNumTasks do
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          localQueue: TOmniLocalQueue;
+          value     : TOmniValue;
+        begin
+          localQueue := oplDataManager.CreateLocalQueue;
+          try
+            while (not Stopped) and localQueue.GetNext(value) do
+              loopBody(value);
+          finally FreeAndNil(localQueue); end;
+          if oplCountStopped.Allocate = 0 then
+            DoOnStop;
+        end,
+        'Parallel.ForEach worker #' + IntToStr(iTask)
+      ).Unobserved
+       .Schedule;
+    if not (ploNoWait in Options) then
+      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   end;
 end; { TOmniParallelLoopBase.InternalExecute }
 
 function TOmniParallelLoopBase.InternalExecuteAggregate(loopBody:
   TOmniIteratorAggregateDelegate): TOmniValue;
 var
-  countStopped : IOmniResourceCount;
   dataManager  : TOmniDataManager;
   iTask        : integer;
   localQueue   : TOmniLocalQueue;
   lockAggregate: IOmniCriticalSection;
   value        : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) then begin
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
+     (not (ploNoWait in Options)) then
+  begin
     dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
     try
       localQueue := dataManager.CreateLocalQueue;
@@ -625,36 +642,36 @@ begin
     Result := oplAggregate;
   end
   else begin
-    countStopped := TOmniResourceCount.Create(oplNumTasks);
+    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
     lockAggregate := CreateOmniCriticalSection;
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      for iTask := 1 to oplNumTasks do
-        CreateTask(
-          procedure (const task: IOmniTask)
-          var
-            aggregate : TOmniValue;
-            localQueue: TOmniLocalQueue;
-            value     : TOmniValue;
-          begin
-            aggregate := TOmniValue.Null;
-            localQueue := dataManager.CreateLocalQueue;
-            try
-              while (not Stopped) and localQueue.GetNext(value) do
-                oplAggregator(aggregate, loopBody(value));
-            finally FreeAndNil(localQueue); end;
-            task.Lock.Acquire;
-            try
-              oplAggregator(oplAggregate, aggregate);
-            finally task.Lock.Release; end;
-            countStopped.Allocate;
-          end,
-          'Parallel.ForEach worker #' + IntToStr(iTask)
-        ).WithLock(lockAggregate)
-         .Unobserved
-         .Schedule;
-      WaitForSingleObject(countStopped.Handle, INFINITE);
-    finally FreeAndNil(dataManager); end;
+    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+    for iTask := 1 to oplNumTasks do
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          aggregate : TOmniValue;
+          localQueue: TOmniLocalQueue;
+          value     : TOmniValue;
+        begin
+          aggregate := TOmniValue.Null;
+          localQueue := oplDataManager.CreateLocalQueue;
+          try
+            while (not Stopped) and localQueue.GetNext(value) do
+              oplAggregator(aggregate, loopBody(value));
+          finally FreeAndNil(localQueue); end;
+          task.Lock.Acquire;
+          try
+            oplAggregator(oplAggregate, aggregate);
+          finally task.Lock.Release; end;
+          if oplCountStopped.Allocate = 0 then
+            DoOnStop;
+        end,
+        'Parallel.ForEach worker #' + IntToStr(iTask)
+      ).WithLock(lockAggregate)
+       .Unobserved
+       .Schedule;
+    if not (ploNoWait in Options) then
+      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
     Result := oplAggregate;
   end;
 end; { TOmniParallelLoopBase.InternalExecuteAggregate }
@@ -676,6 +693,11 @@ begin
   Assert(taskCount > 0);
   oplNumTasks := taskCount;
 end; { TOmniParallelLoopBase.SetNumTasks }
+
+procedure TOmniParallelLoopBase.SetOnStop(stopDelegate: TProc);
+begin
+  oplOnStop := stopDelegate;
+end; { TOmniParallelLoopBase.SetOnStop }
 
 function TOmniParallelLoopBase.Stopped: boolean;
 begin
@@ -728,7 +750,7 @@ end; { TOmniParallelLoop.IntoNext }
 
 function TOmniParallelLoop.NoWait: IOmniParallelLoop;
 begin
-  { TODO 1 -ogabr : implement }
+  Options := Options + [ploNoWait];
   Result := Self;
 end; { TOmniParallelLoop.NoWait }
 
@@ -740,7 +762,7 @@ end; { TOmniParallelLoop.taskCount }
 
 function TOmniParallelLoop.OnStop(stopCode: TProc): IOmniParallelLoop;
 begin
-  { TODO 1 -ogabr : implement }
+  SetOnStop(stopCode);
   Result := Self;
 end; { TOmniParallelLoop.OnStop }
 
@@ -773,8 +795,6 @@ end; { TOmniParallelLoop<T>.Create }
 
 destructor TOmniParallelLoop<T>.Destroy;
 begin
-  if oplManagedProvider then
-    FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
   FreeAndNil(oplEnumerator);
   inherited;
@@ -820,7 +840,7 @@ begin
   InternalExecute(
     procedure (const value: TOmniValue)
     begin
-      loopBody(T(value.AsObject));
+      loopBody(value.CastAs<T>);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -877,7 +897,7 @@ end; { TOmniParallelLoop<T>.IntoNext }
 
 function TOmniParallelLoop<T>.NoWait: IOmniParallelLoop<T>;
 begin
-  { TODO 1 -ogabr : implement }
+  Options := Options + [ploNoWait];
   Result := Self;
 end; { TOmniParallelLoop<T>.NoWait }
 
@@ -889,7 +909,7 @@ end; { TOmniParallelLoop<T>.NumTasks }
 
 function TOmniParallelLoop<T>.OnStop(stopCode: TProc): IOmniParallelLoop<T>;
 begin
-  { TODO 1 -ogabr : implement }
+  SetOnStop(stopCode);
   Result := Self;
 end; { TOmniParallelLoop<T>.OnStop }
 
