@@ -139,7 +139,8 @@ type
     class operator Implicit(const a: TOTPThreadDataFactoryMethod): TOTPThreadDataFactory; inline;
     class operator Implicit(const a: TOTPThreadDataFactory): TOTPThreadDataFactoryFunction; inline;
     class operator Implicit(const a: TOTPThreadDataFactory): TOTPThreadDataFactoryMethod; inline;
-    function Execute: IInterface;
+    function  Execute: IInterface; inline;
+    function IsEmpty: boolean; inline;
   end; { TOTPThreadDataFactory }
 
   /// <summary>Worker thread lifetime reporting handler.</summary> 
@@ -464,6 +465,11 @@ begin
   end;
 end; { TOTPThreadDataFactory.Execute }
 
+function TOTPThreadDataFactory.IsEmpty: boolean;
+begin
+  Result := tdfExecutable.IsNull;
+end; { TOTPThreadDataFactory.IsEmpty }
+
 class operator TOTPThreadDataFactory.Implicit(const a: TOTPThreadDataFactoryFunction):
   TOTPThreadDataFactory;
 begin
@@ -601,10 +607,10 @@ begin
   try
     Comm.Send(MSG_THREAD_CREATED, threadID);
     try
-      if assigned(@owtThreadDataFactory) then
-        owtThreadData := owtThreadDataFactory.Execute
+      if owtThreadDataFactory.IsEmpty then
+        owtThreadData := nil
       else
-        owtThreadData := nil;
+        owtThreadData := owtThreadDataFactory.Execute;
       while true do begin
         if Comm.ReceiveWait(msg, INFINITE) then begin
           case msg.MsgID of
