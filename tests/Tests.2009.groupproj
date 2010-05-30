@@ -3,34 +3,34 @@
 			<ProjectGuid>{E132473E-1771-48B9-9094-EFA6FBF92B20}</ProjectGuid>
 		</PropertyGroup>
 		<ItemGroup>
-			<Projects Include="0_Beep\app_0_Beep.2009.dproj">
+			<Projects Include="00_Beep\app_0_Beep.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="1_HelloWorld\app_1_HelloWorld.2009.dproj">
+			<Projects Include="01_HelloWorld\app_1_HelloWorld.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="2_TwoWayHello\app_2_TwoWayHello.2009.dproj">
+			<Projects Include="02_TwoWayHello\app_2_TwoWayHello.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj">
+			<Projects Include="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj">
+			<Projects Include="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj">
+			<Projects Include="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj">
+			<Projects Include="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="7_InitTest\app_7_InitTest.2009.dproj">
+			<Projects Include="07_InitTest\app_7_InitTest.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="8_RegisterComm\app_8_RegisterComm.2009.dproj">
+			<Projects Include="08_RegisterComm\app_8_RegisterComm.2009.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="9_Communications\app_9_Communications.2009.dproj">
+			<Projects Include="09_Communications\app_9_Communications.2009.dproj">
 				<Dependencies/>
 			</Projects>
 			<Projects Include="10_Containers\app_10_Containers.2009.dproj">
@@ -126,94 +126,94 @@
 			</BorlandProject>
 		</ProjectExtensions>
 		<Target Name="app_0_Beep_2009">
-			<MSBuild Projects="0_Beep\app_0_Beep.2009.dproj"/>
+			<MSBuild Projects="00_Beep\app_0_Beep.2009.dproj"/>
 		</Target>
 		<Target Name="app_0_Beep_2009:Clean">
-			<MSBuild Targets="Clean" Projects="0_Beep\app_0_Beep.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="00_Beep\app_0_Beep.2009.dproj"/>
 		</Target>
 		<Target Name="app_0_Beep_2009:Make">
-			<MSBuild Targets="Make" Projects="0_Beep\app_0_Beep.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="00_Beep\app_0_Beep.2009.dproj"/>
 		</Target>
 		<Target Name="app_1_HelloWorld_2009">
-			<MSBuild Projects="1_HelloWorld\app_1_HelloWorld.2009.dproj"/>
+			<MSBuild Projects="01_HelloWorld\app_1_HelloWorld.2009.dproj"/>
 		</Target>
 		<Target Name="app_1_HelloWorld_2009:Clean">
-			<MSBuild Targets="Clean" Projects="1_HelloWorld\app_1_HelloWorld.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="01_HelloWorld\app_1_HelloWorld.2009.dproj"/>
 		</Target>
 		<Target Name="app_1_HelloWorld_2009:Make">
-			<MSBuild Targets="Make" Projects="1_HelloWorld\app_1_HelloWorld.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="01_HelloWorld\app_1_HelloWorld.2009.dproj"/>
 		</Target>
 		<Target Name="app_2_TwoWayHello_2009">
-			<MSBuild Projects="2_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
+			<MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
 		</Target>
 		<Target Name="app_2_TwoWayHello_2009:Clean">
-			<MSBuild Targets="Clean" Projects="2_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="02_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
 		</Target>
 		<Target Name="app_2_TwoWayHello_2009:Make">
-			<MSBuild Targets="Make" Projects="2_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="02_TwoWayHello\app_2_TwoWayHello.2009.dproj"/>
 		</Target>
 		<Target Name="app_3_HelloWorld_with_package_2009">
-			<MSBuild Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
+			<MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_3_HelloWorld_with_package_2009:Clean">
-			<MSBuild Targets="Clean" Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_3_HelloWorld_with_package_2009:Make">
-			<MSBuild Targets="Make" Projects="3_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_4_TwoWayHello_with_package_2009">
-			<MSBuild Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
+			<MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_4_TwoWayHello_with_package_2009:Clean">
-			<MSBuild Targets="Clean" Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_4_TwoWayHello_with_package_2009:Make">
-			<MSBuild Targets="Make" Projects="4_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2009.dproj"/>
 		</Target>
 		<Target Name="app_5_TwoWayHello_without_loop_2009">
-			<MSBuild Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
+			<MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
 		</Target>
 		<Target Name="app_5_TwoWayHello_without_loop_2009:Clean">
-			<MSBuild Targets="Clean" Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
 		</Target>
 		<Target Name="app_5_TwoWayHello_without_loop_2009:Make">
-			<MSBuild Targets="Make" Projects="5_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2009.dproj"/>
 		</Target>
 		<Target Name="app_6_TwoWayHello_with_object_worker_2009">
-			<MSBuild Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
+			<MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
 		</Target>
 		<Target Name="app_6_TwoWayHello_with_object_worker_2009:Clean">
-			<MSBuild Targets="Clean" Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
 		</Target>
 		<Target Name="app_6_TwoWayHello_with_object_worker_2009:Make">
-			<MSBuild Targets="Make" Projects="6_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2009.dproj"/>
 		</Target>
 		<Target Name="app_7_InitTest_2009">
-			<MSBuild Projects="7_InitTest\app_7_InitTest.2009.dproj"/>
+			<MSBuild Projects="07_InitTest\app_7_InitTest.2009.dproj"/>
 		</Target>
 		<Target Name="app_7_InitTest_2009:Clean">
-			<MSBuild Targets="Clean" Projects="7_InitTest\app_7_InitTest.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="07_InitTest\app_7_InitTest.2009.dproj"/>
 		</Target>
 		<Target Name="app_7_InitTest_2009:Make">
-			<MSBuild Targets="Make" Projects="7_InitTest\app_7_InitTest.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="07_InitTest\app_7_InitTest.2009.dproj"/>
 		</Target>
 		<Target Name="app_8_RegisterComm_2009">
-			<MSBuild Projects="8_RegisterComm\app_8_RegisterComm.2009.dproj"/>
+			<MSBuild Projects="08_RegisterComm\app_8_RegisterComm.2009.dproj"/>
 		</Target>
 		<Target Name="app_8_RegisterComm_2009:Clean">
-			<MSBuild Targets="Clean" Projects="8_RegisterComm\app_8_RegisterComm.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="08_RegisterComm\app_8_RegisterComm.2009.dproj"/>
 		</Target>
 		<Target Name="app_8_RegisterComm_2009:Make">
-			<MSBuild Targets="Make" Projects="8_RegisterComm\app_8_RegisterComm.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="08_RegisterComm\app_8_RegisterComm.2009.dproj"/>
 		</Target>
 		<Target Name="app_9_Communications_2009">
-			<MSBuild Projects="9_Communications\app_9_Communications.2009.dproj"/>
+			<MSBuild Projects="09_Communications\app_9_Communications.2009.dproj"/>
 		</Target>
 		<Target Name="app_9_Communications_2009:Clean">
-			<MSBuild Targets="Clean" Projects="9_Communications\app_9_Communications.2009.dproj"/>
+			<MSBuild Targets="Clean" Projects="09_Communications\app_9_Communications.2009.dproj"/>
 		</Target>
 		<Target Name="app_9_Communications_2009:Make">
-			<MSBuild Targets="Make" Projects="9_Communications\app_9_Communications.2009.dproj"/>
+			<MSBuild Targets="Make" Projects="09_Communications\app_9_Communications.2009.dproj"/>
 		</Target>
 		<Target Name="app_10_Containers_2009">
 			<MSBuild Projects="10_Containers\app_10_Containers.2009.dproj"/>
