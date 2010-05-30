@@ -70,7 +70,7 @@
 ///</para></remarks>
 
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
-//DEFINE OTL_OLDCPU to not use Move64 (SSE2) code
+{$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
 
 unit OtlContainers;
 
