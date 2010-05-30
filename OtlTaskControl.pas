@@ -162,6 +162,8 @@
 // http://209.85.129.132/search?q=cache:B2PbIgFSyLcJ:www.dojotoolkit.org/book/dojo-book-0-9/part-3-programmatic-dijit-and-dojo/event-system/publish-and-subscribe-events+dojo+subscribe+publish&hl=sl&client=opera&strip=1
 // http://msdn.microsoft.com/en-us/library/ms978583.aspx
 
+// TODO 3 -oPrimoz Gabrijelcic : Can futures be implemented without the language support?
+
 // TODO 3 -oPrimoz Gabrijelcic : Could RegisterWaitForSingleObject be used to wait on more than 64 objects at the same time? http://msdn.microsoft.com/en-us/library/ms685061(VS.85).aspx
 
 {$IF CompilerVersion >= 20}
