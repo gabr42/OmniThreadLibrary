@@ -79,6 +79,8 @@ type
   strict private
     FValue: integer;
   public
+    constructor Create;
+    destructor  Destroy; override;
     function  GetValue: integer;
     procedure SetValue(const value: integer);
   end; { TDataIntf }
@@ -234,6 +236,16 @@ begin
   else
     Log(Format('[%d/%s] Unknown message %d|%s', [task.UniqueID, task.Name, msg.msgID, sData]));
 end;
+
+constructor TDataIntf.Create;
+begin
+  inherited Create;
+end; { TDataIntf.Create }
+
+destructor TDataIntf.Destroy;
+begin
+  inherited;
+end; { TDataIntf.Destroy }
 
 function TDataIntf.GetValue: integer;
 begin

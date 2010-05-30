@@ -16,6 +16,8 @@
   to set this property. 
 - Added support for multiple simultaneous timers. SetTimer takes additional 'timerID'
   parameter. The old SetTimer assumes timerID = 0.
+- TOmniEventMonitor: Message retrieving loop destroys interface immediately, not when the
+  next message is received.
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
