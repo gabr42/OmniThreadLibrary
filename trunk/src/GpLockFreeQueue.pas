@@ -43,7 +43,8 @@
 
 // The following code requires at least Pentium 4 processor because SSE2 instructions are
 // used in the Move64 function.
-{ $DEFINE LFQ_DontUseMove64} // define to not use SSE2-specific stuff
+
+{$DEFINE LFQ_DontUseMove64} // defined to not use SSE2-specific stuff - apparently there's a lot of AMD CPUs without SSE2 support out there
 
 unit GpLockFreeQueue;
 
