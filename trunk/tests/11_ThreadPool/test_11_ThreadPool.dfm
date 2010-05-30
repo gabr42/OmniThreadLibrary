@@ -2,7 +2,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   Left = 0
   Top = 0
   Caption = 'OtlThreadPool tester'
-  ClientHeight = 441
+  ClientHeight = 478
   ClientWidth = 611
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,18 +15,18 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
   OnCreate = FormCreate
   DesignSize = (
     611
-    441)
+    478)
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
     Left = 143
     Top = 0
     Width = 468
-    Height = 441
+    Height = 478
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 0
+    TabOrder = 13
   end
   object btnRunTask: TButton
     Left = 8
@@ -34,7 +34,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Run task'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = btnScheduleClick
   end
   object btnScheduleTask: TButton
@@ -43,7 +43,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Schedule task'
-    TabOrder = 2
+    TabOrder = 1
     OnClick = btnScheduleClick
   end
   object btnSchedule6: TButton
@@ -52,7 +52,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Schedule 6 tasks'
-    TabOrder = 3
+    TabOrder = 2
     OnClick = btnSchedule6Click
   end
   object btnScheduleAndCancel: TButton
@@ -61,25 +61,25 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Schedule and cancel'
-    TabOrder = 4
+    TabOrder = 5
     OnClick = btnScheduleAndCancelClick
   end
   object btnCancelLong: TButton
     Left = 8
-    Top = 194
+    Top = 225
     Width = 129
     Height = 25
     Caption = 'Cancel long task'
-    TabOrder = 5
+    TabOrder = 7
     OnClick = btnScheduleAndCancelClick
   end
   object btnCancelAll: TButton
     Left = 8
-    Top = 225
+    Top = 256
     Width = 129
     Height = 25
     Caption = 'Cancel all'
-    TabOrder = 6
+    TabOrder = 8
     OnClick = btnCancelAllClick
   end
   object btnSchedule80: TButton
@@ -88,7 +88,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Schedule 80 tasks'
-    TabOrder = 7
+    TabOrder = 3
     OnClick = btnSchedule6Click
   end
   object btnSchedule80All: TButton
@@ -97,46 +97,55 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Width = 129
     Height = 25
     Caption = 'Schedule 80 in long q.'
-    TabOrder = 8
+    TabOrder = 4
     OnClick = btnSchedule6Click
   end
   object btnSaveLog: TButton
     Left = 8
-    Top = 408
+    Top = 445
     Width = 129
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Save log'
-    TabOrder = 9
+    TabOrder = 12
     OnClick = btnSaveLogClick
-    ExplicitTop = 364
+    ExplicitTop = 408
   end
   object btnScheduleUnobserved: TButton
-    Left = 8
-    Top = 280
-    Width = 129
-    Height = 25
-    Caption = 'Schedule unobserved'
-    TabOrder = 10
-    OnClick = btnScheduleUnobservedClick
-  end
-  object btnScheduleObserved: TButton
     Left = 8
     Top = 311
     Width = 129
     Height = 25
+    Caption = 'Schedule unobserved'
+    TabOrder = 9
+    OnClick = btnScheduleUnobservedClick
+  end
+  object btnScheduleObserved: TButton
+    Left = 8
+    Top = 342
+    Width = 129
+    Height = 25
     Caption = 'Schedule observed'
-    TabOrder = 11
+    TabOrder = 10
     OnClick = btnScheduleObservedClick
   end
   object btnScheduleAndWait: TButton
     Left = 8
-    Top = 360
+    Top = 391
     Width = 129
     Height = 25
     Caption = 'Schedule and wait'
-    TabOrder = 12
+    TabOrder = 11
     OnClick = btnScheduleAndWaitClick
+  end
+  object btnScheduleAndTerminate: TButton
+    Left = 8
+    Top = 194
+    Width = 129
+    Height = 25
+    Caption = 'Schedule and terminate'
+    TabOrder = 6
+    OnClick = btnScheduleAndCancelClick
   end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated

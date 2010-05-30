@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-04-06
-///   Version           : 1.21a
+///   Last modification : 2010-05-30
+///   Version           : 1.21b
 ///</para><para>
 ///   History:
+///     1.21b: 2010-05-30
+///       - Fixed TOmniTaskControl.WaitFor for pooled tasks.
 ///     1.21a: 2010-04-06
 ///       - [LN] Bug fixed: TOmniTaskControl.WaitFor would hang if thread was 
 ///         terminated externally.
@@ -2530,7 +2532,10 @@ end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
 begin
-  Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
+  if assigned(otcThread) then
+    Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1]
+  else
+    Result := WaitForSingleObject(otcSharedInfo.TerminatedEvent, maxWait_ms) = WAIT_OBJECT_0;
 end; { TOmniTaskControl.WaitFor }
 
 function TOmniTaskControl.WaitForInit: boolean;
