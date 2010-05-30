@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-03
-///   Version           : 1.01
+///   Last modification : 2010-05-30
+///   Version           : 1.01a
 ///</para><para>
 ///   History:
+///     1.01a: 2010-05-30
+///       - Message retrieving loop destroys interface immediately, not when the next
+///         message is received.
 ///     1.01: 2010-03-03
 ///       - Implemented TOmniEventMonitorPool, per-thread TOmniEventMonitor allocator.
 ///     1.0a: 2009-01-26
@@ -232,6 +235,7 @@ var
         break; //while
       end;
     end; //while
+    emCurrentMsg.MsgData._ReleaseAndClear;
   end; { ProcessMessages }
 
 begin { TOmniEventMonitor.WndProc }
@@ -257,6 +261,7 @@ begin { TOmniEventMonitor.WndProc }
         while endpoint.Receive(emCurrentMsg) do
           if Assigned(emOnTaskUndeliveredMessage) then
             emOnTaskUndeliveredMessage(task, emCurrentMsg);
+        emCurrentMsg.MsgData._ReleaseAndClear;
         if Assigned(emOnTaskTerminated) then
           OnTaskTerminated(task);
         Detach(task);
