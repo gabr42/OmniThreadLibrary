@@ -145,9 +145,11 @@ type
   EOmniValueConv = class(Exception);
 
   TOmniValue = packed record
+  {$IFDEF OTL_ERTTI}
   private
     class var DataSize: array [TTypeKind] of integer;
     class constructor Create;
+  {$ENDIF OTL_ERTTI}
   private
     ovData: int64;
     ovIntf: IInterface;
@@ -1084,6 +1086,7 @@ end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
 
+{$IFDEF OTL_ERTTI}
 class constructor TOmniValue.Create;
 begin
   FillChar(DataSize, SizeOf(DataSize), 0);
@@ -1093,6 +1096,7 @@ begin
   DataSize[tkInt64]   := SizeOf(int64);
   DataSize[tkPointer] := SizeOf(pointer);
 end; { TOmniValue.Create }
+{$ENDIF OTL_ERTTI}
 
 function TOmniValue.CastAsInt64: int64;
 begin
