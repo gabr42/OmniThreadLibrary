@@ -11,6 +11,9 @@
 - IOmniCommDispatchingObserver
 - TOmniCounter, auto-initialized wrapper around the IOmniCounter
 - TOmniMessageID record, used internally to implement timers.
+- TOmhiThreadPool: ThreadDataFactory can now accept either a function or a method.
+  Use ThreadDataFactory := @FunctionName or ThreadDataFactory := @ClassName.MethodName
+  to set this property. 
 - Added support for multiple simultaneous timers. SetTimer takes additional 'timerID'
   parameter. The old SetTimer assumes timerID = 0.
 

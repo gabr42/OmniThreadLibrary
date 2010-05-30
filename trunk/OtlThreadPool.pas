@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-01-09
-///   Version           : 2.03c
+///   Last modification : 2010-05-30
+///   Version           : 2.04
 /// </para><para>
 ///   History:
+///     2.04: 2010-05-30
+///       - ThreadDataFactory can now accept either a function or a method.
 ///     2.03c: 2010-01-09
 ///       - Fixed CancelAll.
 ///       - Can be compiled with /dLogThreadPool.
@@ -87,6 +89,7 @@ interface
 uses
   Windows,
   SysUtils,
+  OtlCommon,
   OtlTask;
 
 const
@@ -125,7 +128,19 @@ type
     property UniqueID: int64 read otpmiUniqueID;
   end; { TOmniThreadPoolMonitorInfo }
 
-  TOTPThreadDataFactory = function: IInterface;
+  TOTPThreadDataFactoryFunction = function: IInterface;
+  TOTPThreadDataFactoryMethod = function: IInterface of object;
+
+  TOTPThreadDataFactory = record
+  private
+    tdfExecutable: TOmniExecutable;
+  public
+    class operator Implicit(const a: TOTPThreadDataFactoryFunction): TOTPThreadDataFactory; inline;
+    class operator Implicit(const a: TOTPThreadDataFactoryMethod): TOTPThreadDataFactory; inline;
+    class operator Implicit(const a: TOTPThreadDataFactory): TOTPThreadDataFactoryFunction; inline;
+    class operator Implicit(const a: TOTPThreadDataFactory): TOTPThreadDataFactoryMethod; inline;
+    function Execute: IInterface;
+  end; { TOTPThreadDataFactory }
 
   /// <summary>Worker thread lifetime reporting handler.</summary> 
   TOTPWorkerThreadEvent = procedure(Sender: TObject; threadID: DWORD) of object;
@@ -149,7 +164,7 @@ type
     procedure SetName(const value: string);
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactory);
     procedure SetWaitOnTerminate_sec(value: integer);
-    // 
+    //
     function  Cancel(taskID: int64): boolean;
     procedure CancelAll;
     function  CountExecuting: integer;
@@ -167,7 +182,7 @@ type
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
     property ThreadDataFactory: TOTPThreadDataFactory read GetThreadDataFactory
-      write SetThreadDataFactory;
+      write SetThreadDataFactory; 
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec
       write SetWaitOnTerminate_sec;
@@ -197,7 +212,6 @@ uses
   SpinLock,
   GpStuff,
   OtlHooks,
-  OtlCommon,
   OtlComm,
   OtlContainerObserver,
   OtlTaskControl,
@@ -334,8 +348,16 @@ type
     procedure Schedule(var workItem: TOTPWorkItem);
     procedure SetMonitor(const params: TOmniValue);
     procedure SetName(const name: TOmniValue);
-    procedure SetThreadDataFactory(const ThreadDataFactory: TOmniValue);
+    procedure SetThreadDataFactory(const threadDataFactory: TOmniValue);
   end; { TOTPWorker }
+
+  TOTPThreadDataFactoryData = class
+  strict private
+    tdfdExecutable: TOTPThreadDataFactory;
+  public
+    constructor Create(const executable: TOTPThreadDataFactory);
+    property Executable: TOTPThreadDataFactory read tdfdExecutable;
+  end; { TOTPThreadDataFactoryData }
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
   strict private
@@ -428,6 +450,43 @@ begin
   otpmiThreadPoolOperation := tpoWorkItemCompleted;
   otpmiTaskID := taskID;
 end; { TOmniThreadPoolMonitorInfo.Create }
+
+{ TOTPThreadDataFactory }
+
+function TOTPThreadDataFactory.Execute: IInterface;
+begin
+  case tdfExecutable.Kind of
+    oekProcedure:
+      Result := TOTPThreadDataFactoryFunction(tdfExecutable.Proc)();
+    oekMethod:
+      Result := TOTPThreadDataFactoryMethod(tdfExecutable.Method)();
+    else raise Exception.Create('TOTPThreadDataFactory.Execute: Not supported!');
+  end;
+end; { TOTPThreadDataFactory.Execute }
+
+class operator TOTPThreadDataFactory.Implicit(const a: TOTPThreadDataFactoryFunction):
+  TOTPThreadDataFactory;
+begin
+  Result.tdfExecutable.Proc := TProcedure(a);
+end; { TOTPThreadDataFactory.Implicit }
+
+class operator TOTPThreadDataFactory.Implicit(const a: TOTPThreadDataFactoryMethod):
+  TOTPThreadDataFactory;
+begin
+  Result.tdfExecutable.Method := TMethod(a);
+end; { TOTPThreadDataFactory.Implicit }
+
+class operator TOTPThreadDataFactory.Implicit(const a: TOTPThreadDataFactory):
+  TOTPThreadDataFactoryFunction;
+begin
+  Result := TOTPThreadDataFactoryFunction(a.tdfExecutable.Proc);
+end; { TOTPThreadDataFactory.Implicit }
+
+class operator TOTPThreadDataFactory.Implicit(const a: TOTPThreadDataFactory):
+  TOTPThreadDataFactoryMethod;
+begin
+  Result := TOTPThreadDataFactoryMethod(a.tdfExecutable.Method);
+end; { TOTPThreadDataFactory.Implicit }
 
 { TOTPWorkItem }
 
@@ -543,7 +602,7 @@ begin
     Comm.Send(MSG_THREAD_CREATED, threadID);
     try
       if assigned(@owtThreadDataFactory) then
-        owtThreadData := owtThreadDataFactory()
+        owtThreadData := owtThreadDataFactory.Execute
       else
         owtThreadData := nil;
       while true do begin
@@ -1157,9 +1216,13 @@ begin
   owName := name;
 end; { TOTPWorker.SetName }
 
-procedure TOTPWorker.SetThreadDataFactory(const ThreadDataFactory: TOmniValue);
+procedure TOTPWorker.SetThreadDataFactory(const threadDataFactory: TOmniValue);
+var
+  factoryData: TOTPThreadDataFactoryData;
 begin
-  owThreadDataFactory := TOTPThreadDataFactory(cardinal(ThreadDataFactory));
+  factoryData := threadDataFactory.AsObject as TOTPThreadDataFactoryData;
+  owThreadDataFactory := factoryData.Executable;
+  FreeAndNil(factoryData);
 end; { TOTPWorker.SetThreadDataFactory }
 
 /// <summary>Move the thread to the 'stopping' list and tell it to CancelAll.<para> 
@@ -1174,6 +1237,14 @@ begin
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [owStoppingWorkers.Count]);{$ENDIF LogThreadPool}
 end; { TOTPWorker.StopThread }
+
+{ TOTPThreadDataFactoryData }
+
+constructor TOTPThreadDataFactoryData.Create(const executable: TOTPThreadDataFactory);
+begin
+  inherited Create;
+  tdfdExecutable := executable;
+end; { TOTPThreadDataFactoryData.Create }
 
 { TOmniThreadPool }
 
@@ -1359,11 +1430,11 @@ begin
   otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
 end; { TOmniThreadPool.SetName }
 
-procedure TOmniThreadPool.SetThreadDataFactory
-  (const value: TOTPThreadDataFactory);
+procedure TOmniThreadPool.SetThreadDataFactory(const value: TOTPThreadDataFactory);
 begin
   otpThreadDataFactory := @value;
-  otpWorkerTask.Invoke(@TOTPWorker.SetThreadDataFactory, cardinal(@value));
+  otpWorkerTask.Invoke(@TOTPWorker.SetThreadDataFactory,
+    TOTPThreadDataFactoryData.Create(value));
 end; { TOmniThreadPool.SetThreadDataFactory }
 
 procedure TOmniThreadPool.SetWaitOnTerminate_sec(value: integer);
