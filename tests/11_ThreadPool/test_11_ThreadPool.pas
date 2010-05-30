@@ -33,6 +33,7 @@ type
     btnScheduleUnobserved: TButton;
     btnScheduleObserved: TButton;
     btnScheduleAndWait: TButton;
+    btnScheduleAndTerminate: TButton;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
@@ -133,21 +134,29 @@ procedure TfrmTestOtlThreadPool.btnScheduleAndCancelClick(Sender: TObject);
 var
   delay_ms: integer;
   i       : integer;
+  task    : IOmniTaskControl;
   taskID  : int64;
 begin
-  if Sender = btnScheduleAndCancel then
+  if (Sender = btnScheduleAndCancel) or (Sender = btnScheduleAndTerminate) then
     delay_ms := 1000
   else
     delay_ms := 20000;
   GlobalOmniThreadPool.WaitOnTerminate_sec := 3;
-  taskID := CreateTask(THelloWorker.Create(Handle, delay_ms))
-    .MonitorWith(OmniTED).Schedule.UniqueID;
+  task := CreateTask(THelloWorker.Create(Handle, delay_ms))
+    .MonitorWith(OmniTED).Schedule;
+  taskID := task.UniqueID;
   for i := 1 to 50 do begin
     Application.ProcessMessages;
     Sleep(10);
   end;
   Log(Format('Cancelling task %d', [taskID]));
-  if GlobalOmniThreadPool.Cancel(taskID) then
+  if Sender = btnScheduleAndTerminate then begin
+    if task.Terminate(1000) then
+      Log(Format('Task %d was terminated', [taskID]))
+    else
+      Log(Format('Task %d failed to terminate', [taskID]));
+  end
+  else if GlobalOmniThreadPool.Cancel(taskID) then
     Log(Format('Task %d was cancelled', [taskID]))
   else
     Log(Format('Task %d was killed', [taskID]));
