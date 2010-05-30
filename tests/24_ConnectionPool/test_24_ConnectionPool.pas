@@ -22,6 +22,7 @@ type
     procedure OTLMonitorTaskTerminated(const task: IOmniTaskControl);
   private
     FConnectionPool: IOmniThreadPool;
+    function  CreateThreadData: IInterface;
     procedure Log(const msg: string);
     procedure WMMessage(var msg: TMessage); message WM_USER;
     procedure WMTaskStarted(var msg: TMessage); message WM_USER+1;
@@ -61,11 +62,6 @@ type
 var
   GConnPoolID: IOmniCounter;
 
-function CreateThreadData: IInterface;
-begin
-  Result := TConnectionPoolData.Create;
-end;
-
 procedure PostToForm(winMsg: cardinal; msg, data: integer);
 begin
   PostMessage(frmConnectionPoolDemo.Handle, winMsg, msg, data);
@@ -100,6 +96,11 @@ begin
   CreateTask(TaskProc).MonitorWith(OTLMonitor).Schedule(FConnectionPool);
 end;
 
+function TfrmConnectionPoolDemo.CreateThreadData: IInterface;
+begin
+  Result := TConnectionPoolData.Create;
+end;
+
 procedure TfrmConnectionPoolDemo.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   FConnectionPool.CancelAll;
@@ -108,7 +109,7 @@ end;
 procedure TfrmConnectionPoolDemo.FormCreate(Sender: TObject);
 begin
   FConnectionPool := CreateThreadPool('Connection pool');
-  FConnectionPool.ThreadDataFactory := CreateThreadData;
+  FConnectionPool.ThreadDataFactory := @TfrmConnectionPoolDemo.CreateThreadData;
   FConnectionPool.MaxExecuting := 3;
 end;
 
