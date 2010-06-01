@@ -51,9 +51,9 @@ begin
     Parallel.ForEach(1, inpMaxPrime.Value)
     .NumTasks(inpNumCPU.Value)
     .Aggregate(0,
-      procedure (var aggregate: TOmniValue; const value: integer)
+      procedure (var aggregate: TOmniValue; const value: TOmniValue)
       begin
-        aggregate := value + aggregate.AsInt64;
+        aggregate := aggregate.AsInt64 + value.AsInt64;
       end)
     .Execute(
       function (const value: integer): TOmniValue
@@ -93,9 +93,9 @@ begin
     .ForEach(1, inpMaxSummand.Value)
     .NumTasks(inpNumCPU.Value)
     .Aggregate(0,
-      procedure (var aggregate: TOmniValue; const value: integer)
+      procedure (var aggregate: TOmniValue; const value: TOmniValue)
       begin
-        aggregate := aggregate.AsInt64 + value;
+        aggregate := aggregate.AsInt64 + value.AsInt64;
       end)
     .Execute(
       function (const value: integer): TOmniValue
