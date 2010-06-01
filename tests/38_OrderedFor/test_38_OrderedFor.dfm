@@ -13,14 +13,14 @@ object frmOderedForDemo: TfrmOderedForDemo
   OldCreateOrder = False
   PixelsPerInch = 96
   TextHeight = 13
-  object btnUnorderedPrimes: TButton
+  object btnUnorderedPrimes1: TButton
     Left = 8
     Top = 8
     Width = 122
     Height = 25
-    Caption = 'Unordered primes'
+    Caption = 'Unordered primes 1'
     TabOrder = 0
-    OnClick = btnUnorderedPrimesClick
+    OnClick = btnUnorderedPrimes1Click
   end
   object lbLog: TListBox
     Left = 136
@@ -59,13 +59,13 @@ object frmOderedForDemo: TfrmOderedForDemo
     TabOrder = 4
     OnClick = Button2Click
   end
-  object Button3: TButton
+  object btnUnorderedPrimes2: TButton
     Left = 8
-    Top = 40
-    Width = 97
+    Top = 39
+    Width = 122
     Height = 25
     Caption = 'Unordered primes 2'
     TabOrder = 5
-    OnClick = Button3Click
+    OnClick = btnUnorderedPrimes2Click
   end
 end

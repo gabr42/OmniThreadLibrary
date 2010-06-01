@@ -156,7 +156,8 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Enumerate: IOmniParallelEnumerateLoop;
-    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop; { TODO 1 -ogabr : do we need TOmniBlockingCollection overload? }
+    function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
+    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  IntoNext: IOmniParallelIntoNextLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
@@ -172,7 +173,8 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Enumerate: IOmniParallelEnumerateLoop<T>;
-    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+    function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
+    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  IntoNext: IOmniParallelIntoNextLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
@@ -249,6 +251,10 @@ type
     oplCountStopped     : IOmniResourceCount;
     oplDataManager      : TOmniDataManager;
     oplDelegateEnum     : TOmniDelegateEnumerator;
+    oplHasIntoQueueIntf : boolean;
+    oplHasIntoQueueObj  : boolean;
+    oplIntoQueueIntf    : IOmniBlockingCollection;
+    oplIntoQueueObj     : TOmniBlockingCollection;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplOnStop           : TProc;
@@ -257,10 +263,13 @@ type
   strict protected
     procedure DoOnStop;
     procedure InternalExecute(loopBody: TOmniIteratorDelegate);
+    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
     function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
+    procedure SetIntoQueue(const queue: IOmniBlockingCollection); overload;
+    procedure SetIntoQueue(queue: TOmniBlockingCollection); overload;
     procedure SetNumTasks(taskCount: integer);
     procedure SetOnStop(stopDelegate: TProc);
     function  Stopped: boolean; inline;
@@ -290,7 +299,8 @@ type
     function  ExecuteEnum(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
     function  ForEach: IOmniParallelLoop;
     function  GetEnumerator: IOmniValueEnumerator;
-    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop; { TODO 1 -ogabr : do we need TOmniBlockingCollection overload? }
+    function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
+    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  IntoNext: IOmniParallelIntoNextLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
@@ -327,7 +337,8 @@ type
     function  ExecuteEnum(loopBody: TOmniIteratorIntoDelegate): IOmniParallelEnumerable;
     function  ForEach: IOmniParallelLoop<T>;
     function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
-    function  Into(queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+    function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
+    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  IntoNext: IOmniParallelIntoNextLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
@@ -590,6 +601,7 @@ begin
       try
         while (not Stopped) and localQueue.GetNext(value) do
           loopBody(value);
+        DoOnStop;
       finally FreeAndNil(localQueue); end;
     finally FreeAndNil(dataManager); end;
   end
@@ -637,6 +649,7 @@ begin
       try
         while (not Stopped) and localQueue.GetNext(value) do
           oplAggregator(oplAggregate, loopBody(value));
+        DoOnStop;
       finally FreeAndNil(localQueue); end;
     finally FreeAndNil(dataManager); end;
     Result := oplAggregate;
@@ -676,6 +689,82 @@ begin
   end;
 end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 
+procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
+var
+  dataManager : TOmniDataManager;
+  iTask       : integer;
+  localQueue  : TOmniLocalQueue;
+  result      : TOmniValue;
+  value       : TOmniValue;
+begin
+  { TODO 1 -ogabr : Could this be merged with the InternalExecute? Could internal task loop can be implemented as a delegate? Would that affect the speed too much? }
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
+     (not (ploNoWait in Options)) then
+  begin
+    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
+    try
+      localQueue := dataManager.CreateLocalQueue;
+      try
+        result := TOmniValue.Null;
+        while (not Stopped) and localQueue.GetNext(value) do begin
+          loopBody(value, result);
+          if not result.IsEmpty then begin
+            if oplHasIntoQueueObj then
+              oplIntoQueueObj.Add(result)
+            else if oplHasIntoQueueIntf then
+              oplIntoQueueIntf.Add(result);
+            result := TOmniValue.Null;
+          end;
+        end;
+        if oplHasIntoQueueObj then
+          oplIntoQueueObj.CompleteAdding
+        else if oplHasIntoQueueIntf then
+          oplIntoQueueIntf.CompleteAdding;
+        DoOnStop;
+      finally FreeAndNil(localQueue); end;
+    finally FreeAndNil(dataManager); end;
+  end
+  else begin
+    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
+    for iTask := 1 to oplNumTasks do
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          localQueue: TOmniLocalQueue;
+          result    : TOmniValue;
+          value     : TOmniValue;
+        begin
+          localQueue := oplDataManager.CreateLocalQueue;
+          try
+            result := TOmniValue.Null;
+            while (not Stopped) and localQueue.GetNext(value) do begin
+              loopBody(value, result);
+              if not result.IsEmpty then begin
+                if oplHasIntoQueueObj then
+                  oplIntoQueueObj.Add(result)
+                else if oplHasIntoQueueIntf then
+                  oplIntoQueueIntf.Add(result);
+                result := TOmniValue.Null;
+              end;
+            end;
+          finally FreeAndNil(localQueue); end;
+          if oplCountStopped.Allocate = 0 then begin
+            if oplHasIntoQueueObj then
+              oplIntoQueueObj.CompleteAdding
+            else if oplHasIntoQueueIntf then
+              oplIntoQueueIntf.CompleteAdding;
+            DoOnStop;
+          end;
+        end,
+        'Parallel.ForEach worker #' + IntToStr(iTask)
+      ).Unobserved
+       .Schedule;
+    if not (ploNoWait in Options) then
+      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
+  end;
+end; { TOmniParallelLoopBase.InternalExecuteInto }
+
 procedure TOmniParallelLoopBase.SetAggregator(defaultAggregateValue: TOmniValue;
   aggregator: TOmniAggregatorDelegate);
 begin
@@ -687,6 +776,20 @@ procedure TOmniParallelLoopBase.SetCancellationToken(const token: IOmniCancellat
 begin
   oplCancellationToken := token;
 end; { TOmniParallelLoopBase.SetCancellationToken }
+
+procedure TOmniParallelLoopBase.SetIntoQueue(const queue: IOmniBlockingCollection);
+begin
+  oplIntoQueueIntf := queue;
+  oplHasIntoQueueIntf := (oplIntoQueueIntf <> nil);
+  Assert(not (oplHasIntoQueueIntf and oplHasIntoQueueObj));
+end; { TOmniParallelLoopBase.SetIntoQueue }
+
+procedure TOmniParallelLoopBase.SetIntoQueue(queue: TOmniBlockingCollection);
+begin
+  oplIntoQueueObj := queue;
+  oplHasIntoQueueObj := (oplIntoQueueObj <> nil);
+  Assert(not (oplHasIntoQueueIntf and oplHasIntoQueueObj));
+end; { TOmniParallelLoopBase.SetIntoQueue }
 
 procedure TOmniParallelLoopBase.SetNumTasks(taskCount: integer);
 begin
@@ -735,10 +838,15 @@ begin
   InternalExecute(loopBody);
 end; { TOmniParallelLoop.Execute }
 
-function TOmniParallelLoop.Into(
-  queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
+function TOmniParallelLoop.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
 begin
-  { TODO 1 -ogabr : implement }
+  SetIntoQueue(queue);
+  Result := Self;
+end; { TOmniParallelLoop.Into }
+
+function TOmniParallelLoop.Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop;
+begin
+  SetIntoQueue(queue);
   Result := Self;
 end; { TOmniParallelLoop.Into }
 
@@ -853,7 +961,12 @@ end; { TOmniParallelLoop<T>.Enumerate }
 
 procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorIntoDelegate<T>);
 begin
-  { TODO 1 -ogabr : implement }
+  InternalExecuteInto(
+    procedure (const value: TOmniValue; var result: TOmniValue)
+    begin
+      loopBody(value.CastAs<T>, result);
+    end
+  );
 end; { TOmniParallelLoop<T>.Execute }
 
 function TOmniParallelLoop<T>.ExecuteEnum(
@@ -882,10 +995,15 @@ begin
   Result := nil;
 end; { TOmniParallelLoop<T>.GetEnumerator }
 
-function TOmniParallelLoop<T>.Into(
-  queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+function TOmniParallelLoop<T>.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
 begin
-  { TODO 1 -ogabr : implement }
+  SetIntoQueue(queue);
+  Result := Self;
+end; { TOmniParallelLoop<T>.Into }
+
+function TOmniParallelLoop<T>.Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>;
+begin
+  SetIntoQueue(queue);
   Result := Self;
 end; { TOmniParallelLoop<T>.Into }
 
@@ -921,7 +1039,7 @@ end; { TOmniParallelLoop<T>.PreserveOrder }
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorIntoDelegate);
 begin
-  { TODO 1 -ogabr : implement }
+  InternalExecuteInto(loopBody);
 end; { TOmniParallelLoop.Execute }
 
 function TOmniParallelLoop.ExecuteEnum(
