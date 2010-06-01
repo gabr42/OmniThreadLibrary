@@ -95,7 +95,6 @@ type
   IOmniParallelLoop<T> = interface;
 
   TOmniAggregatorDelegate = reference to procedure(var aggregate: TOmniValue; const value: TOmniValue);
-  TOmniAggregatorDelegate<T> = reference to procedure(var aggregate: TOmniValue; const value: T);
 
   TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
   TOmniIteratorDelegate<T> = reference to procedure(const value: T);
@@ -167,9 +166,7 @@ type
 
   IOmniParallelLoop<T> = interface
     function  Aggregate(defaultAggregateValue: T;
-      aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>; overload;
-    function  Aggregate(defaultAggregateValue: T;
-      aggregator: TOmniAggregatorDelegate<T>): IOmniParallelAggregatorLoop<T>; overload;
+      aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Enumerate: IOmniParallelEnumerateLoop<T>;
@@ -326,8 +323,6 @@ type
     destructor  Destroy; override;
     function  Aggregate(defaultAggregateValue: T;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>; overload;
-    function  Aggregate(defaultAggregateValue: T;
-      aggregator: TOmniAggregatorDelegate<T>): IOmniParallelAggregatorLoop<T>; overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Enumerate: IOmniParallelEnumerateLoop<T>;
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
@@ -900,18 +895,6 @@ function TOmniParallelLoop<T>.Aggregate(defaultAggregateValue: T;
   aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
 begin
   SetAggregator(TOmniValue.CastFrom<T>(defaultAggregateValue), aggregator);
-  Result := Self;
-end; { TOmniParallelLoop<T>.Aggregate }
-
-function TOmniParallelLoop<T>.Aggregate(defaultAggregateValue: T;
-  aggregator: TOmniAggregatorDelegate<T>): IOmniParallelAggregatorLoop<T>;
-begin
-  SetAggregator(TOmniValue.CastFrom<T>(defaultAggregateValue),
-    procedure (var aggregate: TOmniValue; const value: TOmniValue)
-    begin
-      aggregator(aggregate, value.CastAs<T>);
-    end
-  );
   Result := Self;
 end; { TOmniParallelLoop<T>.Aggregate }
 
