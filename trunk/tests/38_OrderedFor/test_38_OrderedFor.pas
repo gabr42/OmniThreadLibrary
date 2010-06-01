@@ -1,5 +1,7 @@
 unit test_38_OrderedFor;
 
+{ TODO 1 -ogabr : Test results in all demoes. }
+
 interface
 
 uses
@@ -8,17 +10,17 @@ uses
 
 type
   TfrmOderedForDemo = class(TForm)
-    btnUnorderedPrimes: TButton;
+    btnUnorderedPrimes1: TButton;
     lbLog: TListBox;
     btnOrderedPrimes: TButton;
     Button1: TButton;
     Button2: TButton;
-    Button3: TButton;
-    procedure btnUnorderedPrimesClick(Sender: TObject);
+    btnUnorderedPrimes2: TButton;
+    procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
-    procedure Button3Click(Sender: TObject);
+    procedure btnUnorderedPrimes2Click(Sender: TObject);
   private
     function IsPrime(i: integer): boolean;
   public
@@ -49,7 +51,7 @@ begin
   Result := true;
 end;
 
-procedure TfrmOderedForDemo.btnUnorderedPrimesClick(Sender: TObject);
+procedure TfrmOderedForDemo.btnUnorderedPrimes1Click(Sender: TObject);
 var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
@@ -67,7 +69,7 @@ begin
       begin
         if IsPrime(value) then begin
           primeQueue.Add(value);
-//          Sleep(200);
+//          Sleep(200); // enable to see how results from different threads are added during the calculation
         end;
       end);
   for prime in primeQueue do begin
@@ -76,7 +78,7 @@ begin
   end;
 end;
 
-procedure TfrmOderedForDemo.Button3Click(Sender: TObject);
+procedure TfrmOderedForDemo.btnUnorderedPrimes2Click(Sender: TObject);
 var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
