@@ -61,7 +61,6 @@ unit OtlParallel;
 
 interface
 
-// TODO 1 -oPrimoz Gabrijelcic : At least some functionality should work in D2007.
 // TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) Execute(method) and Execute(procedure)
 // TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) OnStop(method) and OnStop(procedure)
 // TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
@@ -71,11 +70,8 @@ interface
 // TODO 3 -oPrimoz Gabrijelcic : Output queueing function (anonymous, same as the delegate enumerator). That has a meaning only if it preserves the input order.
 // TODO 3 -oPrimoz Gabrijelcic : Need a 'non blocking' option for the ForEach (and some kind of completion signalisation; maybe nonblocking mode would have to use blocking collection as an output? or is that too restrictive?)
 // TODO 3 -oPrimoz Gabrijelcic : Do we need another Int delegate using 'integer' instead of 'int64'?
-
-{ TODO 1 -ogabr : There's no need for the 'Int' version of the delegate - <integer> can handle that
-  Actually, it is a nice readability improvement. Could ForEach(range) return
-  IOmniParallelLoopt<integer>?
-}
+// TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
+// TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 
 uses
   SysUtils,
@@ -262,6 +258,7 @@ type
     procedure InternalExecute(loopBody: TOmniIteratorDelegate);
     procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
     function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+    procedure InternalExecuteTask(task: TOmniTaskDelegate);
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
@@ -581,11 +578,8 @@ begin
 end; { TOmniParallelLoopBase.DoOnStop }
 
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
-var
-  iTask : integer;
-  worker: TOmniTaskDelegate;
 begin
-  worker :=
+  InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
       localQueue: TOmniLocalQueue;
@@ -598,95 +592,55 @@ begin
       finally FreeAndNil(localQueue); end;
       if oplCountStopped.Allocate = 0 then
         DoOnStop;
-    end;
-
-  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
-  oplCountStopped := CreateResourceCount(oplNumTasks);
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and (not (ploNoWait in Options)) then
-    worker(nil)
-  else begin
-    for iTask := 1 to oplNumTasks do
-      CreateTask(worker, 'Parallel.ForEach worker #' + IntToStr(iTask))
-        .Unobserved
-        .Schedule;
-    if not (ploNoWait in Options) then
-      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
-  end;
+    end
+  );
 end; { TOmniParallelLoopBase.InternalExecute }
 
 function TOmniParallelLoopBase.InternalExecuteAggregate(loopBody:
   TOmniIteratorAggregateDelegate): TOmniValue;
-var
-  dataManager  : TOmniDataManager;
-  iTask        : integer;
-  localQueue   : TOmniLocalQueue;
-  lockAggregate: IOmniCriticalSection;
-  value        : TOmniValue;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
-     (not (ploNoWait in Options)) then
-  begin
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      localQueue := dataManager.CreateLocalQueue;
+  if ploNoWait in Options then
+    raise Exception.Create('NoWait cannot be used with the Aggregate');
+
+  InternalExecuteTask(
+    procedure (const task: IOmniTask)
+    var
+      aggregate : TOmniValue;
+      localQueue: TOmniLocalQueue;
+      value     : TOmniValue;
+    begin
+      aggregate := TOmniValue.Null;
+      localQueue := oplDataManager.CreateLocalQueue;
       try
         while (not Stopped) and localQueue.GetNext(value) do
-          oplAggregator(oplAggregate, loopBody(value));
-        DoOnStop;
+          oplAggregator(aggregate, loopBody(value));
       finally FreeAndNil(localQueue); end;
-    finally FreeAndNil(dataManager); end;
-    Result := oplAggregate;
-  end
-  else begin
-    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
-    lockAggregate := CreateOmniCriticalSection;
-    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
-    for iTask := 1 to oplNumTasks do
-      CreateTask(
-        procedure (const task: IOmniTask)
-        var
-          aggregate : TOmniValue;
-          localQueue: TOmniLocalQueue;
-          value     : TOmniValue;
-        begin
-          aggregate := TOmniValue.Null;
-          localQueue := oplDataManager.CreateLocalQueue;
-          try
-            while (not Stopped) and localQueue.GetNext(value) do
-              oplAggregator(aggregate, loopBody(value));
-          finally FreeAndNil(localQueue); end;
-          task.Lock.Acquire;
-          try
-            oplAggregator(oplAggregate, aggregate);
-          finally task.Lock.Release; end;
-          if oplCountStopped.Allocate = 0 then
-            DoOnStop;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask)
-      ).WithLock(lockAggregate)
-       .Unobserved
-       .Schedule;
-    if not (ploNoWait in Options) then
-      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
-    Result := oplAggregate;
-  end;
+      if not assigned(task) then
+        oplAggregate := aggregate
+      else begin
+        task.Lock.Acquire;
+        try
+          oplAggregator(oplAggregate, aggregate);
+        finally task.Lock.Release; end;
+      end;
+      if oplCountStopped.Allocate = 0 then
+        DoOnStop;
+    end
+  );
+
+  Result := oplAggregate;
 end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
-var
-  dataManager : TOmniDataManager;
-  iTask       : integer;
-  localQueue  : TOmniLocalQueue;
-  result      : TOmniValue;
-  value       : TOmniValue;
 begin
-  { TODO 1 -ogabr : Could this be merged with the InternalExecute? Could internal task loop can be implemented as a delegate? Would that affect the speed too much? }
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
-     (not (ploNoWait in Options)) then
-  begin
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      localQueue := dataManager.CreateLocalQueue;
+  InternalExecuteTask(
+    procedure (const task: IOmniTask)
+    var
+      localQueue: TOmniLocalQueue;
+      result    : TOmniValue;
+      value     : TOmniValue;
+    begin
+      localQueue := oplDataManager.CreateLocalQueue;
       try
         result := TOmniValue.Null;
         while (not Stopped) and localQueue.GetNext(value) do begin
@@ -699,54 +653,38 @@ begin
             result := TOmniValue.Null;
           end;
         end;
+      finally FreeAndNil(localQueue); end;
+      if oplCountStopped.Allocate = 0 then begin
         if oplHasIntoQueueObj then
           oplIntoQueueObj.CompleteAdding
         else if oplHasIntoQueueIntf then
           oplIntoQueueIntf.CompleteAdding;
         DoOnStop;
-      finally FreeAndNil(localQueue); end;
-    finally FreeAndNil(dataManager); end;
-  end
+      end;
+    end
+  );
+end; { TOmniParallelLoopBase.InternalExecuteInto }
+
+procedure TOmniParallelLoopBase.InternalExecuteTask(task: TOmniTaskDelegate);
+var
+  iTask        : integer;
+  lockAggregate: IOmniCriticalSection;
+begin
+  oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
+  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and (not (ploNoWait in Options)) then
+    task(nil)
   else begin
-    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
-    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
+    lockAggregate := CreateOmniCriticalSection;
     for iTask := 1 to oplNumTasks do
-      CreateTask(
-        procedure (const task: IOmniTask)
-        var
-          localQueue: TOmniLocalQueue;
-          result    : TOmniValue;
-          value     : TOmniValue;
-        begin
-          localQueue := oplDataManager.CreateLocalQueue;
-          try
-            result := TOmniValue.Null;
-            while (not Stopped) and localQueue.GetNext(value) do begin
-              loopBody(value, result);
-              if not result.IsEmpty then begin
-                if oplHasIntoQueueObj then
-                  oplIntoQueueObj.Add(result)
-                else if oplHasIntoQueueIntf then
-                  oplIntoQueueIntf.Add(result);
-                result := TOmniValue.Null;
-              end;
-            end;
-          finally FreeAndNil(localQueue); end;
-          if oplCountStopped.Allocate = 0 then begin
-            if oplHasIntoQueueObj then
-              oplIntoQueueObj.CompleteAdding
-            else if oplHasIntoQueueIntf then
-              oplIntoQueueIntf.CompleteAdding;
-            DoOnStop;
-          end;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask)
-      ).Unobserved
-       .Schedule;
+      CreateTask(task, 'Parallel.ForEach worker #' + IntToStr(iTask))
+        .WithLock(lockAggregate)
+        .Unobserved
+        .Schedule;
     if not (ploNoWait in Options) then
       WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   end;
-end; { TOmniParallelLoopBase.InternalExecuteInto }
+end; { TOmniParallelLoopBase.InternalExecuteTask }
 
 procedure TOmniParallelLoopBase.SetAggregator(defaultAggregateValue: TOmniValue;
   aggregator: TOmniAggregatorDelegate);
