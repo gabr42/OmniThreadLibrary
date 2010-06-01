@@ -223,7 +223,7 @@ type
     function  MoveNext: boolean; override;
   end; { TOmniDelegateEnumerator }
 
-  TOmniParallelLoopOption = (ploNoWait);
+  TOmniParallelLoopOption = (ploNoWait, ploPreserveOrder);
   TOmniParallelLoopOptions = set of TOmniParallelLoopOption;
 
   TOmniParallelLoopBase = class(TInterfacedObject)
@@ -579,6 +579,7 @@ end; { TOmniParallelLoopBase.DoOnStop }
 
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
 begin
+  { TODO 5 -ogabr : Handle ploPreserveOrder }
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -633,6 +634,7 @@ end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
 begin
+  { TODO 5 -ogabr : Handle ploPreserveOrder }
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -797,7 +799,7 @@ end; { TOmniParallelLoop.OnStop }
 
 function TOmniParallelLoop.PreserveOrder: IOmniParallelLoop;
 begin
-  { TODO 1 -ogabr : implement }
+  Options := Options + [ploPreserveOrder];
   Result := Self;
 end; { TOmniParallelLoop.PreserveOrder }
 
@@ -942,7 +944,7 @@ end; { TOmniParallelLoop<T>.OnStop }
 
 function TOmniParallelLoop<T>.PreserveOrder: IOmniParallelLoop<T>;
 begin
-  { TODO 1 -ogabr : implement }
+  Options := Options + [ploPreserveOrder];
   Result := Self;
 end; { TOmniParallelLoop<T>.PreserveOrder }
 
