@@ -204,9 +204,9 @@ type
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
     {$ENDIF OTL_ERTTI}
-    class procedure Join(const task1, task2: TOmniTaskFunction); overload;
+    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
     class procedure Join(const task1, task2: TProc); overload;
-    class procedure Join(const tasks: array of TOmniTaskFunction); overload;
+    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
     class procedure Join(const tasks: array of TProc); overload;
   end; { Parallel }
 
@@ -445,17 +445,17 @@ begin
   Result := TOmniParallelLoop<T>.Create(enumerator);
 end; { Parallel.ForEach }
 
-class procedure Parallel.Join(const task1, task2: TOmniTaskFunction);
+class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate);
 begin
   Join([task1, task2]);
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const tasks: array of TOmniTaskFunction);
+class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate);
 var
   countStopped: TOmniResourceCount;
   firstTask   : IOmniTaskControl;
   prevTask    : IOmniTaskControl;
-  proc        : TOmniTaskFunction;
+  proc        : TOmniTaskDelegate;
   task        : IOmniTaskControl;
 begin
   if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
@@ -587,45 +587,33 @@ end; { TOmniParallelLoopBase.DoOnStop }
 
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
 var
-  dataManager : TOmniDataManager;
-  iTask       : integer;
-  localQueue  : TOmniLocalQueue;
-  value       : TOmniValue;
+  iTask : integer;
+  worker: TOmniTaskDelegate;
 begin
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
-     (not (ploNoWait in Options)) then
-  begin
-    dataManager := CreateDataManager(oplSourceProvider, oplNumTasks);
-    try
-      localQueue := dataManager.CreateLocalQueue;
+  worker :=
+    procedure (const task: IOmniTask)
+    var
+      localQueue: TOmniLocalQueue;
+      value     : TOmniValue;
+    begin
+      localQueue := oplDataManager.CreateLocalQueue;
       try
         while (not Stopped) and localQueue.GetNext(value) do
           loopBody(value);
-        DoOnStop;
       finally FreeAndNil(localQueue); end;
-    finally FreeAndNil(dataManager); end;
-  end
+      if oplCountStopped.Allocate = 0 then
+        DoOnStop;
+    end;
+
+  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+  oplCountStopped := CreateResourceCount(oplNumTasks);
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and (not (ploNoWait in Options)) then
+    worker(nil)
   else begin
-    oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
-    oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
     for iTask := 1 to oplNumTasks do
-      CreateTask(
-        procedure (const task: IOmniTask)
-        var
-          localQueue: TOmniLocalQueue;
-          value     : TOmniValue;
-        begin
-          localQueue := oplDataManager.CreateLocalQueue;
-          try
-            while (not Stopped) and localQueue.GetNext(value) do
-              loopBody(value);
-          finally FreeAndNil(localQueue); end;
-          if oplCountStopped.Allocate = 0 then
-            DoOnStop;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask)
-      ).Unobserved
-       .Schedule;
+      CreateTask(worker, 'Parallel.ForEach worker #' + IntToStr(iTask))
+        .Unobserved
+        .Schedule;
     if not (ploNoWait in Options) then
       WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   end;

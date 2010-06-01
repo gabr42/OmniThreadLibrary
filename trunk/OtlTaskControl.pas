@@ -435,7 +435,7 @@ type
 //  function CreateTask(worker: IOmniTaskGroup; const taskName: string = ''): IOmniTaskControl; overload;
 
 {$IFDEF OTL_Anonymous}
-  function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl; overload;
+  function CreateTask(worker: TOmniTaskDelegate; const taskName: string = ''): IOmniTaskControl; overload;
 {$ENDIF OTL_Anonymous}
 
   function CreateTaskGroup: IOmniTaskGroup;
@@ -540,7 +540,7 @@ type
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
     {$IFDEF OTL_Anonymous}
-    oteFunc              : TOmniTaskFunction;
+    oteFunc              : TOmniTaskDelegate;
     {$ENDIF OTL_Anonymous}
     oteMethod            : TOmniTaskMethod;
     oteMethodHash        : TGpStringObjectHash;
@@ -597,7 +597,7 @@ type
     constructor Create(method: TOmniTaskMethod); overload;
     constructor Create(proc: TOmniTaskProcedure); overload;
     {$IFDEF OTL_Anonymous}
-    constructor Create(func: TOmniTaskFunction); overload;
+    constructor Create(func: TOmniTaskDelegate); overload;
     {$ENDIF OTL_Anonymous}
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
@@ -736,7 +736,7 @@ type
     procedure SetUserDataVal(const idxData: TOmniValue; const value: TOmniValue);
   public
     {$IFDEF OTL_Anonymous}
-    constructor Create(worker: TOmniTaskFunction; const taskName: string); overload;
+    constructor Create(worker: TOmniTaskDelegate; const taskName: string); overload;
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
@@ -889,7 +889,7 @@ var
 { exports }
 
 {$IFDEF OTL_Anonymous}
-function CreateTask(worker: TOmniTaskFunction; const taskName: string = ''): IOmniTaskControl;
+function CreateTask(worker: TOmniTaskDelegate; const taskName: string = ''): IOmniTaskControl;
 begin
   Result := TOmniTaskControl.Create(worker, taskName);
 end; { CreateTask }
@@ -1287,7 +1287,7 @@ begin
 end; { TOmniTaskExecutor.Create }
 
 {$IFDEF OTL_Anonymous}
-constructor TOmniTaskExecutor.Create(func: TOmniTaskFunction);
+constructor TOmniTaskExecutor.Create(func: TOmniTaskDelegate);
 begin
   oteExecutorType := etFunction;
   oteFunc := func;
@@ -2027,7 +2027,7 @@ begin
 end; { TOmniTaskControl.Create }
 
 {$IFDEF OTL_Anonymous}
-constructor TOmniTaskControl.Create(worker: TOmniTaskFunction; const taskName: string);
+constructor TOmniTaskControl.Create(worker: TOmniTaskDelegate; const taskName: string);
 begin
   otcExecutor := TOmniTaskExecutor.Create(worker);
   Initialize(taskName);

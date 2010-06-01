@@ -157,7 +157,7 @@ type
   end; { IOmniTaskExecutor }
 
 {$IFDEF OTL_Anonymous}
-  TOmniTaskFunction = reference to procedure(const task: IOmniTask);
+  TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
 {$ENDIF OTL_Anonymous}
 
 implementation

@@ -18,6 +18,8 @@
   parameter. The old SetTimer assumes timerID = 0.
 - TOmniEventMonitor: Message retrieving loop destroys interface immediately, not when the
   next message is received.
+- TOmniTaskFunction renamed to TOmniTaskDelegate.
+- Added function CreateResourceCount(initialCount): IOmniResourceCount.
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 

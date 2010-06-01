@@ -142,6 +142,7 @@ type
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
+function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
 // Intel Atomic functions support
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
@@ -201,6 +202,11 @@ function CreateOmniCancellationToken: IOmniCancellationToken;
 begin
   Result := TOmniCancellationToken.Create;
 end; { CreateOmniCancellationToken }
+
+function CreateResourceCount(initialCount: integer): IOmniResourceCount;
+begin
+  Result := TOmniResourceCount.Create(initialCount);
+end; { CreateResourceCount }
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 asm
