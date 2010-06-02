@@ -14,12 +14,10 @@ type
     lbLog: TListBox;
     btnOrderedPrimes: TButton;
     Button1: TButton;
-    Button2: TButton;
     btnUnorderedPrimes2: TButton;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
     procedure btnUnorderedPrimes2Click(Sender: TObject);
   private
     function IsPrime(i: integer): boolean;
@@ -114,19 +112,21 @@ end;
 
 procedure TfrmOderedForDemo.Button1Click(Sender: TObject);
 var
+  dataQueue  : IOmniBlockingCollection;
   prime      : TOmniValue;
   resultQueue: IOmniBlockingCollection;
 begin
   lbLog.Clear;
+  dataQueue := TOmniBlockingCollection.Create;
   resultQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NoWait.IntoNext.Execute(
+  Parallel.ForEach(1, 1000).NoWait.Into(dataQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
         res := value;
     end
-  )
-  .ForEach.NoWait.Into(resultQueue).Execute(
+  );
+  Parallel.ForEach<integer>(dataQueue as IOmniValueEnumerable).NoWait.Into(resultQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       // Sophie Germain primes
@@ -135,23 +135,6 @@ begin
     end
   );
   for prime in resultQueue do
-    lbLog.Items.Add(IntToStr(prime));
-end;
-
-procedure TfrmOderedForDemo.Button2Click(Sender: TObject);
-var
-  prime: TOmniValue;
-begin
-  lbLog.Clear;
-  for prime in
-    Parallel.ForEach(1, 1000).Enumerate.Execute(
-      procedure (const value: TOmniValue; var res: TOmniValue)
-      begin
-        if IsPrime(value) then
-          res := value;
-      end
-    )
-  do
     lbLog.Items.Add(IntToStr(prime));
 end;
 

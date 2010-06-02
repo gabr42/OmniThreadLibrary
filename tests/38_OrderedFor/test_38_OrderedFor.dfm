@@ -50,22 +50,13 @@ object frmOderedForDemo: TfrmOderedForDemo
     TabOrder = 3
     OnClick = Button1Click
   end
-  object Button2: TButton
-    Left = 8
-    Top = 102
-    Width = 75
-    Height = 25
-    Caption = 'Button2'
-    TabOrder = 4
-    OnClick = Button2Click
-  end
   object btnUnorderedPrimes2: TButton
     Left = 8
     Top = 39
     Width = 122
     Height = 25
     Caption = 'Unordered primes 2'
-    TabOrder = 5
+    TabOrder = 4
     OnClick = btnUnorderedPrimes2Click
   end
 end
