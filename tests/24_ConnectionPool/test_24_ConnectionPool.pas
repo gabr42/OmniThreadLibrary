@@ -109,7 +109,7 @@ end;
 procedure TfrmConnectionPoolDemo.FormCreate(Sender: TObject);
 begin
   FConnectionPool := CreateThreadPool('Connection pool');
-  FConnectionPool.ThreadDataFactory := @TfrmConnectionPoolDemo.CreateThreadData;
+  FConnectionPool.SetThreadDataFactory(CreateThreadData);
   FConnectionPool.MaxExecuting := 3;
 end;
 
