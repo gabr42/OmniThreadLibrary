@@ -59,6 +59,8 @@
 
 unit OtlComm;
 
+{$WARN SYMBOL_PLATFORM OFF} // Win32Check
+
 interface
 
 uses

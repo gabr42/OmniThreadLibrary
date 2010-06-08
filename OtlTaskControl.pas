@@ -384,15 +384,18 @@ type
 //    function  Parallel(useThreadPool: IOmniThreadPool): IOmniTaskGroup;
 //  maybe: if one of group processes dies, TerminateAll should automatically happen?
   IOmniTaskGroup = interface ['{B36C08B4-0F71-422C-8613-63C4D04676B7}']
+    function  GetTasks: IOmniTaskControlList;
+  //
     function  Add(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  GetEnumerator: IOmniTaskControlListEnumerator;
     function  RegisterAllCommWith(const task: IOmniTask): IOmniTaskGroup;
     function  Remove(const taskControl: IOmniTaskControl): IOmniTaskGroup;
     function  RunAll: IOmniTaskGroup;
-    procedure SendToAll(const msg: TOmniMessage); 
+    procedure SendToAll(const msg: TOmniMessage);
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
     function  UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
+    property  Tasks: IOmniTaskControlList read GetTasks;
   end; { IOmniTaskGroup }
 
   TOmniSharedTaskInfo = class
@@ -844,6 +847,8 @@ type
   strict protected
     procedure AutoUnregisterComms;
     procedure InternalUnregisterAllCommFrom(const task: IOmniTask);
+  protected
+    function  GetTasks: IOmniTaskControlList; inline;
   public
     constructor Create;
     destructor  Destroy; override;
@@ -856,6 +861,7 @@ type
     function  TerminateAll(maxWait_ms: cardinal = INFINITE): boolean;
     function  UnregisterAllCommFrom(const task: IOmniTask): IOmniTaskGroup;
     function  WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
+    property Tasks: IOmniTaskControlList read GetTasks;
   end; { TOmniTaskGroup }
 
 implementation
@@ -2722,6 +2728,11 @@ function TOmniTaskGroup.GetEnumerator: IOmniTaskControlListEnumerator;
 begin
   Result := otgTaskList.GetEnumerator;
 end; { TOmniTaskGroup.GetEnumerator }
+
+function TOmniTaskGroup.GetTasks: IOmniTaskControlList;
+begin
+  Result := otgTaskList;
+end; { TOmniTaskGroup.GetTasks }
 
 procedure TOmniTaskGroup.InternalUnregisterAllCommFrom(const task: IOmniTask);
 var
