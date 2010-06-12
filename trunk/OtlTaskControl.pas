@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-30
-///   Version           : 1.21b
+///   Last modification : 2010-06-12
+///   Version           : 1.21c
 ///</para><para>
 ///   History:
+///     1.21c: 2010-06-12
+///       - TOmniTaskExecutor must always call Cleanup in case task was not executed.
+///         (Issue #19, http://code.google.com/p/omnithreadlibrary/issues/detail?id=19).
 ///     1.21b: 2010-05-30
 ///       - Fixed TOmniTaskControl.WaitFor for pooled tasks.
 ///     1.21a: 2010-04-06
@@ -1098,7 +1101,10 @@ end; { GetLock: TSynchroObject }
 
 function TOmniTask.GetName: string;
 begin
-  Result := otSharedInfo_ref.TaskName;
+  if assigned(otSharedInfo_ref) then
+    Result := otSharedInfo_ref.TaskName
+  else
+    Result := '';
 end; { TOmniTask.GetName }
 
 function TOmniTask.GetParam(idxParam: integer): TOmniValue;
@@ -1305,6 +1311,7 @@ destructor TOmniTaskExecutor.Destroy;
 begin
   oteInternalLock.Acquire;
   try
+    Cleanup;
     FreeAndNil(oteCommList);
     FreeAndNil(oteWaitObjectList);
   finally oteInternalLock.Release; end;
