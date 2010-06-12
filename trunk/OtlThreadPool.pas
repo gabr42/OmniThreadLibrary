@@ -238,8 +238,8 @@ type
     property ScheduledAt: TDateTime read owiScheduledAt;
     property Scheduled_ms: int64 read owiScheduled_ms;
     property StartedAt: TDateTime read owiStartedAt write owiStartedAt;
-    property uniqueID: int64 read owiUniqueID;
-    property task: IOmniTask read owiTask;
+    property UniqueID: int64 read owiUniqueID;
+    property Task: IOmniTask read owiTask;
     property Thread: TOTPWorkerThread read owiThread write owiThread;
   end; { TOTPWorkItem }
 
@@ -485,12 +485,15 @@ begin
   owiTask := task;
   owiScheduledAt := Now;
   owiScheduled_ms := DSiTimeGetTime64;
-  owiUniqueID := owiTask.uniqueID;
+  owiUniqueID := owiTask.UniqueID;
 end; { TOTPWorkItem.Create }
 
 function TOTPWorkItem.Description: string;
 begin
-  Result := Format('%s:%d', [task.Name, uniqueID]);
+  if assigned(task) then
+    Result := Format('%s:%d', [task.Name, UniqueID])
+  else
+    Result := Format(':%d', [UniqueID]);
 end; { TOTPWorkItem.Description }
 
 procedure TOTPWorkItem.TerminateTask(exitCode: integer; const exitMessage: string);
@@ -691,14 +694,14 @@ function TOTPWorkerThread.IsExecuting(taskID: int64): boolean;
 begin
   owtWorkItemLock.Acquire;
   try
-    Result := assigned(WorkItem_ref) and (WorkItem_ref.uniqueID = taskID);
+    Result := assigned(WorkItem_ref) and (WorkItem_ref.UniqueID = taskID);
   finally owtWorkItemLock.Release; end;
 end; { TOTPWorkerThread.IsExecuting }
 
 procedure TOTPWorkerThread.Log(const msg: string; const params: array of const);
 begin
   {$IFDEF LogThreadPool}
-  // use whatever logger you want
+  OutputDebugString(PChar(Format(msg, params)));
   {$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Log }
 
@@ -926,7 +929,7 @@ end; { TOTPWorker.LocateThread }
 procedure TOTPWorker.Log(const msg: string; const params: array of const );
 begin
   {$IFDEF LogThreadPool}
-  // use whatever logger you want
+  OutputDebugString(PChar(Format(msg, params)));
   {$ENDIF LogThreadPool}
 end; { TOTPWorker.Log }
 
@@ -1026,7 +1029,7 @@ begin
   end;
   if assigned(owMonitorObserver) then
     owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.uniqueID)));
+      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID)));
   {$IFDEF LogThreadPool}Log('Thread %s completed request %s',
     [worker.Description, workItem.Description]);
     Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
@@ -1351,7 +1354,7 @@ end; { TOmniThreadPool.IsIdle }
 procedure TOmniThreadPool.Log(const msg: string; const params: array of const);
 begin
   {$IFDEF LogThreadPool}
-  // use whatever logger you want
+  OutputDebugString(PChar(Format(msg, params)));
   {$ENDIF LogThreadPool}
 end; { TGpThreadPool.Log }
 
