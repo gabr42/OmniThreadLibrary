@@ -17,11 +17,13 @@ type
     btnTestFuture3: TButton;
     btnTestFuture4: TButton;
     btnTestFuture5: TButton;
+    btnTestFuture6: TButton;
     procedure btnTestFuture1Click(Sender: TObject);
     procedure btnTestFuture2Click(Sender: TObject);
     procedure btnTestFuture3Click(Sender: TObject);
     procedure btnTestFuture4Click(Sender: TObject);
     procedure btnTestFuture5Click(Sender: TObject);
+    procedure btnTestFuture6Click(Sender: TObject);
   private
     function CountPrimesTo(high: integer): TOmniFuture<integer>;
     function CountPrimesToHigh(high: integer): integer;
@@ -71,6 +73,7 @@ procedure TfrmFuturesDemo.btnTestFuture1Click(Sender: TObject);
 var
   numPrimes: IOmniFuture<integer>;
 begin
+  // Use future-generating method; call Value twice for testing.
   numPrimes := CountPrimesTo(CPrimesHigh);
 //   do something else
   lbLog.Items.Add(Format('%d primes from 1 to %d', [numPrimes.Value, CPrimesHigh]));
@@ -81,6 +84,7 @@ procedure TfrmFuturesDemo.btnTestFuture2Click(Sender: TObject);
 var
   numPrimes: IOmniFuture<integer>;
 begin
+  // Use fully coded delegate, create future twice for testing.
   numPrimes := TOmniFuture<integer>.Create(function: integer begin Result := 0 end);
   numPrimes := TOmniFuture<integer>.Create(function: integer
     var
@@ -100,6 +104,7 @@ procedure TfrmFuturesDemo.btnTestFuture3Click(Sender: TObject);
 var
   numPrimes: IOmniFuture<integer>;
 begin
+  // Use function-calling delegate.
   numPrimes := TOmniFuture<integer>.Create(function: integer
     begin
       Result := CountPrimesToHigh(CPrimesHigh);
@@ -113,7 +118,7 @@ procedure TfrmFuturesDemo.btnTestFuture4Click(Sender: TObject);
 var
   numPrimes: IOmniFuture<integer>;
 begin
-  // a method is automatically upgraded to a delegate
+  // Use method instead of delegate, test IsDone.
   numPrimes := TOmniFuture<integer>.Create(CountPrimesToMethod);
   while not numPrimes.IsDone do begin
     Sleep(200);
@@ -127,7 +132,7 @@ procedure TfrmFuturesDemo.btnTestFuture5Click(Sender: TObject);
 var
   numPrimes: IOmniFuture<integer>;
 begin
-  // a function is automatically upgraded to a delegate
+  // Use function instead of delegate, test Cancel, IsCancelled and Value after cancellation (must raise exception).
   numPrimes := TOmniFuture<integer>.CreateEx(CountPrimesToFunc);
   Sleep(200);
   if not numPrimes.IsDone then begin
@@ -135,10 +140,24 @@ begin
     lbLog.Update;
     numPrimes.Cancel;
   end;
-  lbLog.Items.Add(Format('... IsCancelled = %s', [BoolToStr(numPrimes.IsCancelled)]));
-  lbLog.Items.Add(Format('... IsDone = %s', [BoolToStr(numPrimes.IsDone)]));
+  lbLog.Items.Add(Format('... IsCancelled = %s', [BoolToStr(numPrimes.IsCancelled, true)]));
+  lbLog.Items.Add(Format('... IsDone = %s', [BoolToStr(numPrimes.IsDone, true)]));
   lbLog.Update;
   lbLog.Items.Add(Format('%d primes from 1 to %d', [numPrimes.Value, CPrimesHigh]));
+end;
+
+procedure TfrmFuturesDemo.btnTestFuture6Click(Sender: TObject);
+var
+  countPrimes: integer;
+  numPrimes  : IOmniFuture<integer>;
+begin
+  // Test TryValue.
+  numPrimes := TOmniFuture<integer>.Create(CountPrimesToMethod);
+  while not numPrimes.TryValue(200, countPrimes) do begin
+    lbLog.Items.Add('... not yet done');
+    lbLog.Update;
+  end;
+  lbLog.Items.Add(Format('%d primes from 1 to %d', [countPrimes, CPrimesHigh]));
 end;
 
 function TfrmFuturesDemo.CountPrimesTo(high: integer): TOmniFuture<integer>;

@@ -68,4 +68,13 @@ object frmFuturesDemo: TfrmFuturesDemo
     TabOrder = 5
     OnClick = btnTestFuture5Click
   end
+  object btnTestFuture6: TButton
+    Left = 8
+    Top = 163
+    Width = 89
+    Height = 25
+    Caption = 'Future Primes'
+    TabOrder = 6
+    OnClick = btnTestFuture6Click
+  end
 end
