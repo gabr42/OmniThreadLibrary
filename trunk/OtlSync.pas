@@ -135,7 +135,7 @@ type
     function  GetHandle: THandle;
   //
     procedure Clear;
-    function  IsSignaled: boolean;
+    function  IsSignalled: boolean;
     procedure Signal;
     property Handle: THandle read GetHandle;
   end; { IOmniCancellationToken }
@@ -179,14 +179,14 @@ type
   TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
   private
     octEvent     : TDSiEventHandle;
-    octIsSignaled: boolean;
+    octIsSignalled: boolean;
   protected
     function  GetHandle: THandle; inline;
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Clear; inline;
-    function  IsSignaled: boolean; inline;
+    function  IsSignalled: boolean; inline;
     procedure Signal; inline;
     property Handle: THandle read GetHandle;
   end; { TOmniCancellationToken }
@@ -374,7 +374,7 @@ end; { TOmniCancellationToken.Destroy }
 
 procedure TOmniCancellationToken.Clear;
 begin
-  octIsSignaled := false;
+  octIsSignalled := false;
   ResetEvent(octEvent);
 end; { TOmniCancellationToken.Clear }
 
@@ -383,14 +383,14 @@ begin
   Result := octEvent;
 end; { TOmniCancellationToken.GetHandle }
 
-function TOmniCancellationToken.IsSignaled: boolean;
+function TOmniCancellationToken.IsSignalled: boolean;
 begin
-  Result := octIsSignaled;
-end; { TOmniCancellationToken.IsSignaled }
+  Result := octIsSignalled;
+end; { TOmniCancellationToken.IsSignalled }
 
 procedure TOmniCancellationToken.Signal;
 begin
-  octIsSignaled := true;
+  octIsSignalled := true;
   SetEvent(octEvent);
 end; { TOmniCancellationToken.Signal }
 
