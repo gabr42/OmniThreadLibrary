@@ -50,4 +50,22 @@ object frmFuturesDemo: TfrmFuturesDemo
     TabOrder = 3
     OnClick = btnTestFuture3Click
   end
+  object btnTestFuture4: TButton
+    Left = 8
+    Top = 101
+    Width = 89
+    Height = 25
+    Caption = 'Future Primes'
+    TabOrder = 4
+    OnClick = btnTestFuture4Click
+  end
+  object btnTestFuture5: TButton
+    Left = 8
+    Top = 132
+    Width = 89
+    Height = 25
+    Caption = 'Future Primes'
+    TabOrder = 5
+    OnClick = btnTestFuture5Click
+  end
 end
