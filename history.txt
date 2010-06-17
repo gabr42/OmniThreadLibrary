@@ -19,6 +19,7 @@
   next message is received.
 - TOmniTaskFunction renamed to TOmniTaskDelegate.
 - Added function CreateResourceCount(initialCount): IOmniResourceCount.
+- renamed IOmniCancellationToken.IsSignaled -> IsSignalled
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
