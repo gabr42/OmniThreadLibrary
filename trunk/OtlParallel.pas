@@ -61,15 +61,9 @@ unit OtlParallel;
 
 interface
 
-// TODO 1 -oPrimoz Gabrijelcic : ForEach should directly take TOmniBlockingCollection and IOmniBlockingCollection - demo 38.
-// TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) Execute(method) and Execute(procedure)
-// TODO 1 -oPrimoz Gabrijelcic : Add (primitive?) OnStop(method) and OnStop(procedure)
 // TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."? Better: Parallel.ForEach.NoWait and use for over the blocking collection. Add a demo.
-// TODO 3 -oPrimoz Gabrijelcic : ForEach chaining (output of one ForEach goes into the next ForEach); must have a simple syntax and good task scheduler.
-// TODO 3 -oPrimoz Gabrijelcic : Output queueing function (anonymous, same as the delegate enumerator). That has a meaning only if it preserves the input order.
-// TODO 3 -oPrimoz Gabrijelcic : Need a 'non blocking' option for the ForEach (and some kind of completion signalisation; maybe nonblocking mode would have to use blocking collection as an output? or is that too restrictive?)
 // TODO 3 -oPrimoz Gabrijelcic : Do we need another Int delegate using 'integer' instead of 'int64'?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
