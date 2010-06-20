@@ -605,10 +605,11 @@ begin
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
-      localQueue: TOmniLocalQueue;
-      position  : int64;
-      result    : TOmniValue;
-      value     : TOmniValue;
+      localQueue      : TOmniLocalQueue;
+      outputBuffer_ref: TOmniOutputBuffer;
+      position        : int64;
+      result          : TOmniValue;
+      value           : TOmniValue;
     begin
       if oplHasIntoQueueObj then
         oplDataManager.SetOutput(oplIntoQueueObj)
@@ -616,17 +617,20 @@ begin
         oplDataManager.SetOutput(oplIntoQueueIntf);
       localQueue := oplDataManager.CreateLocalQueue;
       try
-        result := TOmniValue.Null;
-        while (not Stopped) and localQueue.GetNext(position, value) do begin
-          loopBody(value, result);
-          if not result.IsEmpty then begin
-            oplDataManager.Submit(position, result);
-            result := TOmniValue.Null;
+        outputBuffer_ref := oplDataManager.AllocateOutputBuffer;
+        try
+          result := TOmniValue.Null;
+          while (not Stopped) and localQueue.GetNext(position, value) do begin
+            loopBody(value, result);
+            if not result.IsEmpty then begin
+              outputBuffer_ref.Submit(position, result);
+              result := TOmniValue.Null;
+            end;
           end;
-        end;
+        finally oplDataManager.ReleaseOutputBuffer(outputBuffer_ref); end;
       finally FreeAndNil(localQueue); end;
-      oplDataManager.Flush;
       if oplCountStopped.Allocate = 0 then begin
+        oplDataManager.Flush;
         if oplHasIntoQueueObj then
           oplIntoQueueObj.CompleteAdding
         else if oplHasIntoQueueIntf then
