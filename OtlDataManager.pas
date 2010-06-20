@@ -42,6 +42,9 @@ type
     function  GetPackageSizeLimit: integer; virtual; abstract;
   end; { TOmniSourceProvider }
 
+  TOmniDataManagerOption = (dmoPreserveOrder);
+  TOmniDataManagerOptions = set of TOmniDataManagerOption;
+
   ///<summary>Data manager. All methods can and will be called from multiple threads
   ///    at the same time!</summary>
   TOmniDataManager = class abstract
@@ -55,7 +58,8 @@ function  CreateSourceProvider(enumerator: TOmniValueEnumerator): TOmniSourcePro
 function  CreateSourceProvider(enumerator: IOmniValueEnumerator): TOmniSourceProvider; overload;
 function  CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; overload;
 
-function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer): TOmniDataManager;
+function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer;
+  options: TOmniDataManagerOptions): TOmniDataManager;
 
 (*
 type
@@ -113,25 +117,6 @@ type
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
 
-  ///<summary>Integer range source provider.</summary>
-  TOmniIntegerRangeProvider = class(TOmniSourceProvider)
-  strict private
-    irpCount: TGp4AlignedInt;
-    irpHigh : integer;
-    irpLock : TOmniCS;
-    irpLow  : integer;
-    irpStep : integer;
-  strict protected
-    function  CalcCount(low, high, step: integer): integer; inline;
-  public
-    constructor Create(low, high, step: integer);
-    function  Count: int64; override;
-    function  CreateDataPackage: TOmniDataPackage; override;
-    function  GetCapabilities: TOmniSourceProviderCapabilities; override;
-    function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
-    function  GetPackageSizeLimit: integer; override;
-  end; { TOmniIntegerRangeProvider }
-
   ///<summary>Data package storing a list of TOmniValues.</summary>
   TOmniValueEnumeratorDataPackage = class(TOmniDataPackageBase)
   strict private
@@ -149,8 +134,34 @@ type
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniValueEnumeratorDataPackage }
 
+  TOmniSourceProviderBase = class(TOmniSourceProvider)
+  strict private
+    spbStorePositions: boolean;
+  public
+    property StorePositions: boolean read spbStorePositions write spbStorePositions;
+  end; { TOmniSourceProviderBase }
+
+  ///<summary>Integer range source provider.</summary>
+  TOmniIntegerRangeProvider = class(TOmniSourceProviderBase)
+  strict private
+    irpCount: TGp4AlignedInt;
+    irpHigh : integer;
+    irpLock : TOmniCS;
+    irpLow  : integer;
+    irpStep : integer;
+  strict protected
+    function  CalcCount(low, high, step: integer): integer; inline;
+  public
+    constructor Create(low, high, step: integer);
+    function  Count: int64; override;
+    function  CreateDataPackage: TOmniDataPackage; override;
+    function  GetCapabilities: TOmniSourceProviderCapabilities; override;
+    function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; override;
+    function  GetPackageSizeLimit: integer; override;
+  end; { TOmniIntegerRangeProvider }
+
   ///<summary>TOmniValue source provider supporting mutable collections and parallel enumerators.</summary>
-  TOmniValueEnumeratorProvider = class(TOmniSourceProvider)
+  TOmniValueEnumeratorProvider = class(TOmniSourceProviderBase)
   strict protected
     vepEnumerator: IOmniValueEnumerator;
   public
@@ -162,7 +173,7 @@ type
     function  GetPackageSizeLimit: integer; override;
   end; { TOmniValueEnumeratorProvider }
 
-  TOmniEnumeratorProvider = class(TOmniSourceProvider)
+  TOmniEnumeratorProvider = class(TOmniSourceProviderBase)
   strict private
     epEnumeratorIntf: IEnumerator;
     epEnumeratorObj : TOmniValueEnumerator;
@@ -178,9 +189,6 @@ type
     property EnumeratorIntf: IEnumerator read epEnumeratorIntf;
     property EnumeratorObj: TOmniValueEnumerator read epEnumeratorObj;
   end; { TOmniEnumeratorProvider }
-
-  TOmniDelphiEnumeratorProvider = class(TOmniSourceProvider)
-  end; { TOmniDelphiEnumeratorProvider }
 
   TOmniBaseDataManager = class;
 
@@ -200,15 +208,18 @@ type
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
     dmNumWorkers        : integer;
+    dmOptions           : TOmniDataManagerOptions;
     dmPacketSizes       : array of integer;
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
-    dmSourceProvider_ref: TOmniSourceProvider;
+    dmSourceProvider_ref: TOmniSourceProviderBase;
     dmStealIdx          : integer;
   strict protected
+    function  GetSourceProvider: TOmniSourceProvider;
     procedure InitializePacketSizes;
   public
-    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
+    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer;
+      options: TOmniDataManagerOptions);
     destructor  Destroy; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
     function  GetDataCountForGeneration(generation: integer): integer;
@@ -217,7 +228,7 @@ type
       generation: integer): boolean; virtual; abstract;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
     function  StealPackage(package: TOmniDataPackage): boolean;
-    property SourceProvider: TOmniSourceProvider read dmSourceProvider_ref;
+    property SourceProvider: TOmniSourceProvider read GetSourceProvider;
   end; { TOmniBaseDataManager }
 
   ///<summary>Data manager for countable data.</summary>
@@ -234,7 +245,8 @@ type
   strict private
     hdmEstimatedPackageSize: TGp4AlignedInt;
   public
-    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer);
+    constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer; options:
+      TOmniDataManagerOptions);
     function  GetNextFromProvider(package: TOmniDataPackage;
       generation: integer): boolean; override;
   end; { TOmniHeuristicDataManager }
@@ -261,13 +273,13 @@ begin
   Result := TOmniEnumeratorProvider.Create(enumerator);
 end; { CreateSourceProvider }
 
-function CreateDataManager(sourceProvider: TOmniSourceProvider;
-  numWorkers: integer): TOmniDataManager;
+function CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer;
+  options: TOmniDataManagerOptions): TOmniDataManager;
 begin
   if spcCountable in sourceProvider.GetCapabilities then
-    Result := TOmniCountableDataManager.Create(sourceProvider, numWorkers)
+    Result := TOmniCountableDataManager.Create(sourceProvider, numWorkers, options)
   else
-    Result := TOmniHeuristicDataManager.Create(sourceProvider, numWorkers);
+    Result := TOmniHeuristicDataManager.Create(sourceProvider, numWorkers, options);
 end; { CreateDataManager }
 
 { TOmniDataPackageBase }
@@ -380,6 +392,9 @@ var
   high      : int64;
   intPackage: TOmniIntegerDataPackage absolute package;
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniIntegerRangeProvider.GetPackage
+  Assert(not StorePositions);
+
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
   {$IFDEF Debug}Assert(dataCount > 0);{$ENDIF}
   if irpCount.Value <= 0 then
@@ -454,7 +469,6 @@ end; { TOmniValueEnumeratorDataPackage.GetPackageSizeLimit }
 function TOmniValueEnumeratorDataPackage.Prepare(dataCount: integer): integer;
 begin
   // only called when the package is empty
-//  {$IFDEF Debug} Assert(vedpDataQueue.IsEmpty); {$ENDIF}
   if dataCount <= CMaxValueEnumeratorDataPackageSize then
     Result := dataCount
   else
@@ -509,6 +523,9 @@ var
   timeout   : cardinal;
   value     : TOmniValue;
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorProvider.GetPackage
+  Assert(not StorePositions);
+
   Result := false;
   dataCount := intPackage.Prepare(dataCount);
   timeout := INFINITE;
@@ -561,6 +578,9 @@ var
   iData     : integer;
   intPackage: TOmniValueEnumeratorDataPackage absolute package;
 begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniEnumeratorProvider.GetPackage
+  Assert(not StorePositions);
+
   Result := false;
   epEnumLock.Acquire;
   try
@@ -628,12 +648,14 @@ end; { TOmniLocalQueueImpl.Split }
 { TOmniBaseDataManager }
 
 constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider; numWorkers:
-  integer);
+  integer; options: TOmniDataManagerOptions);
 begin
   inherited Create;
-  dmSourceProvider_ref := sourceProvider;
+  dmSourceProvider_ref := (sourceProvider as TOmniSourceProviderBase);
   dmQueueList := TObjectList.Create;
   dmNumWorkers := numWorkers;
+  dmOptions := options;
+  dmSourceProvider_ref.StorePositions := (dmoPreserveOrder in dmOptions);
   InitializePacketSizes;
 end; { TOmniBaseDataManager.Create }
 
@@ -678,6 +700,11 @@ begin
   if Result then
     intPackage.NextGeneration;
 end; { TOmniBaseDataManager.GetNext }
+
+function TOmniBaseDataManager.GetSourceProvider: TOmniSourceProvider;
+begin
+  Result := dmSourceProvider_ref;
+end; { TOmniBaseDataManager.GetSourceProvider }
 
 procedure TOmniBaseDataManager.InitializePacketSizes;
 var
@@ -739,9 +766,9 @@ end; { TOmniCountableDataManager.GetNextFromProvider }
 { TOmniHeuristicDataManager }
 
 constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider;
-  numWorkers: integer);
+  numWorkers: integer; options: TOmniDataManagerOptions);
 begin
-  inherited Create(sourceProvider, numWorkers);
+  inherited Create(sourceProvider, numWorkers, options);
   hdmEstimatedPackageSize.Value := GetDataCountForGeneration(High(integer)); // hope for the best
 end; { TOmniHeuristicDataManager.Create }
 
