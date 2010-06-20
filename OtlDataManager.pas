@@ -5,7 +5,8 @@ interface
 uses
   GpStuff,
   OtlCommon,
-  OtlContainers;
+  OtlContainers,
+  OtlCollections;
 
 type
   ///<summary>Source provider capabilities.</summary>
@@ -27,7 +28,8 @@ type
   ///<summary>A data package queue between a single worker and shared data manager.</summary>
   TOmniLocalQueue = class abstract
   public
-    function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
+    function  GetNext(var value: TOmniValue): boolean; overload; virtual; abstract;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniLocalQueue }
 
@@ -50,7 +52,11 @@ type
   TOmniDataManager = class abstract
   public
     function  CreateLocalQueue: TOmniLocalQueue; virtual; abstract;
+    procedure Flush; virtual; abstract;
     function  GetNext(package: TOmniDataPackage): boolean; virtual; abstract;
+    procedure SetOutput(queue: TOmniBlockingCollection); overload; virtual; abstract;
+    procedure SetOutput(queue: IOmniBlockingCollection); overload; virtual; abstract;
+    procedure Submit(position: int64; const data: TOmniValue); virtual; abstract;
   end; { TOmniDataManager }
 
 function  CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
@@ -107,13 +113,14 @@ type
     idpHigh    : int64;
     idpHighSign: int64;
     idpLow     : TGp8AlignedInt64;
+    idpPosition: integer;
     idpSign    : integer;
     idpStep    : integer;
     idpStepAbs : integer;
   public
     function  GetNext(var value: TOmniValue): boolean; override;
     function  HasData: boolean;
-    procedure Initialize(low, high, step: integer);
+    procedure Initialize(low, high, step, position: integer);
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
 
@@ -144,11 +151,12 @@ type
   ///<summary>Integer range source provider.</summary>
   TOmniIntegerRangeProvider = class(TOmniSourceProviderBase)
   strict private
-    irpCount: TGp4AlignedInt;
-    irpHigh : integer;
-    irpLock : TOmniCS;
-    irpLow  : integer;
-    irpStep : integer;
+    irpCount   : TGp4AlignedInt;
+    irpHigh    : integer;
+    irpLock    : TOmniCS;
+    irpLow     : integer;
+    irpPosition: integer;
+    irpStep    : integer;
   strict protected
     function  CalcCount(low, high, step: integer): integer; inline;
   public
@@ -200,7 +208,8 @@ type
   public
     constructor Create(owner: TOmniBaseDataManager);
     destructor  Destroy; override;
-    function  GetNext(var value: TOmniValue): boolean; override;
+    function  GetNext(var value: TOmniValue): boolean; overload; override;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniLocalQueueImpl }
 
@@ -222,12 +231,16 @@ type
       options: TOmniDataManagerOptions);
     destructor  Destroy; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
+    procedure Flush; override;
     function  GetDataCountForGeneration(generation: integer): integer;
     function  GetNext(package: TOmniDataPackage): boolean; override;
     function  GetNextFromProvider(package: TOmniDataPackage;
       generation: integer): boolean; virtual; abstract;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
+    procedure SetOutput(queue: TOmniBlockingCollection); overload; override;
+    procedure SetOutput(queue: IOmniBlockingCollection); overload; override;
     function  StealPackage(package: TOmniDataPackage): boolean;
+    procedure Submit(position: int64; const data: TOmniValue); override;
     property SourceProvider: TOmniSourceProvider read GetSourceProvider;
   end; { TOmniBaseDataManager }
 
@@ -309,7 +322,7 @@ begin
   Result := idpStep <> 0;
 end; { TOmniIntegerDataPackage.HasData }
 
-procedure TOmniIntegerDataPackage.Initialize(low, high, step: integer);
+procedure TOmniIntegerDataPackage.Initialize(low, high, step, position: integer);
 begin
   {$IFDEF Debug}Assert(step <> 0);{$ENDIF}
   idpLow.Value := low;
@@ -321,6 +334,7 @@ begin
   else
     idpSign := -1;
   idpHighSign := idpHigh * idpSign;
+  idpPosition := position;
 end; { TOmniIntegerDataPackage.Initialize }
 
 function TOmniIntegerDataPackage.Split(package: TOmniDataPackage): boolean;
@@ -345,7 +359,7 @@ begin
       if Result and (high * idpSign > idpHighSign) then
         high := (idpHigh div idpStepAbs) * idpStepAbs;
       if Result then begin
-        intPackage.Initialize(low, high, idpStep);
+        intPackage.Initialize(low, high, idpStep, 0);
       end;
     end;
   end;
@@ -360,6 +374,7 @@ begin
   irpLow := low;
   irpHigh := high;
   irpStep := step;
+  irpPosition := 1;
   irpCount.Value := CalcCount(low, high, step);
 end; { TOmniIntegerRangeProvider.Create }
 
@@ -392,9 +407,6 @@ var
   high      : int64;
   intPackage: TOmniIntegerDataPackage absolute package;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniIntegerRangeProvider.GetPackage
-  Assert(not StorePositions);
-
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
   {$IFDEF Debug}Assert(dataCount > 0);{$ENDIF}
   if irpCount.Value <= 0 then
@@ -405,7 +417,8 @@ begin
       if dataCount > irpCount.Value then
         dataCount := irpCount.Value;
       high := irpLow + (dataCount - 1) * irpStep;
-      intPackage.Initialize(irpLow, high, irpStep);
+      intPackage.Initialize(irpLow, high, irpStep, irpPosition);
+      Inc(irpPosition, dataCount);
       irpLow := high + irpStep;
       irpCount.Value := CalcCount(irpLow, irpHigh, irpStep);
     finally irpLock.Release; end;
@@ -424,7 +437,7 @@ constructor TOmniValueEnumeratorDataPackage.Create;
 begin
   inherited Create;
   vedpDataQueue := TOmniBaseQueue.Create; //TOmniBaseBoundedQueue.Create;
-//  vedpDataQueue.Initialize(CMaxValueEnumeratorDataPackageSize+1, SizeOf(TOmniValue));
+//  vedpDataQueue.Initialize(2*CMaxValueEnumeratorDataPackageSize+2, SizeOf(TOmniValue)); // there are bugs in the TOmniBaseBoundedQueue
 end; { TOmniValueEnumeratorDataPackage.Create }
 
 destructor TOmniValueEnumeratorDataPackage.Destroy;
@@ -637,6 +650,12 @@ begin
   end;
 end; { TOmniLocalQueueImpl.GetNext }
 
+function TOmniLocalQueueImpl.GetNext(var position: int64; var value: TOmniValue): boolean;
+begin
+  Result := false;
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniLocalQueueImpl.GetNext
+end; { TOmniLocalQueueImpl.GetNext }
+
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
 begin
   // this method is called when queue list is locked, therefore lqiDataPackage is
@@ -681,6 +700,11 @@ begin
     dmQueueList.Add(Result);
   finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.CreateLocalQueue }
+
+procedure TOmniBaseDataManager.Flush;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.Flush
+end; { TOmniBaseDataManager.Flush }
 
 function TOmniBaseDataManager.GetDataCountForGeneration(generation: integer): integer;
 begin
@@ -733,6 +757,16 @@ begin
   end;
 end; { TOmniBaseDataManager.InitializePacketSizes }
 
+procedure TOmniBaseDataManager.SetOutput(queue: TOmniBlockingCollection);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.SetOutput;
+end; { TOmniBaseDataManager.SetOutput }
+
+procedure TOmniBaseDataManager.SetOutput(queue: IOmniBlockingCollection);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.SetOutput
+end; { TOmniBaseDataManager.SetOutput }
+
 function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
 var
   iQueue  : integer;
@@ -740,6 +774,7 @@ var
   queueCnt: integer;
 begin
   // try to steal package from other workers
+  // TODO 1 -oPrimoz Gabrijelcic : Do not steal in dmoPreserveOrder mode
   Result := true;
   dmQueueLock.Acquire;
   try
@@ -754,6 +789,11 @@ begin
   finally dmQueueLock.Release; end;
   Result := false;
 end; { TOmniBaseDataManager.StealPackage }
+
+procedure TOmniBaseDataManager.Submit(position: int64; const data: TOmniValue);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.Submit
+end; { TOmniBaseDataManager.Submit }
 
 { TOmniCountableDataManager }
 

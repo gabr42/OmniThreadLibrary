@@ -606,23 +606,26 @@ begin
     procedure (const task: IOmniTask)
     var
       localQueue: TOmniLocalQueue;
+      position  : int64;
       result    : TOmniValue;
       value     : TOmniValue;
     begin
+      if oplHasIntoQueueObj then
+        oplDataManager.SetOutput(oplIntoQueueObj)
+      else if oplHasIntoQueueIntf then
+        oplDataManager.SetOutput(oplIntoQueueIntf);
       localQueue := oplDataManager.CreateLocalQueue;
       try
         result := TOmniValue.Null;
-        while (not Stopped) and localQueue.GetNext(value) do begin
+        while (not Stopped) and localQueue.GetNext(position, value) do begin
           loopBody(value, result);
           if not result.IsEmpty then begin
-            if oplHasIntoQueueObj then
-              oplIntoQueueObj.Add(result)
-            else if oplHasIntoQueueIntf then
-              oplIntoQueueIntf.Add(result);
+            oplDataManager.Submit(position, result);
             result := TOmniValue.Null;
           end;
         end;
       finally FreeAndNil(localQueue); end;
+      oplDataManager.Flush;
       if oplCountStopped.Allocate = 0 then begin
         if oplHasIntoQueueObj then
           oplIntoQueueObj.CompleteAdding
