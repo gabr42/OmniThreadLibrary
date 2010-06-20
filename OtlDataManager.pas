@@ -21,7 +21,8 @@ type
   ///    called from multiple threads at the same time!</summary>
   TOmniDataPackage = class abstract
   public
-    function  GetNext(var value: TOmniValue): boolean; virtual; abstract;
+    function  GetNext(var value: TOmniValue): boolean; overload; virtual; abstract;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniDataPackage }
 
@@ -118,7 +119,8 @@ type
     idpStep    : integer;
     idpStepAbs : integer;
   public
-    function  GetNext(var value: TOmniValue): boolean; override;
+    function  GetNext(var value: TOmniValue): boolean; overload; override;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  HasData: boolean;
     procedure Initialize(low, high, step, position: integer);
     function  Split(package: TOmniDataPackage): boolean; override;
@@ -136,7 +138,8 @@ type
     destructor  Destroy; override;
     class function GetPackageSizeLimit: integer;
     procedure Add(const value: TOmniValue);
-    function  GetNext(var value: TOmniValue): boolean; override;
+    function  GetNext(var value: TOmniValue): boolean; overload; override;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  Prepare(dataCount: integer): integer;
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniValueEnumeratorDataPackage }
@@ -317,6 +320,16 @@ begin
   end;
 end; { TOmniIntegerDataPackage.GetNext }
 
+function TOmniIntegerDataPackage.GetNext(var position: int64; var value: TOmniValue):
+  boolean;
+begin
+  Result := GetNext(value);
+  if Result then begin
+    position := idpPosition;
+    Inc(position);
+  end;
+end; { TOmniIntegerDataPackage.GetNext }
+
 function TOmniIntegerDataPackage.HasData: boolean;
 begin
   Result := idpStep <> 0;
@@ -472,6 +485,12 @@ begin
   if tmp.IsInterface then
     tmp.AsInterface._Release;
   vedpApproxCount.Decrement;
+end; { TOmniValueEnumeratorDataPackage.GetNext }
+
+function TOmniValueEnumeratorDataPackage.GetNext(var position: int64; var value:
+  TOmniValue): boolean;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorDataPackage.GetNext
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
 class function TOmniValueEnumeratorDataPackage.GetPackageSizeLimit: integer;
@@ -652,8 +671,12 @@ end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.GetNext(var position: int64; var value: TOmniValue): boolean;
 begin
-  Result := false;
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniLocalQueueImpl.GetNext
+  Result := lqiDataPackage.GetNext(position, value);
+  if not Result then begin
+    Result := lqiDataManager_ref.GetNext(lqiDataPackage);
+    if Result then
+      Result := lqiDataPackage.GetNext(position, value);
+  end;
 end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
