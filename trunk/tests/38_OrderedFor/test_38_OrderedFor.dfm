@@ -46,7 +46,7 @@ object frmOderedForDemo: TfrmOderedForDemo
     Top = 304
     Width = 97
     Height = 25
-    Caption = 'Chained (move!)'
+    Caption = 'cooperative'
     TabOrder = 3
     OnClick = Button1Click
   end

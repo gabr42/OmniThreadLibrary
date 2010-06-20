@@ -636,11 +636,15 @@ end; { TOmniParallelLoopBase.InternalExecuteInto }
 
 procedure TOmniParallelLoopBase.InternalExecuteTask(task: TOmniTaskDelegate);
 var
+  dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
 begin
   oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
-  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks); // destructor will do the cleanup
+  dmOptions := [];
+  if ploPreserveOrder in Options then
+    Include(dmOptions, dmoPreserveOrder);
+  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks, dmOptions); // destructor will do the cleanup
   if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and (not (ploNoWait in Options)) then
     task(nil)
   else begin
