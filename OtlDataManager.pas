@@ -45,6 +45,11 @@ type
     function  GetPackageSizeLimit: integer; virtual; abstract;
   end; { TOmniSourceProvider }
 
+  TOmniOutputBuffer = class abstract
+  public
+    procedure Submit(position: int64; const data: TOmniValue); virtual; abstract;
+  end; { TOmniOutputBuffer }
+
   TOmniDataManagerOption = (dmoPreserveOrder);
   TOmniDataManagerOptions = set of TOmniDataManagerOption;
 
@@ -53,11 +58,11 @@ type
   TOmniDataManager = class abstract
   public
     function  CreateLocalQueue: TOmniLocalQueue; virtual; abstract;
+    function  AllocateOutputBuffer: TOmniOutputBuffer; virtual; abstract;
     procedure Flush; virtual; abstract;
     function  GetNext(package: TOmniDataPackage): boolean; virtual; abstract;
-    procedure SetOutput(queue: TOmniBlockingCollection); overload; virtual; abstract;
-    procedure SetOutput(queue: IOmniBlockingCollection); overload; virtual; abstract;
-    procedure Submit(position: int64; const data: TOmniValue); virtual; abstract;
+    procedure ReleaseOutputBuffer(buffer: TOmniOutputBuffer); virtual; abstract;
+    procedure SetOutput(const queue: IOmniBlockingCollection); overload; virtual; abstract;
   end; { TOmniDataManager }
 
 function  CreateSourceProvider(low, high: integer; step: integer = 1): TOmniSourceProvider; overload;
@@ -216,11 +221,17 @@ type
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniLocalQueueImpl }
 
+  TOmniOutputBufferImpl = class(TOmniOutputBuffer)
+  public
+    procedure Submit(position: int64; const data: TOmniValue); override;
+  end; { TOmniOutputBufferImpl }
+
   ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
     dmNumWorkers        : integer;
     dmOptions           : TOmniDataManagerOptions;
+    dmOutputIntf        : IOmniBlockingCollection;
     dmPacketSizes       : array of integer;
     dmQueueList         : TObjectList;
     dmQueueLock         : TOmniCS;
@@ -233,6 +244,7 @@ type
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer;
       options: TOmniDataManagerOptions);
     destructor  Destroy; override;
+    function  AllocateOutputBuffer: TOmniOutputBuffer; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
     procedure Flush; override;
     function  GetDataCountForGeneration(generation: integer): integer;
@@ -240,10 +252,9 @@ type
     function  GetNextFromProvider(package: TOmniDataPackage;
       generation: integer): boolean; virtual; abstract;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
-    procedure SetOutput(queue: TOmniBlockingCollection); overload; override;
-    procedure SetOutput(queue: IOmniBlockingCollection); overload; override;
+    procedure ReleaseOutputBuffer(buffer: TOmniOutputBuffer); override;
+    procedure SetOutput(const queue: IOmniBlockingCollection); overload; override;
     function  StealPackage(package: TOmniDataPackage): boolean;
-    procedure Submit(position: int64; const data: TOmniValue); override;
     property SourceProvider: TOmniSourceProvider read GetSourceProvider;
   end; { TOmniBaseDataManager }
 
@@ -490,6 +501,7 @@ end; { TOmniValueEnumeratorDataPackage.GetNext }
 function TOmniValueEnumeratorDataPackage.GetNext(var position: int64; var value:
   TOmniValue): boolean;
 begin
+  Result := false;
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorDataPackage.GetNext
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
@@ -687,6 +699,13 @@ begin
   Result := lqiDataPackage.Split(package);
 end; { TOmniLocalQueueImpl.Split }
 
+{ TOmniOutputBufferImpl }
+
+procedure TOmniOutputBufferImpl.Submit(position: int64; const data: TOmniValue);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniOutputBufferImpl.Submit
+end; { TOmniOutputBufferImpl.Submit }
+
 { TOmniBaseDataManager }
 
 constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider; numWorkers:
@@ -703,9 +722,15 @@ end; { TOmniBaseDataManager.Create }
 
 destructor TOmniBaseDataManager.Destroy;
 begin
+  dmOutputIntf := nil;
   FreeAndNil(dmQueueList);
   inherited;
 end; { TOmniBaseDataManager.Destroy }
+
+function TOmniBaseDataManager.AllocateOutputBuffer: TOmniOutputBuffer;
+begin
+  Result := TOmniOutputBufferImpl.Create;
+end; { TOmniBaseDataManager.AllocateOutputBuffer }
 
 procedure TOmniBaseDataManager.LocalQueueDestroyed(queue: TOmniLocalQueue);
 begin
@@ -726,7 +751,6 @@ end; { TOmniBaseDataManager.CreateLocalQueue }
 
 procedure TOmniBaseDataManager.Flush;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.Flush
 end; { TOmniBaseDataManager.Flush }
 
 function TOmniBaseDataManager.GetDataCountForGeneration(generation: integer): integer;
@@ -780,14 +804,16 @@ begin
   end;
 end; { TOmniBaseDataManager.InitializePacketSizes }
 
-procedure TOmniBaseDataManager.SetOutput(queue: TOmniBlockingCollection);
+procedure TOmniBaseDataManager.ReleaseOutputBuffer(buffer: TOmniOutputBuffer);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.SetOutput;
-end; { TOmniBaseDataManager.SetOutput }
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.ReleaseOutputBuffer
+  // must put buffer 'away' so that it will be read from when data manager is flushed
+  // (or even before)
+end; { TOmniBaseDataManager.ReleaseOutputBuffer }
 
-procedure TOmniBaseDataManager.SetOutput(queue: IOmniBlockingCollection);
+procedure TOmniBaseDataManager.SetOutput(const queue: IOmniBlockingCollection);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.SetOutput
+  dmOutputIntf := queue;
 end; { TOmniBaseDataManager.SetOutput }
 
 function TOmniBaseDataManager.StealPackage(package: TOmniDataPackage): boolean;
@@ -812,11 +838,6 @@ begin
   finally dmQueueLock.Release; end;
   Result := false;
 end; { TOmniBaseDataManager.StealPackage }
-
-procedure TOmniBaseDataManager.Submit(position: int64; const data: TOmniValue);
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.Submit
-end; { TOmniBaseDataManager.Submit }
 
 { TOmniCountableDataManager }
 
