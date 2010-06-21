@@ -118,7 +118,6 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
@@ -131,7 +130,6 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
@@ -147,7 +145,6 @@ type
     class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
-    class function  ForEach(const source: TOmniBlockingCollection): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
@@ -158,7 +155,6 @@ type
     class function  ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const source: TOmniBlockingCollection): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
     {$IFDEF OTL_ERTTI}
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
@@ -211,10 +207,7 @@ type
     oplCountStopped     : IOmniResourceCount;
     oplDataManager      : TOmniDataManager;
     oplDelegateEnum     : TOmniDelegateEnumerator;
-    oplHasIntoQueueIntf : boolean;
-    oplHasIntoQueueObj  : boolean;
     oplIntoQueueIntf    : IOmniBlockingCollection;
-    oplIntoQueueObj     : TOmniBlockingCollection;
     oplManagedProvider  : boolean;
     oplNumTasks         : integer;
     oplOnStop           : TProc;
@@ -230,7 +223,6 @@ type
       aggregator: TOmniAggregatorDelegate);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetIntoQueue(const queue: IOmniBlockingCollection); overload;
-    procedure SetIntoQueue(queue: TOmniBlockingCollection); overload;
     procedure SetNumTasks(taskCount: integer);
     procedure SetOnStop(stopDelegate: TProc);
     function  Stopped: boolean; inline;
@@ -254,7 +246,6 @@ type
     function  ForEach: IOmniParallelLoop;
     function  GetEnumerator: IOmniValueEnumerator;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
@@ -280,7 +271,6 @@ type
     function  ForEach: IOmniParallelLoop<T>;
     function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-    function  Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
@@ -339,11 +329,6 @@ begin
   Result := ForEach(source as IOmniValueEnumerable);
 end; { Parallel.ForEach }
 
-class function Parallel.ForEach(const source: TOmniBlockingCollection): IOmniParallelLoop;
-begin
-  Result := ForEach(source as IOmniValueEnumerable);
-end; { Parallel.ForEach }
-
 class function Parallel.ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop;
 begin
   Result := TOmniParallelLoop.Create(enumerator);
@@ -389,11 +374,6 @@ begin
 end; { Parallel.ForEach<T> }
 
 class function Parallel.ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>;
-begin
-  Result := ForEach<T>(source as IOmniValueEnumerable);
-end; { Parallel.ForEach<T> }
-
-class function Parallel.ForEach<T>(const source: TOmniBlockingCollection): IOmniParallelLoop<T>;
 begin
   Result := ForEach<T>(source as IOmniValueEnumerable);
 end; { Parallel.ForEach<T> }
@@ -601,7 +581,7 @@ end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
 begin
-  { TODO 5 -ogabr : Handle ploPreserveOrder }
+  Assert(assigned(oplIntoQueueIntf));
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -611,10 +591,7 @@ begin
       result          : TOmniValue;
       value           : TOmniValue;
     begin
-      if oplHasIntoQueueObj then
-        oplDataManager.SetOutput(oplIntoQueueObj)
-      else if oplHasIntoQueueIntf then
-        oplDataManager.SetOutput(oplIntoQueueIntf);
+      oplDataManager.SetOutput(oplIntoQueueIntf);
       localQueue := oplDataManager.CreateLocalQueue;
       try
         outputBuffer_ref := oplDataManager.AllocateOutputBuffer;
@@ -631,10 +608,7 @@ begin
       finally FreeAndNil(localQueue); end;
       if oplCountStopped.Allocate = 0 then begin
         oplDataManager.Flush;
-        if oplHasIntoQueueObj then
-          oplIntoQueueObj.CompleteAdding
-        else if oplHasIntoQueueIntf then
-          oplIntoQueueIntf.CompleteAdding;
+        oplIntoQueueIntf.CompleteAdding;
         DoOnStop;
       end;
     end
@@ -681,15 +655,6 @@ end; { TOmniParallelLoopBase.SetCancellationToken }
 procedure TOmniParallelLoopBase.SetIntoQueue(const queue: IOmniBlockingCollection);
 begin
   oplIntoQueueIntf := queue;
-  oplHasIntoQueueIntf := (oplIntoQueueIntf <> nil);
-  Assert(not (oplHasIntoQueueIntf and oplHasIntoQueueObj));
-end; { TOmniParallelLoopBase.SetIntoQueue }
-
-procedure TOmniParallelLoopBase.SetIntoQueue(queue: TOmniBlockingCollection);
-begin
-  oplIntoQueueObj := queue;
-  oplHasIntoQueueObj := (oplIntoQueueObj <> nil);
-  Assert(not (oplHasIntoQueueIntf and oplHasIntoQueueObj));
 end; { TOmniParallelLoopBase.SetIntoQueue }
 
 procedure TOmniParallelLoopBase.SetNumTasks(taskCount: integer);
@@ -751,12 +716,6 @@ begin
 end; { TOmniParallelLoop.GetEnumerator }
 
 function TOmniParallelLoop.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
-begin
-  SetIntoQueue(queue);
-  Result := Self;
-end; { TOmniParallelLoop.Into }
-
-function TOmniParallelLoop.Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop;
 begin
   SetIntoQueue(queue);
   Result := Self;
@@ -870,12 +829,6 @@ begin
 end; { TOmniParallelLoop<T>.GetEnumerator }
 
 function TOmniParallelLoop<T>.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
-begin
-  SetIntoQueue(queue);
-  Result := Self;
-end; { TOmniParallelLoop<T>.Into }
-
-function TOmniParallelLoop<T>.Into(queue: TOmniBlockingCollection): IOmniParallelIntoLoop<T>;
 begin
   SetIntoQueue(queue);
   Result := Self;

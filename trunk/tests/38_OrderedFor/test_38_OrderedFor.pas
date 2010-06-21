@@ -30,6 +30,7 @@ var
 implementation
 
 uses
+  DSiWin32,
   OtlCommon,
   OtlCollections,
   OtlParallel;
@@ -52,7 +53,7 @@ end;
 procedure TfrmOderedForDemo.btnUnorderedPrimes1Click(Sender: TObject);
 var
   prime     : TOmniValue;
-  primeQueue: IOmniBlockingCollection;
+  primeQueue: TOmniBlockingCollection;
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
