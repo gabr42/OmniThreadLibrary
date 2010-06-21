@@ -597,6 +597,7 @@ begin
         outputBuffer_ref := oplDataManager.AllocateOutputBuffer;
         try
           result := TOmniValue.Null;
+          { TODO 1 : make sure that one thread cannot overtake all others and start filling its output buffer }
           while (not Stopped) and localQueue.GetNext(position, value) do begin
             loopBody(value, result);
             if not result.IsEmpty then begin
