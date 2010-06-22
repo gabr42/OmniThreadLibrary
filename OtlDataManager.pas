@@ -26,9 +26,16 @@ type
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
   end; { TOmniDataPackage }
 
+  ///<summary>Output data buffer.</summary>
+  TOmniOutputBuffer = class abstract
+  public
+    procedure Submit(position: int64; const data: TOmniValue); virtual; abstract;
+  end; { TOmniOutputBuffer }
+
   ///<summary>A data package queue between a single worker and shared data manager.</summary>
   TOmniLocalQueue = class abstract
   public
+    procedure AssociateBuffer(buffer: TOmniOutputBuffer); virtual; abstract;
     function  GetNext(var value: TOmniValue): boolean; overload; virtual; abstract;
     function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; virtual; abstract;
     function  Split(package: TOmniDataPackage): boolean; virtual; abstract;
@@ -44,11 +51,6 @@ type
     function  GetPackage(dataCount: integer; package: TOmniDataPackage): boolean; virtual; abstract;
     function  GetPackageSizeLimit: integer; virtual; abstract;
   end; { TOmniSourceProvider }
-
-  TOmniOutputBuffer = class abstract
-  public
-    procedure Submit(position: int64; const data: TOmniValue); virtual; abstract;
-  end; { TOmniOutputBuffer }
 
   TOmniDataManagerOption = (dmoPreserveOrder);
   TOmniDataManagerOptions = set of TOmniDataManagerOption;
@@ -102,18 +104,23 @@ uses
   OtlSync;
 
 type
+  TOmniPositionRange = record
+    First: int64;
+    Last : int64;
+    constructor Create(aFirst, aLast: int64);
+    class function Empty: TOmniPositionRange; static;
+  end; { TOmniPositionRange }
+
   ///<summary>Base class for all data package classes.</summary>
   TOmniDataPackageBase = class abstract(TOmniDataPackage)
   private
     dpbGeneration: integer;
-    dpbPosition  : int64;
+    dpbRange     : TOmniPositionRange;
     dpbQueue     : TOmniLocalQueue;
-  strict protected
-    procedure SetPosition(position: int64);
   public
     procedure NextGeneration; inline;
     property Generation: integer read dpbGeneration;
-    property Position: int64 read dpbPosition;
+    property Range: TOmniPositionRange read dpbRange write dpbRange;
     property Queue: TOmniLocalQueue read dpbQueue write dpbQueue;
   end; { TOmniDataPackageBase }
 
@@ -131,7 +138,7 @@ type
     function  GetNext(var value: TOmniValue): boolean; overload; override;
     function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  HasData: boolean;
-    procedure Initialize(low, high, step, position: integer);
+    procedure Initialize(low, high, step: integer; newRange: TOmniPositionRange);
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniIntegerDataPackage }
 
@@ -212,28 +219,37 @@ type
 
   TOmniBaseDataManager = class;
 
+  ///<summary>Output buffer implementation.</summary>
+  TOmniOutputBufferImpl = class(TOmniOutputBuffer)
+  strict private
+    obiBuffer         : TOmniBlockingCollection;
+    obiDataManager_ref: TOmniBaseDataManager;
+    obiOutput         : IOmniBlockingCollection;
+    obiRange          : TOmniPositionRange;
+  strict protected
+    procedure SetRange(range: TOmniPositionRange);
+  public
+    constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
+    destructor  Destroy; override;
+    procedure MarkFull;
+    procedure Submit(position: int64; const data: TOmniValue); override;
+    property Range: TOmniPositionRange read obiRange write SetRange;
+  end; { TOmniOutputBufferImpl }
+
   ///<summary>Local queue implementation.</summary>
   TOmniLocalQueueImpl = class(TOmniLocalQueue)
   strict private
+    lqiBuffer         : TOmniOutputBufferImpl;
     lqiDataManager_ref: TOmniBaseDataManager;
-    lqiDataPackage    : TOmniDataPackage;
+    lqiDataPackage    : TOmniDataPackageBase;
   public
     constructor Create(owner: TOmniBaseDataManager);
     destructor  Destroy; override;
+    procedure AssociateBuffer(buffer: TOmniOutputBuffer); override;
     function  GetNext(var value: TOmniValue): boolean; overload; override;
     function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniLocalQueueImpl }
-
-  TOmniOutputBufferImpl = class(TOmniOutputBuffer)
-  strict private
-    obiBuffer: TOmniBlockingCollection;
-    obiOutput: IOmniBlockingCollection;
-  public
-    constructor Create(output: IOmniBlockingCollection);
-    destructor  Destroy; override;
-    procedure Submit(position: int64; const data: TOmniValue); override;
-  end; { TOmniOutputBufferImpl }
 
   ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
@@ -319,17 +335,25 @@ begin
     Result := TOmniHeuristicDataManager.Create(sourceProvider, numWorkers, options);
 end; { CreateDataManager }
 
+{ TOmniPositionRange }
+
+constructor TOmniPositionRange.Create(aFirst, aLast: int64);
+begin
+  First := aFirst;
+  Last := aLast;
+end; { TOmniPositionRange.Create }
+
+class function TOmniPositionRange.Empty: TOmniPositionRange;
+begin
+  Result := TOmniPositionRange.Create(0, 0);
+end; { TOmniPositionRange.Empty }
+
 { TOmniDataPackageBase }
 
 procedure TOmniDataPackageBase.NextGeneration;
 begin
   dpbGeneration := Abs((dpbGeneration SHL 1) + 3) SHR 1;
 end; { TOmniDataPackageBase.NextGeneration }
-
-procedure TOmniDataPackageBase.SetPosition(position: int64);
-begin
-  dpbPosition := position;
-end; { TOmniDataPackageBase.SetPosition }
 
 { TOmniIntegerDataPackage }
 
@@ -361,7 +385,8 @@ begin
   Result := idpStep <> 0;
 end; { TOmniIntegerDataPackage.HasData }
 
-procedure TOmniIntegerDataPackage.Initialize(low, high, step, position: integer);
+procedure TOmniIntegerDataPackage.Initialize(low, high, step: integer;
+  newRange: TOmniPositionRange);
 begin
   {$IFDEF Debug}Assert(step <> 0);{$ENDIF}
   idpLow.Value := low;
@@ -372,8 +397,8 @@ begin
     idpSign := 1
   else
     idpSign := -1;
-  idpHighSign := idpHigh * idpSign;
-  SetPosition(position);
+  idpHighSign := idpHigh  * idpSign;
+  Range := newRange;
 end; { TOmniIntegerDataPackage.Initialize }
 
 function TOmniIntegerDataPackage.Split(package: TOmniDataPackage): boolean;
@@ -398,7 +423,7 @@ begin
       if Result and (high * idpSign > idpHighSign) then
         high := (idpHigh div idpStepAbs) * idpStepAbs;
       if Result then begin
-        intPackage.Initialize(low, high, idpStep, 0);
+        intPackage.Initialize(low, high, idpStep, TOmniPositionRange.Empty);
       end;
     end;
   end;
@@ -456,7 +481,7 @@ begin
       if dataCount > irpCount.Value then
         dataCount := irpCount.Value;
       high := irpLow + (dataCount - 1) * irpStep;
-      intPackage.Initialize(irpLow, high, irpStep, irpPosition);
+      intPackage.Initialize(irpLow, high, irpStep, TOmniPositionRange.Create(irpPosition, irpPosition + dataCount - 1));
       Inc(irpPosition, dataCount);
       irpLow := high + irpStep;
       irpCount.Value := CalcCount(irpLow, irpHigh, irpStep);
@@ -670,12 +695,17 @@ end; { TOmniEnumeratorProvider.GetPackageSizeLimit }
 
 { TOmniLocalQueueImpl }
 
+procedure TOmniLocalQueueImpl.AssociateBuffer(buffer: TOmniOutputBuffer);
+begin
+  lqiBuffer := buffer as TOmniOutputBufferImpl;
+end; { TOmniLocalQueueImpl.AssociateBuffer }
+
 constructor TOmniLocalQueueImpl.Create(owner: TOmniBaseDataManager);
 begin
   inherited Create;
   lqiDataManager_ref := owner;
-  lqiDataPackage := lqiDataManager_ref.SourceProvider.CreateDataPackage;
-  (lqiDataPackage as TOmniDataPackageBase).Queue := Self;
+  lqiDataPackage := lqiDataManager_ref.SourceProvider.CreateDataPackage as TOmniDataPackageBase;
+  lqiDataPackage.Queue := Self;
 end; { TOmniLocalQueueImpl.Create }
 
 destructor TOmniLocalQueueImpl.Destroy;
@@ -690,9 +720,15 @@ function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
 begin
   Result := lqiDataPackage.GetNext(value);
   if not Result then begin
+    if assigned(lqiBuffer) then // data manager must make sure that the thread running 'earlier' calculation doesn't get stalled for too long
+      lqiBuffer.MarkFull;
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
-    if Result then
+    if Result then begin
+      if assigned(lqiBuffer) then
+        { TODO 1 : what to do - if anything - if buffer is not empty yet}
+        lqiBuffer.Range := lqiDataPackage.Range;
       Result := lqiDataPackage.GetNext(value);
+    end;
   end;
 end; { TOmniLocalQueueImpl.GetNext }
 
@@ -716,9 +752,11 @@ end; { TOmniLocalQueueImpl.Split }
 
 { TOmniOutputBufferImpl }
 
-constructor TOmniOutputBufferImpl.Create(output: IOmniBlockingCollection);
+constructor TOmniOutputBufferImpl.Create(owner: TOmniBaseDataManager;
+  output: IOmniBlockingCollection);
 begin
   inherited Create;
+  obiDataManager_ref := owner;
   obiOutput := output;
   obiBuffer := TOmniBlockingCollection.Create;
 end; { TOmniOutputBufferImpl.Create }
@@ -729,8 +767,27 @@ begin
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
 
+procedure TOmniOutputBufferImpl.MarkFull;
+begin
+  { TODO 1 : Implement }
+  // tell the owner that the buffer is full
+end; { TOmniOutputBufferImpl.MarkFull }
+
+procedure TOmniOutputBufferImpl.SetRange(range: TOmniPositionRange);
+begin
+  obiRange := range;
+  { TODO 1 : notify data manager that the range has been updated }
+end; { TOmniOutputBufferImpl.SetRange }
+
 procedure TOmniOutputBufferImpl.Submit(position: int64; const data: TOmniValue);
 begin
+  // if active
+  //   in debug mode, check position
+  //   obiOutput.Add(data);
+  //   if that was the last element, tell the data manager to activate/flush new buffer
+  // else
+  //   in debug mode, check position
+  //   obiBuffer.Add(data);
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniOutputBufferImpl.Submit
 end; { TOmniOutputBufferImpl.Submit }
 
@@ -759,7 +816,7 @@ end; { TOmniBaseDataManager.Destroy }
 function TOmniBaseDataManager.AllocateOutputBuffer: TOmniOutputBuffer;
 begin
   Assert(assigned(dmOutputIntf));
-  Result := TOmniOutputBufferImpl.Create(dmOutputIntf);
+  Result := TOmniOutputBufferImpl.Create(Self, dmOutputIntf);
 end; { TOmniBaseDataManager.AllocateOutputBuffer }
 
 procedure TOmniBaseDataManager.LocalQueueDestroyed(queue: TOmniLocalQueue);
@@ -797,8 +854,6 @@ var
   intPackage: TOmniDataPackageBase absolute package;
 begin
   Result := GetNextFromProvider(package, intPackage.Generation);
-  // package starts at intPackage.Position
-  // !!! get position too; store position for the current thread; set 'active' token in the buffer for that thread
   if not Result then
     Result := StealPackage(package);
   if Result then
