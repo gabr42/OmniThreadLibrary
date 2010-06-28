@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2010-04-09
-   Version           : 1.06a
+   Last modification : 2010-06-28
+   Version           : 1.06b
 </pre>*)(*
    History:
+     1.06b: 2010-06-28
+       - [lkessler] In TGpStringHash.Add, hash must be calculated *after* Grow is called.
      1.06a: 2010-04-09
        - Unicode fixes in TGpStringTable.
      1.06: 2010-03-04
@@ -366,12 +368,12 @@ var
   bucket: PGpHashItem;
   hash  : cardinal;
 begin
-  hash := HashOf(key) mod shNumBuckets;
   if shFirstEmpty > shSize then
     if shCanGrow then
       Grow
     else
       raise Exception.Create('TGpStringHash.Add: Maximum size reached');
+  hash := HashOf(key) mod shNumBuckets;
   bucket := @(shItems[shFirstEmpty]); // point to an empty slot in the pre-allocated array
   bucket^.Key := key;
   bucket^.Value := value;
