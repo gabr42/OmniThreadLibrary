@@ -101,6 +101,7 @@ uses
   Contnrs,
   Classes,
   DSiWin32,
+  GpLists,
   OtlSync;
 
 type
@@ -222,8 +223,11 @@ type
   ///<summary>Output buffer implementation.</summary>
   TOmniOutputBufferImpl = class(TOmniOutputBuffer)
   strict private
+    obiActive         : boolean;
     obiBuffer         : TOmniBlockingCollection;
     obiDataManager_ref: TOmniBaseDataManager;
+    obiFull           : boolean;
+    obiNextPosition   : int64;
     obiOutput         : IOmniBlockingCollection;
     obiRange          : TOmniPositionRange;
   strict protected
@@ -231,8 +235,10 @@ type
   public
     constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
     destructor  Destroy; override;
+    procedure Activate;
     procedure MarkFull;
     procedure Submit(position: int64; const data: TOmniValue); override;
+    property IsFull: boolean read obiFull;
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
 
@@ -254,6 +260,8 @@ type
   ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
+    dmBufferRangeList   : TGpInt64ObjectList;
+    dmBufferRangeLock   : TOmniCS;
     dmNextPosition      : int64;
     dmNumWorkers        : integer;
     dmOptions           : TOmniDataManagerOptions;
@@ -264,8 +272,10 @@ type
     dmSourceProvider_ref: TOmniSourceProviderBase;
     dmStealIdx          : integer;
   strict protected
+    function  GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl; inline;
     function  GetSourceProvider: TOmniSourceProvider;
     procedure InitializePacketSizes;
+    property BufferList[idxBuffer: integer]: TOmniOutputBufferImpl read GetBufferList;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer;
       options: TOmniDataManagerOptions);
@@ -278,6 +288,8 @@ type
     function  GetNextFromProvider(package: TOmniDataPackage;
       generation: integer): boolean; virtual; abstract;
     procedure LocalQueueDestroyed(queue: TOmniLocalQueue);
+    procedure NotifyBufferFull(buffer: TOmniOutputBufferImpl);
+    procedure NotifyBufferRangeChanged(buffer: TOmniOutputBufferImpl);
     procedure ReleaseOutputBuffer(buffer: TOmniOutputBuffer); override;
     procedure SetOutput(const queue: IOmniBlockingCollection); overload; override;
     function  StealPackage(package: TOmniDataPackage): boolean;
@@ -720,15 +732,10 @@ function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
 begin
   Result := lqiDataPackage.GetNext(value);
   if not Result then begin
-    if assigned(lqiBuffer) then // data manager must make sure that the thread running 'earlier' calculation doesn't get stalled for too long
-      lqiBuffer.MarkFull;
+    {$IFDEF Debug}Assert(not assigned(lqiBuffer));{$ENDIF Debug}
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
-    if Result then begin
-      if assigned(lqiBuffer) then
-        { TODO 1 : what to do - if anything - if buffer is not empty yet}
-        lqiBuffer.Range := lqiDataPackage.Range;
+    if Result then
       Result := lqiDataPackage.GetNext(value);
-    end;
   end;
 end; { TOmniLocalQueueImpl.GetNext }
 
@@ -736,9 +743,13 @@ function TOmniLocalQueueImpl.GetNext(var position: int64; var value: TOmniValue)
 begin
   Result := lqiDataPackage.GetNext(position, value);
   if not Result then begin
+    {$IFDEF Debug}Assert(assigned(lqiBuffer));{$ENDIF Debug}
+    lqiBuffer.MarkFull;
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
-    if Result then
+    if Result then begin
       Result := lqiDataPackage.GetNext(position, value);
+      lqiBuffer.Range := lqiDataPackage.Range;
+    end;
   end;
 end; { TOmniLocalQueueImpl.GetNext }
 
@@ -751,6 +762,11 @@ begin
 end; { TOmniLocalQueueImpl.Split }
 
 { TOmniOutputBufferImpl }
+
+procedure TOmniOutputBufferImpl.Activate;
+begin
+  obiActive := true;
+end; { TOmniOutputBufferImpl.Activate }
 
 constructor TOmniOutputBufferImpl.Create(owner: TOmniBaseDataManager;
   output: IOmniBlockingCollection);
@@ -769,26 +785,24 @@ end; { TOmniOutputBufferImpl.Destroy }
 
 procedure TOmniOutputBufferImpl.MarkFull;
 begin
-  { TODO 1 : Implement }
-  // tell the owner that the buffer is full
+  obiActive := false;
+  obiDataManager_ref.NotifyBufferFull(Self);
 end; { TOmniOutputBufferImpl.MarkFull }
 
 procedure TOmniOutputBufferImpl.SetRange(range: TOmniPositionRange);
 begin
   obiRange := range;
-  { TODO 1 : notify data manager that the range has been updated }
+  obiDataManager_ref.NotifyBufferRangeChanged(Self);
+  obiNextPosition := obiRange.First;
 end; { TOmniOutputBufferImpl.SetRange }
 
 procedure TOmniOutputBufferImpl.Submit(position: int64; const data: TOmniValue);
 begin
-  // if active
-  //   in debug mode, check position
-  //   obiOutput.Add(data);
-  //   if that was the last element, tell the data manager to activate/flush new buffer
-  // else
-  //   in debug mode, check position
-  //   obiBuffer.Add(data);
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniOutputBufferImpl.Submit
+  {$IFDEF DEBUG}Assert(position = obiNextPosition); Inc(obiNextPosition);{$ENDIF}
+  if obiActive then
+    obiOutput.Add(data)
+  else
+    obiBuffer.Add(data);
 end; { TOmniOutputBufferImpl.Submit }
 
 { TOmniBaseDataManager }
@@ -803,6 +817,9 @@ begin
   dmOptions := options;
   dmSourceProvider_ref.StorePositions := (dmoPreserveOrder in dmOptions);
   dmNextPosition := 1;
+  dmBufferRangeList := TGpInt64ObjectList.Create(false);
+  dmBufferRangeList.Sorted := true;
+  dmBufferRangeList.Duplicates := dupError;
   InitializePacketSizes;
 end; { TOmniBaseDataManager.Create }
 
@@ -810,6 +827,7 @@ destructor TOmniBaseDataManager.Destroy;
 begin
   dmOutputIntf := nil;
   FreeAndNil(dmQueueList);
+  FreeAndNil(dmBufferRangeList);
   inherited;
 end; { TOmniBaseDataManager.Destroy }
 
@@ -827,6 +845,40 @@ begin
   finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.LocalQueueDestroyed }
 
+procedure TOmniBaseDataManager.NotifyBufferFull(buffer: TOmniOutputBufferImpl);
+begin
+  // Remove buffer from the list. Check if next buffer is waiting in the list.
+  // Copy buffer if it is complete and repeat the process.
+  // Activate the first buffer if it is the expected one.
+  {$IFDEF Debug}Assert(buffer.Range.First = dmNextPosition);{$ENDIF Debug}
+  dmNextPosition := buffer.Range.Last + 1;
+  dmBufferRangeLock.Acquire;
+
+  ' copy data from buffer, just in case?
+
+  try
+    {$IFDEF Debug}Assert(dmBufferRangeList.Objects[0] = buffer);{$ENDIF Debug}
+    dmBufferRangeList.Delete(0);
+    while (dmBufferRangeList.Count > 0) and (BufferList[0].Range.First = dmNextPosition) and
+          BufferList[0].IsFull do
+    begin
+      dmBufferRangeLock.Release;
+      !! copy data from the buffer
+      dmBufferRangeLock.Acquire;
+    end;
+  finally dmBufferRangeLock.Release; end;
+end; { TOmniBaseDataManager.NotifyBufferFull }
+
+procedure TOmniBaseDataManager.NotifyBufferRangeChanged(buffer: TOmniOutputBufferImpl);
+begin
+  dmBufferRangeLock.Acquire;
+  try
+    dmBufferRangeList.AddObject(buffer.Range.First, buffer);
+  finally dmBufferRangeLock.Release; end;
+  if buffer.Range.First = dmNextPosition then
+    buffer.Activate;
+end; { TOmniBaseDataManager.NotifyBufferRangeChanged }
+
 function TOmniBaseDataManager.CreateLocalQueue: TOmniLocalQueue;
 begin
   Result := TOmniLocalQueueImpl.Create(Self);
@@ -840,6 +892,11 @@ procedure TOmniBaseDataManager.Flush;
 begin
   { TODO 1 : implement: Flush }
 end; { TOmniBaseDataManager.Flush }
+
+function TOmniBaseDataManager.GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl;
+begin
+  Result := TOmniOutputBufferImpl(dmBufferRangeList.Objects[idxBuffer]);
+end; { TOmniBaseDataManager.GetBufferList }
 
 function TOmniBaseDataManager.GetDataCountForGeneration(generation: integer): integer;
 begin
