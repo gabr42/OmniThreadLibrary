@@ -1660,7 +1660,7 @@ var
     Result := (flags = []);
     {$ELSEIF CompilerVersion = 21}
     // Delphi 2010 original and Update 1: []
-    // Delphi 2010 while Update 2 and 4: [pfAddress]
+    // Delphi 2010 with Update 2 and 4: [pfAddress]
     Result := (flags = []) or (flags = [pfAddress]);
     {$ELSE} // best guess
     Result := (flags = [pfAddress]);

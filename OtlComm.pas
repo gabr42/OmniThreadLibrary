@@ -123,7 +123,7 @@ type
   {:Fixed-size ring buffer of TOmniMessage data.
     WARNING Supports only one writer and one reader WARNING
   }
-  // TODO 1 -oPrimoz Gabrijelcic : Check if 1 reader/1 write warning still applies.
+  // TODO 1 -oPrimoz Gabrijelcic : Check if 1 reader/1 writer warning still applies.
   TOmniMessageQueue = class(TOmniBoundedQueue)
   strict private
     mqWinEventObserver: TOmniContainerWindowsEventObserver;
