@@ -1,9 +1,9 @@
-///<summary>Component registration unit. Part of the OmniThreadLibrary project.</summary>
+///<summary>Common compilation settings and conditional defines for the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2008, Primoz Gabrijelcic
+///Copyright (c) 2010 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -28,48 +28,29 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
 ///   Author            : Primoz Gabrijelcic
-///     E-Mail          : primoz@gabrijelcic.org
-///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover
-///
-///   Creation date     : 2008-07-12
+///   Creation date     : 2010-07-01
 ///   Last modification : 2010-07-01
-///   Version           : 1.02
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     1.02: 2010-07-01
-///       - Includes OTLOptions.inc.
-///     1.01: 2008-11-04
-///       - Added TOmniTaskRunner registration.
-///     1.0: 2008-08-26
-///       - First official release.
+///     1.0: 2010-07-01
+///       - Released.
 ///</para></remarks>
 
-unit OtlRegister;
+{$ALIGN 8}
+{$BOOLEVAL OFF}
+{$EXTENDEDSYNTAX ON}
+{$LONGSTRINGS ON}
+{$MINENUMSIZE 1}
+{$OPENSTRINGS ON}
+{$OVERFLOWCHECKS OFF}
 
-{$I OTLOptions.inc}
-
-interface
-
-uses
-  Classes,
-  OtlEventMonitor;
-
-{$R OtlEventMonitor.dcr}
-
-procedure Register;
-
-implementation
-
-{ exports }
-
-procedure Register;
-begin
-  RegisterComponents('OmniThreadLibrary', [TOmniEventMonitor]);
-end; { Register }
-
-end.
+{$IF CompilerVersion >= 20}
+  {$DEFINE OTL_Anonymous}
+{$IFEND}
+{$IF CompilerVersion >= 21}
+  {$DEFINE OTL_ERTTI}
+  {$DEFINE OTL_DeprecatedResume}
+  {$DEFINE OTL_KnowsParamCount}
+{$IFEND}

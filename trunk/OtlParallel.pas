@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-01-14
-///   Version           : 1.01
+///   Last modification : 2010-07-01
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.01: 2010-02-02
 ///       - Implemented ForEach(rangeLow, rangeHigh).
 ///       - Implemented ForEach.Aggregate.
@@ -55,9 +57,7 @@
 
 unit OtlParallel;
 
-{$IF CompilerVersion >= 21}
-  {$DEFINE OTL_ERTTI}
-{$IFEND}
+{$I OTLOptions.inc}
 
 interface
 

@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-12
-///   Version           : 1.16
+///   Last modification : 2010-07-01
+///   Version           : 1.17
 ///</para><para>
 ///   History:
+///     1.17: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.16: 2010-05-12
 ///       - TOmniValue can be cast as Int64.
 ///       - Implemented TOmniValue.CastFrom<T> and .CastAs<T>.
@@ -105,17 +107,12 @@
 ///       - First official release.
 ///</para></remarks>
 
-{$WARN SYMBOL_PLATFORM OFF}
-{$IF CompilerVersion >= 20}
-  {$DEFINE OTL_Anonymous}
-{$IFEND}
-{$IF CompilerVersion >= 21}
-  {$DEFINE OTL_ERTTI}
-{$IFEND}
-
 // TODO 1 -oPrimoz Gabrijelcic : Can CastAs<> and CastFrom<> work in Delphi 2009?
 
 unit OtlCommon;
+
+{$I OTLOptions.inc}
+{$WARN SYMBOL_PLATFORM OFF}
 
 interface
 

@@ -37,15 +37,19 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-07-12
-///   Last modification : 2008-08-26
-///   Version           : 1.0
+///   Last modification : 2010-07-01
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
 
 unit OtlCommBufferTest;
+
+{$I OTLOptions.inc}
 
 interface
 

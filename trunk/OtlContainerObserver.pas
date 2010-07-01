@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-02-19
-///   Last modification : 2009-12-22
-///   Version           : 1.03
+///   Last modification : 2010-07-01
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.03: 2009-12-22
 ///       - TOmniContainerSubject moved here from OtlContainers because it will also be
 ///         used in OtlCollections.
@@ -51,6 +53,7 @@
 
 unit OtlContainerObserver;
 
+{$I OTLOptions.inc}
 {$WARN SYMBOL_PLATFORM OFF} // Win32Check
 
 interface

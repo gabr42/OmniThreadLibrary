@@ -31,10 +31,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-06
-///   Version           : 1.06a
+///   Last modification : 2010-07-01
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.06a: 2010-05-06
 ///       - Fixed memory leak when sending String, WideString, Variant and Extended values
 ///         over the communication channel.
@@ -59,11 +61,15 @@
 
 unit OtlComm;
 
+{$I OTLOptions.inc}
 {$WARN SYMBOL_PLATFORM OFF} // Win32Check
 
 interface
 
 uses
+  Windows,
+  Messages,
+  SysUtils,
   Classes,
   SyncObjs,
   SpinLock,
@@ -120,6 +126,8 @@ type
     function Endpoint2: IOmniCommunicationEndpoint;
   end; { IOmniTwoWayChannel }
 
+  TOmniMessageQueueMessageEvent = procedure(Sender: TObject; const msg: TOmniMessage) of object;
+
   {:Fixed-size ring buffer of TOmniMessage data.
     WARNING Supports only one writer and one reader WARNING
   }
@@ -127,8 +135,15 @@ type
   TOmniMessageQueue = class(TOmniBoundedQueue)
   strict private
     mqWinEventObserver: TOmniContainerWindowsEventObserver;
+    mqWinMsgObserver  : record
+      Observer : TOmniContainerWindowsMessageObserver;
+      Window   : THandle;
+      OnMessage: TOmniMessageQueueMessageEvent;
+    end;
   strict protected
     procedure AttachWinEventObserver;
+    procedure SetOnMessage(const value: TOmniMessageQueueMessageEvent);
+    procedure WndProc(var msg: TMessage);
   public
     constructor Create(numMessages: integer; createEventObserver: boolean = true);
       reintroduce;
@@ -139,6 +154,7 @@ type
     function  GetNewMessageEvent: THandle;
     function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
     property EventObserver: TOmniContainerWindowsEventObserver read mqWinEventObserver;
+    property OnMessage: TOmniMessageQueueMessageEvent read mqWinMsgObserver.OnMessage write SetOnMessage;
   end; { TOmniMessageQueue }
 
   IOmniMessageQueueTee = interface ['{8A9526BF-71AA-4D78-BAE8-3490C3987327}']
@@ -171,12 +187,12 @@ type
 implementation
 
 uses
-  Windows,
-  Messages,
-  SysUtils,
   Variants,
   {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
   OtlEventMonitor;
+
+const
+  MSG_CLIENT_MESSAGE = WM_USER;
 
 type
   IOmniCommunicationEndpointInternal = interface ['{4F872DE9-6E9A-4881-B9EC-E2189DAC00F4}']
@@ -293,6 +309,7 @@ end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
 begin
+  OnMessage := nil;
   ContainerSubject.Detach(mqWinEventObserver, coiNotifyOnAllInserts);
   FreeAndNil(mqWinEventObserver);
   Empty;
@@ -339,6 +356,24 @@ begin
   Result := mqWinEventObserver.GetEvent;
 end; { TOmniMessageQueue.GetNewMessageEvent }
 
+procedure TOmniMessageQueue.SetOnMessage(const value: TOmniMessageQueueMessageEvent);
+begin
+  if (not assigned(mqWinMsgObserver.OnMessage)) and assigned(value) then begin // set up observer
+    mqWinMsgObserver.Window := DSiAllocateHWnd(WndProc);
+    mqWinMsgObserver.Observer := CreateContainerWindowsMessageObserver(
+      mqWinMsgObserver.Window, MSG_CLIENT_MESSAGE, 0, 0);
+    ContainerSubject.Attach(mqWinMsgObserver.Observer, coiNotifyOnAllInserts);
+    mqWinMsgObserver.Observer.Activate;
+  end
+  else if assigned(mqWinMsgObserver.OnMessage) and (not assigned(value)) then begin // tear down observer
+    mqWinMsgObserver.Observer.Deactivate;
+    ContainerSubject.Detach(mqWinMsgObserver.Observer, coiNotifyOnAllInserts);
+    FreeAndNil(mqWinMsgObserver.Observer);
+    DSiDeallocateHWnd(mqWinMsgObserver.Window);
+  end;
+  mqWinMsgObserver.OnMessage := value;
+end; { TOmniMessageQueue.SetOnMessage }
+
 function TOmniMessageQueue.TryDequeue(var msg: TOmniMessage): boolean;
 var
   tmp: TOmniMessage;
@@ -350,6 +385,15 @@ begin
   msg := tmp;
   tmp.MsgData._Release;
 end; { TOmniMessageQueue.TryDequeue }
+
+procedure TOmniMessageQueue.WndProc(var msg: TMessage);
+var
+  queueMsg: TOmniMessage;
+begin
+  if (msg.Msg = MSG_CLIENT_MESSAGE) and assigned(mqWinMsgObserver.OnMessage) then
+    while TryDequeue(queueMsg) do
+      mqWinMsgObserver.OnMessage(Self, queueMsg);
+end; { TOmniMessageQueue.WndProc }
 
 { TOmniCommunicationEndpoint }
 
