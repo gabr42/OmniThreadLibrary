@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-01-14
-///   Version           : 1.02
+///   Last modification : 2010-07-01
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.02: 2010-01-14
 ///       - Small changes required for the interoperability with the Parallel.ForEach.
 ///     1.01a: 2010-01-05
@@ -48,6 +50,8 @@
 ///</para></remarks>
 
 unit OtlCollections;
+
+{$I OTLOptions.inc}
 
 interface
 

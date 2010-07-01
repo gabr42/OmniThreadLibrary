@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-03-30
-///   Version           : 1.04a
+///   Last modification : 2010-07-01
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.04a: 2010-03-30
 ///       - Prevent race condition in a rather specialized usage of TOmniResourceCount.
 ///     1.04: 2010-02-04
@@ -62,6 +64,8 @@
 ///</para></remarks>
 
 unit OtlSync;
+
+{$I OTLOptions.inc}
 
 interface
 

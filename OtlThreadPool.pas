@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-06-06
-///   Version           : 2.04a
+///   Last modification : 2010-07-01
+///   Version           : 2.05
 /// </para><para>
 ///   History:
+///     2.05: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     2.04a: 2010-06-06
 ///       - Modified patch from 2.04 so that it's actually working.
 ///     2.04: 2010-05-30
@@ -76,11 +78,9 @@
 ///       - First official release. 
 /// </para></remarks>
 
-{$IF CompilerVersion >= 21}
-{$DEFINE OTL_DeprecatedResume}
-{$IFEND}
-
 unit OtlThreadPool;
+
+{$I OTLOptions.inc}
 
 interface
 

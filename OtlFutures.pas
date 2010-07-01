@@ -36,15 +36,19 @@
 ///     Web             : http://gp.17slon.com
 ///
 ///   Creation date     : 2008-06-17
-///   Last modification : 2010-06-17
-///   Version           : 1.0
+///   Last modification : 2010-07-01
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.0: 2010-06-17
 ///       - Initial implementation.
 /// </para></remarks>
 
 unit OtlFutures;
+
+{$I OTLOptions.inc}
 
 interface
 

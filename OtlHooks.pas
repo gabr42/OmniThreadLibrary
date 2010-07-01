@@ -30,13 +30,17 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-05-17
-///   Last modification : 2009-05-17
-///   Version           : 1.0
+///   Last modification : 2010-07-01
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///</para></remarks>
 
 unit OtlHooks;
+
+{$I OTLOptions.inc}
 
 interface
 

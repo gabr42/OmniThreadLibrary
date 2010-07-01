@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-03-16
-///   Version           : 1.09
+///   Last modification : 2010-07-01
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.09: 2010-03-16
 ///       - Added support for multiple simultaneous timers. SetTimer takes additional
 ///         'timerID' parameter. The old SetTimer assumes timerID = 0.
@@ -68,11 +70,9 @@
 ///       - First official release.
 ///</para></remarks>
 
-{$IF CompilerVersion >= 20}
-  {$DEFINE OTL_Anonymous}
-{$IFEND}
-
 unit OtlTask;
+
+{$I OTLOptions.inc}
 
 interface
 

@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2010-05-06
-///   Version           : 2.03a
+///   Last modification : 2010-07-01
+///   Version           : 2.04
 ///</para><para>
 ///   History:
+///     2.04: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     2.03a: 2010-05-06
 ///       - Fixed memory leak in TOmni{Base}Queue when queueing String, WideString,
 ///         Variant and Extended values.
@@ -69,13 +71,13 @@
 ///         multiple readers.
 ///</para></remarks>
 
-//DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
-{$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
-
 unit OtlContainers;
 
-{$R-,O+,A8,B-}
+{$I OTLOptions.inc}
+{$OPTIMIZATION ON}
 {$WARN SYMBOL_PLATFORM OFF}
+{$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
+//DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
 interface
 

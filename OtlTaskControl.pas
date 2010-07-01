@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-06-12
-///   Version           : 1.21c
+///   Last modification : 2010-07-01
+///   Version           : 1.22
 ///</para><para>
 ///   History:
+///     1.22: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.21c: 2010-06-12
 ///       - TOmniTaskExecutor must always call Cleanup in case task was not executed.
 ///         (Issue #19, http://code.google.com/p/omnithreadlibrary/issues/detail?id=19).
@@ -168,16 +170,10 @@
 
 // TODO 3 -oPrimoz Gabrijelcic : Could RegisterWaitForSingleObject be used to wait on more than 64 objects at the same time? http://msdn.microsoft.com/en-us/library/ms685061(VS.85).aspx
 
-{$IF CompilerVersion >= 20}
-  {$DEFINE OTL_Anonymous}
-{$IFEND}
-{$IF CompilerVersion >= 21}
-  {$DEFINE OTL_DeprecatedResume}
-  {$DEFINE OTL_KnowsParamCount}
-{$IFEND}
-{$WARN SYMBOL_PLATFORM OFF}
-
 unit OtlTaskControl;
+
+{$I OTLOptions.inc}
+{$WARN SYMBOL_PLATFORM OFF}
 
 interface
 

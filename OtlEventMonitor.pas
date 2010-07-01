@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-05-30
-///   Version           : 1.01a
+///   Last modification : 2010-07-01
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2010-07-01
+///       - Includes OTLOptions.inc.
 ///     1.01a: 2010-05-30
 ///       - Message retrieving loop destroys interface immediately, not when the next
 ///         message is received.
@@ -52,9 +54,10 @@
 ///       - First official release.
 ///</para></remarks>
 
-{$WARN SYMBOL_PLATFORM OFF}
-
 unit OtlEventMonitor;
+
+{$I OTLOptions.inc}
+{$WARN SYMBOL_PLATFORM OFF}
 
 interface
 
