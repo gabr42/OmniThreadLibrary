@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{57B9DF85-D94A-47BE-BDEF-74FA8FDBECC5}</ProjectGuid>
 			<MainSource>app_38_OrderedFor.dpr</MainSource>
-			<ProjectVersion>12.1</ProjectVersion>
+			<ProjectVersion>12.0</ProjectVersion>
 			<Base>True</Base>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<Platform Condition="'$(Platform)'==''">Win32</Platform>

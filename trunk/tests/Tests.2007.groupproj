@@ -1,354 +1,354 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{2cfa204c-720f-4819-bccc-25de980ec6fc}</ProjectGuid>
+    <ProjectGuid>{87628bb1-4ca4-4421-9372-616ceb8e9310}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
-    <Projects Include="00_Beep\app_0_Beep.dproj" />
-    <Projects Include="01_HelloWorld\app_1_HelloWorld.dproj" />
-    <Projects Include="02_TwoWayHello\app_2_TwoWayHello.dproj" />
-    <Projects Include="03_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" />
-    <Projects Include="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" />
-    <Projects Include="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" />
-    <Projects Include="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" />
-    <Projects Include="07_InitTest\app_7_InitTest.dproj" />
-    <Projects Include="08_RegisterComm\app_8_RegisterComm.dproj" />
-    <Projects Include="09_Communications\app_9_Communications.dproj" />
-    <Projects Include="10_Containers\app_10_Containers.dproj" />
-    <Projects Include="11_ThreadPool\app_11_ThreadPool.dproj" />
-    <Projects Include="12_Lock\app_12_Lock.dproj" />
-    <Projects Include="13_Exceptions\app_13_Exceptions.dproj" />
-    <Projects Include="14_TerminateWhen\app_14_TerminateWhen.dproj" />
-    <Projects Include="15_TaskGroup\app_15_TaskGroup.dproj" />
-    <Projects Include="16_ChainTo\app_16_ChainTo.dproj" />
-    <Projects Include="17_MsgWait\app_17_MsgWait.dproj" />
-    <Projects Include="18_StringMsgDispatch\app_18_StringMsgDispatch.dproj" />
-    <Projects Include="19_StringMsgBenchmark\app_19_StringMsgBenchmark.dproj" />
-    <Projects Include="20_QuickSort\app_20_QuickSort.dproj" />
-    <Projects Include="22_TerminationTest\app_22_TerminationTest.dproj" />
-    <Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" />
-    <Projects Include="24_ConnectionPool\app_24_ConnectionPool.dproj" />
-    <Projects Include="25_WaitableComm\app_25_WaitableComm.dproj" />
-    <Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" />
-    <Projects Include="27_RecursiveTree\app_27_RecursiveTree.dproj" />
-    <Projects Include="28_Hooks\app_28_Hooks.dproj" />
-    <Projects Include="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" />
-    <Projects Include="31_WaitableObjects\app_31_WaitableObjects.dproj" />
-    <Projects Include="32_Queue\app_32_Queue.dproj" />
-    <Projects Include="33_BlockingCollection\app_33_BlockingCollection.dproj" />
-    <Projects Include="34_TreeScan\app_34_TreeScan.dproj" />
+    <Projects Include="00_Beep\app_0_Beep.2007.dproj" />
+    <Projects Include="01_HelloWorld\app_1_HelloWorld.2007.dproj" />
+    <Projects Include="02_TwoWayHello\app_2_TwoWayHello.2007.dproj" />
+    <Projects Include="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2007.dproj" />
+    <Projects Include="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2007.dproj" />
+    <Projects Include="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2007.dproj" />
+    <Projects Include="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2007.dproj" />
+    <Projects Include="07_InitTest\app_7_InitTest.2007.dproj" />
+    <Projects Include="08_RegisterComm\app_8_RegisterComm.2007.dproj" />
+    <Projects Include="09_Communications\app_9_Communications.2007.dproj" />
+    <Projects Include="10_Containers\app_10_Containers.2007.dproj" />
+    <Projects Include="11_ThreadPool\app_11_ThreadPool.2007.dproj" />
+    <Projects Include="12_Lock\app_12_Lock.2007.dproj" />
+    <Projects Include="13_Exceptions\app_13_Exceptions.2007.dproj" />
+    <Projects Include="14_TerminateWhen\app_14_TerminateWhen.2007.dproj" />
+    <Projects Include="15_TaskGroup\app_15_TaskGroup.2007.dproj" />
+    <Projects Include="16_ChainTo\app_16_ChainTo.2007.dproj" />
+    <Projects Include="17_MsgWait\app_17_MsgWait.2007.dproj" />
+    <Projects Include="18_StringMsgDispatch\app_18_StringMsgDispatch.2007.dproj" />
+    <Projects Include="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2007.dproj" />
+    <Projects Include="20_QuickSort\app_20_QuickSort.2007.dproj" />
+    <Projects Include="22_TerminationTest\app_22_TerminationTest.2007.dproj" />
+    <Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2007.dproj" />
+    <Projects Include="24_ConnectionPool\app_24_ConnectionPool.2007.dproj" />
+    <Projects Include="25_WaitableComm\app_25_WaitableComm.2007.dproj" />
+    <Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.2007.dproj" />
+    <Projects Include="27_RecursiveTree\app_27_RecursiveTree.2007.dproj" />
+    <Projects Include="28_Hooks\app_28_Hooks.2007.dproj" />
+    <Projects Include="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2007.dproj" />
+    <Projects Include="31_WaitableObjects\app_31_WaitableObjects.2007.dproj" />
+    <Projects Include="32_Queue\app_32_Queue.2007.dproj" />
+    <Projects Include="33_BlockingCollection\app_33_BlockingCollection.2007.dproj" />
+    <Projects Include="34_TreeScan\app_34_TreeScan.2007.dproj" />
   </ItemGroup>
   <ProjectExtensions>
     <Borland.Personality>Default.Personality</Borland.Personality>
     <Borland.ProjectType />
     <BorlandProject>
-<BorlandProject xmlns=""><Default.Personality></Default.Personality></BorlandProject></BorlandProject>
+  <BorlandProject xmlns=""> <Default.Personality> </Default.Personality> </BorlandProject></BorlandProject>
   </ProjectExtensions>
-  <Target Name="app_0_Beep">
-    <MSBuild Projects="00_Beep\app_0_Beep.dproj" Targets="" />
+  <Target Name="app_0_Beep_2007">
+    <MSBuild Projects="00_Beep\app_0_Beep.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_0_Beep:Clean">
-    <MSBuild Projects="00_Beep\app_0_Beep.dproj" Targets="Clean" />
+  <Target Name="app_0_Beep_2007:Clean">
+    <MSBuild Projects="00_Beep\app_0_Beep.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_0_Beep:Make">
-    <MSBuild Projects="00_Beep\app_0_Beep.dproj" Targets="Make" />
+  <Target Name="app_0_Beep_2007:Make">
+    <MSBuild Projects="00_Beep\app_0_Beep.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_1_HelloWorld">
-    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.dproj" Targets="" />
+  <Target Name="app_1_HelloWorld_2007">
+    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_1_HelloWorld:Clean">
-    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.dproj" Targets="Clean" />
+  <Target Name="app_1_HelloWorld_2007:Clean">
+    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_1_HelloWorld:Make">
-    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.dproj" Targets="Make" />
+  <Target Name="app_1_HelloWorld_2007:Make">
+    <MSBuild Projects="01_HelloWorld\app_1_HelloWorld.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_2_TwoWayHello">
-    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.dproj" Targets="" />
+  <Target Name="app_2_TwoWayHello_2007">
+    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_2_TwoWayHello:Clean">
-    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.dproj" Targets="Clean" />
+  <Target Name="app_2_TwoWayHello_2007:Clean">
+    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_2_TwoWayHello:Make">
-    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.dproj" Targets="Make" />
+  <Target Name="app_2_TwoWayHello_2007:Make">
+    <MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_3_HelloWorld_with_package">
-    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="" />
+  <Target Name="app_3_HelloWorld_with_package_2007">
+    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_3_HelloWorld_with_package:Clean">
-    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="Clean" />
+  <Target Name="app_3_HelloWorld_with_package_2007:Clean">
+    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_3_HelloWorld_with_package:Make">
-    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.dproj" Targets="Make" />
+  <Target Name="app_3_HelloWorld_with_package_2007:Make">
+    <MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_4_TwoWayHello_with_package">
-    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="" />
+  <Target Name="app_4_TwoWayHello_with_package_2007">
+    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_4_TwoWayHello_with_package:Clean">
-    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="Clean" />
+  <Target Name="app_4_TwoWayHello_with_package_2007:Clean">
+    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_4_TwoWayHello_with_package:Make">
-    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.dproj" Targets="Make" />
+  <Target Name="app_4_TwoWayHello_with_package_2007:Make">
+    <MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_5_TwoWayHello_without_loop">
-    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="" />
+  <Target Name="app_5_TwoWayHello_without_loop_2007">
+    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_5_TwoWayHello_without_loop:Clean">
-    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="Clean" />
+  <Target Name="app_5_TwoWayHello_without_loop_2007:Clean">
+    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_5_TwoWayHello_without_loop:Make">
-    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.dproj" Targets="Make" />
+  <Target Name="app_5_TwoWayHello_without_loop_2007:Make">
+    <MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_6_TwoWayHello_with_object_worker">
-    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="" />
+  <Target Name="app_6_TwoWayHello_with_object_worker_2007">
+    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_6_TwoWayHello_with_object_worker:Clean">
-    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="Clean" />
+  <Target Name="app_6_TwoWayHello_with_object_worker_2007:Clean">
+    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_6_TwoWayHello_with_object_worker:Make">
-    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.dproj" Targets="Make" />
+  <Target Name="app_6_TwoWayHello_with_object_worker_2007:Make">
+    <MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_7_InitTest">
-    <MSBuild Projects="07_InitTest\app_7_InitTest.dproj" Targets="" />
+  <Target Name="app_7_InitTest_2007">
+    <MSBuild Projects="07_InitTest\app_7_InitTest.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_7_InitTest:Clean">
-    <MSBuild Projects="07_InitTest\app_7_InitTest.dproj" Targets="Clean" />
+  <Target Name="app_7_InitTest_2007:Clean">
+    <MSBuild Projects="07_InitTest\app_7_InitTest.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_7_InitTest:Make">
-    <MSBuild Projects="07_InitTest\app_7_InitTest.dproj" Targets="Make" />
+  <Target Name="app_7_InitTest_2007:Make">
+    <MSBuild Projects="07_InitTest\app_7_InitTest.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_8_RegisterComm">
-    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.dproj" Targets="" />
+  <Target Name="app_8_RegisterComm_2007">
+    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_8_RegisterComm:Clean">
-    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.dproj" Targets="Clean" />
+  <Target Name="app_8_RegisterComm_2007:Clean">
+    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_8_RegisterComm:Make">
-    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.dproj" Targets="Make" />
+  <Target Name="app_8_RegisterComm_2007:Make">
+    <MSBuild Projects="08_RegisterComm\app_8_RegisterComm.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_9_Communications">
-    <MSBuild Projects="09_Communications\app_9_Communications.dproj" Targets="" />
+  <Target Name="app_9_Communications_2007">
+    <MSBuild Projects="09_Communications\app_9_Communications.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_9_Communications:Clean">
-    <MSBuild Projects="09_Communications\app_9_Communications.dproj" Targets="Clean" />
+  <Target Name="app_9_Communications_2007:Clean">
+    <MSBuild Projects="09_Communications\app_9_Communications.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_9_Communications:Make">
-    <MSBuild Projects="09_Communications\app_9_Communications.dproj" Targets="Make" />
+  <Target Name="app_9_Communications_2007:Make">
+    <MSBuild Projects="09_Communications\app_9_Communications.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_10_Containers">
-    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="" />
+  <Target Name="app_10_Containers_2007">
+    <MSBuild Projects="10_Containers\app_10_Containers.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_10_Containers:Clean">
-    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="Clean" />
+  <Target Name="app_10_Containers_2007:Clean">
+    <MSBuild Projects="10_Containers\app_10_Containers.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_10_Containers:Make">
-    <MSBuild Projects="10_Containers\app_10_Containers.dproj" Targets="Make" />
+  <Target Name="app_10_Containers_2007:Make">
+    <MSBuild Projects="10_Containers\app_10_Containers.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_11_ThreadPool">
-    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="" />
+  <Target Name="app_11_ThreadPool_2007">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_11_ThreadPool:Clean">
-    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="Clean" />
+  <Target Name="app_11_ThreadPool_2007:Clean">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_11_ThreadPool:Make">
-    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.dproj" Targets="Make" />
+  <Target Name="app_11_ThreadPool_2007:Make">
+    <MSBuild Projects="11_ThreadPool\app_11_ThreadPool.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_12_Lock">
-    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="" />
+  <Target Name="app_12_Lock_2007">
+    <MSBuild Projects="12_Lock\app_12_Lock.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_12_Lock:Clean">
-    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="Clean" />
+  <Target Name="app_12_Lock_2007:Clean">
+    <MSBuild Projects="12_Lock\app_12_Lock.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_12_Lock:Make">
-    <MSBuild Projects="12_Lock\app_12_Lock.dproj" Targets="Make" />
+  <Target Name="app_12_Lock_2007:Make">
+    <MSBuild Projects="12_Lock\app_12_Lock.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_13_Exceptions">
-    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="" />
+  <Target Name="app_13_Exceptions_2007">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_13_Exceptions:Clean">
-    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="Clean" />
+  <Target Name="app_13_Exceptions_2007:Clean">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_13_Exceptions:Make">
-    <MSBuild Projects="13_Exceptions\app_13_Exceptions.dproj" Targets="Make" />
+  <Target Name="app_13_Exceptions_2007:Make">
+    <MSBuild Projects="13_Exceptions\app_13_Exceptions.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_14_TerminateWhen">
-    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="" />
+  <Target Name="app_14_TerminateWhen_2007">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_14_TerminateWhen:Clean">
-    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="Clean" />
+  <Target Name="app_14_TerminateWhen_2007:Clean">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_14_TerminateWhen:Make">
-    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.dproj" Targets="Make" />
+  <Target Name="app_14_TerminateWhen_2007:Make">
+    <MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_15_TaskGroup">
-    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="" />
+  <Target Name="app_15_TaskGroup_2007">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_15_TaskGroup:Clean">
-    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="Clean" />
+  <Target Name="app_15_TaskGroup_2007:Clean">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_15_TaskGroup:Make">
-    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.dproj" Targets="Make" />
+  <Target Name="app_15_TaskGroup_2007:Make">
+    <MSBuild Projects="15_TaskGroup\app_15_TaskGroup.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_16_ChainTo">
-    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="" />
+  <Target Name="app_16_ChainTo_2007">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_16_ChainTo:Clean">
-    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="Clean" />
+  <Target Name="app_16_ChainTo_2007:Clean">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_16_ChainTo:Make">
-    <MSBuild Projects="16_ChainTo\app_16_ChainTo.dproj" Targets="Make" />
+  <Target Name="app_16_ChainTo_2007:Make">
+    <MSBuild Projects="16_ChainTo\app_16_ChainTo.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_17_MsgWait">
-    <MSBuild Projects="17_MsgWait\app_17_MsgWait.dproj" Targets="" />
+  <Target Name="app_17_MsgWait_2007">
+    <MSBuild Projects="17_MsgWait\app_17_MsgWait.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_17_MsgWait:Clean">
-    <MSBuild Projects="17_MsgWait\app_17_MsgWait.dproj" Targets="Clean" />
+  <Target Name="app_17_MsgWait_2007:Clean">
+    <MSBuild Projects="17_MsgWait\app_17_MsgWait.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_17_MsgWait:Make">
-    <MSBuild Projects="17_MsgWait\app_17_MsgWait.dproj" Targets="Make" />
+  <Target Name="app_17_MsgWait_2007:Make">
+    <MSBuild Projects="17_MsgWait\app_17_MsgWait.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_18_StringMsgDispatch">
-    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.dproj" Targets="" />
+  <Target Name="app_18_StringMsgDispatch_2007">
+    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_18_StringMsgDispatch:Clean">
-    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.dproj" Targets="Clean" />
+  <Target Name="app_18_StringMsgDispatch_2007:Clean">
+    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_18_StringMsgDispatch:Make">
-    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.dproj" Targets="Make" />
+  <Target Name="app_18_StringMsgDispatch_2007:Make">
+    <MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_19_StringMsgBenchmark">
-    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.dproj" Targets="" />
+  <Target Name="app_19_StringMsgBenchmark_2007">
+    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_19_StringMsgBenchmark:Clean">
-    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.dproj" Targets="Clean" />
+  <Target Name="app_19_StringMsgBenchmark_2007:Clean">
+    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_19_StringMsgBenchmark:Make">
-    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.dproj" Targets="Make" />
+  <Target Name="app_19_StringMsgBenchmark_2007:Make">
+    <MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_20_QuickSort">
-    <MSBuild Projects="20_QuickSort\app_20_QuickSort.dproj" Targets="" />
+  <Target Name="app_20_QuickSort_2007">
+    <MSBuild Projects="20_QuickSort\app_20_QuickSort.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_20_QuickSort:Clean">
-    <MSBuild Projects="20_QuickSort\app_20_QuickSort.dproj" Targets="Clean" />
+  <Target Name="app_20_QuickSort_2007:Clean">
+    <MSBuild Projects="20_QuickSort\app_20_QuickSort.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_20_QuickSort:Make">
-    <MSBuild Projects="20_QuickSort\app_20_QuickSort.dproj" Targets="Make" />
+  <Target Name="app_20_QuickSort_2007:Make">
+    <MSBuild Projects="20_QuickSort\app_20_QuickSort.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_22_TerminationTest">
-    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.dproj" Targets="" />
+  <Target Name="app_22_TerminationTest_2007">
+    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_22_TerminationTest:Clean">
-    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.dproj" Targets="Clean" />
+  <Target Name="app_22_TerminationTest_2007:Clean">
+    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_22_TerminationTest:Make">
-    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.dproj" Targets="Make" />
+  <Target Name="app_22_TerminationTest_2007:Make">
+    <MSBuild Projects="22_TerminationTest\app_22_TerminationTest.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_23_BackgroundFileSearch">
-    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" Targets="" />
+  <Target Name="app_23_BackgroundFileSearch_2007">
+    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_23_BackgroundFileSearch:Clean">
-    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" Targets="Clean" />
+  <Target Name="app_23_BackgroundFileSearch_2007:Clean">
+    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_23_BackgroundFileSearch:Make">
-    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.dproj" Targets="Make" />
+  <Target Name="app_23_BackgroundFileSearch_2007:Make">
+    <MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_24_ConnectionPool">
-    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="" />
+  <Target Name="app_24_ConnectionPool_2007">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_24_ConnectionPool:Clean">
-    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="Clean" />
+  <Target Name="app_24_ConnectionPool_2007:Clean">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_24_ConnectionPool:Make">
-    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.dproj" Targets="Make" />
+  <Target Name="app_24_ConnectionPool_2007:Make">
+    <MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_25_WaitableComm">
-    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="" />
+  <Target Name="app_25_WaitableComm_2007">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_25_WaitableComm:Clean">
-    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="Clean" />
+  <Target Name="app_25_WaitableComm_2007:Clean">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_25_WaitableComm:Make">
-    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.dproj" Targets="Make" />
+  <Target Name="app_25_WaitableComm_2007:Make">
+    <MSBuild Projects="25_WaitableComm\app_25_WaitableComm.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_26_MultiEventMonitor">
-    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="" />
+  <Target Name="app_26_MultiEventMonitor_2007">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_26_MultiEventMonitor:Clean">
-    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="Clean" />
+  <Target Name="app_26_MultiEventMonitor_2007:Clean">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_26_MultiEventMonitor:Make">
-    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.dproj" Targets="Make" />
+  <Target Name="app_26_MultiEventMonitor_2007:Make">
+    <MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_27_RecursiveTree">
-    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="" />
+  <Target Name="app_27_RecursiveTree_2007">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_27_RecursiveTree:Clean">
-    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="Clean" />
+  <Target Name="app_27_RecursiveTree_2007:Clean">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_27_RecursiveTree:Make">
-    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.dproj" Targets="Make" />
+  <Target Name="app_27_RecursiveTree_2007:Make">
+    <MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_28_Hooks">
-    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="" />
+  <Target Name="app_28_Hooks_2007">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_28_Hooks:Clean">
-    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="Clean" />
+  <Target Name="app_28_Hooks_2007:Clean">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_28_Hooks:Make">
-    <MSBuild Projects="28_Hooks\app_28_Hooks.dproj" Targets="Make" />
+  <Target Name="app_28_Hooks_2007:Make">
+    <MSBuild Projects="28_Hooks\app_28_Hooks.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_29_ImplicitEventMonitor">
-    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="" />
+  <Target Name="app_29_ImplicitEventMonitor_2007">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_29_ImplicitEventMonitor:Clean">
-    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="Clean" />
+  <Target Name="app_29_ImplicitEventMonitor_2007:Clean">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_29_ImplicitEventMonitor:Make">
-    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.dproj" Targets="Make" />
+  <Target Name="app_29_ImplicitEventMonitor_2007:Make">
+    <MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_31_WaitableObjects">
-    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.dproj" Targets="" />
+  <Target Name="app_31_WaitableObjects_2007">
+    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_31_WaitableObjects:Clean">
-    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.dproj" Targets="Clean" />
+  <Target Name="app_31_WaitableObjects_2007:Clean">
+    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_31_WaitableObjects:Make">
-    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.dproj" Targets="Make" />
+  <Target Name="app_31_WaitableObjects_2007:Make">
+    <MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_32_Queue">
-    <MSBuild Projects="32_Queue\app_32_Queue.dproj" Targets="" />
+  <Target Name="app_32_Queue_2007">
+    <MSBuild Projects="32_Queue\app_32_Queue.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_32_Queue:Clean">
-    <MSBuild Projects="32_Queue\app_32_Queue.dproj" Targets="Clean" />
+  <Target Name="app_32_Queue_2007:Clean">
+    <MSBuild Projects="32_Queue\app_32_Queue.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_32_Queue:Make">
-    <MSBuild Projects="32_Queue\app_32_Queue.dproj" Targets="Make" />
+  <Target Name="app_32_Queue_2007:Make">
+    <MSBuild Projects="32_Queue\app_32_Queue.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_33_BlockingCollection">
-    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.dproj" Targets="" />
+  <Target Name="app_33_BlockingCollection_2007">
+    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_33_BlockingCollection:Clean">
-    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.dproj" Targets="Clean" />
+  <Target Name="app_33_BlockingCollection_2007:Clean">
+    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_33_BlockingCollection:Make">
-    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.dproj" Targets="Make" />
+  <Target Name="app_33_BlockingCollection_2007:Make">
+    <MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.2007.dproj" Targets="Make" />
   </Target>
-  <Target Name="app_34_TreeScan">
-    <MSBuild Projects="34_TreeScan\app_34_TreeScan.dproj" Targets="" />
+  <Target Name="app_34_TreeScan_2007">
+    <MSBuild Projects="34_TreeScan\app_34_TreeScan.2007.dproj" Targets="" />
   </Target>
-  <Target Name="app_34_TreeScan:Clean">
-    <MSBuild Projects="34_TreeScan\app_34_TreeScan.dproj" Targets="Clean" />
+  <Target Name="app_34_TreeScan_2007:Clean">
+    <MSBuild Projects="34_TreeScan\app_34_TreeScan.2007.dproj" Targets="Clean" />
   </Target>
-  <Target Name="app_34_TreeScan:Make">
-    <MSBuild Projects="34_TreeScan\app_34_TreeScan.dproj" Targets="Make" />
+  <Target Name="app_34_TreeScan_2007:Make">
+    <MSBuild Projects="34_TreeScan\app_34_TreeScan.2007.dproj" Targets="Make" />
   </Target>
   <Target Name="Build">
-    <CallTarget Targets="app_0_Beep;app_1_HelloWorld;app_2_TwoWayHello;app_3_HelloWorld_with_package;app_4_TwoWayHello_with_package;app_5_TwoWayHello_without_loop;app_6_TwoWayHello_with_object_worker;app_7_InitTest;app_8_RegisterComm;app_9_Communications;app_10_Containers;app_11_ThreadPool;app_12_Lock;app_13_Exceptions;app_14_TerminateWhen;app_15_TaskGroup;app_16_ChainTo;app_17_MsgWait;app_18_StringMsgDispatch;app_19_StringMsgBenchmark;app_20_QuickSort;app_22_TerminationTest;app_23_BackgroundFileSearch;app_24_ConnectionPool;app_25_WaitableComm;app_26_MultiEventMonitor;app_27_RecursiveTree;app_28_Hooks;app_29_ImplicitEventMonitor;app_31_WaitableObjects;app_32_Queue;app_33_BlockingCollection;app_34_TreeScan" />
+    <CallTarget Targets="app_0_Beep_2007;app_1_HelloWorld_2007;app_2_TwoWayHello_2007;app_3_HelloWorld_with_package_2007;app_4_TwoWayHello_with_package_2007;app_5_TwoWayHello_without_loop_2007;app_6_TwoWayHello_with_object_worker_2007;app_7_InitTest_2007;app_8_RegisterComm_2007;app_9_Communications_2007;app_10_Containers_2007;app_11_ThreadPool_2007;app_12_Lock_2007;app_13_Exceptions_2007;app_14_TerminateWhen_2007;app_15_TaskGroup_2007;app_16_ChainTo_2007;app_17_MsgWait_2007;app_18_StringMsgDispatch_2007;app_19_StringMsgBenchmark_2007;app_20_QuickSort_2007;app_22_TerminationTest_2007;app_23_BackgroundFileSearch_2007;app_24_ConnectionPool_2007;app_25_WaitableComm_2007;app_26_MultiEventMonitor_2007;app_27_RecursiveTree_2007;app_28_Hooks_2007;app_29_ImplicitEventMonitor_2007;app_31_WaitableObjects_2007;app_32_Queue_2007;app_33_BlockingCollection_2007;app_34_TreeScan_2007" />
   </Target>
   <Target Name="Clean">
-    <CallTarget Targets="app_0_Beep:Clean;app_1_HelloWorld:Clean;app_2_TwoWayHello:Clean;app_3_HelloWorld_with_package:Clean;app_4_TwoWayHello_with_package:Clean;app_5_TwoWayHello_without_loop:Clean;app_6_TwoWayHello_with_object_worker:Clean;app_7_InitTest:Clean;app_8_RegisterComm:Clean;app_9_Communications:Clean;app_10_Containers:Clean;app_11_ThreadPool:Clean;app_12_Lock:Clean;app_13_Exceptions:Clean;app_14_TerminateWhen:Clean;app_15_TaskGroup:Clean;app_16_ChainTo:Clean;app_17_MsgWait:Clean;app_18_StringMsgDispatch:Clean;app_19_StringMsgBenchmark:Clean;app_20_QuickSort:Clean;app_22_TerminationTest:Clean;app_23_BackgroundFileSearch:Clean;app_24_ConnectionPool:Clean;app_25_WaitableComm:Clean;app_26_MultiEventMonitor:Clean;app_27_RecursiveTree:Clean;app_28_Hooks:Clean;app_29_ImplicitEventMonitor:Clean;app_31_WaitableObjects:Clean;app_32_Queue:Clean;app_33_BlockingCollection:Clean;app_34_TreeScan:Clean" />
+    <CallTarget Targets="app_0_Beep_2007:Clean;app_1_HelloWorld_2007:Clean;app_2_TwoWayHello_2007:Clean;app_3_HelloWorld_with_package_2007:Clean;app_4_TwoWayHello_with_package_2007:Clean;app_5_TwoWayHello_without_loop_2007:Clean;app_6_TwoWayHello_with_object_worker_2007:Clean;app_7_InitTest_2007:Clean;app_8_RegisterComm_2007:Clean;app_9_Communications_2007:Clean;app_10_Containers_2007:Clean;app_11_ThreadPool_2007:Clean;app_12_Lock_2007:Clean;app_13_Exceptions_2007:Clean;app_14_TerminateWhen_2007:Clean;app_15_TaskGroup_2007:Clean;app_16_ChainTo_2007:Clean;app_17_MsgWait_2007:Clean;app_18_StringMsgDispatch_2007:Clean;app_19_StringMsgBenchmark_2007:Clean;app_20_QuickSort_2007:Clean;app_22_TerminationTest_2007:Clean;app_23_BackgroundFileSearch_2007:Clean;app_24_ConnectionPool_2007:Clean;app_25_WaitableComm_2007:Clean;app_26_MultiEventMonitor_2007:Clean;app_27_RecursiveTree_2007:Clean;app_28_Hooks_2007:Clean;app_29_ImplicitEventMonitor_2007:Clean;app_31_WaitableObjects_2007:Clean;app_32_Queue_2007:Clean;app_33_BlockingCollection_2007:Clean;app_34_TreeScan_2007:Clean" />
   </Target>
   <Target Name="Make">
-    <CallTarget Targets="app_0_Beep:Make;app_1_HelloWorld:Make;app_2_TwoWayHello:Make;app_3_HelloWorld_with_package:Make;app_4_TwoWayHello_with_package:Make;app_5_TwoWayHello_without_loop:Make;app_6_TwoWayHello_with_object_worker:Make;app_7_InitTest:Make;app_8_RegisterComm:Make;app_9_Communications:Make;app_10_Containers:Make;app_11_ThreadPool:Make;app_12_Lock:Make;app_13_Exceptions:Make;app_14_TerminateWhen:Make;app_15_TaskGroup:Make;app_16_ChainTo:Make;app_17_MsgWait:Make;app_18_StringMsgDispatch:Make;app_19_StringMsgBenchmark:Make;app_20_QuickSort:Make;app_22_TerminationTest:Make;app_23_BackgroundFileSearch:Make;app_24_ConnectionPool:Make;app_25_WaitableComm:Make;app_26_MultiEventMonitor:Make;app_27_RecursiveTree:Make;app_28_Hooks:Make;app_29_ImplicitEventMonitor:Make;app_31_WaitableObjects:Make;app_32_Queue:Make;app_33_BlockingCollection:Make;app_34_TreeScan:Make" />
+    <CallTarget Targets="app_0_Beep_2007:Make;app_1_HelloWorld_2007:Make;app_2_TwoWayHello_2007:Make;app_3_HelloWorld_with_package_2007:Make;app_4_TwoWayHello_with_package_2007:Make;app_5_TwoWayHello_without_loop_2007:Make;app_6_TwoWayHello_with_object_worker_2007:Make;app_7_InitTest_2007:Make;app_8_RegisterComm_2007:Make;app_9_Communications_2007:Make;app_10_Containers_2007:Make;app_11_ThreadPool_2007:Make;app_12_Lock_2007:Make;app_13_Exceptions_2007:Make;app_14_TerminateWhen_2007:Make;app_15_TaskGroup_2007:Make;app_16_ChainTo_2007:Make;app_17_MsgWait_2007:Make;app_18_StringMsgDispatch_2007:Make;app_19_StringMsgBenchmark_2007:Make;app_20_QuickSort_2007:Make;app_22_TerminationTest_2007:Make;app_23_BackgroundFileSearch_2007:Make;app_24_ConnectionPool_2007:Make;app_25_WaitableComm_2007:Make;app_26_MultiEventMonitor_2007:Make;app_27_RecursiveTree_2007:Make;app_28_Hooks_2007:Make;app_29_ImplicitEventMonitor_2007:Make;app_31_WaitableObjects_2007:Make;app_32_Queue_2007:Make;app_33_BlockingCollection_2007:Make;app_34_TreeScan_2007:Make" />
   </Target>
   <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
 </Project>
