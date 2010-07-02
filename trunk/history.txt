@@ -20,6 +20,12 @@
 - TOmniTaskFunction renamed to TOmniTaskDelegate.
 - Added function CreateResourceCount(initialCount): IOmniResourceCount.
 - renamed IOmniCancellationToken.IsSignaled -> IsSignalled
+- .dproj tests renamed to .2007.dproj
+- TOmniValueContainer.IndexOfName renamed to TOmniValueContainer.IndexOf
+- New methods in TOmniValueContainer class: ByName, Count, Exists. New properties:
+  Items[integer], Items[string] and Items[TOmniValue].
+- IOmniTask/IOmniTaskControl.ParamByName has been removed, use .Param[name: string].
+- IOmniTask/IOmniTaskControl.Param returns TOmniValueContainter.
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 

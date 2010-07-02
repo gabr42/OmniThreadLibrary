@@ -117,8 +117,7 @@ type
     function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string;
-    function  GetParam(idxParam: integer): TOmniValue;
-    function  GetParamByName(const paramName: string): TOmniValue;
+    function  GetParam: TOmniValueContainer;
     function  GetTerminateEvent: THandle;
     function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
@@ -144,8 +143,7 @@ type
     property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
-    property Param[idxParam: integer]: TOmniValue read GetParam;
-    property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
+    property Param: TOmniValueContainer read GetParam;
     property TerminateEvent: THandle read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
@@ -212,6 +210,8 @@ begin
     owolResponseHandlers.Delete(idxWaitObject);
   end;
 end; { TOmniWaitObjectList.Remove }
+
+{ TOmniTaskParam }
 
 initialization
   Assert(SizeOf(THandle) = SizeOf(integer));

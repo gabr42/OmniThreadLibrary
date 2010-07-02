@@ -37,12 +37,12 @@ var
   delay: integer;
 begin
   task.Comm.Send(0, 'Worker started');
-  delay := task.ParamByName['Delay1'];
+  delay := task.Param['Delay1'];
   task.Comm.Send(0, Format('Sleeping for %d ms', [delay]));
   Sleep(delay);
   if task.Terminated then
     Exit;
-  delay := task.ParamByName['Delay2'];
+  delay := task.Param['Delay2'];
   task.Comm.Send(0, Format('Sleeping for %d ms', [delay]));
   Sleep(delay);
   task.Comm.Send(0, 'Worker stopped');
