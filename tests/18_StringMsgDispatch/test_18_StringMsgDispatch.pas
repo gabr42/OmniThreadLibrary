@@ -147,7 +147,7 @@ end;
 
 function TAsyncHello.Initialize: boolean;
 begin
-  aiMessage := Task.ParamByName['Message'];
+  aiMessage := Task.Param['Message'];
   Result := true;
 end;
 

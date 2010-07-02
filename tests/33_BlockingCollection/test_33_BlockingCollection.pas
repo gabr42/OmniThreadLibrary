@@ -104,9 +104,9 @@ var
   end; { MyTake }
 
 begin
-  value := task.ParamByName['Source'];     srcColl := TOmniBlockingCollection(value.AsObject);
-  value := task.ParamByName['Channel'];    chanColl := TOmniBlockingCollection(value.AsObject);
-  useTryTake := task.ParamByName['UseTryTake'];
+  value := task.Param['Source'];     srcColl := TOmniBlockingCollection(value.AsObject);
+  value := task.Param['Channel'];    chanColl := TOmniBlockingCollection(value.AsObject);
+  useTryTake := task.Param['UseTryTake'];
   repeat
     if useTryTake then begin
       if not MyTake then
@@ -148,9 +148,9 @@ var
 
   
 begin
-  value := task.ParamByName['Channel'];     chanColl := TOmniBlockingCollection(value.AsObject);
-  value := task.ParamByName['Destination']; dstColl := TOmniBlockingCollection(value.AsObject);
-  useTryTake := task.ParamByName['UseTryTake'];
+  value := task.Param['Channel'];     chanColl := TOmniBlockingCollection(value.AsObject);
+  value := task.Param['Destination']; dstColl := TOmniBlockingCollection(value.AsObject);
+  useTryTake := task.Param['UseTryTake'];
   repeat
     if useTryTake then begin
       if not MyTake then

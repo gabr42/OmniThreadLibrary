@@ -290,22 +290,30 @@ type
   TOmniValueContainer = class
   strict private
     ovcCanModify: boolean;
+    ovcCount    : integer;
     ovcNames    : array of string;
     ovcValues   : array of TOmniValue;
-    ovcCount    : integer;
   strict protected
     procedure Clear;
+    function  GetItem(paramIdx: integer): TOmniValue; overload;
+    function  GetItem(const paramName: string): TOmniValue; overload;
+    function GetItem(const param: TOmniValue): TOmniValue; overload;
     procedure Grow(requiredIdx: integer = -1);
   public
     constructor Create;
     procedure Add(const paramValue: TOmniValue; paramName: string = '');
     procedure Assign(const parameters: array of TOmniValue);
-    function  IndexOfName(const paramName: string): integer;
+    function  ByName(const paramName: string): TOmniValue; overload;
+    function  ByName(const paramName: string; const defValue: TOmniValue): TOmniValue; overload;
+    function  Count: integer;
+    function  Exists(const paramName: string): boolean;
+    function  IndexOf(const paramName: string): integer;
     procedure Insert(paramIdx: integer; const value: TOmniValue);
     function  IsLocked: boolean; inline;
     procedure Lock; inline;
-    function  ParamByIdx(paramIdx: integer): TOmniValue;
-    function  ParamByName(const paramName: string): TOmniValue;
+    property Item[paramIdx: integer]: TOmniValue read GetItem; default;
+    property Item[const paramName: string]: TOmniValue read GetItem; default;
+    property Item[const param: TOmniValue]: TOmniValue read GetItem; default;
   end; { TOmniValueContainer }
 
   IOmniCounter = interface ['{3A73CCF3-EDC5-484F-8459-532B8C715E3C}']
@@ -759,7 +767,7 @@ var
 begin
   if not ovcCanModify then
     raise Exception.Create('TOmniValueContainer: Locked');
-  newParam := (paramName = '') or (Asgn(idxParam, IndexOfName(paramName)) < 0);
+  newParam := (paramName = '') or (Asgn(idxParam, IndexOf(paramName)) < 0);
   if newParam then begin
     idxParam := ovcCount;
     Inc(ovcCount);
@@ -783,12 +791,65 @@ begin
     Add(value);
 end; { TOmniValueContainer.Assign }
 
+function TOmniValueContainer.ByName(const paramName: string): TOmniValue;
+begin
+  Result := ByName(paramName, TOmniValue.Null);
+end; { TOmniValueContainer.ByName }
+
+function TOmniValueContainer.ByName(const paramName: string; const defValue: TOmniValue):
+  TOmniValue;
+var
+  idxParam: integer;
+begin
+  idxParam := IndexOf(paramName);
+  if idxParam >= 0 then
+    Result := GetItem(idxParam)
+  else
+    Result := defValue;
+end; { TOmniValueContainer.ByName }
+
 procedure TOmniValueContainer.Clear;
 begin
   SetLength(ovcNames, 0);
   SetLength(ovcValues, 0);
   ovcCount := 0;
 end; { TOmniValueContainer.Clear }
+
+function TOmniValueContainer.Count: integer;
+begin
+  Result := ovcCount;
+end; { TOmniValueContainer.Count }
+
+function TOmniValueContainer.Exists(const paramName: string): boolean;
+begin
+  Result := (IndexOf(paramName) >= 0);
+end; { TOmniValueContainer.Exists }
+
+function TOmniValueContainer.GetItem(paramIdx: integer): TOmniValue;
+begin
+  Result := ovcValues[paramIdx];
+end; { TOmniValueContainer.GetItem }
+
+function TOmniValueContainer.GetItem(const paramName: string): TOmniValue;
+var
+  idxParam: integer;
+begin
+  idxParam := IndexOf(paramName);
+  if idxParam >= 0 then
+    Result := GetItem(idxParam)
+  else
+    raise Exception.CreateFmt('TOmniValueContainer.GetItem: Parameter %s does not exist', [paramName]);
+end; { TOmniValueContainer.GetItem }
+
+function TOmniValueContainer.GetItem(const param: TOmniValue): TOmniValue;
+begin
+  if param.IsInteger then
+    Result := GetItem(param.AsInteger)
+  else if param.IsString then
+    Result := GetItem(param.AsString)
+  else
+    raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');  
+end; { TOmniValueContainer.GetItem }
 
 procedure TOmniValueContainer.Grow(requiredIdx: integer = -1);
 var
@@ -815,17 +876,17 @@ begin
   end;
 end; { TOmniValueContainer.Grow }
 
-function TOmniValueContainer.IndexOfName(const paramName: string): integer;
+function TOmniValueContainer.IndexOf(const paramName: string): integer;
 begin
   for Result := 0 to ovcCount - 1 do
     if SameText(paramName, ovcNames[Result]) then
       Exit;
   Result := -1;
-end; { TOmniValueContainer.IndexOfName }
+end; { TOmniValueContainer.IndexOf }
 
 procedure TOmniValueContainer.Insert(paramIdx: integer; const value: TOmniValue);
 begin
-  if paramIdx > High(ovcValues) then 
+  if paramIdx > High(ovcValues) then
     Grow(paramIdx);
   ovcValues[paramIdx] := value;
 end; { TOmniValueContainer.Insert }
@@ -839,16 +900,6 @@ procedure TOmniValueContainer.Lock;
 begin
   ovcCanModify := false;
 end; { TOmniValueContainer.Lock }
-
-function TOmniValueContainer.ParamByIdx(paramIdx: integer): TOmniValue;
-begin
-  Result := ovcValues[paramIdx];
-end; { TOmniValueContainer.ParamByIdx }
-
-function TOmniValueContainer.ParamByName(const paramName: string): TOmniValue;
-begin
-  Result := ovcValues[IndexOfName(paramName)];
-end; { TOmniValueContainer.ParamByName }
 
 { TOmniCounter }
 

@@ -151,7 +151,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
-    Value = 1
+    Value = 0
     OnChange = inpNumCPUChange
   end
   object OtlMonitor: TOmniEventMonitor

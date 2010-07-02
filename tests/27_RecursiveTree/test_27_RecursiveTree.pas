@@ -115,7 +115,7 @@ procedure ParallelProcessTree(const task: IOmniTask);
         begin //schedule new task
           if not assigned(subTasks) then
             subTasks := TInterfaceList.Create;
-          monVal := task.ParamByName['Monitor']; //work around internal error T2575
+          monVal := task.Param['Monitor']; //work around internal error T2575
           monitor := monVal.AsInterface as IOmniTaskControlMonitor;
           subTasks.Add(
             CreateTask(ParallelProcessTree)
@@ -153,10 +153,10 @@ var
   level  : integer;
   nodeVal: TOmniValue;
 begin
-  level := task.ParamByName['Level'];
+  level := task.Param['Level'];
   task.Comm.Send(0, Format('Task %d started: Level %d / Child %d',
-    [task.UniqueID, level, integer(task.ParamByName['Child'])]));
-  nodeVal := task.ParamByName['Node']; //work around internal error T2575
+    [task.UniqueID, level, integer(task.Param['Child'])]));
+  nodeVal := task.Param['Node']; //work around internal error T2575
   Process(PNode(nodeVal.AsObject), level, level);
   task.Comm.Send(0, Format('Task %d completed', [task.UniqueID]));
 end; { ParallelProcessTree }

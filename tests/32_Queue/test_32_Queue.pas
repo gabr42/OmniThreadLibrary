@@ -94,8 +94,8 @@ var
   srcColl : TOmniBaseQueue;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
-  value := task.ParamByName['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
+  value := task.Param['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
+  value := task.Param['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
   GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopForwarders do
@@ -115,8 +115,8 @@ var
   msg     : TOmniMessage;
   value   : TOmniValue;
 begin
-  value := task.ParamByName['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
-  value := task.ParamByName['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
+  value := task.Param['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
+  value := task.Param['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
   GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
   while not GStopReaders do

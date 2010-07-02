@@ -75,7 +75,7 @@ var
   folder: string;
   mask  : string;
 begin
-  mask := task.ParamByName['FolderMask'];
+  mask := task.Param['FolderMask'];
   folder := ExtractFilePath(mask);
   Delete(mask, 1, Length(folder));
   if folder <> '' then

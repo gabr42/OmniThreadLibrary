@@ -636,8 +636,7 @@ type
     function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
-    function  GetParam(idxParam: integer): TOmniValue; inline;
-    function  GetParamByName(const paramName: string): TOmniValue; inline;
+    function  GetParam: TOmniValueContainer; inline;
     function  GetTerminateEvent: THandle; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
@@ -668,8 +667,7 @@ type
     property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
-    property Param[idxParam: integer]: TOmniValue read GetParam;
-    property ParamByName[const paramName: string]: TOmniValue read GetParamByName;
+    property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
     property TerminateEvent: THandle read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
@@ -995,8 +993,8 @@ end; { TOmniInternalAddressMsg.UnpackMessage }
 
 { TOmniTask }
 
-constructor TOmniTask.Create(executor: TOmniTaskExecutor; parameters:
-  TOmniValueContainer; sharedInfo: TOmniSharedTaskInfo);
+constructor TOmniTask.Create(executor: TOmniTaskExecutor;
+  parameters: TOmniValueContainer; sharedInfo: TOmniSharedTaskInfo);
 begin
   inherited Create;
   otExecutor_ref := executor;
@@ -1100,15 +1098,10 @@ begin
     Result := '';
 end; { TOmniTask.GetName }
 
-function TOmniTask.GetParam(idxParam: integer): TOmniValue;
+function TOmniTask.GetParam: TOmniValueContainer;
 begin
-  Result := otParameters_ref.ParamByIdx(idxParam);
+  Result := otParameters_ref;
 end; { TOmniTask.GetParam }
-
-function TOmniTask.GetParamByName(const paramName: string): TOmniValue;
-begin
-  Result := otParameters_ref.ParamByName(paramName);
-end; { TOmniTask.GetParamByName }
 
 function TOmniTask.GetTerminateEvent: THandle;
 begin
@@ -2205,12 +2198,7 @@ end; { TOmniTaskControl.GetUniqueID }
 
 function TOmniTaskControl.GetUserDataVal(const idxData: TOmniValue): TOmniValue;
 begin
-  if idxData.IsInteger then
-    Result := otcUserData.ParamByIdx(idxData)
-  else if idxData.IsString then
-    Result := otcUserData.ParamByName(idxData)
-  else
-    raise Exception.Create('UserData can only be indexed by integer or string.');  
+  Result := otcUserData[idxData];
 end; { TOmniTaskControl.GetUserDataVal }
 
 procedure TOmniTaskControl.Initialize;

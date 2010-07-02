@@ -53,9 +53,9 @@ var
   msgData: TOmniValue;
   msgID  : word;
 begin
-  msg := task.ParamByName['Message'];
+  msg := task.Param['Message'];
   repeat
-    case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.ParamByName['Delay']) of
+    case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.Param['Delay']) of
       WAIT_OBJECT_1:
         begin
           while task.Comm.Receive(msgID, msgData) do begin
