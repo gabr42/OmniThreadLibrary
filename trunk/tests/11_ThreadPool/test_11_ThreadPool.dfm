@@ -109,7 +109,6 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     Caption = 'Save log'
     TabOrder = 12
     OnClick = btnSaveLogClick
-    ExplicitTop = 408
   end
   object btnScheduleUnobserved: TButton
     Left = 8
