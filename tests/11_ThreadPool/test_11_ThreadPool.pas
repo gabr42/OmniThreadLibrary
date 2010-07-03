@@ -259,6 +259,8 @@ procedure TfrmTestOtlThreadPool.OmniTEDPoolWorkItemCompleted(const pool: IOmniTh
   taskID: Int64);
 begin
   Log(Format('Task %d removed from pool', [taskID]));
+  if pool.IsIdle then
+    Log(Format('Pool %d is empty', [pool.UniqueID]));
 end;
 
 procedure TfrmTestOtlThreadPool.OmniTEDTaskMessage(const task: IOmniTaskControl;
