@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-01
-///   Version           : 1.02
+///   Last modification : 2010-07-07
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2010-07-07
+///       - Internal message window is exposed via the MessageWindow property.
 ///     1.02: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.01a: 2010-05-30
@@ -101,6 +103,7 @@ type
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
   published
+    property MessageWindow: THandle read emMessageWindow;
     property OnPoolThreadCreated: TOmniPoolThreadEvent read emOnPoolThreadCreated
       write emOnPoolThreadCreated;
     property OnPoolThreadDestroying: TOmniPoolThreadEvent read emOnPoolThreadDestroying
