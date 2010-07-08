@@ -62,6 +62,7 @@ type
     procedure btnSeqScanClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure btnTEnumeratorTEnumClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     FNumNodes: integer;
     FRootNode: TNode;
@@ -255,6 +256,7 @@ begin
       nodeList.Add(pointer(i));
     outQueue := TOmniBlockingCollection.Create;
     time := DSiTimeGetTime64;
+    {$IF CompilerVersion >= 21}
     Parallel.ForEach<pointer>(CreateIEnumerator(nodeList))
       .NumTasks(numCores)
       .Execute(
@@ -262,6 +264,15 @@ begin
         begin
           outQueue.Add(elem);
         end);
+    {$ELSE} // there's no typeinfo for 'pointer' in D2009 which causes CastAs to break
+    Parallel.ForEach<TObject>(CreateIEnumerator(nodeList))
+      .NumTasks(numCores)
+      .Execute(
+        procedure (const elem: TObject)
+        begin
+          outQueue.Add(pointer(elem));
+        end);
+    {$IFEND}
     VerifyResult(outQueue, testSize, numCores, DSiTimeGetTime64 - time);
   finally FreeAndNil(nodeList); end;
   if cbRepeat.Checked then
@@ -269,6 +280,7 @@ begin
 end; { TfrmParallelForDemo.btnEnumeratorEnumClick }
 
 procedure TfrmParallelForDemo.btnGetEnumeratorEnumClick(Sender: TObject);
+{$IF CompilerVersion >= 21}
 var
   i       : integer;
   nodeList: TList;
@@ -276,7 +288,9 @@ var
   outQueue: IOmniBlockingCollection;
   testSize: integer;
   time    : int64;
+{$IFEND}
 begin
+  {$IF CompilerVersion >= 21}
   nodeList := TList.Create;
   try
     testSize := Random(200000)+1;
@@ -296,6 +310,7 @@ begin
   finally FreeAndNil(nodeList); end;
   if cbRepeat.Checked then
     PostMessage(Handle, WM_USER, 3, 0);
+  {$IFEND}
 end; { TfrmParallelForDemo.btnGetEnumeratorEnumClick }
 
 procedure TfrmParallelForDemo.btnIntegerEnumClick(Sender: TObject);
@@ -464,6 +479,13 @@ begin
   DestroyTree;
   CanClose := true;
 end; { TfrmParallelForDemo.FormCloseQuery }
+
+procedure TfrmParallelForDemo.FormCreate(Sender: TObject);
+begin
+  {$IF CompilerVersion < 21}
+  btnGetEnumeratorEnum.Enabled := false;
+  {$IFEND}
+end; { TfrmParallelForDemo.FormCreate }
 
 procedure TfrmParallelForDemo.Log(const msg: string; const params: array of const);
 begin

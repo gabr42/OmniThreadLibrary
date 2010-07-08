@@ -1154,11 +1154,13 @@ end; { TOmniValue.CastAsInt64 }
 function TOmniValue.CastAs<T>: T;
 var
   ds      : integer;
-  maxValue: int64;
+  maxValue: uint64;
   ti      : PTypeInfo;
 begin
+  ds := 0;
   ti := System.TypeInfo(T);
-  ds := TOmniValue_DataSize[ti^.Kind];
+  if assigned(ti) then
+    ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
     {$IFDEF OTL_ERTTI}
     Result := AsTValue.AsType<T>
@@ -1166,9 +1168,11 @@ begin
     raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
     {$ENDIF OTL_ERTTI}
   else begin // simple types
-    maxValue := int64($FF) SHL ((ds-1) * 8);
-    if ovData > maxValue then
-      raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [ovData, ti^.Name]);
+    if ds < 8 then begin
+      maxValue := uint64($FF) SHL ((ds-1) * 8);
+      if ovData > maxValue then
+        raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [ovData, ti^.Name]);
+    end;
     Move(ovData, Result, ds);
   end;
 end; { TOmniValue.CastAs }
@@ -1179,8 +1183,10 @@ var
   ds  : integer;
   ti  : PTypeInfo;
 begin
+  ds := 0;
   ti := System.TypeInfo(T);
-  ds := TOmniValue_DataSize[ti^.Kind];
+  if assigned(ti) then
+    ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
     {$IFDEF OTL_ERTTI}
     Result.AsTValue := TValue.From<T>(value)

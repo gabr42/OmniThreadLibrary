@@ -12,6 +12,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   Font.Style = []
   OldCreateOrder = False
   OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
