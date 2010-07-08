@@ -59,6 +59,10 @@ unit OtlParallel;
 
 {$I OTLOptions.inc}
 
+{$IF CompilerVersion < 20}
+'This unit requires Delphi 2009 or newer'
+{$IFEND}
+
 interface
 
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
