@@ -46,7 +46,7 @@ var
   j: integer;
 begin
   Result := false;
-  if i <= 0 then
+  if i <= 1 then
     Exit;
   for j := 2 to Round(Sqrt(i)) do
     if (i mod j) = 0 then

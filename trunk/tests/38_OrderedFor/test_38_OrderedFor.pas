@@ -42,7 +42,7 @@ var
   j: integer;
 begin
   Result := false;
-  if i <= 0 then
+  if i <= 1 then
     Exit;
   for j := 2 to Round(Sqrt(i)) do
     if (i mod j) = 0 then
@@ -101,7 +101,7 @@ var
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NumTasks(1).PreserveOrder.NoWait.Into(primeQueue).Execute(
+  Parallel.ForEach(1, 1{000}).NumTasks(1).PreserveOrder.NoWait.Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
