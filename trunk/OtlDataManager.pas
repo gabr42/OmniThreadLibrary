@@ -903,7 +903,8 @@ begin
   dmNextPosition := buffer.Range.Last + 1;
   dmBufferRangeLock.Acquire;
 
-  ' copy data from buffer, just in case?
+  //!!CONTINUE HERE!!
+  //' copy data from buffer, just in case?
 
   try
     {$IFDEF Debug}Assert(dmBufferRangeList.Objects[0] = buffer);{$ENDIF Debug}
@@ -912,7 +913,7 @@ begin
           BufferList[0].IsFull do
     begin
       dmBufferRangeLock.Release;
-      !! copy data from the buffer
+      { TODO : copy data from the buffer }
       dmBufferRangeLock.Acquire;
     end;
   finally dmBufferRangeLock.Release; end;
