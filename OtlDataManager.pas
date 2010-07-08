@@ -124,24 +124,6 @@ function  CreateSourceProvider(enumerator: IEnumerator): TOmniSourceProvider; ov
 function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: integer;
   options: TOmniDataManagerOptions): TOmniDataManager;
 
-(*
-type
-  TOmniLogger = class
-  strict private
-    eventList: TOmniBaseQueue;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Clear;
-    procedure GetEventList(sl: TStringList);
-    procedure Log(const msg: string; const params: array of const); overload;
-    procedure Log(const msg: string); overload;
-  end; { TOmniLogger }
-
-var
-  GLogger: TOmniLogger;
-*)
-
 implementation
 
 uses
@@ -1101,52 +1083,4 @@ begin
   end;
 end; { TOmniHeuristicDataManager.GetNextFromProvider }
 
-(*
-{ TOmniLogger }
-
-constructor TOmniLogger.Create;
-begin
-  inherited Create;
-  eventList := TOmniBaseQueue.Create;
-end; { TOmniLogger.Create }
-
-destructor TOmniLogger.Destroy;
-begin
-  FreeAndNil(eventList);
-  inherited;
-end; { TOmniLogger.Destroy }
-
-procedure TOmniLogger.Clear;
-var
-  tmp: TOmniValue;
-begin
-  while eventList.TryDequeue(tmp) do begin
-    tmp := '';
-    ;
-  end;
-end; { TOmniLogger.Clear }
-
-procedure TOmniLogger.GetEventList(sl: TStringList);
-var
-  tmp: TOmniValue;
-begin
-  while eventList.TryDequeue(tmp) do
-    sl.Add(tmp);
-end; { TOmniLogger.GetEventList }
-
-procedure TOmniLogger.Log(const msg: string; const params: array of const);
-begin
-  Log(Format(msg, params));
-end; { TOmniLogger.Log }
-
-procedure TOmniLogger.Log(const msg: string);
-begin
-  eventList.Enqueue(Format('[%d] %s', [GetCurrentThreadID, msg]));
-end; { TOmniLogger.Log }
-*)
-
-initialization
-//  GLogger := TOmniLogger.Create;
-finalization
-//  FreeAndNil(GLogger);
 end.
