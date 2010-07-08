@@ -285,6 +285,7 @@ type
     constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
     destructor  Destroy; override;
     procedure Activate;
+    procedure CopyToOutput;
     procedure MarkFull;
     procedure Submit(position: int64; const data: TOmniValue); override;
     property IsFull: boolean read obiFull;
@@ -817,6 +818,14 @@ begin
   obiActive := true;
 end; { TOmniOutputBufferImpl.Activate }
 
+procedure TOmniOutputBufferImpl.CopyToOutput;
+var
+  value: TOmniValue;
+begin
+  while obiBuffer.TryTake(value) do
+    obiOutput.Add(value);
+end; { TOmniOutputBufferImpl.CopyToOutput }
+
 constructor TOmniOutputBufferImpl.Create(owner: TOmniBaseDataManager;
   output: IOmniBlockingCollection);
 begin
@@ -834,8 +843,10 @@ end; { TOmniOutputBufferImpl.Destroy }
 
 procedure TOmniOutputBufferImpl.MarkFull;
 begin
-  obiActive := false;
-  obiDataManager_ref.NotifyBufferFull(Self);
+  if obiActive then begin
+    obiActive := false;
+    obiDataManager_ref.NotifyBufferFull(Self);
+  end;
 end; { TOmniOutputBufferImpl.MarkFull }
 
 procedure TOmniOutputBufferImpl.SetRange(range: TOmniPositionRange);
@@ -902,18 +913,15 @@ begin
   {$IFDEF Debug}Assert(buffer.Range.First = dmNextPosition);{$ENDIF Debug}
   dmNextPosition := buffer.Range.Last + 1;
   dmBufferRangeLock.Acquire;
-
-  //!!CONTINUE HERE!!
-  //' copy data from buffer, just in case?
-
   try
     {$IFDEF Debug}Assert(dmBufferRangeList.Objects[0] = buffer);{$ENDIF Debug}
     dmBufferRangeList.Delete(0);
-    while (dmBufferRangeList.Count > 0) and (BufferList[0].Range.First = dmNextPosition) and
+    while (dmBufferRangeList.Count > 0) and
+          (BufferList[0].Range.First = dmNextPosition) and
           BufferList[0].IsFull do
     begin
       dmBufferRangeLock.Release;
-      { TODO : copy data from the buffer }
+      buffer.CopyToOutput;
       dmBufferRangeLock.Acquire;
     end;
   finally dmBufferRangeLock.Release; end;

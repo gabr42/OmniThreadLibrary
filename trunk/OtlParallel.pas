@@ -218,8 +218,9 @@ type
   strict protected
     procedure DoOnStop;
     procedure InternalExecute(loopBody: TOmniIteratorDelegate);
-    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
     function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
+    procedure InternalExecuteIntoOrdered(loopBody: TOmniIteratorIntoDelegate);
     procedure InternalExecuteTask(task: TOmniTaskDelegate);
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
@@ -532,7 +533,6 @@ end; { TOmniParallelLoopBase.DoOnStop }
 
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
 begin
-  { TODO 5 -ogabr : Handle ploPreserveOrder }
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -588,6 +588,39 @@ end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
 begin
   Assert(assigned(oplIntoQueueIntf));
+  if ploPreserveOrder in Options then
+    InternalExecuteIntoOrdered(loopBody)
+  else // no order preservation; no output buffering required
+    InternalExecuteTask(
+      procedure (const task: IOmniTask)
+      var
+        localQueue: TOmniLocalQueue;
+        result    : TOmniValue;
+        value     : TOmniValue;
+      begin
+        localQueue := oplDataManager.CreateLocalQueue;
+        try
+          result := TOmniValue.Null;
+          while (not Stopped) and localQueue.GetNext(value) do begin
+            loopBody(value, result);
+            if not result.IsEmpty then begin
+              oplIntoQueueIntf.Add(result);
+              result := TOmniValue.Null;
+            end;
+          end;
+        finally FreeAndNil(localQueue); end;
+        if oplCountStopped.Allocate = 0 then begin
+          oplIntoQueueIntf.CompleteAdding;
+          DoOnStop;
+        end;
+      end
+    );
+end; { TOmniParallelLoopBase.InternalExecuteInto }
+
+procedure TOmniParallelLoopBase.InternalExecuteIntoOrdered(
+  loopBody: TOmniIteratorIntoDelegate);
+begin
+  Assert(assigned(oplIntoQueueIntf));
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -621,7 +654,7 @@ begin
       end;
     end
   );
-end; { TOmniParallelLoopBase.InternalExecuteInto }
+end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
 procedure TOmniParallelLoopBase.InternalExecuteTask(task: TOmniTaskDelegate);
 var
