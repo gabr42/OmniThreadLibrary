@@ -61,10 +61,7 @@ unit OtlParallel;
 
 interface
 
-// TODO 1 -oPrimoz Gabrijelcic : Check compilation with D2009.
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
-// TODO 5 -oPrimoz Gabrijelcic : Simple way to access Parallel.ForEach output? something like "for xxx in Parallel.ForEach(...)..."? Better: Parallel.ForEach.NoWait and use for over the blocking collection. Add a demo.
-// TODO 3 -oPrimoz Gabrijelcic : Do we need another Int delegate using 'integer' instead of 'int64'?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 
