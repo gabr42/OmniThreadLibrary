@@ -101,7 +101,7 @@ var
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).PreserveOrder.NoWait.Into(primeQueue).Execute(
+  Parallel.ForEach(1, 1000).NumTasks(1).PreserveOrder.NoWait.Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
