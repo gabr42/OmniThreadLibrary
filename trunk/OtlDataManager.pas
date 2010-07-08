@@ -321,6 +321,7 @@ type
     dmQueueLock         : TOmniCS;
     dmSourceProvider_ref: TOmniSourceProviderBase;
     dmStealIdx          : integer;
+    dmUnusedBuffers     : TObjectList;
   strict protected
     function  GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl; inline;
     function  GetSourceProvider: TOmniSourceProvider;
@@ -500,7 +501,6 @@ begin
   irpLow := low;
   irpHigh := high;
   irpStep := step;
-  irpPosition := 1;
   irpCount.Value := CalcCount(low, high, step);
 end; { TOmniIntegerRangeProvider.Create }
 
@@ -858,7 +858,7 @@ end; { TOmniOutputBufferImpl.SetRange }
 
 procedure TOmniOutputBufferImpl.Submit(position: int64; const data: TOmniValue);
 begin
-  {$IFDEF DEBUG}Assert(position = obiNextPosition); Inc(obiNextPosition);{$ENDIF}
+  {$IFDEF DEBUG}Assert(position >= obiNextPosition); obiNextPosition := position + 1;{$ENDIF}
   if obiActive then
     obiOutput.Add(data)
   else
@@ -876,10 +876,12 @@ begin
   dmNumWorkers := numWorkers;
   dmOptions := options;
   dmSourceProvider_ref.StorePositions := (dmoPreserveOrder in dmOptions);
-  dmNextPosition := 1;
-  dmBufferRangeList := TGpInt64ObjectList.Create(false);
-  dmBufferRangeList.Sorted := true;
-  dmBufferRangeList.Duplicates := dupError;
+  if dmoPreserveOrder in dmOptions then begin
+    dmBufferRangeList := TGpInt64ObjectList.Create(false);
+    dmBufferRangeList.Sorted := true;
+    dmBufferRangeList.Duplicates := dupError;
+    dmUnusedBuffers := TObjectList.Create;
+  end;
   InitializePacketSizes;
 end; { TOmniBaseDataManager.Create }
 
@@ -888,6 +890,7 @@ begin
   dmOutputIntf := nil;
   FreeAndNil(dmQueueList);
   FreeAndNil(dmBufferRangeList);
+  FreeAndNil(dmUnusedBuffers);
   inherited;
 end; { TOmniBaseDataManager.Destroy }
 
@@ -986,17 +989,16 @@ var
   maxDataCount: integer;
 begin
   if (spcCountable in sourceProvider.GetCapabilities) and
-     (dmNumWorkers = 1) or (spcFast in sourceProvider.GetCapabilities) then
+     ( (dmNumWorkers = 1) or
+       ( (spcFast in sourceProvider.GetCapabilities) and
+         (not (dmoPreserveOrder in dmOptions)))) then
   begin
     SetLength(dmPacketSizes, 1);
     dmPacketSizes[0] := (SourceProvider.Count + dmNumWorkers - 1) div dmNumWorkers;
   end
   else begin
     SetLength(dmPacketSizes, 5);
-    if spcCountable in sourceProvider.GetCapabilities then
-      maxDataCount := sourceProvider.GetPackageSizeLimit
-    else
-      maxDataCount := High(integer);
+    maxDataCount := sourceProvider.GetPackageSizeLimit;
     for iGen := 0 to 4 do begin
       dmPacketSizes[iGen] := Round(Exp(2 * iGen * Ln(3))); // 3^(2*iGen)
       if dmPacketSizes[iGen] > maxDataCount then begin
@@ -1012,6 +1014,8 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniBaseDataManager.ReleaseOutputBuffer
   // must put buffer 'away' so that it will be read from when data manager is flushed
   // (or even before)
+  (buffer as TOmniOutputBufferImpl).MarkFull;
+  dmUnusedBuffers.Add(buffer);
 end; { TOmniBaseDataManager.ReleaseOutputBuffer }
 
 procedure TOmniBaseDataManager.SetOutput(const queue: IOmniBlockingCollection);

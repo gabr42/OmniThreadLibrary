@@ -588,7 +588,7 @@ end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
 begin
   Assert(assigned(oplIntoQueueIntf));
-  if ploPreserveOrder in Options then
+  if (ploPreserveOrder in Options) {and (oplNumTasks > 1)} then { TODO 1 : reenable! }
     InternalExecuteIntoOrdered(loopBody)
   else // no order preservation; no output buffering required
     InternalExecuteTask(

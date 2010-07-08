@@ -1,6 +1,7 @@
 program app_38_OrderedFor;
 
 uses
+  FastMM4,
   Forms,
   test_38_OrderedFor in 'test_38_OrderedFor.pas' {frmOderedForDemo};
 

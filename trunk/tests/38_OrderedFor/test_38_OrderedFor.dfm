@@ -34,7 +34,7 @@ object frmOderedForDemo: TfrmOderedForDemo
   end
   object btnOrderedPrimes: TButton
     Left = 8
-    Top = 71
+    Top = 70
     Width = 122
     Height = 25
     Caption = 'Ordered primes'
