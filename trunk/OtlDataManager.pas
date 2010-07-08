@@ -310,6 +310,8 @@ type
   ///<summary>Base data manager class.</summary>
   TOmniBaseDataManager = class abstract (TOmniDataManager)
   strict private
+    const CMaxPreserveOrderPackageSize = 1024; // pretty arbitrary, should do some performance tests
+  strict private
     dmBufferRangeList   : TGpInt64ObjectList;
     dmBufferRangeLock   : TOmniCS;
     dmNextPosition      : int64;
@@ -858,7 +860,7 @@ end; { TOmniOutputBufferImpl.SetRange }
 
 procedure TOmniOutputBufferImpl.Submit(position: int64; const data: TOmniValue);
 begin
-  {$IFDEF DEBUG}Assert(position >= obiNextPosition); obiNextPosition := position + 1;{$ENDIF}
+  {$IFDEF DEBUG}Assert(position >= obiNextPosition, Format('%d < %d', [position, obiNextPosition])); obiNextPosition := position + 1;{$ENDIF}
   if obiActive then
     obiOutput.Add(data)
   else
@@ -998,7 +1000,12 @@ begin
   end
   else begin
     SetLength(dmPacketSizes, 5);
-    maxDataCount := sourceProvider.GetPackageSizeLimit;
+    if not (spcFast in sourceProvider.GetCapabilities) then
+      maxDataCount := sourceProvider.GetPackageSizeLimit
+    else if dmoPreserveOrder in dmOptions then
+      maxDataCount := CMaxPreserveOrderPackageSize
+    else
+      maxDataCount := High(integer);
     for iGen := 0 to 4 do begin
       dmPacketSizes[iGen] := Round(Exp(2 * iGen * Ln(3))); // 3^(2*iGen)
       if dmPacketSizes[iGen] > maxDataCount then begin
