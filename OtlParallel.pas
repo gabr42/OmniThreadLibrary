@@ -148,6 +148,9 @@ type
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
     class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
+    {$IFDEF OTL_ERTTI}
+    class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
+    {$ENDIF OTL_ERTTI}
     class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
@@ -157,7 +160,6 @@ type
     class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
     class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
     {$IFDEF OTL_ERTTI}
-    class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
     {$ENDIF OTL_ERTTI}
     class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
@@ -319,10 +321,12 @@ begin
   Result := TOmniParallelLoop.Create(CreateSourceProvider(enum), true);
 end; { Parallel.ForEach }
 
+{$IFDEF OTL_ERTTI}
 class function Parallel.ForEach(const enumerable: TObject): IOmniParallelLoop;
 begin
   Result := TOmniParallelLoop.Create(enumerable);
 end; { Parallel.ForEach }
+{$ENDIF OTL_ERTTI}
 
 class function Parallel.ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop;
 begin
@@ -368,10 +372,12 @@ begin
   Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true );
 end; { Parallel.ForEach<T> }
 
+{$IFDEF OTL_ERTTI}
 class function Parallel.ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>;
 begin
   Result := TOmniParallelLoop<T>.Create(enumerable);
 end; { Parallel.ForEach<T> }
+{$ENDIF OTL_ERTTI}
 
 class function Parallel.ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>;
 begin

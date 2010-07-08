@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-01
-///   Version           : 1.17
+///   Last modification : 2010-07-08
+///   Version           : 1.17a
 ///</para><para>
 ///   History:
+///     1.17a: 2010-07-08
+///       - TOmniValue.CastAs<T> and .CastFrom<T> are partially supported in D2009.
 ///     1.17: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.16: 2010-05-12
@@ -142,11 +144,6 @@ type
   EOmniValueConv = class(Exception);
 
   TOmniValue = packed record
-  {$IFDEF OTL_ERTTI}
-  private
-    class var DataSize: array [TTypeKind] of integer;
-    class constructor Create;
-  {$ENDIF OTL_ERTTI}
   private
     ovData: int64;
     ovIntf: IInterface;
@@ -233,6 +230,11 @@ type
     property AsVariant: Variant read GetAsVariant write SetAsVariant;
     property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
+  {$IFDEF OTL_Generics}
+  public
+    class function CastFrom<T>(const value: T): TOmniValue; static;
+    function CastAs<T>: T;
+  {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   private
     function  GetAsTValue: TValue;
@@ -240,8 +242,6 @@ type
   public
     class operator Implicit(const a: TValue): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): TValue; inline;
-    class function CastFrom<T>(const value: T): TOmniValue; static;
-    function CastAs<T>: T;
     property AsTValue: TValue read GetAsTValue write SetAsTValue;
   {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
@@ -497,6 +497,10 @@ type
 
 var
   OtlUID: TGp8AlignedInt64;
+
+  {$IFDEF OTL_Generics} // must not be local due to compiler restrictions
+  TOmniValue_DataSize: array [TTypeKind] of integer;
+  {$ENDIF OTL_Generics}
 
 implementation
 
@@ -1134,18 +1138,6 @@ end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
 
-{$IFDEF OTL_ERTTI}
-class constructor TOmniValue.Create;
-begin
-  FillChar(DataSize, SizeOf(DataSize), 0);
-  DataSize[tkInteger] := SizeOf(integer);
-  DataSize[tkClass]   := SizeOf(TObject);
-  DataSize[tkMethod]  := SizeOf(TMethod);
-  DataSize[tkInt64]   := SizeOf(int64);
-  DataSize[tkPointer] := SizeOf(pointer);
-end; { TOmniValue.Create }
-{$ENDIF OTL_ERTTI}
-
 function TOmniValue.CastAsInt64: int64;
 begin
   case ovType of
@@ -1158,7 +1150,7 @@ begin
   end;
 end; { TOmniValue.CastAsInt64 }
 
-{$IFDEF OTL_ERTTI}
+{$IFDEF OTL_Generics}
 function TOmniValue.CastAs<T>: T;
 var
   ds      : integer;
@@ -1166,9 +1158,13 @@ var
   ti      : PTypeInfo;
 begin
   ti := System.TypeInfo(T);
-  ds := DataSize[ti^.Kind];
+  ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
+    {$IFDEF OTL_ERTTI}
     Result := AsTValue.AsType<T>
+    {$ELSE}
+    raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
+    {$ENDIF OTL_ERTTI}
   else begin // simple types
     maxValue := int64($FF) SHL ((ds-1) * 8);
     if ovData > maxValue then
@@ -1184,9 +1180,13 @@ var
   ti  : PTypeInfo;
 begin
   ti := System.TypeInfo(T);
-  ds := DataSize[ti^.Kind];
+  ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
+    {$IFDEF OTL_ERTTI}
     Result.AsTValue := TValue.From<T>(value)
+    {$ELSE}
+    raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
+    {$ENDIF OTL_ERTTI}
   else begin // simple types
     data := 0;
     Move(value, data, ds);
@@ -1199,14 +1199,16 @@ begin
         Result.AsInt64 := data;
       tkInt64:
         Result.AsInt64 := data;
+      {$IFDEF OTL_HasTkPointer}
       tkPointer:
         Result.AsPointer := pointer(data);
+      {$ENDIF OTL_HasTkPointer}
       else
         raise Exception.CreateFmt('TOmniValue: CastFrom<%s> is broken!', [ti^.Name]);
     end;
   end;
 end; { TOmniValue.CastFrom }
-{$ENDIF OTL_ERTTI}
+{$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
 begin
@@ -2133,4 +2135,12 @@ initialization
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   Assert(SizeOf(pointer) = 4);
   GEnvironment := TOmniEnvironment.Create;
+  FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);
+  TOmniValue_DataSize[tkInteger] := SizeOf(integer);
+  TOmniValue_DataSize[tkClass]   := SizeOf(TObject);
+  TOmniValue_DataSize[tkMethod]  := SizeOf(TMethod);
+  TOmniValue_DataSize[tkInt64]   := SizeOf(int64);
+  {$IFDEF OTL_HasTkPointer}
+  TOmniValue_DataSize[tkPointer] := SizeOf(pointer);
+  {$ENDIF OTL_HasTkPointer}
 end.
