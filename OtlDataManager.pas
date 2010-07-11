@@ -110,7 +110,6 @@ type
   public
     function  CreateLocalQueue: TOmniLocalQueue; virtual; abstract;
     function  AllocateOutputBuffer: TOmniOutputBuffer; virtual; abstract;
-    procedure Flush; virtual; abstract;
     function  GetNext(package: TOmniDataPackage): boolean; virtual; abstract;
     procedure ReleaseOutputBuffer(buffer: TOmniOutputBuffer); virtual; abstract;
     procedure SetOutput(const queue: IOmniBlockingCollection); overload; virtual; abstract;
@@ -336,7 +335,6 @@ type
     destructor  Destroy; override;
     function  AllocateOutputBuffer: TOmniOutputBuffer; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
-    procedure Flush; override;
     function  GetDataCountForGeneration(generation: integer): integer;
     function  GetNext(package: TOmniDataPackage): boolean; override;
     function  GetNextFromProvider(package: TOmniDataPackage;
@@ -1022,11 +1020,6 @@ begin
     dmQueueList.Add(Result);
   finally dmQueueLock.Release; end;
 end; { TOmniBaseDataManager.CreateLocalQueue }
-
-procedure TOmniBaseDataManager.Flush;
-begin
-  { TODO 1 : implement: Flush }
-end; { TOmniBaseDataManager.Flush }
 
 function TOmniBaseDataManager.GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl;
 begin
