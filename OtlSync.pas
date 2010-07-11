@@ -162,6 +162,9 @@ procedure Move128(var Source, Destination);
 function GetThreadId: cardinal;
 function GetCPUTimeStamp: int64;
 
+var
+  GOmniCancellationToken: IOmniCancellationToken;
+
 implementation
 
 uses
@@ -521,4 +524,6 @@ begin
   orcLock.Release; 
 end; { TOmniResourceCount.TryAllocate }
 
+initialization
+  GOmniCancellationToken := CreateOmniCancellationToken;
 end.

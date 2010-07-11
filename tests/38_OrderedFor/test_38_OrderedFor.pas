@@ -15,6 +15,7 @@ type
     btnOrderedPrimes: TButton;
     Button1: TButton;
     btnUnorderedPrimes2: TButton;
+    btnUnorderedCancel: TButton;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -31,8 +32,8 @@ implementation
 
 uses
   DSiWin32,
-  OtlLogger, { TODO 1 : Remove! }
   OtlCommon,
+  OtlSync,
   OtlCollections,
   OtlParallel;
 
@@ -56,6 +57,7 @@ var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
 begin
+  btnUnorderedPrimes1.Enabled := false;
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 2000).NoWait
@@ -76,6 +78,7 @@ begin
     lbLog.Items.Add(IntToStr(prime));
     lbLog.Update;
   end;
+  btnUnorderedPrimes1.Enabled := true;
 end;
 
 procedure TfrmOderedForDemo.btnUnorderedPrimes2Click(Sender: TObject);
@@ -83,6 +86,7 @@ var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
 begin
+  btnUnorderedPrimes2.Enabled := false;
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
   Parallel.ForEach(1, 2000).NoWait.Into(primeQueue).Execute(
@@ -93,6 +97,7 @@ begin
     end);
   for prime in primeQueue do
     lbLog.Items.Add(IntToStr(prime));
+  btnUnorderedPrimes2.Enabled := true;
 end;
 
 procedure TfrmOderedForDemo.btnOrderedPrimesClick(Sender: TObject);
@@ -101,32 +106,20 @@ var
   primeQueue: IOmniBlockingCollection;
   events: TStringList;
 begin
+  (Sender as TButton).Enabled := false;
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-
-  try
-  try
-
-  Parallel.ForEach(1, 2000).PreserveOrder.NoWait.Into(primeQueue).Execute(
+  Parallel.ForEach(1, 2000).CancelWith(GOmniCancellationToken).PreserveOrder.NoWait.Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
         res := value;
+      if (Sender = btnUnorderedCancel) and (value = 511 {arbitrary}) then
+        GOmniCancellationToken.Signal;
     end);
   for prime in primeQueue do
     lbLog.Items.Add(IntToStr(prime));
-
-  except
-    on E: Exception do
-      GLogger.Log(E.Message);
-  end;
-  finally
-    events := TStringList.Create;
-    try
-      GLogger.GetEventList(events);
-      events.SaveToFile('d:\0\events.txt');
-    finally FreeAndNil(events); end;
-  end;
+  (Sender as TButton).Enabled := true;
 end;
 
 procedure TfrmOderedForDemo.Button1Click(Sender: TObject);
