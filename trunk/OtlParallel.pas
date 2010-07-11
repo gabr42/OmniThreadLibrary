@@ -650,7 +650,6 @@ begin
         finally oplDataManager.ReleaseOutputBuffer(outputBuffer_ref); end;
       finally FreeAndNil(localQueue); end;
       if oplCountStopped.Allocate = 0 then begin
-        oplDataManager.Flush;
         oplIntoQueueIntf.CompleteAdding;
         DoOnStop;
       end;
