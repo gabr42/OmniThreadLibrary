@@ -845,19 +845,6 @@ end; { TOmniLocalQueueImpl.Split }
 
 { TOmniOutputBufferImpl }
 
-procedure TOmniOutputBufferImpl.CopyToOutput;
-var
-  value: TOmniValue;
-begin
-  GLogger.Log('Copying data from buffer %d..%d to output', [Range.First, Range.Last]);
-  while obiBuffer.TryTake(value) do begin
-    GLogger.Log(value.AsString);
-    obiOutput.Add(value);
-  end;
-  SetEvent(obiEmptyHandle);
-  obiFull := false;
-end; { TOmniOutputBufferImpl.CopyToOutput }
-
 constructor TOmniOutputBufferImpl.Create(owner: TOmniBaseDataManager;
   output: IOmniBlockingCollection);
 begin
@@ -874,6 +861,19 @@ begin
   FreeAndNil(obiBuffer);
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
+
+procedure TOmniOutputBufferImpl.CopyToOutput;
+var
+  value: TOmniValue;
+begin
+  GLogger.Log('Copying data from buffer %d..%d to output', [Range.First, Range.Last]);
+  while obiBuffer.TryTake(value) do begin
+    GLogger.Log(value.AsString);
+    obiOutput.Add(value);
+  end;
+  SetEvent(obiEmptyHandle);
+  obiFull := false;
+end; { TOmniOutputBufferImpl.CopyToOutput }
 
 procedure TOmniOutputBufferImpl.MarkFull;
 begin

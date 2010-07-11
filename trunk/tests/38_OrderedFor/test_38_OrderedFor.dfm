@@ -16,16 +16,16 @@ object frmOderedForDemo: TfrmOderedForDemo
   object btnUnorderedPrimes1: TButton
     Left = 8
     Top = 8
-    Width = 122
+    Width = 138
     Height = 25
     Caption = 'Unordered primes 1'
     TabOrder = 0
     OnClick = btnUnorderedPrimes1Click
   end
   object lbLog: TListBox
-    Left = 136
+    Left = 152
     Top = 0
-    Width = 497
+    Width = 481
     Height = 337
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
@@ -35,7 +35,7 @@ object frmOderedForDemo: TfrmOderedForDemo
   object btnOrderedPrimes: TButton
     Left = 8
     Top = 70
-    Width = 122
+    Width = 138
     Height = 25
     Caption = 'Ordered primes'
     TabOrder = 2
@@ -53,10 +53,19 @@ object frmOderedForDemo: TfrmOderedForDemo
   object btnUnorderedPrimes2: TButton
     Left = 8
     Top = 39
-    Width = 122
+    Width = 138
     Height = 25
     Caption = 'Unordered primes 2'
     TabOrder = 4
     OnClick = btnUnorderedPrimes2Click
+  end
+  object btnUnorderedCancel: TButton
+    Left = 8
+    Top = 101
+    Width = 138
+    Height = 25
+    Caption = 'Ordered primes + cancel'
+    TabOrder = 5
+    OnClick = btnOrderedPrimesClick
   end
 end
