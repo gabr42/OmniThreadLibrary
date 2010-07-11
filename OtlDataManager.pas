@@ -136,6 +136,9 @@ uses
   OtlLogger, { TODO 1 : Remove! }
   OtlSync;
 
+const
+  CNumBuffersInSet = 2;
+
 type
   TOmniPositionRange = record
     First: int64;
@@ -257,6 +260,7 @@ type
   strict private
     obiBuffer         : TOmniBlockingCollection;
     obiDataManager_ref: TOmniBaseDataManager;
+    obiEmptyHandle    : THandle;
     obiFull           : boolean;
     obiHasData        : boolean;
     obiNextPosition   : int64;
@@ -270,14 +274,29 @@ type
     procedure CopyToOutput;
     procedure MarkFull;
     procedure Submit(position: int64; const data: TOmniValue); override;
+    property EmptyHandle: THandle read obiEmptyHandle;
     property IsFull: boolean read obiFull;
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
 
+  TOmniOutputBufferSet = class(TOmniOutputBuffer)
+  strict private
+    obsActiveBuffer_ref: TOmniOutputBufferImpl;
+    obsActiveIndex     : integer;
+    obsBuffers         : array [1..CNumBuffersInSet] of TOmniOutputBufferImpl;
+    obsWaitHandles     : array [1..CNumBuffersInSet] of THandle;
+  public
+    constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
+    destructor  Destroy; override;
+    procedure ActivateBuffer;
+    procedure Submit(position: int64; const data: TOmniValue); override;
+    property ActiveBuffer: TOmniOutputBufferImpl read obsActiveBuffer_ref;
+  end; { TOmniOutputBufferSet }
+
   ///<summary>Local queue implementation.</summary>
   TOmniLocalQueueImpl = class(TOmniLocalQueue)
   strict private
-    lqiBuffer         : TOmniOutputBufferImpl;
+    lqiBufferSet      : TOmniOutputBufferSet;
     lqiDataManager_ref: TOmniBaseDataManager;
     lqiDataPackage    : TOmniDataPackageBase;
   public
@@ -764,7 +783,7 @@ end; { TOmniEnumeratorProvider.GetPackageSizeLimit }
 
 procedure TOmniLocalQueueImpl.AssociateBuffer(buffer: TOmniOutputBuffer);
 begin
-  lqiBuffer := buffer as TOmniOutputBufferImpl;
+  lqiBufferSet := buffer as TOmniOutputBufferSet;
 end; { TOmniLocalQueueImpl.AssociateBuffer }
 
 constructor TOmniLocalQueueImpl.Create(owner: TOmniBaseDataManager);
@@ -787,7 +806,7 @@ function TOmniLocalQueueImpl.GetNext(var value: TOmniValue): boolean;
 begin
   Result := lqiDataPackage.GetNext(value);
   if not Result then begin
-    {$IFDEF Debug}Assert(not assigned(lqiBuffer));{$ENDIF Debug}
+    {$IFDEF Debug}Assert(not assigned(lqiBufferSet));{$ENDIF Debug}
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
     if Result then
       Result := lqiDataPackage.GetNext(value);
@@ -799,11 +818,9 @@ begin
   Result := lqiDataPackage.GetNext(position, value);
   if not Result then begin
     GLogger.Log('GetNext failed');
-    {$IFDEF Debug}Assert(assigned(lqiBuffer));{$ENDIF Debug}
-    lqiBuffer.MarkFull;
-    ! the code should either block until the buffer is 'not full' again or
-    ! allocate new buffer and use it
-    ! maybe two buffers could be used for each local queue
+    {$IFDEF Debug}Assert(assigned(lqiBufferSet));{$ENDIF Debug}
+    lqiBufferSet.ActiveBuffer.MarkFull;
+    lqiBufferSet.ActivateBuffer; // this will block if alternate buffer is also full
     Result := lqiDataManager_ref.GetNext(lqiDataPackage);
     if Result then begin
       Result := lqiDataPackage.GetNext(position, value);
@@ -811,8 +828,8 @@ begin
         GLogger.Log('Retried GetNext failed')
       else begin
         GLogger.Log('Retried GetNext: %d @ %d', [value.AsInteger, position]);
-        lqiBuffer.Range := lqiDataPackage.Range;
-        GLogger.Log('Data package range is %d..%d', [lqiBuffer.Range.First, lqiBuffer.Range.Last]);
+        lqiBufferSet.ActiveBuffer.Range := lqiDataPackage.Range;
+        GLogger.Log('Data package range is %d..%d', [lqiBufferSet.ActiveBuffer.Range.First, lqiBufferSet.ActiveBuffer.Range.Last]);
       end;
     end;
   end
@@ -839,6 +856,7 @@ begin
     GLogger.Log(value.AsString);
     obiOutput.Add(value);
   end;
+  SetEvent(obiEmptyHandle);
   obiFull := false;
 end; { TOmniOutputBufferImpl.CopyToOutput }
 
@@ -849,10 +867,12 @@ begin
   obiDataManager_ref := owner;
   obiOutput := output;
   obiBuffer := TOmniBlockingCollection.Create;
+  obiEmptyHandle := CreateEvent(nil, false, true, nil);
 end; { TOmniOutputBufferImpl.Create }
 
 destructor TOmniOutputBufferImpl.Destroy;
 begin
+  DSiCloseHandleAndNull(obiEmptyHandle);
   FreeAndNil(obiBuffer);
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
@@ -881,6 +901,45 @@ begin
   {$IFDEF DEBUG}Assert(position >= obiNextPosition, Format('%d < %d', [position, obiNextPosition])); obiNextPosition := position + 1;{$ENDIF}
   obiBuffer.Add(data);
 end; { TOmniOutputBufferImpl.Submit }
+
+{ TOmniOutputBufferSet }
+
+constructor TOmniOutputBufferSet.Create(owner: TOmniBaseDataManager;
+  output: IOmniBlockingCollection);
+var
+  iBuffer: integer;
+begin
+  for iBuffer := 1 to CNumBuffersInSet do begin
+    obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output);
+    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyHandle;
+  end;
+  ActivateBuffer;
+end; { TOmniOutputBufferSet.Create }
+
+destructor TOmniOutputBufferSet.Destroy;
+var
+  iBuffer: integer;
+begin
+  for iBuffer := 1 to CNumBuffersInSet do
+    obsBuffers[iBuffer].Free;
+  inherited;
+end; { TOmniOutputBufferSet.Destroy }
+
+procedure TOmniOutputBufferSet.ActivateBuffer;
+var
+  awaited: cardinal;
+begin
+  { TODO 1 : Timeout? Cancellation? }
+  awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE);
+  Assert({(awaited >= WAIT_OBJECT_0) and } (awaited < (WAIT_OBJECT_0 + CNumBuffersInSet)));
+  obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
+  obsActiveBuffer_ref := obsBuffers[obsActiveIndex];
+end; { TOmniOutputBufferSet.ActivateBuffer }
+
+procedure TOmniOutputBufferSet.Submit(position: int64; const data: TOmniValue);
+begin
+  obsActiveBuffer_ref.Submit(position, data);
+end; { TOmniOutputBufferSet.Submit }
 
 { TOmniBaseDataManager }
 
@@ -914,7 +973,7 @@ end; { TOmniBaseDataManager.Destroy }
 function TOmniBaseDataManager.AllocateOutputBuffer: TOmniOutputBuffer;
 begin
   Assert(assigned(dmOutputIntf));
-  Result := TOmniOutputBufferImpl.Create(Self, dmOutputIntf);
+  Result := TOmniOutputBufferSet.Create(Self, dmOutputIntf);
 end; { TOmniBaseDataManager.AllocateOutputBuffer }
 
 procedure TOmniBaseDataManager.LocalQueueDestroyed(queue: TOmniLocalQueue);
@@ -1031,7 +1090,7 @@ end; { TOmniBaseDataManager.InitializePacketSizes }
 
 procedure TOmniBaseDataManager.ReleaseOutputBuffer(buffer: TOmniOutputBuffer);
 begin
-  (buffer as TOmniOutputBufferImpl).MarkFull;
+  (buffer as TOmniOutputBufferSet).ActiveBuffer.MarkFull;
   dmUnusedBuffers.Add(buffer);
 end; { TOmniBaseDataManager.ReleaseOutputBuffer }
 

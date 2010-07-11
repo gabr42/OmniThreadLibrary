@@ -31,6 +31,7 @@ implementation
 
 uses
   DSiWin32,
+  OtlLogger, { TODO 1 : Remove! }
   OtlCommon,
   OtlCollections,
   OtlParallel;
@@ -57,7 +58,7 @@ var
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NoWait
+  Parallel.ForEach(1, 2000).NoWait
     .OnStop(
       procedure
       begin
@@ -84,7 +85,7 @@ var
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NoWait.Into(primeQueue).Execute(
+  Parallel.ForEach(1, 2000).NoWait.Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
@@ -98,10 +99,15 @@ procedure TfrmOderedForDemo.btnOrderedPrimesClick(Sender: TObject);
 var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
+  events: TStringList;
 begin
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).PreserveOrder.NoWait.Into(primeQueue).Execute(
+
+  try
+  try
+
+  Parallel.ForEach(1, 2000).PreserveOrder.NoWait.Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
@@ -109,6 +115,18 @@ begin
     end);
   for prime in primeQueue do
     lbLog.Items.Add(IntToStr(prime));
+
+  except
+    on E: Exception do
+      GLogger.Log(E.Message);
+  end;
+  finally
+    events := TStringList.Create;
+    try
+      GLogger.GetEventList(events);
+      events.SaveToFile('d:\0\events.txt');
+    finally FreeAndNil(events); end;
+  end;
 end;
 
 procedure TfrmOderedForDemo.Button1Click(Sender: TObject);
@@ -120,7 +138,7 @@ begin
   lbLog.Clear;
   dataQueue := TOmniBlockingCollection.Create;
   resultQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, 1000).NoWait.Into(dataQueue).Execute(
+  Parallel.ForEach(1, 2000).NoWait.Into(dataQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
