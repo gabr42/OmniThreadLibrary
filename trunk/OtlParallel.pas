@@ -55,6 +55,8 @@
   - Probably we need Parallel.Join.MonitorWith or something like that.
 *)
 
+{ TODO 1 : Check cancelling of parallel for with PreserveOrder! }
+
 unit OtlParallel;
 
 {$I OTLOptions.inc}
@@ -638,7 +640,6 @@ begin
         try
           localQueue.AssociateBuffer(outputBuffer_ref);
           result := TOmniValue.Null;
-          { TODO 1 : make sure that one thread cannot overtake all others and start filling its output buffer }
           while (not Stopped) and localQueue.GetNext(position, value) do begin
             loopBody(value, result);
             if not result.IsEmpty then begin
