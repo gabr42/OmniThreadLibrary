@@ -16,12 +16,15 @@ type
     Button1: TButton;
     btnUnorderedPrimes2: TButton;
     btnUnorderedCancel: TButton;
+    cbRepeatTest: TCheckBox;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure btnUnorderedPrimes2Click(Sender: TObject);
   private
     function IsPrime(i: integer): boolean;
+    procedure VerifyResult;
+    procedure RepeatTest(var msg: TMessage); message WM_USER;
   public
   end;
 
@@ -32,6 +35,7 @@ implementation
 
 uses
   DSiWin32,
+  GpLists,
   OtlCommon,
   OtlSync,
   OtlCollections,
@@ -50,6 +54,65 @@ begin
     if (i mod j) = 0 then
       Exit;
   Result := true;
+end;
+
+procedure TfrmOderedForDemo.RepeatTest(var msg: TMessage);
+begin
+  case Random(2) of
+    0: btnUnorderedPrimes1.Click;
+    1: btnUnorderedPrimes2.Click;
+    2: btnOrderedPrimes.Click;
+  end;
+end;
+
+procedure TfrmOderedForDemo.VerifyResult;
+var
+  iItem: integer;
+  order: string;
+  value: integer;
+  value2: integer;
+  primes: TGpIntegerList;
+  error: boolean;
+begin
+  if lbLog.Items.Count = 0 then
+    lbLog.Items.Add('Error, empty result list!')
+  else begin
+    error := false;
+    order := 'ordered';
+    value := StrToInt(lbLog.Items[0]);
+    primes := TGpIntegerList.Create;
+    try
+      primes.Add(value);
+      for iItem := 1 to lbLog.Items.Count - 1 do begin
+        value2 := StrToInt(lbLog.Items[iItem]);
+        if value2 <= value then
+          order := 'unordered';
+        primes.Add(value2);
+        value := value2;
+      end;
+      primes.Sort;
+      for iItem := 1 to 2000 do begin
+        if IsPrime(iItem) then begin
+          if not primes.Contains(iItem) then begin
+            error := true;
+            break; //for
+          end
+        end
+        else if primes.Contains(iItem) then begin
+          error := true;
+          break; //for
+        end;
+      end; //for
+      if error then
+        lbLog.Items.Add('ERROR, list is ' + order)
+      else begin
+        lbLog.Items.Add('OK, list is ' + order);
+        if cbRepeatTest.Checked then
+          PostMessage(Handle, WM_USER, 0, 0);
+      end;
+    finally FreeAndNil(primes); end;
+  end;
+  lbLog.ItemIndex := lbLog.Items.Count - 1;
 end;
 
 procedure TfrmOderedForDemo.btnUnorderedPrimes1Click(Sender: TObject);
@@ -78,6 +141,7 @@ begin
     lbLog.Items.Add(IntToStr(prime));
     lbLog.Update;
   end;
+  VerifyResult;
   btnUnorderedPrimes1.Enabled := true;
 end;
 
@@ -97,6 +161,7 @@ begin
     end);
   for prime in primeQueue do
     lbLog.Items.Add(IntToStr(prime));
+  VerifyResult;
   btnUnorderedPrimes2.Enabled := true;
 end;
 
@@ -118,6 +183,8 @@ begin
     end);
   for prime in primeQueue do
     lbLog.Items.Add(IntToStr(prime));
+  VerifyResult;
+  GOmniCancellationToken.Clear;
   (Sender as TButton).Enabled := true;
 end;
 
