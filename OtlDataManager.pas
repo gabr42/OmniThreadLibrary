@@ -324,6 +324,7 @@ type
     dmSourceProvider_ref: TOmniSourceProviderBase;
     dmStealIdx          : integer;
     dmUnusedBuffers     : TObjectList;
+    dmUnusedBuffersLock : TOmniCS;
   strict protected
     function  GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl; inline;
     function  GetSourceProvider: TOmniSourceProvider;
@@ -1084,7 +1085,10 @@ end; { TOmniBaseDataManager.InitializePacketSizes }
 procedure TOmniBaseDataManager.ReleaseOutputBuffer(buffer: TOmniOutputBuffer);
 begin
   (buffer as TOmniOutputBufferSet).ActiveBuffer.MarkFull;
-  dmUnusedBuffers.Add(buffer);
+  dmUnusedBuffersLock.Acquire;
+  try
+    dmUnusedBuffers.Add(buffer);
+  finally dmUnusedBuffersLock.Release; end;
 end; { TOmniBaseDataManager.ReleaseOutputBuffer }
 
 procedure TOmniBaseDataManager.SetOutput(const queue: IOmniBlockingCollection);
