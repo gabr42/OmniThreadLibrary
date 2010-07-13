@@ -55,8 +55,6 @@
   - Probably we need Parallel.Join.MonitorWith or something like that.
 *)
 
-{ TODO 1 : Check cancelling of parallel for with PreserveOrder! }
-
 unit OtlParallel;
 
 {$I OTLOptions.inc}

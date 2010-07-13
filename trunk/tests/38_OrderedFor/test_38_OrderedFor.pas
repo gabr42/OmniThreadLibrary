@@ -104,7 +104,6 @@ procedure TfrmOderedForDemo.btnOrderedPrimesClick(Sender: TObject);
 var
   prime     : TOmniValue;
   primeQueue: IOmniBlockingCollection;
-  events: TStringList;
 begin
   (Sender as TButton).Enabled := false;
   lbLog.Clear;
