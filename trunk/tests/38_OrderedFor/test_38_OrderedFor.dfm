@@ -68,4 +68,12 @@ object frmOderedForDemo: TfrmOderedForDemo
     TabOrder = 5
     OnClick = btnOrderedPrimesClick
   end
+  object cbRepeatTest: TCheckBox
+    Left = 8
+    Top = 144
+    Width = 138
+    Height = 17
+    Caption = 'Repeat'
+    TabOrder = 6
+  end
 end
