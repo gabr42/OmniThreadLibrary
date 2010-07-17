@@ -11,6 +11,7 @@ object frmOderedForDemo: TfrmOderedForDemo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object btnUnorderedPrimes1: TButton
@@ -26,7 +27,7 @@ object frmOderedForDemo: TfrmOderedForDemo
     Left = 152
     Top = 0
     Width = 481
-    Height = 337
+    Height = 318
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
@@ -41,22 +42,13 @@ object frmOderedForDemo: TfrmOderedForDemo
     TabOrder = 2
     OnClick = btnOrderedPrimesClick
   end
-  object Button1: TButton
-    Left = 8
-    Top = 304
-    Width = 97
-    Height = 25
-    Caption = 'cooperative'
-    TabOrder = 3
-    OnClick = Button1Click
-  end
   object btnUnorderedPrimes2: TButton
     Left = 8
     Top = 39
     Width = 138
     Height = 25
     Caption = 'Unordered primes 2'
-    TabOrder = 4
+    TabOrder = 3
     OnClick = btnUnorderedPrimes2Click
   end
   object btnUnorderedCancel: TButton
@@ -65,7 +57,7 @@ object frmOderedForDemo: TfrmOderedForDemo
     Width = 138
     Height = 25
     Caption = 'Ordered primes + cancel'
-    TabOrder = 5
+    TabOrder = 4
     OnClick = btnOrderedPrimesClick
   end
   object cbRepeatTest: TCheckBox
@@ -74,7 +66,15 @@ object frmOderedForDemo: TfrmOderedForDemo
     Width = 138
     Height = 17
     Caption = 'Repeat'
-    TabOrder = 6
+    TabOrder = 5
+  end
+  object StatusBar1: TStatusBar
+    Left = 0
+    Top = 318
+    Width = 633
+    Height = 19
+    Panels = <>
+    SimplePanel = True
   end
   object Timer1: TTimer
     Enabled = False
