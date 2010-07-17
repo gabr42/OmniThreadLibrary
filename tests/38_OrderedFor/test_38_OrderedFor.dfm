@@ -76,4 +76,11 @@ object frmOderedForDemo: TfrmOderedForDemo
     Caption = 'Repeat'
     TabOrder = 6
   end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 200
+    OnTimer = Timer1Timer
+    Left = 8
+    Top = 264
+  end
 end

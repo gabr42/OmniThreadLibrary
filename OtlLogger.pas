@@ -66,6 +66,7 @@ type
     procedure GetEventList(sl: TStringList);
     procedure Log(const msg: string; const params: array of const); overload;
     procedure Log(const msg: string); overload;
+    procedure SaveEventList(const fileName: string);
   end; { TOmniLogger }
 
 var
@@ -119,6 +120,17 @@ procedure TOmniLogger.Log(const msg: string);
 begin
   eventList.Enqueue(Format('[%d] %s', [GetCurrentThreadID, msg]));
 end; { TOmniLogger.Log }
+
+procedure TOmniLogger.SaveEventList(const fileName: string);
+var
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  try
+    GetEventList(sl);
+    sl.SaveToFile(fileName);
+  finally FreeAndNil(sl); end;
+end;
 
 initialization
   GLogger := TOmniLogger.Create;
