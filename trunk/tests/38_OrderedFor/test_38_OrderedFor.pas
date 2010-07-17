@@ -6,24 +6,30 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls;
+  Dialogs, StdCtrls, ExtCtrls, ComCtrls,
+  OtlEventMonitor,
+  OtlThreadPool;
 
 type
   TfrmOderedForDemo = class(TForm)
     btnUnorderedPrimes1: TButton;
     lbLog: TListBox;
     btnOrderedPrimes: TButton;
-    Button1: TButton;
     btnUnorderedPrimes2: TButton;
     btnUnorderedCancel: TButton;
     cbRepeatTest: TCheckBox;
     Timer1: TTimer;
+    StatusBar1: TStatusBar;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure btnUnorderedPrimes2Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
+    FEventMonitor: TOmniEventMonitor;
+    procedure HandleThreadCreated(const pool: IOmniThreadPool; threadID: integer);
+    procedure HandleThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
+    procedure HandleThreadKilled(const pool: IOmniThreadPool; threadID: integer);
     function  IsPrime(i: integer): boolean;
     function  NumCores: integer;
     procedure VerifyResult;
@@ -157,7 +163,8 @@ begin
       end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-    lbLog.Update;
+//    lbLog.Update;
+    Application.ProcessMessages; // because we want to receive pool notification messages
   end;
   VerifyResult;
   btnUnorderedPrimes1.Enabled := true;
@@ -179,10 +186,39 @@ begin
     end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-    lbLog.Update;
+//    lbLog.Update;
+    Application.ProcessMessages; // because we want to receive pool notification messages
   end;
   VerifyResult;
   btnUnorderedPrimes2.Enabled := true;
+end;
+
+procedure TfrmOderedForDemo.FormCreate(Sender: TObject);
+begin
+  FEventMonitor := TOmniEventMonitor.Create(Self);
+  FEventMonitor.OnPoolThreadCreated := HandleThreadCreated;
+  FEventMonitor.OnPoolThreadDestroying := HandleThreadDestroying;
+  FEventMonitor.OnPoolThreadKilled := HandleThreadKilled;
+  GForEachPool.MonitorWith(FEventMonitor);
+end;
+
+procedure TfrmOderedForDemo.HandleThreadCreated(const pool: IOmniThreadPool;
+  threadID: integer);
+begin
+  StatusBar1.SimpleText := Format('Thread %d created', [threadID]);
+  StatusBar1.Update;
+end;
+
+procedure TfrmOderedForDemo.HandleThreadDestroying(const pool: IOmniThreadPool;
+  threadID: integer);
+begin
+  StatusBar1.SimpleText := Format('Thread %d destroyed', [threadID]);
+end;
+
+procedure TfrmOderedForDemo.HandleThreadKilled(const pool: IOmniThreadPool;
+  threadID: integer);
+begin
+  StatusBar1.SimpleText := Format('Thread %d killed', [threadID]);
 end;
 
 procedure TfrmOderedForDemo.btnOrderedPrimesClick(Sender: TObject);
@@ -209,39 +245,12 @@ begin
     end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-    lbLog.Update;
+//    lbLog.Update;
+    Application.ProcessMessages; // because we want to receive pool notification messages
   end;
   VerifyResult;
   GOmniCancellationToken.Clear;
   (Sender as TButton).Enabled := true;
-end;
-
-procedure TfrmOderedForDemo.Button1Click(Sender: TObject);
-var
-  dataQueue  : IOmniBlockingCollection;
-  prime      : TOmniValue;
-  resultQueue: IOmniBlockingCollection;
-begin
-  lbLog.Clear;
-  dataQueue := TOmniBlockingCollection.Create;
-  resultQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, CMaxTest).NoWait.Into(dataQueue).Execute(
-    procedure (const value: integer; var res: TOmniValue)
-    begin
-      if IsPrime(value) then
-        res := value;
-    end
-  );
-  Parallel.ForEach<integer>(dataQueue as IOmniValueEnumerable).NoWait.Into(resultQueue).Execute(
-    procedure (const value: integer; var res: TOmniValue)
-    begin
-      // Sophie Germain primes
-      if IsPrime(2*value + 1) then
-        res := value;
-    end
-  );
-  for prime in resultQueue do
-    lbLog.Items.Add(IntToStr(prime));
 end;
 
 end.

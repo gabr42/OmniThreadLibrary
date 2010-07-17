@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-07-01
-///   Version           : 1.02
+///   Last modification : 2010-07-17
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2010-07-17
+///       - ForEach tasks are scheduled in the specialized pool.
 ///     1.02: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.01: 2010-02-02
@@ -90,7 +92,8 @@ uses
   OtlSync,
   OtlCollections,
   OtlTask,
-  OtlDataManager;
+  OtlDataManager,
+  OtlThreadPool;
 
 type
   IOmniParallelLoop = interface;
@@ -290,6 +293,9 @@ type
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
+
+var
+  GForEachPool: IOmniThreadPool;
 
 implementation
 
@@ -599,7 +605,7 @@ end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
 begin
   Assert(assigned(oplIntoQueueIntf));
-  if (ploPreserveOrder in Options) {and (oplNumTasks > 1)} then { TODO 1 : reenable! }
+  if (ploPreserveOrder in Options) and (oplNumTasks > 1) then
     InternalExecuteIntoOrdered(loopBody)
   else // no order preservation; no output buffering required
     InternalExecuteTask(
@@ -680,11 +686,12 @@ begin
     task(nil)
   else begin
     lockAggregate := CreateOmniCriticalSection;
+    GForEachPool.MaxExecuting := oplNumTasks;
     for iTask := 1 to oplNumTasks do
       CreateTask(task, 'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
         .Unobserved
-        .Schedule;
+        .Schedule(GForEachPool);
     if not (ploNoWait in Options) then
       WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   end;
@@ -942,4 +949,6 @@ begin
   Result := odeDelegate(odeValue);
 end; { TOmniDelegateEnumerator }
 
+initialization
+  GForEachPool := CreateThreadPool('Parallel.ForEach pool');
 end.
