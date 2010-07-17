@@ -69,6 +69,16 @@ interface
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 
+// Notes for OTL 3
+// - Parallel.ForEach should use task pool.
+// - Task pool would dynamically schedule tasks over available cores.
+// - Task pool would know how many different kinds of tasks are there (one per distinct
+//   ForEach) and would balance load so that all different kinds of tasks would get executed.
+// - ForEach would support .DegreeOfConcurrency (or something like that) which would
+//   default to one meaning that one task can easily consume one core. Setting it to two
+//   (it would be a real number) would mean that one task can only consume one half of a
+//   core and that 2*<number of cores> is a good number of threads for this particular task.
+
 uses
   SysUtils,
   {$IFDEF OTL_ERTTI}

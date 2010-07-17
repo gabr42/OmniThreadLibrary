@@ -132,7 +132,7 @@ uses
   Classes,
   DSiWin32,
   GpLists,
-  OtlLogger, { TODO 1 : Remove! }
+//  OtlLogger, { TODO 1 : Remove! }
   OtlSync;
 
 const
@@ -275,6 +275,7 @@ type
     procedure Submit(position: int64; const data: TOmniValue); override;
     property EmptyHandle: THandle read obiEmptyHandle;
     property IsFull: boolean read obiFull;
+//    property Owner: TOmniBaseDataManager read obiDataManager_ref; { TODO 1 : testing, remove }
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
 
@@ -336,6 +337,7 @@ type
     destructor  Destroy; override;
     function  AllocateOutputBuffer: TOmniOutputBuffer; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
+//    procedure DumpBufferList; { TODO 1 : testing, remove }
     function  GetDataCountForGeneration(generation: integer): integer;
     function  GetNext(package: TOmniDataPackage): boolean; override;
     function  GetNextFromProvider(package: TOmniDataPackage;
@@ -369,19 +371,19 @@ type
       generation: integer): boolean; override;
   end; { TOmniHeuristicDataManager }
 
-procedure Assert(condition: boolean; message: string = '');
-var
-  events: TStringList;
-begin
-  if not condition then begin
-    events := TStringList.Create;
-    try
-      GLogger.GetEventList(events);
-      events.SaveToFile('d:\0\events.txt');
-    finally FreeAndNil(events); end;
-  end;
-  System.Assert(condition, message);
-end;
+//procedure Assert(condition: boolean; message: string = '');
+//var
+//  events: TStringList;
+//begin
+//  if not condition then begin
+//    events := TStringList.Create;
+//    try
+//      GLogger.GetEventList(events);
+//      events.SaveToFile('d:\0\events.txt');
+//    finally FreeAndNil(events); end;
+//  end;
+//  System.Assert(condition, message);
+//end;
 
 { exports }
 
@@ -479,8 +481,8 @@ begin
   idpHighSign := idpHigh  * idpSign;
   Range := newRange;
   idpPosition := Range.First;
-  GLogger.Log('Package initialized to %d..%d [%d]; range %d..%d',
-    [low, high, step, Range.First, Range.Last]);
+//  GLogger.Log('Package initialized to %d..%d [%d]; range %d..%d',
+//    [low, high, step, Range.First, Range.Last]);
 end; { TOmniIntegerDataPackage.Initialize }
 
 function TOmniIntegerDataPackage.Split(package: TOmniDataPackage): boolean;
@@ -552,11 +554,11 @@ var
   high      : int64;
   intPackage: TOmniIntegerDataPackage absolute package;
 begin
-  GLogger.Log('GetPackage (%d)', [dataCount]);
+//  GLogger.Log('GetPackage (%d)', [dataCount]);
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
   {$IFDEF Debug}Assert(dataCount > 0);{$ENDIF}
   if irpCount.Value <= 0 then begin
-    GLogger.Log('GetPackage failed');
+//    GLogger.Log('GetPackage failed');
     Result := false;
   end
   else begin
@@ -816,7 +818,7 @@ function TOmniLocalQueueImpl.GetNext(var position: int64; var value: TOmniValue)
 begin
   Result := lqiDataPackage.GetNext(position, value);
   if not Result then begin
-    GLogger.Log('GetNext failed');
+//    GLogger.Log('GetNext failed');
     {$IFDEF Debug}Assert(assigned(lqiBufferSet));{$ENDIF Debug}
     lqiBufferSet.ActiveBuffer.MarkFull;
     lqiBufferSet.ActivateBuffer; // this will block if alternate buffer is also full
@@ -824,16 +826,16 @@ begin
     if Result then begin
       Result := lqiDataPackage.GetNext(position, value);
       if not Result then
-        GLogger.Log('Retried GetNext failed')
+//        GLogger.Log('Retried GetNext failed')
       else begin
-        GLogger.Log('Retried GetNext: %d @ %d', [value.AsInteger, position]);
+//        GLogger.Log('Retried GetNext: %d @ %d', [value.AsInteger, position]);
         lqiBufferSet.ActiveBuffer.Range := lqiDataPackage.Range;
-        GLogger.Log('Data package range is %d..%d', [lqiBufferSet.ActiveBuffer.Range.First, lqiBufferSet.ActiveBuffer.Range.Last]);
+//        GLogger.Log('Data package range is %d..%d', [lqiBufferSet.ActiveBuffer.Range.First, lqiBufferSet.ActiveBuffer.Range.Last]);
       end;
     end;
   end
-  else
-    GLogger.Log('GetNext: %d @ %d', [value.AsInteger, position]);
+//  else
+//    GLogger.Log('GetNext: %d @ %d', [value.AsInteger, position]);
 end; { TOmniLocalQueueImpl.GetNext }
 
 function TOmniLocalQueueImpl.Split(package: TOmniDataPackage): boolean;
@@ -867,9 +869,9 @@ procedure TOmniOutputBufferImpl.CopyToOutput;
 var
   value: TOmniValue;
 begin
-  GLogger.Log('Copying data from buffer %d..%d to output', [Range.First, Range.Last]);
+//  GLogger.Log('Copying data from buffer %d..%d to output', [Range.First, Range.Last]);
   while obiBuffer.TryTake(value) do begin
-    GLogger.Log(value.AsString);
+//    GLogger.Log(value.AsString);
     obiOutput.Add(value);
   end;
   SetEvent(obiEmptyHandle);
@@ -880,7 +882,7 @@ procedure TOmniOutputBufferImpl.MarkFull;
 begin
   obiFull := true;
   if obiHasData then begin
-    GLogger.Log('Mark full %d..%d', [Range.First, Range.Last]);
+//    GLogger.Log('Mark full %d..%d', [Range.First, Range.Last]);
     obiDataManager_ref.NotifyBufferFull(Self);
   end;
   obiHasData := false;
@@ -888,7 +890,7 @@ end; { TOmniOutputBufferImpl.MarkFull }
 
 procedure TOmniOutputBufferImpl.SetRange(range: TOmniPositionRange);
 begin
-  GLogger.Log('Set range %d..%d', [Range.First, Range.Last]);
+//  GLogger.Log('Set range %d..%d', [Range.First, Range.Last]);
   obiRange := range;
   obiDataManager_ref.NotifyBufferRangeChanged(Self);
   obiNextPosition := obiRange.First;
@@ -928,8 +930,13 @@ procedure TOmniOutputBufferSet.ActivateBuffer;
 var
   awaited: cardinal;
 begin
-  { TODO 1 : Timeout? Cancellation? }
-  awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE);
+  { TODO 1 : testing, remove }
+  awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE{10000});
+//  if awaited = WAIT_TIMEOUT then begin
+//    ActiveBuffer.Owner.DumpBufferList;
+//    Sleep(0);
+//  end;
+
   Assert({(awaited >= WAIT_OBJECT_0) and } (awaited < (WAIT_OBJECT_0 + CNumBuffersInSet)));
   obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
   obsActiveBuffer_ref := obsBuffers[obsActiveIndex];
@@ -969,6 +976,20 @@ begin
   inherited;
 end; { TOmniBaseDataManager.Destroy }
 
+//procedure TOmniBaseDataManager.DumpBufferList;
+//var
+//  buffer: TOmniOutputBufferImpl;
+//  i: Integer;
+//begin
+//  dmBufferRangeLock.Acquire;
+//  OutputDebugString(PChar(Format('Next position: %d', [dmNextPosition])));
+//  for i := 0 to dmBufferRangeList.Count - 1 do begin
+//    buffer := TOmniOutputBufferImpl(dmBufferRangeList.Objects[i]);
+//    OutputDebugString(PChar(Format('%d: %d..%d', [i, buffer.Range.First, buffer.Range.Last])));
+//  end;
+//  dmBufferRangeLock.Release;
+//end;
+
 function TOmniBaseDataManager.AllocateOutputBuffer: TOmniOutputBuffer;
 begin
   Assert(assigned(dmOutputIntf));
@@ -984,12 +1005,15 @@ begin
 end; { TOmniBaseDataManager.LocalQueueDestroyed }
 
 procedure TOmniBaseDataManager.NotifyBufferFull(buffer: TOmniOutputBufferImpl);
+//var
+//  i: Integer;
+//  range: TOmniPositionRange;
 begin
   // Remove buffer from the list. Check if next buffer is waiting in the list.
   // Copy buffer if it is complete and repeat the process.
   // Can only be called from one thread at the same time as only one buffer can be active.
   // Activate the first buffer if it is the expected one.
-  GLogger.Log('Buffer %d..%d is full', [buffer.Range.First, buffer.Range.Last]);
+//  GLogger.Log('Buffer %d..%d is full', [buffer.Range.First, buffer.Range.Last]);
   dmBufferRangeLock.Acquire;
   try
     while (dmBufferRangeList.Count > 0) and
@@ -997,9 +1021,18 @@ begin
           BufferList[0].IsFull do
     begin
       buffer := TOmniOutputBufferImpl(dmBufferRangeList.ExtractObject(0));
-      GLogger.Log('Buffer %d..%d is full', [buffer.Range.First, buffer.Range.Last]);
-      buffer.CopyToOutput;
+//      range := buffer.Range; { TODO 1 : testing, remove }
+//      GLogger.Log('Buffer %d..%d is full', [buffer.Range.First, buffer.Range.Last]);
       dmNextPosition := buffer.Range.Last + 1;
+      buffer.CopyToOutput;
+
+      { TODO 1 : testing, remove }
+//      for i := 0 to dmBufferRangeList.Count - 1 do
+//        if TOmniOutputBufferImpl(dmBufferRangeList.Objects[i]).Range.Last < dmNextPosition then begin
+//          GLogger.SaveEventList('d:\0\events.txt');
+//          Sleep(0);
+//        end;
+
     end;
   finally dmBufferRangeLock.Release; end;
 end; { TOmniBaseDataManager.NotifyBufferFull }
@@ -1008,7 +1041,7 @@ procedure TOmniBaseDataManager.NotifyBufferRangeChanged(buffer: TOmniOutputBuffe
 begin
   dmBufferRangeLock.Acquire;
   try
-    GLogger.Log('Buffer range changed to %d..%d', [buffer.Range.First, buffer.Range.Last]);
+//    GLogger.Log('Buffer range changed to %d..%d', [buffer.Range.First, buffer.Range.Last]);
     dmBufferRangeList.AddObject(buffer.Range.First, buffer);
   finally dmBufferRangeLock.Release; end;
 end; { TOmniBaseDataManager.NotifyBufferRangeChanged }
