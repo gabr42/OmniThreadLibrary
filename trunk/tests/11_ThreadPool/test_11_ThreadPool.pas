@@ -34,6 +34,7 @@ type
     btnScheduleObserved: TButton;
     btnScheduleAndWait: TButton;
     btnScheduleAndTerminate: TButton;
+    btnTestZeroExecutorThreads: TButton;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
@@ -50,6 +51,7 @@ type
     procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OmniTEDTaskTerminated(const task: IOmniTaskControl);
+    procedure btnTestZeroExecutorThreadsClick(Sender: TObject);
   private
     FObservableTask: IOmniTaskControl;
     FThreadPool: IOmniThreadPool;
@@ -207,6 +209,28 @@ begin
   FObservableTask := CreateTask(THelloWorker.Create(Handle), 'unobserved task')
     .OnTerminated(ReleaseObservableTask)
     .Schedule(FThreadPool);
+end;
+
+procedure TfrmTestOtlThreadPool.btnTestZeroExecutorThreadsClick(Sender: TObject);
+var
+  oldExecuting: integer;
+  task        : IOmniTaskControl;
+begin
+  oldExecuting := GlobalOmniThreadPool.MaxExecuting;
+  try
+    GlobalOmniThreadPool.MaxExecuting := 0;
+    Log('Scheduling one task. It should only start executing after one second delay.');
+    task := CreateTask(THelloWorker.Create(Handle, 1000)).Unobserved.Schedule;
+    Application.ProcessMessages;
+    Sleep(1000);
+    Log('Starting execution now');
+    GlobalOmniThreadPool.MaxExecuting := 1;
+    while not task.WaitFor(100) do
+      Application.ProcessMessages;
+    Log('Tasks completed');
+  finally
+    GlobalOmniThreadPool.MaxExecuting := oldExecuting;
+  end;
 end;
 
 procedure TfrmTestOtlThreadPool.FormCloseQuery(Sender: TObject; var CanClose: boolean);

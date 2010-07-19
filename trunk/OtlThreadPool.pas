@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-01
-///   Version           : 2.05
+///   Last modification : 2010-07-19
+///   Version           : 2.05a
 /// </para><para>
 ///   History:
+///     2.05a: 2010-07-19
+///       - Works correctly if MaxExecuting is set to 0. Set MaxExecuting to -1 to allow
+///         "infinite" number of execution threads.
+///       - When MaxExecuting is changed, the code checks immediately if tasks from the
+///         idle queue can now be activated.
 ///     2.05: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     2.04a: 2010-06-06
@@ -339,6 +344,7 @@ type
     procedure CancelAll(var doneSignal: TOmniWaitableValue);
     procedure MaintainanceTimer;
     // invoked from TOTPWorkerThreads
+    procedure CheckIdleQueue;
     procedure MsgCompleted(var msg: TOmniMessage); message MSG_COMPLETED;
     procedure MsgThreadCreated(var msg: TOmniMessage); message MSG_THREAD_CREATED;
     procedure MsgThreadDestroying(var msg: TOmniMessage); message MSG_THREAD_DESTROYING;
@@ -986,6 +992,21 @@ begin
   end;
 end; { TOTPWorker.MaintainanceTimer }
 
+procedure TOTPWorker.CheckIdleQueue;
+var
+  workItem: TOTPWorkItem;
+begin
+  if (not owDestroying) and (owWorkItemQueue.Count > 0) and
+    ((owIdleWorkers.Count > 0) or (owRunningWorkers.Count < MaxExecuting.Value)) then
+  begin
+    workItem := TOTPWorkItem(owWorkItemQueue[0]);
+    owWorkItemQueue.Delete(0);
+    CountQueued.Decrement;
+    {$IFDEF LogThreadPool}Log('Dequeueing %s ', [workItem.Description]);{$ENDIF LogThreadPool}
+    ScheduleNext(workItem);
+  end;
+end; { TOTPWorker.CheckIdleQueue }
+
 procedure TOTPWorker.MsgCompleted(var msg: TOmniMessage);
 begin
   ProcessCompletedWorkItem(TOTPWorkItem(msg.MsgData.AsObject));
@@ -1061,15 +1082,7 @@ begin
       StopThread(worker);
     end;
   end;
-  if (not owDestroying) and (owWorkItemQueue.Count > 0) and
-    ((owIdleWorkers.Count > 0) or (owRunningWorkers.Count < MaxExecuting.Value)) then
-  begin
-    workItem := TOTPWorkItem(owWorkItemQueue[0]);
-    owWorkItemQueue.Delete(0);
-    CountQueued.Decrement;
-    {$IFDEF LogThreadPool}Log('Dequeueing %s ', [workItem.Description]);{$ENDIF LogThreadPool}
-    ScheduleNext(workItem);
-  end;
+  CheckIdleQueue;
 end; { TOTPWorker.ProcessCompletedWorkItem }
 
 procedure TOTPWorker.PruneWorkingQueue;
@@ -1143,34 +1156,34 @@ var
   worker: TOTPWorkerThread;
 begin
   worker := nil;
-  if owIdleWorkers.Count > 0 then begin
-    worker := TOTPWorkerThread(owIdleWorkers[owIdleWorkers.Count - 1]);
-    owIdleWorkers.Delete(owIdleWorkers.Count - 1);
-    owRunningWorkers.Add(worker);
-    CountRunning.Increment;
-    {$IFDEF LogThreadPool}Log(
-      'Allocated thread from idle pool, num idle = %d, num running = %d[%d]',
-      [owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting.Value]);
-    {$ENDIF LogThreadPool}
-  end
-  else if (MaxExecuting.Value <= 0) or
-    (owRunningWorkers.Count < MaxExecuting.Value) then
-  begin
-    if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count)
-       >= CMaxConcurrentWorkers
-    then
-      raise Exception.CreateFmt(
-        'TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
-          'due to the implementation limitations', [CMaxConcurrentWorkers]);
-    worker := TOTPWorkerThread.Create(owThreadDataFactory);
-    worker.Start;
-    task.RegisterComm(worker.OwnerCommEndpoint);
-    owRunningWorkers.Add(worker);
-    CountRunning.Increment;
-    {$IFDEF LogThreadPool}Log(
-      'Created new thread %s, num idle = %d, num running = %d[%d]',
-      [worker.Description, owIdleWorkers.Count, owRunningWorkers.Count,
-      MaxExecuting.Value]); {$ENDIF LogThreadPool}
+  if (MaxExecuting = -1) or (owRunningWorkers.Count < MaxExecuting.Value) then begin
+    if owIdleWorkers.Count > 0 then begin
+      worker := TOTPWorkerThread(owIdleWorkers[owIdleWorkers.Count - 1]);
+      owIdleWorkers.Delete(owIdleWorkers.Count - 1);
+      owRunningWorkers.Add(worker);
+      CountRunning.Increment;
+      {$IFDEF LogThreadPool}Log(
+        'Allocated thread from idle pool, num idle = %d, num running = %d[%d]',
+        [owIdleWorkers.Count, owRunningWorkers.Count, MaxExecuting.Value]);
+      {$ENDIF LogThreadPool}
+    end
+    else begin
+      if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count)
+         >= CMaxConcurrentWorkers
+      then
+        raise Exception.CreateFmt(
+          'TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
+            'due to the implementation limitations', [CMaxConcurrentWorkers]);
+      worker := TOTPWorkerThread.Create(owThreadDataFactory);
+      worker.Start;
+      task.RegisterComm(worker.OwnerCommEndpoint);
+      owRunningWorkers.Add(worker);
+      CountRunning.Increment;
+      {$IFDEF LogThreadPool}Log(
+        'Created new thread %s, num idle = %d, num running = %d[%d]',
+        [worker.Description, owIdleWorkers.Count, owRunningWorkers.Count,
+        MaxExecuting.Value]); {$ENDIF LogThreadPool}
+    end;
   end;
   if assigned(worker) then begin
     {$IFDEF LogThreadPool}Log('Started %s', [workItem.Description]);{$ENDIF LogThreadPool}
@@ -1388,6 +1401,7 @@ begin
         'MaxExecuting cannot be larger than %d due to the implementation limitations',
       [CMaxConcurrentWorkers]);
   WorkerObj.MaxExecuting.Value := value;
+  otpWorkerTask.Invoke(@TOTPWorker.CheckIdleQueue);
 end; { TOmniThreadPool.SetMaxExecuting }
 
 procedure TOmniThreadPool.SetMaxQueued(value: integer);
