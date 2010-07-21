@@ -176,6 +176,7 @@ type
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
   public
+    constructor Create(const values: array of const);
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
@@ -1137,6 +1138,11 @@ begin
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
+
+constructor TOmniValue.Create(const values: array of const);
+begin
+  AsVariant := OpenArrayToVarArray(values);
+end; { TOmniValue.Create }
 
 function TOmniValue.CastAsInt64: int64;
 begin
