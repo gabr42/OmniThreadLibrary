@@ -30,10 +30,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-07-01
-///   Version           : 1.03
+///   Last modification : 2010-07-21
+///   Version           : 1.03a
 ///</para><para>
 ///   History:
+///     1.03a: 2010-07-21
+///       - TOmniBlockingCollection.TryTake was broken. When two threads were waiting in
+///         TryTake at the same time, first thread to complete the wait would remove
+///         observer from the queue and that would cause next Add *not* to wake the other
+///         waiting thread.
 ///     1.03: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.02: 2010-01-14
@@ -90,7 +95,6 @@ type
     obcCompletedSignal: TDSiEventHandle;
     obcObserver       : TOmniContainerWindowsEventObserver;
     obcResourceCount  : TOmniResourceCount;
-    obcSingleThreaded : boolean;
   public
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
@@ -119,7 +123,8 @@ type
 implementation
 
 uses
-  Classes;
+  Classes,
+  OtlLogger;
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -157,14 +162,12 @@ begin
   obcCollection := TOmniQueue.Create;
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
   obcObserver := CreateContainerWindowsEventObserver;
-  obcSingleThreaded := (Environment.Process.Affinity.Count = 1);
-  if obcSingleThreaded then
-    obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
+  obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
 end; { TOmniBlockingCollection.Create }
 
 destructor TOmniBlockingCollection.Destroy;
 begin
-  if assigned(obcCollection) and assigned(obcObserver) and obcSingleThreaded then
+  if assigned(obcCollection) and assigned(obcObserver) then
     obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
   FreeAndNil(obcObserver);
   DSiCloseHandleAndNull(obcCompletedSignal);
@@ -249,32 +252,27 @@ begin { TOmniBlockingCollection.TryTake }
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
     try
-      if not obcSingleThreaded then
-        obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
-      try
-        startTime := DSiTimeGetTime64;
-        waitHandles[0] := obcCompletedSignal;
-        waitHandles[1] := obcObserver.GetEvent;
-        if assigned(obcResourceCount) then
-          waitHandles[2] := obcResourceCount.Handle;
-        Result := false;
-        while not (IsCompleted or Elapsed) do begin
-          if obcCollection.TryDequeue(value) then begin
-            Result := true;
-            break; //while
-          end;
-          awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
-                       @waitHandles, false, TimeLeft_ms);
-          if awaited <> WAIT_OBJECT_1 then begin
-            if awaited = WAIT_OBJECT_2 then 
-              CompleteAdding;
-            Result := false;
-            break; //while
-          end;
+      startTime := DSiTimeGetTime64;
+      waitHandles[0] := obcCompletedSignal;
+      waitHandles[1] := obcObserver.GetEvent;
+      if assigned(obcResourceCount) then
+        waitHandles[2] := obcResourceCount.Handle;
+      Result := false;
+      while not (IsCompleted or Elapsed) do begin
+        if obcCollection.TryDequeue(value) then begin
+          Result := true;
+          break; //while
         end;
-      finally
-        if not obcSingleThreaded then
-          obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
+        GLogger.Log('Waiting on %d in %d', [obcObserver.GetEvent, cardinal(Self)]);
+        awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
+                     @waitHandles, false, TimeLeft_ms);
+        GLogger.Log('Awaited %d', [awaited]);
+        if awaited <> WAIT_OBJECT_1 then begin
+          if awaited = WAIT_OBJECT_2 then 
+            CompleteAdding;
+          Result := false;
+          break; //while
+        end;
       end;
     finally
       if assigned(obcResourceCount) then

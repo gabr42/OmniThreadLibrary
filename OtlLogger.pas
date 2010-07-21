@@ -37,12 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2010-07-08
-///   Last modification : 2010-07-08
-///   Version           : 0.1
+///   Last modification : 2010-07-21
+///   Version           : 1.01
 ///</para><para>
 ///   History:
-///     0.1: 2010-04-13
-///       - Created.
+///     1.01: 2010-07-21
+///       - SaveToFile will append original file.
 ///</para></remarks>
 
 unit OtlLogger;
@@ -77,6 +77,7 @@ implementation
 uses
   Windows,
   SysUtils,
+  DSiWin32,
   OtlCommon;
 
 { TOmniLogger }
@@ -118,18 +119,27 @@ end; { TOmniLogger.Log }
 
 procedure TOmniLogger.Log(const msg: string);
 begin
-  eventList.Enqueue(Format('[%d] %s', [GetCurrentThreadID, msg]));
+  eventList.Enqueue(Format('[%d] %d %s', [GetCurrentThreadID, DSiTimeGetTime64, msg]));
 end; { TOmniLogger.Log }
 
 procedure TOmniLogger.SaveEventList(const fileName: string);
 var
-  sl: TStringList;
+  s    : string;
+  slNew: TStringList;
+  slOld: TStringList;
 begin
-  sl := TStringList.Create;
+  slOld := TStringList.Create;
   try
-    GetEventList(sl);
-    sl.SaveToFile(fileName);
-  finally FreeAndNil(sl); end;
+    if FileExists(fileName) then
+      slOld.LoadFromFile(fileName);
+    slNew := TStringList.Create;
+    try
+      GetEventList(slNew);
+      for s in slNew do
+        slOld.Add(s);
+      slOld.SaveToFile(fileName);
+    finally FreeAndNil(slNew); end;
+  finally FreeAndNil(slOld); end;
 end;
 
 initialization

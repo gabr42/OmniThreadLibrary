@@ -6,6 +6,9 @@
   - Implemented _AddRef, _Release, _ReleaseAndClear.
   - TOmniValue can be cast as Int64.
   - Implemented conversions to/from TValue (Delphi 2010 and newer).
+  - Implemented constructor.
+  
+ - Fixed ugly bug in TOmniBlockingCollection
 
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver

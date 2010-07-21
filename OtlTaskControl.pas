@@ -160,6 +160,8 @@
 ///    http://www.bluebytesoftware.com/blog/2009/01/30/ASinglewordReaderwriterSpinLock.aspx
 ///  - CancellationToken, 
 ///    http://blogs.msdn.com/pfxteam/archive/2009/06/22/9791840.aspx
+
+// TODO 1 -oPrimoz Gabrijelcic : The whole Unobserved mess should go away - task should be implicitly owned ALWAYS
   
 // TODO 3 -oPrimoz Gabrijelcic : Add general way to map unique ID into a task controller/task interface.
 // TODO 3 -oPrimoz Gabrijelcic : ChainTo options 'only on success', 'only on fault' (http://blogs.msdn.com/pfxteam/archive/2010/02/09/9960735.aspx)
@@ -2036,6 +2038,8 @@ end; { TOmniTaskControl.Create }
 destructor TOmniTaskControl.Destroy;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
+  // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying ! then
+    
   if assigned(otcEventMonitor) then begin
     RemoveMonitor;
     if assigned(GTaskControlEventMonitorPool) then
