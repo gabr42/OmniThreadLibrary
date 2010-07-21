@@ -896,13 +896,7 @@ procedure TOmniOutputBufferSet.ActivateBuffer;
 var
   awaited: cardinal;
 begin
-  { TODO 1 : testing, remove }
-  awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE{10000});
-//  if awaited = WAIT_TIMEOUT then begin
-//    ActiveBuffer.Owner.DumpBufferList;
-//    Sleep(0);
-//  end;
-
+  awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE);
   Assert({(awaited >= WAIT_OBJECT_0) and } (awaited < (WAIT_OBJECT_0 + CNumBuffersInSet)));
   obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
   obsActiveBuffer_ref := obsBuffers[obsActiveIndex];

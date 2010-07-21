@@ -2141,11 +2141,13 @@ initialization
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   Assert(SizeOf(pointer) = 4);
   GEnvironment := TOmniEnvironment.Create;
+  {$IFDEF OTL_Generics}
   FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);
   TOmniValue_DataSize[tkInteger] := SizeOf(integer);
   TOmniValue_DataSize[tkClass]   := SizeOf(TObject);
   TOmniValue_DataSize[tkMethod]  := SizeOf(TMethod);
   TOmniValue_DataSize[tkInt64]   := SizeOf(int64);
+  {$ENDIF OTL_Generics}
   {$IFDEF OTL_HasTkPointer}
   TOmniValue_DataSize[tkPointer] := SizeOf(pointer);
   {$ENDIF OTL_HasTkPointer}
