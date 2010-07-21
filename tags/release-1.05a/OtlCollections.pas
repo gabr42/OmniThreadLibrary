@@ -34,6 +34,11 @@
 ///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     release-1.05a/1.02a: 2010-07-21
+///       - TOmniBlockingCollection.TryTake was broken. When two threads were waiting in
+///         TryTake at the same time, first thread to complete the wait would remove
+///         observer from the queue and that would cause next Add *not* to wake the other
+///         waiting thread.
 ///     1.02: 2010-01-14
 ///       - Small changes required for the interoperability with the Parallel.ForEach.
 ///     1.01a: 2010-01-05
@@ -87,7 +92,6 @@ type
     obcCompletedSignal: TDSiEventHandle;
     obcObserver       : TOmniContainerWindowsEventObserver;
     obcResourceCount  : TOmniResourceCount;
-    obcSingleThreaded : boolean;
   public
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
@@ -156,14 +160,12 @@ begin
   obcCollection := TOmniQueue.Create;
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
   obcObserver := CreateContainerWindowsEventObserver;
-  obcSingleThreaded := (Environment.Process.Affinity.Count = 1);
-  if obcSingleThreaded then
-    obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
+  obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
 end; { TOmniBlockingCollection.Create }
 
 destructor TOmniBlockingCollection.Destroy;
 begin
-  if assigned(obcCollection) and assigned(obcObserver) and obcSingleThreaded then
+  if assigned(obcCollection) and assigned(obcObserver) then
     obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
   FreeAndNil(obcObserver);
   DSiCloseHandleAndNull(obcCompletedSignal);
@@ -248,32 +250,25 @@ begin { TOmniBlockingCollection.TryTake }
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
     try
-      if not obcSingleThreaded then
-        obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
-      try
-        startTime := DSiTimeGetTime64;
-        waitHandles[0] := obcCompletedSignal;
-        waitHandles[1] := obcObserver.GetEvent;
-        if assigned(obcResourceCount) then
-          waitHandles[2] := obcResourceCount.Handle;
-        Result := false;
-        while not (IsCompleted or Elapsed) do begin
-          if obcCollection.TryDequeue(value) then begin
-            Result := true;
-            break; //while
-          end;
-          awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
-                       @waitHandles, false, TimeLeft_ms);
-          if awaited <> WAIT_OBJECT_1 then begin
-            if awaited = WAIT_OBJECT_2 then 
-              CompleteAdding;
-            Result := false;
-            break; //while
-          end;
+      startTime := DSiTimeGetTime64;
+      waitHandles[0] := obcCompletedSignal;
+      waitHandles[1] := obcObserver.GetEvent;
+      if assigned(obcResourceCount) then
+        waitHandles[2] := obcResourceCount.Handle;
+      Result := false;
+      while not (IsCompleted or Elapsed) do begin
+        if obcCollection.TryDequeue(value) then begin
+          Result := true;
+          break; //while
         end;
-      finally
-        if not obcSingleThreaded then
-          obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
+        awaited := WaitForMultipleObjects(IFF(assigned(obcResourceCount), 3, 2),
+                     @waitHandles, false, TimeLeft_ms);
+        if awaited <> WAIT_OBJECT_1 then begin
+          if awaited = WAIT_OBJECT_2 then
+            CompleteAdding;
+          Result := false;
+          break; //while
+        end;
       end;
     finally
       if assigned(obcResourceCount) then
