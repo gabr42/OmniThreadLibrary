@@ -123,8 +123,7 @@ type
 implementation
 
 uses
-  Classes,
-  OtlLogger;
+  Classes;
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -263,10 +262,8 @@ begin { TOmniBlockingCollection.TryTake }
           Result := true;
           break; //while
         end;
-        GLogger.Log('Waiting on %d in %d', [obcObserver.GetEvent, cardinal(Self)]);
         awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
                      @waitHandles, false, TimeLeft_ms);
-        GLogger.Log('Awaited %d', [awaited]);
         if awaited <> WAIT_OBJECT_1 then begin
           if awaited = WAIT_OBJECT_2 then 
             CompleteAdding;
