@@ -38,7 +38,7 @@
 ///     1.04: 2010-07-22
 ///       - Introduced overloaded Execute methods with delegates that accept the task
 ///         interface parameter.
-///       - Introduced OnTaskCreate hook.
+///       - Introduced OnTaskCreate hook and MonitorWith shorthand.
 ///     1.03: 2010-07-17
 ///       - ForEach tasks are scheduled in the specialized pool.
 ///     1.02: 2010-07-01
@@ -98,6 +98,7 @@ uses
   OtlTask,
   OtlTaskControl,
   OtlDataManager,
+  OtlEventMonitor,
   OtlThreadPool;
 
 type
@@ -147,6 +148,7 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
+    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
@@ -162,6 +164,7 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
+    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
@@ -290,6 +293,7 @@ type
     function  ForEach: IOmniParallelLoop;
     function  GetEnumerator: IOmniValueEnumerator;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
+    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
@@ -320,6 +324,7 @@ type
     function  ForEach: IOmniParallelLoop<T>;
     function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
+    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
@@ -773,12 +778,14 @@ end; { TOmniParallelLoopBase.SetOnStop }
 
 procedure TOmniParallelLoopBase.SetOnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate);
 begin
+  Assert(not assigned(oplOnTaskCreate));
   oplOnTaskCreate := taskCreateDelegate;
 end; { TOmniParallelLoopBase.SetOnTaskCreate }
 
 procedure TOmniParallelLoopBase.SetOnTaskCreate(
   taskCreateDelegate: TOmniTaskControlCreateDelegate);
 begin
+  Assert(not assigned(oplOnTaskControlCreate));
   oplOnTaskControlCreate := taskCreateDelegate;
 end; { TOmniParallelLoopBase.SetOnTaskCreate }
 
@@ -864,6 +871,16 @@ begin
   SetIntoQueue(queue);
   Result := Self;
 end; { TOmniParallelLoop.Into }
+
+function TOmniParallelLoop.MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
+begin
+  Result := OnTaskCreate(
+    procedure (const task: IOmniTaskControl)
+    begin
+      task.MonitorWith(monitor);
+    end
+  );
+end; { TOmniParallelLoop.MonitorWith }
 
 function TOmniParallelLoop.NoWait: IOmniParallelLoop;
 begin
@@ -1022,6 +1039,17 @@ begin
   SetIntoQueue(queue);
   Result := Self;
 end; { TOmniParallelLoop<T>.Into }
+
+function TOmniParallelLoop<T>.MonitorWith(
+  monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
+begin
+  Result := OnTaskCreate(
+    procedure (const task: IOmniTaskControl)
+    begin
+      task.MonitorWith(monitor)
+    end
+  );
+end; { TOmniParallelLoop<T>.MonitorWith }
 
 function TOmniParallelLoop<T>.NoWait: IOmniParallelLoop<T>;
 begin
