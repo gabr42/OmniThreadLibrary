@@ -767,12 +767,12 @@ end; { TGpThreadPool.ActiveWorkItemDescriptions }
 /// <returns>True: Normal exit, False: Thread was killed.</returns> 
 procedure TOTPWorker.Cancel(const params: TOmniValue);
 var
-  endWait_ms: int64;
-  iWorker: integer;
-  taskID: int64;
+  endWait_ms   : int64;
+  iWorker      : integer;
+  taskID       : int64;
   wasTerminated: boolean;
-  worker: TOTPWorkerThread;
-  workItem: TOTPWorkItem;
+  worker       : TOTPWorkerThread;
+  workItem     : TOTPWorkItem;
 begin
   taskID := params[0];
   wasTerminated := true;
