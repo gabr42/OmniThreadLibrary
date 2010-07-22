@@ -38,6 +38,7 @@
 ///     1.04: 2010-07-22
 ///       - Introduced overloaded Execute methods with delegates that accept the task
 ///         interface parameter.
+///       - Introduced OnTaskCreate hook.
 ///     1.03: 2010-07-17
 ///       - ForEach tasks are scheduled in the specialized pool.
 ///     1.02: 2010-07-01
@@ -95,6 +96,7 @@ uses
   OtlSync,
   OtlCollections,
   OtlTask,
+  OtlTaskControl,
   OtlDataManager,
   OtlThreadPool;
 
@@ -118,6 +120,9 @@ type
   TOmniIteratorIntoDelegate<T> = reference to procedure(const value: T; var result: TOmniValue);
   TOmniIteratorIntoTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue; var result: TOmniValue);
   TOmniIteratorIntoTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T; var result: TOmniValue);
+
+  TOmniTaskCreateDelegate = reference to procedure(const task: IOmniTask);
+  TOmniTaskControlCreateDelegate = reference to procedure(const task: IOmniTaskControl);
 
   IOmniParallelAggregatorLoop = interface
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
@@ -144,6 +149,8 @@ type
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
   end; { IOmniParallelLoop }
@@ -157,6 +164,8 @@ type
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
@@ -228,30 +237,34 @@ type
     constructor Create(enumerable: TObject); overload;
   {$ENDIF OTL_ERTTI}
   strict private
-    oplAggregate        : TOmniValue;
-    oplAggregator       : TOmniAggregatorDelegate;
-    oplCancellationToken: IOmniCancellationToken;
-    oplCountStopped     : IOmniResourceCount;
-    oplDataManager      : TOmniDataManager;
-    oplDelegateEnum     : TOmniDelegateEnumerator;
-    oplIntoQueueIntf    : IOmniBlockingCollection;
-    oplManagedProvider  : boolean;
-    oplNumTasks         : integer;
-    oplOnStop           : TProc;
-    oplOptions          : TOmniParallelLoopOptions;
-    oplSourceProvider   : TOmniSourceProvider;
+    oplAggregate          : TOmniValue;
+    oplAggregator         : TOmniAggregatorDelegate;
+    oplCancellationToken  : IOmniCancellationToken;
+    oplCountStopped       : IOmniResourceCount;
+    oplDataManager        : TOmniDataManager;
+    oplDelegateEnum       : TOmniDelegateEnumerator;
+    oplIntoQueueIntf      : IOmniBlockingCollection;
+    oplManagedProvider    : boolean;
+    oplNumTasks           : integer;
+    oplOnTaskCreate       : TOmniTaskCreateDelegate;
+    oplOnTaskControlCreate: TOmniTaskControlCreateDelegate;
+    oplOnStop             : TProc;
+    oplOptions            : TOmniParallelLoopOptions;
+    oplSourceProvider     : TOmniSourceProvider;
   strict protected
     procedure DoOnStop;
     procedure InternalExecute(loopBody: TOmniIteratorTaskDelegate);
     function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateTaskDelegate): TOmniValue;
     procedure InternalExecuteInto(loopBody: TOmniIteratorIntoTaskDelegate);
     procedure InternalExecuteIntoOrdered(loopBody: TOmniIteratorIntoTaskDelegate);
-    procedure InternalExecuteTask(task: TOmniTaskDelegate);
+    procedure InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetIntoQueue(const queue: IOmniBlockingCollection); overload;
     procedure SetNumTasks(taskCount: integer);
+    procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate); overload;
+    procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate); overload;
     procedure SetOnStop(stopDelegate: TProc);
     function  Stopped: boolean; inline;
   public
@@ -279,6 +292,8 @@ type
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
   end; { TOmniParallelLoop }
@@ -307,6 +322,8 @@ type
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
+    function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
@@ -318,8 +335,7 @@ implementation
 
 uses
   Windows,
-  GpStuff,
-  OtlTaskControl;
+  GpStuff;
 
 { Parallel }
 
@@ -688,27 +704,40 @@ begin
   );
 end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
-procedure TOmniParallelLoopBase.InternalExecuteTask(task: TOmniTaskDelegate);
+procedure TOmniParallelLoopBase.InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
 var
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
+  taskControl  : IOmniTaskControl;
 begin
   oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
   dmOptions := [];
   if ploPreserveOrder in Options then
     Include(dmOptions, dmoPreserveOrder);
   oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks, dmOptions); // destructor will do the cleanup
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and (not (ploNoWait in Options)) then
-    task(nil)
+  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
+     (not ((ploNoWait in Options) or assigned(oplOnTaskCreate) or assigned(oplOnTaskControlCreate)))
+  then
+    taskDelegate(nil)
   else begin
     lockAggregate := CreateOmniCriticalSection;
     GForEachPool.MaxExecuting := oplNumTasks;
-    for iTask := 1 to oplNumTasks do
-      CreateTask(task, 'Parallel.ForEach worker #' + IntToStr(iTask))
+    for iTask := 1 to oplNumTasks do begin
+      taskControl := CreateTask(
+        procedure (const task: IOmniTask)
+        begin
+          if assigned(oplOnTaskCreate) then
+            oplOnTaskCreate(task);
+          taskDelegate(task);
+        end,
+        'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
-        .Unobserved
-        .Schedule(GForEachPool);
+        .Unobserved;
+      if assigned(oplOnTaskControlCreate) then
+        oplOnTaskControlCreate(taskControl);
+      taskControl.Schedule(GForEachPool);
+    end;
     if not (ploNoWait in Options) then
       WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   end;
@@ -741,6 +770,17 @@ procedure TOmniParallelLoopBase.SetOnStop(stopDelegate: TProc);
 begin
   oplOnStop := stopDelegate;
 end; { TOmniParallelLoopBase.SetOnStop }
+
+procedure TOmniParallelLoopBase.SetOnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate);
+begin
+  oplOnTaskCreate := taskCreateDelegate;
+end; { TOmniParallelLoopBase.SetOnTaskCreate }
+
+procedure TOmniParallelLoopBase.SetOnTaskCreate(
+  taskCreateDelegate: TOmniTaskControlCreateDelegate);
+begin
+  oplOnTaskControlCreate := taskCreateDelegate;
+end; { TOmniParallelLoopBase.SetOnTaskCreate }
 
 function TOmniParallelLoopBase.Stopped: boolean;
 begin
@@ -842,6 +882,20 @@ begin
   SetOnStop(stopCode);
   Result := Self;
 end; { TOmniParallelLoop.OnStop }
+
+function TOmniParallelLoop.OnTaskCreate(
+  taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop;
+begin
+  SetOnTaskCreate(taskCreateDelegate);
+  Result := Self;
+end; { TOmniParallelLoop.OnTaskCreate }
+
+function TOmniParallelLoop.OnTaskCreate(
+  taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop;
+begin
+  SetOnTaskCreate(taskCreateDelegate);
+  Result := Self;
+end; { TOmniParallelLoop.OnTaskCreate }
 
 function TOmniParallelLoop.PreserveOrder: IOmniParallelLoop;
 begin
@@ -986,6 +1040,20 @@ begin
   SetOnStop(stopCode);
   Result := Self;
 end; { TOmniParallelLoop<T>.OnStop }
+
+function TOmniParallelLoop<T>.OnTaskCreate(
+  taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>;
+begin
+  SetOnTaskCreate(taskCreateDelegate);
+  Result := Self;
+end; { TOmniParallelLoop<T>.OnTaskCreate }
+
+function TOmniParallelLoop<T>.OnTaskCreate(
+  taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>;
+begin
+  SetOnTaskCreate(taskCreateDelegate);
+  Result := Self;
+end; { TOmniParallelLoop<T>.OnTaskCreate }
 
 function TOmniParallelLoop<T>.PreserveOrder: IOmniParallelLoop<T>;
 begin
