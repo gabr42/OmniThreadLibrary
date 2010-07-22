@@ -714,7 +714,7 @@ var
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
-  taskControl  : IOmniTaskControl;
+  taskControls : array of IOmniTaskControl;
 begin
   oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
   dmOptions := [];
@@ -728,8 +728,9 @@ begin
   else begin
     lockAggregate := CreateOmniCriticalSection;
     GForEachPool.MaxExecuting := oplNumTasks;
+    SetLength(taskControls, oplNumTasks);
     for iTask := 1 to oplNumTasks do begin
-      taskControl := CreateTask(
+      taskControls[iTask-1] := CreateTask(
         procedure (const task: IOmniTask)
         begin
           if assigned(oplOnTaskCreate) then
@@ -737,11 +738,12 @@ begin
           taskDelegate(task);
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
-        .WithLock(lockAggregate)
-        .Unobserved;
+        .WithLock(lockAggregate);
+      if ploNoWait in Options then
+        taskControls[iTask-1].Unobserved;
       if assigned(oplOnTaskControlCreate) then
-        oplOnTaskControlCreate(taskControl);
-      taskControl.Schedule(GForEachPool);
+        oplOnTaskControlCreate(taskControls[iTask-1]);
+      taskControls[iTask-1].Schedule(GForEachPool);
     end;
     if not (ploNoWait in Options) then
       WaitForSingleObject(oplCountStopped.Handle, INFINITE);
