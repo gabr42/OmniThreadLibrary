@@ -1,4 +1,4 @@
-/// <summary>Futures implementation. Part of the OmniThreadLibrary project.</summary>
+///<summary>Futures implementation. Part of the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.

@@ -8,7 +8,7 @@
   - Implemented conversions to/from TValue (Delphi 2010 and newer).
   - Implemented constructor.
   
- - Fixed ugly bug in TOmniBlockingCollection
+- Fixed ugly bug in TOmniBlockingCollection
 
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver
@@ -29,6 +29,8 @@
   Items[integer], Items[string] and Items[TOmniValue].
 - IOmniTask/IOmniTaskControl.ParamByName has been removed, use .Param[name: string].
 - IOmniTask/IOmniTaskControl.Param returns TOmniValueContainter.
+
+- new demos?
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 

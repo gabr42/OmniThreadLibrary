@@ -18,12 +18,14 @@ type
     btnTestFuture4: TButton;
     btnTestFuture5: TButton;
     btnTestFuture6: TButton;
+    btnTestFuture7: TButton;
     procedure btnTestFuture1Click(Sender: TObject);
     procedure btnTestFuture2Click(Sender: TObject);
     procedure btnTestFuture3Click(Sender: TObject);
     procedure btnTestFuture4Click(Sender: TObject);
     procedure btnTestFuture5Click(Sender: TObject);
     procedure btnTestFuture6Click(Sender: TObject);
+    procedure btnTestFuture7Click(Sender: TObject);
   private
     function CountPrimesTo(high: integer): TOmniFuture<integer>;
     function CountPrimesToHigh(high: integer): integer;
@@ -36,10 +38,14 @@ var
 
 implementation
 
-const
-  CPrimesHigh = 1000000;
+uses
+  OtlCommon,
+  OtlParallel;
 
 {$R *.dfm}
+
+const
+  CPrimesHigh = 1000000;
 
 function IsPrime(i: integer): boolean;
 var
@@ -158,6 +164,27 @@ begin
     lbLog.Update;
   end;
   lbLog.Items.Add(Format('%d primes from 1 to %d', [countPrimes, CPrimesHigh]));
+end;
+
+procedure TfrmFuturesDemo.btnTestFuture7Click(Sender: TObject);
+var
+  numPrimes: IOmniFuture<integer>;
+begin
+  numPrimes := TOmniFuture<integer>.Create(function: integer
+    begin
+      Result := Parallel.ForEach(1, CPrimesHigh).AggregateSum.Execute(
+        function (const value: integer): TOmniValue
+        begin
+          if IsPrime(value) then
+            Result := 1
+          else
+            Result := 0;
+        end
+      );
+    end
+  );
+//   do something else
+  lbLog.Items.Add(Format('%d primes from 1 to %d', [numPrimes.Value, CPrimesHigh]));
 end;
 
 function TfrmFuturesDemo.CountPrimesTo(high: integer): TOmniFuture<integer>;
