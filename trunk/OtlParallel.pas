@@ -727,7 +727,7 @@ begin
     GForEachPool.MaxExecuting := oplNumTasks;
     SetLength(taskControls, oplNumTasks);
     for iTask := 1 to oplNumTasks do begin
-      taskControls[iTask-1] := CreateTask(
+      {taskControls[iTask-1] := }CreateTask(
         procedure (const task: IOmniTask)
         begin
           if assigned(oplOnTaskCreate) then
@@ -736,14 +736,15 @@ begin
           countStopped.Allocate;
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
-        .WithLock(lockAggregate);
+        .WithLock(lockAggregate)
 { TODO 1 : If not Unobserved, sometimes crashes when Execute terminates! }
 { TODO 1 : Add non-Monitor based Unobserved implementation }
 //      if ploNoWait in Options then
-        taskControls[iTask-1].Unobserved;
-      if assigned(oplOnTaskControlCreate) then
-        oplOnTaskControlCreate(taskControls[iTask-1]);
-      taskControls[iTask-1].Schedule(GForEachPool);
+        {taskControls[iTask-1]}.Unobserved
+//      if assigned(oplOnTaskControlCreate) then
+//        oplOnTaskControlCreate(taskControls[iTask-1]);
+//      {taskControls[iTask-1]}.Schedule(GForEachPool);
+        .Run;
     end;
     if not (ploNoWait in Options) then begin
       WaitForSingleObject(countStopped.Handle, INFINITE);
