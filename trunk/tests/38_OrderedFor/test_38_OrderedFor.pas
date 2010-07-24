@@ -6,8 +6,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, ComCtrls,
-  OtlEventMonitor,
+  Dialogs, StdCtrls, ExtCtrls, ComCtrls, Spin,
   OtlThreadPool;
 
 type
@@ -20,20 +19,22 @@ type
     cbRepeatTest: TCheckBox;
     Timer1: TTimer;
     StatusBar1: TStatusBar;
+    btnSGPrimes: TButton;
+    btnOrderedSGPrimes: TButton;
+    lblNumSGTasks: TLabel;
+    inpNumSGTasks: TSpinEdit;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure btnUnorderedPrimes2Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
+    procedure btnSGPrimesClick(Sender: TObject);
   private
-    FEventMonitor: TOmniEventMonitor;
-    procedure HandleThreadCreated(const pool: IOmniThreadPool; threadID: integer);
-    procedure HandleThreadDestroying(const pool: IOmniThreadPool; threadID: integer);
-    procedure HandleThreadKilled(const pool: IOmniThreadPool; threadID: integer);
     function  IsPrime(i: integer): boolean;
+    function  MultiThreadedSGPrimes(numTasks: integer; ordered: boolean): integer;
     function  NumCores: integer;
-    procedure VerifyResult;
     procedure RepeatTest;
+    function  SingleThreadedSGPrimes: integer;
+    procedure VerifyResult;
   public
   end;
 
@@ -44,6 +45,7 @@ implementation
 
 uses
   DSiWin32,
+  GpStuff,
   GpLists,
   OtlCommon,
   OtlSync,
@@ -54,6 +56,7 @@ uses
 
 const
   CMaxTest = 20000;
+  CMaxSGPrimeTest = 3000000;
 
 function TfrmOderedForDemo.IsPrime(i: integer): boolean;
 var
@@ -66,6 +69,26 @@ begin
     if (i mod j) = 0 then
       Exit;
   Result := true;
+end;
+
+function TfrmOderedForDemo.MultiThreadedSGPrimes(numTasks: integer;
+  ordered: boolean): integer;
+var
+  numSGPrimes: TGp4AlignedInt;
+  parafor    : IOmniParallelLoop<integer>;
+begin
+  numSGPrimes.Value := 0;
+  parafor := Parallel.ForEach(1, CMaxSGPrimeTest).NumTasks(numTasks);
+  if ordered then
+    parafor.PreserveOrder;
+  parafor.Execute(
+    procedure (const value: integer)
+    begin
+      if IsPrime(value) and IsPrime(2*value + 1) then
+        numSGPrimes.Increment;
+    end
+  );
+  Result := numSGPrimes.Value;
 end;
 
 function TfrmOderedForDemo.NumCores: integer;
@@ -81,6 +104,16 @@ begin
     1: btnUnorderedPrimes2.Click;
     2: btnOrderedPrimes.Click;
   end;
+end;
+
+function TfrmOderedForDemo.SingleThreadedSGPrimes: integer;
+var
+  iTest: integer;
+begin
+  Result := 0;
+  for iTest := 1 to CMaxSGPrimeTest do
+    if IsPrime(iTest) and IsPrime(2*iTest + 1) then
+      Inc(Result);
 end;
 
 procedure TfrmOderedForDemo.Timer1Timer(Sender: TObject);
@@ -139,6 +172,22 @@ begin
   lbLog.ItemIndex := lbLog.Items.Count - 1;
 end;
 
+procedure TfrmOderedForDemo.btnSGPrimesClick(Sender: TObject);
+var
+  numSGPrimes: integer;
+  time       : int64;
+begin
+  lbLog.Clear;
+  time := DSiTimeGetTime64;
+  if inpNumSGTasks.Value = 0 then
+    numSGPrimes := SingleThreadedSGPrimes
+  else
+    numSGPrimes := MultiThreadedSGPrimes(inpNumSGTasks.Value, Sender = btnOrderedSGPrimes);
+  time := DSiElapsedTime64(time);
+  lbLog.Items.Add(Format('%d Sophie Germain primes from 1 to %d, calculation on %d threads took %s seconds',
+    [numSGPrimes, CMaxSGPrimeTest, inpNumSGTasks.Value, FormatDateTime('ss.zzz', time/MSecsPerDay)]));
+end;
+
 procedure TfrmOderedForDemo.btnUnorderedPrimes1Click(Sender: TObject);
 var
   prime     : TOmniValue;
@@ -158,13 +207,12 @@ begin
       begin
         if IsPrime(value) then begin
           primeQueue.Add(value);
-//          Sleep(200); // enable to see how results from different threads are added during the calculation
+//        Sleep(200); // enable to see how results from different threads are added during the calculation
         end;
       end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-//    lbLog.Update;
-    Application.ProcessMessages; // because we want to receive pool notification messages
+    lbLog.Update;
   end;
   VerifyResult;
   btnUnorderedPrimes1.Enabled := true;
@@ -183,42 +231,14 @@ begin
     begin
       if IsPrime(value) then
         res := value;
+//      Sleep(200); // enable to see how results from different threads are added during the calculation
     end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-//    lbLog.Update;
-    Application.ProcessMessages; // because we want to receive pool notification messages
+    lbLog.Update;
   end;
   VerifyResult;
   btnUnorderedPrimes2.Enabled := true;
-end;
-
-procedure TfrmOderedForDemo.FormCreate(Sender: TObject);
-begin
-  FEventMonitor := TOmniEventMonitor.Create(Self);
-  FEventMonitor.OnPoolThreadCreated := HandleThreadCreated;
-  FEventMonitor.OnPoolThreadDestroying := HandleThreadDestroying;
-  FEventMonitor.OnPoolThreadKilled := HandleThreadKilled;
-  GForEachPool.MonitorWith(FEventMonitor);
-end;
-
-procedure TfrmOderedForDemo.HandleThreadCreated(const pool: IOmniThreadPool;
-  threadID: integer);
-begin
-  StatusBar1.SimpleText := Format('Thread %d created', [threadID]);
-  StatusBar1.Update;
-end;
-
-procedure TfrmOderedForDemo.HandleThreadDestroying(const pool: IOmniThreadPool;
-  threadID: integer);
-begin
-  StatusBar1.SimpleText := Format('Thread %d destroyed', [threadID]);
-end;
-
-procedure TfrmOderedForDemo.HandleThreadKilled(const pool: IOmniThreadPool;
-  threadID: integer);
-begin
-  StatusBar1.SimpleText := Format('Thread %d killed', [threadID]);
 end;
 
 procedure TfrmOderedForDemo.btnOrderedPrimesClick(Sender: TObject);
@@ -245,8 +265,7 @@ begin
     end);
   for prime in primeQueue do begin
     lbLog.Items.Add(IntToStr(prime));
-//    lbLog.Update;
-    Application.ProcessMessages; // because we want to receive pool notification messages
+    lbLog.Update;
   end;
   VerifyResult;
   GOmniCancellationToken.Clear;

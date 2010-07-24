@@ -2524,6 +2524,7 @@ end; { TOmniTaskControl.TerminateWhen }
 
 function TOmniTaskControl.Unobserved: IOmniTaskControl;
 begin
+  { TODO 1 -oPrimoz Gabrijelcic : reimplement without the internal monitor }
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.Unobserved }

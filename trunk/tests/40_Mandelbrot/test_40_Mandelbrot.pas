@@ -24,6 +24,7 @@ var
 implementation
 
 uses
+  DSiWin32,
   OtlTask,
   OtlParallel;
 
@@ -39,8 +40,11 @@ begin
 end;
 
 procedure TfrmParallelMandelbrot.FormDblClick(Sender: TObject);
+var
+  start: int64;
 begin
   Invalidate; Update;
+  start := DSiTimeGetTime64;
   Parallel
     .ForEach(0, ClientHeight - 1)
     .MonitorWith(OmniEventMonitor)
@@ -53,6 +57,8 @@ begin
         task.Comm.Send(MSG_DISPLAY_LINE, [y, bitmap]);
       end
     );
+  OmniEventMonitor.ProcessMessages;
+  Caption := FormatDateTime('ss.zzz', DSiElapsedTime64(start)/MSecsPerDay);
 end;
 
 procedure TfrmParallelMandelbrot.OmniEventMonitorTaskMessage(const task: IOmniTaskControl; const msg:
@@ -66,7 +72,7 @@ begin
     bitmap := TBitmap(cardinal(msg.MsgData[1]));
     DisplayLine(bitmap, y);
     bitmap.Free;
-    Sleep(5);
+//    Sleep(5);
   end;
 end;
 
@@ -89,6 +95,7 @@ begin
   bitmap.Width := width;
   bitmap.Height := 1;
   bitmap.PixelFormat := pf32bit;
+
   for x := 0 to bitmap.Width - 1 do
   begin
     rX := -0.8 + 3 * x / ClientWidth;

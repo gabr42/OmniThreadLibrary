@@ -2,7 +2,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   Left = 0
   Top = 0
   Caption = 'Parallel.For demo'
-  ClientHeight = 370
+  ClientHeight = 377
   ClientWidth = 635
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,11 +19,12 @@ object frmParallelForDemo: TfrmParallelForDemo
     Left = 111
     Top = 0
     Width = 524
-    Height = 370
+    Height = 377
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
+    ExplicitHeight = 370
   end
   object btnBuildTree: TButton
     Left = 8
@@ -74,7 +75,7 @@ object frmParallelForDemo: TfrmParallelForDemo
   end
   object cbRepeat: TCheckBox
     Left = 8
-    Top = 343
+    Top = 351
     Width = 97
     Height = 17
     Caption = 'Repeat'

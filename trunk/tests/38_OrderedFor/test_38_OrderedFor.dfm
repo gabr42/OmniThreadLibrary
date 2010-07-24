@@ -11,9 +11,15 @@ object frmOderedForDemo: TfrmOderedForDemo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
-  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
+  object lblNumSGTasks: TLabel
+    Left = 8
+    Top = 293
+    Width = 53
+    Height = 13
+    Caption = 'Num tasks:'
+  end
   object btnUnorderedPrimes1: TButton
     Left = 8
     Top = 8
@@ -76,11 +82,39 @@ object frmOderedForDemo: TfrmOderedForDemo
     Panels = <>
     SimplePanel = True
   end
+  object btnSGPrimes: TButton
+    Left = 8
+    Top = 231
+    Width = 138
+    Height = 25
+    Caption = 'Sophie Germain primes'
+    TabOrder = 7
+    OnClick = btnSGPrimesClick
+  end
+  object btnOrderedSGPrimes: TButton
+    Left = 8
+    Top = 262
+    Width = 138
+    Height = 25
+    Caption = 'Ordered SG primes'
+    TabOrder = 8
+    OnClick = btnSGPrimesClick
+  end
+  object inpNumSGTasks: TSpinEdit
+    Left = 67
+    Top = 290
+    Width = 79
+    Height = 22
+    MaxValue = 64
+    MinValue = 0
+    TabOrder = 9
+    Value = 0
+  end
   object Timer1: TTimer
     Enabled = False
     Interval = 200
     OnTimer = Timer1Timer
-    Left = 8
-    Top = 264
+    Left = 160
+    Top = 8
   end
 end
