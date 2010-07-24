@@ -247,7 +247,6 @@ type
     oplAggregate          : TOmniValue;
     oplAggregator         : TOmniAggregatorDelegate;
     oplCancellationToken  : IOmniCancellationToken;
-    oplCountStopped       : IOmniResourceCount;
     oplDataManager        : TOmniDataManager;
     oplDelegateEnum       : TOmniDelegateEnumerator;
     oplIntoQueueIntf      : IOmniBlockingCollection;
@@ -606,8 +605,6 @@ begin
         while (not Stopped) and localQueue.GetNext(value) do
           loopBody(task, value);
       finally FreeAndNil(localQueue); end;
-      if oplCountStopped.Allocate = 0 then
-        DoOnStop;
     end
   );
 end; { TOmniParallelLoopBase.InternalExecute }
@@ -639,8 +636,6 @@ begin
           oplAggregator(oplAggregate, aggregate);
         finally task.Lock.Release; end;
       end;
-      if oplCountStopped.Allocate = 0 then
-        DoOnStop;
     end
   );
 
@@ -671,12 +666,9 @@ begin
             end;
           end;
         finally FreeAndNil(localQueue); end;
-        if oplCountStopped.Allocate = 0 then begin
-          oplIntoQueueIntf.CompleteAdding;
-          DoOnStop;
-        end;
       end
     );
+    oplIntoQueueIntf.CompleteAdding;
 end; { TOmniParallelLoopBase.InternalExecuteInto }
 
 procedure TOmniParallelLoopBase.InternalExecuteIntoOrdered(
@@ -708,22 +700,20 @@ begin
           end;
         finally oplDataManager.ReleaseOutputBuffer(outputBuffer_ref); end;
       finally FreeAndNil(localQueue); end;
-      if oplCountStopped.Allocate = 0 then begin
-        oplIntoQueueIntf.CompleteAdding;
-        DoOnStop;
-      end;
     end
   );
+  oplIntoQueueIntf.CompleteAdding;
 end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
 procedure TOmniParallelLoopBase.InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
 var
+  countStopped : IOmniResourceCount;
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
   taskControls : array of IOmniTaskControl;
 begin
-  oplCountStopped := TOmniResourceCount.Create(oplNumTasks);
+  countStopped := TOmniResourceCount.Create(oplNumTasks);
   dmOptions := [];
   if ploPreserveOrder in Options then
     Include(dmOptions, dmoPreserveOrder);
@@ -743,6 +733,7 @@ begin
           if assigned(oplOnTaskCreate) then
             oplOnTaskCreate(task);
           taskDelegate(task);
+          countStopped.Allocate;
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate);
@@ -754,8 +745,10 @@ begin
         oplOnTaskControlCreate(taskControls[iTask-1]);
       taskControls[iTask-1].Schedule(GForEachPool);
     end;
-    if not (ploNoWait in Options) then
-      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
+    if not (ploNoWait in Options) then begin
+      WaitForSingleObject(countStopped.Handle, INFINITE);
+      DoOnStop;
+    end;
   end;
 end; { TOmniParallelLoopBase.InternalExecuteTask }
 
