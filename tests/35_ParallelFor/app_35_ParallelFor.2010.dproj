@@ -23,6 +23,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_Define>FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_DebugDCUs>true</DCC_DebugDCUs>

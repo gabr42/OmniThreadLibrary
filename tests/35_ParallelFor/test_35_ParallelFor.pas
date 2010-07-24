@@ -369,6 +369,7 @@ procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
   ParaFind(2);
   ParaFind(FNumNodes div 4 * 2);
+  Exit;
   { TODO 5 -oPrimoz Gabrijelcic : Why big time difference between the next two? }
   ParaFind(FNumNodes div 2 * 2);
   ParaFind(FNumNodes div 2 * 2 - 1);
@@ -526,6 +527,7 @@ begin
       var
         childNode: TNode;
       begin
+        try
         if node.Value = value then begin
           nodeResult := node;
           nodeQueue.CompleteAdding;
@@ -533,6 +535,9 @@ begin
         end
         else for childNode in node.Children do
           nodeQueue.TryAdd(childNode);
+        except
+          sleep(0);
+        end;
       end);
   Result := nodeResult;
 end; { TfrmParallelForDemo.ParaScan }

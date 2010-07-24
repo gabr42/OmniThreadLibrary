@@ -9,6 +9,9 @@
 			<Projects Include="OmniThreadLibraryDesigntime2010.dproj">
 				<Dependencies/>
 			</Projects>
+			<Projects Include="..\tests\40_Mandelbrot\app_40_Mandelbrot.dproj">
+				<Dependencies/>
+			</Projects>
 		</ItemGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
 		<Target Name="OmniThreadLibraryDesigntime2010:Make">
 			<MSBuild Targets="Make" Projects="OmniThreadLibraryDesigntime2010.dproj"/>
 		</Target>
+		<Target Name="app_40_Mandelbrot">
+			<MSBuild Projects="..\tests\40_Mandelbrot\app_40_Mandelbrot.dproj"/>
+		</Target>
+		<Target Name="app_40_Mandelbrot:Clean">
+			<MSBuild Targets="Clean" Projects="..\tests\40_Mandelbrot\app_40_Mandelbrot.dproj"/>
+		</Target>
+		<Target Name="app_40_Mandelbrot:Make">
+			<MSBuild Targets="Make" Projects="..\tests\40_Mandelbrot\app_40_Mandelbrot.dproj"/>
+		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="OmniThreadLibraryRuntime2010;OmniThreadLibraryDesigntime2010"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2010;OmniThreadLibraryDesigntime2010;app_40_Mandelbrot"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="OmniThreadLibraryRuntime2010:Clean;OmniThreadLibraryDesigntime2010:Clean"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2010:Clean;OmniThreadLibraryDesigntime2010:Clean;app_40_Mandelbrot:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="OmniThreadLibraryRuntime2010:Make;OmniThreadLibraryDesigntime2010:Make"/>
+			<CallTarget Targets="OmniThreadLibraryRuntime2010:Make;OmniThreadLibraryDesigntime2010:Make;app_40_Mandelbrot:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>
