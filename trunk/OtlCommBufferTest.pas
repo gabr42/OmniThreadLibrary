@@ -49,7 +49,7 @@
 
 unit OtlCommBufferTest;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

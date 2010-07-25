@@ -47,7 +47,7 @@
 
 unit OtlLogger;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

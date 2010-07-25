@@ -71,12 +71,13 @@ unit OtlParallel;
 
 interface
 
+// TODO 1 -oPrimoz Gabrijelcic : NoWait doesn't work together with OnStop/Into
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
-// TODO 3 -oPrimoz Gabrijelcic : Single-threaded data source - how? (datasets etc)
-// TODO 1 -oPrimoz Gabrijelcic : Could use a shorthand for Aggregate (+) - maybe Sum or AggregateSum [At the moment this triggers internal error in the compiler.]
+// TODO 5 -oPrimoz Gabrijelcic : Single-threaded access to a data source - how? (datasets etc)
+// TODO 1 -oPrimoz Gabrijelcic : PreserveOrder must run on NumCores-1
 
 // Notes for OTL 3
 // - Parallel.ForEach should use task pool.
@@ -785,7 +786,7 @@ var
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   lockAggregate: IOmniCriticalSection;
-  taskControls : array of IOmniTaskControl;
+  task         : IOmniTaskControl;
 begin
   countStopped := TOmniResourceCount.Create(oplNumTasks);
   dmOptions := [];
@@ -799,9 +800,8 @@ begin
   else begin
     lockAggregate := CreateOmniCriticalSection;
     GForEachPool.MaxExecuting := oplNumTasks;
-    SetLength(taskControls, oplNumTasks);
     for iTask := 1 to oplNumTasks do begin
-      {taskControls[iTask-1] := }CreateTask(
+      task := CreateTask(
         procedure (const task: IOmniTask)
         begin
           if assigned(oplOnTaskCreate) then
@@ -811,14 +811,12 @@ begin
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
+        .Unobserved;
 { TODO 1 : If not Unobserved, sometimes crashes when Execute terminates! }
 { TODO 1 : Add non-Monitor based Unobserved implementation }
-//      if ploNoWait in Options then
-        {taskControls[iTask-1]}.Unobserved
-//      if assigned(oplOnTaskControlCreate) then
-//        oplOnTaskControlCreate(taskControls[iTask-1]);
-//      {taskControls[iTask-1]}.Schedule(GForEachPool);
-        .Run;
+      if assigned(oplOnTaskControlCreate) then
+        oplOnTaskControlCreate(task);
+      task.Schedule(GForEachPool);
     end;
     if not (ploNoWait in Options) then begin
       WaitForSingleObject(countStopped.Handle, INFINITE);

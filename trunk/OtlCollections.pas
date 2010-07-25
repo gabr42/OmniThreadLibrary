@@ -56,7 +56,7 @@
 
 unit OtlCollections;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

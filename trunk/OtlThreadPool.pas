@@ -85,7 +85,7 @@
 
 unit OtlThreadPool;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

@@ -73,7 +73,7 @@
 
 unit OtlContainers;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 {$OPTIMIZATION ON}
 {$WARN SYMBOL_PLATFORM OFF}
 {$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)

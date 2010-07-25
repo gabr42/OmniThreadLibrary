@@ -61,7 +61,7 @@
 
 unit OtlComm;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 {$WARN SYMBOL_PLATFORM OFF} // Win32Check
 
 interface
