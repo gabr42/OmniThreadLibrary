@@ -72,7 +72,7 @@
 
 unit OtlTask;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

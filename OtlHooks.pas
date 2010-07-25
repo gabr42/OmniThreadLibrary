@@ -40,7 +40,7 @@
 
 unit OtlHooks;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

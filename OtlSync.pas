@@ -65,7 +65,7 @@
 
 unit OtlSync;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 

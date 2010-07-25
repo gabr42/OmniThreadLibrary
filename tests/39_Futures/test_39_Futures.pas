@@ -19,6 +19,7 @@ type
     btnTestFuture5: TButton;
     btnTestFuture6: TButton;
     btnTestFuture7: TButton;
+    procedure FormCreate(Sender: TObject);
     procedure btnTestFuture1Click(Sender: TObject);
     procedure btnTestFuture2Click(Sender: TObject);
     procedure btnTestFuture3Click(Sender: TObject);
@@ -43,6 +44,7 @@ uses
   OtlParallel;
 
 {$R *.dfm}
+{$I OTLOptions.inc}
 
 const
   CPrimesHigh = 1000000;
@@ -71,6 +73,13 @@ begin
       if task.CancellationToken.IsSignalled then
         Exit;
     end;
+end;
+
+procedure TfrmFuturesDemo.FormCreate(Sender: TObject);
+begin
+  {$IFNDEF OTL_ParallelAggregate}
+  btnTestFuture7.Enabled := false;
+  {$ENDIF OTL_ParallelAggregate}
 end;
 
 { TfrmFuturesDemo }
@@ -167,9 +176,12 @@ begin
 end;
 
 procedure TfrmFuturesDemo.btnTestFuture7Click(Sender: TObject);
+{$IFDEF OTL_ParallelAggregate}
 var
   numPrimes: IOmniFuture<integer>;
+{$ENDIF OTL_ParallelAggregate}
 begin
+  {$IFDEF OTL_ParallelAggregate}
   numPrimes := TOmniFuture<integer>.Create(function: integer
     begin
       Result := Parallel.ForEach(1, CPrimesHigh).AggregateSum.Execute(
@@ -185,6 +197,7 @@ begin
   );
 //   do something else
   lbLog.Items.Add(Format('%d primes from 1 to %d', [numPrimes.Value, CPrimesHigh]));
+  {$ENDIF OTL_ParallelAggregate}
 end;
 
 function TfrmFuturesDemo.CountPrimesTo(high: integer): TOmniFuture<integer>;

@@ -51,7 +51,7 @@
 
 unit OtlRegister;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 interface
 
