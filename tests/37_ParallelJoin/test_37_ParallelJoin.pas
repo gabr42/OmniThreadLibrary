@@ -25,6 +25,7 @@ var
 implementation
 
 uses
+  DSiWin32,
   OtlCommon,
   OtlTask,
   OtlParallel;
@@ -32,8 +33,16 @@ uses
 {$R *.dfm}
 
 procedure TfrmTestParallelJoin.btnJoinAllClick(Sender: TObject);
+var
+  expectedTime: integer;
+  startTime   : int64;
 begin
-  Log('Starting two tasks');
+  if Environment.Process.Affinity.Count = 1 then
+    expectedTime := 5
+  else
+    expectedTime := 3;
+  Log(Format('Starting two tasks, expected execution time is %d seconds', [expectedTime]));
+  startTime := DSiTimeGetTime64;
   Parallel.Join(
     procedure (const task: IOmniTask)
     begin
@@ -43,7 +52,8 @@ begin
     begin
       Sleep(2000);
     end);
-  Log('Tasks stopped');
+  Log(Format('Tasks stopped, execution time was %s seconds',
+    [FormatDateTime('s.zzz', DSiElapsedTime64(startTime)/MSecsPerDay)]));
 end;
 
 procedure TfrmTestParallelJoin.btnJointOneClick(Sender: TObject);
