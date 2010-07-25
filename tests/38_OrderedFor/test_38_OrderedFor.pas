@@ -183,8 +183,10 @@ begin
   else
     numSGPrimes := MultiThreadedSGPrimes(inpNumSGTasks.Value, Sender = btnOrderedSGPrimes);
   time := DSiElapsedTime64(time);
-  lbLog.Items.Add(Format('%d Sophie Germain primes from 1 to %d, calculation on %d threads took %s seconds',
-    [numSGPrimes, CMaxSGPrimeTest, inpNumSGTasks.Value, FormatDateTime('ss.zzz', time/MSecsPerDay)]));
+  lbLog.ItemIndex :=
+    lbLog.Items.Add(Format(
+      '%d Sophie Germain primes from 1 to %d, calculation on %d threads took %s seconds',
+      [numSGPrimes, CMaxSGPrimeTest, inpNumSGTasks.Value, FormatDateTime('ss.zzz', time/MSecsPerDay)]));
 end;
 
 procedure TfrmOderedForDemo.btnUnorderedPrimes1Click(Sender: TObject);
