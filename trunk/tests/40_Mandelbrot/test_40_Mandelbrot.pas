@@ -4,18 +4,18 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, OtlComm, OtlTaskControl, OtlEventMonitor;
+  Dialogs, OtlComm, OtlTaskControl;
+
+const
+  WM_DISPLAY_LINE = WM_USER;
 
 type
   TfrmParallelMandelbrot = class(TForm)
-    OmniEventMonitor: TOmniEventMonitor;
     procedure FormDblClick(Sender: TObject);
-    procedure OmniEventMonitorTaskMessage(const task: IOmniTaskControl; const msg:
-      TOmniMessage);
   private
     procedure DisplayLine(bitmap: TBitmap; y: integer);
     procedure PaintLine(width: integer; y: integer; var bitmap: TBitmap);
-  public
+    procedure WMDisplayLine(var msg: TMessage); message WM_DISPLAY_LINE;
   end;
 
 var
@@ -29,9 +29,6 @@ uses
   OtlParallel;
 
 {$R *.dfm}
-
-const
-  MSG_DISPLAY_LINE = 1;
 
 procedure TfrmParallelMandelbrot.DisplayLine(bitmap: TBitmap; y: integer);
 begin
@@ -47,35 +44,18 @@ begin
   start := DSiTimeGetTime64;
   Parallel
     .ForEach(0, ClientHeight - 1)
-    .MonitorWith(OmniEventMonitor)
     .Execute(
       procedure (const task: IOmniTask; const y: integer)
       var
         bitmap: TBitmap;
       begin
         PaintLine(ClientWidth - 1, y, bitmap);
-        task.Comm.Send(MSG_DISPLAY_LINE, [y, bitmap]);
+        PostMessage(frmParallelMandelbrot.Handle, WM_DISPLAY_LINE, WParam(y), LParam(bitmap));
       end
     );
-  OmniEventMonitor.ProcessMessages;
+  Application.ProcessMessages; // force full repaint before measuring time
   Caption := FormatDateTime('ss.zzz', DSiElapsedTime64(start)/MSecsPerDay);
 end;
-
-procedure TfrmParallelMandelbrot.OmniEventMonitorTaskMessage(const task: IOmniTaskControl; const msg:
-  TOmniMessage);
-var
-  bitmap: TBitmap;
-  y     : integer;
-begin
-  if msg.MsgID = MSG_DISPLAY_LINE then begin
-    y := msg.MsgData[0];
-    bitmap := TBitmap(cardinal(msg.MsgData[1]));
-    DisplayLine(bitmap, y);
-    bitmap.Free;
-//    Sleep(5);
-  end;
-end;
-
 procedure TfrmParallelMandelbrot.PaintLine(width: integer; y: integer; var bitmap: TBitmap);
 const
   aColors: array [0 .. 14] of TColor = (clBlack, clMaroon, clGreen, clNavy,
@@ -111,6 +91,16 @@ begin
     until (Sqr(rU) + Sqr(rV) > 9) or (color = 14);
     bitmap.Canvas.Pixels[x, 0] := aColors[color];
   end;
+end;
+
+procedure TfrmParallelMandelbrot.WMDisplayLine(var msg: TMessage);
+var
+  bitmap: TBitmap;
+begin
+  bitmap := TBitmap(msg.LParam);
+  DisplayLine(bitmap, integer(msg.WParam));
+  bitmap.Free;
+//  Sleep(5);
 end;
 
 end.

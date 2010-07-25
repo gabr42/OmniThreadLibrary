@@ -368,9 +368,11 @@ type
     function  First: IOmniTaskControl;
     function  GetEnumerator: IOmniTaskControlListEnumerator;
     function  IndexOf(const item: IOmniTaskControl): integer;
+    function  IndexOfID(uniqueID: int64): integer;
     procedure Insert(idxItem: integer; const item: IOmniTaskControl);
     function  Last: IOmniTaskControl;
     function  Remove(const item: IOmniTaskControl): integer;
+    function  RemoveByID(uniqueID: int64): integer;
     property Capacity: Integer read GetCapacity write SetCapacity;
     property Count: integer read GetCount write SetCount;
     property Items[idxItem: integer]: IOmniTaskControl read Get write Put; default;
@@ -831,9 +833,14 @@ type
     function  First: IOmniTaskControl;
     function  GetEnumerator: IOmniTaskControlListEnumerator;
     function  IndexOf(const item: IOmniTaskControl): integer;
+    function  IndexOfID(uniqueID: int64): integer;
     procedure Insert(idxItem: integer; const item: IOmniTaskControl);
     function  Last: IOmniTaskControl;
     function  Remove(const item: IOmniTaskControl): integer;
+    function  RemoveByID(uniqueID: int64): integer;
+    property Capacity: Integer read GetCapacity write SetCapacity;
+    property Count: integer read GetCount write SetCount;
+    property Items[idxItem: integer]: IOmniTaskControl read Get write Put; default;
   end; { TOmniTaskControlList }
 
   TOmniTaskGroup = class(TInterfacedObject, IOmniTaskGroup)
@@ -1056,7 +1063,7 @@ begin
   finally
     if assigned(otSharedInfo_ref.Monitor) then
       otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-        integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
     //Task controller could die any time now. Make sure we're not using shared
     //structures anymore.
     otExecutor_ref   := nil;
@@ -2039,7 +2046,7 @@ destructor TOmniTaskControl.Destroy;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying ! then
-    
+
   if assigned(otcEventMonitor) then begin
     RemoveMonitor;
     if assigned(GTaskControlEventMonitorPool) then
@@ -2661,6 +2668,17 @@ begin
   Result := otclList.IndexOf(item);
 end; { TOmniTaskControlList.IndexOf }
 
+function TOmniTaskControlList.IndexOfID(uniqueID: int64): integer;
+begin
+  otclList.Lock;
+  try
+    for Result := 0 to Count - 1 do
+      if Items[Result].UniqueID = uniqueID then
+        Exit;
+    Result := -1;
+  finally otclList.Unlock; end;
+end; { TOmniTaskControlList.IndexOfID }
+
 procedure TOmniTaskControlList.Insert(idxItem: integer; const item: IOmniTaskControl);
 begin
   otclList.Insert(idxItem, item);
@@ -2680,6 +2698,16 @@ function TOmniTaskControlList.Remove(const item: IOmniTaskControl): integer;
 begin
   Result := otclList.Remove(item);
 end; { TOmniTaskControlList.Remove }
+
+function TOmniTaskControlList.RemoveByID(uniqueID: int64): integer;
+begin
+  otclList.Lock;
+  try
+    Result := IndexOfID(uniqueID);
+    if Result >= 0 then
+      otclList.Remove(Items[Result]);
+  finally otclList.Unlock; end;
+end; { TOmniTaskControlList.RemoveByID }
 
 procedure TOmniTaskControlList.SetCapacity(const value: integer);
 begin

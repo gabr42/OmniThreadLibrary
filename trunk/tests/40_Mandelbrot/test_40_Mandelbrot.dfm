@@ -14,9 +14,4 @@ object frmParallelMandelbrot: TfrmParallelMandelbrot
   OnDblClick = FormDblClick
   PixelsPerInch = 96
   TextHeight = 13
-  object OmniEventMonitor: TOmniEventMonitor
-    OnTaskMessage = OmniEventMonitorTaskMessage
-    Left = 56
-    Top = 16
-  end
 end
