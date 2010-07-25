@@ -487,11 +487,11 @@ end; { Parallel.Join }
 
 class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate);
 var
-  countStopped: TOmniResourceCount;
-  firstTask   : IOmniTaskControl;
-  prevTask    : IOmniTaskControl;
-  proc        : TOmniTaskDelegate;
-  task        : IOmniTaskControl;
+  firstTask: IOmniTaskControl;
+  prevTask : IOmniTaskControl;
+  proc     : TOmniTaskDelegate;
+  task     : IOmniTaskControl;
+  taskGroup: IOmniTaskGroup;
 begin
   if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
     prevTask := nil;
@@ -504,21 +504,15 @@ begin
         firstTask := task;
     end;
     if assigned(firstTask) then begin
-      firstTask.Run;
+      firstTask.Schedule;
       prevTask.WaitFor(INFINITE);
     end;
   end
   else begin
-    countStopped := TOmniResourceCount.Create(Length(tasks));
+    taskGroup := CreateTaskGroup;
     for proc in tasks do
-      CreateTask(
-        procedure (const task: IOmniTask) begin
-          proc(task);
-          countStopped.Allocate;
-        end
-      ).Unobserved
-       .Schedule;
-    WaitForSingleObject(countStopped.Handle, INFINITE);
+      CreateTask(proc).Join(taskGroup).Unobserved.Schedule;
+    taskGroup.WaitForAll;
   end;
 end; { Parallel.Join }
 
