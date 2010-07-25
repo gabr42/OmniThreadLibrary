@@ -49,11 +49,10 @@
 {$OVERFLOWCHECKS OFF}
 {$TYPEDADDRESS OFF}
 
-{$UNDEF OTL_ParallelAggregate} //codegen bugs in D2010
-
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
+  {$DEFINE OTL_ParallelAggregate}
 {$IFEND}
 {$IF CompilerVersion >= 21}
   {$DEFINE OTL_ERTTI}
@@ -61,6 +60,4 @@
   {$DEFINE OTL_KnowsParamCount}
   {$DEFINE OTL_HasTkPointer}
 {$IFEND}
-{$IF CompilerVersion >= 22} //hope for the best
-  {$DEFINE OTL_ParallelAggregate}
-{$IFEND}
+
