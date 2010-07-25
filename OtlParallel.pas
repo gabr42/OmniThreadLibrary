@@ -156,7 +156,7 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
+//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
@@ -175,7 +175,7 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
+//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
@@ -321,7 +321,7 @@ type
     function  ForEach: IOmniParallelLoop;
     function  GetEnumerator: IOmniValueEnumerator;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
+//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
@@ -358,7 +358,7 @@ type
     function  ForEach: IOmniParallelLoop<T>;
     function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
+//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
@@ -816,8 +816,6 @@ begin
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
         .Unobserved;
-{ TODO 1 : If not Unobserved, sometimes crashes when Execute terminates! }
-{ TODO 1 : Add non-Monitor based Unobserved implementation }
       if assigned(oplOnTaskControlCreate) then
         oplOnTaskControlCreate(task);
       task.Schedule(GForEachPool);
@@ -975,15 +973,15 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.Into }
 
-function TOmniParallelLoop.MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
-begin
-  Result := OnTaskCreate(
-    procedure (const task: IOmniTaskControl)
-    begin
-      task.MonitorWith(monitor);
-    end
-  );
-end; { TOmniParallelLoop.MonitorWith }
+//function TOmniParallelLoop.MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
+//begin
+//  Result := OnTaskCreate(
+//    procedure (const task: IOmniTaskControl)
+//    begin
+//      task.MonitorWith(monitor);
+//    end
+//  );
+//end; { TOmniParallelLoop.MonitorWith }
 
 function TOmniParallelLoop.NoWait: IOmniParallelLoop;
 begin
@@ -1153,16 +1151,16 @@ begin
   Result := Self;
 end; { TOmniParallelLoop<T>.Into }
 
-function TOmniParallelLoop<T>.MonitorWith(
-  monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
-begin
-  Result := OnTaskCreate(
-    procedure (const task: IOmniTaskControl)
-    begin
-      task.MonitorWith(monitor)
-    end
-  );
-end; { TOmniParallelLoop<T>.MonitorWith }
+//function TOmniParallelLoop<T>.MonitorWith(
+//  monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
+//begin
+//  Result := OnTaskCreate(
+//    procedure (const task: IOmniTaskControl)
+//    begin
+//      task.MonitorWith(monitor)
+//    end
+//  );
+//end; { TOmniParallelLoop<T>.MonitorWith }
 
 function TOmniParallelLoop<T>.NoWait: IOmniParallelLoop<T>;
 begin
