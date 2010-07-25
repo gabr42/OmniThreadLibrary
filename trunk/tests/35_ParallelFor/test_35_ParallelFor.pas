@@ -369,7 +369,6 @@ procedure TfrmParallelForDemo.btnParaScanClick(Sender: TObject);
 begin
   ParaFind(2);
   ParaFind(FNumNodes div 4 * 2);
-  Exit;
   { TODO 5 -oPrimoz Gabrijelcic : Why big time difference between the next two? }
   ParaFind(FNumNodes div 2 * 2);
   ParaFind(FNumNodes div 2 * 2 - 1);
