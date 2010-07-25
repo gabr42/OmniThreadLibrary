@@ -73,6 +73,7 @@ interface
 
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
+// TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 // TODO 3 -oPrimoz Gabrijelcic : Single-threaded data source - how? (datasets etc)
 // TODO 1 -oPrimoz Gabrijelcic : Could use a shorthand for Aggregate (+) - maybe Sum or AggregateSum [At the moment this triggers internal error in the compiler.]
@@ -107,17 +108,19 @@ type
   IOmniParallelLoop = interface;
   IOmniParallelLoop<T> = interface;
 
+  {$IFDEF OTL_ParallelAggregate}
   TOmniAggregatorDelegate = reference to procedure(var aggregate: TOmniValue; const value: TOmniValue);
-
-  TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
-  TOmniIteratorDelegate<T> = reference to procedure(const value: T);
-  TOmniIteratorTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue);
-  TOmniIteratorTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T);
 
   TOmniIteratorAggregateDelegate = reference to function(const value: TOmniValue): TOmniValue;
   TOmniIteratorAggregateDelegate<T> = reference to function(const value: T): TOmniValue;
   TOmniIteratorAggregateTaskDelegate = reference to function(const task: IOmniTask; const value: TOmniValue): TOmniValue;
   TOmniIteratorAggregateTaskDelegate<T> = reference to function(const task: IOmniTask; const value: T): TOmniValue;
+  {$ENDIF OTL_ParallelAggregate}
+
+  TOmniIteratorDelegate = reference to procedure(const value: TOmniValue);
+  TOmniIteratorDelegate<T> = reference to procedure(const value: T);
+  TOmniIteratorTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue);
+  TOmniIteratorTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T);
 
   TOmniIteratorIntoDelegate = reference to procedure(const value: TOmniValue; var result: TOmniValue);
   TOmniIteratorIntoDelegate<T> = reference to procedure(const value: T; var result: TOmniValue);
@@ -128,11 +131,15 @@ type
   TOmniTaskControlCreateDelegate = reference to procedure(const task: IOmniTaskControl);
 
   IOmniParallelAggregatorLoop = interface
+    {$IFDEF OTL_ParallelAggregate}
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+    {$ENDIF OTL_ParallelAggregate}
   end; { IOmniParallelAggregatorLoop }
 
   IOmniParallelAggregatorLoop<T> = interface
+    {$IFDEF OTL_ParallelAggregate}
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue;
+    {$ENDIF OTL_ParallelAggregate}
   end; { IOmniParallelAggregatorLoop<T> }
 
   IOmniParallelIntoLoop = interface
@@ -144,9 +151,11 @@ type
   end; { IOmniParallelIntoLoop<T> }
 
   IOmniParallelLoop = interface
+    {$IFDEF OTL_ParallelAggregate}
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
     function  AggregateSum: IOmniParallelAggregatorLoop;
+    {$ENDIF OTL_ParallelAggregate}
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
@@ -161,9 +170,11 @@ type
   end; { IOmniParallelLoop }
 
   IOmniParallelLoop<T> = interface
+    {$IFDEF OTL_ParallelAggregate}
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
     function  AggregateSum: IOmniParallelAggregatorLoop<T>;
+    {$ENDIF OTL_ParallelAggregate}
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
@@ -243,9 +254,12 @@ type
   public
     constructor Create(enumerable: TObject); overload;
   {$ENDIF OTL_ERTTI}
+  {$IFDEF OTL_ParallelAggregate}
   strict private
     oplAggregate          : TOmniValue;
     oplAggregator         : TOmniAggregatorDelegate;
+  {$ENDIF OTL_ParallelAggregate}
+  strict private
     oplCancellationToken  : IOmniCancellationToken;
     oplDataManager        : TOmniDataManager;
     oplDelegateEnum       : TOmniDelegateEnumerator;
@@ -259,14 +273,22 @@ type
     oplSourceProvider     : TOmniSourceProvider;
   strict protected
     procedure DoOnStop;
-    procedure InternalExecute(loopBody: TOmniIteratorTaskDelegate);
-    function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateTaskDelegate): TOmniValue;
-    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoTaskDelegate);
-    procedure InternalExecuteIntoOrdered(loopBody: TOmniIteratorIntoTaskDelegate);
+    procedure InternalExecute(loopBody: TOmniIteratorDelegate); overload;
+    procedure InternalExecute(loopBody: TOmniIteratorTaskDelegate); overload;
+    {$IFDEF OTL_ParallelAggregate}
+    function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
+    function  InternalExecuteAggregate(loopBody: TOmniIteratorAggregateTaskDelegate): TOmniValue; overload;
+    {$ENDIF OTL_ParallelAggregate}
+    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate); overload;
+    procedure InternalExecuteInto(loopBody: TOmniIteratorIntoTaskDelegate); overload;
+    procedure InternalExecuteIntoOrdered(loopBody: TOmniIteratorIntoDelegate); overload;
+    procedure InternalExecuteIntoOrdered(loopBody: TOmniIteratorIntoTaskDelegate); overload;
     procedure InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
+    {$IFDEF OTL_ParallelAggregate}
     procedure SetAggregator(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate);
     procedure SetAggregatorSum;
+    {$ENDIF OTL_ParallelAggregate}
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetIntoQueue(const queue: IOmniBlockingCollection); overload;
     procedure SetNumTasks(taskCount: integer);
@@ -285,12 +307,16 @@ type
                                                    IOmniParallelAggregatorLoop,
                                                    IOmniParallelIntoLoop)
   public
+    {$IFDEF OTL_ParallelAggregate}
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
     function  AggregateSum: IOmniParallelAggregatorLoop;
+    {$ENDIF OTL_ParallelAggregate}
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
+    {$IFDEF OTL_ParallelAggregate}
     function  Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateTaskDelegate): TOmniValue; overload;
+    {$ENDIF OTL_ParallelAggregate}
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
@@ -317,12 +343,16 @@ type
     constructor Create(const enumerator: TEnumeratorDelegate<T>); overload;
     constructor Create(const enumerator: TEnumerator<T>); overload;
     destructor  Destroy; override;
+    {$IFDEF OTL_ParallelAggregate}
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
     function  AggregateSum: IOmniParallelAggregatorLoop<T>;
+    {$ENDIF OTL_ParallelAggregate}
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
+    {$IFDEF OTL_ParallelAggregate}
     function  Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue; overload;
     function  Execute(loopBody: TOmniIteratorAggregateTaskDelegate<T>): TOmniValue; overload;
+    {$ENDIF OTL_ParallelAggregate}
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
@@ -609,6 +639,17 @@ begin
   );
 end; { TOmniParallelLoopBase.InternalExecute }
 
+procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorDelegate);
+begin
+  InternalExecute(
+    procedure (const task: IOmniTask; const value: TOmniValue)
+    begin
+      loopBody(value);
+    end
+  );
+end; { TOmniParallelLoopBase.InternalExecute }
+
+{$IFDEF OTL_ParallelAggregate}
 function TOmniParallelLoopBase.InternalExecuteAggregate(loopBody:
   TOmniIteratorAggregateTaskDelegate): TOmniValue;
 begin
@@ -642,6 +683,18 @@ begin
   Result := oplAggregate;
 end; { TOmniParallelLoopBase.InternalExecuteAggregate }
 
+function TOmniParallelLoopBase.InternalExecuteAggregate(
+  loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
+begin
+  Result := InternalExecuteAggregate(
+    function (const task: IOmniTask; const value: TOmniValue): TOmniValue
+    begin
+      Result := loopBody(value);
+    end
+  );
+end; { TOmniParallelLoopBase.InternalExecuteAggregate }
+{$ENDIF OTL_ParallelAggregate}
+
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoTaskDelegate);
 begin
   Assert(assigned(oplIntoQueueIntf));
@@ -669,6 +722,16 @@ begin
       end
     );
     oplIntoQueueIntf.CompleteAdding;
+end; { TOmniParallelLoopBase.InternalExecuteInto }
+
+procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
+begin
+  InternalExecuteInto(
+    procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
+    begin
+      loopBody(value, result);
+    end
+  );
 end; { TOmniParallelLoopBase.InternalExecuteInto }
 
 procedure TOmniParallelLoopBase.InternalExecuteIntoOrdered(
@@ -703,6 +766,17 @@ begin
     end
   );
   oplIntoQueueIntf.CompleteAdding;
+end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
+
+procedure TOmniParallelLoopBase.InternalExecuteIntoOrdered(
+  loopBody: TOmniIteratorIntoDelegate);
+begin
+  InternalExecuteIntoOrdered(
+    procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
+    begin
+      loopBody(value, result);
+    end
+  );
 end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
 procedure TOmniParallelLoopBase.InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
@@ -753,6 +827,7 @@ begin
   end;
 end; { TOmniParallelLoopBase.InternalExecuteTask }
 
+{$IFDEF OTL_ParallelAggregate}
 procedure TOmniParallelLoopBase.SetAggregator(defaultAggregateValue: TOmniValue;
   aggregator: TOmniAggregatorDelegate);
 begin
@@ -769,6 +844,7 @@ begin
     end
   );
 end; { TOmniParallelLoopBase.SetAggregatorSum }
+{$ENDIF OTL_ParallelAggregate}
 
 procedure TOmniParallelLoopBase.SetCancellationToken(const token: IOmniCancellationToken);
 begin
@@ -811,6 +887,7 @@ end; { TOmniParallelLoopBase.Stopped }
 
 { TOmniParallelLoop }
 
+{$IFDEF OTL_ParallelAggregate}
 function TOmniParallelLoop.Aggregate(defaultAggregateValue: TOmniValue;
   aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
 begin
@@ -823,6 +900,7 @@ begin
   SetAggregatorSum;
   Result := Self;
 end; { TOmniParallelLoop.AggregateSum }
+{$ENDIF OTL_ParallelAggregate}
 
 function TOmniParallelLoop.CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
 begin
@@ -830,11 +908,11 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.CancelWith }
 
+{$IFDEF OTL_ParallelAggregate}
 function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateDelegate): TOmniValue;
 begin
   Result := InternalExecuteAggregate(
-    function (const task: IOmniTask; const value: TOmniValue): TOmniValue
-    begin
+    function (const task: IOmniTask; const value: TOmniValue): TOmniValue    begin
       Result := loopBody(value);
     end
   );
@@ -844,6 +922,7 @@ function TOmniParallelLoop.Execute(loopBody: TOmniIteratorAggregateTaskDelegate)
 begin
   Result := InternalExecuteAggregate(loopBody);
 end; { TOmniParallelLoop.Execute }
+{$ENDIF OTL_ParallelAggregate}
 
 procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorDelegate);
 begin
@@ -969,6 +1048,7 @@ begin
   inherited;
 end; { TOmniParallelLoop }
 
+{$IFDEF OTL_ParallelAggregate}
 function TOmniParallelLoop<T>.Aggregate(defaultAggregateValue: TOmniValue;
   aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
 begin
@@ -981,6 +1061,7 @@ begin
   SetAggregatorSum;
   Result := Self;
 end; { TOmniParallelLoop<T>.AggregateSum }
+{$ENDIF OTL_ParallelAggregate}
 
 function TOmniParallelLoop<T>.CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
 begin
@@ -988,6 +1069,7 @@ begin
   Result := Self;
 end; { TOmniParallelLoop<T>.CancelWith }
 
+{$IFDEF OTL_ParallelAggregate}
 function TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorAggregateDelegate<T>): TOmniValue;
 begin
   Result := InternalExecuteAggregate(
@@ -1008,11 +1090,12 @@ begin
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
+{$ENDIF OTL_ParallelAggregate}
 
 procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorDelegate<T>);
 begin
   InternalExecute(
-    procedure (const task: IOmniTask; const value: TOmniValue)
+    procedure (const value: TOmniValue)
     begin
       loopBody(value.CastAs<T>);
     end
