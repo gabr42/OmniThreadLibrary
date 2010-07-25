@@ -56,13 +56,12 @@ begin
         aggregate := aggregate.AsInt64 + value.AsInt64;
       end)
     .Execute(
-      function (const value: integer): TOmniValue
+      procedure (const value: integer; var result: TOmniValue)
       begin
         if IsPrime(value) then
-          Result := 1
-        else
-          Result := 0;
-      end);
+          Result := 1;
+      end
+    );
   start := DSiTimeGetTime64 - start;
   Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxPrime.Value, start]);
 end;
@@ -92,16 +91,13 @@ begin
     Parallel
     .ForEach(1, inpMaxSummand.Value)
     .NumTasks(inpNumCPU.Value)
-    .Aggregate(0,
-      procedure (var aggregate: TOmniValue; const value: TOmniValue)
-      begin
-        aggregate := aggregate.AsInt64 + value.AsInt64;
-      end)
+    .AggregateSum
     .Execute(
-      function (const value: integer): TOmniValue
+      procedure (const value: integer; var result: TOmniValue)
       begin
         Result := value;
-      end);
+      end
+    );
   start := DSiTimeGetTime64 - start;
   Log('Sum(1..%d) = %d; calculation took %d ms', [inpMaxSummand.Value, sum, start]);
 end;
