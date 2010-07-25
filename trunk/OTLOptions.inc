@@ -47,6 +47,8 @@
 {$OVERFLOWCHECKS OFF}
 {$TYPEDADDRESS OFF}
 
+{$UNDEF OTL_ParallelAggregate} //codegen bugs in D2010
+
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
