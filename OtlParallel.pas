@@ -816,7 +816,7 @@ begin
   numTasks := oplNumTasks;
   if ploPreserveOrder in Options then begin
     Include(dmOptions, dmoPreserveOrder);
-    if (numTasks > 1) and oplNumTasksManual then
+    if (numTasks > 1) and (not oplNumTasksManual) then
       Dec(numTasks);
   end;
   oplDataManager := CreateDataManager(oplSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
