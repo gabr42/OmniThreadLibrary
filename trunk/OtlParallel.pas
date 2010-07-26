@@ -270,6 +270,7 @@ type
     oplIntoQueueIntf      : IOmniBlockingCollection;
     oplManagedProvider    : boolean;
     oplNumTasks           : integer;
+    oplNumTasksManual     : boolean;
     oplOnMessageList      : TGpIntegerObjectList;
     oplOnTaskCreate       : TOmniTaskCreateDelegate;
     oplOnTaskControlCreate: TOmniTaskControlCreateDelegate;
@@ -808,21 +809,26 @@ var
   iTask        : integer;
   kv           : TGpKeyValue;
   lockAggregate: IOmniCriticalSection;
+  numTasks     : integer;
   task         : IOmniTaskControl;
 begin
   dmOptions := [];
-  if ploPreserveOrder in Options then
+  numTasks := oplNumTasks;
+  if ploPreserveOrder in Options then begin
     Include(dmOptions, dmoPreserveOrder);
-  oplDataManager := CreateDataManager(oplSourceProvider, oplNumTasks, dmOptions); // destructor will do the cleanup
-  if ((oplNumTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
+    if (numTasks > 1) and oplNumTasksManual then
+      Dec(numTasks);
+  end;
+  oplDataManager := CreateDataManager(oplSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
+  if ((numTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
      (not ((ploNoWait in Options) or assigned(oplOnTaskCreate) or assigned(oplOnTaskControlCreate)))
   then
     taskDelegate(nil)
   else begin
-    countStopped := TOmniResourceCount.Create(oplNumTasks + 1);
+    countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
-    GForEachPool.MaxExecuting := oplNumTasks;
-    for iTask := 1 to oplNumTasks do begin
+    GForEachPool.MaxExecuting := numTasks;
+    for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
         begin
@@ -889,6 +895,7 @@ procedure TOmniParallelLoopBase.SetNumTasks(taskCount: integer);
 begin
   Assert(taskCount > 0);
   oplNumTasks := taskCount;
+  oplNumTasksManual := true;
 end; { TOmniParallelLoopBase.SetNumTasks }
 
 procedure TOmniParallelLoopBase.SetOnMessage(eventDispatcher: TObject);
