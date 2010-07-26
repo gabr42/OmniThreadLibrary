@@ -84,7 +84,7 @@ object frmOderedForDemo: TfrmOderedForDemo
   end
   object btnSGPrimes: TButton
     Left = 8
-    Top = 231
+    Top = 199
     Width = 138
     Height = 25
     Caption = 'Sophie Germain primes'
@@ -93,7 +93,7 @@ object frmOderedForDemo: TfrmOderedForDemo
   end
   object btnOrderedSGPrimes: TButton
     Left = 8
-    Top = 262
+    Top = 230
     Width = 138
     Height = 25
     Caption = 'Ordered SG primes'
@@ -109,6 +109,15 @@ object frmOderedForDemo: TfrmOderedForDemo
     MinValue = 0
     TabOrder = 9
     Value = 0
+  end
+  object btnAggregatedSGPrimes: TButton
+    Left = 8
+    Top = 259
+    Width = 138
+    Height = 25
+    Caption = 'SG primes w/ aggregator'
+    TabOrder = 10
+    OnClick = btnSGPrimesClick
   end
   object Timer1: TTimer
     Enabled = False
