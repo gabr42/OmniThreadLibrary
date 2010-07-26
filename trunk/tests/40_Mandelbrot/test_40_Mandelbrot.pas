@@ -34,6 +34,7 @@ procedure TfrmParallelMandelbrot.DisplayLine(bitmap: TBitmap; y: integer);
 begin
   Canvas.CopyRect(Rect(0, y, ClientWidth, y + 1), bitmap.Canvas,
     Rect(0, 0, bitmap.Width, 1));
+//  Sleep(5);
 end;
 
 procedure TfrmParallelMandelbrot.FormDblClick(Sender: TObject);

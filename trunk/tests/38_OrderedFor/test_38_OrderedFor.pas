@@ -23,6 +23,7 @@ type
     btnOrderedSGPrimes: TButton;
     lblNumSGTasks: TLabel;
     inpNumSGTasks: TSpinEdit;
+    btnAggregatedSGPrimes: TButton;
     procedure btnUnorderedPrimes1Click(Sender: TObject);
     procedure btnOrderedPrimesClick(Sender: TObject);
     procedure btnUnorderedPrimes2Click(Sender: TObject);
@@ -30,7 +31,9 @@ type
     procedure btnSGPrimesClick(Sender: TObject);
   private
     function  IsPrime(i: integer): boolean;
-    function  MultiThreadedSGPrimes(numTasks: integer; ordered: boolean): integer;
+    function  MultiThreadedSGPrimes(numTasks: integer): integer;
+    function  MultiThreadedAggregatedSGPrimes(numTasks: integer): integer;
+    function  MultiThreadedOrderedSGPrimes(numTasks: integer): integer;
     function  NumCores: integer;
     procedure RepeatTest;
     function  SingleThreadedSGPrimes: integer;
@@ -71,23 +74,49 @@ begin
   Result := true;
 end;
 
-function TfrmOderedForDemo.MultiThreadedSGPrimes(numTasks: integer;
-  ordered: boolean): integer;
+function TfrmOderedForDemo.MultiThreadedSGPrimes(numTasks: integer): integer;
 var
   numSGPrimes: TGp4AlignedInt;
-  parafor    : IOmniParallelLoop<integer>;
 begin
   numSGPrimes.Value := 0;
-  parafor := Parallel.ForEach(1, CMaxSGPrimeTest).NumTasks(numTasks);
-  if ordered then
-    parafor.PreserveOrder;
-  parafor.Execute(
+
+  Parallel.ForEach(1, CMaxSGPrimeTest).NumTasks(numTasks).Execute(
     procedure (const value: integer)
     begin
       if IsPrime(value) and IsPrime(2*value + 1) then
         numSGPrimes.Increment;
     end
   );
+
+  Result := numSGPrimes.Value;
+end;
+
+function TfrmOderedForDemo.MultiThreadedAggregatedSGPrimes(numTasks: integer): integer;
+begin
+  Result := Parallel.ForEach(1, CMaxSGPrimeTest).NumTasks(numTasks).AggregateSum
+  .Execute(
+    procedure (const value: integer; var result: TOmniValue)
+    begin
+      if IsPrime(value) and IsPrime(2*value + 1) then
+        result := 1;
+    end
+  );
+end;
+
+function TfrmOderedForDemo.MultiThreadedOrderedSGPrimes(numTasks: integer): integer;
+var
+  numSGPrimes: TGp4AlignedInt;
+begin
+  numSGPrimes.Value := 0;
+
+  Parallel.ForEach(1, CMaxSGPrimeTest).NumTasks(numTasks).PreserveOrder.Execute(
+    procedure (const value: integer)
+    begin
+      if IsPrime(value) and IsPrime(2*value + 1) then
+        numSGPrimes.Increment;
+    end
+  );
+
   Result := numSGPrimes.Value;
 end;
 
@@ -180,8 +209,12 @@ begin
   time := DSiTimeGetTime64;
   if inpNumSGTasks.Value = 0 then
     numSGPrimes := SingleThreadedSGPrimes
+  else if Sender = btnOrderedSGPrimes then
+    numSGPrimes := MultiThreadedOrderedSGPrimes(inpNumSGTasks.Value)
+  else if Sender = btnAggregatedSGPrimes then
+    numSGPrimes := MultiThreadedAggregatedSGPrimes(inpNumSGTasks.Value)
   else
-    numSGPrimes := MultiThreadedSGPrimes(inpNumSGTasks.Value, Sender = btnOrderedSGPrimes);
+    numSGPrimes := MultiThreadedSGPrimes(inpNumSGTasks.Value);
   time := DSiElapsedTime64(time);
   lbLog.ItemIndex :=
     lbLog.Items.Add(Format(
