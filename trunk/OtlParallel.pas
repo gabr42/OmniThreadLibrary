@@ -63,7 +63,7 @@
 
 unit OtlParallel;
 
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 {$IF CompilerVersion < 20}
 'This unit requires Delphi 2009 or newer'
@@ -96,6 +96,7 @@ uses
   RTTI,
   {$ENDIF OTL_ERTTI}
   Generics.Collections,
+  GpLists,
   OtlCommon,
   OtlSync,
   OtlCollections,
@@ -156,9 +157,13 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
+    function  OnMessage(eventDispatcher: TObject): IOmniParallelLoop; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop; overload;
+    {$IFDEF OTL_Anonymous}
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop; overload;
+    {$ENDIF OTL_Anonymous}
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
@@ -175,9 +180,13 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnMessage(eventDispatcher: TObject): IOmniParallelLoop<T>; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop<T>; overload;
+    {$IFDEF OTL_Anonymous}
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop<T>; overload;
+    {$ENDIF OTL_Anonymous}
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
@@ -262,6 +271,7 @@ type
     oplIntoQueueIntf      : IOmniBlockingCollection;
     oplManagedProvider    : boolean;
     oplNumTasks           : integer;
+    oplOnMessageList      : TGpIntegerObjectList;
     oplOnTaskCreate       : TOmniTaskCreateDelegate;
     oplOnTaskControlCreate: TOmniTaskControlCreateDelegate;
     oplOnStop             : TProc;
@@ -288,6 +298,11 @@ type
     procedure SetCancellationToken(const token: IOmniCancellationToken);
     procedure SetIntoQueue(const queue: IOmniBlockingCollection); overload;
     procedure SetNumTasks(taskCount: integer);
+    procedure SetOnMessage(eventDispatcher: TObject); overload;
+    procedure SetOnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure SetOnMessage(msgID: word; eventHandler: TOmniOnMessageFunction); overload;
+    {$ENDIF OTL_Anonymous}
     procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate); overload;
     procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate); overload;
     procedure SetOnStop(stopDelegate: TProc);
@@ -321,9 +336,13 @@ type
     function  ForEach: IOmniParallelLoop;
     function  GetEnumerator: IOmniValueEnumerator;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
-//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
+    function  OnMessage(eventDispatcher: TObject): IOmniParallelLoop; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop; overload;
+    {$IFDEF OTL_Anonymous}
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop; overload;
+    {$ENDIF OTL_Anonymous}
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop; overload;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
@@ -358,9 +377,13 @@ type
     function  ForEach: IOmniParallelLoop<T>;
     function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
-//    function  MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
+    function  OnMessage(eventDispatcher: TObject): IOmniParallelLoop<T>; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop<T>; overload;
+    {$IFDEF OTL_Anonymous}
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop<T>; overload;
+    {$ENDIF OTL_Anonymous}
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
@@ -374,7 +397,8 @@ implementation
 
 uses
   Windows,
-  GpStuff;
+  GpStuff,
+  OtlComm;
 
 { Parallel }
 
@@ -553,6 +577,13 @@ begin
   oplNumTasks := Environment.Process.Affinity.Count;
   oplSourceProvider := sourceProvider;
   oplManagedProvider := managedProvider;
+  oplOnMessageList := TGpIntegerObjectList.Create;
+end; { TOmniParallelLoopBase.Create }
+
+constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
+begin
+  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
+  Create(CreateSourceProvider(oplDelegateEnum), true);
 end; { TOmniParallelLoopBase.Create }
 
 {$IFDEF OTL_ERTTI}
@@ -587,18 +618,13 @@ begin
 end; { TOmniParallelLoopBase.Create }
 {$ENDIF OTL_ERTTI}
 
-constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
-begin
-  oplDelegateEnum := TOmniDelegateEnumerator.Create(enumerator);
-  Create(CreateSourceProvider(oplDelegateEnum), true);
-end; { TOmniParallelLoopBase.Create }
-
 destructor TOmniParallelLoopBase.Destroy;
 begin
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
   FreeAndNil(oplDataManager);
+  FreeAndNil(oplOnMessageList);
   {$IFDEF OTL_ERTTI}
   if oplEnumerable.AsObject <> nil then begin
     oplDestroy.Invoke(oplEnumerable, []);
@@ -783,6 +809,7 @@ var
   countStopped : IOmniResourceCount;
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
+  kv           : TGpKeyValue;
   lockAggregate: IOmniCriticalSection;
   task         : IOmniTaskControl;
 begin
@@ -810,6 +837,8 @@ begin
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
         .Unobserved;
+      for kv in oplOnMessageList.WalkKV do
+        task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
       if assigned(oplOnTaskControlCreate) then
         oplOnTaskControlCreate(task);
       task.Schedule(GForEachPool);
@@ -855,6 +884,24 @@ begin
   Assert(taskCount > 0);
   oplNumTasks := taskCount;
 end; { TOmniParallelLoopBase.SetNumTasks }
+
+procedure TOmniParallelLoopBase.SetOnMessage(eventDispatcher: TObject);
+begin
+  oplOnMessageList.AddObject(COtlReservedMsgID, TOmniMessageExec.Create(eventDispatcher));
+end; { TOmniParallelLoopBase.SetOnMessage }
+
+procedure TOmniParallelLoopBase.SetOnMessage(msgID: word;
+  eventHandler: TOmniTaskMessageEvent);
+begin
+  oplOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+end; { TOmniParallelLoopBase.SetOnMessage }
+
+{$IFDEF OTL_Anonymous}
+procedure TOmniParallelLoopBase.SetOnMessage(msgID: word; eventHandler: TOmniOnMessageFunction);
+begin
+  oplOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+end; { TOmniParallelLoopBase.SetOnMessage }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniParallelLoopBase.SetOnStop(stopDelegate: TProc);
 begin
@@ -967,16 +1014,6 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.Into }
 
-//function TOmniParallelLoop.MonitorWith(monitor: TOmniEventMonitor): IOmniParallelLoop;
-//begin
-//  Result := OnTaskCreate(
-//    procedure (const task: IOmniTaskControl)
-//    begin
-//      task.MonitorWith(monitor);
-//    end
-//  );
-//end; { TOmniParallelLoop.MonitorWith }
-
 function TOmniParallelLoop.NoWait: IOmniParallelLoop;
 begin
   Options := Options + [ploNoWait];
@@ -988,6 +1025,27 @@ begin
   SetNumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
+
+function TOmniParallelLoop.OnMessage(eventDispatcher: TObject): IOmniParallelLoop;
+begin
+  SetOnMessage(eventDispatcher);
+  Result := Self;
+end; { TOmniParallelLoop.OnMessage }
+
+function TOmniParallelLoop.OnMessage(msgID: word;
+  eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop;
+begin
+  SetOnMessage(msgID, eventHandler);
+  Result := Self;
+end; { TOmniParallelLoop.OnMessage }
+
+{$IFDEF OTL_Anonymous}
+function TOmniParallelLoop.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop;
+begin
+  SetOnMessage(msgID, eventHandler);
+  Result := Self;
+end; { TOmniParallelLoop.OnMessage }
+{$ENDIF OTL_Anonymous}
 
 function TOmniParallelLoop.OnStop(stopCode: TProc): IOmniParallelLoop;
 begin
@@ -1145,17 +1203,6 @@ begin
   Result := Self;
 end; { TOmniParallelLoop<T>.Into }
 
-//function TOmniParallelLoop<T>.MonitorWith(
-//  monitor: TOmniEventMonitor): IOmniParallelLoop<T>;
-//begin
-//  Result := OnTaskCreate(
-//    procedure (const task: IOmniTaskControl)
-//    begin
-//      task.MonitorWith(monitor)
-//    end
-//  );
-//end; { TOmniParallelLoop<T>.MonitorWith }
-
 function TOmniParallelLoop<T>.NoWait: IOmniParallelLoop<T>;
 begin
   Options := Options + [ploNoWait];
@@ -1167,6 +1214,27 @@ begin
   SetNumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop<T>.NumTasks }
+
+function TOmniParallelLoop<T>.OnMessage(eventDispatcher: TObject): IOmniParallelLoop<T>;
+begin
+  SetOnMessage(eventDispatcher);
+  Result := Self;
+end; { TOmniParallelLoop<T>.OnMessage }
+
+function TOmniParallelLoop<T>.OnMessage(msgID: word;
+  eventHandler: TOmniTaskMessageEvent): IOmniParallelLoop<T>;
+begin
+  SetOnMessage(msgID, eventHandler);
+  Result := Self;
+end; { TOmniParallelLoop.OnMessage<T> }
+
+{$IFDEF OTL_Anonymous}
+function TOmniParallelLoop<T>.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniParallelLoop<T>;
+begin
+  SetOnMessage(msgID, eventHandler);
+  Result := Self;
+end; { TOmniParallelLoop.OnMessage<T> }
+{$ENDIF OTL_Anonymous}
 
 function TOmniParallelLoop<T>.OnStop(stopCode: TProc): IOmniParallelLoop<T>;
 begin

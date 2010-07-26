@@ -1,6 +1,7 @@
 program app_40_Mandelbrot;
 
 uses
+  FastMM4,
   Forms,
   test_40_Mandelbrot in 'test_40_Mandelbrot.pas' {frmParallelMandelbrot};
 
