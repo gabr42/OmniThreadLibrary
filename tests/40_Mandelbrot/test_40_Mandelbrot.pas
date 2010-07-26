@@ -15,7 +15,7 @@ type
   private
     procedure DisplayLine(bitmap: TBitmap; y: integer);
     procedure PaintLine(width: integer; y: integer; var bitmap: TBitmap);
-    procedure WMDisplayLine(var msg: TMessage); message WM_DISPLAY_LINE;
+    procedure WMDisplayLine(var msg: TOmniMessage); message WM_DISPLAY_LINE;
   end;
 
 var
@@ -40,22 +40,25 @@ procedure TfrmParallelMandelbrot.FormDblClick(Sender: TObject);
 var
   start: int64;
 begin
-  Invalidate; Update;
+  Invalidate; Update; // clear the form
   start := DSiTimeGetTime64;
-  Parallel
-    .ForEach(0, ClientHeight - 1)
+
+  Parallel.ForEach(0, ClientHeight - 1)
+    .OnMessage(frmParallelMandelbrot)
     .Execute(
       procedure (const task: IOmniTask; const y: integer)
       var
         bitmap: TBitmap;
       begin
         PaintLine(ClientWidth - 1, y, bitmap);
-        PostMessage(frmParallelMandelbrot.Handle, WM_DISPLAY_LINE, WParam(y), LParam(bitmap));
+        task.Comm.Send(WM_DISPLAY_LINE, [y, bitmap]);
       end
     );
+
   Application.ProcessMessages; // force full repaint before measuring time
   Caption := FormatDateTime('ss.zzz', DSiElapsedTime64(start)/MSecsPerDay);
 end;
+
 procedure TfrmParallelMandelbrot.PaintLine(width: integer; y: integer; var bitmap: TBitmap);
 const
   aColors: array [0 .. 14] of TColor = (clBlack, clMaroon, clGreen, clNavy,
@@ -93,14 +96,13 @@ begin
   end;
 end;
 
-procedure TfrmParallelMandelbrot.WMDisplayLine(var msg: TMessage);
+procedure TfrmParallelMandelbrot.WMDisplayLine(var msg: TOmniMessage);
 var
   bitmap: TBitmap;
 begin
-  bitmap := TBitmap(msg.LParam);
-  DisplayLine(bitmap, integer(msg.WParam));
+  bitmap := TBitmap(cardinal(msg.MsgData[1]));
+  DisplayLine(bitmap, msg.MsgData[0]);
   bitmap.Free;
-//  Sleep(5);
 end;
 
 end.

@@ -29,6 +29,7 @@
   Items[integer], Items[string] and Items[TOmniValue].
 - IOmniTask/IOmniTaskControl.ParamByName has been removed, use .Param[name: string].
 - IOmniTask/IOmniTaskControl.Param returns TOmniValueContainter.
+- IOmniTaskControl.OnMessage also accepts an object (message dispatcher; form, for example)
 
 - new demos?
 

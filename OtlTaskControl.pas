@@ -172,6 +172,8 @@
 
 // TODO 3 -oPrimoz Gabrijelcic : Could RegisterWaitForSingleObject be used to wait on more than 64 objects at the same time? http://msdn.microsoft.com/en-us/library/ms685061(VS.85).aspx
 
+// TODO 1 -oPrimoz Gabrijelcic : Add cache to TOmniTaskExecutor.DispatchOmniMessage
+
 unit OtlTaskControl;
 
 {$I OtlOptions.inc}
@@ -254,12 +256,15 @@ type
 {$ENDIF OTL_Anonymous}
 
   TOmniMessageExec = class
-  strict private
-    omeOnMessage   : TOmniExecutable;
-    omeOnTerminated: TOmniExecutable;
+  strict protected
+    omeOnMessage        : TOmniExecutable;
+    omeOnMessageDispatch: TObject;
+    omeOnTerminated     : TOmniExecutable;
   public
     constructor Create(exec: TOmniTaskMessageEvent); overload;
     constructor Create(exec: TOmniTaskTerminatedEvent); overload;
+    constructor Create(dispatch: TObject); overload;
+    constructor Clone(exec: TOmniMessageExec);
     procedure SetOnMessage(exec: TOmniTaskMessageEvent); overload;
     procedure SetOnTerminated(exec: TOmniTaskTerminatedEvent); overload;
     procedure OnMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
@@ -298,14 +303,16 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  OnMessage(eventDispatcher: TObject): IOmniTaskControl; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
-    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskControl; overload;
     {$IFDEF OTL_Anonymous}
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
@@ -761,8 +768,10 @@ type
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
     function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  OnMessage(eventDispatcher: TObject): IOmniTaskControl; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
     function  Run: IOmniTaskControl;
@@ -2137,7 +2146,14 @@ end; { TOmniTaskControl.EnsureCommChannel }
 procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
 var
   exec: TOmniMessageExec;
+  kv  : TGpKeyValue;
+  msg1: TOmniMessage;
 begin
+  for kv in otcOnMessageList.WalkKV do
+    if kv.Key = COtlReservedMsgID then begin
+      msg1 := msg;
+      TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+    end;
   exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
   if assigned(exec) then
     exec.OnMessage(Self, msg)
@@ -2289,8 +2305,14 @@ begin
   Result := Self;
 end; { TOmniTaskControl.MsgWait }
 
-function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent):
-    IOmniTaskControl;
+function TOmniTaskControl.OnMessage(eventDispatcher: TObject): IOmniTaskControl;
+begin
+  otcOnMessageList.AddObject(COtlReservedMsgID, TOmniMessageExec.Create(eventDispatcher));
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+
+function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
@@ -2303,6 +2325,14 @@ function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageE
   IOmniTaskControl;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnMessage }
+
+function TOmniTaskControl.OnMessage(msgID: word;
+  eventHandler: TOmniMessageExec): IOmniTaskControl;
+begin
+  otcOnMessageList.AddObject(msgID, eventHandler);
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -2899,10 +2929,30 @@ begin
   SetOnTerminated(exec);
 end; { TOmniMessageExec.Create }
 
+constructor TOmniMessageExec.Create(dispatch: TObject);
+begin
+  inherited Create;
+  omeOnMessageDispatch := dispatch;
+end; { TOmniMessageExec.Create }
+
+constructor TOmniMessageExec.Clone(exec: TOmniMessageExec);
+begin
+  inherited Create;
+  omeOnMessage := exec.omeOnMessage;
+  omeOnMessageDispatch := exec.omeOnMessageDispatch;
+  omeOnTerminated := exec.omeOnTerminated;
+end; { TOmniMessageExec.Clone }
+
 procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
+var
+  msg1: TOmniMessage;
 begin
-  case omeOnMessage.Kind of
+  if assigned(omeOnMessageDispatch) then begin
+    msg1 := msg;
+    omeOnMessageDispatch.Dispatch(msg1);
+  end
+  else case omeOnMessage.Kind of
     {$IFDEF OTL_Anonymous}
     oekDelegate: TOmniOnMessageFunction(TProc(omeOnMessage))(task, msg);
     {$ENDIF OTL_Anonymous}
