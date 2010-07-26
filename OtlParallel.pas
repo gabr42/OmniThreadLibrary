@@ -71,7 +71,6 @@ unit OtlParallel;
 
 interface
 
-// TODO 1 -oPrimoz Gabrijelcic : NoWait doesn't work together with OnStop/Into
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
@@ -672,7 +671,7 @@ function TOmniParallelLoopBase.InternalExecuteAggregate(loopBody:
   TOmniIteratorIntoTaskDelegate): TOmniValue;
 begin
   if ploNoWait in Options then
-    raise Exception.Create('NoWait cannot be used with the Aggregate');
+    raise Exception.Create('NoWait cannot be used with Aggregate');
 
   InternalExecuteTask(
     procedure (const task: IOmniTask)
@@ -746,7 +745,6 @@ begin
         finally FreeAndNil(localQueue); end;
       end
     );
-    oplIntoQueueIntf.CompleteAdding;
 end; { TOmniParallelLoopBase.InternalExecuteInto }
 
 procedure TOmniParallelLoopBase.InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate);
@@ -790,7 +788,6 @@ begin
       finally FreeAndNil(localQueue); end;
     end
   );
-  oplIntoQueueIntf.CompleteAdding;
 end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
 procedure TOmniParallelLoopBase.InternalExecuteIntoOrdered(
@@ -813,7 +810,6 @@ var
   lockAggregate: IOmniCriticalSection;
   task         : IOmniTaskControl;
 begin
-  countStopped := TOmniResourceCount.Create(oplNumTasks);
   dmOptions := [];
   if ploPreserveOrder in Options then
     Include(dmOptions, dmoPreserveOrder);
@@ -823,6 +819,7 @@ begin
   then
     taskDelegate(nil)
   else begin
+    countStopped := TOmniResourceCount.Create(oplNumTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
     GForEachPool.MaxExecuting := oplNumTasks;
     for iTask := 1 to oplNumTasks do begin
@@ -832,7 +829,14 @@ begin
           if assigned(oplOnTaskCreate) then
             oplOnTaskCreate(task);
           taskDelegate(task);
-          countStopped.Allocate;
+          if countStopped.Allocate = 1 then begin
+            if ploNoWait in Options then begin
+              if assigned(oplIntoQueueIntf) then
+                oplIntoQueueIntf.CompleteAdding;
+              DoOnStop;
+            end;
+            countStopped.Allocate;
+          end;
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
@@ -845,6 +849,8 @@ begin
     end;
     if not (ploNoWait in Options) then begin
       WaitForSingleObject(countStopped.Handle, INFINITE);
+      if assigned(oplIntoQueueIntf) then
+        oplIntoQueueIntf.CompleteAdding;
       DoOnStop;
     end;
   end;

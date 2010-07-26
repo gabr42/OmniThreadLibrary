@@ -197,7 +197,7 @@ begin
   btnUnorderedPrimes1.Enabled := false;
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, CMaxTest).NumTasks(NumCores){.NoWait}
+  Parallel.ForEach(1, CMaxTest).NumTasks(NumCores).NoWait
     .OnStop(
       procedure
       begin
@@ -227,7 +227,7 @@ begin
   btnUnorderedPrimes2.Enabled := false;
   lbLog.Clear;
   primeQueue := TOmniBlockingCollection.Create;
-  Parallel.ForEach(1, CMaxTest){.NoWait}.NumTasks(NumCores).Into(primeQueue).Execute(
+  Parallel.ForEach(1, CMaxTest).NoWait.NumTasks(NumCores).Into(primeQueue).Execute(
     procedure (const value: integer; var res: TOmniValue)
     begin
       if IsPrime(value) then
@@ -254,7 +254,7 @@ begin
     .CancelWith(GOmniCancellationToken)
     .NumTasks(NumCores)
     .PreserveOrder
-//    .NoWait
+    .NoWait
     .Into(primeQueue)
     .Execute(
     procedure (const value: integer; var res: TOmniValue)
