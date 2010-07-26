@@ -196,8 +196,8 @@ begin
     FThreadPool.CancelAll;
   FThreadPool := CreateThreadPool('Test thread pool')
     .MonitorWith(OmniTED);
-  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'unobserved task')
-    .OnTerminated(ReleaseObservableTask)
+  CreateTask(THelloWorker.Create(Handle), 'unobserved task')
+    .Unobserved
     .Schedule(FThreadPool);
 end;
 
@@ -206,7 +206,7 @@ begin
   if assigned(FThreadPool) then
     FThreadPool.CancelAll;
   FThreadPool := CreateThreadPool('Test thread pool');
-  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'unobserved task')
+  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'observed task')
     .OnTerminated(ReleaseObservableTask)
     .Schedule(FThreadPool);
 end;
