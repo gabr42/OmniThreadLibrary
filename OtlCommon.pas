@@ -746,7 +746,7 @@ begin
     threadNameInfo.FThreadID := $FFFFFFFF;
     threadNameInfo.FFlags := 0;
     try
-//      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
+      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
     except {ignore} end;
   end;
 end; { SetThreadName }
