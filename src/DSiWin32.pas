@@ -4,12 +4,55 @@
 
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
-                       Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja
+                       Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
+                       Christian Wimmer
    Creation date     : 2002-10-09
-   Last modification : 2010-04-12
-   Version           : 1.55
+   Last modification : 2010-07-27
+   Version           : 1.58
 </pre>*)(*
    History:
+     1.58: 2010-07-27
+       - DSiAddApplicationToFirewallExceptionList[Advanced|XP] got a new parameter
+         TDSiFwResolveConflict (default rcDuplicate) where the caller can specify
+         behaviour if the rule with the same name already exists.
+         [rcDuplicate = add new rule with the same name, rcOverwrite = remove all rules
+          with the same name and then add the new rule, rcSkip = leave existing rules
+          intact and don't add the new rule]
+       - Implemented DSiFindApplicationInFirewallExceptionList[Advanced|XP].
+     1.57a: 2010-07-20
+       - Bug fix in DSiAddApplicationToFirewallExceptionListAdvanced: setting
+         rule.ServiceName to '' caused fwPolicy2.Rules.Add(rule) to raise exception.
+     1.57: 2010-06-18
+       - DSiExecuteAsUser now calls CreateProcessWithLogonW if CreateProcessAsUser fails
+         with ERROR_PRIVILEGE_NOT_HELD (1314). Windows error code is now returned in a
+         parameter. Window station and desktop process-specific ACEs are removed in a
+         background thread when child process exits (thanks to Christian Wimmer to pointing
+         out this problem). If the username is not set, DSiExecuteAsUser still sets up
+         ACEs for window station/desktop access but ends calling CreateProcess and does
+         not remove ACEs at the end.
+       - Two overloaded versions of DSiExecuteAsUser are implemented. One is backwards
+         compatible and another introduces two parameters -
+         out processInfo: TProcessInformation and startInfo: PStartupInfo (default: nil).
+         If the latter is assigned, it will be used instead of the internally generated
+         TStartupInfo. This version does not close process and thread handle returned
+         in the TProcessInformation if 'wait' is False.
+       - Implemented DSiRemoveAceFromWindowStation and DSiRemoveAceFromDesktop.
+       - Added dynamically loaded API forwarders DSiCreateProcessWithLogonW,
+         DSiCreateEnvironmentBlock, DSiDestroyEnvironmentBlock and
+         DSiGetUserProfileDirectoryW.
+       - DSiAddAceTo[WindowStation|Desktop] will not add SID if it already exists in the
+         ACL.
+     1.56: 2010-06-10
+       - [Mitja] Clear the last error if CreateProcess succeeds in DSiExecuteAndCapture
+         (found a test case where CreateProcess succeeded but last error was 126).
+       - [Christian Wimmer] In Unicode Delphis, DSiOpenSCManager, DSiGetLongPathName,
+         DSiGetModuleFileNameEx, DSiGetProcessImageFileName, DSiSetDllDirectory, and
+         DSiSHEmptyRecycleBin were linking to the wrong verison of the API.
+       - [Christian Wimmer] DSiCreateProcessAsUser must make a local copy of the
+         commandLine parameter when using Unicode API because the API may modify the
+         contents of this parameter.
+       - Implemented DSiGetLogonSID, DSiAddAceToWindowStation and DSiAddAceToDesktop.
+       - Redesigned DSiExecuteAsUser.
      1.55: 2010-04-12
        - Implemented DSiHasElapsed64 and DSiElapsedTime64.
      1.54: 2010-04-08
@@ -694,6 +737,8 @@ const
 
 { Processes }
 
+  function  DSiAddAceToDesktop(desktop: HDESK; sid: PSID): boolean;
+  function  DSiAddAceToWindowStation(station: HWINSTA; sid: PSID): boolean;
   function  DSiAffinityMaskToString(affinityMask: DWORD): string;
   function  DSiGetCurrentProcessHandle: THandle;
   function  DSiGetCurrentThreadHandle: THandle;
@@ -705,8 +750,14 @@ const
     var exitCode: longword; waitTimeout_sec: integer = 15; onNewLine: TDSiOnNewLineCallback
     = nil): cardinal;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
+    var winErrorCode: cardinal; const domain: string = '.';
+    visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
+    wait: boolean = false): cardinal; overload;
+  function  DSiExecuteAsUser(const commandLine, username, password: string;
+    var winErrorCode: cardinal; var processInfo: TProcessInformation;
     const domain: string = '.'; visibility: integer = SW_SHOWDEFAULT;
-    const workDir: string = ''; wait: boolean = false): cardinal;
+    const workDir: string = ''; wait: boolean = false;
+    startInfo: PStartupInfo = nil): cardinal; overload;
   function  DSiGetProcessAffinity: string;
   function  DSiGetProcessAffinityMask: DWORD;
   function  DSiGetProcessID(const processName: string; var processID: DWORD): boolean;
@@ -742,6 +793,8 @@ const
   function  DSiOpenURL(const URL: string; newBrowser: boolean = false): boolean;
   procedure DSiProcessThreadMessages;
   function  DSiRealModuleName: string;
+  function  DSiRemoveAceFromDesktop(desktop: HDESK; sid: PSID): boolean;
+  function  DSiRemoveAceFromWindowStation(station: HWINSTA; sid: PSID): boolean;
   function  DSiSetProcessAffinity(affinity: string): string;
   function  DSiSetProcessPriorityClass(const processName: string;
     priority: DWORD): boolean;
@@ -1009,16 +1062,21 @@ type // Firewall management types
     fwProfileCurrent);
   TDSiFwIPProfiles = set of TDSiFwIPProfile;
 
+  TDSiFwResolveConflict = (rcDuplicate, rcOverwrite, rcSkip); 
+
   function  DSiAddApplicationToFirewallExceptionList(const entryName,
-    applicationFullPath: string; description: string = ''; grouping: string = '';
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
+    description: string = ''; grouping: string = '';
     serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
     localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
   function  DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
-    applicationFullPath: string; description: string = ''; grouping: string = '';
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
+    description: string = ''; grouping: string = '';
     serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
     localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
   function  DSiAddApplicationToFirewallExceptionListXP(const entryName,
-    applicationFullPath: string; profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
+    profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
   function  DSiAddPortToFirewallExceptionList(const entryName: string;
     portNumber: cardinal): boolean;
   function  DSiAddUninstallInfo(const displayName, uninstallCommand, publisher,
@@ -1030,6 +1088,11 @@ type // Firewall management types
   function  DSiDeleteShortcut(const displayName: string;
     folder: integer = CSIDL_STARTUP): boolean;
   procedure DSiEditShortcut(const lnkName, fileName, workDir, parameters: string);
+  function  DSiFindApplicationInFirewallExceptionListAdvanced(const entryName: string;
+    var rule: OleVariant): boolean;
+  function  DSiFindApplicationInFirewallExceptionListXP(const entryName: string;
+    var application: OleVariant; profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
+  function  DSiGetLogonSID(token: THandle; var logonSID: PSID): boolean;
   function  DSiGetShortcutInfo(const lnkName: string; var fileName, filePath, workDir,
     parameters: string): boolean;
   function  DSiGetUninstallInfo(const displayName: string;
@@ -1041,8 +1104,9 @@ type // Firewall management types
   function  DSiRemoveApplicationFromFirewallExceptionList(const entryName,
     applicationFullPath: string): boolean;
   function  DSiRemoveApplicationFromFirewallExceptionListAdvanced(const entryName: string): boolean;
-  function  DSiRemoveApplicationFromFirewallExceptionListXP(
-    const applicationFullPath: string): boolean;
+  function  DSiRemoveApplicationFromFirewallExceptionListXP(const applicationFullPath: string): boolean; overload;
+  function  DSiRemoveApplicationFromFirewallExceptionListXP(const applicationFullPath: string;
+    profile: TDSiFwIPProfile): boolean; overload;
   procedure DSiRemoveRunOnce(const applicationName: string);
   function  DSiRemoveUninstallInfo(const displayName: string): boolean;
   function  DSiShortcutExists(const displayName: string;
@@ -1125,6 +1189,13 @@ type
     dwCreationFlags: DWORD; lpEnvironment: pointer;
     lpCurrentDirectory: PChar; const lpStartupInfo: TStartupInfo;
     var lpProcessInformation: TProcessInformation): BOOL; stdcall;
+  function  DSiCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword: PWideChar;
+    dwLogonFlags: DWORD; lpApplicationName, lpCommandLine: PWideChar;
+    dwCreationFlags: DWORD; lpEnvironment: pointer; lpCurrentDirectory: PWideChar;
+    const lpStartupInfo: TStartupInfoW; var lpProcessInformation: TProcessInformation): BOOL;
+  function  DSiCreateEnvironmentBlock(var lpEnvironment: pointer; hToken: THandle;
+    bInherit: BOOL): BOOL;
+  function  DSiDestroyEnvironmentBlock(lpEnvironment: pointer): BOOL;
   function  DSiDwmEnableComposition(uCompositionAction: UINT): HRESULT; stdcall;
   function  DSiDwmIsCompositionEnabled(var pfEnabled: BOOL): HRESULT; stdcall;
   function  DSiEnumProcessModules(hProcess: THandle; lphModule: PModule; cb: DWORD;
@@ -1137,6 +1208,8 @@ type
   function  DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
   function  DSiGetTickCount64: int64; stdcall;
+  function  DSiGetUserProfileDirectoryW(hToken: THandle; lpProfileDir: PWideChar;
+    var lpcchSize: DWORD): BOOL; stdcall;
   function  DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
   function  DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   function  DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
@@ -1187,18 +1260,69 @@ uses
   TLHelp32,
   MMSystem;
 
+const
+  CAPISuffix = {$IFDEF Unicode}'W'{$ELSE}'A'{$ENDIF};
+
 type
+  IRestoreLastError = interface
+  end; { IRestoreLastError }
+
+  TRestoreLastError = class(TInterfacedObject, IRestoreLastError)
+  private
+    rleLastError: DWORD;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+  end; { TRestoreLastError }
+
+  TBackgroundTask = class
+  private
+    btWaitObject: THandle;
+  public
+    constructor Create(waitObject: THandle);
+    procedure Awaited; virtual; abstract;
+    property WaitObject: THandle read btWaitObject;
+  end; { TBackgroundTask }
+
+  TCleanupAces = class(TBackgroundTask)
+  private
+    caDesktop      : HDESK;
+    caSid          : PSID;
+    caWindowStation: HWINSTA;
+  public
+    constructor Create(waitObject: THandle; windowStation: HWINSTA; desktop: HDESK;
+      sid: PSID);
+    destructor  Destroy; override;
+    procedure Awaited; override;
+  end; { TCleanupAces }
+
+  TBackgroundThread = class(TThread)
+  private
+    btTask: TBackgroundTask;
+  public
+    constructor Create(task: TBackgroundTask);
+    procedure Execute; override;
+  end; { TBackgroundThread }
+
   T9xNetShareAdd = function(serverName: PChar; shareLevel: smallint;
     buffer: pointer; size: word): integer; stdcall;
   T9xNetShareDel = function(serverName: PChar; netName: PChar;
     reserved: word): integer; stdcall;
   TCloseServiceHandle = function(hSCObject: SC_HANDLE): BOOL; stdcall;
   TCreateProcessAsUser = function(hToken: THandle;
-    lpApplicationName: PAnsiChar; lpCommandLine: PAnsiChar; lpProcessAttributes,
+    lpApplicationName: PChar; lpCommandLine: PChar; lpProcessAttributes,
     lpThreadAttributes: PSecurityAttributes; bInheritHandles: BOOL;
     dwCreationFlags: DWORD; lpEnvironment: pointer;
-    lpCurrentDirectory: PAnsiChar; const lpStartupInfo: TStartupInfo;
+    lpCurrentDirectory: PChar; const lpStartupInfo: TStartupInfo;
     var lpProcessInformation: TProcessInformation): BOOL; stdcall;
+  TCreateProcessWithLogonW = function(lpUsername, lpDomain, lpPassword: PWideChar;
+    dwLogonFlags: DWORD; lpApplicationName, lpCommandLine: PWideChar;
+    dwCreationFlags: DWORD; lpEnvironment: pointer; lpCurrentDirectory: PWideChar;
+    const lpStartupInfo: TStartupInfoW;
+    var lpProcessInformation: TProcessInformation): BOOL; stdcall;
+  TCreateEnvironmentBlock = function (var lpEnvironment: pointer; hToken: THandle;
+    bInherit: BOOL): BOOL; stdcall;
+  TDestroyEnvironmentBlock = function (lpEnvironment: pointer): BOOL; stdcall;
   TDwmEnableComposition = function(uCompositionAction: UINT): HRESULT; stdcall;
   TDwmIsCompositionEnabled = function(var pfEnabled: BOOL): HRESULT; stdcall;
   TEnumProcessModules = function(hProcess: THandle; lphModule: PModule; cb: DWORD;
@@ -1212,6 +1336,8 @@ type
   TGetProcessMemoryInfo = function(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
   TGetTickCount64 = function: int64; stdcall;
+  TGetUserProfileDirectoryW = function (hToken: THandle; lpProfileDir: PWideChar;
+    var lpcchSize: DWORD): BOOL; stdcall;
   TGlobalMemoryStatusEx = function(memStatus: PMemoryStatusEx): boolean; stdcall;
   TImpersonateLoggedOnUser = function(hToken: THandle): BOOL; stdcall;
   TIsWow64Process = function(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
@@ -1219,7 +1345,7 @@ type
     dwLogonType, dwLogonProvider: DWORD; var phToken: THandle): BOOL; stdcall;
   TNetApiBufferFree = function(buffer: pointer): cardinal; stdcall;
   TNetWkstaGetInfo = function(servername: PChar; level: cardinal;
-    out bufptr: Pointer): cardinal; stdcall;
+    out bufptr: pointer): cardinal; stdcall;
   TNTNetShareAdd = function(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord; stdcall;
   TNTNetShareDel = function(serverName: PChar; netName: PWideChar;
@@ -1239,6 +1365,9 @@ const
   G9xNetShareDel: T9xNetShareDel = nil;
   GCloseServiceHandle: TCloseServiceHandle = nil;
   GCreateProcessAsUser: TCreateProcessAsUser = nil;
+  GCreateProcessWithLogonW: TCreateProcessWithLogonW = nil;
+  GCreateEnvironmentBlock: TCreateEnvironmentBlock = nil;
+  GDestroyEnvironmentBlock: TDestroyEnvironmentBlock = nil;
   GDwmEnableComposition: TDwmEnableComposition = nil;
   GDwmIsCompositionEnabled: TDwmIsCompositionEnabled = nil;
   GEnumProcessModules: TEnumProcessModules = nil;
@@ -1247,6 +1376,7 @@ const
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
   GGetProcessMemoryInfo: TGetProcessMemoryInfo = nil;
   GGetTickCount64: TGetTickCount64 = nil;
+  GGetUserProfileDirectoryW: TGetUserProfileDirectoryW = nil;
   GGlobalMemoryStatusEx: TGlobalMemoryStatusEx = nil;
   GImpersonateLoggedOnUser: TImpersonateLoggedOnUser = nil;
   GIsWow64Process: TIsWow64Process = nil;
@@ -1263,7 +1393,14 @@ const
   GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
   GWow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection = nil;
 
+{$IFOPT R+} {$DEFINE RestoreR} {$ELSE} {$UNDEF RestoreR} {$ENDIF}
+
 { Helpers }
+
+  procedure CreateProcessWatchdog(task: TBackgroundTask);
+  begin
+    TBackgroundThread.Create(task);
+  end; { CreateProcessWatchdog }
 
   function FileOpenSafe(fileName: string; var fileHandle: textfile;
     diskRetryDelay, diskRetryCount: integer): boolean;
@@ -1579,7 +1716,7 @@ const
         rdBinary:
           begin
             SetLength(Result, GetDataSize(name));
-            SetLength(Result, ReadBinaryData(name, Pointer(Result)^, Length(Result)));
+            SetLength(Result, ReadBinaryData(name, pointer(Result)^, Length(Result)));
           end; //rdBinary
         else
           Result := inherited ReadString(name);
@@ -2628,7 +2765,7 @@ const
   function DSiGetLongPathName(const fileName: string): string;
   begin
     if not assigned(GGetLongPathName) then
-      GGetLongPathName := DSiGetProcAddress('kernel32.dll', 'GetLongPathNameA');
+      GGetLongPathName := DSiGetProcAddress('kernel32.dll', 'GetLongPathName' + CAPISuffix);
     if assigned(GGetLongPathName) then begin
       SetLength(Result, MAX_PATH);
       SetLength(Result, GGetLongPathName(PChar(fileName), PChar(Result), Length(Result)));
@@ -3028,6 +3165,233 @@ const
 
 { Processes }
 
+  const
+    DESKTOP_ALL = DESKTOP_READOBJECTS or DESKTOP_CREATEWINDOW or DESKTOP_CREATEMENU or DESKTOP_HOOKCONTROL or
+      DESKTOP_JOURNALRECORD or DESKTOP_JOURNALPLAYBACK or DESKTOP_ENUMERATE or DESKTOP_WRITEOBJECTS or
+      DESKTOP_SWITCHDESKTOP or STANDARD_RIGHTS_REQUIRED;
+
+    WINSTA_ALL = WINSTA_ENUMDESKTOPS or WINSTA_READATTRIBUTES or WINSTA_ACCESSCLIPBOARD or WINSTA_CREATEDESKTOP or
+      WINSTA_WRITEATTRIBUTES or WINSTA_ACCESSGLOBALATOMS or WINSTA_EXITWINDOWS or WINSTA_ENUMERATE or
+      WINSTA_READSCREEN or STANDARD_RIGHTS_REQUIRED;
+
+    GENERIC_ACCESS = GENERIC_READ or GENERIC_WRITE or GENERIC_EXECUTE or GENERIC_ALL;
+
+    HEAP_ZERO_MEMORY         = 8;
+    ACL_REVISION             = 2;
+    ACCESS_ALLOWED_ACE_TYPE  = 0;
+    CONTAINER_INHERIT_ACE    = 2;
+    INHERIT_ONLY_ACE         = 8;
+    OBJECT_INHERIT_ACE       = 1;
+    NO_PROPAGATE_INHERIT_ACE = 4;
+    SE_GROUP_LOGON_ID        = $C0000000;
+
+  type
+    ACL_SIZE_INFORMATION = record
+      AceCount: DWORD;
+      AclBytesInUse: DWORD;
+      AclBytesFree: DWORD;
+    end;
+
+    ACE_HEADER = record
+      AceType: BYTE;
+      AceFlags: BYTE;
+      AceSize: WORD;
+    end;
+    PACE_HEADER = ^ACE_HEADER;
+
+    ACCESS_ALLOWED_ACE = record
+      Header: ACE_HEADER;
+      Mask: ACCESS_MASK;
+      SidStart: DWORD;
+    end;
+    PACCESS_ALLOWED_ACE = ^ACCESS_ALLOWED_ACE;
+
+  function  DSiAddAceToDesktop(desktop: HDESK; sid: PSID): boolean;
+  var
+    aclSizeInfo : ACL_SIZE_INFORMATION;
+    dacl        : PACL;
+    daclExists  : LongBool;
+    daclPresent : LongBool;
+    iAce        : integer;
+    newAcl      : PACL;
+    newAclSize  : DWORD;
+    newSecDescr : PSECURITY_DESCRIPTOR;
+    sdSize      : DWORD;
+    sdSizeNeeded: DWORD;
+    secDescr    : PSECURITY_DESCRIPTOR;
+    secInfo     : SECURITY_INFORMATION;
+    skipAdd     : boolean;
+    tempAce     : PACE_HEADER;
+  begin
+    Result := false;
+    secDescr := nil;
+    newSecDescr := nil;
+    newAcl := nil;
+    secInfo := DACL_SECURITY_INFORMATION;
+    sdSize := 0;
+    try
+      if not GetUserObjectSecurity(desktop, secInfo, secDescr, sdSize, sdSizeNeeded) then begin
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        secDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, sdSizeNeeded);
+        if secDescr = nil then
+          Exit;
+        newSecDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, sdSizeNeeded);
+        if newSecDescr = nil then
+          Exit;
+        sdSize := sdSizeNeeded;
+        if not GetUserObjectSecurity(desktop, secInfo, secDescr, sdSize, sdSizeNeeded) then
+          Exit;
+      end;
+      if not InitializeSecurityDescriptor(newSecDescr, SECURITY_DESCRIPTOR_REVISION) then
+        Exit;
+      if not GetSecurityDescriptorDacl(secDescr, daclPresent, dacl, daclExists) then
+        Exit;
+      ZeroMemory(@aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION));
+      aclSizeInfo.AclBytesInUse := SizeOf(ACL);
+      if assigned(dacl) then begin
+        if not GetAclInformation(dacl^, @aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION), AclSizeInformation) then
+          Exit;
+      end;
+      newAclSize := aclSizeInfo.AclBytesInUse + SizeOf(ACCESS_ALLOWED_ACE) +
+        GetLengthSid(sid) - SizeOf(DWORD);
+      newAcl := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, newAclSize);
+      if (newAcl = nil) or (not InitializeAcl(newAcl^, newAclSize, ACL_REVISION)) then
+        Exit;
+      skipAdd := false;
+      if daclPresent then begin
+        // Copy the ACEs to the new ACL.
+        for iAce := 0 to aclSizeInfo.AceCount - 1 do begin
+          if not (GetAce(dacl^, iAce, pointer(tempAce)) and
+                  AddAce(newAcl^, ACL_REVISION, MAXDWORD, tempAce, tempAce.AceSize))
+          then
+            Exit;
+          if (tempAce.AceType = ACCESS_ALLOWED_ACE_TYPE) and
+             EqualSID(@PACCESS_ALLOWED_ACE(tempAce)^.SidStart, sid)
+          then
+            skipAdd := true;
+        end;
+      end;
+      if not skipAdd then begin
+        if not (AddAccessAllowedAce(newAcl^, ACL_REVISION, DESKTOP_ALL, sid) and
+                SetSecurityDescriptorDacl(newSecDescr, true, newAcl, false) and
+                SetUserObjectSecurity(desktop, secInfo, newSecDescr))
+        then
+          Exit;
+      end;
+      Result := true;
+    finally
+      if assigned(newAcl) then
+        HeapFree(GetProcessHeap, 0, newAcl);
+      if assigned(secDescr) then
+        HeapFree(GetProcessHeap, 0, secDescr);
+      if assigned(newSecDescr) then
+        HeapFree(GetProcessHeap, 0, newSecDescr);
+    end;
+  end; { DSiAddAceToDesktop }
+
+  function DSiAddAceToWindowStation(station: HWINSTA; sid: PSID): boolean;
+  var
+    ace        : ^ACCESS_ALLOWED_ACE;
+    aclSizeInfo: ACL_SIZE_INFORMATION;
+    dacl       : PACL;
+    daclExists : LongBool;
+    daclPresent: LongBool;
+    iAce       : integer;
+    newAcl     : PACL;
+    newAclSize : DWORD;
+    newSecDecr : PSECURITY_DESCRIPTOR;
+    reqSdSize  : DWORD;
+    sdSize     : DWORD;
+    secDescr   : PSECURITY_DESCRIPTOR;
+    secInfo    : SECURITY_INFORMATION;
+    skipAdd    : boolean;
+    tempAce    : PACE_HEADER;
+  begin
+    Result := false;
+    secInfo := DACL_SECURITY_INFORMATION;
+    ace := nil;
+    secDescr := nil;
+    sdSize := 0;
+    newAcl := nil;
+    newSecDecr := nil;
+    try
+      if not GetUserObjectSecurity(station, secInfo, secDescr, sdSize, reqSdSize) then begin
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        secDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, reqSdSize);
+        if secDescr = nil then
+          Exit;
+        newSecDecr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, reqSdSize);
+        if newSecDecr = nil then
+          Exit;
+        sdSize := reqSdSize;
+        if not GetUserObjectSecurity(station, secInfo, secDescr, sdSize, reqSdSize) then
+          Exit;
+      end;
+      if not InitializeSecurityDescriptor(newSecDecr, SECURITY_DESCRIPTOR_REVISION) then
+        Exit;
+      if not GetSecurityDescriptorDacl(secDescr, daclPresent, dacl, daclExists) then
+        Exit;
+      ZeroMemory(@aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION));
+      aclSizeInfo.AclBytesInUse := SizeOf(ACL);
+      if dacl <> nil then
+        if not GetAclInformation(dacl^, @aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION), AclSizeInformation) then
+          Exit;
+      newAclSize := aclSizeInfo.AclBytesInUse + (2 * SizeOf(ACCESS_ALLOWED_ACE)) +
+        (2 * GetLengthSid(sid)) - (2 * SizeOf(DWORD));
+      newAcl := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, newAclSize);
+      if newAcl = nil then
+        Exit;
+      if not InitializeAcl(newAcl^, newAclSize, ACL_REVISION) then
+        Exit;
+      skipAdd := false;
+      if daclPresent then begin
+        for iAce := 0 to aclSizeInfo.AceCount - 1 do begin
+          if not (GetAce(dacl^, iAce, pointer(tempAce)) and
+                  AddAce(newAcl^, ACL_REVISION, MAXDWORD, tempAce, tempAce.AceSize))
+          then
+            Exit;
+          if (tempAce.AceType = ACCESS_ALLOWED_ACE_TYPE) and
+             EqualSID(@PACCESS_ALLOWED_ACE(tempAce)^.SidStart, sid)
+          then
+            skipAdd := true;
+        end;
+      end;
+      if not skipAdd then begin
+        ace := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, SizeOf(ACCESS_ALLOWED_ACE) +
+          GetLengthSid(sid) - SizeOf(DWORD));
+        if ace = nil then
+          Exit;
+        ace.Header.AceType := ACCESS_ALLOWED_ACE_TYPE;
+        ace.Header.AceFlags := CONTAINER_INHERIT_ACE or INHERIT_ONLY_ACE or OBJECT_INHERIT_ACE;
+        ace.Header.AceSize := SizeOf(ACCESS_ALLOWED_ACE) + GetLengthSid(sid) - SizeOf(DWORD);
+        ace.Mask := GENERIC_ACCESS;
+        if not (CopySid(GetLengthSid(sid), @ace.SidStart, sid) and
+                AddAce(newAcl^, ACL_REVISION, MAXDWORD, ace, ace.Header.AceSize))
+        then
+          Exit;
+        ace.Header.AceFlags := NO_PROPAGATE_INHERIT_ACE;
+        ace.Mask := WINSTA_ALL;
+        if not (AddAce(newAcl^, ACL_REVISION, MAXDWORD, ace, ace.Header.AceSize) and
+                SetSecurityDescriptorDacl(newSecDecr, true, newAcl, false) and
+                SetUserObjectSecurity(station, secInfo, newSecDecr))
+        then
+          Exit;
+      end;
+      Result := true;
+    finally
+      if assigned(ace) then
+        HeapFree(GetProcessHeap, 0, ace);
+      if assigned(newAcl) then
+        HeapFree(GetProcessHeap, 0, newAcl);
+      if assigned(secDescr) then
+        HeapFree(GetProcessHeap, 0, secDescr);
+      if assigned(newSecDecr) then
+        HeapFree(GetProcessHeap, 0, newSecDecr);
+    end;
+  end; { DSiAddAceToWindowStation }
+
   {:Convert affinity mask into a string representation (0..9, A..V).
     @author  gabr
     @since   2003-11-14
@@ -3132,54 +3496,206 @@ const
     end;
   end; { DSiExecute }
 
+
+  {:Simplified DSiExecuteAsUser.
+    @author  gabr
+    @returns Returns MaxInt if any Win32 API fails or process exit code if wait is
+             specified or 0 in other cases.
+    @since   2010-06-18
+  }
+  function  DSiExecuteAsUser(const commandLine, username, password: string;
+    var winErrorCode: cardinal; const domain: string; visibility: integer;
+    const workDir: string; wait: boolean): cardinal;
+  var
+    processInfo: TProcessInformation;
+  begin
+    Result := DSiExecuteAsUser(commandLine, username, password, winErrorCode, processInfo,
+      domain, visibility, workDir, wait, nil);
+    if (Result <> cardinal(MaxInt)) and wait then begin
+      DSiCloseHandleAndNull(processInfo.hProcess);
+      DSiCloseHandleAndNull(processInfo.hThread);
+    end;
+  end; { DSiExecuteAsUser }
+
   {:Executes process as another user. Same as DSiExecute on 9x architecture.
     @author  gabr
     @returns Returns MaxInt if any Win32 API fails or process exit code if wait is
              specified or 0 in other cases.
     @since   2002-12-19
   }
-  function DSiExecuteAsUser(const commandLine, username, password, domain: string;
-    visibility: integer; const workDir: string; wait: boolean): cardinal;
+  function DSiExecuteAsUser(const commandLine, username, password: string;
+    var winErrorCode: cardinal; var processInfo: TProcessInformation;
+    const domain: string; visibility: integer; const workDir: string; wait: boolean;
+    startInfo: PStartupInfo): cardinal;
   var
-    lastError  : DWORD;
-    logonHandle: THandle;
-    processInfo: TProcessInformation;
-    startupInfo: TStartupInfo;
-    useWorkDir : string;
+    dwSize            : DWORD;
+    hProcess          : THandle;
+    interDesktop      : HDESK;
+    interWindowStation: HWINSTA;
+    lastError         : DWORD;
+    logonHandle       : THandle;
+    logonSID          : PSID;
+    lpvEnv            : pointer;
+    origWindowStation : HWINSTA;
+    startupInfo       : TStartupInfo;
+    startupInfoW      : TStartupInfoW;
+    szUserProfile     : PWideChar;
+    useStartInfo      : pointer;
+    workDirW          : WideString;
   begin
-    if not DSiIsWinNT then
-      Result := DSiExecute(commandLine, visibility, workDir, wait)
-    else begin
-      Result := MaxInt;
-      if DSiLogonAs(username, password, password, logonHandle) then begin
-        if workDir = '' then
-          GetDir(0, useWorkDir)
-        else
-          useWorkDir := workDir;
-        FillChar(startupInfo, SizeOf(startupInfo), #0);
-        startupInfo.cb := SizeOf(startupInfo);
-        startupInfo.dwFlags := STARTF_USESHOWWINDOW;
-        startupInfo.wShowWindow := visibility;
-        if not DSiCreateProcessAsUser(logonHandle, nil, PChar(commandLine), nil,
-             nil, false, CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil,
-             PChar(useWorkDir), startupInfo, processInfo)
-        then
-          Result := MaxInt
-        else begin
-          if wait then begin
-            WaitForSingleObject(processInfo.hProcess, INFINITE);
-            GetExitCodeProcess(processInfo.hProcess, Result);
+    Result := MaxInt;
+    logonHandle := 0;
+    lpvEnv := nil;
+    szUserProfile := nil;
+    origWindowStation := 0;
+    logonSID := nil;
+    interWindowStation := 0;
+    interDesktop := 0;
+    logonHandle := 0;
+    hProcess := 0;
+    try
+      if not DSiIsWinNT then
+        Result := DSiExecute(commandLine, visibility, workDir, wait)
+      else begin
+        try
+          if username <> '' then begin
+            if not DSiLogonAs(username, password, domain, logonHandle) then
+              Exit;
           end
-          else
-            Result := 0;
-          CloseHandle(processInfo.hProcess);
-          CloseHandle(processInfo.hThread);
+          else begin
+            hProcess := OpenProcess(STANDARD_RIGHTS_REQUIRED or SYNCHRONIZE or $FFF, true, GetCurrentProcessID);
+            if hProcess = 0 then
+              Exit;
+            if not OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, logonHandle) then
+              Exit;
+          end;
+            
+          if workDir <> '' then
+            workDirW := workDir
+          else begin
+            GetMem(szUserProfile, SizeOf(WideChar) * 257);
+            dwSize := 256;
+            if not DSiGetUserProfileDirectoryW(logonHandle, szUserProfile, dwSize) then
+              Exit;
+            if workDir = '' then
+              workDirW := szUserProfile;
+          end;
+          
+          origWindowStation := GetProcessWindowStation;
+          if origWindowStation = 0 then
+            Exit;
+          interWindowStation := OpenWindowStation('winsta0', false, READ_CONTROL OR WRITE_DAC);
+          if interWindowStation = 0 then
+            Exit;
+          if not SetProcessWindowStation(interWindowStation) then
+            Exit;
+          interDesktop := OpenDesktop('default', 0, false, READ_CONTROL OR WRITE_DAC OR
+            DESKTOP_WRITEOBJECTS OR DESKTOP_READOBJECTS);
+          if (not SetProcessWindowStation(origWindowStation)) or
+             (interDesktop = 0) or
+             (not DSiGetLogonSID(logonHandle, logonSID))
+          then
+            Exit;
+          if (not assigned(logonSID)) or
+             (not DSiAddAceToWindowStation(interWindowStation, logonSID)) or
+             (not DSiAddAceToDesktop(interDesktop, logonSID)) then 
+            Exit;
+
+          FillChar(startupInfo, SizeOf(startupInfo), #0);
+          startupInfo.cb := SizeOf(startupInfo);
+          startupInfo.dwFlags := STARTF_USESHOWWINDOW;
+          startupInfo.lpDesktop := 'winsta0\default';
+          startupInfo.wShowWindow := visibility;
+          if username = '' then begin
+            useStartInfo := startInfo;
+            if not assigned(useStartInfo) then
+              useStartInfo := @startupInfo;
+            if CreateProcess(nil, PChar(commandLine), nil, nil, false,
+                 CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil,
+                 PChar(string(workDirW)), PStartupInfo(useStartInfo)^, processInfo)
+            then
+              Result := 0;
+          end
+          else begin
+            // Impersonate client to ensure access to executable file.
+            if (not ImpersonateLoggedOnUser(logonHandle)) then
+              Exit;
+            try
+              useStartInfo := startInfo;
+              if not assigned(useStartInfo) then
+                useStartInfo := @startupInfo;
+              if DSiCreateProcessAsUser(logonHandle, nil, PChar(commandLine), nil,
+                   nil, false, {CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS} CREATE_DEFAULT_ERROR_MODE, nil,
+                   PChar(string(workDirW)), PStartupInfo(useStartInfo)^, processInfo)
+              then
+                Result := 0;
+              lastError := GetLastError;
+            finally
+              if (username <> '') then
+                RevertToSelf;
+            end;
+            SetLastError(lastError);
+          end;
+
+          if (Result <> 0) and (GetLastError = ERROR_PRIVILEGE_NOT_HELD) and (username <> '') then begin
+            if not DSiCreateEnvironmentBlock(lpvEnv, logonHandle, true) then
+              Exit;
+            Assert(SizeOf(TStartupInfoA) = SizeOf(TStartupInfoW));
+            Move(useStartInfo^, startupInfoW, SizeOf(TStartupInfoW));
+            startupInfoW.lpDesktop := nil;
+            if DSiCreateProcessWithLogonW(PWideChar(WideString(username)),
+              PWideChar(WideString(domain)), PWideChar(WideString(password)),
+              1 {LOGON_WITH_PROFILE}, nil, PWideChar(WideString(commandLine)),
+              CREATE_UNICODE_ENVIRONMENT, lpvEnv, PWideChar(WideString(workDirW)),
+              startupInfoW, processInfo)
+            then
+              Result := 0;
+          end;
+
+          if Result = 0 then begin
+            lastError := GetLastError;
+            if wait then begin
+              WaitForSingleObject(processInfo.hProcess, INFINITE);
+              GetExitCodeProcess(processInfo.hProcess, Result);
+              DSiCloseHandleAndNull(processInfo.hProcess);
+              DSiCloseHandleAndNull(processInfo.hThread);
+            end
+            else begin
+              Result := 0;
+              if username <> '' then begin
+                CreateProcessWatchdog(TCleanupAces.Create(processInfo.hProcess, interWindowStation, interDesktop, logonSID));
+                interWindowStation := 0;
+                interDesktop := 0;
+                logonSID := nil;
+              end;
+            end;
+            SetLastError(lastError);
+          end;
+
+        finally
+          lastError := GetLastError;
+          if assigned(lpvEnv) then
+            DSiDestroyEnvironmentBlock(lpvEnv);
+          DSiCloseHandleAndNull(logonHandle);
+          DSiCloseHandleAndNull(hProcess);
+          DSiFreeMemAndNil(pointer(szUserProfile));
+          if origWindowStation <> 0 then
+            SetProcessWindowStation(origWindowStation);
+          if assigned(logonSID) and (username <> '') then begin
+            if interWindowStation <> 0 then
+              DSiRemoveAceFromWindowStation(interWindowStation, logonSID);
+            if interDesktop <> 0 then
+              DSiRemoveAceFromDesktop(interDesktop, logonSID);
+            HeapFree(GetProcessHeap, 0, logonSID);
+          end;
+          if interWindowStation <> 0 then
+            CloseWindowStation(interWindowStation);
+          if interDesktop <> 0 then
+            CloseDesktop(interDesktop);
+          SetLastError(lastError);
         end;
-        lastError := GetLastError;
-        CloseHandle(logonHandle);
-        SetLastError(lastError);
       end;
-    end;
+    finally winErrorCode := GetLastError; end;
   end; { DSiExecuteAsUser }
 
   {:Executes console process in a hidden window and captures its output in a TStrings
@@ -3275,6 +3791,7 @@ const
            CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, PChar(useWorkDir), start,
            processInfo) then
       begin
+        SetLastError(0); // [Mitja] found a testcase where CreateProcess succeeded but the last error was 126
         Result := processInfo.hProcess;
         totalBytesRead := 0;
         repeat
@@ -3707,8 +4224,10 @@ const
     dsiUsername: string;
     posDomain  : integer;
   begin
-    if not DSiIsWinNT then
-      Result := true
+    if not DSiIsWinNT then begin
+      logonHandle := 0;
+      Result := true;
+    end
     else begin
       dsiDomain := domain;
       dsiUsername := username;
@@ -3721,6 +4240,8 @@ const
       end;
       Result := DSiLogonUser(PChar(dsiUsername), PChar(dsiDomain), PChar(password),
         LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, logonHandle);
+      if not Result then
+        logonHandle := 0;
     end;
   end; { DSiLogonAs }
 
@@ -3756,6 +4277,181 @@ const
     GetModuleFileName(HInstance, FileName, SizeOf(FileName));
     Result := string(FileName);
   end; { DSiRealModuleName }
+
+  function DSiRemoveAceFromDesktop(desktop: HDESK; sid: PSID): boolean;
+  var
+    aclSizeInfo : ACL_SIZE_INFORMATION;
+    dacl        : PACL;
+    daclExists  : LongBool;
+    daclPresent : LongBool;
+    iAce        : integer;
+    newAcl      : PACL;
+    newAclSize  : DWORD;
+    newSecDescr : PSECURITY_DESCRIPTOR;
+    sdSize      : DWORD;
+    sdSizeNeeded: DWORD;
+    secDescr    : PSECURITY_DESCRIPTOR;
+    secInfo     : SECURITY_INFORMATION;
+    tempAce     : PACE_HEADER;
+  begin
+    Result := false;
+    secDescr := nil;
+    newSecDescr := nil;
+    newAcl := nil;
+    secInfo := DACL_SECURITY_INFORMATION;
+    sdSize := 0;
+    try
+      if not GetUserObjectSecurity(desktop, secInfo, secDescr, sdSize, sdSizeNeeded) then begin
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        secDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, sdSizeNeeded);
+        if secDescr = nil then
+          Exit;
+        newSecDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, sdSizeNeeded);
+        if newSecDescr = nil then
+          Exit;
+        sdSize := sdSizeNeeded;
+        if not GetUserObjectSecurity(desktop, secInfo, secDescr, sdSize, sdSizeNeeded) then
+          Exit;
+      end;
+      if not InitializeSecurityDescriptor(newSecDescr, SECURITY_DESCRIPTOR_REVISION) then
+        Exit;
+      if not GetSecurityDescriptorDacl(secDescr, daclPresent, dacl, daclExists) then
+        Exit;
+      ZeroMemory(@aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION));
+      aclSizeInfo.AclBytesInUse := SizeOf(ACL);
+      if assigned(dacl) then begin
+        if not GetAclInformation(dacl^, @aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION), AclSizeInformation) then
+          Exit;
+      end;
+      newAclSize := aclSizeInfo.AclBytesInUse + SizeOf(ACCESS_ALLOWED_ACE) +
+        GetLengthSid(sid) - SizeOf(DWORD);
+      newAcl := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, newAclSize);
+      if (newAcl = nil) or (not InitializeAcl(newAcl^, newAclSize, ACL_REVISION)) then
+        Exit;
+      if daclPresent then begin
+        // Copy the ACEs to the new ACL.
+        for iAce := 0 to aclSizeInfo.AceCount - 1 do begin
+          if not GetAce(dacl^, iAce, pointer(tempAce)) then
+            Exit;
+          if (tempAce.AceType <> ACCESS_ALLOWED_ACE_TYPE) or
+             (not EqualSID(@PACCESS_ALLOWED_ACE(tempAce)^.SidStart, sid))
+          then
+            if not AddAce(newAcl^, ACL_REVISION, MAXDWORD, tempAce, tempAce.AceSize) then
+              Exit;
+        end;
+      end;
+      if not (SetSecurityDescriptorDacl(newSecDescr, true, newAcl, false) and
+              SetUserObjectSecurity(desktop, secInfo, newSecDescr))
+      then
+        Exit;
+      Result := true;
+    finally
+      if assigned(newAcl) then
+        HeapFree(GetProcessHeap, 0, newAcl);
+      if assigned(secDescr) then
+        HeapFree(GetProcessHeap, 0, secDescr);
+      if assigned(newSecDescr) then
+        HeapFree(GetProcessHeap, 0, newSecDescr);
+    end;
+  end; { DSiRemoveAceFromDesktop }
+
+  function DSiRemoveAceFromWindowStation(station: HWINSTA; sid: PSID): boolean;
+  var
+    ace        : ^ACCESS_ALLOWED_ACE;
+    aclSizeInfo: ACL_SIZE_INFORMATION;
+    dacl       : PACL;
+    daclExists : LongBool;
+    daclPresent: LongBool;
+    iAce       : integer;
+    newAcl     : PACL;
+    newAclSize : DWORD;
+    newSecDecr : PSECURITY_DESCRIPTOR;
+    reqSdSize  : DWORD;
+    sdSize     : DWORD;
+    secDescr   : PSECURITY_DESCRIPTOR;
+    secInfo    : SECURITY_INFORMATION;
+    tempAce    : PACE_HEADER;
+  begin
+    Result := false;
+    secInfo := DACL_SECURITY_INFORMATION;
+    ace := nil;
+    secDescr := nil;
+    sdSize := 0;
+    newAcl := nil;
+    newSecDecr := nil;
+    try
+      if not GetUserObjectSecurity(station, secInfo, secDescr, sdSize, reqSdSize) then begin
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        secDescr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, reqSdSize);
+        if secDescr = nil then
+          Exit;
+        newSecDecr := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, reqSdSize);
+        if newSecDecr = nil then
+          Exit;
+        sdSize := reqSdSize;
+        if not GetUserObjectSecurity(station, secInfo, secDescr, sdSize, reqSdSize) then
+          Exit;
+      end;
+      if not InitializeSecurityDescriptor(newSecDecr, SECURITY_DESCRIPTOR_REVISION) then
+        Exit;
+      if not GetSecurityDescriptorDacl(secDescr, daclPresent, dacl, daclExists) then
+        Exit;
+      ZeroMemory(@aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION));
+      aclSizeInfo.AclBytesInUse := SizeOf(ACL);
+      if dacl <> nil then
+        if not GetAclInformation(dacl^, @aclSizeInfo, SizeOf(ACL_SIZE_INFORMATION), AclSizeInformation) then
+          Exit;
+      newAclSize := aclSizeInfo.AclBytesInUse + (2 * SizeOf(ACCESS_ALLOWED_ACE)) +
+        (2 * GetLengthSid(sid)) - (2 * SizeOf(DWORD));
+      newAcl := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, newAclSize);
+      if newAcl = nil then
+        Exit;
+      if not InitializeAcl(newAcl^, newAclSize, ACL_REVISION) then
+        Exit;
+      if daclPresent then begin
+        for iAce := 0 to aclSizeInfo.AceCount - 1 do begin
+          if not GetAce(dacl^, iAce, pointer(tempAce)) then
+            Exit;
+          if (tempAce.AceType <> ACCESS_ALLOWED_ACE_TYPE) or
+             (not EqualSID(@PACCESS_ALLOWED_ACE(tempAce)^.SidStart, sid))
+          then 
+            if not AddAce(newAcl^, ACL_REVISION, MAXDWORD, tempAce, tempAce.AceSize) then
+              Exit;
+        end;
+      end;
+      ace := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, SizeOf(ACCESS_ALLOWED_ACE) +
+        GetLengthSid(sid) - SizeOf(DWORD));
+      if ace = nil then
+        Exit;
+      ace.Header.AceType := ACCESS_ALLOWED_ACE_TYPE;
+      ace.Header.AceFlags := CONTAINER_INHERIT_ACE or INHERIT_ONLY_ACE or OBJECT_INHERIT_ACE;
+      ace.Header.AceSize := SizeOf(ACCESS_ALLOWED_ACE) + GetLengthSid(sid) - SizeOf(DWORD);
+      ace.Mask := GENERIC_ACCESS;
+      if not (CopySid(GetLengthSid(sid), @ace.SidStart, sid) and
+              AddAce(newAcl^, ACL_REVISION, MAXDWORD, ace, ace.Header.AceSize))
+      then
+        Exit;
+      ace.Header.AceFlags := NO_PROPAGATE_INHERIT_ACE;
+      ace.Mask := WINSTA_ALL;
+      if not (AddAce(newAcl^, ACL_REVISION, MAXDWORD, ace, ace.Header.AceSize) and
+              SetSecurityDescriptorDacl(newSecDecr, true, newAcl, false) and
+              SetUserObjectSecurity(station, secInfo, newSecDecr))
+      then
+        Exit;
+      Result := true;
+    finally
+      if assigned(ace) then
+        HeapFree(GetProcessHeap, 0, ace);
+      if assigned(newAcl) then
+        HeapFree(GetProcessHeap, 0, newAcl);
+      if assigned(secDescr) then
+        HeapFree(GetProcessHeap, 0, secDescr);
+      if assigned(newSecDecr) then
+        HeapFree(GetProcessHeap, 0, newSecDecr);
+    end;
+  end; { DSiRemoveAceFromWindowStation }
 
   {:Sets current process' affinity mask.
     @param   affinity List of CPUs to include in the affinity mask (0..9, A..V).
@@ -3993,6 +4689,7 @@ var
   GDSiWndHandlerCritSect: TRTLCriticalSection;
   //Count of registered windows in this instance
   GDSiWndHandlerCount: integer;
+  GTerminateBackgroundTasks: THandle;
 
   {:Class message dispatcher for the DSiUtilWindow class. Fetches instance's WndProc from
     the window extra data and calls it.
@@ -4002,8 +4699,8 @@ var
     instanceWndProc: TMethod;
     msg            : TMessage;
   begin
-    instanceWndProc.Code := Pointer(GetWindowLong(Window, GWL_METHODCODE));
-    instanceWndProc.Data := Pointer(GetWindowLong(Window, GWL_METHODDATA));
+    instanceWndProc.Code := pointer(GetWindowLong(Window, GWL_METHODCODE));
+    instanceWndProc.Data := pointer(GetWindowLong(Window, GWL_METHODDATA));
     if Assigned(TWndMethod(instanceWndProc)) then
     begin
       msg.msg := Message;
@@ -4816,7 +5513,7 @@ var
         Result := '';
     end;
   end; { DSiGetEnvironmentVariable }
-  
+
   {:Returns location of a special folder.
     @author  Miha-R
     @since   2002-11-25
@@ -5159,7 +5856,7 @@ var
               break; //for iGroup
             end;
           end; //for iGroup
-          {$R+}
+          {$IFDEF RestoreR}{$R+}{$ENDIF}
           FreeSid(administrators);
         end;
         FreeMem(groups);
@@ -5257,9 +5954,9 @@ var
     @since   2009-10-28
   }
   function DSiAddApplicationToFirewallExceptionList(const entryName,
-    applicationFullPath: string; description: string; grouping: string;
-    serviceName: string; protocols: TDSiFwIPProtocols; localPorts: string;
-    profiles: TDSiFwIPProfiles): boolean;
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict;
+    description: string; grouping: string; serviceName: string;
+    protocols: TDSiFwIPProtocols; localPorts: string; profiles: TDSiFwIPProfiles): boolean;
   var
     profile    : TDSiFwIPProfile;
     versionInfo: TOSVersionInfo;
@@ -5275,14 +5972,14 @@ var
              (profile in [fwProfileCurrent, fwProfileDomain, fwProfilePrivate])
           then
             if not DSiAddApplicationToFirewallExceptionListXP(entryName,
-                     applicationFullPath, profile)
+                     applicationFullPath, resolveConflict, profile)
             then
               Result := false;
       end
       else if versionInfo.dwMajorVersion >= 6 then
         Result := DSiAddApplicationToFirewallExceptionListAdvanced(entryName,
-          applicationFullPath, description, grouping, serviceName, protocols, localPorts,
-          profiles);
+          applicationFullPath, resolveConflict, description, grouping, serviceName,
+          protocols, localPorts, profiles);
     end;
   end; { DSiAddApplicationToFirewallExceptionList }
 
@@ -5294,9 +5991,9 @@ var
     @since   2009-10-28
   }
   function DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
-    applicationFullPath: string; description: string; grouping: string;
-    serviceName: string; protocols: TDSiFwIPProtocols; localPorts: string;
-    profiles: TDSiFwIPProfiles): boolean;
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict;
+    description: string; grouping: string; serviceName: string;
+    protocols: TDSiFwIPProtocols; localPorts: string; profiles: TDSiFwIPProfiles): boolean;
   var
     fwPolicy2  : OleVariant;
     profileMask: integer;
@@ -5305,6 +6002,19 @@ var
   begin
     Result := false;
     try
+      case resolveConflict of
+        rcDuplicate:
+          {nothing to do};
+        rcOverwrite:
+          DSiRemoveApplicationFromFirewallExceptionListAdvanced(entryName);
+        rcSkip:
+          if DSiFindApplicationInFirewallExceptionListAdvanced(entryName, rule) then begin
+            Result := true;
+            Exit;
+          end;
+        else
+          raise Exception.CreateFmt('Unknown resolveConflict value %d', [Ord(resolveConflict)]);
+      end;
       //http://msdn.microsoft.com/en-us/library/aa366458(VS.85).aspx
       //Windows Firewall with Advanced Security was first released with Windows Vista.
       fwPolicy2 := CreateOLEObject('HNetCfg.FwPolicy2');
@@ -5336,7 +6046,8 @@ var
           rule.Grouping := grouping;
           rule.Profiles := profileMask;
           rule.Action := NET_FW_ACTION_ALLOW;
-          rule.ServiceName := serviceName;
+          if serviceName <> '' then
+            rule.ServiceName := serviceName;
           fwPolicy2.Rules.Add(rule);
         end;
       Result := true;
@@ -5350,13 +6061,14 @@ var
 
   {:Adds application to the list of firewall exceptions, XP style. Based on the code at
     http://www.delphi3000.com/articles/article_5021.asp?SK=.
-    MSDN: //http://msdn.microsoft.com/en-us/library/aa366449(VS.85).aspx
+    MSDN: http://msdn.microsoft.com/en-us/library/aa366449(VS.85).aspx
     CoInitialize must be called before using this function.
     @author  gabr
     @since   2009-02-05
   }
   function DSiAddApplicationToFirewallExceptionListXP(const entryName,
-    applicationFullPath: string; profile: TDSiFwIPProfile): boolean;
+    applicationFullPath: string; resolveConflict: TDSiFwResolveConflict;
+    profile: TDSiFwIPProfile): boolean;
   var
     app      : OleVariant;
     fwMgr    : OleVariant;
@@ -5364,6 +6076,19 @@ var
   begin
     Result := false;
     try
+      case resolveConflict of
+        rcDuplicate:
+          {nothing to do};
+        rcOverwrite:
+          DSiRemoveApplicationFromFirewallExceptionListXP(entryName, profile);
+        rcSkip:
+          if DSiFindApplicationInFirewallExceptionListXP(entryName, app, profile) then begin
+            Result := true;
+            Exit;
+          end
+        else
+          raise Exception.CreateFmt('Unknown resolveConflict value %d', [Ord(resolveConflict)]);
+      end;
       fwMgr := CreateOLEObject('HNetCfg.FwMgr');
       if profile = fwProfileCurrent then
         fwProfile := fwMgr.LocalPolicy.CurrentProfile
@@ -5539,6 +6264,105 @@ var
     finally CoUninitialize; end;
   end; { DSiEditShortcut }
 
+  {:Finds rule in the firewall exception list, advanced style (Vista+).
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2010-07-27
+  }
+  function DSiFindApplicationInFirewallExceptionListAdvanced(const entryName: string;
+    var rule: OleVariant): boolean;
+  var
+    fwPolicy2: OleVariant;
+    ruleEnum : IEnumVariant;
+    value    : cardinal;
+  begin
+    Result := false;
+    fwPolicy2 := CreateOLEObject('HNetCfg.FwPolicy2');
+    if IUnknown(fwPolicy2.Rules._NewEnum).QueryInterface(IEnumVariant, ruleEnum) <> S_OK then
+      Exit;
+    while (ruleEnum.Next(1, rule, value) = S_OK) do begin
+      if SameText(entryName, rule.Name) then begin
+        Result := true;
+        Exit;
+      end;
+    end;
+    rule := Null;
+  end; { DSiFindApplicationInFirewallExceptionListAdvanced }
+
+  {:Finds rule in the firewall exception lis (XP).
+    CoInitialize must be called before using this function.
+    @author  gabr
+    @since   2010-07-27
+  }
+  function  DSiFindApplicationInFirewallExceptionListXP(const entryName: string;
+    var application: OleVariant; profile: TDSiFwIPProfile): boolean;
+  var
+    fwMgr      : OleVariant;
+    fwProfile  : OleVariant;
+    ruleEnum   : IEnumVariant;
+    value      : cardinal;
+  begin
+    Result := false;
+    fwMgr := CreateOLEObject('HNetCfg.FwMgr');
+    if profile = fwProfileDomain then
+      fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_DOMAIN)
+    else if profile = fwProfilePrivate {alias for 'standard'} then
+      fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_STANDARD)
+    else
+      fwProfile := fwMgr.LocalPolicy.CurrentProfile;
+    if IUnknown(fwProfile.AuthorizedApplications._NewEnum).QueryInterface(IEnumVariant, ruleEnum) <> S_OK then
+      Exit;
+    while (ruleEnum.Next(1, application, value) = S_OK) do begin
+      if SameText(entryName, application.Name) then begin
+        Result := true;
+        Exit;
+      end;
+    end;
+    application := Null;
+  end; { DSiFindApplicationInFirewallExceptionListXP }
+
+  {$R-}
+  function  DSiGetLogonSID(token: THandle; var logonSID: PSID): boolean;
+  var
+    dwLength: DWORD;
+    iGroup  : integer;
+    tkGroups: ^TOKEN_GROUPS;
+  begin
+    Result := false;
+    dwLength := 0;
+    tkGroups := nil;
+    try
+      if not GetTokenInformation(token, TokenGroups, tkGroups, 0, dwLength) then begin
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        tkGroups := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, dwLength);
+        if tkGroups = nil then
+          Exit;
+        if not GetTokenInformation(token, TokenGroups, tkGroups, dwLength, dwLength) then
+          Exit;
+        // Loop through the groups to find the logon SID.
+        for iGroup := 0 to tkGroups.GroupCount - 1 do begin
+          if (tkGroups.Groups[iGroup].Attributes AND SE_GROUP_LOGON_ID) = SE_GROUP_LOGON_ID then begin
+            dwLength := GetLengthSid(tkGroups.Groups[iGroup].Sid);
+            logonSID := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, dwLength);
+            if logonSID = nil then
+              Exit;
+            if not CopySid(dwLength, logonSID, tkGroups.Groups[iGroup].Sid) then begin
+              HeapFree(GetProcessHeap, 0, logonSID);
+              Exit;
+            end;
+            break; //for iGroup
+          end; //for iGroup
+        end;
+        Result := true;
+      end;
+    finally
+      if assigned(tkGroups) then
+        HeapFree(GetProcessHeap, 0, tkGroups);
+    end;
+  end; { DSiGetLogonSID }
+  {$IFDEF RestoreR}{$R+}{$ENDIF}
+
   {:Extracts executable path and work dir from the LNK file.
     @author  Cavlji
     @since   2006-06-20
@@ -5666,18 +6490,36 @@ var
   }
   function  DSiRemoveApplicationFromFirewallExceptionListXP(const applicationFullPath: string): boolean;
   var
+    profile     : TDSiFwIPProfile;
+    removeResult: boolean;
+  begin
+    Result := false;
+    for profile := fwProfileDomain to fwProfilePublic do begin
+      removeResult := DSiRemoveApplicationFromFirewallExceptionListXP(applicationFullPath, profile);
+      Result := Result or removeResult;
+    end;
+  end; { DSiRemoveApplicationFromFirewallExceptionListXP }
+
+  {:Removes application from a specific profile in the firewall exception list, XP style.
+    @author  gabr
+    @since   2010-07-27
+  }
+  function  DSiRemoveApplicationFromFirewallExceptionListXP(const applicationFullPath: string;
+    profile: TDSiFwIPProfile): boolean;
+  var
     fwMgr    : OleVariant;
     fwProfile: OleVariant;
-    profile  : integer;
   begin
     Result := false;
     try
       fwMgr := CreateOLEObject('HNetCfg.FwMgr');
-      for profile := NET_FW_PROFILE_DOMAIN to NET_FW_PROFILE_STANDARD do begin
-        fwProfile := fwMgr.LocalPolicy.GetProfileByType(profile);
-        fwProfile.AuthorizedApplications.Remove(DSiGetSubstPath(applicationFullPath));
-      end;
-      Result := true;
+      if profile = fwProfileDomain then
+        fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_DOMAIN)
+      else if profile = fwProfilePrivate {alias for 'standard'} then
+        fwProfile := fwMgr.LocalPolicy.GetProfileByType(NET_FW_PROFILE_STANDARD)
+      else
+        fwProfile := fwMgr.LocalPolicy.CurrentProfile;
+      Result := fwProfile.AuthorizedApplications.Remove(DSiGetSubstPath(applicationFullPath)) = S_OK;
     except
       on E: EOleSysError do
         SetLastError(cardinal(E.ErrorCode));
@@ -6201,16 +7043,20 @@ var
     dwCreationFlags: DWORD; lpEnvironment: pointer;
     lpCurrentDirectory: PChar; const lpStartupInfo: TStartupInfo;
     var lpProcessInformation: TProcessInformation): BOOL;
+  {$IFDEF Unicode}
+  var
+    commandLine: string;
+  {$ENDIF Unicode}
   begin
-    {$IFDEF Unicode} //Tiburon defines CreateProcessAsUser
-      Result := CreateProcessAsUser(hToken, lpApplicationName, lpCommandLine,
+    {$IFDEF Unicode}
+      commandLine := lpCommandLine;
+      Result := CreateProcessAsUser(hToken, lpApplicationName, PChar(commandLine),
         lpProcessAttributes, lpThreadAttributes, bInheritHandles,
         dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
         lpProcessInformation);
     {$ELSE}
       if not assigned(GCreateProcessAsUser) then
-        GCreateProcessAsUser := DSiGetProcAddress('advapi32.dll',
-          'CreateProcessAsUserA');
+        GCreateProcessAsUser := DSiGetProcAddress('advapi32.dll', 'CreateProcessAsUserA');
       if assigned(GCreateProcessAsUser) then
         Result := GCreateProcessAsUser(hToken, lpApplicationName, lpCommandLine,
           lpProcessAttributes, lpThreadAttributes, bInheritHandles,
@@ -6222,6 +7068,55 @@ var
       end;
     {$ENDIF Unicode}
   end; { DSiCreateProcessAsUser }
+
+  function DSiCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword: PWideChar;
+    dwLogonFlags: DWORD; lpApplicationName, lpCommandLine: PWideChar;
+    dwCreationFlags: DWORD; lpEnvironment: pointer; lpCurrentDirectory: PWideChar;
+    const lpStartupInfo: TStartupInfoW; var lpProcessInformation: TProcessInformation): BOOL;
+  var
+    restoreLastError: IRestoreLastError;
+  var
+    commandLine: WideString;
+  begin
+    if not assigned(GCreateProcessWithLogonW) then
+      GCreateProcessWithLogonW := DSiGetProcAddress('advapi32.dll', 'CreateProcessWithLogonW');
+    if assigned(GCreateProcessWithLogonW) then begin
+      commandLine := lpCommandLine;
+      Result := GCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword, dwLogonFlags,
+        lpApplicationName, PWideChar(commandLine), dwCreationFlags, lpEnvironment,
+        lpCurrentDirectory, lpStartupInfo, lpProcessInformation)
+    end
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+    restoreLastError := TRestoreLastError.Create;
+  end; { DSiCreateProcessWithLogonW }
+
+  function DSiCreateEnvironmentBlock(var lpEnvironment: pointer; hToken: THandle;
+    bInherit: BOOL): BOOL;
+  begin
+    if not assigned(GCreateEnvironmentBlock) then
+      GCreateEnvironmentBlock := DSiGetProcAddress('userenv.dll', 'CreateEnvironmentBlock');
+    if assigned(GCreateEnvironmentBlock) then
+      Result := GCreateEnvironmentBlock(lpEnvironment, hToken, bInherit)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiCreateEnvironmentBlock }
+
+  function DSiDestroyEnvironmentBlock(lpEnvironment: pointer): BOOL;
+  begin
+    if not assigned(GDestroyEnvironmentBlock) then
+      GDestroyEnvironmentBlock := DSiGetProcAddress('userenv.dll', 'DestroyEnvironmentBlock');
+    if assigned(GDestroyEnvironmentBlock) then
+      Result := GDestroyEnvironmentBlock(lpEnvironment)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiDestroyEnvironmentBlock }
 
   //http://msdn2.microsoft.com/en-us/library/aa969510.aspx
   function DSiDwmEnableComposition(uCompositionAction: UINT): HRESULT;
@@ -6266,7 +7161,7 @@ var
     nSize: DWORD): DWORD; stdcall;
   begin
     if not assigned(GGetModuleFileNameEx) then
-      GGetModuleFileNameEx := DSiGetProcAddress('psapi.dll', 'GetModuleFileNameExA');
+      GGetModuleFileNameEx := DSiGetProcAddress('psapi.dll', 'GetModuleFileNameEx' + CAPISuffix);
     if assigned(GGetModuleFileNameEx) then
       Result := GGetModuleFileNameEx(hProcess, hModule, lpFilename, nSize)
     else begin
@@ -6279,7 +7174,7 @@ var
     nSize: DWORD): DWORD; stdcall;
   begin
     if not assigned(GGetProcessImageFileName) then
-      GGetProcessImageFileName := DSiGetProcAddress('psapi.dll', 'GetProcessImageFileNameA');
+      GGetProcessImageFileName := DSiGetProcAddress('psapi.dll', 'GetProcessImageFileName' + CAPISuffix);
     if assigned(GGetProcessImageFileName) then
       Result := GGetProcessImageFileName(hProcess, lpImageFileName, nSize)
     else begin
@@ -6295,7 +7190,7 @@ var
       GGetProcessMemoryInfo := DSiGetProcAddress('psapi.dll', 'GetProcessMemoryInfo');
     if assigned(GGetProcessMemoryInfo) then
       Result := GGetProcessMemoryInfo(process, memCounters, cb)
-    else begin
+    else begin        
       SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
     end;
@@ -6304,17 +7199,30 @@ var
   function DSiGetTickCount64: int64; stdcall;
   begin
     if not assigned(GGetTickCount64) then
-      GGetTickCount64 := DSiGetProcAddress('kernel32', 'GetTickCount64');
+      GGetTickCount64 := DSiGetProcAddress('kernel32.dll', 'GetTickCount64');
     if assigned(GGetTickCount64) then
       Result := GGetTickCount64()
     else
       raise Exception.Create('Unsupported API: GetTickCount64');
   end; { DSiGetTickCount64 }
 
+  function DSiGetUserProfileDirectoryW(hToken: THandle; lpProfileDir: PWideChar;
+    var lpcchSize: DWORD): BOOL;
+  begin
+    if not assigned(GGetUserProfileDirectoryW) then
+      GGetUserProfileDirectoryW := DSiGetProcAddress('userenv.dll', 'GetUserProfileDirectoryW');
+    if assigned(GGetUserProfileDirectoryW) then
+      Result := GGetUserProfileDirectoryW(hToken, lpProfileDir, lpcchSize)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetUserProfileDirectoryW }
+
   function DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
   begin
     if not assigned(GGlobalMemoryStatusEx) then
-      GGlobalMemoryStatusEx := DSiGetProcAddress('kernel32', 'GlobalMemoryStatusEx');
+      GGlobalMemoryStatusEx := DSiGetProcAddress('kernel32.dll', 'GlobalMemoryStatusEx');
     if assigned(GGlobalMemoryStatusEx) then
       Result := GGlobalMemoryStatusEx(memStatus)
     else begin
@@ -6339,7 +7247,7 @@ var
   function DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
   begin
     if not assigned(GIsWow64Process) then
-      GIsWow64Process := DSiGetProcAddress('kernel32', 'IsWow64Process');
+      GIsWow64Process := DSiGetProcAddress('kernel32.dll', 'IsWow64Process');
     if assigned(GIsWow64Process) then
       Result := GIsWow64Process(hProcess, wow64Process)
     else begin
@@ -6351,7 +7259,7 @@ var
   function DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: PChar;
     dwLogonType, dwLogonProvider: DWORD; var phToken: THandle): BOOL;
   begin
-    {$IFDEF Unicode} //Tiburon defines LogonUser
+    {$IFDEF Unicode}
       Result := LogonUser(lpszUsername, lpszDomain, lpszPassword, dwLogonType,
         dwLogonProvider, phToken);
     {$ELSE}
@@ -6381,7 +7289,7 @@ var
   end; { DSiNetApiBufferFree }
 
   function DSiNetWkstaGetInfo(servername: PChar; level: cardinal;
-    out bufptr: Pointer): cardinal; stdcall;
+    out bufptr: pointer): cardinal; stdcall;
   begin
     if not assigned(GNetWkstaGetInfo) then
       GNetWkstaGetInfo := DSiGetProcAddress('netapi32.dll', 'NetWkstaGetInfo');
@@ -6417,7 +7325,7 @@ var
     dwDesiredAccess: DWORD): SC_HANDLE; stdcall;
   begin
     if not assigned(GOpenSCManager) then
-      GOpenSCManager := DSiGetProcAddress('advapi32.dll', 'OpenSCManagerA');
+      GOpenSCManager := DSiGetProcAddress('advapi32.dll', 'OpenSCManager' + CAPISuffix);
     if assigned(GOpenSCManager) then
       Result := GOpenSCManager(lpMachineName, lpDatabaseName, dwDesiredAccess)
     else begin
@@ -6441,7 +7349,7 @@ var
   function DSiSetDllDirectory(path: PChar): boolean; stdcall;
   begin
     if not assigned(GSetDllDirectory) then
-      GSetDllDirectory := DSiGetProcAddress('kernel32.dll', 'SetDllDirectoryA');
+      GSetDllDirectory := DSiGetProcAddress('kernel32.dll', 'SetDllDirectory' + CAPISuffix);
     if assigned(GSetDllDirectory) then
       Result := GSetDllDirectory(path)
     else
@@ -6462,8 +7370,7 @@ var
     dwFlags: DWORD): HRESULT; stdcall;
   begin
     if not assigned(GSHEmptyRecycleBin) then
-      GSHEmptyRecycleBin := DSiGetProcAddress('shell32.dll',
-        'SHEmptyRecycleBinA');
+      GSHEmptyRecycleBin := DSiGetProcAddress('shell32.dll', 'SHEmptyRecycleBin' + CAPISuffix);
     if assigned(GSHEmptyRecycleBin) then
       Result := GSHEmptyRecycleBin(Wnd, pszRootPath, dwFlags)
     else
@@ -6473,7 +7380,7 @@ var
   function DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
   begin
     if not assigned(GWow64DisableWow64FsRedirection) then
-      GWow64DisableWow64FsRedirection := DSiGetProcAddress('kernel32', 'Wow64DisableWow64FsRedirection');
+      GWow64DisableWow64FsRedirection := DSiGetProcAddress('kernel32.dll', 'Wow64DisableWow64FsRedirection');
     if assigned(GWow64DisableWow64FsRedirection) then
       Result := GWow64DisableWow64FsRedirection(oldStatus)
     else
@@ -6483,15 +7390,90 @@ var
   function DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
   begin
     if not assigned(GWow64RevertWow64FsRedirection) then
-      GWow64RevertWow64FsRedirection := DSiGetProcAddress('kernel32', 'Wow64RevertWow64FsRedirection');
+      GWow64RevertWow64FsRedirection := DSiGetProcAddress('kernel32.dll', 'Wow64RevertWow64FsRedirection');
     if assigned(GWow64RevertWow64FsRedirection) then
       Result := GWow64RevertWow64FsRedirection(oldStatus)
     else
       Result := false;
   end; { DSiWow64RevertWow64FsRedirection }
 
+{ TRestoreLastError }
+
+constructor TRestoreLastError.Create;
+begin
+  inherited Create;
+  rleLastError := GetLastError;
+end; { TRestoreLastError.Create }
+
+destructor TRestoreLastError.Destroy;
+begin
+  SetLastError(rleLastError);
+  inherited;
+end; { TRestoreLastError.Destroy }
+
+{ TBackgroundTask }
+
+constructor TBackgroundTask.Create(waitObject: THandle);
+begin
+  inherited Create;
+  btWaitObject := waitObject;
+end; { TBackgroundTask.Create }
+
+{ TCleanupAces }
+
+procedure TCleanupAces.Awaited;
+begin
+  if assigned(caSid) then begin
+    if caWindowStation <> 0 then
+      DSiRemoveAceFromWindowStation(caWindowStation, caSid);
+    if caDesktop <> 0 then
+      DSiRemoveAceFromDesktop(caDesktop, caSid);
+  end;
+end; { TCleanupAces.Awaited }
+
+constructor TCleanupAces.Create(waitObject: THandle; windowStation: HWINSTA;
+  desktop: HDESK; sid: PSID);
+var
+  waitHandle: THandle;
+begin
+  Win32Check(DuplicateHandle(GetCurrentProcess, waitObject, GetCurrentProcess,
+      @waitHandle, 0, false, DUPLICATE_SAME_ACCESS));
+  inherited Create(waitHandle);
+  caWindowStation := windowStation;
+  caDesktop := desktop;
+  caSid := sid;
+end; { TCleanupAces.Create }
+
+destructor TCleanupAces.Destroy;
+begin
+  if assigned(caSid) then 
+    HeapFree(GetProcessHeap, 0, caSid);
+  if caWindowStation <> 0 then
+    CloseWindowStation(caWindowStation);
+  if caDesktop <> 0 then
+    CloseDesktop(caDesktop);
+  inherited;
+end; { TCleanupAces.Destroy }
+
+{ TBackgroundThread }
+
+constructor TBackgroundThread.Create(task: TBackgroundTask);
+begin
+  btTask := task;
+  FreeOnTerminate := true;
+  inherited Create(false);
+end; { TBackgroundThread.Create }
+
+procedure TBackgroundThread.Execute;
+begin
+  if DSiWaitForTwoObjects(GTerminateBackgroundTasks, btTask.WaitObject, false, INFINITE) = WAIT_OBJECT_1 then
+    btTask.Awaited;
+  FreeAndNil(btTask);
+end; { TBackgroundThread.Execute }
+
 initialization
   InitializeCriticalSection(GDSiWndHandlerCritSect);
+  GTerminateBackgroundTasks := CreateEvent(nil, false, false, nil);
   GDSiWndHandlerCount := 0;
   GTimeGetTimeBase := 0;
   GLastTimeGetTime := 0;
@@ -6501,6 +7483,7 @@ initialization
   timeBeginPeriod(1);
 finalization
   timeEndPeriod(1);
+  DSiCloseHandleAndNull(GTerminateBackgroundTasks);
   DeleteCriticalSection(GDSiWndHandlerCritSect);
   DSiUnloadLibrary;
   FreeAndNil(_GLibraryList);

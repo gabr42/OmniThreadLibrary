@@ -30,10 +30,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2009-07-01
-   Version           : 1.43
+   Last modification : 2010-07-28
+   Version           : 1.46a
 </pre>*)(*
    History:
+     1.46a: 2010-07-28
+       - [Jens] Capacity was not set to the ideal value in TGp[Integer|Int64]List.Append.
+     1.46: 2010-07-13
+       - [Istvan] Reintroduced Insert methods for Counted Integer and Int64 lists that
+         accept a count parameter
+     1.45: 2010-07-05
+       - Added overloaded version of EnsureObject.
+     1.44: 2010-05-13
+       - TStringList helper split into TStrings and TStringList helpers.
      1.43: 2009-07-01
        - Added parameter 'step' to various Slice(), Walk() and WalkKV() enumerators.
      1.42: 2008-11-10
@@ -194,7 +203,7 @@ interface
   {$IFEND}
   {$IF (CompilerVersion >= 17)} //Delphi 2005 or newer
     {$DEFINE GpLists_Inline}
-    {$DEFINE GpLists_TStringListHelper}
+    {$DEFINE GpLists_TStringsHelper}
     {$DEFINE GpLists_Enumerators}
   {$IFEND}
 {$ENDIF}
@@ -586,7 +595,8 @@ type
     procedure Clear; override;
     procedure Delete(idx: integer); override;
     function  Dump(baseAddr: pointer): pointer; override;
-    function  EnsureObject(item: integer; obj: TObject): integer; virtual;
+    function  EnsureObject(item: integer; obj: TObject): integer; overload; virtual;
+    function EnsureObject(item: integer; objClass: TClass): integer; overload; virtual;
     procedure Exchange(idx1, idx2: integer); override;
     function  ExtractObject(idxObject: integer): TObject;
     function  FetchObject(item: integer): TObject;
@@ -617,6 +627,7 @@ type
     function  Add(item, count: integer): integer; reintroduce;
     function  Ensure(item, count: integer): integer; reintroduce;
     function  Fetch(item: integer): integer;
+    procedure Insert(idx: integer; item, count: integer); reintroduce;
     procedure SortByCounter(descending: boolean = true);
     property Counter[idx: integer]: integer read GetCounter write SetCounter;
     property ItemCounter[item: integer]: integer read GetItemCounter write SetItemCounter;
@@ -666,7 +677,8 @@ type
     procedure Clear; override;
     procedure Delete(idx: integer); override;
     function  Dump(baseAddr: pointer): pointer; override;
-    function  EnsureObject(item: int64; obj: TObject): integer; virtual;
+    function  EnsureObject(item: int64; obj: TObject): integer; overload; virtual;
+    function EnsureObject(item: int64; objClass: TClass): integer; overload; virtual;
     procedure Exchange(idx1, idx2: integer); override;
     function  ExtractObject(idxObject: integer): TObject;
     function  FetchObject(item: int64): TObject;
@@ -696,24 +708,29 @@ type
     function  Add(item: int64; count: int64): integer; reintroduce;
     function  Ensure(item: int64; count: int64): integer; reintroduce;
     function  Fetch(item: integer): int64;
+    procedure Insert(idx: integer; item, count: int64); reintroduce;
     procedure SortByCounter(descending: boolean = true);
     property Counter[idx: integer]: int64 read GetCounter write SetCounter;
     property ItemCounter[item: int64]: int64 read GetItemCounter write SetItemCounter;
   end; { TGpCountedInt64List }
 
-  {$IFDEF GpLists_TStringListHelper}
-  ///<summary>Implements helpers for the TStringList.</summary>
+  {$IFDEF GpLists_TStringsHelper}
+  ///<summary>Implements helpers for the TStrings.</summary>
   ///<since>2007-06-28</since>
-  TGpStringListHelper = class helper for TStringList
+  TGpStringsHelper = class helper for TStrings
   public
     function  Contains(const s: string): boolean;   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  FetchObject(const s: string): TObject;
     procedure FreeObjects;
     function  Last: string;                         {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Sort;
     procedure Remove(const s: string);
+  end; { TGpStringsHelper }
+
+  TGpStringListHelper = class helper for TStringList
+  public
+    procedure Sort;
   end; { TGpStringListHelper }
-  {$ENDIF GpLists_TStringListHelper}
+  {$ENDIF GpLists_TStringsHelper}
 
   {:String list where each item has associated counter (stored in the Objects property).
   }
@@ -1269,7 +1286,7 @@ procedure TGpIntegerList.Append(elements: array of integer);
 var
   iElement: integer;
 begin
-  SetCapacity(Length(elements));
+  SetCapacity(Count + Length(elements));
   for iElement := Low(elements) to High(elements) do
     Add(elements[iElement]);
 end; { TGpIntegerList.Append }
@@ -1278,7 +1295,7 @@ procedure TGpIntegerList.Append(list: TGpIntegerList);
 var
   iItem: integer;
 begin
-  SetCapacity(list.Count);
+  SetCapacity(Count + list.Count);
   for iItem := 0 to list.Count-1 do
     Add(list[iItem]);
 end; { TGpIntegerList.Append }
@@ -1566,11 +1583,8 @@ begin
       while (SCompare(Self, J, P) > 0) do
         Dec(J);
       if (I <= J) then begin
-        Exchange(I, J);
-        if (P = I) then
-          P := J
-        else if (P = J) then
-          P := I;
+        if I <> J then
+          Exchange(I, J);
         Inc(I);
         Dec(J);
       end;
@@ -1857,7 +1871,7 @@ procedure TGpInt64List.Append(elements: array of int64);
 var
   iElement: integer;
 begin
-  SetCapacity(Length(elements));
+  SetCapacity(Count + Length(elements));
   for iElement := Low(elements) to High(elements) do
     Add(elements[iElement]);
 end; { TGpInt64List.Append }
@@ -1866,7 +1880,7 @@ procedure TGpInt64List.Append(list: TGpInt64List);
 var
   iItem: integer;
 begin
-  SetCapacity(list.Count);
+  SetCapacity(Count + list.Count);
   for iItem := 0 to list.Count-1 do
     Add(list[iItem]);
 end; { TGpInt64List.Append }
@@ -1875,7 +1889,7 @@ procedure TGpInt64List.Append(list: TGpIntegerList);
 var
   iItem: integer;
 begin
-  SetCapacity(list.Count);
+  SetCapacity(Count + list.Count);
   for iItem := 0 to list.Count-1 do
     Add(list[iItem]);
 end; { TGpInt64List.Append }
@@ -2168,11 +2182,8 @@ begin
       while (SCompare(Self, J, P) > 0) do
         Dec(J);
       if (I <= J) then begin
-        Exchange(I, J);
-        if (P = I) then
-          P := J
-        else if (P = J) then
-          P := I;
+        if I <> J then
+          Exchange(I, J);
         Inc(I);
         Dec(J);
       end;
@@ -2433,6 +2444,13 @@ begin
   Objects[Result] := obj;
 end; { TGpIntegerObjectList.EnsureObject }
 
+function TGpIntegerObjectList.EnsureObject(item: integer; objClass: TClass): integer;
+begin
+  Result := inherited Ensure(item);
+  if not assigned(Objects[Result]) then
+    Objects[Result] := objClass.Create;
+end; { TGpIntegerObjectList.EnsureObject }
+
 procedure TGpIntegerObjectList.Exchange(idx1, idx2: integer);
 begin
   inherited;
@@ -2629,6 +2647,11 @@ begin
   Result := Counter[IndexOf(item)];
 end; { TGpCountedInt64List.GetItemCounter }
 
+procedure TGpCountedIntegerList.Insert(idx: integer; item, count: integer);
+begin
+  inherited InsertObject(idx, item, TObject(count));
+end; { TGpCountedIntegerList.Insert }
+
 procedure TGpCountedIntegerList.SetCounter(idx: integer; const value: integer);
 begin
   Objects[idx] := TObject(value);
@@ -2776,6 +2799,13 @@ function TGpInt64ObjectList.EnsureObject(item: int64; obj: TObject): integer;
 begin
   Result := inherited Ensure(item);
   Objects[Result] := obj;
+end; { TGpInt64ObjectList.EnsureObject }
+
+function TGpInt64ObjectList.EnsureObject(item: int64; objClass: TClass): integer;
+begin
+  Result := inherited Ensure(item);
+  if not assigned(Objects[Result]) then
+    Objects[Result] := objClass.Create;
 end; { TGpInt64ObjectList.EnsureObject }
 
 procedure TGpInt64ObjectList.Exchange(idx1, idx2: integer);
@@ -2971,6 +3001,11 @@ begin
   Result := Counter[IndexOf(item)];
 end; { TGpCountedInt64List.GetItemCounter }
 
+procedure TGpCountedInt64List.Insert(idx: integer; item, count: int64);
+begin
+  inherited InsertObject(idx, item, TGpInt64.Create(count));
+end; { TGpCountedInt64List.Insert }
+
 procedure TGpCountedInt64List.SetCounter(idx: integer; const value: int64);
 begin
   TGpInt64(Objects[idx]).Value := value;
@@ -2991,16 +3026,16 @@ begin
   Sorted := false;
 end; { TGpCountedInt64List.SortByCounter }
 
-{$IFDEF GpLists_TStringListHelper}
+{$IFDEF GpLists_TStringsHelper}
 
-{ TGpStringListHelper }
+{ TGpStringsHelper }
 
-function TGpStringListHelper.Contains(const s: string): boolean;
+function TGpStringsHelper.Contains(const s: string): boolean;
 begin
   Result := (IndexOf(s) >= 0);
-end; { TGpStringListHelper.Contains }
+end; { TGpStringsHelper.Contains }
 
-function TGpStringListHelper.FetchObject(const s: string): TObject;
+function TGpStringsHelper.FetchObject(const s: string): TObject;
 var
   idxItem: integer;
 begin
@@ -3009,9 +3044,9 @@ begin
     Result := Objects[idxItem]
   else
     Result := nil;
-end; { TGpStringListHelper.FetchObject }
+end; { TGpStringsHelper.FetchObject }
 
-procedure TGpStringListHelper.FreeObjects;
+procedure TGpStringsHelper.FreeObjects;
 var
   iObject: integer;
 begin
@@ -3019,21 +3054,23 @@ begin
     Objects[iObject].Free;
     Objects[iObject] := nil;
   end;
-end; { TGpStringListHelper.FreeObjects }
+end; { TGpStringsHelper.FreeObjects }
 
-function TGpStringListHelper.Last: string;
+function TGpStringsHelper.Last: string;
 begin
   Result := Strings[Count - 1];
-end; { TGpStringListHelper.Last }
+end; { TGpStringsHelper.Last }
 
-procedure TGpStringListHelper.Remove(const s: string);
+procedure TGpStringsHelper.Remove(const s: string);
 var
   idxItem: integer;
 begin
   idxItem := IndexOf(s);
   if idxItem >= 0 then
     Delete(idxItem);
-end; { TGpStringListHelper.Remove }
+end; { TGpStringsHelper.Remove }
+
+{ TGpStringListHelper }
 
 procedure TGpStringListHelper.Sort;
 begin
@@ -3041,7 +3078,7 @@ begin
   Sorted := true;
 end; { TGpStringListHelper.Sort }
 
-{$ENDIF GpLists_TStringListHelper}
+{$ENDIF GpLists_TStringsHelper}
 
 { TGpCountedStringList }
 

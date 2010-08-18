@@ -29,10 +29,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2010-06-28
-   Version           : 1.06b
+   Last modification : 2010-08-18
+   Version           : 1.07
 </pre>*)(*
    History:
+     1.07: 2010-08-18
+       - Use better hashing function written by Paul Hsieh (Delphi translation by Davy
+         Landman).
+     1.06c: 2010-07-18
+       - HashOf hashes complete string in Unicode Delphis.
      1.06b: 2010-06-28
        - [lkessler] In TGpStringHash.Add, hash must be calculated *after* Grow is called.
      1.06a: 2010-04-09
@@ -266,7 +271,8 @@ type
   end; { TGpStringDictionary }
 
 function GetGoodHashSize(dataSize: cardinal): cardinal;
-function HashOf(const key: string): cardinal;
+function HashOf(const key: string): cardinal; overload;
+function HashOf(data: pointer; dataLength: integer): cardinal; overload;
 
 implementation
 
@@ -299,20 +305,68 @@ begin
     [upper div 2]);
 end; { GetGoodHashSize }
 
+function HashOf(data: pointer; dataLength: integer): cardinal;
+// Pascal translation of the SuperFastHash function by Paul Hsieh
+// more info: http://www.azillionmonkeys.com/qed/hash.html
+// Translation by: Davy Landman
+// No warranties, but have fun :)
+var
+  TempPart: longword;
+  RemainingBytes: integer;
+begin
+  if not Assigned(data) or (dataLength <= 0) then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  Result := dataLength;
+  RemainingBytes := dataLength and 3;
+  dataLength := dataLength shr 2; // div 4, so var name is not correct anymore..
+  // main loop
+  while dataLength > 0 do
+  begin
+    inc(Result, PWord(data)^);
+    TempPart := (PWord(Pointer(Cardinal(data)+2))^ shl 11) xor Result;
+    Result := (Result shl 16) xor TempPart;
+    data := Pointer(Cardinal(data) + 4);
+    inc(Result, Result shr 11);
+    dec(dataLength);
+  end;
+  // end case
+  if RemainingBytes = 3 then
+  begin
+    inc(Result, PWord(data)^);
+    Result := Result xor (Result shl 16);
+    Result := Result xor (PByte(Pointer(Cardinal(data)+2))^ shl 18);
+    inc(Result, Result shr 11);
+  end
+  else if RemainingBytes = 2 then
+  begin
+    inc(Result, PWord(data)^);
+    Result := Result xor (Result shl 11);
+    inc(Result, Result shr 17);
+  end
+  else if RemainingBytes = 1 then
+  begin
+    inc(Result, PByte(data)^);
+    Result := Result xor (Result shl 10);
+    inc(Result, Result shr 1);
+  end;
+  // avalance
+  Result := Result xor (Result shl 3);
+  inc(Result, Result shr 5);
+  Result := Result xor (Result shl 4);
+  inc(Result, Result shr 17);
+  Result := Result xor (Result shl 25);
+  inc(Result, Result shr 6);
+end; { HashOf }
+
 function HashOf(const key: string): cardinal;
-asm
-      xor       edx,edx         { result := 0 }
-      and       eax,eax         { test if 0 }
-      jz        @End            { skip if nil }
-      mov       ecx,[eax-4]     { ecx := string length }
-      jecxz     @End            { skip if length = 0 }
-@loop:                          { repeat }
-      rol       edx,2           {   edx := (edx shl 2) or (edx shr 30)... }
-      xor       dl,[eax]        {   ... xor Ord(key[eax]) }
-      inc       eax             {   inc(eax) }
-      loop      @loop           { until ecx = 0 }
-@End:
-      mov       eax,edx         { result := eax }
+begin
+  if Length(key) = 0 then
+    Result := 0
+  else
+    Result := HashOf(@key[1], Length(key) * SizeOf(Char));
 end; { HashOf }
 
 {$IFDEF GpStringHash_Enumerators}

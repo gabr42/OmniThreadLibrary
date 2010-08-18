@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2010-04-13
-   Version           : 1.21
+   Last modification : 2010-07-09
+   Version           : 1.22
 </pre>*)(*
    History:
+     1.22: 2010-07-09
+       - Added IFF overload with AnsiString parameters (Unicode Delphi only).
      1.21: 2010-04-13
        - Implemented overloads for Increment and Decrement in TGp4AlignedInt and
          TGp8AlignedInt64.
@@ -185,6 +187,9 @@ function  IFF(condit: boolean; iftrue, iffalse: real): real; overload;        {$
 function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: pointer): pointer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$IFDEF Unicode}
+function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$ENDIF Unicode}
 
 function  OffsetPtr(ptr: pointer; offset: integer): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
@@ -460,6 +465,16 @@ begin
   else
     Result := iffalse;
 end; { IFF64 }
+
+{$IFDEF Unicode}
+function IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString;
+begin
+  if condit then
+    Result := iftrue
+  else
+    Result := iffalse;
+end; { IFF }
+{$ENDIF Unicode}
 
 function OffsetPtr(ptr: pointer; offset: integer): pointer;
 begin
