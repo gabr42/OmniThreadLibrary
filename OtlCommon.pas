@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-08
-///   Version           : 1.17a
+///   Last modification : 2010-09-20
+///   Version           : 1.18
 ///</para><para>
 ///   History:
+///     1.18: 2010-09-20
+///       - Declared interface IOmniWaitableValue and added function CreateWaitableValue.
+///       - Implemented TOmniMessageID.AsString.
 ///     1.17a: 2010-07-08
 ///       - TOmniValue.CastAs<T> and .CastFrom<T> are partially supported in D2009.
 ///     1.17: 2010-07-01
@@ -276,14 +279,21 @@ type
     property Current: TOmniValue read GetCurrent;
   end; { TOmniValueEnumerator }
 
-  TOmniWaitableValue = class
+  IOmniWaitableValue = interface ['{46EB21E0-B5E8-47DA-8E34-E4DE04C4D8D9}']
+    procedure Reset; 
+    procedure Signal; overload;
+    procedure Signal(const data: TOmniValue); overload;
+    function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean;
+  end; { IOmniWaitableValue }
+
+  TOmniWaitableValue = class(TInterfacedObject, IOmniWaitableValue)
   public
     Handle: THandle;
     Value : TOmniValue;
     constructor Create;
     destructor  Destroy; override;
     procedure Reset; inline;
-    procedure Signal; overload; inline; 
+    procedure Signal; overload; inline;
     procedure Signal(const data: TOmniValue); overload; inline;
     function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean; inline;
   end; { TOmniWaitableValue }
@@ -487,11 +497,14 @@ type
     class operator Implicit(const a: TOmniMessageID): integer; inline;
     class operator Implicit(const a: TOmniMessageID): string; inline;
     class operator Implicit(const a: TOmniMessageID): pointer; inline;
+    function AsString: string;
     property MessageType: TOmniMessageIDType read omidMessageType;
   end; { TOmniMessageID }
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
+  function  CreateWaitableValue: IOmniWaitableValue;
+  
   function  Environment: IOmniEnvironment;
   procedure SetThreadName(const name: string);
   function  VarToObj(const v: Variant): TObject; inline;
@@ -721,6 +734,11 @@ function CreateInterfaceDictionary: IOmniInterfaceDictionary;
 begin
   Result := TOmniInterfaceDictionary.Create;
 end; { CreateInterfaceDictionary }
+
+function CreateWaitableValue: IOmniWaitableValue;
+begin
+  Result := TOmniWaitableValue.Create;
+end; { CreateWaitableValue }
 
 function Environment: IOmniEnvironment;
 begin
@@ -2104,6 +2122,16 @@ end; { TOmniExecutable.SetDelegate }
 {$ENDIF OTL_Anonymous}
 
 { TOmniMessageID }
+
+function TOmniMessageID.AsString: string;
+begin
+  case MessageType of
+    mitInteger: Result := IntToStr(omidInteger);
+    mitString:  Result := omidString;
+    mitPointer: Result := Format('%p', [omidPointer]);
+    else        raise Exception.CreateFmt('TOmniMessageID.AsString: Unexpected message type %d', [Ord(MessageType)]);
+  end;
+end; { TOmniMessageID.AsString }
 
 class operator TOmniMessageID.Implicit(const a: integer): TOmniMessageID;
 begin
