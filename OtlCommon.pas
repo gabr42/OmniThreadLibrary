@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2010-09-20
-///   Version           : 1.18
+///   Version           : 1.18a
 ///</para><para>
 ///   History:
+///     1.18a: 2010-09-21
+///       - IOmniWaitableValue fully compatible with TOmniWaitableValue.
 ///     1.18: 2010-09-20
 ///       - Declared interface IOmniWaitableValue and added function CreateWaitableValue.
 ///       - Implemented TOmniMessageID.AsString.
@@ -280,22 +282,33 @@ type
   end; { TOmniValueEnumerator }
 
   IOmniWaitableValue = interface ['{46EB21E0-B5E8-47DA-8E34-E4DE04C4D8D9}']
-    procedure Reset; 
+    function  GetHandle: THandle;
+    function  GetValue: TOmniValue;
+  //
+    procedure Reset;
     procedure Signal; overload;
     procedure Signal(const data: TOmniValue); overload;
     function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean;
+    property Handle: THandle read GetHandle;
+    property Value: TOmniValue read GetValue;
   end; { IOmniWaitableValue }
 
   TOmniWaitableValue = class(TInterfacedObject, IOmniWaitableValue)
+  strict private
+    FHandle: THandle;
+    FValue : TOmniValue;
+  protected
+    function  GetHandle: THandle;
+    function  GetValue: TOmniValue;
   public
-    Handle: THandle;
-    Value : TOmniValue;
     constructor Create;
     destructor  Destroy; override;
     procedure Reset; inline;
     procedure Signal; overload; inline;
     procedure Signal(const data: TOmniValue); overload; inline;
     function  WaitFor(maxWait_ms: cardinal = INFINITE): boolean; inline;
+    property Handle: THandle read GetHandle;
+    property Value: TOmniValue read GetValue;
   end; { TOmniWaitableValue }
 
   TOmniValueContainer = class
@@ -1711,14 +1724,24 @@ end; { TOmniValue.Implicit }
 
 constructor TOmniWaitableValue.Create;
 begin
-  Handle := CreateEvent(nil, false, false, nil);
-  Value := TOmniValue.Null;
+  FHandle := CreateEvent(nil, false, false, nil);
+  FValue := TOmniValue.Null;
 end; { TOmniWaitableValue.Create }
 
 destructor TOmniWaitableValue.Destroy;
 begin
-  DSiCloseHandleAndInvalidate(Handle);
+  DSiCloseHandleAndInvalidate(FHandle);
 end; { TOmniWaitableValue.Destroy }
+
+function TOmniWaitableValue.GetHandle: THandle;
+begin
+  Result := FHandle;
+end; { TOmniWaitableValue.GetHandle }
+
+function TOmniWaitableValue.GetValue: TOmniValue;
+begin
+  Result := FValue;
+end; { TOmniWaitableValue.GetValue }
 
 procedure TOmniWaitableValue.Reset;
 begin
@@ -1732,7 +1755,7 @@ end; { TOmniWaitableValue.Signal }
 
 procedure TOmniWaitableValue.Signal(const data: TOmniValue);
 begin
-  Value := data;
+  FValue := data;
   Signal;
 end; { TOmniWaitableValue.Signal }
 
