@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-09-20
-///   Version           : 1.22a
+///   Last modification : 2010-09-21
+///   Version           : 1.22b
 ///</para><para>
 ///   History:
+///     1.22b: 2010-09-21
+///       - Better workaround for the 'invalid handle' error.
 ///     1.22a: 2010-09-20
 ///       - Changed the place where internal monitor is destroyed to prevent 'invalid
 ///         handle' error.
@@ -2060,7 +2062,8 @@ destructor TOmniTaskControl.Destroy;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying ! then
-  DestroyMonitor;
+  _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
+  DestroyMonitor; 
   if assigned(otcThread) then begin
     Terminate;
     FreeAndNil(otcThread);
@@ -2089,7 +2092,6 @@ begin
   FreeAndNil(otcOnMessageExec);
   FreeAndNil(otcOnTerminatedExec);
   inherited Destroy;
-  _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
 end; { TOmniTaskControl.Destroy }
 
 function TOmniTaskControl.Alertable: IOmniTaskControl;
@@ -2134,6 +2136,7 @@ begin
     if assigned(GTaskControlEventMonitorPool) then
       GTaskControlEventMonitorPool.Release(TOmniTaskControlEventMonitor(otcEventMonitor));
     otcEventMonitor := nil;
+    otcEventMonitorInternal := false;
   end;
 end; { TOmniTaskControl.DestroyMonitor }
 
@@ -2535,8 +2538,6 @@ end; { TOmniTaskControl.SilentExceptions }
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
-  if otcEventMonitorInternal then
-    DestroyMonitor;
   otcSharedInfo.Terminating := true;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
