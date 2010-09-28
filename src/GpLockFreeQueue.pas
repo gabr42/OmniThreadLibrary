@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-02-10
-///   Last modification : 2010-02-18
-///   Version           : 1.01
+///   Last modification : 2010-09-28
+///   Version           : 1.01a
 ///</para><para>
 ///   History:
+///     1.01a: 2010-09-28
+///       - Assumes that memory allocations are 4-aligned. 8-alignment is implemented
+///         internally.
 ///     1.01: 2010-02-18
 ///       - Reversed head and tail because they were used illogically.    
 ///     1.0: 2010-02-10
@@ -81,10 +84,13 @@ type
   strict private
     obcBlockSize  : integer;
     obcCachedBlock: PGpLFQueueTaggedValue;
+    obcTailBuffer : pointer;
     obcTailPointer: PGpLFQueueTaggedPointer;
     obcNumSlots   : integer;
+    obcHeadBuffer : pointer;
     obcHeadPointer: PGpLFQueueTaggedPointer;
   strict protected
+    function  AllocateAligned(size, alignment: integer; var memPtr: pointer): pointer;
     function  AllocateBlock: PGpLFQueueTaggedValue;
     procedure Cleanup; virtual;
     procedure Initialize; virtual;
@@ -260,6 +266,22 @@ begin
   inherited;
 end; { TGpLockFreeQueue.Destroy }
 
+function TGpLockFreeQueue.AllocateAligned(size, alignment: integer; var memPtr: pointer):
+  pointer;
+var
+  mask: byte;
+begin
+  Assert(SizeOf(cardinal) = SizeOf(pointer));
+  Dec(alignment);
+  Assert((alignment >= 1) and (alignment <= 4));
+  mask := $FF shl (8-alignment);
+  mask := mask shr (8-alignment);
+  memPtr := AllocMem(size + (1 shl alignment));
+  Result := memPtr;
+  if (cardinal(Result) AND mask) <> 0 then
+    Result := pointer((cardinal(Result) AND (NOT mask))+ (1 shl alignment));
+end; { TGpLockFreeQueue.AllocateAligned }
+
 function TGpLockFreeQueue.AllocateBlock: PGpLFQueueTaggedValue;
 var
   cached: PGpLFQueueTaggedValue;
@@ -291,8 +313,8 @@ begin
   end;
   if assigned(obcCachedBlock) then
     FreeMem(obcCachedBlock);
-  FreeMem(obcTailPointer);
-  FreeMem(obcHeadPointer);
+  FreeMem(obcTailBuffer);
+  FreeMem(obcHeadBuffer);
 end; { TGpLockFreeQueue.Cleanup }
 
 function TGpLockFreeQueue.Dequeue(var value: int64): boolean;
@@ -420,16 +442,16 @@ end; { TGpLockFreeQueue.Enqueue }
 
 procedure TGpLockFreeQueue.Initialize;
 begin
-  obcTailPointer := AllocMem(SizeOf(TGpLFQueueTaggedPointer));
-  obcHeadPointer := AllocMem(SizeOf(TGpLFQueueTaggedPointer));
-  Assert(cardinal(obcTailPointer) mod 8 = 0);
-  Assert(cardinal(obcHeadPointer) mod 8 = 0);
-  Assert(cardinal(@obcCachedBlock) mod 4 = 0);
+  obcTailPointer := AllocateAligned(SizeOf(TGpLFQueueTaggedPointer), 4, obcTailBuffer);
+  obcHeadPointer := AllocateAligned(SizeOf(TGpLFQueueTaggedPointer), 4, obcHeadBuffer);
+  obcCachedBlock := AllocateBlock; // pre-allocate memory
   obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
   obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
-  obcCachedBlock := AllocateBlock; // pre-allocate memory
+  Assert(cardinal(obcTailPointer) mod 8 = 0);
+  Assert(cardinal(obcHeadPointer) mod 8 = 0);
+  Assert(cardinal(@obcCachedBlock) mod 4 = 0);
 end; { TGpLockFreeQueue.Initialize }
 
 function TGpLockFreeQueue.NextSlot(slot: PGpLFQueueTaggedValue): PGpLFQueueTaggedValue;
