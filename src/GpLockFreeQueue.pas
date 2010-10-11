@@ -16,7 +16,7 @@
 ///  and/or other materials provided with the distribution.
 ///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
 ///  products derived from this software without specific prior written permission.
-///
+///                                  
 ///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 ///WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-02-10
-///   Last modification : 2010-09-28
-///   Version           : 1.01a
+///   Last modification : 2010-10-11
+///   Version           : 1.01b
 ///</para><para>
 ///   History:
+///     1.01b: 2010-10-11
+///       - Fixed internal alignment algorithm.
 ///     1.01a: 2010-09-28
 ///       - Assumes that memory allocations are 4-aligned. 8-alignment is implemented
 ///         internally.
@@ -270,7 +272,7 @@ function TGpLockFreeQueue.AllocateAligned(size, alignment: integer; var memPtr: 
   pointer;
 var
   mask: byte;
-begin
+begin                     
   Assert(SizeOf(cardinal) = SizeOf(pointer));
   Dec(alignment);
   Assert((alignment >= 1) and (alignment <= 4));
@@ -279,7 +281,7 @@ begin
   memPtr := AllocMem(size + (1 shl alignment));
   Result := memPtr;
   if (cardinal(Result) AND mask) <> 0 then
-    Result := pointer((cardinal(Result) AND (NOT mask))+ (1 shl alignment));
+    Result := pointer((cardinal(Result) AND (NOT cardinal(mask))));//+ (1 shl alignment));
 end; { TGpLockFreeQueue.AllocateAligned }
 
 function TGpLockFreeQueue.AllocateBlock: PGpLFQueueTaggedValue;
