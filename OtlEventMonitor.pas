@@ -200,14 +200,14 @@ end; { TOmniEventMonitor.Destroy }
 
 function TOmniEventMonitor.Detach(const task: IOmniTaskControl): IOmniTaskControl;
 begin
-  Result := task.RemoveMonitor;
   emMonitoredTasks.Remove(task.UniqueID);
+  Result := task.RemoveMonitor;
 end; { TOmniEventMonitor.Detach }
 
 function TOmniEventMonitor.Detach(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
-  Result := pool.RemoveMonitor;
   emMonitoredPools.Remove(pool.UniqueID);
+  Result := pool.RemoveMonitor;
 end; { TOmniEventMonitor.Detach }
 
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;

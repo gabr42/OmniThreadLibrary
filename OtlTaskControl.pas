@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-09-21
-///   Version           : 1.22b
+///   Last modification : 2010-10-13
+///   Version           : 1.22c
 ///</para><para>
 ///   History:
+///     1.22c: 2010-10-13
+///       - Allow Terminate to be called from the OnTerminated handler.
 ///     1.22b: 2010-09-21
 ///       - Better workaround for the 'invalid handle' error.
 ///     1.22a: 2010-09-20
@@ -710,10 +712,12 @@ type
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
   strict private
+    otcDelayedTerminate    : boolean;
     otcDestroyLock         : boolean;
     otcEventMonitor        : TObject{TOmniEventMonitor};
     otcEventMonitorInternal: boolean;
     otcExecutor            : TOmniTaskExecutor;
+    otcInEventHandler      : boolean;
     otcOnMessageExec       : TOmniMessageExec;
     otcOnMessageList       : TGpIntegerObjectList;
     otcOnTerminatedExec    : TOmniMessageExec;
@@ -1068,6 +1072,11 @@ begin
         end;
       end;
     finally
+      // with internal monitoring this will not be processed if the task controller owner is also shutting down
+      if assigned(otSharedInfo_ref.Monitor) then
+        otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
+          integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+
       otSharedInfo_ref.Stopped := true;
       SetEvent(otSharedInfo_ref.TerminatedEvent);
     end;
@@ -1077,9 +1086,6 @@ begin
       chainTo := otSharedInfo_ref.ChainTo;
     otSharedInfo_ref.ChainTo := nil;
   finally
-    if assigned(otSharedInfo_ref.Monitor) then
-      otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
     //Task controller could die any time now. Make sure we're not using shared
     //structures anymore.
     otExecutor_ref   := nil;
@@ -2063,7 +2069,7 @@ begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying ! then
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
-  DestroyMonitor; 
+  DestroyMonitor;
   if assigned(otcThread) then begin
     Terminate;
     FreeAndNil(otcThread);
@@ -2168,16 +2174,23 @@ begin
       TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
     end;
   exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-  if assigned(exec) then
-    exec.OnMessage(Self, msg)
-  else if assigned(otcOnMessageExec) then
-    otcOnMessageExec.OnMessage(Self, msg);
+  otcInEventHandler := true;
+  try
+    if assigned(exec) then
+      exec.OnMessage(Self, msg)
+    else if assigned(otcOnMessageExec) then
+      otcOnMessageExec.OnMessage(Self, msg);
+  finally otcInEventHandler := false; end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
-  if assigned(otcOnTerminatedExec) then
-    otcOnTerminatedExec.OnTerminated(Self);
+  if assigned(otcOnTerminatedExec) then begin
+    otcInEventHandler := true;
+    try
+      otcOnTerminatedExec.OnTerminated(Self);
+    finally otcInEventHandler := false; end;
+  end;
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
 function TOmniTaskControl.GetCancellationToken: IOmniCancellationToken;
@@ -2402,18 +2415,6 @@ begin
   end;
 end; { TOmniTaskControl.RaiseTaskException }
 
-function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
-begin
-  if assigned(otcSharedInfo.Monitor) then begin
-    EnsureCommChannel;
-    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
-      otcSharedInfo.Monitor, coiNotifyOnAllInserts);
-    otcSharedInfo.Monitor.Free;
-    otcSharedInfo.Monitor := nil;
-  end;
-  Result := Self;
-end; { TOmniTaskControl.RemoveMonitor }
-
 function TOmniTaskControl.Run: IOmniTaskControl;
 begin
   otcParameters.Lock;
@@ -2425,6 +2426,22 @@ begin
   {$ENDIF OTL_DeprecatedResume}
   Result := Self;
 end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
+begin
+  if assigned(otcSharedInfo.Monitor) then begin
+    EnsureCommChannel;
+    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
+      otcSharedInfo.Monitor, coiNotifyOnAllInserts);
+    otcSharedInfo.Monitor.Free;
+    otcSharedInfo.Monitor := nil;
+  end;
+  Result := Self;
+  if otcDelayedTerminate then begin
+    otcDelayedTerminate := false;
+    Terminate;
+  end;
+end; { TOmniTaskControl.RemoveMonitor }
 
 function TOmniTaskControl.Schedule(const threadPool: IOmniThreadPool): IOmniTaskControl;
 begin
@@ -2538,9 +2555,15 @@ end; { TOmniTaskControl.SilentExceptions }
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
+  if otcInEventHandler then begin
+    otcDelayedTerminate := true;
+    Exit;
+  end;
   otcSharedInfo.Terminating := true;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
+  if otcEventMonitorInternal then
+    DestroyMonitor;
   if not Result then begin
     if assigned(otcThread) then begin
       TerminateThread(otcThread.Handle, cardinal(-1));
