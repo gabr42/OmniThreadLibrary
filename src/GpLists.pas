@@ -31,9 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
    Last modification : 2010-07-28
-   Version           : 1.46a
+   Version           : 1.47
 </pre>*)(*
    History:
+     1.47: 2010-10-13
+       - Fixed TGp[Integer|Int64]List sorting (broken since 1.44 release).
      1.46a: 2010-07-28
        - [Jens] Capacity was not set to the ideal value in TGp[Integer|Int64]List.Append.
      1.46: 2010-07-13
@@ -1583,8 +1585,11 @@ begin
       while (SCompare(Self, J, P) > 0) do
         Dec(J);
       if (I <= J) then begin
-        if I <> J then
-          Exchange(I, J);
+        Exchange(I, J);
+        if (P = I) then
+          P := J
+        else if (P = J) then
+          P := I;
         Inc(I);
         Dec(J);
       end;
@@ -2182,8 +2187,11 @@ begin
       while (SCompare(Self, J, P) > 0) do
         Dec(J);
       if (I <= J) then begin
-        if I <> J then
-          Exchange(I, J);
+        Exchange(I, J);
+        if (P = I) then
+          P := J
+        else if (P = J) then
+          P := I;
         Inc(I);
         Dec(J);
       end;

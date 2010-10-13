@@ -5,12 +5,19 @@
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
-                       Christian Wimmer
+                       Christian Wimmer, Tommi Prami
    Creation date     : 2002-10-09
-   Last modification : 2010-07-27
-   Version           : 1.58
+   Last modification : 2010-09-24
+   Version           : 1.59a
 </pre>*)(*
    History:
+     1.59a: 2010-09-25
+       - [Tommi Prami] Added types missing in Delphi 7.
+     1.59: 2010-09-24
+       - Added function DSiDisableStandby that will try to disable standby and hibernate
+         on Windows XP SP 2 and newer.
+     1.58a: 2010-09-19
+       - Define TStartupInfoW in Delphi 7 and earlier.
      1.58: 2010-07-27
        - DSiAddApplicationToFirewallExceptionList[Advanced|XP] got a new parameter
          TDSiFwResolveConflict (default rcDuplicate) where the caller can specify
@@ -354,8 +361,8 @@ interface
 {$IFDEF Linux}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF Linux}
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
-{$DEFINE NeedUTF}{$UNDEF NeedVariants}
-{$IFDEF ConditionalExpressions}{$UNDEF NeedUTF}{$DEFINE NeedVariants}{$ENDIF}
+{$DEFINE NeedUTF}{$UNDEF NeedVariants}{$DEFINE NeedStartupInfo}
+{$IFDEF ConditionalExpressions}{$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}{$ENDIF}
 
 uses
   Windows,
@@ -746,7 +753,7 @@ const
   function  DSiExecute(const commandLine: string;
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
     wait: boolean = false): cardinal;
-  function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
+  function  DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
     var exitCode: longword; waitTimeout_sec: integer = 15; onNewLine: TDSiOnNewLineCallback
     = nil): cardinal;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
@@ -824,6 +831,7 @@ type
                    
   function  DSiAllocateHWnd(wndProcMethod: TWndMethod): HWND;
   procedure DSiDeallocateHWnd(wnd: HWND);
+  function  DSiDisableStandby: boolean;
   procedure DSiDisableX(hwnd: THandle);
   procedure DSiEnableX(hwnd: THandle);
   function  DSiExitWindows(exitType: TDSiExitWindows): boolean;
@@ -956,6 +964,32 @@ type
   {$EXTERNALSYM OSVERSIONINFOEXW}
   {$EXTERNALSYM OSVERSIONINFOEX}
   OSVERSIONINFOEX = OSVERSIONINFOEXA;
+
+  {$IFNDEF NeedStartupInfo}
+  _STARTUPINFOW = record
+    cb: DWORD;
+    lpReserved: PWideChar;
+    lpDesktop: PWideChar;
+    lpTitle: PWideChar;
+    dwX: DWORD;
+    dwY: DWORD;
+    dwXSize: DWORD;
+    dwYSize: DWORD;
+    dwXCountChars: DWORD;
+    dwYCountChars: DWORD;
+    dwFillAttribute: DWORD;
+    dwFlags: DWORD;
+    wShowWindow: Word;
+    cbReserved2: Word;
+    lpReserved2: PByte;
+    hStdInput: THandle;
+    hStdOutput: THandle;
+    hStdError: THandle;
+  end;
+  TStartupInfoW = _STARTUPINFOW;
+  PStartupInfoW = ^TStartupInfoW;
+  TStartupInfoA = TStartupInfo;
+  {$ENDIF NeedStartupInfo}
 
   function  DSiGetAppCompatFlags(const exeName: string): string;
   function  DSiGetBootType: TDSiBootType;
@@ -3604,7 +3638,7 @@ const
           FillChar(startupInfo, SizeOf(startupInfo), #0);
           startupInfo.cb := SizeOf(startupInfo);
           startupInfo.dwFlags := STARTF_USESHOWWINDOW;
-          startupInfo.lpDesktop := 'winsta0\default';
+          startupInfo.lpDesktop := PChar('winsta0\default');
           startupInfo.wShowWindow := visibility;
           if username = '' then begin
             useStartInfo := startInfo;
@@ -4768,6 +4802,73 @@ var
         Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
   end; { DSiDeallocateHWnd }
+
+  {:Uses PowerCfg to disable standby and hibernation.
+  }
+  function DSiDisableStandby: boolean;
+
+    function ExtractSchemeNumber(queryOut: TStringList; var schemeNum: integer): boolean;
+    var
+      ln  : string;
+      pNum: integer;
+    begin
+      //c:\> powercfg /query
+      //
+      //Field Description          Value
+      //-----------------          -----
+      //Name                       Home/Office Desk
+      //Numerical ID               0
+      //...
+      Result := false;
+      while (queryOut.Count > 0) and (Copy(queryOut[0], 1, 1) <> '-') do
+        queryOut.Delete(0);
+      if queryOut.Count >= 2 then begin
+        ln := queryOut[2];
+        pNum := Length(ln);
+        while (pNum > 0) and (ln[pNum] in ['0'..'9']) do
+          Dec(pNum);
+        Inc(pNum);
+        Result := TryStrToInt(Copy(ln, pNum, Length(ln)), schemeNum);
+      end;
+    end; { ExtractSchemeNumber }
+
+  var
+    execExit : cardinal;
+    execOut  : TStringList;
+    execRes  : cardinal;
+    schemeNum: integer;
+    winVer   : TDSiWindowsVersion;
+  begin
+    Result := false;
+    SetLastError(ERROR_NOT_SUPPORTED);
+    execOut := TStringList.Create;
+    try
+      winVer := DSiGetTrueWindowsVersion;
+      if winVer >= wvWinXP then begin
+        if winVer < wvWinVista then begin
+          execRes := DSiExecuteAndCapture('powercfg.exe /query', execOut, '', execExit);
+          if (execRes = 0) or (not ExtractSchemeNumber(execOut, schemeNum)) then
+            Exit;
+          Result := (0 = DSiExecute('powercfg.exe /numerical /change ' + IntToStr(schemeNum) +
+                           ' /standby-timeout-ac 0 /standby-timeout-dc 0' +
+                           ' /hibernate-timeout-ac 0 /hibernate-timeout-dc 0', SW_HIDE, '', true));
+          if Result then
+            Result := (0 = DSiExecute('powercfg /hibernate off', SW_HIDE, '', true));
+        end
+        else begin
+          Result := (0 = DSiExecute('powercfg.exe -change -standby-timeout-ac 0', SW_HIDE, '', true));
+          if Result then
+            Result := (0 = DSiExecute('powercfg.exe -change -standby-timeout-dc 0', SW_HIDE, '', true));
+          if Result then
+            Result := (0 = DSiExecute('powercfg.exe -change -hibernate-timeout-ac 0', SW_HIDE, '', true));
+          if Result then
+            Result := (0 = DSiExecute('powercfg.exe -change -hibernate-timeout-dc 0', SW_HIDE, '', true));
+          if Result then // -hibernate will fail when run without admin privileges
+            DSiExecute('powercfg -hibernate off', SW_HIDE, '', true);
+        end;
+      end;
+    finally execOut.Free; end;
+  end; { DSiDisableStandby }
 
   {:Disables 'X' button and Alt+F4.
     @author  aoven

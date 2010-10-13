@@ -6,10 +6,16 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2010-07-09
-   Version           : 1.22
+   Last modification : 2010-09-21
+   Version           : 1.23
 </pre>*)(*
    History:
+     1.23: 2010-09-21
+       - Implemented function DisableHandler. Usage:
+           with DisableHandler(@@cbDisableInterface.OnClick) do begin
+             cbDisableInterface.Checked := newValue;
+             Restore;
+           end;
      1.22: 2010-07-09
        - Added IFF overload with AnsiString parameters (Unicode Delphi only).
      1.21: 2010-04-13
@@ -175,6 +181,8 @@ type
     property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
   end; { TGpTraceable }
 
+  PMethod = ^TMethod;
+
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: string; const value: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: integer; const value: integer): integer; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -258,11 +266,17 @@ type
     function  GetEnumerator: IGpStringPairEnumerator;
   end; { IGpStringPairEnumeratorFactory }
 
+  IGpDisableHandler = interface
+    procedure Restore;
+  end; { IGpDisableHandler }
+
 function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory;
 function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
 function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
 function EnumList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): IGpStringValueEnumeratorFactory;
+
+function DisableHandler(const handler: PMethod): IGpDisableHandler;
 
 {$ENDIF GpStuff_ValuesEnumerators}
 
@@ -343,6 +357,16 @@ type
 
 type
   TDelimiters = array of integer;
+
+  TGpDisableHandler = class(TInterfacedObject, IGpDisableHandler)
+  strict private
+    FHandler   : PMethod;
+    FOldHandler: TMethod;
+  public
+    constructor Create(const handler: PMethod);
+    destructor  Destroy; override;
+    procedure Restore;
+  end; { TGpDisableHandler }
 
 //copied from GpString unit
 procedure GetDelimiters(const list: string; delim: char; const quoteChar: string;
@@ -959,5 +983,33 @@ begin
     asm int 3; end;
   Result := inherited _Release;
 end; { TGpTraceable._Release }
+
+{ TGpDisableHandler }
+
+function DisableHandler(const handler: PMethod): IGpDisableHandler;
+begin
+  Result := TGpDisableHandler.Create(handler);
+end; { DisableHandler }
+
+constructor TGpDisableHandler.Create(const handler: PMethod);
+const
+  CNilMethod: TMethod = (Code: nil; Data: nil);
+begin
+  inherited Create;
+  FHandler := handler;
+  FOldHandler := handler^;
+  handler^ := CNilMethod;
+end; { TGpDisableHandler.Create }
+
+destructor TGpDisableHandler.Destroy;
+begin
+  Restore;
+  inherited;
+end; { TGpDisableHandler.Destroy }
+
+procedure TGpDisableHandler.Restore;
+begin
+  FHandler^ := FOldHandler;
+end; { TGpDisableHandler.Restore }
 
 end.
