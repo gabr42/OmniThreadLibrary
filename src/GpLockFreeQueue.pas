@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-02-10
-///   Last modification : 2010-10-11
-///   Version           : 1.01b
+///   Last modification : 2010-10-13
+///   Version           : 1.01c
 ///</para><para>
 ///   History:
+///     1.01c: 2010-10-13
+///       - [GJ] Alignment algorithm simplification and fix.
 ///     1.01b: 2010-10-11
 ///       - Fixed internal alignment algorithm.
 ///     1.01a: 2010-09-28
@@ -274,14 +276,9 @@ var
   mask: byte;
 begin                     
   Assert(SizeOf(cardinal) = SizeOf(pointer));
-  Dec(alignment);
-  Assert((alignment >= 1) and (alignment <= 4));
-  mask := $FF shl (8-alignment);
-  mask := mask shr (8-alignment);
+  Assert(alignment in [2{WORD-aligned}, 3{DWORD-aligned}, 4{QWORD-aligned}]);
   memPtr := AllocMem(size + (1 shl alignment));
-  Result := memPtr;
-  if (cardinal(Result) AND mask) <> 0 then
-    Result := pointer((cardinal(Result) AND (NOT cardinal(mask))));//+ (1 shl alignment));
+  Result := pointer((cardinal(memPtr) + (1 shl alignment)) AND (cardinal(-1 SHL alignment)));
 end; { TGpLockFreeQueue.AllocateAligned }
 
 function TGpLockFreeQueue.AllocateBlock: PGpLFQueueTaggedValue;
