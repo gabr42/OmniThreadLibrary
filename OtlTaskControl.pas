@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-10-13
-///   Version           : 1.22c
+///   Last modification : 2010-10-16
+///   Version           : 1.22d
 ///</para><para>
 ///   History:
+///     1.22d: 2010-10-16
+///       - Delayed Terminate did not set result.
 ///     1.22c: 2010-10-13
 ///       - Allow Terminate to be called from the OnTerminated handler.
 ///     1.22b: 2010-09-21
@@ -2557,6 +2559,7 @@ begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
   if otcInEventHandler then begin
     otcDelayedTerminate := true;
+    Result := true;
     Exit;
   end;
   otcSharedInfo.Terminating := true;
