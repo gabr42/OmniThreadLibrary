@@ -4,7 +4,7 @@ Fast Memory Manager - Readme
 Description:
 ------------
 
-A fast replacement memory manager for Borland Delphi Win32 applications that scales well under multi-threaded usage, is not prone to memory fragmentation, and supports shared memory without the use of external .DLL files.
+A fast replacement memory manager for Embarcadero Delphi Win32 applications that scales well under multi-threaded usage, is not prone to memory fragmentation, and supports shared memory without the use of external .DLL files.
 
 
 
@@ -59,7 +59,7 @@ E-mail:
 Support:
 --------
 
-If you have trouble using FastMM, you are welcome to drop me an e-mail at the address above, or you may post your questions in the BASM newsgroup on the Borland news server (which is where I hang out quite frequently).
+If you have trouble using FastMM, you are welcome to drop me an e-mail at the address above, or you may post your questions in the BASM newsgroup on the Embarcadero news server (which is where I hang out quite frequently).
 
 
 
@@ -119,7 +119,7 @@ Important Notes Regarding Delphi 2005:
 
 Presently the latest service pack for Delphi 2005 is SP3, but unfortunately there are still bugs that prevent a replacement borlndmm.dll from working stably with the Delphi 2005 IDE. There is a collection of unofficial patches that need to be installed before you can use the replacement borlndmm.dll with the Delphi 2005 IDE. You can get it from:
 
-http://cc.borland.com/item.aspx?id=23618
+http://cc.embarcadero.com/item.aspx?id=23618
 
 Installing these patches together with the replacement borlndmm.dll should provide you with a faster and more stable Delphi 2005 IDE.
 

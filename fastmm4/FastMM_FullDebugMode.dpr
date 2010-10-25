@@ -43,6 +43,10 @@ Change log:
  Version 1.60 (5 May 2009):
   - Improved the code used to identify call instructions in the stack trace
     code. (Thanks to the JCL team.)
+ Version 1.61 (5 September 2010):
+  - Recompiled using the latest JCL in order to fix a possible crash on shutdown
+    when the executable contains no debug information. (Thanks to Hanspeter
+    Widmer.)
 
 }
 
@@ -56,6 +60,7 @@ Change log:
 
 {--------------------End of options block-------------------------}
 
+// JCL_DEBUG_EXPERT_INSERTJDBG OFF
 library FastMM_FullDebugMode;
 
 uses
