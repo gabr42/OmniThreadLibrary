@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-07-22
-///   Version           : 1.04
+///   Last modification : 2010-11-20
+///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.04: 2010-11-20
+///       - Small fix regarding setting GForEachPool.MaxExecuting.
 ///     1.04: 2010-07-22
 ///       - Introduced overloaded Execute methods with delegates that accept the task
 ///         interface parameter.
@@ -827,7 +829,9 @@ begin
   else begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
-    GForEachPool.MaxExecuting := numTasks;
+    { TODO 3 -oPrimoz : Still not optimal - show know how many Parallel.ForEach are currently executing! }
+    if numTasks < GForEachPool.MaxExecuting then
+      GForEachPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
