@@ -36,9 +36,10 @@
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_MapFile>3</DCC_MapFile>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<Version>7.0</Version>
-			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>

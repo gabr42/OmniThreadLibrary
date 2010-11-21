@@ -1634,7 +1634,6 @@ begin
         .SetParameter('Input',  inQueue)
         .SetParameter('Stage', opStages[iStage])
         .SetParameter('Output', outQueue)
-        .Invoke('Start')
         .Schedule(GParallelPool);
     end; //for iTask
   end; //for iStage
