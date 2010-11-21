@@ -371,6 +371,7 @@ uses
   {$IFDEF NeedVariants}
   Variants,
   {$ENDIF}
+  FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
   SysUtils,
   ShellAPI,
   ShlObj,
@@ -1287,7 +1288,6 @@ uses
   Types,
   ComObj,
   ActiveX,
-  FileCtrl,
   {$IFDEF CONDITIONALCOMPILATION}
   Variants,
   {$ENDIF}
@@ -4825,7 +4825,7 @@ var
       if queryOut.Count >= 2 then begin
         ln := queryOut[2];
         pNum := Length(ln);
-        while (pNum > 0) and (ln[pNum] in ['0'..'9']) do
+        while (pNum > 0) and (ln[pNum] >= '0') and (ln[pNum] <= '9') do
           Dec(pNum);
         Inc(pNum);
         Result := TryStrToInt(Copy(ln, pNum, Length(ln)), schemeNum);
