@@ -13,8 +13,10 @@ type
   TfrmPipelineDemo = class(TForm)
     lbLog: TListBox;
     btnPipeline: TButton;
+    btnPipelineNoWait: TButton;
     procedure btnForEachClick(Sender: TObject);
     procedure btnPipelineClick(Sender: TObject);
+    procedure btnPipelineNoWaitClick(Sender: TObject);
   private
     procedure StageMod5(const input, output: IOmniBlockingCollection);
   public
@@ -138,6 +140,44 @@ begin
       end
     )
     .Run; // .NoWait is not used so .Run will block and wait for all stages to complete
+  testResult := 0;
+  for i := 1 to 1000000 do
+    Inc(testResult, (2*i - 3) mod 5);
+  lbLog.Items.Add(Format('Pipeline result: %d; expected result: %d', [pipelineResult, testResult]));
+end;
+
+procedure TfrmPipelineDemo.btnPipelineNoWaitClick(Sender: TObject);
+var
+  i             : integer;
+  output        : IOmniBlockingCollection;
+  pipelineResult: integer;
+  testResult    : integer;
+  value         : TOmniValue;
+begin
+  output := TOmniBlockingCollection.Create;
+  Parallel
+    .Pipeline
+    //.Input not set - first stage will have no input
+    .Stage(
+      procedure (const input, output: IOmniBlockingCollection)
+      var
+        i: integer;
+      begin
+        for i := 1 to 1000000 do
+          output.Add(i);
+        // .CompleteAdding is called automatically
+      end
+    )
+    .Stage(StageMult2)
+    .Stages([StageMinus3, StageMod5])
+      .NumTasks(2) // each stage from previous line will execute in two tasks
+    .Output(output)
+    .NoWait
+    .Run;
+  // Because of .NoWait, Parallel.Pipeline will not block and execution will continue immediately.
+  pipelineResult := 0;
+  for value in output do
+    Inc(pipelineResult, value);
   testResult := 0;
   for i := 1 to 1000000 do
     Inc(testResult, (2*i - 3) mod 5);

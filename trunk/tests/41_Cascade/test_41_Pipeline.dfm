@@ -32,4 +32,13 @@ object frmPipelineDemo: TfrmPipelineDemo
     TabOrder = 1
     OnClick = btnPipelineClick
   end
+  object btnPipelineNoWait: TButton
+    Left = 8
+    Top = 39
+    Width = 105
+    Height = 25
+    Caption = 'Pipeline.NoWait'
+    TabOrder = 2
+    OnClick = btnPipelineNoWaitClick
+  end
 end
