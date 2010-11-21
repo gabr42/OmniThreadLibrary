@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-11-20
-///   Version           : 1.04a
+///   Last modification : 2010-11-21
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2010-11-21
+///       - OtlFutures functionality moved into this unit.
+///       - Futures can be created by calling Parallel.Future<T>(action).
 ///     1.04: 2010-11-20
 ///       - Small fix regarding setting GForEachPool.MaxExecuting.
 ///     1.04: 2010-07-22
@@ -58,7 +61,6 @@
 // http://msdn.microsoft.com/en-us/magazine/cc163340.aspx
 // http://blogs.msdn.com/pfxteam/archive/2007/11/29/6558543.aspx
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
-
 (* Things to consider:
   - Probably we need Parallel.Join.MonitorWith or something like that.
 *)
@@ -197,6 +199,41 @@ type
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
   TEnumeratorDelegate<T> = reference to function(var next: T): boolean;
 
+  TOmniFutureDelegate<T> = reference to function: T;
+  TOmniFutureDelegateEx<T> = reference to function(const task: IOmniTask): T;
+
+  IOmniFuture<T> = interface
+    procedure Cancel;
+    function  IsCancelled: boolean;
+    function  IsDone: boolean;
+    function  TryValue(timeout_ms: cardinal; var value: T): boolean;
+    function  Value: T;
+  end; { IOmniFuture<T> }
+
+  { TODO : maybe add Value(timeout_ms) }
+  TOmniFuture<T> = class(TInterfacedObject, IOmniFuture<T>)
+  strict private
+    ofCancellable: boolean;
+    ofCancelled  : boolean;
+    ofResult     : T;
+    ofTask       : IOmniTaskControl;
+  strict protected
+    procedure DestroyTask;
+    procedure Execute(action: TOmniTaskDelegate);
+  public
+    constructor Create(action: TOmniFutureDelegate<T>); // sadly, those two Creates cannot be overloaded as this crashes the compiler (internal error T888)
+    constructor CreateEx(action: TOmniFutureDelegateEx<T>);
+    destructor  Destroy; override;
+    procedure Cancel;
+    function  IsCancelled: boolean; inline;
+    function  IsDone: boolean;
+    function  TryValue(timeout_ms: cardinal; var value: T): boolean;
+    function  Value: T;
+  end; { TOmniFuture<T> }
+
+  EFutureError = class(Exception);
+  EFutureCancelled = class(Exception);
+
   Parallel = class
     class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
@@ -224,6 +261,8 @@ type
     class procedure Join(const task1, task2: TProc); overload;
     class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
     class procedure Join(const tasks: array of TProc); overload;
+    class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
+    class function Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>; overload;
   end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -505,6 +544,16 @@ class function Parallel.ForEach<T>(enumerator: TEnumeratorDelegate<T>):
 begin
   Result := TOmniParallelLoop<T>.Create(enumerator);
 end; { Parallel.ForEach<T> }
+
+class function Parallel.Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>;
+begin
+  Result := TOmniFuture<T>.Create(action);
+end; { Parallel.Future<T> }
+
+class function Parallel.Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>;
+begin
+  Result := TOmniFuture<T>.CreateEx(action);
+end; { Parallel.Future<T> }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate);
 begin
@@ -1312,6 +1361,87 @@ function TOmniDelegateEnumerator<T>.MoveNext: boolean;
 begin
   Result := odeDelegate(odeValue);
 end; { TOmniDelegateEnumerator }
+
+{ TOmniFuture<T> }
+
+constructor TOmniFuture<T>.Create(action: TOmniFutureDelegate<T>);
+begin
+  inherited Create;
+  ofCancellable := false;
+  Execute(procedure (const task: IOmniTask)
+    begin
+      ofResult := action();
+    end);
+end; { TOmniFuture<T>.Create }
+
+constructor TOmniFuture<T>.CreateEx(action: TOmniFutureDelegateEx<T>);
+begin
+  inherited Create;
+  ofCancellable := true;
+  Execute(procedure (const task: IOmniTask)
+    begin
+      ofResult := action(task);
+    end);
+end; { TOmniFuture<T>.CreateEx }
+
+destructor TOmniFuture<T>.Destroy;
+begin
+  DestroyTask;
+  inherited;
+end; { TOmniFuture<T>.Destroy }
+
+procedure TOmniFuture<T>.Cancel;
+begin
+  if not ofCancellable then
+    raise EFutureError.Create('Action cannot be cancelled');
+  if not IsCancelled then begin
+    ofCancelled := true;
+    if assigned(ofTask) then
+      ofTask.CancellationToken.Signal;
+  end;
+end; { TOmniFuture<T>.Cancel }
+
+procedure TOmniFuture<T>.DestroyTask;
+begin
+  if assigned(ofTask) then begin
+    ofTask.Terminate;
+    ofTask := nil;
+  end;
+end; { TOmniFuture<T>.DestroyTask }
+
+procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate);
+begin
+  ofTask := CreateTask(action, 'TOmniFuture action').Schedule;
+end; { TOmniFuture<T>.Execute }
+
+function TOmniFuture<T>.IsCancelled: boolean;
+begin
+  Result := ofCancelled;
+end; { TOmniFuture<T>.IsCancelled }
+
+function TOmniFuture<T>.IsDone: boolean;
+begin
+  Result := (not assigned(ofTask)) or ofTask.WaitFor(0);
+end; { TOmniFuture<T>.IsDone }
+
+function TOmniFuture<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;
+begin
+  Result := false;
+  if ofCancelled then
+    raise EFutureCancelled.Create('Action was cancelled');
+  if assigned(ofTask) then begin
+    if not ofTask.WaitFor(timeout_ms) then
+      Exit;
+    DestroyTask;
+  end;
+  value := ofResult;
+  Result := true;
+end; { TOmniFuture<T>.TryValue }
+
+function TOmniFuture<T>.Value: T;
+begin
+  TryValue(INFINITE, Result);
+end; { TOmniFuture<T>.Value }
 
 initialization
   GForEachPool := CreateThreadPool('Parallel.ForEach pool');

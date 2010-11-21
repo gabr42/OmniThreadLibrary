@@ -1285,6 +1285,7 @@ function TOmniThreadPool.Cancel(taskID: int64): boolean;
 var
   res: TOmniWaitableValue;
 begin
+  Result := false; // not really used
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);

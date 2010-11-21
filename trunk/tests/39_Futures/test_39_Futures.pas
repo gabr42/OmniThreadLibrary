@@ -7,7 +7,7 @@ uses
   Dialogs, StdCtrls,
   OtlTask,
   OtlTaskControl,
-  OtlFutures;
+  OtlParallel;
 
 type
   TfrmFuturesDemo = class(TForm)
@@ -28,7 +28,7 @@ type
     procedure btnTestFuture6Click(Sender: TObject);
     procedure btnTestFuture7Click(Sender: TObject);
   private
-    function CountPrimesTo(high: integer): TOmniFuture<integer>;
+    function CountPrimesTo(high: integer): IOmniFuture<integer>;
     function CountPrimesToHigh(high: integer): integer;
     function CountPrimesToMethod: integer;
   public
@@ -40,8 +40,7 @@ var
 implementation
 
 uses
-  OtlCommon,
-  OtlParallel;
+  OtlCommon;
 
 {$R *.dfm}
 {$I OTLOptions.inc}
@@ -198,9 +197,9 @@ begin
   {$ENDIF OTL_ParallelAggregate}
 end;
 
-function TfrmFuturesDemo.CountPrimesTo(high: integer): TOmniFuture<integer>;
+function TfrmFuturesDemo.CountPrimesTo(high: integer): IOmniFuture<integer>;
 begin
-  Result := TOmniFuture<integer>.Create(function: integer
+  Result := Parallel.Future<integer>(function: integer
     var
       i: integer;
     begin
