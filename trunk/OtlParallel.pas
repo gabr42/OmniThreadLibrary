@@ -38,8 +38,11 @@
 ///     1.05: 2010-11-21
 ///       - OtlFutures functionality moved into this unit.
 ///       - Futures can be created by calling Parallel.Future<T>(action).
+///       - GParallelPool renamed into GParallelPool and used for all Parallel
+///         tasking.
+///       - Two unnecessary Join overloads removed.
 ///     1.04: 2010-11-20
-///       - Small fix regarding setting GForEachPool.MaxExecuting.
+///       - Small fix regarding setting GParallelPool.MaxExecuting.
 ///     1.04: 2010-07-22
 ///       - Introduced overloaded Execute methods with delegates that accept the task
 ///         interface parameter.
@@ -234,7 +237,22 @@ type
   EFutureError = class(Exception);
   EFutureCancelled = class(Exception);
 
+  TPipelineStageDelegate = reference to procedure (const input, output:
+    IOmniBlockingCollection);
+
+  IOmniPipeline = interface
+    function  Input(const queue: IOmniBlockingCollection): IOmniPipeline;
+    function  NoWait: IOmniPipeline;
+    function  NumTasks(numTasks: integer): IOmniPipeline;
+    function  Output(const queue: IOmniBlockingCollection): IOmniPipeline;
+    procedure Run;
+    function  Stage(pipelineStage: TPipelineStageDelegate): IOmniPipeline;
+    function  Stages(const pipelineStages: array of TPipelineStageDelegate): IOmniPipeline;
+    function  Throttle(const numEntries: integer): IOmniPipeline;
+  end; { IOmniPipeline }
+
   Parallel = class
+  // ForEach
     class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
@@ -257,12 +275,20 @@ type
     {$IFDEF OTL_ERTTI}
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
     {$ENDIF OTL_ERTTI}
-    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
+
+  // Join
     class procedure Join(const task1, task2: TProc); overload;
-    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
     class procedure Join(const tasks: array of TProc); overload;
+
+  // Future
     class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
     class function Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>; overload;
+
+  // Pipeline
+    class function Pipeline: IOmniPipeline; overload;
+    class function Pipeline(const input: IOmniBlockingCollection;
+      const stages: array of TPipelineStageDelegate;
+      const output: IOmniBlockingCollection): IOmniPipeline; overload;
   end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -432,14 +458,71 @@ type
   end; { TOmniParallelLoop<T> }
 
 var
-  GForEachPool: IOmniThreadPool;
+  GParallelPool: IOmniThreadPool;
 
 implementation
 
 uses
   Windows,
+  Classes,
   GpStuff,
   OtlComm;
+
+type
+  IOmniPipelineStage = interface ['{C34393C7-E9EE-4CE7-895F-EECA553F4E54}']
+    function  GetNumTasks: integer;
+    function  GetStage: TPipelineStageDelegate;
+    function  GetThrottle: integer;
+    procedure SetNumTasks(const value: integer);
+    procedure SetThrottle(const value: integer);
+  //
+    property NumTasks: integer read GetNumTasks write SetNumTasks;
+    property Stage: TPipelineStageDelegate read GetStage;
+    property Throttle: integer read GetThrottle write SetThrottle;
+  end; { IOmniPipelineStage }
+
+  TOmniPipelineStage = class(TInterfacedObject, IOmniPipelineStage)
+  strict private
+    opsNumTasks: integer;
+    opsStage   : TPipelineStageDelegate;
+    opsThrottle: integer;
+  strict protected
+    function  GetNumTasks: integer;
+    function  GetStage: TPipelineStageDelegate;
+    function  GetThrottle: integer;
+    procedure SetNumTasks(const value: integer);
+    procedure SetThrottle(const value: integer);
+  public
+    constructor Create(stage: TPipelineStageDelegate);
+    property NumTasks: integer read GetNumTasks write SetNumTasks;
+    property Stage: TPipelineStageDelegate read GetStage;
+    property Throttle: integer read GetThrottle write SetThrottle;
+  end; { TOmniPipelineStage }
+
+  TOmniPipeline = class(TInterfacedObject, IOmniPipeline)
+  strict private
+    opCheckpoint: integer;
+    opInput     : IOmniBlockingCollection;
+    opNoWait    : boolean;
+    opNumTasks  : integer;
+    opOutput    : IOmniBlockingCollection;
+    opStages    : TInterfaceList;
+    opThrottle  : integer;
+  strict protected
+    function GetStage(idxStage: integer): IOmniPipelineStage;
+    property PipeStage[idxStage: integer]: IOmniPipelineStage read GetStage;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Input(const queue: IOmniBlockingCollection): IOmniPipeline;
+    function  NoWait: IOmniPipeline;
+    function  NumTasks(numTasks: integer): IOmniPipeline;
+    function  Output(const queue: IOmniBlockingCollection): IOmniPipeline;
+    procedure Run;
+    function  Stage(pipelineStage: TPipelineStageDelegate): IOmniPipeline;
+    function  Stages(const pipelineStages: array of TPipelineStageDelegate): IOmniPipeline;
+    function  Throttle(const numEntries: integer): IOmniPipeline;
+  end; { TOmniPipeline }
 
 { Parallel }
 
@@ -555,42 +638,6 @@ begin
   Result := TOmniFuture<T>.CreateEx(action);
 end; { Parallel.Future<T> }
 
-class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate);
-begin
-  Join([task1, task2]);
-end; { Parallel.Join }
-
-class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate);
-var
-  firstTask: IOmniTaskControl;
-  prevTask : IOmniTaskControl;
-  proc     : TOmniTaskDelegate;
-  task     : IOmniTaskControl;
-  taskGroup: IOmniTaskGroup;
-begin
-  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
-    prevTask := nil;
-    for proc in tasks do begin
-      task := CreateTask(proc).Unobserved;
-      if assigned(prevTask) then
-        prevTask.ChainTo(task);
-      prevTask := task;
-      if not assigned(firstTask) then
-        firstTask := task;
-    end;
-    if assigned(firstTask) then begin
-      firstTask.Schedule;
-      prevTask.WaitFor(INFINITE);
-    end;
-  end
-  else begin
-    taskGroup := CreateTaskGroup;
-    for proc in tasks do
-      CreateTask(proc).Join(taskGroup).Unobserved.Schedule;
-    taskGroup.WaitForAll;
-  end;
-end; { Parallel.Join }
-
 class procedure Parallel.Join(const task1, task2: TProc);
 begin
   Join([task1, task2]);
@@ -614,10 +661,24 @@ begin
           countStopped.Allocate;
         end
       ).Unobserved
-       .Schedule;
+       .Schedule(GParallelPool);
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
 end; { Parallel.Join }
+
+class function Parallel.Pipeline: IOmniPipeline;
+begin
+  Result := TOmniPipeline.Create;
+end; { Parallel.Pipeline }
+
+class function Parallel.Pipeline(const input: IOmniBlockingCollection; const stages:
+  array of TPipelineStageDelegate; const output: IOmniBlockingCollection): IOmniPipeline;
+begin
+  Result := Parallel.Pipeline
+    .Input(input)
+    .Stages(stages)
+    .Output(output);
+end; { Parallel.Pipeline }
 
 { TOmniParallelLoopBase }
 
@@ -878,9 +939,9 @@ begin
   else begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
-    { TODO 3 -oPrimoz : Still not optimal - show know how many Parallel.ForEach are currently executing! }
-    if numTasks < GForEachPool.MaxExecuting then
-      GForEachPool.MaxExecuting := numTasks;
+    { TODO 3 -oPrimoz : Still not optimal - should know how many Parallel.ForEach are currently executing! }
+    if numTasks < GParallelPool.MaxExecuting then
+      GParallelPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
@@ -904,7 +965,7 @@ begin
         task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
       if assigned(oplOnTaskControlCreate) then
         oplOnTaskControlCreate(task);
-      task.Schedule(GForEachPool);
+      task.Schedule(GParallelPool);
     end;
     if not (ploNoWait in Options) then begin
       WaitForSingleObject(countStopped.Handle, INFINITE);
@@ -1411,7 +1472,7 @@ end; { TOmniFuture<T>.DestroyTask }
 
 procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate);
 begin
-  ofTask := CreateTask(action, 'TOmniFuture action').Schedule;
+  ofTask := CreateTask(action, 'TOmniFuture action').Schedule(GParallelPool);
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.IsCancelled: boolean;
@@ -1443,6 +1504,184 @@ begin
   TryValue(INFINITE, Result);
 end; { TOmniFuture<T>.Value }
 
+{ TOmniPipelineStage }
+
+constructor TOmniPipelineStage.Create(stage: TPipelineStageDelegate);
+begin
+  inherited Create;
+  opsStage := stage;
+  opsNumTasks := 1;
+end; { TOmniPipelineStage.Create }
+
+function TOmniPipelineStage.GetNumTasks: integer;
+begin
+  Result := opsNumTasks;
+end; { TOmniPipelineStage.GetNumTasks }
+
+function TOmniPipelineStage.GetStage: TPipelineStageDelegate;
+begin
+  Result := opsStage;
+end; { TOmniPipelineStage.GetStage }
+
+function TOmniPipelineStage.GetThrottle: integer;
+begin
+  Result := opsThrottle;
+end; { TOmniPipelineStage.GetThrottle }
+
+procedure TOmniPipelineStage.SetNumTasks(const value: integer);
+begin
+  opsNumTasks := value;
+end; { TOmniPipelineStage.SetNumTasks }
+
+procedure TOmniPipelineStage.SetThrottle(const value: integer);
+begin
+  opsThrottle := value;
+end; { TOmniPipelineStage.SetThrottle }
+
+{ TOmniPipeline }
+
+constructor TOmniPipeline.Create;
+begin
+  inherited Create;
+  opStages := TInterfaceList.Create;
+  opNumTasks := 1;
+end; { TOmniPipeline.Create }
+
+destructor TOmniPipeline.Destroy;
+begin
+  FreeAndNil(opStages);
+  inherited Destroy;
+end; { TOmniPipeline.Destroy }
+
+function TOmniPipeline.GetStage(idxStage: integer): IOmniPipelineStage;
+begin
+  Result := (opStages[idxStage] as IOmniPipelineStage);
+end; { TOmniPipeline.GetStage }
+
+function TOmniPipeline.Input(const queue: IOmniBlockingCollection): IOmniPipeline;
+begin
+  opInput := queue;
+  Result := Self;
+end; { TOmniPipeline.Input }
+
+function TOmniPipeline.NoWait: IOmniPipeline;
+begin
+  opNoWait := true;
+  Result := Self;
+end; { TOmniPipeline.NoWait }
+
+function TOmniPipeline.NumTasks(numTasks: integer): IOmniPipeline;
+var
+  iStage: integer;
+begin
+  if opStages.Count = 0 then
+    opNumTasks := numTasks
+  else for iStage := opCheckpoint to opStages.Count - 1 do
+    PipeStage[iStage].NumTasks := numTasks;
+  Result := Self;
+end; { TOmniPipeline.NumTasks }
+
+function TOmniPipeline.Output(const queue: IOmniBlockingCollection): IOmniPipeline;
+begin
+  opOutput := queue;
+  Result := Self;
+end; { TOmniPipeline.Output }
+
+procedure TOmniPipeline.Run;
+var
+  countStopped: IOmniResourceCount;
+  inQueue     : IOmniBlockingCollection;
+  iStage      : integer;
+  iTask       : integer;
+  numTasks    : integer;
+  outQueue    : IOmniBlockingCollection;
+  stageName   : string;
+begin
+  outQueue := opInput;
+  numTasks := 0;
+  for iStage := 0 to opStages.Count - 1 do
+    Inc(numTasks, PipeStage[iStage].NumTasks);
+  countStopped := TOmniResourceCount.Create(numTasks);
+  for iStage := 0 to opStages.Count - 1 do begin
+    inQueue := outQueue;
+    if iStage < (opStages.Count - 1) then
+      outQueue := TOmniBlockingCollection.Create
+    else
+      outQueue := opOutput;
+    for iTask := 1 to PipeStage[iStage].NumTasks do begin
+      stageName := Format('Pipleline stage #%d', [iStage]);
+      if PipeStage[iStage].NumTasks > 1 then
+        stageName := Format('%s worker %d', [stageName, iTask]);
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          inQueue : IOmniBlockingCollection;
+          opStage : IOmniPipelineStage;
+          outQueue: IOmniBlockingCollection;
+        begin
+          inQueue := Task.Param['Input'].AsInterface as IOmniBlockingCollection;
+          outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
+          opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
+          opStage.Stage(inQueue, outQueue);
+          if assigned(outQueue) then
+            outQueue.CompleteAdding;
+           (Task.Param['Counter'].AsInterface as IOmniResourceCount).Allocate;
+        end,
+        stageName
+      )
+        .Unobserved
+        .SetParameter('Counter', countStopped)
+        .SetParameter('Input',  inQueue)
+        .SetParameter('Stage', opStages[iStage])
+        .SetParameter('Output', outQueue)
+        .Invoke('Start')
+        .Schedule(GParallelPool);
+    end; //for iTask
+  end; //for iStage
+  if not opNoWait then { TODO 1 -oPrimoz : That will not work because tasks are scheduled, not run! }
+    WaitForSingleObject(countStopped.Handle, INFINITE);
+end; { TOmniPipeline.Run }
+
+function TOmniPipeline.Stage(pipelineStage: TPipelineStageDelegate): IOmniPipeline;
+var
+  stage: IOmniPipelineStage;
+begin
+  stage := TOmniPipelineStage.Create(pipelineStage);
+  stage.NumTasks := opNumTasks;
+  stage.Throttle := opThrottle;
+  opStages.Add(stage);
+  opCheckpoint := opStages.Count;
+  Result := Self;
+end; { TOmniPipeline.Stage }
+
+function TOmniPipeline.Stages(const pipelineStages: array of TPipelineStageDelegate):
+  IOmniPipeline;
+var
+  oneStage: TPipelineStageDelegate;
+  stage   : IOmniPipelineStage;
+begin
+  Assert(Length(pipelineStages) > 0);
+  opCheckpoint := opStages.Count;
+  for oneStage in pipelineStages do begin
+    stage := TOmniPipelineStage.Create(oneStage);
+    stage.NumTasks := opNumTasks;
+    stage.Throttle := opThrottle;
+    opStages.Add(stage);
+  end;
+  Result := Self;
+end; { TOmniPipeline.Stages }
+
+function TOmniPipeline.Throttle(const numEntries: integer): IOmniPipeline;
+var
+  iStage: integer;
+begin
+  if opStages.Count = 0 then
+    opThrottle := numEntries
+  else for iStage := opCheckpoint to opStages.Count do
+    PipeStage[iStage].Throttle := numEntries;
+  Result := Self;
+end; { TOmniPipeline.Throttle }
+
 initialization
-  GForEachPool := CreateThreadPool('Parallel.ForEach pool');
+  GParallelPool := CreateThreadPool('Parallel.ForEach pool');
 end.
