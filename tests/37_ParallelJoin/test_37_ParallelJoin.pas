@@ -11,8 +11,10 @@ type
     btnJoinAll: TButton;
     btnJointOne: TButton;
     lbLog: TListBox;
+    btnJoinTProc: TButton;
     procedure btnJoinAllClick(Sender: TObject);
     procedure btnJointOneClick(Sender: TObject);
+    procedure btnJoinTProcClick(Sender: TObject);
   private
   protected
     procedure Log(const msg: string);
@@ -61,6 +63,30 @@ begin
   Environment.Process.Affinity.Count := 1;
   btnJoinAllClick(Sender);
   Environment.Process.Affinity.Count := Environment.System.Affinity.Count;
+end;
+
+procedure TfrmTestParallelJoin.btnJoinTProcClick(Sender: TObject);
+var
+  expectedTime: integer;
+  startTime   : int64;
+begin
+  if Environment.Process.Affinity.Count = 1 then
+    expectedTime := 5
+  else
+    expectedTime := 3;
+  Log(Format('Starting two tasks, expected execution time is %d seconds', [expectedTime]));
+  startTime := DSiTimeGetTime64;
+  Parallel.Join(
+    procedure
+    begin
+      Sleep(3000);
+    end,
+    procedure
+    begin
+      Sleep(2000);
+    end);
+  Log(Format('Tasks stopped, execution time was %s seconds',
+    [FormatDateTime('s.zzz', DSiElapsedTime64(startTime)/MSecsPerDay)]));
 end;
 
 procedure TfrmTestParallelJoin.Log(const msg: string);

@@ -41,4 +41,13 @@ object frmTestParallelJoin: TfrmTestParallelJoin
     ItemHeight = 13
     TabOrder = 2
   end
+  object btnJoinTProc: TButton
+    Left = 8
+    Top = 88
+    Width = 105
+    Height = 25
+    Caption = 'Join (TProc)'
+    TabOrder = 3
+    OnClick = btnJoinTProcClick
+  end
 end
