@@ -8,7 +8,7 @@
   - Implemented conversions to/from TValue (Delphi 2010 and newer).
   - Implemented constructor.
   
-- Fixed ugly bug in TOmniBlockingCollection
+- Fixed few ugly bugs in TOmniBlockingCollection.
 
 - TOmniMessageQueueTee
 - IOmniCommDispatchingObserver
@@ -32,6 +32,7 @@
 - IOmniTaskControl.OnMessage also accepts an object (message dispatcher; form, for example)
 
 - new demos?
+  38_ +
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
