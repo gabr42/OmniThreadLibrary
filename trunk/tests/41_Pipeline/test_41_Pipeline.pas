@@ -110,6 +110,7 @@ begin
   pipeOut := Parallel
     .Pipeline
     //.Input not set - first stage will have no input
+    .Throttle(102400) // optional command - by default throttling level is set to 10240
     .Stage(
       procedure (const input, output: IOmniBlockingCollection)
       var

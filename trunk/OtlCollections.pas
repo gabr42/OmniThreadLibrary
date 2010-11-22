@@ -40,6 +40,8 @@
 ///         collection and immediately called CompleteAdding, reader sometimes returned
 ///         from TryTake with status False (collection completed) without returning the
 ///         value waiting in the queue.
+///       - Implemented TOmniBlockingCollection.Next.
+///       - Implemented throttling support.
 ///     1.03a: 2010-07-21
 ///       - TOmniBlockingCollection.TryTake was broken. When two threads were waiting in
 ///         TryTake at the same time, first thread to complete the wait would remove
@@ -70,6 +72,7 @@ uses
   Windows,
   SysUtils,
   DSiWin32,
+  GpStuff,
   OtlCommon,
   OtlContainers,
   OtlContainerObserver,
@@ -88,6 +91,7 @@ type
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
     function  Next: TOmniValue;
+    procedure SetThrottling(highWatermark, lowWatermark: integer);
     function  Take(var value: TOmniValue): boolean;
     function  TryAdd(const value: TOmniValue): boolean;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
@@ -97,11 +101,17 @@ type
                                   IOmniBlockingCollection,
                                   IOmniValueEnumerable)
   strict private
+    obcAccessed       : boolean;
+    obcApproxCount    : TGp4AlignedInt;
     obcCollection     : TOmniQueue;
     obcCompleted      : boolean;
     obcCompletedSignal: TDSiEventHandle;
+    obcHighWaterMark  : integer;
+    obcLowWaterMark   : integer;
+    obcNotOverflow    : THandle {event};
     obcObserver       : TOmniContainerWindowsEventObserver;
     obcResourceCount  : TOmniResourceCount;
+    obcThrottling     : boolean;
   public
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
@@ -110,6 +120,7 @@ type
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
     function  Next: TOmniValue;
+    procedure SetThrottling(highWaterMark, lowWaterMark: integer);
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
@@ -170,10 +181,12 @@ begin
   obcCompletedSignal := CreateEvent(nil, true, false, nil);
   obcObserver := CreateContainerWindowsEventObserver;
   obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
+  obcNotOverflow := CreateEvent(nil, true, true, nil);
 end; { TOmniBlockingCollection.Create }
 
 destructor TOmniBlockingCollection.Destroy;
 begin
+  DSiCloseHandleAndNull(obcNotOverflow);
   if assigned(obcCollection) and assigned(obcObserver) then
     obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
   FreeAndNil(obcObserver);
@@ -213,6 +226,18 @@ begin
     raise ECollectionCompleted.Create('Collection is empty');
 end; { TOmniBlockingCollection.Next }
 
+///<summary>When throttling is set, Add will block if there is >= highWaterMark elements
+///  in the queue. It will only unblock when number of elements drops below lowWaterMark.</summary>
+procedure TOmniBlockingCollection.SetThrottling(highWaterMark, lowWaterMark: integer);
+begin
+  if obcAccessed then
+    raise Exception.Create('Throttling cannot be set once the blocking collection has been used');
+  Assert(lowWaterMark <= highWaterMark);
+  obcHighWaterMark := highWaterMark;
+  obcLowWaterMark := lowWaterMark;
+  obcThrottling := true;
+end; { TOmniBlockingCollection.SetThrottling }
+
 function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
 begin
   Result := TryTake(value, INFINITE);
@@ -222,8 +247,19 @@ function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 begin
   // CompleteAdding and TryAdd are not synchronised
   Result := not obcCompleted;
-  if Result then
+  if Result then begin
+    obcAccessed := true;
+    if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
+      Win32Check(ResetEvent(obcNotOverflow));
+      if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
+        Result := false; // completed
+        Exit;
+      end;
+    end;
     obcCollection.Enqueue(value);
+    if obcThrottling then
+      obcApproxCount.Increment;
+  end;
 end; { TOmniBlockingCollection.TryAdd }
 
 function TOmniBlockingCollection.TryTake(var value: TOmniValue;
@@ -277,7 +313,7 @@ begin { TOmniBlockingCollection.TryTake }
         awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
                      @waitHandles, false, TimeLeft_ms);
         if awaited <> WAIT_OBJECT_1 then begin
-          if awaited = WAIT_OBJECT_2 then 
+          if awaited = WAIT_OBJECT_2 then
             CompleteAdding;
           Result := false;
           break; //while
@@ -289,6 +325,11 @@ begin { TOmniBlockingCollection.TryTake }
       if assigned(obcResourceCount) then
         obcResourceCount.Release;
     end;
+  end;
+  if obcThrottling and Result then begin
+    obcApproxCount.Decrement;
+    if obcApproxCount.Value <= obcLowWaterMark then
+      SetEvent(obcNotOverflow);
   end;
 end; { TOmniBlockingCollection.TryTake }
 
