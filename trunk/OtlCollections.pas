@@ -30,10 +30,16 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-07-21
-///   Version           : 1.03a
+///   Last modification : 2010-11-22
+///   Version           : 1.03b
 ///</para><para>
 ///   History:
+///     1.03b: 2010-11-22
+///       - Fixed an algorithm problem in TryTake. If a reader waited in TryTake for
+///         something to happen and then writer scheduled a value to the blocking
+///         collection and immediately called CompleteAdding, reader sometimes returned
+///         from TryTake with status False (collection completed) without returning the
+///         value waiting in the queue.
 ///     1.03a: 2010-07-21
 ///       - TOmniBlockingCollection.TryTake was broken. When two threads were waiting in
 ///         TryTake at the same time, first thread to complete the wait would remove
@@ -81,6 +87,7 @@ type
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
+    function  Next: TOmniValue;
     function  Take(var value: TOmniValue): boolean;
     function  TryAdd(const value: TOmniValue): boolean;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
@@ -102,6 +109,7 @@ type
     procedure CompleteAdding; inline;
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
+    function  Next: TOmniValue;
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
@@ -199,6 +207,12 @@ begin
   Result := obcCompleted;
 end; { TOmniBlockingCollection.IsCompleted }
 
+function TOmniBlockingCollection.Next: TOmniValue;
+begin
+  if not Take(Result) then
+    raise ECollectionCompleted.Create('Collection is empty');
+end; { TOmniBlockingCollection.Next }
+
 function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
 begin
   Result := TryTake(value, INFINITE);
@@ -245,8 +259,6 @@ var
 begin { TOmniBlockingCollection.TryTake }
   if obcCollection.TryDequeue(value) then
     Result := true
-  else if IsCompleted or (timeout_ms = 0) then
-    Result := false
   else begin
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
@@ -271,6 +283,8 @@ begin { TOmniBlockingCollection.TryTake }
           break; //while
         end;
       end;
+      if not Result then // there may still be data in completed queue
+        Result := obcCollection.TryDequeue(value);
     finally
       if assigned(obcResourceCount) then
         obcResourceCount.Release;
