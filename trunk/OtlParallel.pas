@@ -31,16 +31,20 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-11-21
-///   Version           : 1.05
+///   Last modification : 2010-11-22
+///   Version           : 1.05a
 ///</para><para>
 ///   History:
+///     1.05a: 2010-11-03
+///       - Two overloaded versions of Join added back. They were needed after all.
+///       - Fixed bugs in Join implementation - thanks to Mason Wheeler for
+///         the bug report.
 ///     1.05: 2010-11-21
 ///       - OtlFutures functionality moved into this unit.
 ///       - Futures can be created by calling Parallel.Future<T>(action).
 ///       - GParallelPool renamed into GParallelPool and used for all Parallel
 ///         tasking.
-///       - Two unnecessary Join overloads removed.
+///       - Two overloaded versions of Join removed.
 ///     1.04: 2010-11-20
 ///       - Small fix regarding setting GParallelPool.MaxExecuting.
 ///     1.04: 2010-07-22
@@ -278,7 +282,9 @@ type
 
   // Join
     class procedure Join(const task1, task2: TProc); overload;
+    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
     class procedure Join(const tasks: array of TProc); overload;
+    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
 
   // Future
     class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
@@ -646,22 +652,77 @@ end; { Parallel.Join }
 class procedure Parallel.Join(const tasks: array of TProc);
 var
   countStopped: TOmniResourceCount;
+  iProc       : integer;
   proc        : TProc;
+  intProc     : integer absolute proc;
 begin
+  Assert(SizeOf(integer) = SizeOf(TProc));
   if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
     for proc in tasks do
       proc;
   end
   else begin
     countStopped := TOmniResourceCount.Create(Length(tasks));
-    for proc in tasks do
+    for proc in tasks do begin
       CreateTask(
-        procedure (const task: IOmniTask) begin
-          proc;
+        procedure (const task: IOmniTask)
+        begin
+          TProc(task.Param['Proc'].AsInteger)();
           countStopped.Allocate;
         end
       ).Unobserved
+       .SetParameter('Proc', intProc)
        .Schedule(GParallelPool);
+    end;
+    WaitForSingleObject(countStopped.Handle, INFINITE);
+  end;
+end; { Parallel.Join }
+
+class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate);
+begin
+  Join([task1, task2]);
+end; { Parallel.Join }
+
+class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate);
+var
+  countStopped: IOmniResourceCount;
+  firstTask   : IOmniTaskControl;
+  intTasks    : array of TOmniTaskDelegate;
+  prevTask    : IOmniTaskControl;
+  proc        : TOmniTaskDelegate;
+  task        : IOmniTaskControl;
+  intProc     : integer absolute proc;
+begin
+  Assert(SizeOf(integer) = SizeOf(TProc));
+  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
+    prevTask := nil;
+    for proc in tasks do begin
+      task := CreateTask(proc).Unobserved;
+      if assigned(prevTask) then
+        prevTask.ChainTo(task);
+      prevTask := task;
+      if not assigned(firstTask) then
+        firstTask := task;
+    end;
+    if assigned(firstTask) then begin
+      firstTask.Schedule;
+      prevTask.WaitFor(INFINITE);
+    end;
+  end
+  else begin
+    countStopped := TOmniResourceCount.Create(Length(tasks));
+    SetLength(intTasks, Length(tasks));
+    for proc in tasks do begin
+      CreateTask(
+        procedure (const task: IOmniTask)
+        begin
+          TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
+          countStopped.Allocate;
+        end
+      ).Unobserved
+       .SetParameter('Proc', intProc)
+       .Schedule(GParallelPool);
+    end;
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
 end; { Parallel.Join }
