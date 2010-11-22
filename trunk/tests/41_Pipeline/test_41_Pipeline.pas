@@ -109,7 +109,7 @@ var
 begin
   pipeOut := Parallel
     .Pipeline
-    //.Input not set - first stage will have no input
+    //.Input not set - first stage will have no input; if you use .Intput(), don't forget to call CompleteAdding on the input collection
     .Throttle(102400) // optional command - by default throttling level is set to 10240
     .Stage(
       procedure (const input, output: IOmniBlockingCollection)
@@ -123,7 +123,7 @@ begin
     )
     .Stage(StageMult2)
     .Stages([StageMinus3, StageMod5])
-      .NumTasks(2) // each stage from previous line will execute in two tasks
+      .NumTasks(2) // each stage from previous line will execute in two tasks; WARNING - this will unorder data in the pipe!
     .Stage(
       procedure (const input, output: IOmniBlockingCollection)
       var
