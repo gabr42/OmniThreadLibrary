@@ -242,8 +242,6 @@ type
   EFutureError = class(Exception);
   EFutureCancelled = class(Exception);
 
-  TPipelineFirstStageDelegate = reference to procedure (const output:
-    IOmniBlockingCollection);
   TPipelineStageDelegate = reference to procedure (const input, output:
     IOmniBlockingCollection);
 
@@ -509,7 +507,6 @@ type
   strict private
     opCheckpoint: integer;
     opInput     : IOmniBlockingCollection;
-    opNoWait    : boolean;
     opNumTasks  : integer;
     opStages    : TInterfaceList;
     opThrottle  : integer;
@@ -649,7 +646,6 @@ end; { Parallel.Join }
 class procedure Parallel.Join(const tasks: array of TProc);
 var
   countStopped: TOmniResourceCount;
-  iProc       : integer;
   proc        : TProc;
   intProc     : integer absolute proc;
 begin
@@ -1634,17 +1630,13 @@ end; { TOmniPipeline.NumTasks }
 
 function TOmniPipeline.Run: IOmniBlockingCollection;
 var
-  inQueue     : IOmniBlockingCollection;
-  iStage      : integer;
-  iTask       : integer;
-  numTasks    : integer;
-  outQueue    : IOmniBlockingCollection;
-  stageName   : string;
+  inQueue  : IOmniBlockingCollection;
+  iStage   : integer;
+  iTask    : integer;
+  outQueue : IOmniBlockingCollection;
+  stageName: string;
 begin
   outQueue := opInput;
-  numTasks := 0;
-  for iStage := 0 to opStages.Count - 1 do
-    Inc(numTasks, PipeStage[iStage].NumTasks);
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;
