@@ -45,7 +45,7 @@
 ///     1.05: 2010-11-21
 ///       - OtlFutures functionality moved into this unit.
 ///       - Futures can be created by calling Parallel.Future<T>(action).
-///       - GParallelPool renamed into GParallelPool and used for all Parallel
+///       - GForEachPool renamed into GParallelPool and used for all Parallel
 ///         tasking.
 ///       - Two overloaded versions of Join removed.
 ///     1.04: 2010-11-20
@@ -296,8 +296,8 @@ type
 
   // Pipeline
     class function Pipeline: IOmniPipeline; overload;
-    class function Pipeline(const input: IOmniBlockingCollection;
-      const stages: array of TPipelineStageDelegate): IOmniPipeline; overload;
+    class function Pipeline(const stages: array of TPipelineStageDelegate;
+      const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
   end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -739,8 +739,8 @@ begin
   Result := TOmniPipeline.Create;
 end; { Parallel.Pipeline }
 
-class function Parallel.Pipeline(const input: IOmniBlockingCollection; const stages:
-  array of TPipelineStageDelegate): IOmniPipeline;
+class function Parallel.Pipeline(const stages: array of TPipelineStageDelegate; const
+  input: IOmniBlockingCollection): IOmniPipeline;
 begin
   Result := Parallel.Pipeline
     .Input(input)
@@ -1663,6 +1663,11 @@ var
   stageName: string;
 begin
   outQueue := opInput;
+  numTasks := 0;
+  for iStage := 0 to opStages.Count - 1 do
+    Inc(numTasks, PipeStage[iStage].NumTasks);
+  if numTasks < GParallelPool.MaxExecuting then
+    GParallelPool.MaxExecuting := numTasks;
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;

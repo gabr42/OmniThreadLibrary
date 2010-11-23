@@ -12,9 +12,13 @@ uses
 type
   TfrmPipelineDemo = class(TForm)
     lbLog: TListBox;
-    btnPipeline: TButton;
+    btnExtended: TButton;
+    btnSimple: TButton;
+    btnExtended2: TButton;
+    procedure btnExtended2Click(Sender: TObject);
     procedure btnForEachClick(Sender: TObject);
-    procedure btnPipelineClick(Sender: TObject);
+    procedure btnExtendedClick(Sender: TObject);
+    procedure btnSimpleClick(Sender: TObject);
   private
     procedure StageMod5(const input, output: IOmniBlockingCollection);
   public
@@ -73,6 +77,14 @@ begin
   lbLog.Items.Add(Format('Sum = %d; Total time = %d ms', [sum, GetTickCount - startTime]));
 end;
 
+procedure StageGenerate(const input, output: IOmniBlockingCollection);
+var
+  i: integer;
+begin
+  for i := 1 to 1000000 do
+    output.Add(i);
+end;
+
 procedure StageMult2(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
@@ -100,12 +112,38 @@ begin
     output.Add(value.AsInteger mod 5);
 end;
 
-procedure TfrmPipelineDemo.btnPipelineClick(Sender: TObject);
+procedure StageSum(const input, output: IOmniBlockingCollection);
 var
-  i             : integer;
-  pipelineResult: TOmniValue;
-  pipeOut       : IOmniBlockingCollection;
-  testResult    : integer;
+  sum  : integer;
+  value: TOmniValue;
+begin
+  sum := 0;
+  for value in input do
+    Inc(sum, value);
+  output.Add(sum);
+end;
+
+procedure TfrmPipelineDemo.btnExtended2Click(Sender: TObject);
+var
+  pipeOut: IOmniBlockingCollection;
+begin
+  pipeOut := Parallel
+    .Pipeline
+    .Throttle(102400)
+    .Stage(StageGenerate)
+    .Stage(StageMult2)
+    .Stages([StageMinus3, StageMod5])
+      .NumTasks(2)
+    .Stage(StageSum)
+    .Run;
+  lbLog.Items.Add(Format('Pipeline result: %d', [pipeOut.Next.AsInteger]));
+end;
+
+procedure TfrmPipelineDemo.btnExtendedClick(Sender: TObject);
+var
+  i         : integer;
+  pipeOut   : IOmniBlockingCollection;
+  testResult: integer;
 begin
   pipeOut := Parallel
     .Pipeline
@@ -141,6 +179,14 @@ begin
   for i := 1 to 1000000 do
     Inc(testResult, (2*i - 3) mod 5);
   lbLog.Items.Add(Format('Pipeline result: %d; expected result: %d', [pipeOut.Next.AsInteger, testResult]));
+end;
+
+procedure TfrmPipelineDemo.btnSimpleClick(Sender: TObject);
+var
+  pipeOut: IOmniBlockingCollection;
+begin
+  pipeOut := Parallel.Pipeline([StageGenerate, StageMult2, StageMinus3, StageMod5, StageSum]).Run;
+  lbLog.Items.Add(Format('Pipeline result: %d', [pipeOut.Next.AsInteger]));
 end;
 
 end.

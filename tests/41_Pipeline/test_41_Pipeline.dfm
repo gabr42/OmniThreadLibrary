@@ -21,15 +21,33 @@ object frmPipelineDemo: TfrmPipelineDemo
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 0
+    TabOrder = 2
   end
-  object btnPipeline: TButton
+  object btnExtended: TButton
+    Left = 8
+    Top = 39
+    Width = 105
+    Height = 25
+    Caption = 'Extended Pipeline'
+    TabOrder = 1
+    OnClick = btnExtendedClick
+  end
+  object btnSimple: TButton
     Left = 8
     Top = 8
     Width = 105
     Height = 25
-    Caption = 'Parallel.Pipeline'
-    TabOrder = 1
-    OnClick = btnPipelineClick
+    Caption = 'Simple Pipeline'
+    TabOrder = 0
+    OnClick = btnSimpleClick
+  end
+  object btnExtended2: TButton
+    Left = 8
+    Top = 70
+    Width = 105
+    Height = 25
+    Caption = 'Extended Pipeline 2'
+    TabOrder = 3
+    OnClick = btnExtended2Click
   end
 end
