@@ -499,7 +499,7 @@ type
     opsStage      : TPipelineStageDelegate;
     opsThrottle   : integer;
     opsThrottleLow: integer;
-  strict protected
+  protected
     function  GetNumTasks: integer;
     function  GetStage: TPipelineStageDelegate;
     function  GetThrottle: integer;
@@ -1659,6 +1659,7 @@ var
   inQueue  : IOmniBlockingCollection;
   iStage   : integer;
   iTask    : integer;
+  numTasks : integer;
   outQueue : IOmniBlockingCollection;
   stageName: string;
 begin
