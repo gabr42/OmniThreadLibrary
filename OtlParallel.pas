@@ -38,6 +38,7 @@
 ///     1.05c: 2010-11-25
 ///       - CompleteAdding is called only when all tasks for the stage have completed the
 ///         work.
+///       - .NumTasks works correctly after .Stage().
 ///     1.05b: 2010-11-25
 ///       - Parallel.Pipeline uses its own thread pool with unlimited number of running
 ///         threads.
