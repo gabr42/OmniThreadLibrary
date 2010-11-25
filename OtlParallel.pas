@@ -1753,5 +1753,5 @@ end; { TOmniPipeline.Throttle }
 initialization
   GParallelPool := CreateThreadPool('OtlParallel pool');
   GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
-  GPipelinePool.MaxExecuting := 0;
+  GPipelinePool.MaxExecuting := -1;
 end.
