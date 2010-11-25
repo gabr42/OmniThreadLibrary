@@ -50,4 +50,13 @@ object frmPipelineDemo: TfrmPipelineDemo
     TabOrder = 3
     OnClick = btnExtended2Click
   end
+  object btnStressTest: TButton
+    Left = 8
+    Top = 304
+    Width = 105
+    Height = 25
+    Caption = 'Stress test'
+    TabOrder = 4
+    OnClick = btnStressTestClick
+  end
 end

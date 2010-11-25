@@ -30,6 +30,7 @@
 - IOmniTask/IOmniTaskControl.ParamByName has been removed, use .Param[name: string].
 - IOmniTask/IOmniTaskControl.Param returns TOmniValueContainter.
 - IOmniTaskControl.OnMessage also accepts an object (message dispatcher; form, for example)
+- Bug fixed: Thread pool was immediately closing unused threads if MaxExecuting was set to -1.
 
 - new demos?
   38_ +
