@@ -15,12 +15,16 @@ type
     btnExtended: TButton;
     btnSimple: TButton;
     btnExtended2: TButton;
+    btnStressTest: TButton;
     procedure btnExtended2Click(Sender: TObject);
     procedure btnForEachClick(Sender: TObject);
     procedure btnExtendedClick(Sender: TObject);
     procedure btnSimpleClick(Sender: TObject);
+    procedure btnStressTestClick(Sender: TObject);
   private
     procedure StageMod5(const input, output: IOmniBlockingCollection);
+  strict protected
+    procedure RunStressTest(numTest: integer);
   public
   end;
 
@@ -28,6 +32,9 @@ var
   frmPipelineDemo: TfrmPipelineDemo;
 
 implementation
+
+const
+  CNumStressTests = 100;
 
 {$R *.dfm}
 
@@ -187,6 +194,160 @@ var
 begin
   pipeOut := Parallel.Pipeline([StageGenerate, StageMult2, StageMinus3, StageMod5, StageSum]).Run;
   lbLog.Items.Add(Format('Pipeline result: %d', [pipeOut.Next.AsInteger]));
+end;
+
+procedure TfrmPipelineDemo.btnStressTestClick(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := 1 to CNumStressTests do
+    RunStressTest(i);
+end;
+
+procedure Generate(const input, output: IOmniBlockingCollection);
+var
+  i: integer;
+begin
+  for i := 1 to 1000000 do
+    output.Add(i);
+end;
+
+procedure Enlarge(const input, output: IOmniBlockingCollection);
+var
+  value: TOmniValue;
+begin
+  while input.Take(value) do begin
+    output.Add(value);
+    output.Add(value);
+  end;
+end;
+
+procedure Reduce(const input, output: IOmniBlockingCollection);
+var
+  value: TOmniValue;
+begin
+  while input.Take(value) do begin
+    input.Take(value);
+    output.Add(value);
+  end;
+end;
+
+procedure Multiply(const input, output: IOmniBlockingCollection);
+var
+  value: TOmniValue;
+begin
+  while input.Take(value) do
+    output.Add(2 * value.AsInteger);
+end;
+
+procedure Divide(const input, output: IOmniBlockingCollection);
+var
+  value: TOmniValue;
+begin
+  while input.Take(value) do
+    output.Add(value.AsInteger div 2);
+end;
+
+procedure Passthrough(const input, output: IOmniBlockingCollection);
+var
+  value: TOmniValue;
+begin
+  while input.Take(value) do
+    output.Add(value);
+end;
+
+procedure Summary(const input, output: IOmniBlockingCollection);
+var
+  sum  : int64;
+  value: TOmniValue;
+begin
+  sum := 0;
+  while input.Take(value) do
+    Inc(sum, value);
+  output.Add(sum);
+end;
+
+procedure TfrmPipelineDemo.RunStressTest(numTest: integer);
+var
+  descr    : string;
+  iStage   : integer;
+  numStages: integer;
+  numTasks : integer;
+  pipeline : IOmniPipeline;
+  pipeOut  : IOmniBlockingCollection;
+  retVal   : int64;
+
+  procedure AddThrottle;
+  var
+    throttleMax: integer;
+    throttleMin: integer;
+  begin
+    if Random(4) = 1 then begin
+      throttleMax := Random(10000);
+      throttleMin := Random(throttleMax);
+      descr := descr + Format('T %d/%d ', [throttleMax, throttleMin]);
+      pipeline.Throttle(throttleMax, throttleMin);
+    end;
+  end;
+
+  procedure AddTasks;
+  begin
+    if Random(2) = 1 then begin
+      numTasks := Random(3) + 2;
+      descr := descr + Format('/%d ', [numTasks]);
+      pipeline.NumTasks(numTasks);
+    end;
+  end;
+
+begin
+  pipeline := Parallel.Pipeline;
+  AddThrottle;
+  numStages := Random(6) + 2;
+  descr := descr + 'G ';
+  pipeline.Stage(Generate);
+  AddThrottle;
+  for iStage := 1 to numStages - 2 do begin
+    case Random(3) of
+      0: //passthrough
+        begin
+          descr := descr + 'P ';
+          pipeline.Stage(Passthrough);
+          AddThrottle;
+          AddTasks;
+        end;
+      1: //enlarge/reduce
+        begin
+          descr := descr + 'E ';
+          pipeline.Stage(Enlarge);
+          AddThrottle;
+          descr := descr + 'R ';
+          pipeline.Stage(Reduce);
+          AddThrottle;
+        end;
+      2: //multiply/divide
+        begin
+          descr := descr + 'M ';
+          pipeline.Stage(Multiply);
+          AddThrottle;
+          AddTasks;
+          descr := descr + 'D ';
+          pipeline.Stage(Divide);
+          AddThrottle;
+          AddTasks;
+        end;
+    end;
+  end;
+  descr := descr + 'S ';
+  pipeline.Stage(Summary);
+  AddThrottle;
+  lbLog.ItemIndex := lbLog.Items.Add('#' + IntToStr(numTest) + ': ' + descr);
+  lbLog.Update;
+  pipeOut := pipeline.Run;
+  retVal := pipeOut.Next;
+  lbLog.ItemIndex := lbLog.Items.Add(IntToStr(retVal));
+  if retVal <> 500000500000 then
+    raise Exception.Create('Wrong value calculated!');
+  lbLog.Update;
 end;
 
 end.
