@@ -32,9 +32,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
 ///   Last modification : 2010-11-25
-///   Version           : 1.05b
+///   Version           : 1.05c
 ///</para><para>
 ///   History:
+///     1.05c: 2010-11-25
+///       - CompleteAdding is called only when all tasks for the stage have completed the
+///         work.
 ///     1.05b: 2010-11-25
 ///       - Parallel.Pipeline uses its own thread pool with unlimited number of running
 ///         threads.
@@ -1660,17 +1663,19 @@ end; { TOmniPipeline.NumTasks }
 
 function TOmniPipeline.Run: IOmniBlockingCollection;
 var
-  inQueue  : IOmniBlockingCollection;
-  iStage   : integer;
-  iTask    : integer;
-  outQueue : IOmniBlockingCollection;
-  stageName: string;
+  countStopped: IOmniResourceCount;
+  inQueue     : IOmniBlockingCollection;
+  iStage      : integer;
+  iTask       : integer;
+  outQueue    : IOmniBlockingCollection;
+  stageName   : string;
 begin
   outQueue := opInput;
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;
     outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
+    countStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
       stageName := Format('Pipleline stage #%d', [iStage]);
       if PipeStage[iStage].NumTasks > 1 then
@@ -1686,7 +1691,8 @@ begin
           outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
           opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
           opStage.Stage(inQueue, outQueue);
-          outQueue.CompleteAdding;
+          if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+            outQueue.CompleteAdding;
         end,
         stageName
       )
@@ -1694,6 +1700,7 @@ begin
         .SetParameter('Input', inQueue)
         .SetParameter('Stage', opStages[iStage])
         .SetParameter('Output', outQueue)
+        .SetParameter('Stopped', countStopped)
         .Schedule(GPipelinePool);
     end; //for iTask
   end; //for iStage
