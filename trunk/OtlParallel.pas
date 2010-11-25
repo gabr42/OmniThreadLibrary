@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-11-22
-///   Version           : 1.05a
+///   Last modification : 2010-11-25
+///   Version           : 1.05b
 ///</para><para>
 ///   History:
+///     1.05b: 2010-11-25
+///       - Parallel.Pipeline uses its own thread pool with unlimited number of running
+///         threads.
 ///     1.05a: 2010-11-22
 ///       - Two overloaded versions of Join added back. They were needed after all.
 ///       - Fixed bugs in Join implementation - thanks to Mason Wheeler for
@@ -468,6 +471,7 @@ type
 
 var
   GParallelPool: IOmniThreadPool;
+  GPipelinePool: IOmniThreadPool;
 
 implementation
 
@@ -1659,16 +1663,10 @@ var
   inQueue  : IOmniBlockingCollection;
   iStage   : integer;
   iTask    : integer;
-  numTasks : integer;
   outQueue : IOmniBlockingCollection;
   stageName: string;
 begin
   outQueue := opInput;
-  numTasks := 0;
-  for iStage := 0 to opStages.Count - 1 do
-    Inc(numTasks, PipeStage[iStage].NumTasks);
-  if numTasks < GParallelPool.MaxExecuting then
-    GParallelPool.MaxExecuting := numTasks;
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;
@@ -1753,5 +1751,7 @@ begin
 end; { TOmniPipeline.Throttle }
 
 initialization
-  GParallelPool := CreateThreadPool('Parallel.ForEach pool');
+  GParallelPool := CreateThreadPool('OtlParallel pool');
+  GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
+  GPipelinePool.MaxExecuting := 0;
 end.
