@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-19
-///   Version           : 2.05a
+///   Last modification : 2010-11-25
+///   Version           : 2.05b
 /// </para><para>
 ///   History:
+///     2.05b: 2010-11-25
+///       - Bug fixed: Thread pool was immediately closing unused threads if MaxExecuting
+///         was set to -1.
 ///     2.05a: 2010-07-19
 ///       - Works correctly if MaxExecuting is set to 0. Set MaxExecuting to -1 to allow
 ///         "infinite" number of execution threads.
@@ -1065,7 +1068,7 @@ begin
     owRunningWorkers.Extract(worker);
     CountRunning.Decrement;
     if (not worker.RemoveFromPool) and
-      (owRunningWorkers.Count < MaxExecuting.Value) then
+      ((MaxExecuting.Value < 0) or (owRunningWorkers.Count < MaxExecuting.Value)) then
     begin
       worker.StartIdle_ms := DSiTimeGetTime64;
       owIdleWorkers.Add(worker);
@@ -1471,5 +1474,3 @@ initialization
 finalization
   GOmniThreadPool := nil;
 end.
-
-
