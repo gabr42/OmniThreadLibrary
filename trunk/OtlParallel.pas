@@ -1694,7 +1694,7 @@ begin
         .SetParameter('Input', inQueue)
         .SetParameter('Stage', opStages[iStage])
         .SetParameter('Output', outQueue)
-        .Schedule(GParallelPool);
+        .Schedule(GPipelinePool);
     end; //for iTask
   end; //for iStage
   Result := outQueue;
