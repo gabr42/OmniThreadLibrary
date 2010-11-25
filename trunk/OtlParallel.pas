@@ -1223,6 +1223,7 @@ end; { TOmniParallelLoop.NoWait }
 
 function TOmniParallelLoop.NumTasks(taskCount: integer): IOmniParallelLoop;
 begin
+  Assert(taskCount > 0);
   SetNumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
@@ -1716,7 +1717,7 @@ begin
   stage.Throttle := opThrottle;
   stage.ThrottleLow := opThrottleLow;
   opStages.Add(stage);
-  opCheckpoint := opStages.Count;
+  opCheckpoint := opStages.Count - 1;
   Result := Self;
 end; { TOmniPipeline.Stage }
 
@@ -1743,6 +1744,7 @@ var
   iStage: integer;
   throttleLow: integer;
 begin
+  Assert(unblockAtCount < numEntries);
   throttleLow := unblockAtCount;
   if throttleLow = 0 then
     throttleLow := Round(3/4 * numEntries);
@@ -1750,7 +1752,7 @@ begin
     opThrottle := numEntries;
     opThrottleLow := throttleLow;
   end
-  else for iStage := opCheckpoint to opStages.Count do begin
+  else for iStage := opCheckpoint to opStages.Count - 1 do begin
     PipeStage[iStage].Throttle := numEntries;
     PipeStage[iStage].ThrottleLow := throttleLow;
   end;
