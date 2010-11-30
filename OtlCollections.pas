@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-11-22
-///   Version           : 1.03b
+///   Last modification : 2010-11-30
+///   Version           : 1.03c
 ///</para><para>
 ///   History:
+///     1.03c: 2010-11-30
+///       - Fixed deadlock condition in TryAdd when throttling was used.
 ///     1.03b: 2010-11-22
 ///       - Fixed an algorithm problem in TryTake. If a reader waited in TryTake for
 ///         something to happen and then writer scheduled a value to the blocking
@@ -251,9 +253,13 @@ begin
     obcAccessed := true;
     if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
       Win32Check(ResetEvent(obcNotOverflow));
-      if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
-        Result := false; // completed
-        Exit;
+      // it's possible that messages were removed and obcNotOverflow set *before* the
+      // previous line has executed so test again ...
+      if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
+        if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
+          Result := false; // completed
+          Exit;
+        end;
       end;
     end;
     obcCollection.Enqueue(value);
