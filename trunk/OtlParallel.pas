@@ -39,6 +39,7 @@
 ///       - Parallel.Pipeline implements Cancel method.
 ///       - Parallel.Pipeline stage delegate can accept additional parameter of type
 ///         IOmniTask. Stage can use it to check if the pipeline was cancelled.
+///       - Implemented task state in ForEach (ForEach.Initialize.Finalize.Execute).
 ///     1.05c: 2010-11-25
 ///       - CompleteAdding is called only when all tasks for the stage have completed the
 ///         work.
