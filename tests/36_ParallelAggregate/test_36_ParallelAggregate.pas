@@ -140,14 +140,14 @@ begin
       begin
         lockSum.Acquire;
         try
-          sum := sum + taskState.AsInteger;
+          sum := sum + taskState.AsInt64;
         finally lockSum.Release; end;
       end
     )
     .Execute(
       procedure (const value: integer; var taskState: TOmniValue)
       begin
-        taskState.AsInteger := taskState.AsInteger + value;
+        taskState.AsInt64 := taskState.AsInt64 + value;
       end
     );
   start := DSiTimeGetTime64 - start;

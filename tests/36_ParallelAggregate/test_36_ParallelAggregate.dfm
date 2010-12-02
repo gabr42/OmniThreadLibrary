@@ -62,7 +62,6 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Align = alBottom
     ItemHeight = 13
     TabOrder = 7
-    ExplicitWidth = 474
   end
   object btnSumSequential: TButton
     Left = 214
