@@ -50,6 +50,7 @@ implementation
 
 uses
   DSiWin32,
+  GpStuff,
   OtlCommon,
   OtlContainers,
   OtlCollections,
@@ -257,8 +258,7 @@ begin
     for value in nodeQueue do begin
       node := TNode(value.AsPointer);
       if node.Value = scanValue then begin
-        scanResult.Value := node;
-        scanResult.Signal;
+        scanResult.Signal(node);
         nodeQueue.CompleteAdding;
       end
       else for iNode := 0 to node.NumChild - 1 do
