@@ -5,9 +5,11 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
+  OtlTask,
   OtlCommon,
   OtlCollections,
-  OtlParallel;
+  OtlParallel,
+  OtlSync;
 
 type
   TfrmPipelineDemo = class(TForm)
@@ -16,6 +18,8 @@ type
     btnSimple: TButton;
     btnExtended2: TButton;
     btnStressTest: TButton;
+    btnCancelPipe: TButton;
+    procedure btnCancelPipeClick(Sender: TObject);
     procedure btnExtended2Click(Sender: TObject);
     procedure btnForEachClick(Sender: TObject);
     procedure btnExtendedClick(Sender: TObject);
@@ -89,7 +93,7 @@ var
   i: integer;
 begin
   for i := 1 to 1000000 do
-    output.Add(i);
+    if not output.TryAdd(i) then Exit;
 end;
 
 procedure StageMult2(const input, output: IOmniBlockingCollection);
@@ -98,7 +102,7 @@ var
 begin
   // This one is a global method - just for demo purposes.
   for value in input do
-    output.Add(2 * value.AsInteger);
+    if not output.TryAdd(2 * value.AsInteger) then Exit;
 end;
 
 procedure StageMinus3(const input, output: IOmniBlockingCollection);
@@ -107,7 +111,7 @@ var
 begin
   // This one is a global method - just for demo purposes.
   for value in input do
-    output.Add(value.AsInteger - 3);
+    if not output.TryAdd(value.AsInteger - 3) then Exit;
 end;
 
 procedure TfrmPipelineDemo.StageMod5(const input, output: IOmniBlockingCollection);
@@ -116,7 +120,7 @@ var
 begin
   // This one is a method - just for demo purposes.
   for value in input do
-    output.Add(value.AsInteger mod 5);
+    if not output.TryAdd(value.AsInteger mod 5) then Exit;
 end;
 
 procedure StageSum(const input, output: IOmniBlockingCollection);
@@ -127,7 +131,23 @@ begin
   sum := 0;
   for value in input do
     Inc(sum, value);
-  output.Add(sum);
+  output.TryAdd(sum);
+end;
+
+var
+  GWasCancelled: boolean;
+
+procedure StageSumEx(const input, output: IOmniBlockingCollection; const task: IOmniTask);
+var
+  sum  : integer;
+  value: TOmniValue;
+begin
+  sum := 0;
+  for value in input do
+    Inc(sum, value);
+  if task.CancellationToken.IsSignalled then // this and next line as here just for testing
+    GWasCancelled := true;
+  output.TryAdd(sum);
 end;
 
 procedure TfrmPipelineDemo.btnExtended2Click(Sender: TObject);
@@ -279,6 +299,32 @@ begin
     Inc(sum, value);
   output.Add(sum);
   OutputDebugString(PChar(Format('%d < S', [GetCurrentThreadID])));
+end;
+
+procedure TfrmPipelineDemo.btnCancelPipeClick(Sender: TObject);
+var
+  pipeline: IOmniPipeline;
+  pipeOut : IOmniBlockingCollection;
+  sum     : TOmniValue;
+begin
+  GWasCancelled := false;
+  pipeline := Parallel
+    .Pipeline
+    .Throttle(102400)
+    .Stage(StageGenerate)
+    .Stage(StageMult2)
+    .Stages([StageMinus3, StageMod5])
+      .NumTasks(2)
+    .Stage(StageSumEx);
+  pipeout := pipeline.Run;
+  Sleep(500);
+  pipeline.Cancel;
+  while not GWasCancelled do // this and next line are here just for testing
+    Sleep(1);
+  if pipeOut.TryTake(sum) then
+    lbLog.Items.Add('*** ERRROR *** there should be no data in the output pipe')
+  else
+    lbLog.Items.Add('Cancelled');
 end;
 
 procedure TfrmPipelineDemo.RunStressTest(numTest: integer);

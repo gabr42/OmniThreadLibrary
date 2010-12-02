@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-10-16
-///   Version           : 1.22d
+///   Last modification : 2010-12-02
+///   Version           : 1.23
 ///</para><para>
 ///   History:
+///     1.23: 2010-12-02
+///       - Added IOmniTaskControl.CancelWith(token) which can be used to enforce
+///         non-default cancellation token.
 ///     1.22d: 2010-10-16
 ///       - Delayed Terminate did not set result.
 ///     1.22c: 2010-10-13
@@ -299,6 +302,7 @@ type
     procedure SetUserDataVal(const idxData: TOmniValue; const value: TOmniValue);
   //
     function  Alertable: IOmniTaskControl;
+    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
@@ -416,7 +420,7 @@ type
 
   TOmniSharedTaskInfo = class
   strict private
-    ostiCancellationToken : IOmniCancellationToken;
+    ostiCancellationToken : IOmniCancellationToken; // must be the first field for alignment
   strict private
     ostiChainIgnoreErrors : boolean;
     ostiChainTo           : IOmniTaskControl;
@@ -431,7 +435,9 @@ type
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
   strict protected
-    function GetCancellationToken: IOmniCancellationToken;
+    function  GetCancellationToken: IOmniCancellationToken;
+  protected
+    procedure SetCancellationToken(const token: IOmniCancellationToken);
   public
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property ChainIgnoreErrors: boolean read ostiChainIgnoreErrors write ostiChainIgnoreErrors;
@@ -768,6 +774,7 @@ type
     constructor Create(worker: TOmniTaskProcedure; const taskName: string); overload;
     destructor  Destroy; override;
     function  Alertable: IOmniTaskControl;
+    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer = 0): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
@@ -2108,6 +2115,15 @@ begin
   Result := Self;
 end; { TOmniTaskControl.Alertable }
 
+function TOmniTaskControl.CancelWith(
+  const token: IOmniCancellationToken): IOmniTaskControl;
+begin
+  if otcParameters.IsLocked then
+    raise Exception.Create('TOmniTaskControl.CancelWith: Cancellation token can only be set before the task is started');
+  otcSharedInfo.SetCancellationToken(token);
+  Result := Self;
+end; { TOmniTaskControl.CancelWith }
+
 function TOmniTaskControl.ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean):
   IOmniTaskControl;
 begin
@@ -2953,6 +2969,14 @@ begin
   end;
   Result := ostiCancellationToken;
 end; { TOmniSharedTaskInfo.GetCancellationToken }
+
+procedure TOmniSharedTaskInfo.SetCancellationToken(const token: IOmniCancellationToken);
+begin
+  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
+    'TOmniSharedTaskInfo.SetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  // SetCancellationToken can only be called before the task is is created
+  ostiCancellationToken := token;
+end; { TOmniSharedTaskInfo.SetCancellationToken }
 
 { TOmniMessageExec }
 
