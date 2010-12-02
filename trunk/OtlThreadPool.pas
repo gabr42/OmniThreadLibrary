@@ -1288,7 +1288,9 @@ function TOmniThreadPool.Cancel(taskID: int64): boolean;
 var
   res: TOmniWaitableValue;
 begin
+  {$IF CompilerVersion >= 22} // starting with XE, Delphi complains that result is not always assigned if this line is removed
   Result := false; // not really used
+  {$IFEND}
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);

@@ -83,10 +83,17 @@ uses
 type
   ECollectionCompleted = class(Exception);
 
-  ///<summary>Blocking collection
-  ///- http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx
-  ///- http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx
-  ///</summary>
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Blocking collection
+  ///	  <list type="bullet">
+  ///	    <item><see href=
+  ///	    "http://blogs.msdn.com/pfxteam/archive/2009/11/06/9918363.aspx" /></item>
+  ///	    <item>
+  ///	    http://msdn.microsoft.com/en-us/library/dd267312(VS.100).aspx</item>
+  ///	  </list>
+  ///	</summary>
+  {$ENDREGION}
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
@@ -115,6 +122,11 @@ type
     obcResourceCount  : TOmniResourceCount;
     obcThrottling     : boolean;
   public
+    {$REGION 'Documentation'}
+    ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
+    ///	enter 'completed' state when this number of .Take calls is
+    ///	simultaneously blocked because the collection is empty.</remarks>
+    {$ENDREGION}
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
     procedure Add(const value: TOmniValue); inline;
@@ -122,6 +134,12 @@ type
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
     function  Next: TOmniValue;
+
+    {$REGION 'Documentation'}
+    ///	<remarks>When throttling is set, Add will block if there is &gt;=
+    ///	highWaterMark elements in the queue. It will only unblock when number
+    ///	of elements drops below lowWaterMark.</remarks>
+    {$ENDREGION}
     procedure SetThrottling(highWaterMark, lowWaterMark: integer);
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
