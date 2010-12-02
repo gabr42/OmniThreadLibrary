@@ -527,13 +527,13 @@ begin
         childNode: TNode;
       begin
         try
-        if node.Value = value then begin
-          nodeResult := node;
-          nodeQueue.CompleteAdding;
-          cancelToken.Signal;
-        end
-        else for childNode in node.Children do
-          nodeQueue.TryAdd(childNode);
+          if node.Value = value then begin
+            nodeResult := node;
+            nodeQueue.CompleteAdding;
+            cancelToken.Signal;
+          end
+          else for childNode in node.Children do
+            nodeQueue.TryAdd(childNode);
         except
           sleep(0);
         end;
