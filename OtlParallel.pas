@@ -86,10 +86,6 @@ unit OtlParallel;
 
 {$I OtlOptions.inc}
 
-{$IF CompilerVersion < 20}
-'This unit requires Delphi 2009 or newer'
-{$IFEND}
-
 interface
 
 // TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
@@ -266,10 +262,23 @@ type
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
   end; { IOmniPipeline }
 
+  {$REGION 'Documentation'}
+  ///	<summary>Parallel class represents a base class for all high-level language
+  ///	features in the OmniThreadLibrary. Most features are implemented as factories while
+  ///	one (Join) is implemented as a class procedure that does the real work.</summary>
+  {$ENDREGION}
   Parallel = class
   // ForEach
+
+    ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
+    ///	example IOmniBlockingCollection).</summary>
     class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
+
+    ///	<summary>Creates parallel loop that iterates over IOmniEnumerator (for example
+    ///	IOmniBlockingCollection).</summary>
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
+
+    ///	<summary>Creates parallel loop that iterates over IEnumerable.</summary>
     class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
     class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
@@ -416,8 +425,6 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
-    function  ForEach: IOmniParallelLoop;
-    function  GetEnumerator: IOmniValueEnumerator;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
@@ -457,8 +464,6 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
-    function  ForEach: IOmniParallelLoop<T>;
-    function  GetEnumerator: IOmniValueEnumerator; { TODO 1 -ogabr : of T? }
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
@@ -1198,18 +1203,6 @@ begin
   InternalExecuteInto(loopBody);
 end; { TOmniParallelLoop.Execute }
 
-function TOmniParallelLoop.ForEach: IOmniParallelLoop;
-begin
-  { TODO 1 -ogabr : implement }
-  Result := Self;
-end; { TOmniParallelLoop.ForEach }
-
-function TOmniParallelLoop.GetEnumerator: IOmniValueEnumerator;
-begin
-  { TODO 1 -ogabr : implement }
-  Result := nil;
-end; { TOmniParallelLoop.GetEnumerator }
-
 function TOmniParallelLoop.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
 begin
   SetIntoQueue(queue);
@@ -1387,18 +1380,6 @@ begin
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
-
-function TOmniParallelLoop<T>.ForEach: IOmniParallelLoop<T>;
-begin
-  { TODO 1 -ogabr : implement }
-  Result := Self;
-end; { TOmniParallelLoop<T>.ForEach }
-
-function TOmniParallelLoop<T>.GetEnumerator: IOmniValueEnumerator;
-begin
-  { TODO 1 -ogabr : implement }
-  Result := nil;
-end; { TOmniParallelLoop<T>.GetEnumerator }
 
 function TOmniParallelLoop<T>.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
 begin
@@ -1747,6 +1728,7 @@ var
 begin
   Assert(unblockAtCount < numEntries);
   throttleLow := unblockAtCount;
+  // TODO 1 -oPrimoz Gabrijelcic : if there are less cores than stage tasks, throttleLow should be 1/4*throttleHigh!
   if throttleLow = 0 then
     throttleLow := Round(3/4 * numEntries);
   if opStages.Count = 0 then begin

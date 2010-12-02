@@ -274,7 +274,6 @@ type
     procedure Submit(position: int64; const data: TOmniValue); override;
     property EmptyHandle: THandle read obiEmptyHandle;
     property IsFull: boolean read obiFull;
-//    property Owner: TOmniBaseDataManager read obiDataManager_ref; { TODO 1 : testing, remove }
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
 
@@ -336,7 +335,6 @@ type
     destructor  Destroy; override;
     function  AllocateOutputBuffer: TOmniOutputBuffer; override;
     function  CreateLocalQueue: TOmniLocalQueue; override;
-//    procedure DumpBufferList; { TODO 1 : testing, remove }
     function  GetDataCountForGeneration(generation: integer): integer;
     function  GetNext(package: TOmniDataPackage): boolean; override;
     function  GetNextFromProvider(package: TOmniDataPackage;
@@ -608,7 +606,6 @@ function TOmniValueEnumeratorDataPackage.GetNext(var position: int64; var value:
   TOmniValue): boolean;
 begin
   raise Exception.Create('Not implemented!');
-//  Result := false;
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorDataPackage.GetNext
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
@@ -674,9 +671,7 @@ var
   timeout   : cardinal;
   value     : TOmniValue;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorProvider.GetPackage
   Assert(not StorePositions);
-
   Result := false;
   dataCount := intPackage.Prepare(dataCount);
   timeout := INFINITE;
@@ -729,9 +724,7 @@ var
   iData     : integer;
   intPackage: TOmniValueEnumeratorDataPackage absolute package;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniEnumeratorProvider.GetPackage
   Assert(not StorePositions);
-
   Result := false;
   epEnumLock.Acquire;
   try
@@ -935,20 +928,6 @@ begin
   FreeAndNil(dmUnusedBuffers);
   inherited;
 end; { TOmniBaseDataManager.Destroy }
-
-//procedure TOmniBaseDataManager.DumpBufferList;
-//var
-//  buffer: TOmniOutputBufferImpl;
-//  i: Integer;
-//begin
-//  dmBufferRangeLock.Acquire;
-//  OutputDebugString(PChar(Format('Next position: %d', [dmNextPosition])));
-//  for i := 0 to dmBufferRangeList.Count - 1 do begin
-//    buffer := TOmniOutputBufferImpl(dmBufferRangeList.Objects[i]);
-//    OutputDebugString(PChar(Format('%d: %d..%d', [i, buffer.Range.First, buffer.Range.Last])));
-//  end;
-//  dmBufferRangeLock.Release;
-//end;
 
 function TOmniBaseDataManager.AllocateOutputBuffer: TOmniOutputBuffer;
 begin
