@@ -526,17 +526,13 @@ begin
       var
         childNode: TNode;
       begin
-        try
-          if node.Value = value then begin
-            nodeResult := node;
-            nodeQueue.CompleteAdding;
-            cancelToken.Signal;
-          end
-          else for childNode in node.Children do
-            nodeQueue.TryAdd(childNode);
-        except
-          sleep(0);
-        end;
+        if node.Value = value then begin
+          nodeResult := node;
+          nodeQueue.CompleteAdding;
+          cancelToken.Signal;
+        end
+        else for childNode in node.Children do
+          nodeQueue.TryAdd(childNode);
       end);
   Result := nodeResult;
 end; { TfrmParallelForDemo.ParaScan }
