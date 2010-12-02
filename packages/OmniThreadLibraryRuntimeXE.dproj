@@ -1,11 +1,12 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{2FCB214C-2EBE-4450-BF73-C4913A71810E}</ProjectGuid>
-			<MainSource>OmniThreadLibraryRuntime2010.dpk</MainSource>
+			<MainSource>OmniThreadLibraryRuntimeXE.dpk</MainSource>
 			<ProjectVersion>12.3</ProjectVersion>
 			<Config Condition="'$(Config)'==''">Release</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<Base>True</Base>
+			<Platform Condition="'$(Platform)'==''">Win32</Platform>
 			<Platform>Win32</Platform>
 			<AppType>Package</AppType>
 			<FrameworkType>VCL</FrameworkType>
@@ -29,7 +30,7 @@
 			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\7.0\Bpl\OmniThreadLibraryRuntime2010.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\7.0\Bpl\OmniThreadLibraryRuntime2011.bpl</DCC_DependencyCheckOutputName>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
@@ -46,7 +47,7 @@
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="OmniThreadLibraryRuntime2010.dpk">
+			<DelphiCompile Include="OmniThreadLibraryRuntimeXE.dpk">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="rtl.dcp"/>
@@ -89,7 +90,7 @@
 			<BorlandProject>
 				<Delphi.Personality>
 					<Source>
-						<Source Name="MainSource">OmniThreadLibraryRuntime2010.dpk</Source>
+						<Source Name="MainSource">OmniThreadLibraryRuntimeXE.dpk</Source>
 					</Source>
 					<Parameters/>
 					<VersionInfo>
