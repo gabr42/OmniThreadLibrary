@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2010-07-25
-///   Version           : 1.01
+///   Last modification : 2010-12-02
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2010-12-02
+///       - Removed OTL_ParallelAggregate.
 ///     1.01: 2010-07-25
 ///       - Introduced OTL_ParallelAggregate.
 ///     1.0: 2010-07-01
@@ -52,7 +54,6 @@
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
-  {$DEFINE OTL_ParallelAggregate}
 {$IFEND}
 {$IF CompilerVersion >= 21}
   {$DEFINE OTL_ERTTI}
