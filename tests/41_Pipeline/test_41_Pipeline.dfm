@@ -59,4 +59,13 @@ object frmPipelineDemo: TfrmPipelineDemo
     TabOrder = 4
     OnClick = btnStressTestClick
   end
+  object btnCancelPipe: TButton
+    Left = 8
+    Top = 101
+    Width = 105
+    Height = 25
+    Caption = 'Pipeline Cancelation'
+    TabOrder = 5
+    OnClick = btnCancelPipeClick
+  end
 end
