@@ -3,7 +3,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
   Top = 0
   Caption = 'Parallel..Aggregate demo'
   ClientHeight = 243
-  ClientWidth = 474
+  ClientWidth = 537
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -29,8 +29,8 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Caption = 'Count primes from 1 to'
   end
   object Label3: TLabel
-    Left = 409
-    Top = 5
+    Left = 473
+    Top = 16
     Width = 48
     Height = 13
     Caption = 'Num CPU:'
@@ -57,11 +57,12 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
   object lbLog: TListBox
     Left = 0
     Top = 88
-    Width = 474
+    Width = 537
     Height = 155
     Align = alBottom
     ItemHeight = 13
     TabOrder = 7
+    ExplicitWidth = 474
   end
   object btnSumSequential: TButton
     Left = 214
@@ -73,14 +74,14 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     OnClick = btnSumSequentialClick
   end
   object inpNumCPU: TSpinEdit
-    Left = 409
-    Top = 24
+    Left = 473
+    Top = 35
     Width = 57
     Height = 22
     MaxValue = 0
     MinValue = 1
     TabOrder = 2
-    Value = 1
+    Value = 0
   end
   object inpMaxPrime: TSpinEdit
     Left = 136
@@ -109,5 +110,23 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     Caption = 'Sequential'
     TabOrder = 5
     OnClick = btnCountSequentialClick
+  end
+  object btnSumParallel2: TButton
+    Left = 376
+    Top = 11
+    Width = 75
+    Height = 25
+    Caption = 'Parallel 2'
+    TabOrder = 8
+    OnClick = btnSumParallel2Click
+  end
+  object btnCountParallel2: TButton
+    Left = 377
+    Top = 51
+    Width = 75
+    Height = 25
+    Caption = 'Parallel 2'
+    TabOrder = 9
+    OnClick = btnCountParallel2Click
   end
 end

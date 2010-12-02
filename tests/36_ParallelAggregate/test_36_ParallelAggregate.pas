@@ -19,8 +19,12 @@ type
     Label3: TLabel;
     lblCountPrimes: TLabel;
     lbLog: TListBox;
+    btnSumParallel2: TButton;
+    btnCountParallel2: TButton;
+    procedure btnCountParallel2Click(Sender: TObject);
     procedure btnCountParallelClick(Sender: TObject);
     procedure btnCountSequentialClick(Sender: TObject);
+    procedure btnSumParallel2Click(Sender: TObject);
     procedure btnSumParallelClick(Sender: TObject);
     procedure btnSumSequentialClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -37,9 +41,43 @@ implementation
 uses
   DSiWin32,
   OtlCommon,
+  OtlSync,
   OtlParallel;
 
 {$R *.dfm}
+
+procedure TfrmParallelAggregateDemo.btnCountParallel2Click(Sender: TObject);
+var
+  lockNum  : TOmniCS;
+  numPrimes: integer;
+  start    : int64;
+begin
+  start := DSiTimeGetTime64;
+  Parallel.ForEach(1, inpMaxPrime.Value)
+    .NumTasks(inpNumCPU.Value)
+    .Initialize(
+      procedure (var taskState: TOmniValue)
+      begin
+        taskState.AsInteger := 0;
+      end)
+    .Finalize(
+      procedure (const taskState: TOmniValue)
+      begin
+        lockNum.Acquire;
+        try
+          numPrimes := numPrimes+ taskState.AsInteger;
+        finally lockNum.Release; end;
+      end)
+    .Execute(
+      procedure (const value: integer; var taskState: TOmniValue)
+      begin
+        if IsPrime(value) then
+          taskState.AsInteger := taskState.AsInteger + 1;
+      end
+    );
+  start := DSiTimeGetTime64 - start;
+  Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxPrime.Value, start]);
+end;
 
 procedure TfrmParallelAggregateDemo.btnCountParallelClick(Sender: TObject);
 var
@@ -79,6 +117,41 @@ begin
       Inc(numPrimes);
   start := DSiTimeGetTime64 - start;
   Log('%d primes from 1 to %d; calculation took %d ms', [numPrimes, inpMaxPrime.Value, start]);
+end;
+
+procedure TfrmParallelAggregateDemo.btnSumParallel2Click(Sender: TObject);
+var
+  lockSum: TOmniCS;
+  start  : int64;
+  sum    : int64;
+begin
+  start := DSiTimeGetTime64;
+  sum := 0;
+  Parallel
+    .ForEach(1, inpMaxSummand.Value)
+    .NumTasks(inpNumCPU.Value)
+    .Initialize(
+      procedure (var taskState: TOmniValue)
+      begin
+        taskState := 0;
+      end)
+    .Finalize(
+      procedure (const taskState: TOmniValue)
+      begin
+        lockSum.Acquire;
+        try
+          sum := sum + taskState.AsInteger;
+        finally lockSum.Release; end;
+      end
+    )
+    .Execute(
+      procedure (const value: integer; var taskState: TOmniValue)
+      begin
+        taskState.AsInteger := taskState.AsInteger + value;
+      end
+    );
+  start := DSiTimeGetTime64 - start;
+  Log('Sum(1..%d) = %d; calculation took %d ms', [inpMaxSummand.Value, sum, start]);
 end;
 
 procedure TfrmParallelAggregateDemo.btnSumParallelClick(Sender: TObject);

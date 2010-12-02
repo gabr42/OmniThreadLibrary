@@ -140,6 +140,9 @@ type
   TOmniIteratorTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue);
   TOmniIteratorTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T);
 
+  TOmniIteratorStateDelegate = reference to procedure(const value: TOmniValue; var taskState: TOmniValue);
+  TOmniIteratorStateDelegate<T> = reference to procedure(const value: T; var taskState: TOmniValue);
+
   TOmniIteratorIntoDelegate = reference to procedure(const value: TOmniValue; var result: TOmniValue);
   TOmniIteratorIntoDelegate<T> = reference to procedure(const value: T; var result: TOmniValue);
   TOmniIteratorIntoTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue; var result: TOmniValue);
@@ -148,6 +151,9 @@ type
   TOmniTaskCreateDelegate = reference to procedure(const task: IOmniTask);
   TOmniTaskControlCreateDelegate = reference to procedure(const task: IOmniTaskControl);
 
+  TOmniTaskInitializerDelegate = reference to procedure(var taskState: TOmniValue);
+  TOmniTaskFinalizerDelegate = reference to procedure(const taskState: TOmniValue);
+
   IOmniParallelAggregatorLoop = interface
     function  Execute(loopBody: TOmniIteratorIntoDelegate): TOmniValue;
   end; { IOmniParallelAggregatorLoop }
@@ -155,6 +161,16 @@ type
   IOmniParallelAggregatorLoop<T> = interface
     function  Execute(loopBody: TOmniIteratorIntoDelegate<T>): TOmniValue;
   end; { IOmniParallelAggregatorLoop<T> }
+
+  IOmniParallelInitializedLoop = interface
+    function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop;
+    procedure Execute(loopBody: TOmniIteratorStateDelegate);
+  end; { IOmniParallelInitializedLoop }
+
+  IOmniParallelInitializedLoop<T> = interface
+    function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop<T>;
+    procedure Execute(loopBody: TOmniIteratorStateDelegate<T>);
+  end; { IOmniParallelInitializedLoop }
 
   IOmniParallelIntoLoop = interface
     procedure Execute(loopBody: TOmniIteratorIntoDelegate);
@@ -171,6 +187,7 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
+    function  Initialize(taskInitializer: TOmniTaskInitializerDelegate): IOmniParallelInitializedLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount : integer): IOmniParallelLoop;
@@ -190,6 +207,7 @@ type
     procedure Execute(loopBody: TOmniIteratorDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop<T>;
+    function  Initialize(taskInitializer: TOmniTaskInitializerDelegate): IOmniParallelInitializedLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
@@ -408,6 +426,8 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
+    function Initialize(taskInitializer: TOmniTaskInitializerDelegate):
+      IOmniParallelInitializedLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
     function  NumTasks(taskCount: integer): IOmniParallelLoop;
@@ -441,6 +461,8 @@ type
     procedure Execute(loopBody: TOmniIteratorTaskDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
+    function  Initialize(taskInitializer: TOmniTaskInitializerDelegate):
+      IOmniParallelInitializedLoop<T>;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>; overload;
     function  NoWait: IOmniParallelLoop<T>;
     function  NumTasks(taskCount: integer): IOmniParallelLoop<T>;
@@ -1176,6 +1198,13 @@ begin
   InternalExecuteInto(loopBody);
 end; { TOmniParallelLoop.Execute }
 
+function TOmniParallelLoop.Initialize(taskInitializer: TOmniTaskInitializerDelegate):
+  IOmniParallelInitializedLoop;
+begin
+  raise Exception.Create('Not implemented');
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniParallelLoop
+end; { TOmniParallelLoop.Initialize }
+
 function TOmniParallelLoop.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop;
 begin
   SetIntoQueue(queue);
@@ -1347,6 +1376,13 @@ begin
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
+
+function TOmniParallelLoop<T>.Initialize(taskInitializer: TOmniTaskInitializerDelegate):
+  IOmniParallelInitializedLoop<T>;
+begin
+  raise Exception.Create('Not implemented');
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniParallelLoop
+end; { TOmniParallelLoop }
 
 function TOmniParallelLoop<T>.Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop<T>;
 begin
