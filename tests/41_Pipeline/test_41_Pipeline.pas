@@ -208,52 +208,64 @@ procedure Generate(const input, output: IOmniBlockingCollection);
 var
   i: integer;
 begin
+  OutputDebugString(PChar(Format('%d > G', [GetCurrentThreadID])));
   for i := 1 to 1000000 do
     output.Add(i);
+  OutputDebugString(PChar(Format('%d < G', [GetCurrentThreadID])));
 end;
 
 procedure Enlarge(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > E', [GetCurrentThreadID])));
   while input.Take(value) do begin
     output.Add(value);
     output.Add(value);
   end;
+  OutputDebugString(PChar(Format('%d < E', [GetCurrentThreadID])));
 end;
 
 procedure Reduce(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > R', [GetCurrentThreadID])));
   while input.Take(value) do begin
     input.Take(value);
     output.Add(value);
   end;
+  OutputDebugString(PChar(Format('%d < R', [GetCurrentThreadID])));
 end;
 
 procedure Multiply(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > M', [GetCurrentThreadID])));
   while input.Take(value) do
     output.Add(2 * value.AsInteger);
+  OutputDebugString(PChar(Format('%d < M', [GetCurrentThreadID])));
 end;
 
 procedure Divide(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > D', [GetCurrentThreadID])));
   while input.Take(value) do
     output.Add(value.AsInteger div 2);
+  OutputDebugString(PChar(Format('%d < D', [GetCurrentThreadID])));
 end;
 
 procedure Passthrough(const input, output: IOmniBlockingCollection);
 var
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > P', [GetCurrentThreadID])));
   while input.Take(value) do
     output.Add(value);
+  OutputDebugString(PChar(Format('%d < P', [GetCurrentThreadID])));
 end;
 
 procedure Summary(const input, output: IOmniBlockingCollection);
@@ -261,10 +273,12 @@ var
   sum  : int64;
   value: TOmniValue;
 begin
+  OutputDebugString(PChar(Format('%d > S', [GetCurrentThreadID])));
   sum := 0;
   while input.Take(value) do
     Inc(sum, value);
   output.Add(sum);
+  OutputDebugString(PChar(Format('%d < S', [GetCurrentThreadID])));
 end;
 
 procedure TfrmPipelineDemo.RunStressTest(numTest: integer);
@@ -342,6 +356,7 @@ begin
   AddThrottle;
   lbLog.ItemIndex := lbLog.Items.Add('#' + IntToStr(numTest) + ': ' + descr);
   lbLog.Update;
+  OutputDebugString(PChar(descr));
   pipeOut := pipeline.Run;
   retVal := pipeOut.Next;
   lbLog.ItemIndex := lbLog.Items.Add(IntToStr(retVal));

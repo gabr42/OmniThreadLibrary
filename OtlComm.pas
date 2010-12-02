@@ -128,10 +128,9 @@ type
 
   TOmniMessageQueueMessageEvent = procedure(Sender: TObject; const msg: TOmniMessage) of object;
 
-  {:Fixed-size ring buffer of TOmniMessage data.
-    WARNING Supports only one writer and one reader WARNING
+  {:Fixed-size ring buffer of TOmniMessage data. Supports multiple simultaneous readers
+    and writers.
   }
-  // TODO 1 -oPrimoz Gabrijelcic : Check if 1 reader/1 writer warning still applies.
   TOmniMessageQueue = class(TOmniBoundedQueue)
   strict private
     mqWinEventObserver: TOmniContainerWindowsEventObserver;
