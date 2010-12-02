@@ -528,8 +528,8 @@ begin
       begin
         if node.Value = value then begin
           nodeResult := node;
-          nodeQueue.CompleteAdding;
-          cancelToken.Signal;
+          nodeQueue.CompleteAdding; // this will unblock any task waiting for a node
+          cancelToken.Signal; // this will tell all tasks to stop even if there is data in the nodeQueue
         end
         else for childNode in node.Children do
           nodeQueue.TryAdd(childNode);
