@@ -34,13 +34,15 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover
+///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2010-09-20
-///   Version           : 1.18a
+///   Version           : 1.19
 ///</para><para>
 ///   History:
+///     1.19: 2010-12-03
+///       - [scarre] Added TDateTime support to TOmniValue.
 ///     1.18a: 2010-09-21
 ///       - IOmniWaitableValue fully compatible with TOmniWaitableValue.
 ///     1.18: 2010-09-20
@@ -154,10 +156,11 @@ type
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
              ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer);
+             ovtPointer, ovtDateTime);
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
+    function  GetAsDateTime: TDateTime;
     function  GetAsExtended: Extended;
     function  GetAsInt64: int64; inline;
     function  GetAsInteger: integer; inline;
@@ -171,6 +174,7 @@ type
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
+  	procedure SetAsDateTime(value: TDateTime); inline;
     procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
     procedure SetAsInteger(const value: integer); inline;
@@ -190,6 +194,7 @@ type
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFloating: boolean; inline;
+  	function  IsDateTime: boolean; inline;
     function  IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
@@ -204,6 +209,7 @@ type
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
     class operator Implicit(const a: boolean): TOmniValue; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
+    class operator Implicit(const a: TDateTime): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue; inline;
     class operator Implicit(const a: integer): TOmniValue; inline;
     class operator Implicit(const a: int64): TOmniValue; inline;
@@ -214,6 +220,7 @@ type
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
+    class operator Implicit(const a: TOmniValue): TDateTime; inline;
     class operator Implicit(const a: TOmniValue): Extended; inline;
     class operator Implicit(const a: TOmniValue): string; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
@@ -226,6 +233,7 @@ type
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
+	property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
     property AsExtended: Extended read GetAsExtended write SetAsExtended;
     property AsInt64: int64 read GetAsInt64 write SetAsInt64;
     property AsInteger: integer read GetAsInteger write SetAsInteger;
@@ -321,7 +329,7 @@ type
     procedure Clear;
     function  GetItem(paramIdx: integer): TOmniValue; overload;
     function  GetItem(const paramName: string): TOmniValue; overload;
-    function GetItem(const param: TOmniValue): TOmniValue; overload;
+    function  GetItem(const param: TOmniValue): TOmniValue; overload;
     procedure Grow(requiredIdx: integer = -1);
   public
     constructor Create;
@@ -1276,17 +1284,28 @@ function TOmniValue.GetAsDouble: Double;
 begin
   case ovType of
     ovtInteger:  Result := AsInt64;
-    ovtDouble:   Result := PDouble(RawData)^;
+    ovtDouble,
+    ovtDateTime: Result := PDouble(RawData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to double');
   end;
 end; { TOmniValue.GetAsDouble }
 
+function TOmniValue.GetAsDateTime: TDateTime;
+begin
+  case ovType of
+    ovtDouble,
+    ovtDateTime: Result := PDouble(RawData)^;
+    else raise Exception.Create('TOmniValue cannot be converted to TDateTime');
+  end;
+end; { TOmniValue.GetAsDateTime }
+
 function TOmniValue.GetAsExtended: Extended;
 begin
   case ovType of
     ovtInteger:  Result := AsInt64;
-    ovtDouble:   Result := PDouble(RawData)^;
+    ovtDouble,
+    ovtDateTime: Result := PDouble(RawData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to extended');
   end;
@@ -1344,6 +1363,7 @@ begin
     ovtBoolean:    Result := BoolToStr(AsBoolean, true);
     ovtInteger:    Result := IntToStr(ovData);
     ovtDouble,
+    ovtDateTime,
     ovtExtended:   Result := FloatToStr(AsExtended);
     ovtString:     Result := (ovIntf as IOmniStringData).Value;
     ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
@@ -1418,6 +1438,11 @@ begin
   Result := (ovType in [ovtDouble, ovtExtended]);
 end; { TOmniValue.IsFloating }
 
+function TOmniValue.IsDateTime: boolean;
+begin
+  Result := (ovType = ovtDateTime);
+end; { TOmniValue.IsDateTime }
+
 function TOmniValue.IsInteger: boolean;
 begin
   Result := (ovType = ovtInteger);
@@ -1486,6 +1511,12 @@ begin
   PDouble(RawData)^ := value;
   ovType := ovtDouble;
 end; { TOmniValue.SetAsDouble }
+
+procedure TOmniValue.SetAsDateTime(value: TDateTime);
+begin
+  PDouble(RawData)^ := value;
+  ovType := ovtDateTime;
+end; { TOmniValue.SetAsDateTime }
 
 procedure TOmniValue.SetAsExtended(value: Extended);
 begin
@@ -1613,6 +1644,11 @@ begin
   Result.AsDouble := a;
 end; { TOmniValue.Implicit }
 
+class operator TOmniValue.Implicit(const a: TDateTime): TOmniValue;
+begin
+  Result.AsDateTime := a;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: Extended): TOmniValue;
 begin
   Result.AsExtended := a;
@@ -1666,6 +1702,11 @@ end; { TOmniValue.Implicit }
 class operator TOmniValue.Implicit(const a: TOmniValue): Double;
 begin
   Result := a.AsDouble;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): TDateTime;
+begin
+  Result := a.AsDateTime;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): integer;
