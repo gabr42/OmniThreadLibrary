@@ -76,9 +76,9 @@ end;
 
 procedure TfrmFuturesDemo.FormCreate(Sender: TObject);
 begin
-  {$IFNDEF OTL_ParallelAggregate}
+  {$IFNDEF Unicode}
   btnTestFuture7.Enabled := false;
-  {$ENDIF OTL_ParallelAggregate}
+  {$ENDIF Unicode}
 end;
 
 { TfrmFuturesDemo }
@@ -175,12 +175,12 @@ begin
 end;
 
 procedure TfrmFuturesDemo.btnTestFuture7Click(Sender: TObject);
-{$IFDEF OTL_ParallelAggregate}
+{$IFDEF Unicode}
 var
   numPrimes: IOmniFuture<integer>;
-{$ENDIF OTL_ParallelAggregate}
+{$ENDIF Unicode}
 begin
-  {$IFDEF OTL_ParallelAggregate}
+  {$IFDEF Unicode}
   numPrimes := TOmniFuture<integer>.Create(function: integer
     begin
       Result := Parallel.ForEach(1, CPrimesHigh).AggregateSum.Execute(
@@ -194,7 +194,7 @@ begin
   );
 //   do something else
   lbLog.Items.Add(Format('%d primes from 1 to %d', [numPrimes.Value, CPrimesHigh]));
-  {$ENDIF OTL_ParallelAggregate}
+  {$ENDIF Unicode}
 end;
 
 function TfrmFuturesDemo.CountPrimesTo(high: integer): IOmniFuture<integer>;

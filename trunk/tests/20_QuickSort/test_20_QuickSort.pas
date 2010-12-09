@@ -70,9 +70,8 @@ begin
   CreateTask(TQuickSortTask.Create())
     .WithCounter(FCounter)
     .MonitorWith(OtlEventMonitor1)
-    .Run
-    .Invoke(@TQuickSortTask.Sort, [@FData, Low(FData), High(FData),
-      Sender = btnSortOnAll]);
+    .Schedule
+    .Invoke(@TQuickSortTask.Sort, [@FData, Low(FData), High(FData), Sender = btnSortOnAll]);
 end;
 
 procedure TfrmQuickSortDemo.GenerateData;
@@ -99,7 +98,7 @@ begin
     CreateTask(TQuickSortTask.Create())
       .WithCounter(FCounter)
       .MonitorWith(OtlEventMonitor1)
-      .Run
+      .Schedule
       .Invoke(@TQuickSortTask.Sort, [@FData, msg.MsgData[0], msg.MsgData[1], true]);
   end
   else
