@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-12-02
-///   Version           : 1.06
+///   Last modification : 2010-12-09
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2010-12-09
+///       - Parallel.Join(TProc) executes one task in the current thread.
 ///     1.06: 2010-12-02
 ///       - Parallel.Pipeline implements Cancel method.
 ///       - Parallel.Pipeline stage delegate can accept additional parameter of type
@@ -691,8 +693,9 @@ end; { Parallel.Join }
 class procedure Parallel.Join(const tasks: array of TProc);
 var
   countStopped: TOmniResourceCount;
+  prevProc    : TProc;
   proc        : TProc;
-  intProc     : integer absolute proc;
+  intProc     : integer absolute prevProc;
 begin
   Assert(SizeOf(integer) = SizeOf(TProc));
   if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
@@ -700,18 +703,23 @@ begin
       proc;
   end
   else begin
-    countStopped := TOmniResourceCount.Create(Length(tasks));
+    countStopped := TOmniResourceCount.Create(Length(tasks) - 1);
+    prevProc := nil;
     for proc in tasks do begin
-      CreateTask(
-        procedure (const task: IOmniTask)
-        begin
-          TProc(task.Param['Proc'].AsInteger)();
-          countStopped.Allocate;
-        end
-      ).Unobserved
-       .SetParameter('Proc', intProc)
-       .Schedule(GParallelPool);
+      if assigned(prevProc) then
+        CreateTask(
+          procedure (const task: IOmniTask)
+          begin
+            TProc(task.Param['Proc'].AsInteger)();
+            countStopped.Allocate;
+          end
+        ).Unobserved
+         .SetParameter('Proc', intProc) // cannot cast TProc to integer
+         .Schedule(GParallelPool);
+      prevProc := proc;
     end;
+    Assert(assigned(prevProc));
+    prevProc();
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
 end; { Parallel.Join }
