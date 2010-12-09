@@ -37,6 +37,7 @@
 ///   History:
 ///     1.07: 2010-12-09
 ///       - Parallel.Join(TProc) executes one task in the current thread.
+///       - Parallel.ForEach.NoWait runs on NumCores-1 tasks.
 ///     1.06: 2010-12-02
 ///       - Parallel.Pipeline implements Cancel method.
 ///       - Parallel.Pipeline stage delegate can accept additional parameter of type
@@ -100,7 +101,6 @@ interface
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 // TODO 5 -oPrimoz Gabrijelcic : Single-threaded access to a data source - how? (datasets etc)
-// TODO 1 -oPrimoz Gabrijelcic : PreserveOrder must run on NumCores-1
 
 // Notes for OTL 3
 // - Parallel.ForEach should use task pool.
@@ -1054,7 +1054,9 @@ begin
     Include(dmOptions, dmoPreserveOrder);
     if (numTasks > 1) and (not oplNumTasksManual) then
       Dec(numTasks);
-  end;
+  end
+  else if (ploNoWait in Options) and (numTasks > 1) and (not oplNumTasksManual) then
+    Dec(numTasks);
   oplDataManager := CreateDataManager(oplSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
   if ((numTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
      (not ((ploNoWait in Options) or assigned(oplOnTaskCreate) or assigned(oplOnTaskControlCreate)))
