@@ -7,6 +7,7 @@
   - TOmniValue can be cast as Int64.
   - Implemented conversions to/from TValue (Delphi 2010 and newer).
   - Implemented constructor.
+  - [scarre] Added TDateTime support.
   
 - Fixed few ugly bugs in TOmniBlockingCollection.
 
