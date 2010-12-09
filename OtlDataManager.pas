@@ -189,7 +189,6 @@ type
     class function GetPackageSizeLimit: integer;
     procedure Add(const value: TOmniValue);
     function  GetNext(var value: TOmniValue): boolean; overload; override;
-    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
     function  Prepare(dataCount: integer): integer;
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniValueEnumeratorDataPackage }
@@ -600,13 +599,6 @@ begin
   if tmp.IsInterface then
     tmp.AsInterface._Release;
   vedpApproxCount.Decrement;
-end; { TOmniValueEnumeratorDataPackage.GetNext }
-
-function TOmniValueEnumeratorDataPackage.GetNext(var position: int64; var value:
-  TOmniValue): boolean;
-begin
-  raise Exception.Create('Not implemented!');
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniValueEnumeratorDataPackage.GetNext
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
 class function TOmniValueEnumeratorDataPackage.GetPackageSizeLimit: integer;
