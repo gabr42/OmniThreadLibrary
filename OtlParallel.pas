@@ -38,6 +38,8 @@
 ///     1.07: 2010-12-09
 ///       - Parallel.Join(TProc) executes one task in the current thread.
 ///       - Parallel.ForEach.NoWait runs on NumCores-1 tasks.
+///       - Parallel.Pipeline throttling low watermark defaults to 1/4 of the high
+///         watermark if pipeline runs on more tasks than there are available cores.
 ///     1.06: 2010-12-02
 ///       - Parallel.Pipeline implements Cancel method.
 ///       - Parallel.Pipeline stage delegate can accept additional parameter of type
@@ -96,7 +98,6 @@ unit OtlParallel;
 
 interface
 
-// TODO 5 -oPrimoz Gabrijelcic : Do we need separate thread (or task?) pool for Parallel.For?
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
@@ -507,31 +508,37 @@ type
     function  GetNumTasks: integer;
     function  GetThrottle: integer;
     function  GetThrottleLow: integer;
+    function  GetThrottleLowSat: integer;
     procedure SetNumTasks(const value: integer);
     procedure SetThrottle(const value: integer);
     procedure SetThrottleLow(const value: integer);
+    procedure SetThrottleLowSat(const value: integer);
   //
     procedure Execute(const inQueue, outQueue: IOmniBlockingCollection;
       const task: IOmniTask);
     property NumTasks: integer read GetNumTasks write SetNumTasks;
     property Throttle: integer read GetThrottle write SetThrottle;
     property ThrottleLow: integer read GetThrottleLow write SetThrottleLow;
+    property ThrottleLowSat: integer read GetThrottleLowSat write SetThrottleLowSat;
   end; { IOmniPipelineStage }
 
   TOmniPipelineStage = class(TInterfacedObject, IOmniPipelineStage)
   strict private
-    opsNumTasks   : integer;
-    opsStage      : TPipelineStageDelegate;
-    opsStageEx    : TPipelineStageDelegateEx;
-    opsThrottle   : integer;
-    opsThrottleLow: integer;
+    opsNumTasks      : integer;
+    opsStage         : TPipelineStageDelegate;
+    opsStageEx       : TPipelineStageDelegateEx;
+    opsThrottle      : integer;
+    opsThrottleLow   : integer;
+    opsThrottleLowSat: integer;
   protected
     function  GetNumTasks: integer;
     function  GetThrottle: integer;
     function  GetThrottleLow: integer;
+    function  GetThrottleLowSat: integer;
     procedure SetNumTasks(const value: integer);
     procedure SetThrottle(const value: integer);
     procedure SetThrottleLow(const value: integer);
+    procedure SetThrottleLowSat(const value: integer);
   public
     constructor Create(stage: TPipelineStageDelegate); overload;
     constructor Create(stage: TPipelineStageDelegateEx); overload;
@@ -540,18 +547,20 @@ type
     property NumTasks: integer read GetNumTasks write SetNumTasks;
     property Throttle: integer read GetThrottle write SetThrottle;
     property ThrottleLow: integer read GetThrottleLow write SetThrottleLow;
+    property ThrottleLowSat: integer read GetThrottleLowSat write SetThrottleLowSat;
   end; { TOmniPipelineStage }
 
   TOmniPipeline = class(TInterfacedObject, IOmniPipeline)
   strict private
-    opCancelWith : IOmniCancellationToken;
-    opCheckpoint : integer;
-    opInput      : IOmniBlockingCollection;
-    opNumTasks   : integer;
-    opOutQueues  : TInterfaceList;
-    opStages     : TInterfaceList;
-    opThrottle   : integer;
-    opThrottleLow: integer;
+    opCancelWith    : IOmniCancellationToken;
+    opCheckpoint    : integer;
+    opInput         : IOmniBlockingCollection;
+    opNumTasks      : integer;
+    opOutQueues     : TInterfaceList;
+    opStages        : TInterfaceList;
+    opThrottle      : integer;
+    opThrottleLow   : integer;
+    opThrottleLowSat: integer;
   strict protected
     procedure AddSingleStage(const stage: IOmniPipelineStage);
     function GetStage(idxStage: integer): IOmniPipelineStage;
@@ -1689,6 +1698,11 @@ begin
   Result := opsThrottleLow;
 end; { TOmniPipelineStage.GetThrottleLow }
 
+function TOmniPipelineStage.GetThrottleLowSat: integer;
+begin
+  Result := opsThrottleLowSat;
+end; { TOmniPipelineStage.GetThrottleLowSat }
+
 procedure TOmniPipelineStage.SetNumTasks(const value: integer);
 begin
   opsNumTasks := value;
@@ -1704,6 +1718,11 @@ begin
   opsThrottleLow := value;
 end; { TOmniPipelineStage.SetThrottleLow }
 
+procedure TOmniPipelineStage.SetThrottleLowSat(const value: integer);
+begin
+  opsThrottleLowSat := value;
+end; { TOmniPipelineStage.SetThrottleLowSat }
+
 { TOmniPipeline }
 
 constructor TOmniPipeline.Create;
@@ -1713,6 +1732,7 @@ begin
   opNumTasks := 1;
   opThrottle := CDefaultPipelineThrottle;
   opThrottleLow := Round(3/4 * opThrottle);
+  opThrottleLowSat := Round(1/4 * opThrottle);
   opOutQueues := TInterfaceList.Create;
   opCancelWith := CreateOmniCancellationToken;
 end; { TOmniPipeline.Create }
@@ -1729,6 +1749,7 @@ begin
   stage.NumTasks := opNumTasks;
   stage.Throttle := opThrottle;
   stage.ThrottleLow := opThrottleLow;
+  stage.ThrottleLowSat := opThrottleLowSat;
   opStages.Add(stage);
 end; { TOmniPipeline.AddSingleStage }
 
@@ -1771,12 +1792,19 @@ var
   iTask       : integer;
   outQueue    : IOmniBlockingCollection;
   stageName   : string;
+  totalTasks  : integer;
 begin
   outQueue := opInput;
+  totalTasks := 0;
+  for iStage := 0 to opStages.Count - 1 do
+    Inc(totalTasks, PipeStage[iStage].NumTasks);
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;
-    outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
+    if totalTasks > Environment.Process.Affinity.Count then
+      outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLowSat)
+    else
+      outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
     opOutQueues.Add(outQueue);
     countStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
@@ -1852,21 +1880,28 @@ end; { TOmniPipeline.Stages }
 
 function TOmniPipeline.Throttle(numEntries: integer; unblockAtCount: integer): IOmniPipeline;
 var
-  iStage: integer;
-  throttleLow: integer;
+  iStage              : integer;
+  throttleLow         : integer;
+  throttleLowSaturated: integer;
 begin
   Assert(unblockAtCount < numEntries);
-  throttleLow := unblockAtCount;
-  // TODO 1 -oPrimoz Gabrijelcic : if there are less cores than stage tasks, throttleLow should be 1/4*throttleHigh!
-  if throttleLow = 0 then
+  if unblockAtCount = 0 then begin
     throttleLow := Round(3/4 * numEntries);
+    throttleLowSaturated := Round(1/4 * numEntries);
+  end
+  else begin
+    throttleLow := unblockAtCount;
+    throttleLowSaturated := unblockAtCount;
+  end;
   if opStages.Count = 0 then begin
     opThrottle := numEntries;
     opThrottleLow := throttleLow;
+    opThrottleLowSat := throttleLowSaturated;
   end
   else for iStage := opCheckpoint to opStages.Count - 1 do begin
     PipeStage[iStage].Throttle := numEntries;
     PipeStage[iStage].ThrottleLow := throttleLow;
+    PipeStage[iStage].ThrottleLowSat := throttleLowSaturated;
   end;
   Result := Self;
 end; { TOmniPipeline.Throttle }
