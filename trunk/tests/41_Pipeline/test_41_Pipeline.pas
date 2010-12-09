@@ -344,7 +344,10 @@ var
   begin
     if Random(4) = 1 then begin
       throttleMax := Random(10000);
-      throttleMin := Random(throttleMax);
+      if Random(2) = 1 then
+        throttleMin := Random(throttleMax)
+      else
+        throttleMin := 0;
       descr := descr + Format('T %d/%d ', [throttleMax, throttleMin]);
       pipeline.Throttle(throttleMax, throttleMin);
     end;
