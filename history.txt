@@ -1,5 +1,18 @@
-?? bug in TOmniBaseBoundedQueue ??
-
+2.0: 2010-12-10
+- New high-level primitives (unit OtlParallel):
+  - Improved parallel for (Parallel.ForEach).
+  - Futures (Parallel.Future<T>).
+  - Pipelines (Parallel.Pipeline).
+- Added support for multiple simultaneous timers. SetTimer takes additional 'timerID'
+  parameter. The old SetTimer assumes timerID = 0.
+- IOmniTask/IOmniTaskControl:
+  - ParamByName has been removed, use .Param[name: string].
+  - Param returns TOmniValueContainter.
+- IOmniTaskControl.OnMessage also accepts an object (message dispatcher; form, for example)
+- TOmniValueContainer:
+  - IndexOfName renamed to TOmniValueContainer.IndexOf.
+  - New methods in TOmniValueContainer class: ByName, Count, Exists. New properties:
+    Items[integer], Items[string] and Items[TOmniValue].
 - TOmniValue:
   - Fixed memory leak when sending String, WideString, Variant and Extended values over
     the communication channel and when queueing them into TOmni[Base]Queue.
@@ -8,33 +21,28 @@
   - Implemented conversions to/from TValue (Delphi 2010 and newer).
   - Implemented constructor.
   - [scarre] Added TDateTime support.
-  
-- Fixed few ugly bugs in TOmniBlockingCollection.
-
-- TOmniMessageQueueTee
-- IOmniCommDispatchingObserver
-- TOmniCounter, auto-initialized wrapper around the IOmniCounter
-- TOmniMessageID record, used internally to implement timers.
-- TOmhiThreadPool: ThreadDataFactory can now accept either a function or a method
+- New classes and interfaces:
+  - TOmniMessageQueueTee
+  - IOmniCommDispatchingObserver
+  - TOmniCounter, auto-initialized wrapper around the IOmniCounter
+  - TOmniMessageID record, used internally to implement timers.
+- TOmniThreadPool: ThreadDataFactory can now accept either a function or a method
   (but can be used only as a method - SetThreadDataFactory).
-- Added support for multiple simultaneous timers. SetTimer takes additional 'timerID'
-  parameter. The old SetTimer assumes timerID = 0.
 - TOmniEventMonitor: Message retrieving loop destroys interface immediately, not when the
   next message is received.
 - TOmniTaskFunction renamed to TOmniTaskDelegate.
 - Added function CreateResourceCount(initialCount): IOmniResourceCount.
-- renamed IOmniCancellationToken.IsSignaled -> IsSignalled
-- .dproj tests renamed to .2007.dproj
-- TOmniValueContainer.IndexOfName renamed to TOmniValueContainer.IndexOf
-- New methods in TOmniValueContainer class: ByName, Count, Exists. New properties:
-  Items[integer], Items[string] and Items[TOmniValue].
-- IOmniTask/IOmniTaskControl.ParamByName has been removed, use .Param[name: string].
-- IOmniTask/IOmniTaskControl.Param returns TOmniValueContainter.
-- IOmniTaskControl.OnMessage also accepts an object (message dispatcher; form, for example)
-- Bug fixed: Thread pool was immediately closing unused threads if MaxExecuting was set to -1.
-
-- new demos?
-  38_ +
+- Renamed IOmniCancellationToken.IsSignaled -> IsSignalled.
+- .dproj tests renamed to .2007.dproj.
+- Bugs fixed:
+  - Thread pool was immediately closing unused threads if MaxExecuting was set to -1.
+  - Ugly bugs in TOmniBlockingCollection removed.
+- new demos:
+  38_OrderedFor: Ordered parallel for loops.
+  39_Future: Futures.
+  40_Mandelbrot: Parallel graphics demo (very simple).
+  41_Pipeline: Pipeline demo.
+  42_MessageQueue: Stress tests for TOmniMessageQueue.
 
 1.05a: 2010-03-08
 - Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) 
