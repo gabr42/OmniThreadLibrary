@@ -34,6 +34,7 @@
 - Added function CreateResourceCount(initialCount): IOmniResourceCount.
 - Renamed IOmniCancellationToken.IsSignaled -> IsSignalled.
 - .dproj tests renamed to .2007.dproj.
+- Added Delphi XE project files.
 - Bugs fixed:
   - Thread pool was immediately closing unused threads if MaxExecuting was set to -1.
   - Ugly bugs in TOmniBlockingCollection removed.
@@ -41,7 +42,7 @@
   38_OrderedFor: Ordered parallel for loops.
   39_Future: Futures.
   40_Mandelbrot: Parallel graphics demo (very simple).
-  41_Pipeline: Pipeline demo.
+  41_Pipeline: Pipelines.
   42_MessageQueue: Stress tests for TOmniMessageQueue.
 
 1.05a: 2010-03-08
