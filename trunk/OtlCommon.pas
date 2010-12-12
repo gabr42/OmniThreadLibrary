@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-09-20
-///   Version           : 1.19
+///   Last modification : 2010-12-12
+///   Version           : 1.19a
 ///</para><para>
 ///   History:
+///     1.19a: 2010-12-12
+///       - Define implicit TOmniValue<->TDateTime conversion operators only for Delphi XE
+///         and higher.
 ///     1.19: 2010-12-03
 ///       - [scarre] Added TDateTime support to TOmniValue.
 ///     1.18a: 2010-09-21
@@ -209,7 +212,6 @@ type
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
     class operator Implicit(const a: boolean): TOmniValue; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
-    class operator Implicit(const a: TDateTime): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue; inline;
     class operator Implicit(const a: integer): TOmniValue; inline;
     class operator Implicit(const a: int64): TOmniValue; inline;
@@ -220,7 +222,6 @@ type
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
-    class operator Implicit(const a: TOmniValue): TDateTime; inline;
     class operator Implicit(const a: TOmniValue): Extended; inline;
     class operator Implicit(const a: TOmniValue): string; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
@@ -230,10 +231,14 @@ type
     class operator Implicit(const a: TOmniValue): IInterface; inline;
     class operator Implicit(const a: WideString): TOmniValue; inline;
     class operator Implicit(const a: Variant): TOmniValue; inline;
+    {$IFDEF OTL_TOmniValueImplicitDateTime}
+    class operator Implicit(const a: TDateTime): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): TDateTime; inline;
+    {$ENDIF OTL_TOmniValueImplicitDateTime}
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
-	property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
+  	property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
     property AsExtended: Extended read GetAsExtended write SetAsExtended;
     property AsInt64: int64 read GetAsInt64 write SetAsInt64;
     property AsInteger: integer read GetAsInteger write SetAsInteger;
@@ -1644,10 +1649,12 @@ begin
   Result.AsDouble := a;
 end; { TOmniValue.Implicit }
 
+{$IFDEF OTL_TOmniValueImplicitDateTime}
 class operator TOmniValue.Implicit(const a: TDateTime): TOmniValue;
 begin
   Result.AsDateTime := a;
 end; { TOmniValue.Implicit }
+{$ENDIF OTL_TOmniValueImplicitDateTime}
 
 class operator TOmniValue.Implicit(const a: Extended): TOmniValue;
 begin
@@ -1704,10 +1711,12 @@ begin
   Result := a.AsDouble;
 end; { TOmniValue.Implicit }
 
+{$IFDEF OTL_TOmniValueImplicitDateTime}
 class operator TOmniValue.Implicit(const a: TOmniValue): TDateTime;
 begin
   Result := a.AsDateTime;
 end; { TOmniValue.Implicit }
+{$ENDIF OTL_TOmniValueImplicitDateTime}
 
 class operator TOmniValue.Implicit(const a: TOmniValue): integer;
 begin
