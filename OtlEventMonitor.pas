@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-22
-///   Version           : 1.04
+///   Last modification : 2010-07-23
+///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.04a: 2010-09-23
+///       - Destroy internal monitor in Terminate.
+///       - Signal termination (in Execute) before 'Terminated' is set (which may cause
+///         Monitor to be immediately destroyed.
 ///     1.04: 2010-07-22
 ///       - Implemented ProcessMessages.
 ///     1.03: 2010-07-07
@@ -399,8 +403,9 @@ begin
     monitorInfo := TOmniCountedEventMonitor(empMonitorList.Objects[idxMonitor]);
     Assert(monitorInfo.Monitor = monitor);
     monitorInfo.Release;
-    if monitorInfo.RefCount = 0 then
+    if monitorInfo.RefCount = 0 then begin
       empMonitorList.Delete(idxMonitor);
+    end;
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Release }
 

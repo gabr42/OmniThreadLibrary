@@ -55,6 +55,7 @@
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
 {$IFEND}
+
 {$IF CompilerVersion >= 21}
   {$DEFINE OTL_ERTTI}
   {$DEFINE OTL_DeprecatedResume}
@@ -62,3 +63,6 @@
   {$DEFINE OTL_HasTkPointer}
 {$IFEND}
 
+{$IF CompilerVersion >= 22}
+  {$DEFINE OTL_TOmniValueImplicitDateTime}
+{$IFEND}
