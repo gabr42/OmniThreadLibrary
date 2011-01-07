@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-12-02
-///   Version           : 1.23
+///   Last modification : 2011-01-07
+///   Version           : 1.23a
 ///</para><para>
 ///   History:
+///     1.23a: 2011-01-07
+///       - Bug fixed: Enumerating over TOmniTaskControlList (for example when using
+///         IOmniTaskGroup.SendToAll) leaked one object.
 ///     1.23: 2010-12-02
 ///       - Added IOmniTaskControl.CancelWith(token) which can be used to enforce
 ///         non-default cancellation token.
@@ -840,6 +843,7 @@ type
     function MoveNext: boolean;
   public
     constructor Create(taskList: TInterfaceList);
+    destructor Destroy; override;
   end; { TOmniTaskControlListEnumerator }
 
   TOmniTaskControlList = class(TInterfacedObject, IOmniTaskControlList)
@@ -2678,6 +2682,12 @@ constructor TOmniTaskControlListEnumerator.Create(taskList: TInterfaceList);
 begin
   otcleTaskEnum := taskList.GetEnumerator;
 end; { TOmniTaskControlListEnumerator.Create }
+
+destructor TOmniTaskControlListEnumerator.Destroy;
+begin
+  FreeAndNil(otcleTaskEnum);
+  inherited;
+end; { TOmniTaskControlListEnumerator.Destroy }
 
 function TOmniTaskControlListEnumerator.GetCurrent: IOmniTaskControl;
 begin
