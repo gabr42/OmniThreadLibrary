@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-23
-///   Version           : 1.04a
+///   Last modification : 2011-02-14
+///   Version           : 1.04b
 ///</para><para>
 ///   History:
+///     1.04b: 2011-02-15
+///       - Don't rearm self if message window was already destroyed.
+///       - Safely destroy message window.
 ///     1.04a: 2010-09-23
 ///       - Destroy internal monitor in Terminate.
 ///       - Signal termination (in Execute) before 'Terminated' is set (which may cause
@@ -187,7 +190,8 @@ end; { TOmniEventMonitor.Create }
 
 destructor TOmniEventMonitor.Destroy;
 var
-  intfKV: TOmniInterfaceDictionaryPair;
+  intfKV   : TOmniInterfaceDictionaryPair;
+  winHandle: THandle;
 begin
   for intfKV in emMonitoredTasks do
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;
@@ -196,8 +200,9 @@ begin
     (intfKV.Value as IOmniThreadPool).RemoveMonitor;
   emMonitoredPools.Clear;
   if emMessageWindow <> 0 then begin
-    DSiDeallocateHWnd(emMessageWindow);
+    winHandle := emMessageWindow;
     emMessageWindow := 0;
+    DSiDeallocateHWnd(winHandle);
   end;
   inherited;
 end; { TOmniEventMonitor.Destroy }
@@ -216,12 +221,14 @@ end; { TOmniEventMonitor.Detach }
 
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
+  Assert(emMessageWindow <> 0);
   emMonitoredTasks.Add(task.UniqueID, task);
   Result := task.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
 
 function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
+  Assert(emMessageWindow <> 0);
   emMonitoredPools.Add(pool.UniqueID, pool);
   Result := pool.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
@@ -230,7 +237,10 @@ procedure TOmniEventMonitor.ProcessMessages;
 var
   msg: TMsg;
 begin
-  while PeekMessage(Msg, emMessageWindow, 0, 0, PM_REMOVE) and (Msg.Message <> WM_QUIT) do begin
+  while (emMessageWindow <> 0) and
+        PeekMessage(Msg, emMessageWindow, 0, 0, PM_REMOVE) and
+        (Msg.Message <> WM_QUIT) do
+  begin
     TranslateMessage(Msg);
     DispatchMessage(Msg);
   end;
@@ -251,7 +261,7 @@ var
     while task.Comm.Receive(emCurrentMsg) do begin
       if assigned(emOnTaskMessage) then
         emOnTaskMessage(task, emCurrentMsg);
-      if DSiElapsedSince(GetTickCount, timeStart) > timeout_ms then begin
+      if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
         if rearmSelf then
           Win32Check(PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
         Result := false;
