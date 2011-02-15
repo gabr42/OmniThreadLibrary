@@ -1,3 +1,6 @@
+- OtlParallel compiles in Delphi 2009.
+- Bugs fixed in OtlEventMonitor: Message window could be used after it was destroyed.
+
 2.0: 2010-12-10
 - New high-level primitives (unit OtlParallel):
   - Improved parallel for (Parallel.ForEach).
