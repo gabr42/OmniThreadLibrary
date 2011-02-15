@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2010-12-09
-///   Version           : 1.07
+///   Last modification : 2011-02-15
+///   Version           : 1.07a
 ///</para><para>
 ///   History:
+///     1.07a: 2011-02-15
+///       - Compiles in Delphi 2009.
 ///     1.07: 2010-12-09
 ///       - Parallel.Join(TProc) executes one task in the current thread.
 ///       - Parallel.ForEach.NoWait runs on NumCores-1 tasks.
@@ -1673,12 +1675,14 @@ end; { TOmniPipelineStage.Create }
 procedure TOmniPipelineStage.Execute(const inQueue, outQueue: IOmniBlockingCollection;
   const task: IOmniTask);
 begin
-  if TProc(opsStage) <> TProc(nil) then begin
-    Assert(TProc(opsStageEx) = TProc(nil));
+  // D2009 doesn't like TProc casts so we're casting to integer
+  Assert(SizeOf(TProc) = SizeOf(integer));
+  if PInteger(@opsStage)^ <> integer(nil) then begin
+    Assert(PInteger(@opsStageEx)^ = integer(nil));
     opsStage(inQueue, outQueue);
   end
   else begin
-    Assert(TProc(opsStageEx) <> TProc(nil));
+    Assert(PInteger(@opsStageEx)^ <> integer(nil));
     opsStageEx(inQueue, outQueue, task);
   end;
 end; { TOmniPipelineStage.Execute }

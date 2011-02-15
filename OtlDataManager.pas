@@ -60,7 +60,7 @@ uses
 type
   ///<summary>Source provider capabilities.</summary>
   TOmniSourceProviderCapability = (
-    spcCountable,  // source provider that knows how many data it holds
+    spcCountable,  // source provider that knows how much data it holds
     spcFast,       // source provider operations are O(1)
     spcDataLimit   // data package can only hold limited amount of data
   );
@@ -938,9 +938,7 @@ end; { TOmniBaseDataManager.LocalQueueDestroyed }
 procedure TOmniBaseDataManager.NotifyBufferFull(buffer: TOmniOutputBufferImpl);
 begin
   // Remove buffer from the list. Check if next buffer is waiting in the list.
-  // Copy buffer if it is complete and repeat the process.
-  // Can only be called from one thread at the same time as only one buffer can be active.
-  // Activate the first buffer if it is the expected one.
+  // Copy buffer if it is full and repeat the process.
   dmBufferRangeLock.Acquire;
   try
     while (dmBufferRangeList.Count > 0) and
