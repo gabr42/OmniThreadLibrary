@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,13 +35,15 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover
+///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2010-07-01
-///   Version           : 1.05
+///   Last modification : 2011-03-01
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2011-03-01
+///       - [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always returned False.
 ///     1.05: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.04a: 2010-03-30
@@ -511,6 +513,7 @@ begin
       orcLock.Acquire;
     end;
     if orcNumResources.Value > 0 then begin
+      Result := true;
       resourceCount := cardinal(orcNumResources.Decrement);
       if resourceCount = 0 then begin
         orcLock.Release; //prevent race condition - another thread may wait on orcHandle and destroy this instance
