@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2011 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-02-15
-///   Version           : 1.07a
+///   Last modification : 2011-03-09
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2011-03-09
+///       - Faster IOmniFuture<T>.IsDone.
 ///     1.07a: 2011-02-15
 ///       - Compiles in Delphi 2009.
 ///     1.07: 2010-12-09
@@ -245,6 +247,7 @@ type
   strict private
     ofCancellable: boolean;
     ofCancelled  : boolean;
+    ofCompleted  : boolean;
     ofResult     : T;
     ofTask       : IOmniTaskControl;
   strict protected
@@ -280,6 +283,46 @@ type
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
   end; { IOmniPipeline }
+
+  IOmniCompute<T> = interface ['{915A5BDB-ECAA-4928-B449-EFCB2311B28B}']
+    procedure Execute;
+    function  IsDone: boolean;
+    function  TryValue(timeout_ms: cardinal; var value: T): boolean;
+    function  Value: T;
+  end; { IOmniCompute<T> }
+
+  TOmniCompute<T> = class(TInterfacedObject, IOmniCompute<T>)
+  strict private
+    ocAction  : TOmniFutureDelegate<T>;
+    ocComputed: boolean;
+    ocInput   : IOmniBlockingCollection;
+    ocResult  : T;
+  public
+    constructor Create(action: TOmniFutureDelegate<T>; input: IOmniBlockingCollection);
+    procedure Execute;
+    function IsDone: boolean;
+    function  TryValue(timeout_ms: cardinal; var value: T): boolean;
+    function  Value: T;
+  end; { TOmniCompute<T> }
+
+  IOmniForkJoin<T> = interface
+    function  Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+    function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
+  end; { IOmniForkJoin<T> }
+
+  TOmniForkJoin<T> = class(TInterfacedObject, IOmniForkJoin<T>)
+  strict private
+    ocNumTasks : integer;
+    ocPoolInput: IOmniBlockingCollection;
+    ocTaskPool : IOmniPipeline;
+  strict protected
+    procedure Asy_ProcessComputations(const input, output: IOmniBlockingCollection);
+    procedure StartWorkerTasks;
+  public
+    constructor Create;
+    function  Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+    function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
+  end; { TOmniForkJoin }
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -333,6 +376,9 @@ type
     class function Pipeline: IOmniPipeline; overload;
     class function Pipeline(const stages: array of TPipelineStageDelegate;
       const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
+
+  // Fork/Join
+    class function ForkJoin<T>: IOmniForkJoin<T>;
   end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -497,11 +543,19 @@ var
   GParallelPool: IOmniThreadPool;
   GPipelinePool: IOmniThreadPool;
 
+  {$REGION 'Documentation'}
+  ///	<summary>A workaround used in TOmniForkJoin&lt;T&gt; to add work units into
+  ///	blocking collection. Calling IOmniBlockinCollection.Add directly causes internal
+  ///	compiler error.</summary>
+  {$ENDREGION}
+  procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
+
 implementation
 
 uses
   Windows,
   Classes,
+  DSiWin32,
   GpStuff,
   OtlComm;
 
@@ -581,6 +635,13 @@ type
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
   end; { TOmniPipeline }
+
+{ exports }
+
+procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
+begin
+  queue.Add(value);
+end; { AddToBC }
 
 { Parallel }
 
@@ -685,6 +746,11 @@ class function Parallel.ForEach<T>(enumerator: TEnumeratorDelegate<T>):
 begin
   Result := TOmniParallelLoop<T>.Create(enumerator);
 end; { Parallel.ForEach<T> }
+
+class function Parallel.ForkJoin<T>: IOmniForkJoin<T>;
+begin
+  Result := TOmniForkJoin<T>.Create;
+end; { Parallel.ForkJoin<T> }
 
 class function Parallel.Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>;
 begin
@@ -1581,9 +1647,11 @@ constructor TOmniFuture<T>.Create(action: TOmniFutureDelegate<T>);
 begin
   inherited Create;
   ofCancellable := false;
+  ofCompleted := false;
   Execute(procedure (const task: IOmniTask)
     begin
       ofResult := action();
+      ofCompleted := true;
     end);
 end; { TOmniFuture<T>.Create }
 
@@ -1591,9 +1659,11 @@ constructor TOmniFuture<T>.CreateEx(action: TOmniFutureDelegateEx<T>);
 begin
   inherited Create;
   ofCancellable := true;
+  ofCompleted := false;
   Execute(procedure (const task: IOmniTask)
     begin
       ofResult := action(task);
+      ofCompleted := true;
     end);
 end; { TOmniFuture<T>.CreateEx }
 
@@ -1634,7 +1704,7 @@ end; { TOmniFuture<T>.IsCancelled }
 
 function TOmniFuture<T>.IsDone: boolean;
 begin
-  Result := (not assigned(ofTask)) or ofTask.WaitFor(0);
+  Result := ofCompleted;
 end; { TOmniFuture<T>.IsDone }
 
 function TOmniFuture<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;
@@ -1910,8 +1980,98 @@ begin
   Result := Self;
 end; { TOmniPipeline.Throttle }
 
+{ TOmniCompute<T> }
+
+constructor TOmniCompute<T>.Create(action: TOmniFutureDelegate<T>;
+  input: IOmniBlockingCollection);
+begin
+  inherited Create;
+  ocAction := action;
+  ocInput := input;
+end; { TOmniCompute<T>.Create }
+
+procedure TOmniCompute<T>.Execute;
+begin
+  Assert(not ocComputed);
+  ocResult := ocAction;
+  ocComputed := true;
+end; { TOmniCompute }
+
+function TOmniCompute<T>.IsDone: boolean;
+begin
+  Result := ocComputed;
+end; { TOmniCompute }
+
+function TOmniCompute<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;
+var
+  compute: TOmniValue;
+begin
+  Result := false;
+  while not ocComputed do begin
+    if ocInput.Take(compute) then
+      (compute.AsInterface as IOmniCompute<T>).Execute
+    else
+      DSiYield;
+  end;
+  value := ocResult;
+  Result := true;
+end; { TOmniCompute<T>.TryValue }
+
+function TOmniCompute<T>.Value: T;
+begin
+  TryValue(INFINITE, Result);
+end; { TOmniCompute<T>.Value }
+
+{ TOmniForkJoin }
+
+procedure TOmniForkJoin<T>.Asy_ProcessComputations(const input, output:
+  IOmniBlockingCollection);
+var
+  computation: TOmniValue;
+begin
+  for computation in input do
+    (computation.AsInterface as IOmniCompute<T>).Execute;
+end; { TOmniForkJoin }
+
+function TOmniForkJoin<T>.Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+var
+  intf: IInterface;
+begin
+  StartWorkerTasks;
+  Result := TOmniCompute<T>.Create(action, ocPoolInput);
+  AddToBC(ocPoolInput, Result);
+end; { TOmniForkJoin<T>.Compute }
+
+constructor TOmniForkJoin<T>.Create;
+begin
+  inherited Create;
+  ocNumTasks := Environment.Process.Affinity.Count - 1;
+end; { TOmniForkJoin<T>.Create }
+
+function TOmniForkJoin<T>.NumTasks(numTasks: integer): IOmniForkJoin<T>;
+begin
+  ocNumTasks := numTasks;
+  Result := Self;
+end; { TOmniForkJoin<T>.NumTasks }
+
+procedure TOmniForkJoin<T>.StartWorkerTasks;
+begin
+  if not assigned(ocTaskPool) then begin
+    //Use pipeline with one parallelized stage as a simple task pool.
+    ocPoolInput := TOmniBlockingCollection.Create(ocNumTasks+1);
+    if ocNumTasks > 0 then begin
+      ocTaskPool := Parallel.Pipeline
+        .NumTasks(ocNumTasks)
+        .Input(ocPoolInput)
+        .Stage(Asy_ProcessComputations);
+      ocTaskPool.Run;
+    end;
+  end;
+end; { TOmniForkJoin }
+
 initialization
   GParallelPool := CreateThreadPool('OtlParallel pool');
+  GParallelPool.IdleWorkerThreadTimeout_sec := 60*1000; // 1 minute
   GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
   GPipelinePool.MaxExecuting := -1;
 end.
