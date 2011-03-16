@@ -42,7 +42,9 @@
 ///</para><para>
 ///   History:
 ///     1.24: 2011-03-16
-///       - IOmniTaskControl.Invoke accepts anonymous method.
+///       - Implemented IOmniTaskControl.Invoke(procedure) and
+///         .Invoke(procedure const task: IOmniTask).
+///       - Implemented IOmniTask.Invoke(procedure).
 ///     1.23a: 2011-01-07
 ///       - Bug fixed: Enumerating over TOmniTaskControlList (for example when using
 ///         IOmniTaskGroup.SendToAll) leaked one object.
@@ -272,8 +274,8 @@ type
   TOmniOnTerminatedFunction = reference to procedure(const task: IOmniTaskControl);
 {$ENDIF OTL_Anonymous}
 {$IFDEF OTL_Anonymous}
-  TOmniTaskInvokeFunction = reference to procedure;
-  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTask);
+  TOmniTaskControlInvokeFunction = reference to procedure;
+  TOmniTaskControlInvokeFunctionEx = reference to procedure(const task: IOmniTask);
 {$ENDIF OTL_Anonymous}
 
   TOmniMessageExec = class
@@ -322,8 +324,8 @@ type
     function  Invoke(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload;
     {$IFDEF OTL_Anonymous}
-    function  Invoke(remoteFunc: TOmniTaskInvokeFunction): IOmniTaskControl; overload;
-    function  Invoke(remoteFunc: TOmniTaskInvokeFunctionEx): IOmniTaskControl; overload;
+    function  Invoke(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl; overload;
+    function  Invoke(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
@@ -522,19 +524,24 @@ type
   {$IFDEF OTL_Anonymous}
   TOmniInternalFuncMsg = class(TOmniInternalMessage)
   strict private
-    ifmFunc:   TOmniTaskInvokeFunction;
-    ifmFuncEx: TOmniTaskInvokeFunctionEx;
+    ifmFunc    :   TOmniTaskControlInvokeFunction;
+    ifmFuncEx  : TOmniTaskControlInvokeFunctionEx;
+    ifmTaskFunc: TOmniTaskInvokeFunction;
   public
+    class function  CreateMessage(func: TOmniTaskControlInvokeFunction): TOmniMessage; overload; inline;
+    class function  CreateMessage(func: TOmniTaskControlInvokeFunctionEx): TOmniMessage; overload; inline;
     class function  CreateMessage(func: TOmniTaskInvokeFunction): TOmniMessage; overload;
       inline;
-    class function  CreateMessage(func: TOmniTaskInvokeFunctionEx): TOmniMessage; overload;
-      inline;
-    class procedure UnpackMessage(const msg: TOmniMessage; var func: TOmniTaskInvokeFunction;
-      var funcEx: TOmniTaskInvokeFunctionEx);
+    class procedure UnpackMessage(const msg: TOmniMessage; var func: TOmniTaskControlInvokeFunction;
+      var funcEx: TOmniTaskControlInvokeFunctionEx); overload;
+    class function  UnpackMessage(const msg: TOmniMessage; var func: TOmniTaskInvokeFunction):
+      boolean; overload;
+    constructor Create(func: TOmniTaskControlInvokeFunction); overload;
+    constructor Create(func: TOmniTaskControlInvokeFunctionEx); overload;
     constructor Create(func: TOmniTaskInvokeFunction); overload;
-    constructor Create(func: TOmniTaskInvokeFunctionEx); overload;
-    property Func: TOmniTaskInvokeFunction read ifmFunc;
-    property FuncEx: TOmniTaskInvokeFunctionEx read ifmFuncEx;
+    property Func: TOmniTaskControlInvokeFunction read ifmFunc;
+    property FuncEx: TOmniTaskControlInvokeFunctionEx read ifmFuncEx;
+    property TaskFunc: TOmniTaskInvokeFunction read ifmTaskFunc;
   end; { TOmniInternalFuncMsg }
   {$ENDIF OTL_Anonymous}
 
@@ -628,7 +635,7 @@ type
       var methodAddress: pointer; var methodSignature: TOmniInvokeType);
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage;
       var msgName: string; var msgData: TOmniValue {$IFDEF OTL_Anonymous};
-      var func: TOmniTaskInvokeFunction; var funcEx: TOmniTaskInvokeFunctionEx {$ENDIF OTL_Anonymous});
+      var func: TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx {$ENDIF OTL_Anonymous});
     function  GetOptions: TOmniTaskControlOptions;
     function  HaveElapsedTimer: boolean;
     procedure Initialize;
@@ -707,6 +714,7 @@ type
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
+    procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
@@ -818,8 +826,8 @@ type
     function  Invoke(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload; inline;
     {$IFDEF OTL_Anonymous}
-    function  Invoke(remoteFunc: TOmniTaskInvokeFunction): IOmniTaskControl; overload;
-    function  Invoke(remoteFunc: TOmniTaskInvokeFunctionEx): IOmniTaskControl; overload;
+    function  Invoke(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl; overload;
+    function  Invoke(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
@@ -1069,17 +1077,37 @@ end; { TOmniInternalAddressMsg.UnpackMessage }
 
 {$IFDEF OTL_Anonymous}
 
-constructor TOmniInternalFuncMsg.Create(func: TOmniTaskInvokeFunction);
+constructor TOmniInternalFuncMsg.Create(func: TOmniTaskControlInvokeFunction);
 begin
   inherited Create(imtFuncMsg);
   ifmFunc := func;
 end; { TOmniInternalFuncMsg.Create }
 
-constructor TOmniInternalFuncMsg.Create(func: TOmniTaskInvokeFunctionEx);
+constructor TOmniInternalFuncMsg.Create(func: TOmniTaskControlInvokeFunctionEx);
 begin
   inherited Create(imtFuncMsg);
   ifmFuncEx := func;
 end; { TOmniInternalFuncMsg.Create }
+
+constructor TOmniInternalFuncMsg.Create(func: TOmniTaskInvokeFunction);
+begin
+  inherited Create(imtFuncMsg);
+  ifmTaskFunc := func;
+end; { TOmniInternalFuncMsg.Create }
+
+class function TOmniInternalFuncMsg.CreateMessage(func: TOmniTaskControlInvokeFunction):
+  TOmniMessage;
+begin
+  Result := TOmniMessage.Create(COtlReservedMsgID,
+    TOmniInternalFuncMsg.Create(func));
+end; { TOmniInternalFuncMsg.CreateMessage }
+
+class function TOmniInternalFuncMsg.CreateMessage(func: TOmniTaskControlInvokeFunctionEx):
+  TOmniMessage;
+begin
+  Result := TOmniMessage.Create(COtlReservedMsgID,
+    TOmniInternalFuncMsg.Create(func));
+end; { TOmniInternalFuncMsg.CreateMessage }
 
 class function TOmniInternalFuncMsg.CreateMessage(func: TOmniTaskInvokeFunction):
   TOmniMessage;
@@ -1088,15 +1116,8 @@ begin
     TOmniInternalFuncMsg.Create(func));
 end; { TOmniInternalFuncMsg.CreateMessage }
 
-class function TOmniInternalFuncMsg.CreateMessage(func: TOmniTaskInvokeFunctionEx):
-  TOmniMessage;
-begin
-  Result := TOmniMessage.Create(COtlReservedMsgID,
-    TOmniInternalFuncMsg.Create(func));
-end; { TOmniInternalFuncMsg.CreateMessage }
-
 class procedure TOmniInternalFuncMsg.UnpackMessage(const msg: TOmniMessage; var func:
-  TOmniTaskInvokeFunction; var funcEx: TOmniTaskInvokeFunctionEx);
+  TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx);
 var
   funcMsg: TOmniInternalFuncMsg;
 begin
@@ -1104,6 +1125,20 @@ begin
   func := funcMsg.Func;
   funcEx := funcMsg.FuncEx;
   FreeAndNil(funcMsg);
+end; { TOmniInternalFuncMsg.UnpackMessage }
+
+class function TOmniInternalFuncMsg.UnpackMessage(const msg: TOmniMessage; var func:
+  TOmniTaskInvokeFunction): boolean;
+var
+  funcMsg: TOmniInternalFuncMsg;
+begin
+  Result := assigned(msg.MsgData.AsObject) and (msg.MsgData.AsObject is TOmniInternalFuncMsg);
+  if Result then begin
+    funcMsg := TOmniInternalFuncMsg(msg.MsgData.AsObject);
+    func := funcMsg.TaskFunc;
+    FreeAndNil(funcMsg);
+    msg.MsgData.AsObject := nil;
+  end;
 end; { TOmniInternalFuncMsg.UnpackMessage }
 
 {$ENDIF OTL_Anonymous}
@@ -1236,6 +1271,11 @@ function TOmniTask.GetUniqueID: int64;
 begin
   Result := otSharedInfo_ref.UniqueID;
 end; { TOmniTask.GetUniqueID }
+
+procedure TOmniTask.Invoke(remoteFunc: TOmniTaskInvokeFunction);
+begin
+  otSharedInfo_ref.CommChannel.Endpoint2.Send(TOmniInternalFuncMsg.CreateMessage(remoteFunc));
+end; { TOmniTask.Invoke }
 
 procedure TOmniTask.RegisterComm(const comm: IOmniCommunicationEndpoint);
 begin
@@ -1657,8 +1697,8 @@ end; { TOmniTaskExecutor.DispatchMessages }
 procedure TOmniTaskExecutor.DispatchOmniMessage(msg: TOmniMessage);
 {$IFDEF OTL_Anonymous}
 var
-  func  : TOmniTaskInvokeFunction;
-  funcEx: TOmniTaskInvokeFunctionEx;
+  func  : TOmniTaskControlInvokeFunction;
+  funcEx: TOmniTaskControlInvokeFunctionEx;
 {$ENDIF OTL_Anonymous}
 var
   methodAddr     : pointer;
@@ -1861,7 +1901,7 @@ end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
 
 procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage; var
   msgName: string; var msgData: TOmniValue {$IFDEF OTL_Anonymous};
-  var func: TOmniTaskInvokeFunction; var funcEx: TOmniTaskInvokeFunctionEx {$ENDIF OTL_Anonymous});
+  var func: TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx {$ENDIF OTL_Anonymous});
 var
   internalType: TOmniInternalMessageType;
   method      : pointer;
@@ -2286,22 +2326,27 @@ end; { TOmniTaskControl.EnsureCommChannel }
 procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
 var
   exec: TOmniMessageExec;
+  func: TOmniTaskInvokeFunction;
   kv  : TGpKeyValue;
   msg1: TOmniMessage;
 begin
-  for kv in otcOnMessageList.WalkKV do
-    if kv.Key = COtlReservedMsgID then begin
-      msg1 := msg;
-      TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
-    end;
-  exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-  otcInEventHandler := true;
-  try
-    if assigned(exec) then
-      exec.OnMessage(Self, msg)
-    else if assigned(otcOnMessageExec) then
-      otcOnMessageExec.OnMessage(Self, msg);
-  finally otcInEventHandler := false; end;
+  if (msg.MsgID = COtlReservedMsgID) and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
+    func
+  else begin
+    for kv in otcOnMessageList.WalkKV do
+      if kv.Key = COtlReservedMsgID then begin
+        msg1 := msg;
+        TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+      end;
+    exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+    otcInEventHandler := true;
+    try
+      if assigned(exec) then
+        exec.OnMessage(Self, msg)
+      else if assigned(otcOnMessageExec) then
+        otcOnMessageExec.OnMessage(Self, msg);
+    finally otcInEventHandler := false; end;
+  end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
@@ -2428,13 +2473,13 @@ begin
 end; { TOmniCommunicationEndpoint.Invoke }
 
 {$IFDEF OTL_Anonymous}
-function TOmniTaskControl.Invoke(remoteFunc: TOmniTaskInvokeFunction): IOmniTaskControl;
+function TOmniTaskControl.Invoke(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl;
 begin
   Comm.Send(TOmniInternalFuncMsg.CreateMessage(remoteFunc));
   Result := Self;
 end; { TOmniTaskControl.Invoke }
 
-function TOmniTaskControl.Invoke(remoteFunc: TOmniTaskInvokeFunctionEx): IOmniTaskControl;
+function TOmniTaskControl.Invoke(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl;
 begin
   Comm.Send(TOmniInternalFuncMsg.CreateMessage(remoteFunc));
   Result := Self;
@@ -3132,6 +3177,7 @@ end; { TOmniMessageExec.Clone }
 procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
 var
+  func: TOmniTaskInvokeFunction;
   msg1: TOmniMessage;
 begin
   if assigned(omeOnMessageDispatch) then begin
