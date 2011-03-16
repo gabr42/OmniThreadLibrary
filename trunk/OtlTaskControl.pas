@@ -533,7 +533,6 @@ type
       var funcEx: TOmniTaskInvokeFunctionEx);
     constructor Create(func: TOmniTaskInvokeFunction); overload;
     constructor Create(func: TOmniTaskInvokeFunctionEx); overload;
-    destructor  Destroy; override;
     property Func: TOmniTaskInvokeFunction read ifmFunc;
     property FuncEx: TOmniTaskInvokeFunctionEx read ifmFuncEx;
   end; { TOmniInternalFuncMsg }
@@ -1082,13 +1081,6 @@ begin
   ifmFuncEx := func;
 end; { TOmniInternalFuncMsg.Create }
 
-destructor TOmniInternalFuncMsg.Destroy;
-begin
-  ifmFunc := nil;
-  ifmFuncEx := nil;
-  inherited;
-end; { TOmniInternalFuncMsg.Destroy }
-
 class function TOmniInternalFuncMsg.CreateMessage(func: TOmniTaskInvokeFunction):
   TOmniMessage;
 begin
@@ -1111,7 +1103,7 @@ begin
   funcMsg := TOmniInternalFuncMsg(msg.MsgData.AsObject);
   func := funcMsg.Func;
   funcEx := funcMsg.FuncEx;
-  FreeAndNil(func);
+  FreeAndNil(funcMsg);
 end; { TOmniInternalFuncMsg.UnpackMessage }
 
 {$ENDIF OTL_Anonymous}
