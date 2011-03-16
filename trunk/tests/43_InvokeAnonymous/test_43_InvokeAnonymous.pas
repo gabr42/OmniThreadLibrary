@@ -42,14 +42,14 @@ begin
       taskThreadID: DWORD;
     begin
       taskThreadID := GetCurrentThreadID;
-//      task.Invoke(
-//        procedure
-//          frmInvokeAnonymousDemo.lbLog.Items.Add(Format(
-//            'Current thread ID: %d, task thread ID: %d, form thread ID: %d',
-//            [GetCurrentThreadID, taskThreadID, formThreadID]));
-//        begin
-//      end
-//      );
+      task.Invoke(
+        procedure
+        begin
+          frmInvokeAnonymousDemo.lbLog.Items.Add(Format(
+            'Current thread ID: %d, task thread ID: %d, form thread ID: %d',
+            [GetCurrentThreadID, taskThreadID, formThreadID]));
+        end
+      );
     end
   );
 end;

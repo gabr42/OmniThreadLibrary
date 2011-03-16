@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-01
-///   Version           : 1.10
+///   Last modification : 2011-03-16
+///   Version           : 1.11
 ///</para><para>
 ///   History:
+///     1.11: 2011-03-16
+///       - Defined IOmniTask.Invoke method.
 ///     1.10: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.09: 2010-03-16
@@ -110,6 +112,11 @@ type
     property WaitObjects[idxWaitObject: integer]: THandle read GetWaitObjects;
   end; { TOmniWaitObjectList }
 
+  {$IFDEF OTL_Anonymous}
+  TOmniTaskInvokeFunction = reference to procedure;
+//  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTaskControl);
+  {$ENDIF OTL_Anonymous}
+
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
@@ -124,6 +131,10 @@ type
   //
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
+    {$IFDEF OTL_Anonymous}
+    procedure Invoke(remoteFunc: TOmniTaskInvokeFunction); //overload;
+//    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
+    {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
