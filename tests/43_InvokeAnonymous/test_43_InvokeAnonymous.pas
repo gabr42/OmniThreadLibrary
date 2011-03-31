@@ -41,12 +41,15 @@ begin
     var
       taskThreadID: DWORD;
     begin
+      // this will execute in the context of the worker thread
       taskThreadID := GetCurrentThreadID;
       task.Invoke(
         procedure
         begin
+          // this will execute in the context of the main thread
           frmInvokeAnonymousDemo.lbLog.Items.Add(Format(
-            'Current thread ID: %d, task thread ID: %d, form thread ID: %d',
+            'Current thread ID: %d, task thread ID: %d, ' +
+            ' form thread ID: %d',
             [GetCurrentThreadID, taskThreadID, formThreadID]));
         end
       );
