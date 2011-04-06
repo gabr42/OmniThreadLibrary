@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-03-09
-///   Version           : 1.08
+///   Last modification : 2011-04-06
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2011-04-06
+///       - Implemented Parallel.ForkJoin.
 ///     1.08: 2011-03-09
 ///       - Faster IOmniFuture<T>.IsDone.
 ///     1.07a: 2011-02-15
@@ -284,6 +286,18 @@ type
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
   end; { IOmniPipeline }
 
+  TOmniForkJoinDelegate = reference to procedure;
+  TOmniForkJoinDelegateEx = reference to procedure(const task: IOmniTask);
+
+  TOmniForkJoinDelegate<T> = reference to function: T;
+  TOmniForkJoinDelegateEx<T> = reference to function(const task: IOmniTask): T;
+
+  IOmniCompute = interface ['{488441DC-D280-4F94-9B6A-296A19729DD5}']
+    procedure Execute;
+    function  IsDone: boolean;
+    procedure Await;
+  end; { IOmniCompute<T> }
+
   IOmniCompute<T> = interface ['{915A5BDB-ECAA-4928-B449-EFCB2311B28B}']
     procedure Execute;
     function  IsDone: boolean;
@@ -293,20 +307,35 @@ type
 
   TOmniCompute<T> = class(TInterfacedObject, IOmniCompute<T>)
   strict private
-    ocAction  : TOmniFutureDelegate<T>;
+    ocAction  : TOmniForkJoinDelegate<T>;
     ocComputed: boolean;
     ocInput   : IOmniBlockingCollection;
     ocResult  : T;
   public
-    constructor Create(action: TOmniFutureDelegate<T>; input: IOmniBlockingCollection);
+    constructor Create(action: TOmniForkJoinDelegate<T>; input: IOmniBlockingCollection);
     procedure Execute;
-    function IsDone: boolean;
+    function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
     function  Value: T;
   end; { TOmniCompute<T> }
 
+  TOmniCompute = class(TInterfacedObject, IOmniCompute)
+  strict private
+    ocCompute: IOmniCompute<boolean>;
+  public
+    constructor Create(compute: IOmniCompute<boolean>);
+    procedure Await;
+    procedure Execute;
+    function  IsDone: boolean;
+  end; { TOmniCompute }
+
+  IOmniForkJoin = interface
+    function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
+    function  NumTasks(numTasks: integer): IOmniForkJoin;
+  end; { IOmniForkJoin }
+
   IOmniForkJoin<T> = interface
-    function  Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+    function Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
   end; { IOmniForkJoin<T> }
 
@@ -320,8 +349,18 @@ type
     procedure StartWorkerTasks;
   public
     constructor Create;
-    function  Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+    function  Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
+  end; { TOmniForkJoin }
+
+  TOmniForkJoin = class(TInterfacedObject, IOmniForkJoin)
+  strict private
+    ocForkJoin: TOmniForkJoin<boolean>;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
+    function  NumTasks(numTasks: integer): IOmniForkJoin;
   end; { TOmniForkJoin }
 
   {$REGION 'Documentation'}
@@ -378,7 +417,8 @@ type
       const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
 
   // Fork/Join
-    class function ForkJoin<T>: IOmniForkJoin<T>;
+    class function ForkJoin: IOmniForkJoin; overload;
+    class function ForkJoin<T>: IOmniForkJoin<T>; overload;
   end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -746,6 +786,11 @@ class function Parallel.ForEach<T>(enumerator: TEnumeratorDelegate<T>):
 begin
   Result := TOmniParallelLoop<T>.Create(enumerator);
 end; { Parallel.ForEach<T> }
+
+class function Parallel.ForkJoin: IOmniForkJoin;
+begin
+  Result := TOmniForkJoin.Create;
+end; { Parallel.ForkJoin }
 
 class function Parallel.ForkJoin<T>: IOmniForkJoin<T>;
 begin
@@ -1982,7 +2027,7 @@ end; { TOmniPipeline.Throttle }
 
 { TOmniCompute<T> }
 
-constructor TOmniCompute<T>.Create(action: TOmniFutureDelegate<T>;
+constructor TOmniCompute<T>.Create(action: TOmniForkJoinDelegate<T>;
   input: IOmniBlockingCollection);
 begin
   inherited Create;
@@ -2022,6 +2067,29 @@ begin
   TryValue(INFINITE, Result);
 end; { TOmniCompute<T>.Value }
 
+{ TOmniCompute }
+
+constructor TOmniCompute.Create(compute: IOmniCompute<boolean>);
+begin
+  inherited Create;
+  ocCompute := compute;
+end; { TOmniCompute.Create }
+
+procedure TOmniCompute.Await;
+begin
+  ocCompute.Value;
+end; { TOmniCompute.Await }
+
+procedure TOmniCompute.Execute;
+begin
+  ocCompute.Execute;
+end; { TOmniCompute.Execute }
+
+function TOmniCompute.IsDone: boolean;
+begin
+  Result := ocCompute.IsDone;
+end; { TOmniCompute.IsDone }
+
 { TOmniForkJoin }
 
 procedure TOmniForkJoin<T>.Asy_ProcessComputations(const input, output:
@@ -2033,7 +2101,7 @@ begin
     (computation.AsInterface as IOmniCompute<T>).Execute;
 end; { TOmniForkJoin }
 
-function TOmniForkJoin<T>.Compute(action: TOmniFutureDelegate<T>): IOmniCompute<T>;
+function TOmniForkJoin<T>.Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
 var
   intf: IInterface;
 begin
@@ -2067,7 +2135,40 @@ begin
       ocTaskPool.Run;
     end;
   end;
-end; { TOmniForkJoin }
+end; { TOmniForkJoin<T.StartWorkerTasks }
+
+{ TOmniForkJoin }
+
+constructor TOmniForkJoin.Create;
+begin
+  inherited Create;
+  ocForkJoin := TOmniForkJoin<boolean>.Create;
+end; { TOmniForkJoin.Create }
+
+destructor TOmniForkJoin.Destroy;
+begin
+  FreeAndNil(ocForkJoin);
+  inherited;
+end; { TOmniForkJoin.Destroy }
+
+function TOmniForkJoin.Compute(action: TOmniForkJoinDelegate): IOmniCompute;
+begin
+  Result := TOmniCompute.Create(
+    ocForkJoin.Compute(
+      function: boolean
+      begin
+        action;
+        Result := true;
+      end
+    )
+  );
+end;
+
+function TOmniForkJoin.NumTasks(numTasks: integer): IOmniForkJoin;
+begin
+  ocForkJoin.NumTasks(numTasks);
+  Result := self;
+end; { TOmniForkJoin.NumTasks }
 
 initialization
   GParallelPool := CreateThreadPool('OtlParallel pool');
