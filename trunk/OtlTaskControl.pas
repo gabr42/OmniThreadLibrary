@@ -296,6 +296,7 @@ type
     {$IFDEF OTL_Anonymous}
     constructor Create(exec: TOmniOnMessageFunction); overload;
     constructor Create(exec: TOmniOnTerminatedFunction); overload;
+    procedure Apply(msgID: word; task: IOmniTaskControl);
     procedure SetOnMessage(exec: TOmniOnMessageFunction); overload;
     procedure SetOnTerminated(exec: TOmniOnTerminatedFunction); overload;
     {$ENDIF OTL_Anonymous}
@@ -3177,7 +3178,6 @@ end; { TOmniMessageExec.Clone }
 procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
 var
-  func: TOmniTaskInvokeFunction;
   msg1: TOmniMessage;
 begin
   if assigned(omeOnMessageDispatch) then begin
@@ -3228,6 +3228,18 @@ begin
   inherited Create;
   SetOnTerminated(exec);
 end; { TOmniMessageExec.Create }
+
+procedure TOmniMessageExec.Apply(msgID: word; task: IOmniTaskControl);
+begin
+  case omeOnMessage.Kind of
+    oekDelegate:
+      task.OnMessage(msgID, TOmniOnMessageFunction(TProc(omeOnMessage)));
+    oekMethod:
+      task.OnMessage(msgID, TOmniTaskMessageEvent(TMethod(omeOnMessage)));
+    else raise Exception.CreateFmt('TOmniMessageExec.Apply: Unexpected kind %s',
+      [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
+  end;
+end; { TOmniMessageExec.Apply }
 
 procedure TOmniMessageExec.SetOnMessage(exec: TOmniOnMessageFunction);
 begin

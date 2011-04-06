@@ -37,6 +37,8 @@
 ///   History:
 ///     1.09: 2011-04-06
 ///       - Implemented Parallel.ForkJoin.
+///       - Implemented Parallel.Async.
+///       - Implemented Parallel.TaskConfig.
 ///     1.08: 2011-03-09
 ///       - Faster IOmniFuture<T>.IsDone.
 ///     1.07a: 2011-02-15
@@ -94,9 +96,6 @@
 // http://msdn.microsoft.com/en-us/magazine/cc163340.aspx
 // http://blogs.msdn.com/pfxteam/archive/2007/11/29/6558543.aspx
 // http://cis.jhu.edu/~dsimcha/parallelFuture.html
-(* Things to consider:
-  - Probably we need Parallel.Join.MonitorWith or something like that.
-*)
 
 unit OtlParallel;
 
@@ -125,6 +124,7 @@ uses
   TypInfo,
   RTTI,
   {$ENDIF OTL_ERTTI}
+  SyncObjs,
   Generics.Collections,
   GpLists,
   OtlCommon,
@@ -341,9 +341,9 @@ type
 
   TOmniForkJoin<T> = class(TInterfacedObject, IOmniForkJoin<T>)
   strict private
-    ocNumTasks : integer;
-    ocPoolInput: IOmniBlockingCollection;
-    ocTaskPool : IOmniPipeline;
+    ofjNumTasks : integer;
+    ofjPoolInput: IOmniBlockingCollection;
+    ofjTaskPool : IOmniPipeline;
   strict protected
     procedure Asy_ProcessComputations(const input, output: IOmniBlockingCollection);
     procedure StartWorkerTasks;
@@ -355,71 +355,13 @@ type
 
   TOmniForkJoin = class(TInterfacedObject, IOmniForkJoin)
   strict private
-    ocForkJoin: TOmniForkJoin<boolean>;
+    ofjForkJoin: TOmniForkJoin<boolean>;
   public
     constructor Create;
     destructor  Destroy; override;
     function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
     function  NumTasks(numTasks: integer): IOmniForkJoin;
   end; { TOmniForkJoin }
-
-  {$REGION 'Documentation'}
-  ///	<summary>Parallel class represents a base class for all high-level language
-  ///	features in the OmniThreadLibrary. Most features are implemented as factories while
-  ///	one (Join) is implemented as a class procedure that does the real work.</summary>
-  {$ENDREGION}
-  Parallel = class
-  // ForEach
-
-    ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
-    ///	example IOmniBlockingCollection).</summary>
-    class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
-
-    ///	<summary>Creates parallel loop that iterates over IOmniEnumerator (for example
-    ///	IOmniBlockingCollection).</summary>
-    class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
-
-    ///	<summary>Creates parallel loop that iterates over IEnumerable.</summary>
-    class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
-    class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
-    class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
-    class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
-    class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
-    {$IFDEF OTL_ERTTI}
-    class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
-    {$ENDIF OTL_ERTTI}
-    class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
-    class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
-    {$IFDEF OTL_ERTTI}
-    class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
-    {$ENDIF OTL_ERTTI}
-
-  // Join
-    class procedure Join(const task1, task2: TProc); overload;
-    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
-    class procedure Join(const tasks: array of TProc); overload;
-    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
-
-  // Future
-    class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
-    class function Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>; overload;
-
-  // Pipeline
-    class function Pipeline: IOmniPipeline; overload;
-    class function Pipeline(const stages: array of TPipelineStageDelegate;
-      const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
-
-  // Fork/Join
-    class function ForkJoin: IOmniForkJoin; overload;
-    class function ForkJoin<T>: IOmniForkJoin<T>; overload;
-  end; { Parallel }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
   strict private
@@ -579,6 +521,87 @@ type
     function  PreserveOrder: IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
 
+  // TODO 3 -oPrimoz Gabrijelcic : Add more configuration features
+  IOmniTaskConfig = interface
+    procedure Apply(const task: IOmniTaskControl);
+    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
+    function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
+    function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
+    function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
+    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
+    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
+  end; { IOmniTaskConfig }
+
+  {$REGION 'Documentation'}
+  ///	<summary>Parallel class represents a base class for all high-level language
+  ///	features in the OmniThreadLibrary. Most features are implemented as factories while
+  ///	two (Async, Join) are implemented as a class procedures that does the real work.</summary>
+  {$ENDREGION}
+  Parallel = class
+  // ForEach
+    ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
+    ///	example IOmniBlockingCollection).</summary>
+    class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
+
+    ///	<summary>Creates parallel loop that iterates over IOmniEnumerator (for example
+    ///	IOmniBlockingCollection).</summary>
+    class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
+
+    ///	<summary>Creates parallel loop that iterates over IEnumerable.</summary>
+    class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
+    class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
+    class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
+    class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
+    class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
+    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
+    {$IFDEF OTL_ERTTI}
+    class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
+    {$ENDIF OTL_ERTTI}
+    class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
+    class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
+    {$IFDEF OTL_ERTTI}
+    class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
+    {$ENDIF OTL_ERTTI}
+
+  // Join
+    class procedure Join(const task1, task2: TProc); overload;
+    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
+    class procedure Join(const tasks: array of TProc); overload;
+    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
+
+  // Future
+    class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
+    class function Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>; overload;
+
+  // Pipeline
+    class function Pipeline: IOmniPipeline; overload;
+    class function Pipeline(const stages: array of TPipelineStageDelegate;
+      const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
+
+  // Fork/Join
+    class function ForkJoin: IOmniForkJoin; overload;
+    class function ForkJoin<T>: IOmniForkJoin<T>; overload;
+
+  // Async
+    class procedure Async(task: TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Async(task: TProc; onTermination: TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Async(task: TOmniTaskDelegate; onTermination: TProc; taskConfig: IOmniTaskConfig = nil); overload;
+
+  // task configuration
+    class function TaskConfig: IOmniTaskConfig;
+  end; { Parallel }
+
 var
   GParallelPool: IOmniThreadPool;
   GPipelinePool: IOmniThreadPool;
@@ -676,6 +699,34 @@ type
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
   end; { TOmniPipeline }
 
+  TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig)
+  strict private
+    otcCancelWithToken         : IOmniCancellationToken;
+    otcMonitorWithMonitor      : IOmniTaskControlMonitor;
+    otcOnMessageEventDispatcher: TObject;
+    otcOnMessageEventHandler   : TOmniTaskMessageEvent;
+    otcOnMessageList           : TGpIntegerObjectList;
+    otcOnTerminated            : TOmniTaskTerminatedEvent;
+    otcWithCounterCounter      : IOmniCounter;
+    otcWithLockAutoDestroy     : boolean;
+    otcWithLockOmniLock        : IOmniCriticalSection;
+    otcWithLockSyncLock        : TSynchroObject;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Apply(const task: IOmniTaskControl);
+    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig; inline;
+    function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig; inline;
+    function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload; inline;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
+    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
+    function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
+    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
+    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
+  end; { TOmniTaskConfig }
+
 { exports }
 
 procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
@@ -691,6 +742,56 @@ begin
   // Assumes that enumerator's TryTake method is threadsafe!
   Result := Parallel.ForEach(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
+
+class procedure Parallel.Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
+begin
+  Async(
+    task,
+    procedure begin end,
+    taskConfig
+  );
+end; { Parallel.Async }
+
+class procedure Parallel.Async(task: TProc; taskConfig: IOmniTaskConfig);
+begin
+  Async(
+    procedure (const omniTask: IOmniTask)
+    begin
+      task;
+    end,
+    taskConfig
+  );
+end; { Parallel.Async }
+
+class procedure Parallel.Async(task: TOmniTaskDelegate; onTermination: TProc;
+  taskConfig: IOmniTaskConfig);
+var
+  omniTask: IOmniTaskControl;
+begin
+  omniTask := CreateTask(task, 'Parallel.Async')
+    .Unobserved
+    .OnTerminated(
+      procedure (const task: IOmniTaskControl)
+      begin
+        onTermination;
+      end
+    );
+  if assigned(taskConfig) then
+    taskConfig.Apply(omniTask);
+  omniTask.Schedule(GParallelPool);
+end; { Parallel.Async }
+
+class procedure Parallel.Async(task, onTermination: TProc; taskConfig: IOmniTaskConfig);
+begin
+  Async(
+    procedure (const omniTask: IOmniTask)
+    begin
+      task;
+    end,
+    onTermination,
+    taskConfig
+  );
+end; { Parallel.Async }
 
 class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop<integer>;
 begin
@@ -907,6 +1008,11 @@ begin
     .Input(input)
     .Stages(stages);
 end; { Parallel.Pipeline }
+
+class function Parallel.TaskConfig: IOmniTaskConfig;
+begin
+  Result := TOmniTaskConfig.Create;
+end; { Parallel.TaskConfig }
 
 { TOmniParallelLoopBase }
 
@@ -2106,33 +2212,33 @@ var
   intf: IInterface;
 begin
   StartWorkerTasks;
-  Result := TOmniCompute<T>.Create(action, ocPoolInput);
-  AddToBC(ocPoolInput, Result);
+  Result := TOmniCompute<T>.Create(action, ofjPoolInput);
+  AddToBC(ofjPoolInput, Result);
 end; { TOmniForkJoin<T>.Compute }
 
 constructor TOmniForkJoin<T>.Create;
 begin
   inherited Create;
-  ocNumTasks := Environment.Process.Affinity.Count - 1;
+  ofjNumTasks := Environment.Process.Affinity.Count - 1;
 end; { TOmniForkJoin<T>.Create }
 
 function TOmniForkJoin<T>.NumTasks(numTasks: integer): IOmniForkJoin<T>;
 begin
-  ocNumTasks := numTasks;
+  ofjNumTasks := numTasks;
   Result := Self;
 end; { TOmniForkJoin<T>.NumTasks }
 
 procedure TOmniForkJoin<T>.StartWorkerTasks;
 begin
-  if not assigned(ocTaskPool) then begin
+  if not assigned(ofjTaskPool) then begin
     //Use pipeline with one parallelized stage as a simple task pool.
-    ocPoolInput := TOmniBlockingCollection.Create(ocNumTasks+1);
-    if ocNumTasks > 0 then begin
-      ocTaskPool := Parallel.Pipeline
-        .NumTasks(ocNumTasks)
-        .Input(ocPoolInput)
+    ofjPoolInput := TOmniBlockingCollection.Create(ofjNumTasks+1);
+    if ofjNumTasks > 0 then begin
+      ofjTaskPool := Parallel.Pipeline
+        .NumTasks(ofjNumTasks)
+        .Input(ofjPoolInput)
         .Stage(Asy_ProcessComputations);
-      ocTaskPool.Run;
+      ofjTaskPool.Run;
     end;
   end;
 end; { TOmniForkJoin<T.StartWorkerTasks }
@@ -2142,19 +2248,19 @@ end; { TOmniForkJoin<T.StartWorkerTasks }
 constructor TOmniForkJoin.Create;
 begin
   inherited Create;
-  ocForkJoin := TOmniForkJoin<boolean>.Create;
+  ofjForkJoin := TOmniForkJoin<boolean>.Create;
 end; { TOmniForkJoin.Create }
 
 destructor TOmniForkJoin.Destroy;
 begin
-  FreeAndNil(ocForkJoin);
+  FreeAndNil(ofjForkJoin);
   inherited;
 end; { TOmniForkJoin.Destroy }
 
 function TOmniForkJoin.Compute(action: TOmniForkJoinDelegate): IOmniCompute;
 begin
   Result := TOmniCompute.Create(
-    ocForkJoin.Compute(
+    ofjForkJoin.Compute(
       function: boolean
       begin
         action;
@@ -2162,13 +2268,117 @@ begin
       end
     )
   );
-end;
+end; { TOmniForkJoin.Compute }
 
 function TOmniForkJoin.NumTasks(numTasks: integer): IOmniForkJoin;
 begin
-  ocForkJoin.NumTasks(numTasks);
+  ofjForkJoin.NumTasks(numTasks);
   Result := self;
 end; { TOmniForkJoin.NumTasks }
+
+{ TOmniTaskConfig }
+
+constructor TOmniTaskConfig.Create;
+begin
+  inherited Create;
+  otcOnMessageList := TGpIntegerObjectList.Create(true);
+end; { TOmniTaskConfig.Create }
+
+destructor TOmniTaskConfig.Destroy;
+begin
+  FreeAndNil(otcOnMessageList);
+  inherited Destroy;
+end; { TOmniTaskConfig.Destroy }
+
+procedure TOmniTaskConfig.Apply(const task: IOmniTaskControl);
+var
+  kv: TGpKeyValue;
+begin
+  if assigned(otcCancelWithToken) then
+    task.CancelWith(otcCancelWithToken);
+  if assigned(otcMonitorWithMonitor) then
+    task.MonitorWith(otcMonitorWithMonitor);
+  if assigned(otcOnMessageEventDispatcher) then
+    task.OnMessage(otcOnMessageEventDispatcher);
+  if assigned(otcOnMessageEventHandler) then
+    task.OnMessage(otcOnMessageEventHandler);
+  for kv in otcOnMessageList.WalkKV do
+    TOmniMessageExec(kv.Value).Apply(kv.Key, task);
+  if assigned(otcOnTerminated) then
+    task.OnTerminated(otcOnTerminated);
+  if assigned(otcWithCounterCounter) then
+    task.WithCounter(otcWithCounterCounter);
+  if assigned(otcWithLockOmniLock) then
+    task.WithLock(otcWithLockOmniLock);
+  if assigned(otcWithLockSyncLock) then
+    task.WithLock(otcWithLockSyncLock, otcWithLockAutoDestroy);
+end; { TOmniTaskConfig.Apply }
+
+function TOmniTaskConfig.OnMessage(eventDispatcher: TObject): IOmniTaskConfig;
+begin
+  otcOnMessageEventDispatcher := eventDispatcher;
+  Result := Self;
+end; { TOmniTaskConfig.OnMessage }
+
+function TOmniTaskConfig.CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
+begin
+  otcCancelWithToken := token;
+  Result := Self;
+end; { TOmniTaskConfig.CancelWith }
+
+function TOmniTaskConfig.MonitorWith(const monitor: IOmniTaskControlMonitor):
+  IOmniTaskConfig;
+begin
+  otcMonitorWithMonitor := monitor;
+  Result := Self;
+end; { TOmniTaskConfig.MonitorWith }
+
+function TOmniTaskConfig.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig;
+begin
+  otcOnMessageEventHandler := eventHandler;
+  Result := Self;
+end; { TOmniTaskConfig.OnMessage }
+
+function TOmniTaskConfig.OnMessage(msgID: word; eventHandler: TOmniMessageExec):
+  IOmniTaskConfig;
+begin
+  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  Result := Self;
+end; { TOmniTaskConfig.OnMessage }
+
+function TOmniTaskConfig.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
+  IOmniTaskConfig;
+begin
+  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  Result := Self;
+end; { TOmniTaskConfig.OnMessage }
+
+function TOmniTaskConfig.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
+  IOmniTaskConfig;
+begin
+  otcOnTerminated := eventHandler;
+  Result := Self;
+end; { TOmniTaskConfig.OnTerminated }
+
+function TOmniTaskConfig.WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
+begin
+  otcWithCounterCounter := counter;
+  Result := Self;
+end; { TOmniTaskConfig.WithCounter }
+
+function TOmniTaskConfig.WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig;
+begin
+  otcWithLockOmniLock := lock;
+  Result := Self;
+end; { TOmniTaskConfig.WithLock }
+
+function TOmniTaskConfig.WithLock(const lock: TSynchroObject; autoDestroyLock: boolean =
+  true): IOmniTaskConfig;
+begin
+  otcWithLockSyncLock := lock;
+  otcWithLockAutoDestroy := autoDestroyLock;
+  Result := Self;
+end; { TOmniTaskConfig.WithLock }
 
 initialization
   GParallelPool := CreateThreadPool('OtlParallel pool');
