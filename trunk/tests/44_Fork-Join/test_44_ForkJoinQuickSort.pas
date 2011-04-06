@@ -62,7 +62,7 @@ type
 
   TParallelSorter = class(TSorter)
   strict private
-    FForkJoin: IOmniForkJoin<boolean>;
+    FForkJoin: IOmniForkJoin;
   strict protected
     constructor Create(const data: TData);
     procedure QuickSort(left, right: integer); override;
@@ -210,14 +210,14 @@ end; { TSequentialSorter.Sort }
 constructor TParallelSorter.Create(const data: TData);
 begin
   inherited Create(data);
-  FForkJoin := Parallel.ForkJoin<boolean>;
+  FForkJoin := Parallel.ForkJoin;
 end; { TParallelSorter.Create }
 
 procedure TParallelSorter.QuickSort(left, right: integer);
 var
   pivotIndex: integer;
-  sortLeft  : IOmniCompute<boolean>;
-  sortRight : IOmniCompute<boolean>;
+  sortLeft  : IOmniCompute;
+  sortRight : IOmniCompute;
 begin
   if right > left then begin
     if (right - left) <= CSortThreshold then
@@ -225,19 +225,17 @@ begin
     else begin
       pivotIndex := Partition(left, right, (left + right) div 2);
       sortLeft := FForkJoin.Compute(
-        function: boolean
+        procedure
         begin
           QuickSort(left, pivotIndex - 1);
-          Result := true;
         end);
       sortRight := FForkJoin.Compute(
-        function: boolean
+        procedure
         begin
           QuickSort(pivotIndex + 1, right);
-          Result := true;
         end);
-      sortLeft.Value;
-      sortRight.Value;
+      sortLeft.Await;
+      sortRight.Await;
     end;
   end;
 end; { TParallelSorter.QuickSort }
