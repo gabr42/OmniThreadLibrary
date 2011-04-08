@@ -48,6 +48,9 @@
 ///       - Implemented IOmniTaskControl.Invoke(procedure) and
 ///         .Invoke(procedure const task: IOmniTask).
 ///       - Implemented IOmniTask.Invoke(procedure).
+///     1.23b: 2011-02-28
+///       - Bug fixed: Make sure timers are called even if there's a constant stream
+///         of messages in registered message queues.
 ///     1.23a: 2011-01-07
 ///       - Bug fixed: Enumerating over TOmniTaskControlList (for example when using
 ///         IOmniTaskGroup.SendToAll) leaked one object.
@@ -617,6 +620,7 @@ type
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpIntegerList;
+    oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList; 
     oteWakeMask          : DWORD;
     oteWaitHandlesGen    : int64;
@@ -624,11 +628,9 @@ type
     oteWorkerInitialized : THandle;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
-  private
-    procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
-      TOmniMessageID);
   strict protected
     procedure CallOmniTimer;
+    procedure CheckTimers;
     procedure Cleanup;
     procedure DispatchMessages(const task: IOmniTask);
     function  GetExitCode: integer; inline;
@@ -649,6 +651,8 @@ type
     procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
       TOmniMessageInfo);
     procedure SetOptions(const value: TOmniTaskControlOptions);
+    procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
+      TOmniMessageID);
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
   protected
@@ -686,6 +690,7 @@ type
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TaskException: pointer read oteException write oteException;
+    property Terminating: boolean read oteTerminating write oteTerminating;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
     property WorkerInitialized: THandle read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
@@ -1611,6 +1616,12 @@ begin
     WorkerIntf.Timer;
 end; { TOmniTaskExecutor.CallOmniTimer }
 
+procedure TOmniTaskExecutor.CheckTimers;
+begin
+  if (not Terminating) and HaveElapsedTimer then
+    CallOmniTimer;
+end; { TOmniTaskExecutor.CheckTimers }
+
 procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
@@ -1661,10 +1672,8 @@ begin
     ProcessThreadMessages
   else if awaited = WAIT_IO_COMPLETION then
     // do-nothing
-  else if awaited = WAIT_TIMEOUT then begin
-    if HaveElapsedTimer then
-      CallOmniTimer;
-  end //WAIT_TIMEOUT
+  else if awaited = WAIT_TIMEOUT then
+    CheckTimers
   else //errors
     RaiseLastOSError;
   TestForInternalRebuild(task, msgInfo);
@@ -1717,6 +1726,7 @@ var
   msgData        : TOmniValue;
   obj            : TObject;
 begin
+  CheckTimers;
   if msg.MsgID = COtlReservedMsgID then begin
     Assert(assigned(WorkerIntf));
     GetMethodNameFromInternalMessage(msg, methodName, msgData {$IFDEF OTL_Anonymous},
@@ -2756,6 +2766,7 @@ begin
     Result := true;
     Exit;
   end;
+  otcExecutor.Terminating := true;
   otcSharedInfo.Terminating := true;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
