@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-03-16
-///   Version           : 1.24
+///   Last modification : 2011-04-08
+///   Version           : 1.25
 ///</para><para>
 ///   History:
+///     1.25: 2011-04-08
+///       - IOmniTaskControl termination empties task message queue and calls appropriate
+///         OnMessage handlers.
 ///     1.24: 2011-03-16
 ///       - Implemented IOmniTaskControl.Invoke(procedure) and
 ///         .Invoke(procedure const task: IOmniTask).
@@ -628,7 +631,6 @@ type
     procedure CallOmniTimer;
     procedure Cleanup;
     procedure DispatchMessages(const task: IOmniTask);
-    procedure DispatchOmniMessage(msg: TOmniMessage);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
     function  GetImplementor: TObject;
@@ -652,6 +654,7 @@ type
   protected
     function  DispatchEvent(awaited: cardinal; const task: IOmniTask; var msgInfo:
       TOmniMessageInfo): boolean; virtual;
+    procedure DispatchOmniMessage(msg: TOmniMessage);
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessMessages(task: IOmniTask); virtual;
@@ -2744,6 +2747,8 @@ begin
 end; { TOmniTaskControl.SilentExceptions }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
+var
+  msg: TOmniMessage;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
   if otcInEventHandler then begin
@@ -2754,6 +2759,8 @@ begin
   otcSharedInfo.Terminating := true;
   SetEvent(otcSharedInfo.TerminateEvent);
   Result := WaitFor(maxWait_ms);
+  while Comm.Receive(msg) do
+    ForwardTaskMessage(msg);
   if otcEventMonitorInternal then
     DestroyMonitor;
   if not Result then begin
