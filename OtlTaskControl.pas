@@ -715,7 +715,9 @@ type
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
+    {$IFDEF OTL_Anonymous}
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
+    {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
@@ -1273,10 +1275,12 @@ begin
   Result := otSharedInfo_ref.UniqueID;
 end; { TOmniTask.GetUniqueID }
 
+{$IFDEF OTL_Anonymous}
 procedure TOmniTask.Invoke(remoteFunc: TOmniTaskInvokeFunction);
 begin
   otSharedInfo_ref.CommChannel.Endpoint2.Send(TOmniInternalFuncMsg.CreateMessage(remoteFunc));
 end; { TOmniTask.Invoke }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniTask.RegisterComm(const comm: IOmniCommunicationEndpoint);
 begin
@@ -2325,15 +2329,21 @@ begin
 end; { TOmniTaskControl.EnsureCommChannel }
 
 procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
+{$IFDEF OTL_Anonymous}
+var
+  func: TOmniTaskInvokeFunction;
+{$ENDIF OTL_Anonymous}
 var
   exec: TOmniMessageExec;
-  func: TOmniTaskInvokeFunction;
   kv  : TGpKeyValue;
   msg1: TOmniMessage;
 begin
+  {$IFDEF OTL_Anonymous}
   if (msg.MsgID = COtlReservedMsgID) and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
     func
-  else begin
+  else
+  {$ENDIF OTL_Anonymous}
+  begin
     for kv in otcOnMessageList.WalkKV do
       if kv.Key = COtlReservedMsgID then begin
         msg1 := msg;
