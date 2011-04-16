@@ -3470,7 +3470,7 @@ const
   }
   function DSiEnablePrivilege(const privilegeName: string): boolean;
   var
-    hToken   : DWORD;
+    hToken   : THandle;
     retLength: DWORD;
     tokenPriv: TTokenPrivileges;
   begin
