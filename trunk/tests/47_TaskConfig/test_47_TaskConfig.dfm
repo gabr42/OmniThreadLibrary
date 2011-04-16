@@ -1,7 +1,7 @@
-object frmDemoParallelAsync: TfrmDemoParallelAsync
+object frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig
   Left = 0
   Top = 0
-  Caption = 'Parallel.Async tester'
+  Caption = 'Parallel.TaskConfig tester'
   ClientHeight = 337
   ClientWidth = 635
   Color = clBtnFace
@@ -49,5 +49,14 @@ object frmDemoParallelAsync: TfrmDemoParallelAsync
     Caption = 'Future'
     TabOrder = 3
     OnClick = btnFutureClick
+  end
+  object btnPipeline: TButton
+    Left = 8
+    Top = 103
+    Width = 75
+    Height = 25
+    Caption = 'Pipeline'
+    TabOrder = 4
+    OnClick = btnPipelineClick
   end
 end

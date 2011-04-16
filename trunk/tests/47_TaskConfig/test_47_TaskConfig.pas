@@ -5,7 +5,11 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
+  OtlSync,
+  OtlCommon,
   OtlComm,
+  OtlTask,
+  OtlCollections,
   OtlParallel;
 
 const
@@ -13,34 +17,36 @@ const
   WM_FUTURE_RESULT = WM_USER + 1;
 
 type
-  TfrmDemoParallelAsync = class(TForm)
+  TfrmDemoParallelTaskConfig = class(TForm)
     btnAsync: TButton;
     lbLog: TListBox;
     btnJoin: TButton;
     btnFuture: TButton;
+    btnPipeline: TButton;
     procedure btnAsyncClick(Sender: TObject);
     procedure btnFutureClick(Sender: TObject);
     procedure btnJoinClick(Sender: TObject);
+    procedure btnPipelineClick(Sender: TObject);
   private
     FFuture: IOmniFuture<integer>;
     FSharedValue: integer;
+    procedure PipelineStage1(const input, output: IOmniBlockingCollection; const task:
+      IOmniTask);
+    procedure PipelineStage2(const input, output: IOmniBlockingCollection; const task:
+      IOmniTask);
     procedure WMLog(var msg: TOmniMessage); message WM_LOG;
     procedure WMFutureResult(var msg: TOmniMessage); message WM_FUTURE_RESULT;
   public
   end;
 
 var
-  frmDemoParallelAsync: TfrmDemoParallelAsync;
+  frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig;
 
 implementation
 
-uses
-  OtlTask,
-  OtlSync;
-
 {$R *.dfm}
 
-procedure TfrmDemoParallelAsync.btnAsyncClick(Sender: TObject);
+procedure TfrmDemoParallelTaskConfig.btnAsyncClick(Sender: TObject);
 var
   i: integer;
 begin
@@ -74,7 +80,7 @@ begin
   end;
 end;
 
-procedure TfrmDemoParallelAsync.btnFutureClick(Sender: TObject);
+procedure TfrmDemoParallelTaskConfig.btnFutureClick(Sender: TObject);
 begin
   btnFuture.Enabled := false;
   FFuture := Parallel.Future<integer>(
@@ -88,7 +94,7 @@ begin
   )
 end;
 
-procedure TfrmDemoParallelAsync.btnJoinClick(Sender: TObject);
+procedure TfrmDemoParallelTaskConfig.btnJoinClick(Sender: TObject);
 begin
   FSharedValue := 42;
   Parallel.Join(
@@ -117,14 +123,52 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('JOIN: Shared value = %d (should be 42)', [FSharedValue]));
 end;
 
-procedure TfrmDemoParallelAsync.WMFutureResult(var msg: TOmniMessage);
+procedure TfrmDemoParallelTaskConfig.btnPipelineClick(Sender: TObject);
+var
+  pipeOut: IOmniBlockingCollection;
+  value  : TOmniValue;
+begin
+  pipeOut := Parallel.Pipeline
+    .Stages([PipelineStage1, PipelineStage2], Parallel.TaskConfig.OnMessage(Self))
+    .Run;
+  while not pipeOut.TryTake(value) do
+    Application.ProcessMessages;
+  lbLog.ItemIndex := lbLog.Items.Add('PIPELINE: ' + IntToStr(value) + ' (should be 500500)');
+end;
+
+procedure TfrmDemoParallelTaskConfig.PipelineStage1(const input, output:
+    IOmniBlockingCollection; const task: IOmniTask);
+var
+  i: integer;
+begin
+  task.Comm.Send(WM_LOG, 'Pipeline stage 1 starting');
+  for i := 1 to 1000 do
+    output.Add(i);
+  task.Comm.Send(WM_LOG, 'Pipeline stage 1 stopped');
+end;
+
+procedure TfrmDemoParallelTaskConfig.PipelineStage2(const input, output:
+    IOmniBlockingCollection; const task: IOmniTask);
+var
+  sum  : integer;
+  value: TOmniValue;
+begin
+  task.Comm.Send(WM_LOG, 'Pipeline stage 2 starting');
+  sum := 0;
+  while input.TryTake(value) do
+    Inc(sum, value);
+  output.Add(sum);
+  task.Comm.Send(WM_LOG, 'Pipeline stage 2 stopped');
+end;
+
+procedure TfrmDemoParallelTaskConfig.WMFutureResult(var msg: TOmniMessage);
 begin
   lbLog.ItemIndex := lbLog.Items.Add('FUTURE: ' + IntToStr(FFuture.Value));
   FFuture := nil;
   btnFuture.Enabled := true;
 end;
 
-procedure TfrmDemoParallelAsync.WMLog(var msg: TOmniMessage);
+procedure TfrmDemoParallelTaskConfig.WMLog(var msg: TOmniMessage);
 begin
   lbLog.ItemIndex := lbLog.Items.Add('BGTASK: ' + msg.MsgData);
 end;
