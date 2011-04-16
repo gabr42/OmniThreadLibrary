@@ -52,7 +52,7 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="test_47_TaskConfig.pas">
-				<Form>frmDemoParallelAsync</Form>
+				<Form>frmDemoParallelTaskConfig</Form>
 			</DCCReference>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
