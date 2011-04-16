@@ -35,6 +35,9 @@
 ///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.10: 2011-04-16
+///       - Parallel.Join supports TaskConfig.
+///       - Parallel.Future supports TaskConfig.
 ///     1.09: 2011-04-06
 ///       - Implemented Parallel.ForkJoin.
 ///       - Implemented Parallel.Async.
@@ -140,6 +143,20 @@ const
   CDefaultPipelineThrottle = 10240;
 
 type
+  IOmniTaskConfig = interface
+    procedure Apply(const task: IOmniTaskControl);
+    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
+    function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
+    function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload;
+    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
+    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
+    function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
+    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
+    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
+  end; { IOmniTaskConfig }
+
   IOmniParallelLoop = interface;
   IOmniParallelLoop<T> = interface;
 
@@ -254,10 +271,10 @@ type
     ofTask       : IOmniTaskControl;
   strict protected
     procedure DestroyTask;
-    procedure Execute(action: TOmniTaskDelegate);
+    procedure Execute(action: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
   public
-    constructor Create(action: TOmniFutureDelegate<T>); // sadly, those two Creates cannot be overloaded as this crashes the compiler (internal error T888)
-    constructor CreateEx(action: TOmniFutureDelegateEx<T>);
+    constructor Create(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil); // sadly, those two Creates cannot be overloaded as this crashes the compiler (internal error T888)
+    constructor CreateEx(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig = nil);
     destructor  Destroy; override;
     procedure Cancel;
     function  IsCancelled: boolean; inline;
@@ -403,18 +420,19 @@ type
     oplCancellationToken  : IOmniCancellationToken;
     oplDataManager        : TOmniDataManager;
     oplDelegateEnum       : TOmniDelegateEnumerator;
-    oplTaskFinalizer      : TOmniTaskFinalizerDelegate;
-    oplTaskInitializer    : TOmniTaskInitializerDelegate;
     oplIntoQueueIntf      : IOmniBlockingCollection;
     oplManagedProvider    : boolean;
     oplNumTasks           : integer;
     oplNumTasksManual     : boolean;
     oplOnMessageList      : TGpIntegerObjectList;
-    oplOnTaskCreate       : TOmniTaskCreateDelegate;
-    oplOnTaskControlCreate: TOmniTaskControlCreateDelegate;
     oplOnStop             : TProc;
+    oplOnTaskControlCreate: TOmniTaskControlCreateDelegate;
+    oplOnTaskCreate       : TOmniTaskCreateDelegate;
     oplOptions            : TOmniParallelLoopOptions;
     oplSourceProvider     : TOmniSourceProvider;
+    oplTaskConfig         : IOmniTaskConfig;
+    oplTaskFinalizer      : TOmniTaskFinalizerDelegate;
+    oplTaskInitializer    : TOmniTaskInitializerDelegate;
   strict protected
     procedure DoOnStop;
     procedure InternalExecute(loopBody: TOmniIteratorDelegate); overload;
@@ -443,7 +461,7 @@ type
     procedure SetOnStop(stopDelegate: TProc);
     function  Stopped: boolean; inline;
   public
-    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
+    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean; taskConfig: IOmniTaskConfig = nil); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
     property Options: TOmniParallelLoopOptions read oplOptions write oplOptions;
@@ -521,27 +539,14 @@ type
     function  PreserveOrder: IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
 
-  // TODO 3 -oPrimoz Gabrijelcic : Add more configuration features
-  IOmniTaskConfig = interface
-    procedure Apply(const task: IOmniTaskControl);
-    function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
-    function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
-    function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload;
-    function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
-    function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
-    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
-    function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
-    function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
-    function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
-    function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
-  end; { IOmniTaskConfig }
-
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
   ///	features in the OmniThreadLibrary. Most features are implemented as factories while
   ///	two (Async, Join) are implemented as a class procedures that does the real work.</summary>
   {$ENDREGION}
   Parallel = class
+  strict protected
+  public
   // ForEach
     ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
     ///	example IOmniBlockingCollection).</summary>
@@ -557,7 +562,7 @@ type
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
+    class function  ForEach(low, high: integer; step: integer = 1; taskConfig: IOmniTaskConfig = nil): IOmniParallelLoop<integer>; overload;
     {$IFDEF OTL_ERTTI}
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     {$ENDIF OTL_ERTTI}
@@ -574,14 +579,14 @@ type
     {$ENDIF OTL_ERTTI}
 
   // Join
-    class procedure Join(const task1, task2: TProc); overload;
-    class procedure Join(const task1, task2: TOmniTaskDelegate); overload;
-    class procedure Join(const tasks: array of TProc); overload;
-    class procedure Join(const tasks: array of TOmniTaskDelegate); overload;
+    class procedure Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
 
   // Future
-    class function Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>; overload;
-    class function Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>; overload;
+    class function Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
+    class function Future<T>(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
 
   // Pipeline
     class function Pipeline: IOmniPipeline; overload;
@@ -612,6 +617,13 @@ var
   ///	compiler error.</summary>
   {$ENDREGION}
   procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
+
+  {$REGION 'Documentation'}
+  ///	<summary>Applies task configuration to a task. TaskConfig may be nil - in this case
+  ///	nothing is done. Must be public or the code below wouldn't compile due to the
+  ///	limitations of the compiler.</summary>
+  {$ENDREGION}
+  procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
 
 implementation
 
@@ -734,6 +746,12 @@ begin
   queue.Add(value);
 end; { AddToBC }
 
+procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
+begin
+  if assigned(taskConfig) then
+    taskConfig.Apply(task);
+end; { ApplyConfig }
+
 { Parallel }
 
 class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
@@ -776,8 +794,7 @@ begin
         onTermination;
       end
     );
-  if assigned(taskConfig) then
-    taskConfig.Apply(omniTask);
+  ApplyConfig(taskConfig, omniTask);
   omniTask.Schedule(GParallelPool);
 end; { Parallel.Async }
 
@@ -793,9 +810,9 @@ begin
   );
 end; { Parallel.Async }
 
-class function Parallel.ForEach(low, high: integer; step: integer): IOmniParallelLoop<integer>;
+class function Parallel.ForEach(low, high: integer; step: integer; taskConfig: IOmniTaskConfig): IOmniParallelLoop<integer>;
 begin
-  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true);
+  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true, taskConfig);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enumerable: IEnumerable): IOmniParallelLoop;
@@ -898,61 +915,76 @@ begin
   Result := TOmniForkJoin<T>.Create;
 end; { Parallel.ForkJoin<T> }
 
-class function Parallel.Future<T>(action: TOmniFutureDelegate<T>): IOmniFuture<T>;
+class function Parallel.Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig): IOmniFuture<T>;
 begin
-  Result := TOmniFuture<T>.Create(action);
+  Result := TOmniFuture<T>.Create(action, taskConfig);
 end; { Parallel.Future<T> }
 
-class function Parallel.Future<T>(action: TOmniFutureDelegateEx<T>): IOmniFuture<T>;
+class function Parallel.Future<T>(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig): IOmniFuture<T>;
 begin
-  Result := TOmniFuture<T>.CreateEx(action);
+  Result := TOmniFuture<T>.CreateEx(action, taskConfig);
 end; { Parallel.Future<T> }
 
-class procedure Parallel.Join(const task1, task2: TProc);
+class procedure Parallel.Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig);
 begin
-  Join([task1, task2]);
+  Join([task1, task2], taskConfig);
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const tasks: array of TProc);
+class procedure Parallel.Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig);
 var
   countStopped: TOmniResourceCount;
   prevProc    : TProc;
   proc        : TProc;
-  intProc     : integer absolute prevProc;
-begin
+
+  procedure CreateJoinTask(proc: TProc);
+  var
+    intProc: integer absolute proc;
+    task   : IOmniTaskControl;
+  begin
+    task := CreateTask(
+        procedure (const task: IOmniTask)
+        begin
+          TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
+          countStopped.Allocate;
+        end
+      ).Unobserved
+       .SetParameter('Proc', intProc);
+    ApplyConfig(taskConfig, task);
+    task.Schedule(GParallelPool);
+  end; { InternalCreateJoinTask }
+
+begin { Parallel.Join }
   Assert(SizeOf(integer) = SizeOf(TProc));
-  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
+  if ((Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1)) and (not assigned(taskConfig)) then
+  begin
     for proc in tasks do
       proc;
   end
   else begin
-    countStopped := TOmniResourceCount.Create(Length(tasks) - 1);
+    countStopped := TOmniResourceCount.Create(Length(tasks));
+    if not assigned(taskConfig) then
+      countStopped.Allocate; // last task will be executed inline
     prevProc := nil;
     for proc in tasks do begin
       if assigned(prevProc) then
-        CreateTask(
-          procedure (const task: IOmniTask)
-          begin
-            TProc(task.Param['Proc'].AsInteger)();
-            countStopped.Allocate;
-          end
-        ).Unobserved
-         .SetParameter('Proc', intProc) // cannot cast TProc to integer
-         .Schedule(GParallelPool);
+        CreateJoinTask(prevProc);
       prevProc := proc;
     end;
     Assert(assigned(prevProc));
-    prevProc();
+    if assigned(taskConfig) then
+      CreateJoinTask(prevProc)
+    else
+      prevProc(); // last task is executed inline
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate);
+class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 begin
-  Join([task1, task2]);
+  Join([task1, task2], taskConfig);
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate);
+class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 var
   countStopped: IOmniResourceCount;
   firstTask   : IOmniTaskControl;
@@ -967,6 +999,7 @@ begin
     prevTask := nil;
     for proc in tasks do begin
       task := CreateTask(proc).Unobserved;
+      ApplyConfig(taskConfig, task);
       if assigned(prevTask) then
         prevTask.ChainTo(task);
       prevTask := task;
@@ -982,15 +1015,16 @@ begin
     countStopped := TOmniResourceCount.Create(Length(tasks));
     SetLength(intTasks, Length(tasks));
     for proc in tasks do begin
-      CreateTask(
-        procedure (const task: IOmniTask)
-        begin
-          TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
-          countStopped.Allocate;
-        end
-      ).Unobserved
-       .SetParameter('Proc', intProc)
-       .Schedule(GParallelPool);
+      task := CreateTask(
+          procedure (const task: IOmniTask)
+          begin
+            TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
+            countStopped.Allocate;
+          end
+        ).Unobserved
+         .SetParameter('Proc', intProc);
+      ApplyConfig(taskConfig, task);
+      task.Schedule(GParallelPool);
     end;
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
@@ -1017,13 +1051,14 @@ end; { Parallel.TaskConfig }
 { TOmniParallelLoopBase }
 
 constructor TOmniParallelLoopBase.Create(const sourceProvider: TOmniSourceProvider;
-  managedProvider: boolean);
+  managedProvider: boolean; taskConfig: IOmniTaskConfig);
 begin
   inherited Create;
   oplNumTasks := Environment.Process.Affinity.Count;
   oplSourceProvider := sourceProvider;
   oplManagedProvider := managedProvider;
   oplOnMessageList := TGpIntegerObjectList.Create;
+  oplTaskConfig := taskConfig;
 end; { TOmniParallelLoopBase.Create }
 
 constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
@@ -1315,6 +1350,7 @@ begin
         'Parallel.ForEach worker #' + IntToStr(iTask))
         .WithLock(lockAggregate)
         .Unobserved;
+      ApplyConfig(oplTaskConfig, task);
       for kv in oplOnMessageList.WalkKV do
         task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
       if assigned(oplOnTaskControlCreate) then
@@ -1794,28 +1830,32 @@ end; { TOmniDelegateEnumerator }
 
 { TOmniFuture<T> }
 
-constructor TOmniFuture<T>.Create(action: TOmniFutureDelegate<T>);
+constructor TOmniFuture<T>.Create(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig);
 begin
   inherited Create;
   ofCancellable := false;
   ofCompleted := false;
-  Execute(procedure (const task: IOmniTask)
+  Execute(
+    procedure (const task: IOmniTask)
     begin
       ofResult := action();
       ofCompleted := true;
-    end);
+    end,
+    taskConfig);
 end; { TOmniFuture<T>.Create }
 
-constructor TOmniFuture<T>.CreateEx(action: TOmniFutureDelegateEx<T>);
+constructor TOmniFuture<T>.CreateEx(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig);
 begin
   inherited Create;
   ofCancellable := true;
   ofCompleted := false;
-  Execute(procedure (const task: IOmniTask)
+  Execute(
+    procedure (const task: IOmniTask)
     begin
       ofResult := action(task);
       ofCompleted := true;
-    end);
+    end,
+    taskConfig);
 end; { TOmniFuture<T>.CreateEx }
 
 destructor TOmniFuture<T>.Destroy;
@@ -1843,9 +1883,11 @@ begin
   end;
 end; { TOmniFuture<T>.DestroyTask }
 
-procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate);
+procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 begin
-  ofTask := CreateTask(action, 'TOmniFuture action').Schedule(GParallelPool);
+  ofTask := CreateTask(action, 'TOmniFuture action');
+  ApplyConfig(taskConfig, ofTask);
+  ofTask.Schedule(GParallelPool);
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.IsCancelled: boolean;
