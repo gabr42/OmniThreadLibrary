@@ -39,6 +39,7 @@
 ///       - Parallel.Join supports TaskConfig.
 ///       - Parallel.Future supports TaskConfig.
 ///       - Parallel.Pipeline supports TaskConfig.
+///       - Parallel.ForEach supports TaskConfig.
 ///     1.09: 2011-04-06
 ///       - Implemented Parallel.ForkJoin.
 ///       - Implemented Parallel.Async.
@@ -226,6 +227,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { IOmniParallelLoop }
 
   IOmniParallelLoop<T> = interface
@@ -246,6 +248,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
@@ -460,9 +463,10 @@ type
     procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskCreateDelegate); overload;
     procedure SetOnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate); overload;
     procedure SetOnStop(stopDelegate: TProc);
+    procedure SetTaskConfig(const config: IOmniTaskConfig);
     function  Stopped: boolean; inline;
   public
-    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean; taskConfig: IOmniTaskConfig = nil); overload;
+    constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
     destructor  Destroy; override;
     property Options: TOmniParallelLoopOptions read oplOptions write oplOptions;
@@ -499,6 +503,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { TOmniParallelLoop }
 
   TOmniParallelLoop<T> = class(TOmniParallelLoopBase, IOmniParallelLoop<T>,
@@ -538,6 +543,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
 
   {$REGION 'Documentation'}
@@ -563,7 +569,7 @@ type
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: integer; step: integer = 1; taskConfig: IOmniTaskConfig = nil): IOmniParallelLoop<integer>; overload;
+    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
     {$IFDEF OTL_ERTTI}
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     {$ENDIF OTL_ERTTI}
@@ -816,9 +822,10 @@ begin
   );
 end; { Parallel.Async }
 
-class function Parallel.ForEach(low, high: integer; step: integer; taskConfig: IOmniTaskConfig): IOmniParallelLoop<integer>;
+class function Parallel.ForEach(low, high: integer; step: integer = 1):
+  IOmniParallelLoop<integer>;
 begin
-  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true, taskConfig);
+  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enumerable: IEnumerable): IOmniParallelLoop;
@@ -1057,14 +1064,13 @@ end; { Parallel.TaskConfig }
 { TOmniParallelLoopBase }
 
 constructor TOmniParallelLoopBase.Create(const sourceProvider: TOmniSourceProvider;
-  managedProvider: boolean; taskConfig: IOmniTaskConfig);
+  managedProvider: boolean);
 begin
   inherited Create;
   oplNumTasks := Environment.Process.Affinity.Count;
   oplSourceProvider := sourceProvider;
   oplManagedProvider := managedProvider;
   oplOnMessageList := TGpIntegerObjectList.Create;
-  oplTaskConfig := taskConfig;
 end; { TOmniParallelLoopBase.Create }
 
 constructor TOmniParallelLoopBase.Create(const enumerator: TEnumeratorDelegate);
@@ -1451,6 +1457,11 @@ begin
   oplOnTaskControlCreate := taskCreateDelegate;
 end; { TOmniParallelLoopBase.SetOnTaskCreate }
 
+procedure TOmniParallelLoopBase.SetTaskConfig(const config: IOmniTaskConfig);
+begin
+  oplTaskConfig := config;
+end; { TOmniParallelLoopBase.SetTaskConfig }
+
 function TOmniParallelLoopBase.Stopped: boolean;
 begin
   Result := (assigned(oplCancellationToken) and oplCancellationToken.IsSignalled);
@@ -1604,6 +1615,12 @@ begin
   Options := Options + [ploPreserveOrder];
   Result := Self;
 end; { TOmniParallelLoop.PreserveOrder }
+
+function TOmniParallelLoop.TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
+begin
+  SetTaskConfig(config);
+  Result := Self;
+end; { TOmniParallelLoop.TaskConfig }
 
 { TOmniParalleLoop<T> }
 
@@ -1799,6 +1816,13 @@ begin
   Options := Options + [ploPreserveOrder];
   Result := Self;
 end; { TOmniParallelLoop<T>.PreserveOrder }
+
+function TOmniParallelLoop<T>.TaskConfig(const config: IOmniTaskConfig):
+  IOmniParallelLoop<T>;
+begin
+  SetTaskConfig(config);
+  Result := Self;
+end; { TOmniParallelLoop }
 
 { TOmniDelegateEnumerator }
 

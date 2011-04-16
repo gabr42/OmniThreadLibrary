@@ -23,12 +23,15 @@ type
     btnJoin: TButton;
     btnFuture: TButton;
     btnPipeline: TButton;
+    btnForEach: TButton;
     procedure btnAsyncClick(Sender: TObject);
+    procedure btnForEachClick(Sender: TObject);
     procedure btnFutureClick(Sender: TObject);
     procedure btnJoinClick(Sender: TObject);
     procedure btnPipelineClick(Sender: TObject);
   private
     FFuture: IOmniFuture<integer>;
+    FParallel: IOmniParallelLoop<integer>;
     FSharedValue: integer;
     procedure PipelineStage1(const input, output: IOmniBlockingCollection; const task:
       IOmniTask);
@@ -78,6 +81,20 @@ begin
     Sleep(400);
     Application.ProcessMessages;
   end;
+end;
+
+procedure TfrmDemoParallelTaskConfig.btnForEachClick(Sender: TObject);
+begin
+  FParallel := Parallel.ForEach(1, 17)
+    .TaskConfig(Parallel.TaskConfig.OnMessage(Self))
+    .NoWait
+    .OnStop(procedure begin FParallel := nil; end);
+  FParallel
+    .Execute(
+      procedure (const task: IOmniTask; const value: integer)
+      begin
+        task.Comm.Send(WM_LOG, value);
+      end);
 end;
 
 procedure TfrmDemoParallelTaskConfig.btnFutureClick(Sender: TObject);

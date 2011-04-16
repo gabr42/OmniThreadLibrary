@@ -52,11 +52,20 @@ object frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig
   end
   object btnPipeline: TButton
     Left = 8
-    Top = 103
+    Top = 104
     Width = 75
     Height = 25
     Caption = 'Pipeline'
     TabOrder = 4
     OnClick = btnPipelineClick
+  end
+  object btnForEach: TButton
+    Left = 8
+    Top = 136
+    Width = 75
+    Height = 25
+    Caption = 'ForEach'
+    TabOrder = 5
+    OnClick = btnForEachClick
   end
 end
