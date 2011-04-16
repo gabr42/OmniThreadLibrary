@@ -353,18 +353,21 @@ type
   IOmniForkJoin = interface
     function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
     function  NumTasks(numTasks: integer): IOmniForkJoin;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin;
   end; { IOmniForkJoin }
 
   IOmniForkJoin<T> = interface
-    function Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
+    function  Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin<T>;
   end; { IOmniForkJoin<T> }
 
   TOmniForkJoin<T> = class(TInterfacedObject, IOmniForkJoin<T>)
   strict private
-    ofjNumTasks : integer;
-    ofjPoolInput: IOmniBlockingCollection;
-    ofjTaskPool : IOmniPipeline;
+    ofjNumTasks  : integer;
+    ofjPoolInput : IOmniBlockingCollection;
+    ofjTaskConfig: IOmniTaskConfig;
+    ofjTaskPool  : IOmniPipeline;
   strict protected
     procedure Asy_ProcessComputations(const input, output: IOmniBlockingCollection);
     procedure StartWorkerTasks;
@@ -372,6 +375,7 @@ type
     constructor Create;
     function  Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin<T>;
   end; { TOmniForkJoin }
 
   TOmniForkJoin = class(TInterfacedObject, IOmniForkJoin)
@@ -382,6 +386,7 @@ type
     destructor  Destroy; override;
     function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
     function  NumTasks(numTasks: integer): IOmniForkJoin;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin;
   end; { TOmniForkJoin }
 
   TOmniDelegateEnumerator = class(TOmniValueEnumerator)
@@ -2318,11 +2323,17 @@ begin
       ofjTaskPool := Parallel.Pipeline
         .NumTasks(ofjNumTasks)
         .Input(ofjPoolInput)
-        .Stage(Asy_ProcessComputations);
+        .Stage(Asy_ProcessComputations, ofjTaskConfig);
       ofjTaskPool.Run;
     end;
   end;
 end; { TOmniForkJoin<T.StartWorkerTasks }
+
+function TOmniForkJoin<T>.TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin<T>;
+begin
+  ofjTaskConfig := config;
+  Result := Self;
+end; { TOmniForkJoin }
 
 { TOmniForkJoin }
 
@@ -2356,6 +2367,12 @@ begin
   ofjForkJoin.NumTasks(numTasks);
   Result := self;
 end; { TOmniForkJoin.NumTasks }
+
+function TOmniForkJoin.TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin;
+begin
+  ofjForkJoin.TaskConfig(config);
+  Result := Self;
+end; { TOmniForkJoin.TaskConfig }
 
 { TOmniTaskConfig }
 
