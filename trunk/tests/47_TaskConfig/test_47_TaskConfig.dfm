@@ -68,4 +68,13 @@ object frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig
     TabOrder = 5
     OnClick = btnForEachClick
   end
+  object btnForkJoin: TButton
+    Left = 8
+    Top = 167
+    Width = 75
+    Height = 25
+    Caption = 'ForkJoin'
+    TabOrder = 6
+    OnClick = btnForkJoinClick
+  end
 end

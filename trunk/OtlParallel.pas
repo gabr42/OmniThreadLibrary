@@ -154,6 +154,7 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
@@ -736,6 +737,7 @@ type
     otcOnMessageEventHandler   : TOmniTaskMessageEvent;
     otcOnMessageList           : TGpIntegerObjectList;
     otcOnTerminated            : TOmniTaskTerminatedEvent;
+    otcOnTerminatedFunc        : TOmniOnTerminatedFunction;
     otcWithCounterCounter      : IOmniCounter;
     otcWithLockAutoDestroy     : boolean;
     otcWithLockOmniLock        : IOmniCriticalSection;
@@ -751,6 +753,7 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
@@ -2404,6 +2407,8 @@ begin
     TOmniMessageExec(kv.Value).Apply(kv.Key, task);
   if assigned(otcOnTerminated) then
     task.OnTerminated(otcOnTerminated);
+  if assigned(otcOnTerminatedFunc) then
+    task.OnTerminated(otcOnTerminatedFunc);
   if assigned(otcWithCounterCounter) then
     task.WithCounter(otcWithCounterCounter);
   if assigned(otcWithLockOmniLock) then
@@ -2455,6 +2460,13 @@ function TOmniTaskConfig.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
   IOmniTaskConfig;
 begin
   otcOnTerminated := eventHandler;
+  Result := Self;
+end; { TOmniTaskConfig.OnTerminated }
+
+function TOmniTaskConfig.OnTerminated(eventHandler: TOmniOnTerminatedFunction):
+  IOmniTaskConfig;
+begin
+  otcOnTerminatedFunc := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 
