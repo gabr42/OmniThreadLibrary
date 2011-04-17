@@ -28,20 +28,20 @@ uses
 {$R *.dfm}
 
 procedure TfrmDemoParallelAsync.btnAsyncClick(Sender: TObject);
-var
-  i: integer;
 begin
   btnAsync.Enabled := false;
 
   Parallel.Async(
     procedure
     begin
+      // executed in background thread
       Sleep(500);
       MessageBeep($FFFFFFFF);
     end,
 
     procedure
     begin
+      // executed in main thread
       btnAsync.Enabled := true;
     end
   );
