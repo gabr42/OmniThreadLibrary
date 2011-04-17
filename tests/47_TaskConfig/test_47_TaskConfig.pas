@@ -9,6 +9,7 @@ uses
   OtlCommon,
   OtlComm,
   OtlTask,
+  OtlTaskControl,
   OtlCollections,
   OtlParallel;
 
@@ -24,8 +25,10 @@ type
     btnFuture: TButton;
     btnPipeline: TButton;
     btnForEach: TButton;
+    btnForkJoin: TButton;
     procedure btnAsyncClick(Sender: TObject);
     procedure btnForEachClick(Sender: TObject);
+    procedure btnForkJoinClick(Sender: TObject);
     procedure btnFutureClick(Sender: TObject);
     procedure btnJoinClick(Sender: TObject);
     procedure btnPipelineClick(Sender: TObject);
@@ -46,6 +49,9 @@ var
   frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig;
 
 implementation
+
+uses
+  Math;
 
 {$R *.dfm}
 
@@ -95,6 +101,49 @@ begin
       begin
         task.Comm.Send(WM_LOG, value);
       end);
+end;
+
+function ParallelMax(data: TArray<integer>; forkJoin: IOmniForkJoin<integer>; left, right: integer): integer;
+var
+  computeLeft : IOmniCompute<integer>;
+  computeRight: IOmniCompute<integer>;
+  mid         : integer;
+begin
+  if (right - left) <= 2 then
+    Result := Max(data[left], data[right])
+  else begin
+    mid := (left + right) div 2;
+    computeLeft := forkJoin.Compute(
+      function: integer
+      begin
+        Result := ParallelMax(data, forkJoin, left, mid);
+      end);
+    computeRight := forkJoin.Compute(
+      function: integer
+      begin
+        Result := ParallelMax(data, forkJoin, mid + 1, right);
+      end);
+    Result := Max(computeLeft.Value, computeRight.Value);
+  end;
+end;
+
+procedure TfrmDemoParallelTaskConfig.btnForkJoinClick(Sender: TObject);
+var
+  data: TArray<integer>;
+  max : integer;
+begin
+  data := TArray<integer>.Create(1, 17, 4, 99, -250, 7, 13, 132, 101);
+  max := ParallelMax(
+    data,
+    Parallel.ForkJoin<integer>.TaskConfig(Parallel.TaskConfig.OnTerminated(
+      procedure (const task: IOmniTaskControl)
+      begin
+        lbLog.ItemIndex := lbLog.Items.Add(Format('COMPUTE: Task %d terminated', [task.UniqueID]));
+      end
+    )),
+    Low(data),
+    High(data));
+  lbLog.ItemIndex := lbLog.Items.Add('FORKJOIN: ' + IntToStr(max) + ' (expected 132)');
 end;
 
 procedure TfrmDemoParallelTaskConfig.btnFutureClick(Sender: TObject);
