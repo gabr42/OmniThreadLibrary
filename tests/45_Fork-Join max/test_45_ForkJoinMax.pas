@@ -96,21 +96,24 @@ var
   computeLeft : IOmniCompute<integer>;
   computeRight: IOmniCompute<integer>;
   mid         : integer;
-begin
+
+  function Compute(left, right: integer): IOmniCompute<integer>;
+  begin
+    Result := forkJoin.Compute(
+      function: integer
+      begin
+        Result := ParallelMax(forkJoin, left, right);
+      end
+    );
+  end; { Compute }
+
+begin { TfrmQuickSortDemo.ParallelMax }
   if (right - left) < CSeqThreshold then
     Result := SequentialMax(left, right)
   else begin
     mid := (left + right) div 2;
-    computeLeft := forkJoin.Compute(
-      function: integer
-      begin
-        Result := ParallelMax(forkJoin, left, mid);
-      end);
-    computeRight := forkJoin.Compute(
-      function: integer
-      begin
-        Result := ParallelMax(forkJoin, mid + 1, right);
-      end);
+    computeLeft := Compute(left, mid);
+    computeRight := Compute(mid + 1, right);
     Result := Max(computeLeft.Value, computeRight.Value);
   end;
 end; { TfrmQuickSortDemo.ParallelMax }
