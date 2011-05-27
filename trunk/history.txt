@@ -1,5 +1,8 @@
 - OtlParallel compiles in Delphi 2009.
 - Bugs fixed in OtlEventMonitor: Message window could be used after it was destroyed.
+- Timer Proc can be shared between timers (timer ID parameter)
+- Parallel.Async, Parallel.ForkJoin, Parallel.TaskConfig
+- more? check the web
 
 2.0: 2010-12-10
 - New high-level primitives (unit OtlParallel):
