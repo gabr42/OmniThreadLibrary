@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-04-08
-///   Version           : 1.25
+///   Last modification : 2011-05-27
+///   Version           : 1.25a
 ///</para><para>
 ///   History:
+///     1.25a: 2011-05-27
+///       - Passes timer ID to timer proc if it accepts const TOmniValue parameter.
 ///     1.25: 2011-04-08
 ///       - IOmniTaskControl termination empties task message queue and calls appropriate
 ///         OnMessage handlers.
@@ -1601,12 +1603,12 @@ begin
       mitInteger:
         begin
           msg.MsgID := timerInfo.MessageID;
-          msg.MsgData := TOmniValue.Null;
+          msg.MsgData := timerInfo.TimerID;
         end;
       mitString:
-        msg := TOmniInternalStringMsg.CreateMessage(timerInfo.MessageID, TOmniValue.Null);
+        msg := TOmniInternalStringMsg.CreateMessage(timerInfo.MessageID, timerInfo.TimerID);
       mitPointer:
-        msg := TOmniInternalAddressMsg.CreateMessage(timerInfo.MessageID, TOmniValue.Null);
+        msg := TOmniInternalAddressMsg.CreateMessage(timerInfo.MessageID, timerInfo.TimerID);
       else
         raise Exception.Create('TOmniTaskExecutor.CallOmniTimer: Invalid message type');
     end;
