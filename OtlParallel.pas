@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-04-06
-///   Version           : 1.09
+///   Last modification : 2011-06-25
+///   Version           : 1.10a
 ///</para><para>
 ///   History:
+///     1.10a: 2011-06-25
+///       - Bug fixed: Parallel.ForEach was never running on more than
+///         Process.Affinity.Count tasks.
 ///     1.10: 2011-04-16
 ///       - Parallel.Join supports TaskConfig.
 ///       - Parallel.Future supports TaskConfig.
@@ -158,6 +161,7 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
+//    property Param: TOmniValueContainer read GetParam;
   end; { IOmniTaskConfig }
 
   IOmniParallelLoop = interface;
@@ -1349,7 +1353,7 @@ begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
     { TODO 3 -oPrimoz : Still not optimal - should know how many Parallel.ForEach are currently executing! }
-    if numTasks < GParallelPool.MaxExecuting then
+    if numTasks > GParallelPool.MaxExecuting then
       GParallelPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
