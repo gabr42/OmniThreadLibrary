@@ -1,15 +1,24 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2010 Primoz Gabrijelcic
+   (c) 2011 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2010-09-21
-   Version           : 1.23
+   Last modification : 2011-01-28
+   Version           : 1.26
 </pre>*)(*
    History:
+     1.26: 2011-01-28
+       - Implemented procedure DontOptimize. Call DontOptimize(x) if you want to prevent
+         compiler from optimizing out the variable x.
+     1.25: 2010-12-15
+       - DebugBreak accepts parameter.
+       - DebugBreak is only compiled if DEBUG conditional symbol is defined.
+       - Asgn overload taking Ansi/Wide strings.
+     1.24: 2010-12-14
+       - Implemented function DebugBreak.
      1.23: 2010-09-21
        - Implemented function DisableHandler. Usage:
            with DisableHandler(@@cbDisableInterface.OnClick) do begin
@@ -188,6 +197,10 @@ function  Asgn(var output: string; const value: string): string; overload;    {$
 function  Asgn(var output: integer; const value: integer): integer; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: real; const value: real): real; overload;          {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn64(var output: int64; const value: int64): int64; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$IFDEF Unicode}
+function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$ENDIF Unicode}
+function  Asgn(var output: WideString; const value: WideString): WideString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 function  IFF(condit: boolean; iftrue, iffalse: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -224,6 +237,11 @@ function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; asse
 function  OpenArrayToVarArray(aValues: array of const): Variant;
 
 function  FormatDataSize(value: int64): string;
+
+///<summary>Stops execution if the program is running in the debugger.</summary>
+procedure DebugBreak(triggerBreak: boolean = true);
+
+procedure DontOptimize(var data);
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -424,6 +442,20 @@ begin
   Result := output;
 end; { Asgn }
 
+{$IFDEF Unicode}
+function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString;
+begin
+  output := value;
+  Result := output;
+end; { Asgn }
+{$ENDIF Unicode}
+
+function  Asgn(var output: WideString; const value: WideString): WideString;
+begin
+  output := value;
+  Result := output;
+end; { Asgn }
+
 function Asgn(var output: real; const value: real): real; overload;
 begin
   output := value;
@@ -502,7 +534,7 @@ end; { IFF }
 
 function OffsetPtr(ptr: pointer; offset: integer): pointer;
 begin
-  Result := pointer(cardinal(int64(ptr) + offset));
+  Result := pointer({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(int64(ptr) + offset));
 end; { OffsetPtr }
 
 function OpenArrayToVarArray(aValues: array of const): Variant;
@@ -547,6 +579,14 @@ begin
   else
     Result := Format('%.1f GB', [value/1024/1024/1024]);
 end; { FormatDataSize }
+
+procedure DebugBreak(triggerBreak: boolean = true);
+begin
+  {$IFDEF DEBUG}
+  if triggerBreak and (DebugHook <> 0) then
+    asm int 3 end;
+  {$ENDIF DEBUG}
+end; { DebugBreak }
 
 function ReverseDWord(dw: cardinal): cardinal;
 asm
@@ -990,6 +1030,11 @@ function DisableHandler(const handler: PMethod): IGpDisableHandler;
 begin
   Result := TGpDisableHandler.Create(handler);
 end; { DisableHandler }
+
+procedure DontOptimize(var data);
+begin
+  // do nothing
+end; { DontOptimize }
 
 constructor TGpDisableHandler.Create(const handler: PMethod);
 const
