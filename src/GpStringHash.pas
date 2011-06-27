@@ -1,7 +1,7 @@
 (*:Preallocated hasher.
    @author Primoz Gabrijelcic
    @desc <pre>
-Copyright (c) 2010, Primoz Gabrijelcic
+Copyright (c) 2011, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -29,10 +29,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2010-09-27
-   Version           : 1.09
+   Last modification : 2011-02-27
+   Version           : 1.10a
 </pre>*)(*
    History:
+     1.10a: 2011-02-27
+       - Fixed bugs in TGpStringInterfaceHash implementation.
+     1.10: 2011-02-09
+       - Implemented TGpStringInterfaceHash, a string-indexed hash of interfaces.
      1.09: 2010-09-27
        - Faster TGpStringDictionary enumerator, enumerates items in insertion order.
      1.08: 2010-09-25
@@ -136,6 +140,7 @@ type
     procedure SetItems(const key: string; const value: integer); {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpHashItem read GetHashItem;
   public
+    constructor Create; overload;
     constructor Create(numItems: cardinal; canGrow: boolean = false); overload;
     constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
     destructor  Destroy; override;
@@ -158,7 +163,7 @@ type
   public
     property Key: string read kvKey write kvKey;
     property Value: TObject read kvValue write kvValue;
-  end; { TGpStringHashKV }
+  end; { TGpStringObjectHashKV }
 
   TGpStringObjectHashEnumerator = class
   private
@@ -200,11 +205,60 @@ type
     property Objects[const key: string]: TObject read GetObjects write SetObjects; default;
   end; { TGpStringObjectHash }
 
+  ///<summary>External (string, Interface) hash item representation.</summary>
+  TGpStringInterfaceHashKV = class
+  private
+    kvKey  : string;
+    kvValue: IInterface;
+  public
+    property Key: string read kvKey write kvKey;
+    property Value: IInterface read kvValue write kvValue;
+  end; { TGpStringInterfaceHashKV }
+
+  TGpStringInterfaceHashEnumerator = class
+  private
+    siheKV              : TGpStringInterfaceHashKV;
+    siheStringEnumerator: TGpStringHashEnumerator;
+  public
+    constructor Create(stringHash: TGpStringHash);
+    destructor  Destroy; override;
+    function  GetCurrent: TGpStringInterfaceHashKV; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  MoveNext: boolean;                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    property Current: TGpStringInterfaceHashKV read GetCurrent;
+  end; { TGpStringObjectHashEnumerator }
+
+  TGpStringInterfaceHashEnumMethod = procedure(item: TGpStringInterfaceHashKV) of object;
+
+  ///<summary>String-indexed hash of interfaces.
+  ///    Redirects all operations to the internal TGpStringHash.</summary>
+  ///<since>2011-02-09</since>
+  TGpStringInterfaceHash = class
+  private
+    sihHash: TGpStringHash;
+  protected
+    function  GetInterfaces(const key: string): IInterface;
+    procedure ReleaseInterface(item: TGpStringInterfaceHashKV);
+    procedure SetInterfaces(const key: string; const value: IInterface);
+  public
+    constructor Create(numItems: cardinal; canGrow: boolean = false); overload;
+    constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
+    destructor  Destroy; override;
+    procedure Add(const key: string; value: IInterface);               {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Count: integer;                                          {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Find(const key: string; var value: IInterface): boolean; {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure ForEach(enumerator: TGpStringInterfaceHashEnumMethod);
+    function  GetEnumerator: TGpStringInterfaceHashEnumerator;         {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  HasKey(const key: string): boolean;                      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure Update(const key: string; value: IInterface);
+    function  ValueOf(const key: string): IInterface;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    property Interfaces[const key: string]: IInterface read GetInterfaces write SetInterfaces; default;
+  end; { TGpStringInterfaceHash }
+
   ///<summary>External (string, int64) hash table item representation.</summary>
   TGpStringTableKV = class
   private
     kvKey  : string;
-    kvValue: int64;
+    kvValue: int64;                           
   public
     property Key: string read kvKey write kvKey;
     property Value: int64 read kvValue write kvValue;
@@ -483,6 +537,11 @@ begin
   shCanGrow := canGrow;
 end; { TGpStringHash.Create }
 
+constructor TGpStringHash.Create;
+begin
+  raise Exception.Create('Don''t use this constructor');
+end; { TGpStringHash.Create }
+
 destructor TGpStringHash.Destroy;
 begin
   SetLength(shItems, 0);
@@ -686,6 +745,7 @@ end; { TGpStringObjectHash.Destroy }
 
 procedure TGpStringObjectHash.Add(const key: string; value: TObject);
 begin
+  Assert(SizeOf(TObject) = SizeOf(integer));
   sohHash.Add(key, integer(value));
 end; { TGpStringObjectHash.Add }
 
@@ -764,6 +824,144 @@ function TGpStringObjectHash.ValueOf(const key: string): TObject;
 begin
   Result := TObject(sohHash.ValueOf(key));
 end; { TGpStringObjectHash.ValueOf }
+
+{ TGpStringInterfaceHashEnumerator }
+
+constructor TGpStringInterfaceHashEnumerator.Create(stringHash: TGpStringHash);
+begin
+  inherited Create;
+  siheStringEnumerator := TGpStringHashEnumerator.Create(stringHash);
+  siheKV := TGpStringInterfaceHashKV.Create;
+end; { TGpStringInterfaceHashEnumerator.Create }
+
+destructor TGpStringInterfaceHashEnumerator.Destroy;
+begin
+  FreeAndNil(siheKV);
+  FreeAndNil(siheStringEnumerator);
+  inherited;
+end; { TGpStringInterfaceHashEnumerator.Destroy }
+
+function TGpStringInterfaceHashEnumerator.GetCurrent: TGpStringInterfaceHashKV;
+begin
+  siheKV.Key := siheStringEnumerator.GetCurrent.Key;
+  siheKV.Value := IInterface(siheStringEnumerator.GetCurrent.Value);
+  Result := siheKV;
+end; { TGpStringInterfaceHashEnumerator.GetCurrent }
+
+function TGpStringInterfaceHashEnumerator.MoveNext: boolean;
+begin
+  Result := siheStringEnumerator.MoveNext;
+end; { TGpStringInterfaceHashEnumerator.MoveNext }
+
+{ TGpStringInterfaceHash }
+
+constructor TGpStringInterfaceHash.Create(numItems: cardinal; canGrow: boolean);
+begin
+  inherited Create;
+  sihHash := TGpStringHash.Create(numItems, canGrow);
+end; { TGpStringInterfaceHash.Create }
+
+constructor TGpStringInterfaceHash.Create(numBuckets, numItems: cardinal;
+  canGrow: boolean);
+begin
+  inherited Create;
+  sihHash := TGpStringHash.Create(numBuckets, numItems, canGrow);
+end; { TGpStringInterfaceHash.Create }
+
+destructor TGpStringInterfaceHash.Destroy;
+begin
+  if assigned(sihHash) then
+    ForEach(ReleaseInterface);
+  FreeAndNil(sihHash);
+  inherited;
+end; { TGpStringInterfaceHash.Destroy }
+
+procedure TGpStringInterfaceHash.Add(const key: string; value: IInterface);
+begin
+  Assert(SizeOf(IInterface) = SizeOf(integer));
+  sihHash.Add(key, integer(value));
+  value._AddRef;
+end; { TGpStringInterfaceHash.Add }
+
+function TGpStringInterfaceHash.Count: integer;
+begin
+  Result := sihHash.Count;
+end; { TGpStringInterfaceHash.Count }
+
+function TGpStringInterfaceHash.Find(const key: string; var value: IInterface): boolean;
+begin
+  Result := sihHash.Find(key, integer(value));
+  if Result then
+    value._AddRef;
+end; { TGpStringInterfaceHash.Find }
+
+procedure TGpStringInterfaceHash.ForEach(enumerator: TGpStringInterfaceHashEnumMethod);
+var
+  enum: TGpStringInterfaceHashEnumerator;
+begin
+  enum := GetEnumerator;
+  try
+    while enum.MoveNext do
+      enumerator(enum.Current);
+  finally FreeAndNil(enum); end;
+end; { TGpStringInterfaceHash.ForEach }
+
+function TGpStringInterfaceHash.GetEnumerator: TGpStringInterfaceHashEnumerator;
+begin
+  Result := TGpStringInterfaceHashEnumerator.Create(sihHash);
+end; { TGpStringInterfaceHash.GetEnumerator }
+
+function TGpStringInterfaceHash.GetInterfaces(const key: string): IInterface;
+var
+  value: integer;
+begin
+  if sihHash.Find(key, value) then begin
+    integer(Result) := value;
+    Result._AddRef;
+  end
+  else
+    Result := nil;
+end; { TGpStringInterfaceHash.GetInterfaces }
+
+function TGpStringInterfaceHash.HasKey(const key: string): boolean;
+begin
+  Result := sihHash.HasKey(key);
+end; { TGpStringInterfaceHash.HasKey }
+
+procedure TGpStringInterfaceHash.ReleaseInterface(item: TGpStringInterfaceHashKV);
+begin
+  if assigned(item.Value) then
+    item.Value._Release;
+end; { TGpStringInterfaceHash.ReleaseInterface }
+
+procedure TGpStringInterfaceHash.SetInterfaces(const key: string; const value:
+  IInterface);
+begin
+  Update(key, value);
+end; { TGpStringInterfaceHash.SetInterfaces }
+
+procedure TGpStringInterfaceHash.Update(const key: string; value: IInterface);
+var
+  bucket: cardinal;
+  item  : PGpHashItem;
+begin
+  bucket := sihHash.FindBucket(key);
+  if bucket > 0 then begin
+    item := sihHash.HashItems[bucket];
+    IInterface(item.Value)._Release;
+    pointer(item.Value) := nil;
+    item.Value := integer(value);
+    if assigned(value) then
+      value._AddRef;
+  end
+  else
+    Add(key, value);
+end; { TGpStringInterfaceHash.Update }
+
+function TGpStringInterfaceHash.ValueOf(const key: string): IInterface;
+begin
+  Result := IInterface(sihHash.ValueOf(key));
+end; { TGpStringInterfaceHash.ValueOf }
 
 { TGpStringTableEnumerator }
 

@@ -7,10 +7,21 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami
    Creation date     : 2002-10-09
-   Last modification : 2010-09-24
-   Version           : 1.59a
+   Last modification : 2011-05-06
+   Version           : 1.61b
 </pre>*)(*
    History:
+     1.61b: 2011-06-27
+       - [tommi prami] Compiles with D7.
+     1.61a: 2011-05-06
+       - [achim] DSiAddApplicationToFirewallExceptionListXP could fail with "Unknown
+         resoveConflict" exception due to a syntax error.
+     1.61: 2011-03-01
+       - Faster DSiFileExtensionIs.
+     1.60: 2010-12-04
+       - When compiled with D2007 or newer, unit FileCtrl is not included.
+     1.59b: 2010-10-28
+       - Call UniqueString before calling CreateProcessW.
      1.59a: 2010-09-25
        - [Tommi Prami] Added types missing in Delphi 7.
      1.59: 2010-09-24
@@ -362,7 +373,11 @@ interface
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
 {$DEFINE NeedUTF}{$UNDEF NeedVariants}{$DEFINE NeedStartupInfo}
-{$IFDEF ConditionalExpressions}{$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}{$ENDIF}
+{$DEFINE NeedFileCtrl}
+{$IFDEF ConditionalExpressions}
+  {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
+  {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
+{$ENDIF}
 
 uses
   Windows,
@@ -371,7 +386,9 @@ uses
   {$IFDEF NeedVariants}
   Variants,
   {$ENDIF}
+  {$IFDEF NeedFileCtrl}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
+  {$ENDIF NeedFileCtrl}
   SysUtils,
   ShellAPI,
   ShlObj,
@@ -617,6 +634,7 @@ const
   
 type
   TDSiRegistry = class(TRegistry)
+  public
     function  ReadBinary(const name, defval: string): string; overload;
     function  ReadBinary(const name: string; dataStream: TStream): boolean; overload;
     function  ReadBool(const name: string; defval: boolean): boolean;
@@ -679,7 +697,7 @@ const
   FOF_NORECURSION         = $1000;
   FOF_NORECURSEREPARSE    = $8000;
   FOF_WANTNUKEWARNING     = $4000;
-  FOF_NO_UI               = FOF_SILENT OR FOF_NOCONFIRMATION OR FOF_NOERRORUI OR FOF_NOCONFIRMMKDIR;
+  FOF_NO_UI               =  FOF_SILENT OR FOF_NOCONFIRMATION OR FOF_NOERRORUI OR FOF_NOCONFIRMMKDIR;
 
   CShFileOpFlagMappings: array [TShFileOpFlag] of FILEOP_FLAGS = (FOF_ALLOWUNDO,
     FOF_FILESONLY, FOF_MULTIDESTFILES, FOF_NOCONFIRMATION, FOF_NOCONFIRMMKDIR,
@@ -1119,7 +1137,7 @@ type // Firewall management types
   function  DSiAutoRunApp(const applicationName, applicationPath: string;
     enabled: boolean = true): boolean;
   procedure DSiCreateShortcut(const fileName, displayName, parameters: string;
-    folder: integer = CSIDL_STARTUP; const workDir: string = '');
+    folder: integer= CSIDL_STARTUP; const workDir: string = '');
   function  DSiDeleteShortcut(const displayName: string;
     folder: integer = CSIDL_STARTUP): boolean;
   procedure DSiEditShortcut(const lnkName, fileName, workDir, parameters: string);
@@ -1197,12 +1215,14 @@ type
 
 { Interlocked }
 
+{$IFNDEF WIN64}
 function  DSiInterlockedDecrement64(var addend: int64): int64; register;
 function  DSiInterlockedIncrement64(var addend: int64): int64; register;
 function  DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64; register;
 function  DSiInterlockedExchange64(var target: int64; value: int64): int64; register;
 function  DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64; register; overload;
 function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64; register; overload;
+{$ENDIF WIN64}
 
 { DynaLoad }
 
@@ -2333,7 +2353,7 @@ const
     aborted := fileOp.fAnyOperationsAborted;
   end; { DSiCopyFileAnimated }
 
-  {:Creates folder with the unique name under the temporary folder.
+  {:Creates folder with the unique name under the temporary folder and returns its name.
     @author  Miha-R
     @since   2002-11-25
   }
@@ -2431,6 +2451,7 @@ const
         si.cb := SizeOf(si);
         si.dwFlags := STARTF_USESHOWWINDOW;
         si.wShowWindow := SW_HIDE;
+        {$IFDEF Unicode}UniqueString(tmpFile);{$ENDIF Unicode}
         if (CreateProcess(nil, PChar(tmpFile), nil, nil, false,
           CREATE_SUSPENDED or IDLE_PRIORITY_CLASS, nil,
           PChar(ExtractFilePath(tmpFile)), si, pi)) then
@@ -2663,7 +2684,7 @@ const
     fExt: string;
   begin
     fExt := ExtractFileExt(fileName);
-    if (Length(extension) = 0) or (extension[1] <> '.') then
+    if (Length(extension) = 0) or (extension[1] <> '.') and (fExt <> '') and (fExt[1] = '.') then
       Delete(fExt, 1, 1);
     Result := SameText(fExt, extension);
   end; { DSiFileExtensionIs }
@@ -2676,12 +2697,27 @@ const
   function DSiFileExtensionIs(const fileName: string; extension: array of string):
     boolean; overload;
   var
-    iExt: integer;
+    fExtDot  : string;
+    fExtNoDot: string;
+    iExt     : integer;
+    testExt  : string;
   begin
     Result := true;
-    for iExt := Low(extension) to High(extension) do
-      if DSiFileExtensionIs(fileName, extension[iExt]) then
-        Exit;
+    fExtDot := ExtractFileExt(fileName);
+    fExtNoDot := fExtDot;
+    if (fExtDot = '') or (fExtDot[1] <> '.') then
+       fExtDot := '.' + fExtDot;
+    if (fExtNoDot <> '') and (fExtNoDot[1] = '.') then
+      Delete(fExtNoDot, 1, 1);
+    for iExt := Low(extension) to High(extension) do begin
+      testExt := extension[iExt];
+      if (Length(testExt) = 0) or (testExt[1] <> '.') then begin
+        if SameText(fExtNoDot, testExt) then
+          Exit
+        else if SameText(fExtDot, testExt) then
+          Exit;
+      end;
+    end;
     Result := false;
   end; { DSiFileExtensionIs }
   
@@ -3503,6 +3539,7 @@ const
   var
     processInfo: TProcessInformation;
     startupInfo: TStartupInfo;
+    tmpCmdLine : string;
     useWorkDir : string;
   begin
     if workDir = '' then
@@ -3513,7 +3550,9 @@ const
     startupInfo.cb := SizeOf(startupInfo);
     startupInfo.dwFlags := STARTF_USESHOWWINDOW;
     startupInfo.wShowWindow := visibility;
-    if not CreateProcess(nil, PChar(commandLine), nil, nil, false,
+    tmpCmdLine := commandLine;
+    {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
+    if not CreateProcess(nil, PChar(tmpCmdLine), nil, nil, false,
              CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil,
              PChar(useWorkDir), startupInfo, processInfo)
     then
@@ -3574,6 +3613,7 @@ const
     startupInfo       : TStartupInfo;
     startupInfoW      : TStartupInfoW;
     szUserProfile     : PWideChar;
+    tmpCmdLine        : string;
     useStartInfo      : pointer;
     workDirW          : WideString;
   begin
@@ -3644,7 +3684,9 @@ const
             useStartInfo := startInfo;
             if not assigned(useStartInfo) then
               useStartInfo := @startupInfo;
-            if CreateProcess(nil, PChar(commandLine), nil, nil, false,
+            tmpCmdLine := commandLine;
+            {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
+            if CreateProcess(nil, PChar(tmpCmdLine), nil, nil, false,
                  CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil,
                  PChar(string(workDirW)), PStartupInfo(useStartInfo)^, processInfo)
             then
@@ -3658,7 +3700,9 @@ const
               useStartInfo := startInfo;
               if not assigned(useStartInfo) then
                 useStartInfo := @startupInfo;
-              if DSiCreateProcessAsUser(logonHandle, nil, PChar(commandLine), nil,
+              tmpCmdLine := commandLine;
+              {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
+              if DSiCreateProcessAsUser(logonHandle, nil, PChar(tmpCmdLine), nil,
                    nil, false, {CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS} CREATE_DEFAULT_ERROR_MODE, nil,
                    PChar(string(workDirW)), PStartupInfo(useStartInfo)^, processInfo)
               then
@@ -3677,9 +3721,11 @@ const
             Assert(SizeOf(TStartupInfoA) = SizeOf(TStartupInfoW));
             Move(useStartInfo^, startupInfoW, SizeOf(TStartupInfoW));
             startupInfoW.lpDesktop := nil;
+            tmpCmdLine := commandLine;
+            {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
             if DSiCreateProcessWithLogonW(PWideChar(WideString(username)),
               PWideChar(WideString(domain)), PWideChar(WideString(password)),
-              1 {LOGON_WITH_PROFILE}, nil, PWideChar(WideString(commandLine)),
+              1 {LOGON_WITH_PROFILE}, nil, PWideChar(WideString(tmpCmdLine)),
               CREATE_UNICODE_ENVIRONMENT, lpvEnv, PWideChar(WideString(workDirW)),
               startupInfoW, processInfo)
             then
@@ -3820,7 +3866,7 @@ const
       else
         useWorkDir := workDir;
       appW := app;
-      UniqueString(appW);
+      {$IFDEF Unicode}UniqueString(appW);{$ENDIF Unicode}
       if CreateProcess(nil, PChar(appW), @security, @security, true,
            CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, PChar(useWorkDir), start,
            processInfo) then
@@ -6186,7 +6232,7 @@ var
           if DSiFindApplicationInFirewallExceptionListXP(entryName, app, profile) then begin
             Result := true;
             Exit;
-          end
+          end;
         else
           raise Exception.CreateFmt('Unknown resolveConflict value %d', [Ord(resolveConflict)]);
       end;
@@ -6884,6 +6930,7 @@ var
 
 { Interlocked }
 
+{$IFNDEF WIN64}
 function DSiInterlockedDecrement64(var addend: int64): int64; register;
 asm
 {     ->          EAX     addend }
@@ -7045,6 +7092,7 @@ LOCK      CMPXCHG8B [EDI]
           POP     EDI
           POP     EBX
 end; { DSiInterlockedCompareExchange64 }
+{$ENDIF}
 
 { DynaLoad }
 
@@ -7151,6 +7199,7 @@ var
   begin
     {$IFDEF Unicode}
       commandLine := lpCommandLine;
+      {$IFDEF Unicode}UniqueString(commandLine);{$ENDIF Unicode}
       Result := CreateProcessAsUser(hToken, lpApplicationName, PChar(commandLine),
         lpProcessAttributes, lpThreadAttributes, bInheritHandles,
         dwCreationFlags, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
@@ -7183,6 +7232,7 @@ var
       GCreateProcessWithLogonW := DSiGetProcAddress('advapi32.dll', 'CreateProcessWithLogonW');
     if assigned(GCreateProcessWithLogonW) then begin
       commandLine := lpCommandLine;
+      {$IFDEF Unicode}UniqueString(commandLine);{$ENDIF Unicode}
       Result := GCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword, dwLogonFlags,
         lpApplicationName, PWideChar(commandLine), dwCreationFlags, lpEnvironment,
         lpCurrentDirectory, lpStartupInfo, lpProcessInformation)
