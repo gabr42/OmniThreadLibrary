@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-02-14
-///   Version           : 1.04b
+///   Last modification : 2011-07-04
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2011-07-04
+///       - OnPoolWorkItemCompleted event handler got new parameter - task exception object.
 ///     1.04b: 2011-02-15
 ///       - Don't rearm self if message window was already destroyed.
 ///       - Safely destroy message window.
@@ -73,6 +75,7 @@ unit OtlEventMonitor;
 interface
 
 uses
+  SysUtils,
   Messages,
   Classes,
   GpStuff,
@@ -87,7 +90,8 @@ type
   TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
   TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
   TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
-  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
+  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64;
+    var taskException: Exception) of object;
 
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
@@ -105,7 +109,7 @@ type
   strict protected
     procedure WndProc(var msg: TMessage);
   public
-    constructor Create(AOwner: TComponent); override; 
+    constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
@@ -156,7 +160,6 @@ implementation
 
 uses
   Windows,
-  SysUtils,
   DSiWin32;
 
 const
@@ -251,6 +254,7 @@ var
   endpoint     : IOmniCommunicationEndpoint;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
+  taskException: Exception;
   timeStart    : int64;
   tpMonitorInfo: TOmniThreadPoolMonitorInfo;
 
@@ -320,8 +324,12 @@ begin { TOmniEventMonitor.WndProc }
             OnPoolThreadKilled(pool, tpMonitorInfo.ThreadID);
         end
         else if tpMonitorInfo.ThreadPoolOperation = tpoWorkItemCompleted then begin
-          if assigned(OnPoolWorkItemCompleted) then
-            OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID);
+          if assigned(OnPoolWorkItemCompleted) then begin
+            taskException := tpMonitorInfo.TaskException;
+            tpMonitorInfo.TaskException := nil;
+            OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID, taskException);
+            FreeAndNil(taskException);
+          end;
         end;
       end;
     finally FreeAndNil(tpMonitorInfo); end;
