@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-05-27
-///   Version           : 1.25a
+///   Last modification : 2011-07-04
+///   Version           : 1.26
 ///</para><para>
 ///   History:
+///     1.26: 2011-07-04
+///       - Changed exception handling.
 ///     1.25a: 2011-05-27
 ///       - Passes timer ID to timer proc if it accepts const TOmniValue parameter.
 ///     1.25: 2011-04-08
@@ -724,7 +726,7 @@ type
       sharedInfo: TOmniSharedTaskInfo);
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
-    procedure Execute;
+    procedure Execute(const modifier: IOmniTaskExecutionModifier = nil);
     {$IFDEF OTL_Anonymous}
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
     {$ENDIF OTL_Anonymous}
@@ -796,7 +798,6 @@ type
     procedure DestroyMonitor;
     procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
-    procedure RaiseTaskException;
   protected
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
@@ -1180,10 +1181,11 @@ begin
     otExecutor_ref.Options := otExecutor_ref.Options - [tcoForceExecution];
 end; { TOmniTask.Enforced }
 
-procedure TOmniTask.Execute;
+procedure TOmniTask.Execute(const modifier: IOmniTaskExecutionModifier);
 var
   chainTo        : IOmniTaskControl;
   silentException: boolean;
+  taskException  : Exception;
 begin
   otExecuting := true;
   chainTo := nil;
@@ -1197,13 +1199,18 @@ begin
         otExecutor_ref.Asy_Execute(Self);
       except
         on E: Exception do begin
+          taskException := AcquireExceptionObject;
           silentException := (tcoSilentExceptions in otExecutor_ref.Options);
-          FilterException(E, silentException);
-          if silentException then
-            SetExitStatus(EXIT_EXCEPTION, E.ClassName + ': ' + E.Message)
-          else begin
-            SetException(AcquireExceptionObject);
-            raise;
+          FilterException(taskException, silentException);
+          if assigned(modifier) then
+            modifier.FilterException(taskException, silentException);
+          if assigned(taskException) then begin
+            if silentException then
+              SetExitStatus(EXIT_EXCEPTION, taskException.ClassName + ': ' + taskException.Message)
+            else begin
+              SetException(taskException);
+//              raise;
+            end;
           end;
         end;
       end;
@@ -1304,6 +1311,7 @@ end; { TOmniTask.RegisterWaitObject }
 
 procedure TOmniTask.SetException(exceptionObject: pointer);
 begin
+  Exception(otExecutor_ref.TaskException).Free;
   otExecutor_ref.TaskException := exceptionObject;
 end; { TOmniTask.SetException }
 
@@ -2206,7 +2214,7 @@ function TOmniTaskExecutor.WaitForEvent(msgInfo: TOmniMessageInfo; timeout_ms: c
 begin
   Result := MsgWaitForMultipleObjectsEx(msgInfo.NumWaitHandles, msgInfo.WaitHandles,
     timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
-end; { TOmniTaskExecutor.WaitForEvent } 
+end; { TOmniTaskExecutor.WaitForEvent }
 
 { TOmniTaskControl }
 
@@ -2237,17 +2245,22 @@ end; { TOmniTaskControl.Create }
 {$ENDIF OTL_Anonymous}
 
 destructor TOmniTaskControl.Destroy;
+var
+  taskExcept: Exception;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
-  // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying ! then
+  // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying !
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
+  taskExcept := nil;
+  if assigned(otcExecutor) then begin
+    taskExcept := Exception(otcExecutor.TaskException);
+    otcExecutor.TaskException := nil;
+  end;
   DestroyMonitor;
   if assigned(otcThread) then begin
     Terminate;
     FreeAndNil(otcThread);
-  end
-  else
-    RaiseTaskException;
+  end;
   if otcDestroyLock then begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;
@@ -2270,6 +2283,8 @@ begin
   FreeAndNil(otcOnMessageExec);
   FreeAndNil(otcOnTerminatedExec);
   inherited Destroy;
+  if assigned(taskExcept) then
+    raise taskExcept;
 end; { TOmniTaskControl.Destroy }
 
 function TOmniTaskControl.Alertable: IOmniTaskControl;
@@ -2610,17 +2625,6 @@ begin
 end; { TOmniTaskControl.OnTerminated }
 {$ENDIF OTL_Anonymous}
 
-procedure TOmniTaskControl.RaiseTaskException;
-var
-  exc: Exception;
-begin
-  if assigned(otcExecutor) and assigned(otcExecutor.TaskException) then begin
-    exc := Exception(otcExecutor.TaskException);
-    otcExecutor.TaskException := nil;
-    raise exc;
-  end;
-end; { TOmniTaskControl.RaiseTaskException }
-
 function TOmniTaskControl.Run: IOmniTaskControl;
 begin
   otcParameters.Lock;
@@ -2789,7 +2793,6 @@ begin
   otcOnMessageList.Clear;
   FreeAndNil(otcOnMessageExec);
   FreeAndNil(otcOnTerminatedExec);
-  RaiseTaskException;
 end; { TOmniTaskControl.Terminate }
 
 function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
