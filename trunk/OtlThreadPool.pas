@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-11-25
-///   Version           : 2.05b
+///   Last modification : 2011-07-04
+///   Version           : 2.06
 /// </para><para>
 ///   History:
+///     2.06: 2011-07-04
+///       - Fixed task exception handling. Exceptions are now reported through the
+///         OnPoolWorkItemCompleted event.
 ///     2.05b: 2010-11-25
 ///       - Bug fixed: Thread pool was immediately closing unused threads if MaxExecuting
 ///         was set to -1.
@@ -123,6 +126,7 @@ type
 
   TOmniThreadPoolMonitorInfo = class
   strict private
+    otpmiTaskException      : Exception;
     otpmiTaskID             : int64;
     otpmiThreadID           : integer;
     otpmiThreadPoolOperation: TThreadPoolOperation;
@@ -130,7 +134,8 @@ type
   public
     constructor Create(uniqueID: int64; threadPoolOperation: TThreadPoolOperation;
       threadID: integer); overload;
-    constructor Create(uniqueID, taskID: int64); overload;
+    constructor Create(uniqueID, taskID: int64; const taskException: Exception); overload;
+    property TaskException: Exception read otpmiTaskException write otpmiTaskException;
     property TaskID: int64 read otpmiTaskID;
     property ThreadPoolOperation: TThreadPoolOperation read
       otpmiThreadPoolOperation;
@@ -233,14 +238,16 @@ type
 
   TOTPWorkItem = class
   strict private
-    owiScheduled_ms: int64;
-    owiScheduledAt : TDateTime;
-    owiStartedAt   : TDateTime;
-    owiTask        : IOmniTask;
-    owiThread      : TOTPWorkerThread;
-    owiUniqueID    : int64;
+    owiScheduled_ms : int64;
+    owiScheduledAt  : TDateTime;
+    owiStartedAt    : TDateTime;
+    owiTask         : IOmniTask;
+    owiTaskException: Exception;
+    owiThread       : TOTPWorkerThread;
+    owiUniqueID     : int64;
   public
     constructor Create(const task: IOmniTask);
+    destructor Destroy; override;
     function  Description: string;
     procedure TerminateTask(exitCode: integer; const exitMessage: string);
     property ScheduledAt: TDateTime read owiScheduledAt;
@@ -248,18 +255,39 @@ type
     property StartedAt: TDateTime read owiStartedAt write owiStartedAt;
     property UniqueID: int64 read owiUniqueID;
     property Task: IOmniTask read owiTask;
+    property TaskException: Exception read owiTaskException write owiTaskException;
     property Thread: TOTPWorkerThread read owiThread write owiThread;
   end; { TOTPWorkItem }
 
   TOTPThreadDataFactory = record
   private
-    tdfExecutable: TOmniExecutable; 
+    tdfExecutable: TOmniExecutable;
   public
     constructor Create(const a: TOTPThreadDataFactoryFunction); overload;
     constructor Create(const a: TOTPThreadDataFactoryMethod); overload;
     function  Execute: IInterface; inline;
     function  IsEmpty: boolean; inline;
   end; { TOTPThreadDataFactory }
+
+  IOTPWorkerExecutionModifier = interface(IOmniTaskExecutionModifier)
+                                  ['{221F4EC4-19B1-4333-BA1B-6A98AB6BD389}']
+    function  GetTaskException: Exception;
+  //
+    function  DetachException: Exception;
+    property TaskException: Exception read GetTaskException;
+  end; { IOTPWorkerExecutionModifier }
+
+  TOTPWorkerExecutionModifier = class(TInterfacedObject, IOTPWorkerExecutionModifier)
+  strict private
+    owemTaskException: Exception;
+  protected
+    procedure FilterException(var E: Exception; var silentException: boolean);
+    function  GetTaskException: Exception;
+  public
+    destructor  Destroy; override;
+    function  DetachException: Exception;
+    property TaskException: Exception read GetTaskException;
+  end; { TOTPWorkerExecutionModifier }
 
   TOTPWorkerThread = class(TThread)
   strict private
@@ -451,11 +479,13 @@ begin
   otpmiThreadID := threadID;
 end; { TOmniThreadPoolMonitorInfo.Create }
 
-constructor TOmniThreadPoolMonitorInfo.Create(uniqueID, taskID: int64);
+constructor TOmniThreadPoolMonitorInfo.Create(uniqueID, taskID: int64; const
+  taskException: Exception);
 begin
   otpmiUniqueID := uniqueID;
   otpmiThreadPoolOperation := tpoWorkItemCompleted;
   otpmiTaskID := taskID;
+  otpmiTaskException := taskException;
 end; { TOmniThreadPoolMonitorInfo.Create }
 
 { TOTPThreadDataFactory }
@@ -486,6 +516,32 @@ begin
   Result := tdfExecutable.IsNull;
 end; { TOTPThreadDataFactory.IsEmpty }
 
+{ TOTPWorkerExecutionModifier }
+
+destructor TOTPWorkerExecutionModifier.Destroy;
+begin
+  FreeAndNil(owemTaskException);
+  inherited;
+end; { TOTPWorkerExecutionModifier.Destroy }
+
+function TOTPWorkerExecutionModifier.DetachException: Exception;
+begin
+  Result := owemTaskException;
+  owemTaskException := nil;
+end; { TOTPWorkerExecutionModifier.DetachException }
+
+procedure TOTPWorkerExecutionModifier.FilterException(var E: Exception; var
+  silentException: boolean);
+begin
+  owemTaskException := E;
+  E := nil;
+end; { TOTPWorkerExecutionModifier.FilterException }
+
+function TOTPWorkerExecutionModifier.GetTaskException: Exception;
+begin
+  Result := owemTaskException;
+end; { TOTPWorkerExecutionModifier.GetTaskException }
+
 { TOTPWorkItem }
 
 constructor TOTPWorkItem.Create(const task: IOmniTask);
@@ -496,6 +552,12 @@ begin
   owiScheduled_ms := DSiTimeGetTime64;
   owiUniqueID := owiTask.UniqueID;
 end; { TOTPWorkItem.Create }
+
+destructor TOTPWorkItem.Destroy;
+begin
+  FreeAndNil(owiTaskException);
+  inherited;
+end; { TOTPWorkItem.Destroy }
 
 function TOTPWorkItem.Description: string;
 begin
@@ -634,33 +696,36 @@ var
   stopUserTime   : int64;
 {$ENDIF LogThreadPool}
 var
-  task: IOmniTask;
+  excFilter: IOTPWorkerExecutionModifier;
+  task     : IOmniTask;
 begin
   WorkItem_ref := workItem;
   task := WorkItem_ref.task;
   try
-    try
-      {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);
-      DSiGetThreadTimes(creationTime, startUserTime, startKernelTime); {$ENDIF LogThreadPool}
-      if assigned(task) then
-        with (task as IOmniTaskExecutor) do begin
-          SetThreadData(owtThreadData);
-          Execute;
-        end;
-      {$IFDEF LogThreadPool}DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
-      Log(
-        'Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms',
-        [Description, WorkItem_ref.Description, Round
-          ((stopUserTime - startUserTime) / 10000), Round
-          ((stopKernelTime - startKernelTime) / 10000)]); {$ENDIF LogThreadPool}
-    except
-      on E: Exception do begin
-        {$IFDEF LogThreadPool}Log(
-          'Thread %s caught exception %s during exection of %s',
-          [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
-        owtRemoveFromPool := true;
-        //must re-acquire exception object or it will be released when this exception block exists
-        AcquireExceptionObject;
+    excFilter := TOTPWorkerExecutionModifier.Create;
+    {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);
+    DSiGetThreadTimes(creationTime, startUserTime, startKernelTime); {$ENDIF LogThreadPool}
+    if assigned(task) then
+      with (task as IOmniTaskExecutor) do begin
+        SetThreadData(owtThreadData);
+        Execute(excFilter);
+      end;
+    {$IFDEF LogThreadPool}DSiGetThreadTimes(creationTime, stopUserTime, stopKernelTime);
+    Log(
+      'Thread %s completed execution of %s; user time = %d ms, kernel time = %d ms',
+      [Description, WorkItem_ref.Description, Round
+        ((stopUserTime - startUserTime) / 10000), Round
+        ((stopKernelTime - startKernelTime) / 10000)]); {$ENDIF LogThreadPool}
+    if assigned(excFilter.TaskException) then begin
+      {$IFDEF LogThreadPool}Log(
+        'Thread %s caught exception %s during exection of %s',
+        [Description, E.Message, WorkItem_ref.Description]);{$ENDIF LogThreadPool}
+      if assigned(owtWorkItemLock) then begin
+        owtWorkItemLock.Acquire;
+        try
+          if assigned(WorkItem_ref) then
+            WorkItem_ref.TaskException := excFilter.DetachException;
+        finally owtWorkItemLock.Release end;
       end;
     end;
   finally task := nil; end;
@@ -1051,12 +1116,19 @@ begin
     FreeAndNil(workItem);
     Exit;
   end;
+  {$IFDEF LogThreadPool}
+  if assigned(workItem.TaskException) then
+    Log('Thread %s completed request %s with exception %s: %s',
+      [worker.Description, workItem.Description, workItem.TaskException.ClassName,
+       workItem.TaskException.Message]);
+  else
+    Log('Thread %s completed request %s', [worker.Description, workItem.Description]);
+  Log('Destroying %s', [workItem.Description]);
+  {$ENDIF LogThreadPool}
   if assigned(owMonitorObserver) then
     owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID)));
-  {$IFDEF LogThreadPool}Log('Thread %s completed request %s',
-    [worker.Description, workItem.Description]);
-    Log('Destroying %s', [workItem.Description]);{$ENDIF LogThreadPool}
+      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID, workItem.TaskException)));
+  workItem.TaskException := nil; // owMonitorObserver will destroy it
   FreeAndNil(workItem);
   // if (not (owDestroying)) and (owStoppingWorkers.IndexOf(worker) >= 0) then begin 
   // owStoppingWorkers.Remove(worker); 
