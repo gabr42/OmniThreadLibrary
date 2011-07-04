@@ -253,6 +253,7 @@ type
   strict private
     obcBlockSize  : integer;
     obcHeadPointer: POmniTaggedPointer;
+    obcMemStack   : TOmniBaseBoundedStack;
     obcNumSlots   : integer;
     obcTailPointer: POmniTaggedPointer;
   strict protected
@@ -269,7 +270,7 @@ type
     function  PrevSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
     procedure ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean = false);
   public
-    constructor Create(blockSize: integer = 65536; numCachedBlocks: integer = 2);
+    constructor Create(blockSize: integer = 65536; numCachedBlocks: integer = 4);
     destructor  Destroy; override;
     function  Dequeue: TOmniValue;
     procedure Enqueue(const value: TOmniValue);
@@ -524,7 +525,7 @@ var
 begin
   Result := inherited Pop(value);
   if Result then begin
-    countAfter := osInStackCount.Decrement;  //' range check error??
+    countAfter := osInStackCount.Decrement;
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
     if countAfter <= osPartlyEmptyCount then
       ContainerSubject.NotifyOnce(coiNotifyOnPartlyEmpty);
@@ -964,6 +965,9 @@ end; { TOmniTaggedPointer.Move }
 { TOmniBaseQueue }
 
 constructor TOmniBaseQueue.Create(blockSize: integer; numCachedBlocks: integer);
+var
+  iMem  : integer;
+  memory: POmniTaggedValue;
 begin
   inherited Create;
   obcBlockSize := (((blockSize-1) div SizeOf(TOmniTaggedValue)) + 1) * SizeOf(TOmniTaggedValue);
@@ -971,6 +975,13 @@ begin
   if obcNumSlots > 65536 then
     raise Exception.CreateFmt('TOmniBaseQueue.Create: Maximum block size is %d',
             [65536 * SizeOf(TOmniTaggedValue)]);
+  obcMemStack := TOmniBaseBoundedStack.Create;
+  obcMemStack.Initialize(numCachedBlocks, SizeOf(pointer));
+  for iMem := 1 to numCachedBlocks do begin
+    memory := AllocMem(obcBlockSize);
+    PartitionMemory(memory);
+    Assert(obcMemStack.Push(memory));
+  end;
   Initialize;
 end; { TOmniBaseQueue.Create }
 
@@ -981,19 +992,19 @@ begin
 end; { TOmniBaseQueue.Dequeue }
 
 destructor TOmniBaseQueue.Destroy;
+var
+  memory: pointer;
 begin
   Cleanup;
+  while obcMemStack.Pop(memory) do
+    FreeMem(memory);
+  FreeAndNil(obcMemStack);
   inherited;
 end; { TOmniBaseQueue.Destroy }
 
 function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
-var
-  cached: POmniTaggedValue;
 begin
-  cached := obcCachedBlock;
-  if assigned(cached) and CAS32(cached, nil, obcCachedBlock) then
-    Result := cached
-  else begin
+  if not obcMemStack.Pop(Result) then begin
     Result := AllocMem(obcBlockSize);
     PartitionMemory(Result);
   end;
@@ -1128,10 +1139,10 @@ procedure TOmniBaseQueue.PreallocateMemory;
 var
   memory: POmniTaggedValue;
 begin
-  if not assigned(obcCachedBlock) then begin
+  if obcMemStack.IsEmpty then begin
     memory := AllocMem(obcBlockSize);
     PartitionMemory(memory);
-    if not CAS32(nil, memory, obcCachedBlock) then
+    if not obcMemStack.Push(memory) then
       FreeMem(memory);
   end;
 end; { TOmniBaseQueue.PreallocateMemory }
@@ -1145,12 +1156,12 @@ end; { TOmniBaseQueue.PrevSlot }
 procedure TOmniBaseQueue.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
 begin
   {$IFDEF DEBUG_OMNI_QUEUE}Assert(firstSlot.Tag = tagHeader);{$ENDIF DEBUG_OMNI_QUEUE}
-  if forceFree or assigned(obcCachedBlock) then
+  if forceFree or obcMemStack.IsFull then
     FreeMem(firstSlot)
   else begin
     ZeroMemory(firstSlot, obcBlockSize);
     PartitionMemory(firstSlot);
-    if not CAS32(nil, firstSlot, obcCachedBlock) then
+    if not obcMemStack.Push(firstSlot) then
       FreeMem(firstSlot);
   end;
 end; { TOmniBaseQueue.ReleaseBlock }
