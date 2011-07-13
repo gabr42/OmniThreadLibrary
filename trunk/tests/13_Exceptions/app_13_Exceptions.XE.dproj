@@ -38,6 +38,8 @@
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
+			<DCC_MapFile>3</DCC_MapFile>
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_ResourcePath>..\..;..\..\src;$(DCC_ResourcePath)</DCC_ResourcePath>
