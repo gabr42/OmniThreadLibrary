@@ -221,7 +221,7 @@ end; { TfrmTestOtlCollections.CheckResult }
 function TfrmTestOmniQueue.CreateCollection: TOmniBaseQueue;
 begin
   if rgCollectionType.ItemIndex = 0 then
-    Result := TOmniBaseQueue.Create(FBlockSize*1024)
+    Result := TOmniBaseQueue.Create(FBlockSize*1024, 4)
   else
     Result := TOmniQueue.Create(FBlockSize*1024);
 end; { TfrmTestOtlCollections.CreateCollection }
@@ -310,9 +310,9 @@ begin
   GReadersCount.Value := 0;
   GStartedWorkers.Value := 0;
   Log('%d -> %d', [numForwarders, numReaders]);
-  FSrcCollection := CreateCollection;
-  FDstCollection := CreateCollection;
-  FChanCollection := CreateCollection;
+  FSrcCollection := CreateCollection; OutputDebugString(PChar(Format('Source: %p', [pointer(FSrcCollection)])));
+  FDstCollection := CreateCollection; OutputDebugString(PChar(Format('Dest: %p', [pointer(FDstCollection)])));
+  FChanCollection := CreateCollection;OutputDebugString(PChar(Format('Chan: %p', [pointer(FChanCollection)])));
   FNumWorkers.Value := numForwarders + numReaders;
   for i := 1 to CCountThreadedTest do
     FSrcCollection.Enqueue(i);
