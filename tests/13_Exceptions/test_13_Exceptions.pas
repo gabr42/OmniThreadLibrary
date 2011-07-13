@@ -1,4 +1,4 @@
-unit test_13_Exceptions;
+ unit test_13_Exceptions;
 
 interface
 
@@ -9,7 +9,7 @@ uses
   OtlTaskControl,
   OtlContainers,
   OtlComm,
-  OtlEventMonitor;
+  OtlEventMonitor, OtlThreadPool;
 
 type
   TfrmTestExceptions = class(TForm)
@@ -23,6 +23,8 @@ type
     cbSilentExceptions: TCheckBox;
     cbThreadPool: TCheckBox;
     procedure FormCreate(Sender: TObject);
+    procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64; var
+      taskException: Exception);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunObjectTest(Sender: TObject);
     procedure RunTest(Sender: TObject);
@@ -39,8 +41,7 @@ implementation
 
 uses
   SyncObjs,
-  DSiWin32,
-  SpinLock;
+  DSiWin32;
 
 {$R *.dfm}
 
@@ -89,11 +90,22 @@ procedure TfrmTestExceptions.FormCreate(Sender: TObject);
 begin
   if DebugHook <> 0 then
     Log('Don''t run this program in the debugger!');
+  GlobalOmniThreadPool.MonitorWith(OmniTED);
 end;
 
 procedure TfrmTestExceptions.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
+end;
+
+procedure TfrmTestExceptions.OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool;
+  taskID: Int64; var taskException: Exception);
+begin
+  if not assigned(taskException) then
+    Log(Format('Pooled task %d completed successfully', [taskID]))
+  else
+    Log(Format('Pooled task %d completed with exception %s: %s',
+      [taskID, taskException.ClassName, taskException.Message]));
 end;
 
 procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl;
