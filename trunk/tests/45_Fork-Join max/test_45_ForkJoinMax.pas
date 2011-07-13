@@ -115,6 +115,8 @@ begin { TfrmQuickSortDemo.ParallelMax }
     computeLeft := Compute(left, mid);
     computeRight := Compute(mid + 1, right);
     Result := Max(computeLeft.Value, computeRight.Value);
+    // THIS IS WRONG:
+    // Result := Max(Compute(left, mid).Value, Compute(mid + 1, right).Value);
   end;
 end; { TfrmQuickSortDemo.ParallelMax }
 
