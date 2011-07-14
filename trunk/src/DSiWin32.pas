@@ -3871,7 +3871,7 @@ const
            CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, PChar(useWorkDir), start,
            processInfo) then
       begin
-        SetLastError(0); // [Mitja] found a testcase where CreateProcess succeeded but the last error was 126
+        SetLastError(0); // [Mitja] found a situation where CreateProcess succeeded but the last error was 126
         Result := processInfo.hProcess;
         totalBytesRead := 0;
         repeat
