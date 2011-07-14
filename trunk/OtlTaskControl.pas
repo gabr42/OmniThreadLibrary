@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-04
-///   Version           : 1.26
+///   Last modification : 2011-07-14
+///   Version           : 1.26a
 ///</para><para>
 ///   History:
+///     1.26a: 2011-07-14
+///       - Fixed race condition in TOmniTask.Execute. Big thanks to [Anton Alisov] for
+///         providing reproducible test case.
 ///     1.26: 2011-07-04
 ///       - Changed exception handling.
 ///     1.25a: 2011-05-27
@@ -1186,9 +1189,11 @@ var
   chainTo        : IOmniTaskControl;
   silentException: boolean;
   taskException  : Exception;
+  terminateEvent : TDSiEventHandle;
 begin
   otExecuting := true;
   chainTo := nil;
+  terminateEvent := 0;
   try
     try
       {$IFNDEF OTL_DontSetThreadName}
@@ -1221,7 +1226,7 @@ begin
           integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
 
       otSharedInfo_ref.Stopped := true;
-      SetEvent(otSharedInfo_ref.TerminatedEvent);
+      terminateEvent := otSharedInfo_ref.TerminatedEvent;
     end;
     if assigned(otSharedInfo_ref.ChainTo) and
        (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
@@ -1234,6 +1239,8 @@ begin
     otExecutor_ref   := nil;
     otParameters_ref := nil;
     otSharedInfo_ref := nil;
+    if terminateEvent <> 0 then
+      SetEvent(terminateEvent);
   end;
   if assigned(chainTo) then
     chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
