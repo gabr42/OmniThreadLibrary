@@ -19,8 +19,7 @@ type
     btnInitException   : TButton;
     btnRC              : TButton;
     lbLog              : TListBox;
-    OmniTED            : TOmniEventMonitor;
-    cbSilentExceptions: TCheckBox;
+    OmniTED: TOmniEventMonitor;
     cbThreadPool: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
@@ -115,10 +114,7 @@ procedure TfrmTestExceptions.RunObjectTest(Sender: TObject);
 var
   task: IOmniTaskControl;
 begin
-  task := CreateTask(TExceptionTest.Create(Sender = btnInitException));
-  if cbSilentExceptions.Checked then
-    task.SilentExceptions;
-  task.Enforced(true);
+  task := CreateTask(TExceptionTest.Create(Sender = btnInitException)).Enforced(true);
   if cbThreadPool.Checked then
     task.Schedule
   else
@@ -132,8 +128,6 @@ var
   task: IOmniTaskControl;
 begin
   task := CreateTask(TestException);
-  if cbSilentExceptions.Checked then
-    task.SilentExceptions;
   if cbThreadPool.Checked then
     task.Schedule
   else

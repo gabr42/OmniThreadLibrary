@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-05-17
-///   Last modification : 2010-07-01
-///   Version           : 1.01
+///   Last modification : 2011-07-14
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2011-07-14
+///       - Support for non-silent exceptions removed.
+///       - FilterException can "eat" the exception.
 ///     1.01: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///</para></remarks>
@@ -66,17 +69,15 @@ procedure SendThreadNotifications(notifyType: TThreadNotificationType;
   const threadName: string);
 
 type
-  TExceptionFilterProc = procedure(e: Exception; var silentException,
-    continueProcessing: boolean);
-  TExceptionFilterMeth = procedure(e: Exception; var silentException,
-    continueProcessing: boolean) of object;
+  TExceptionFilterProc = procedure(var e: Exception; var continueProcessing: boolean);
+  TExceptionFilterMeth = procedure(var e: Exception; var continueProcessing: boolean) of object;
 
 procedure RegisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
 procedure RegisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
 procedure UnregisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
 procedure UnregisterExceptionFilter(filterMethod: TExceptionFilterMeth); overload;
 
-procedure FilterException(e: Exception; var silentException: boolean);
+procedure FilterException(var e: Exception);
 
 implementation
 
@@ -120,7 +121,7 @@ type
     procedure Register(filterMethod: TExceptionFilterMeth); overload;
     procedure Unregister(filterProc: TExceptionFilterProc); overload;
     procedure Unregister(filterMethod: TExceptionFilterMeth); overload;
-    procedure Filter(e: Exception; var silentException: boolean);
+    procedure Filter(var e: Exception);
   end; { TExceptionFilters }
 
 var
@@ -173,9 +174,9 @@ begin
   GExceptionFilters.Unregister(filterMethod);
 end; { UnregisterExceptionFilter }
 
-procedure FilterException(e: Exception; var silentException: boolean);
+procedure FilterException(var e: Exception);
 begin
-  GExceptionFilters.Filter(e, silentException);
+  GExceptionFilters.Filter(e);
 end; { FilterException }
 
 { TProcMethodList }
@@ -316,7 +317,7 @@ begin
   inherited;
 end; { TExceptionFilters.Destroy }
 
-procedure TExceptionFilters.Filter(e: Exception; var silentException: boolean);
+procedure TExceptionFilters.Filter(var e: Exception);
 var
   continueProcessing: boolean;
   iObserver         : integer;
@@ -328,11 +329,11 @@ begin
     continueProcessing := true;
     while continueProcessing and (iObserver < efList.Count) do begin
       if efList[iObserver] = nil then
-        TExceptionFilterProc(efList[iObserver+1])(e, silentException, continueProcessing)
+        TExceptionFilterProc(efList[iObserver+1])(e, continueProcessing)
       else begin
         meth.Data := efList[iObserver];
         meth.Code := efList[iObserver+1];
-        TExceptionFilterMeth(meth)(e, silentException, continueProcessing);
+        TExceptionFilterMeth(meth)(e, continueProcessing);
       end;
       Inc(iObserver, 2);
     end;
