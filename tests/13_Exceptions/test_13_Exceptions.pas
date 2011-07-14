@@ -23,13 +23,13 @@ type
     cbSilentExceptions: TCheckBox;
     cbThreadPool: TCheckBox;
     procedure FormCreate(Sender: TObject);
-    procedure OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool; taskID: Int64; var
-      taskException: Exception);
     procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure RunObjectTest(Sender: TObject);
     procedure RunTest(Sender: TObject);
   private
     procedure Log(const msg: string);
+  strict protected
+    function FormatException(const exc: Exception): string;
   public
     procedure TestException(const task: IOmniTask);
   end;
@@ -86,6 +86,13 @@ end;
 
 { TfrmTestOtlComm }
 
+function TfrmTestExceptions.FormatException(const exc: Exception): string;
+begin
+  Result := '';
+  if assigned(exc) then
+    Result := exc.ClassName + ': ' + exc.Message;
+end;
+
 procedure TfrmTestExceptions.FormCreate(Sender: TObject);
 begin
   if DebugHook <> 0 then
@@ -96,16 +103,6 @@ end;
 procedure TfrmTestExceptions.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
-end;
-
-procedure TfrmTestExceptions.OmniTEDPoolWorkItemCompleted(const pool: IOmniThreadPool;
-  taskID: Int64; var taskException: Exception);
-begin
-  if not assigned(taskException) then
-    Log(Format('Pooled task %d completed successfully', [taskID]))
-  else
-    Log(Format('Pooled task %d completed with exception %s: %s',
-      [taskID, taskException.ClassName, taskException.Message]));
 end;
 
 procedure TfrmTestExceptions.OmniTEDTaskMessage(const task: IOmniTaskControl;
@@ -127,7 +124,7 @@ begin
   else
     task.Run;
   task.Terminate(3000);
-  Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
+  Log(Format('%d %s %s', [task.ExitCode, task.ExitMessage, FormatException(task.FatalException)]));
 end;
 
 procedure TfrmTestExceptions.RunTest(Sender: TObject);
@@ -148,7 +145,7 @@ begin
   else
     task.Comm.Send(EXC_CUSTOM);
   task.WaitFor(30000);
-  Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
+  Log(Format('%d %s %s', [task.ExitCode, task.ExitMessage, FormatException(task.FatalException)]));
 end;
 
 procedure TfrmTestExceptions.TestException(const task: IOmniTask);

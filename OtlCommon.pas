@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-12-12
-///   Version           : 1.19a
+///   Last modification : 2011-07-14
+///   Version           : 1.20
 ///</para><para>
 ///   History:
+///     1.20: 2011-07-14
+///       - Removed EXIT_EXCEPTION error code.
 ///     1.19a: 2010-12-12
 ///       - Define implicit TOmniValue<->TDateTime conversion operators only for Delphi XE
 ///         and higher.
@@ -143,11 +145,11 @@ uses
 const
   // reserved exit statuses
   EXIT_OK                        = 0;
-  EXIT_EXCEPTION                 = integer($80000000);
-  EXIT_THREADPOOL_QUEUE_TOO_LONG = EXIT_EXCEPTION + 1;
-  EXIT_THREADPOOL_STALE_TASK     = EXIT_EXCEPTION + 2;
-  EXIT_THREADPOOL_CANCELLED      = EXIT_EXCEPTION + 3;
-  EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_EXCEPTION + 4;
+  EXIT_INTERNAL                  = integer($80000000);
+  EXIT_THREADPOOL_QUEUE_TOO_LONG = EXIT_INTERNAL + 0;
+  EXIT_THREADPOOL_STALE_TASK     = EXIT_INTERNAL + 1;
+  EXIT_THREADPOOL_CANCELLED      = EXIT_INTERNAL + 2;
+  EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
   //:TOmniValue conversion exception.
