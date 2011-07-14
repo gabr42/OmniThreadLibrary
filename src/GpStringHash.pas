@@ -364,7 +364,7 @@ type
     sdNumBuckets : cardinal;
     sdSize       : cardinal;
     sdStringTable: TGpStringTable;
-    sdTail: PGpTableHashItem;
+    sdTail       : PGpTableHashItem;
     sdUsedBuckets: cardinal;
   protected
     function  FindBucket(const key: string): cardinal;
