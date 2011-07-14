@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-07-14
-///   Version           : 1.26a
+///   Version           : 1.27
 ///</para><para>
 ///   History:
+///     1.27: 2011-07-14
+///       - IOmniTaskControl implements FatalException property.
 ///     1.26a: 2011-07-14
 ///       - Fixed race condition in TOmniTask.Execute. Big thanks to [Anton Alisov] for
 ///         providing reproducible test case.
@@ -331,6 +333,7 @@ type
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer): IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
+    function  GetFatalException: Exception;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
@@ -383,6 +386,7 @@ type
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
+    property FatalException: Exception read GetFatalException;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property UniqueID: int64 read GetUniqueID;
@@ -613,7 +617,7 @@ type
   strict private
     oteCommList          : TInterfaceList;
     oteCommRebuildHandles: THandle;
-    oteException         : pointer;
+    oteException         : Exception;
     oteExecutorType      : TOmniExecutorType;
     oteExitCode          : TGp4AlignedInt;
     oteExitMessage       : string;
@@ -696,7 +700,7 @@ type
     property Implementor: TObject read GetImplementor;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Priority: TOTLThreadPriority read otePriority write otePriority;
-    property TaskException: pointer read oteException write oteException;
+    property TaskException: Exception read oteException write oteException;
     property Terminating: boolean read oteTerminating write oteTerminating;
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
     property WorkerInitialized: THandle read oteWorkerInitialized;
@@ -729,7 +733,7 @@ type
       sharedInfo: TOmniSharedTaskInfo);
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
-    procedure Execute(const modifier: IOmniTaskExecutionModifier = nil);
+    procedure Execute;
     {$IFDEF OTL_Anonymous}
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
     {$ENDIF OTL_Anonymous}
@@ -808,6 +812,7 @@ type
     function  GetComm: IOmniCommunicationEndpoint; inline;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
+    function  GetFatalException: Exception;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
@@ -884,6 +889,7 @@ type
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
+    property FatalException: Exception read GetFatalException;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
@@ -1184,7 +1190,7 @@ begin
     otExecutor_ref.Options := otExecutor_ref.Options - [tcoForceExecution];
 end; { TOmniTask.Enforced }
 
-procedure TOmniTask.Execute(const modifier: IOmniTaskExecutionModifier);
+procedure TOmniTask.Execute;
 var
   chainTo        : IOmniTaskControl;
   silentException: boolean;
@@ -1207,15 +1213,12 @@ begin
           taskException := AcquireExceptionObject;
           silentException := (tcoSilentExceptions in otExecutor_ref.Options);
           FilterException(taskException, silentException);
-          if assigned(modifier) then
-            modifier.FilterException(taskException, silentException);
           if assigned(taskException) then begin
+            SetException(taskException);
             if silentException then
-              SetExitStatus(EXIT_EXCEPTION, taskException.ClassName + ': ' + taskException.Message)
-            else begin
-              SetException(taskException);
-//              raise;
-            end;
+              otExecutor_ref.Options := otExecutor_ref.Options + [tcoSilentExceptions]
+            else
+              otExecutor_ref.Options := otExecutor_ref.Options - [tcoSilentExceptions];
           end;
         end;
       end;
@@ -1492,6 +1495,7 @@ begin
   finally oteInternalLock.Release; end;
   FreeAndNil(oteTerminateHandles);
   FreeAndNil(oteMethodHash);
+  FreeAndNil(oteException);
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
   inherited;
@@ -2259,7 +2263,7 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying !
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
   taskExcept := nil;
-  if assigned(otcExecutor) then begin
+  if assigned(otcExecutor) and not (tcoSilentExceptions in otcExecutor.Options) then begin
     taskExcept := Exception(otcExecutor.TaskException);
     otcExecutor.TaskException := nil;
   end;
@@ -2427,6 +2431,13 @@ function TOmniTaskControl.GetExitMessage: string;
 begin
   Result := otcExecutor.ExitMessage;
 end; { TOmniTaskControl.GetExitMessage }
+
+function TOmniTaskControl.GetFatalException: Exception;
+begin
+  Result := nil;
+  if assigned(otcExecutor) then
+    Result := otcExecutor.TaskException;
+end; { TOmniTaskControl.GetFatalException }
 
 function TOmniTaskControl.GetLock: TSynchroObject;
 begin

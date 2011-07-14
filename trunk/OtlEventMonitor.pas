@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-04
-///   Version           : 1.05
+///   Last modification : 2011-07-14
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2011-07-14
+///       - Removed task exception object parameter from OnPoolWorkItemCompleted.
 ///     1.05: 2011-07-04
 ///       - OnPoolWorkItemCompleted event handler got new parameter - task exception object.
 ///     1.04b: 2011-02-15
@@ -90,8 +92,7 @@ type
   TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
   TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
   TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
-  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64;
-    var taskException: Exception) of object;
+  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
@@ -325,9 +326,7 @@ begin { TOmniEventMonitor.WndProc }
         end
         else if tpMonitorInfo.ThreadPoolOperation = tpoWorkItemCompleted then begin
           if assigned(OnPoolWorkItemCompleted) then begin
-            taskException := tpMonitorInfo.TaskException;
-            tpMonitorInfo.TaskException := nil;
-            OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID, taskException);
+            OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID);
             FreeAndNil(taskException);
           end;
         end;

@@ -88,7 +88,6 @@ object frmTestExceptions: TfrmTestExceptions
     TabOrder = 7
   end
   object OmniTED: TOmniEventMonitor
-    OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
     OnTaskMessage = OmniTEDTaskMessage
     Left = 8
     Top = 264

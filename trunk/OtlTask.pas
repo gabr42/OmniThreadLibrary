@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-04
-///   Version           : 1.12
+///   Last modification : 2011-07-14
+///   Version           : 1.13
 ///</para><para>
 ///   History:
+///     1.13: 2011-07-14
+///       - IOmniTaskExecutionModifier removed again.
 ///     1.12: 2011-07-04
 ///       - IOmniTaskExecutor.Execute accepts optional IOmniTaskExecutionModifier parameter.
 ///     1.11: 2011-03-16
@@ -162,12 +164,8 @@ type
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
 
-  IOmniTaskExecutionModifier = interface ['{63A7FDDC-64EC-4DDE-AD69-A0975390F361}']
-    procedure FilterException(var E: Exception; var silentException: boolean);
-  end; { IOmniTaskExecutionModifier }
-
   IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']
-    procedure Execute(const modifier: IOmniTaskExecutionModifier = nil);
+    procedure Execute;
     procedure SetThreadData(const value: IInterface);
   end; { IOmniTaskExecutor }
 
