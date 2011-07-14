@@ -43,6 +43,7 @@
 ///   History:
 ///     1.27: 2011-07-14
 ///       - IOmniTaskControl implements FatalException property.
+///       - Support for non-silent exceptions removed.
 ///     1.26a: 2011-07-14
 ///       - Fixed race condition in TOmniTask.Execute. Big thanks to [Anton Alisov] for
 ///         providing reproducible test case.
@@ -371,7 +372,6 @@ type
     function  SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload;
     function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
-    function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
@@ -578,8 +578,7 @@ type
     property Signature: TOmniInvokeType read oiiSignature;
   end; { TOmniInvokeInfo }
 
-  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoForceExecution,
-    tcoSilentExceptions);
+  TOmniTaskControlOption = (tcoAlertableWait, tcoMessageWait, tcoForceExecution);
   TOmniTaskControlOptions = set of TOmniTaskControlOption;
   TOmniExecutorType = (etNone, etMethod, etProcedure, etWorker, etFunction);
 
@@ -875,7 +874,6 @@ type
     function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
       TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
-    function  SilentExceptions: IOmniTaskControl;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
@@ -1192,10 +1190,9 @@ end; { TOmniTask.Enforced }
 
 procedure TOmniTask.Execute;
 var
-  chainTo        : IOmniTaskControl;
-  silentException: boolean;
-  taskException  : Exception;
-  terminateEvent : TDSiEventHandle;
+  chainTo       : IOmniTaskControl;
+  taskException : Exception;
+  terminateEvent: TDSiEventHandle;
 begin
   otExecuting := true;
   chainTo := nil;
@@ -1211,15 +1208,9 @@ begin
       except
         on E: Exception do begin
           taskException := AcquireExceptionObject;
-          silentException := (tcoSilentExceptions in otExecutor_ref.Options);
-          FilterException(taskException, silentException);
-          if assigned(taskException) then begin
+          FilterException(taskException);
+          if assigned(taskException) then
             SetException(taskException);
-            if silentException then
-              otExecutor_ref.Options := otExecutor_ref.Options + [tcoSilentExceptions]
-            else
-              otExecutor_ref.Options := otExecutor_ref.Options - [tcoSilentExceptions];
-          end;
         end;
       end;
     finally
@@ -2256,17 +2247,10 @@ end; { TOmniTaskControl.Create }
 {$ENDIF OTL_Anonymous}
 
 destructor TOmniTaskControl.Destroy;
-var
-  taskExcept: Exception;
 begin
   { TODO : Do we need wait-and-kill mechanism here to prevent shutdown locks? }
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying !
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
-  taskExcept := nil;
-  if assigned(otcExecutor) and not (tcoSilentExceptions in otcExecutor.Options) then begin
-    taskExcept := Exception(otcExecutor.TaskException);
-    otcExecutor.TaskException := nil;
-  end;
   DestroyMonitor;
   if assigned(otcThread) then begin
     Terminate;
@@ -2294,8 +2278,6 @@ begin
   FreeAndNil(otcOnMessageExec);
   FreeAndNil(otcOnTerminatedExec);
   inherited Destroy;
-  if assigned(taskExcept) then
-    raise taskExcept;
 end; { TOmniTaskControl.Destroy }
 
 function TOmniTaskControl.Alertable: IOmniTaskControl;
@@ -2773,12 +2755,6 @@ begin
   else
     raise Exception.Create('UserData can only be indexed by integer or string.');
 end; { TOmniTaskControl.SetUserDataInt }
-
-function TOmniTaskControl.SilentExceptions: IOmniTaskControl;
-begin
-  Options := Options + [tcoSilentExceptions];
-  Result := Self;
-end; { TOmniTaskControl.SilentExceptions }
 
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 var
