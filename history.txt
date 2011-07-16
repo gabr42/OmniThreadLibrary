@@ -1,9 +1,35 @@
-- OtlParallel compiles in Delphi 2009.
-- Bugs fixed in OtlEventMonitor: Message window could be used after it was destroyed.
-- Timer Proc can be shared between timers (timer ID parameter)
-- Parallel.Async, Parallel.ForkJoin, Parallel.TaskConfig
-- more? check the web
-- OtlParallel pools created on the fly
+2.1 2011-07-??
+- New features:
+  - Parallel.Async can be used to start simple background tasks.
+    [http://www.thedelphigeek.com/2011/04/simple-background-tasks-with.html]
+  - Parallel.ForkJoin - divide and conquer (fork/join) framework.
+    [http://www.thedelphigeek.com/2011/05/divide-and-conquer-in-parallel.html]
+  - OtlParallel tasks can be configured with Parallel.TaskConfig; you can also
+    use it to communicated with the owner thread from the task.
+    http://www.thedelphigeek.com/2011/04/configuring-background-otlparallel.html
+  - IOmniTask[Control] can call Invoke method to asynchronously execute a block
+    of code in the other thread.
+    [http://www.thedelphigeek.com/2011/03/synchronize-comes-to-omnithreadlibrary.html]
+  - Passes timer ID to timer proc if it accepts const TOmniValue parameter.
+  - Support for non-silent exceptions removed. Added property 
+    IOmniTaskControl.FatalExecption containing exception that was caught at the
+    task level.
+  - Change method signature in OtlHook.FilterException.
+  - IOmniTaskControl termination empties task message queue and calls appropriate
+    OnMessage handlers.
+
+- Bug fixes:
+  - Fixed race condition in TOmniTask.Execute.
+  - OtlParallel compiles in Delphi 2009.
+  - OTL monitor message window could be used after it was destroyed.
+  - Parallel.ForEach was never running on more than Process.Affinity.Count tasks.
+  - OtlParallel pools are created on the fly - Otlparallel unit can be used from a DLL.
+  - [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always returned False.
+  - Enumerating over TOmniTaskControlList (for example when using
+    IOmniTaskGroup.SendToAll) leaked one object.
+  - Makes sure timers are called even if there's a constant stream of messages in 
+    registered message queues.
+  - Fixed exception handling in the thread pool.
 
 2.0: 2010-12-10
 - New high-level primitives (unit OtlParallel):
