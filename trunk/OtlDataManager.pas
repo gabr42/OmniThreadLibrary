@@ -37,12 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2010-07-01
-///   Version           : 0.1
+///   Last modification : 2010-12-10
+///   Version           : 1.0
 ///</para><para>
 ///   History:
-///     0.1: 2010-04-13
-///       - Created.
+///     1.0: 2010-12-10
+//        - Created.
 ///</para></remarks>
 
 unit OtlDataManager;
