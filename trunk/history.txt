@@ -3,6 +3,7 @@
 - Timer Proc can be shared between timers (timer ID parameter)
 - Parallel.Async, Parallel.ForkJoin, Parallel.TaskConfig
 - more? check the web
+- OtlParallel pools created on the fly
 
 2.0: 2010-12-10
 - New high-level primitives (unit OtlParallel):
