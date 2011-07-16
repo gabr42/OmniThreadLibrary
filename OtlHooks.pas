@@ -36,7 +36,7 @@
 ///   History:
 ///     1.02: 2011-07-14
 ///       - Support for non-silent exceptions removed.
-///       - FilterException can "eat" the exception.
+///       - Changed signature for exception filters.
 ///     1.01: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///</para></remarks>
