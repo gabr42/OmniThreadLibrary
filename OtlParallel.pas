@@ -31,10 +31,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-06-25
-///   Version           : 1.10a
+///   Last modification : 2011-07-16
+///   Version           : 1.11
 ///</para><para>
 ///   History:
+///     1.11: 2011-07-16
+///       - GParallelPool and GPipelinePool are now initialized on the fly which allows
+///         OtlParallel to be used inside a DLL.
+///       - GParallelPool and GPipelinePool are now private and must be accessed with
+///         global methods GlobalParallelPool and GlobalPipelinePool.
 ///     1.10a: 2011-06-25
 ///       - Bug fixed: Parallel.ForEach was never running on more than
 ///         Process.Affinity.Count tasks.
@@ -624,10 +629,6 @@ type
     class function TaskConfig: IOmniTaskConfig;
   end; { Parallel }
 
-var
-  GParallelPool: IOmniThreadPool;
-  GPipelinePool: IOmniThreadPool;
-
   {$REGION 'Documentation'}
   ///	<summary>A workaround used in TOmniForkJoin&lt;T&gt; to add work units into
   ///	blocking collection. Calling IOmniBlockinCollection.Add directly causes internal
@@ -641,6 +642,13 @@ var
   ///	limitations of the compiler.</summary>
   {$ENDREGION}
   procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
+
+  ///	<returns>Global pool used for almost all OtlParallel constructs with the excetion
+  ///	of Parallel.Pipeline.</returns>
+  function GlobalParallelPool: IOmniThreadPool;
+
+  ///	<returns>Global pool used for Parallel.Pipeline tasks..</returns>
+  function GlobalPipelinePool: IOmniThreadPool;
 
 implementation
 
@@ -763,6 +771,10 @@ type
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
   end; { TOmniTaskConfig }
 
+var
+  GParallelPool: IOmniThreadPool;
+  GPipelinePool: IOmniThreadPool;
+
 { exports }
 
 procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
@@ -775,6 +787,24 @@ begin
   if assigned(taskConfig) then
     taskConfig.Apply(task);
 end; { ApplyConfig }
+
+function GlobalParallelPool: IOmniThreadPool;
+begin
+  if not assigned(GParallelPool) then begin
+    GParallelPool := CreateThreadPool('OtlParallel pool');
+    GParallelPool.IdleWorkerThreadTimeout_sec := 60*1000; // 1 minute
+  end;
+  Result := GParallelPool;
+end; { GlobalParallelPool }
+
+function GlobalPipelinePool: IOmniThreadPool;
+begin
+  if not assigned(GPipelinePool) then begin
+    GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
+    GPipelinePool.MaxExecuting := -1;
+  end;
+  Result := GPipelinePool;
+end; { GlobalPipelinePool }
 
 { Parallel }
 
@@ -819,7 +849,7 @@ begin
       end
     );
   ApplyConfig(taskConfig, omniTask);
-  omniTask.Schedule(GParallelPool);
+  omniTask.Schedule(GlobalParallelPool);
 end; { Parallel.Async }
 
 class procedure Parallel.Async(task, onTermination: TProc; taskConfig: IOmniTaskConfig);
@@ -975,7 +1005,7 @@ var
       ).Unobserved
        .SetParameter('Proc', intProc);
     ApplyConfig(taskConfig, task);
-    task.Schedule(GParallelPool);
+    task.Schedule(GlobalParallelPool);
   end; { InternalCreateJoinTask }
 
 begin { Parallel.Join }
@@ -1049,7 +1079,7 @@ begin
         ).Unobserved
          .SetParameter('Proc', intProc);
       ApplyConfig(taskConfig, task);
-      task.Schedule(GParallelPool);
+      task.Schedule(GlobalParallelPool);
     end;
     WaitForSingleObject(countStopped.Handle, INFINITE);
   end;
@@ -1353,8 +1383,8 @@ begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
     { TODO 3 -oPrimoz : Still not optimal - should know how many Parallel.ForEach are currently executing! }
-    if numTasks > GParallelPool.MaxExecuting then
-      GParallelPool.MaxExecuting := numTasks;
+    if numTasks > GlobalParallelPool.MaxExecuting then
+      GlobalParallelPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
@@ -1379,7 +1409,7 @@ begin
         task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
       if assigned(oplOnTaskControlCreate) then
         oplOnTaskControlCreate(task);
-      task.Schedule(GParallelPool);
+      task.Schedule(GlobalParallelPool);
     end;
     if not (ploNoWait in Options) then begin
       WaitForSingleObject(countStopped.Handle, INFINITE);
@@ -1929,7 +1959,7 @@ procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTas
 begin
   ofTask := CreateTask(action, 'TOmniFuture action');
   ApplyConfig(taskConfig, ofTask);
-  ofTask.Schedule(GParallelPool);
+  ofTask.Schedule(GlobalParallelPool);
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.IsCancelled: boolean;
@@ -2152,7 +2182,7 @@ begin
         .SetParameter('Stopped', countStopped)
         .SetParameter('Cancelled', opCancelWith);
       ApplyConfig((opStages[iStage] as IOmniPipelineStage).TaskConfig, task);
-      task.Schedule(GPipelinePool);
+      task.Schedule(GlobalPipelinePool);
     end; //for iTask
   end; //for iStage
   Result := outQueue;
@@ -2494,9 +2524,4 @@ begin
   Result := Self;
 end; { TOmniTaskConfig.WithLock }
 
-initialization
-  GParallelPool := CreateThreadPool('OtlParallel pool');
-  GParallelPool.IdleWorkerThreadTimeout_sec := 60*1000; // 1 minute
-  GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
-  GPipelinePool.MaxExecuting := -1;
 end.
