@@ -30,6 +30,13 @@
   - Makes sure timers are called even if there's a constant stream of messages in 
     registered message queues.
   - Fixed exception handling in the thread pool.
+  
+- New demos:
+  - 43_InvokeAnonymous: Demo for IOmniTaskControl.Invoke and IOmniTask.Invoke.
+  - 44_Fork-Join QuickSort: QuickSort implemented with Parallel.ForkJoin.
+  - 45_Fork-Join max: Selecting maximum element in an array using Parallel.ForkJoin.
+  - 46_Async: Demo for Parallel.Async.
+  - 47_TaskConfig: Demo for Parallel.TaskConfig.
 
 2.0: 2010-12-10
 - New high-level primitives (unit OtlParallel):
