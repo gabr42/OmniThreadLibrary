@@ -11,10 +11,10 @@
     of code in the other thread.
     [http://www.thedelphigeek.com/2011/03/synchronize-comes-to-omnithreadlibrary.html]
   - Passes timer ID to timer proc if it accepts const TOmniValue parameter.
-  - Support for non-silent exceptions removed. Added property 
-    IOmniTaskControl.FatalExecption containing exception that was caught at the
-    task level.
-  - Change method signature in OtlHook.FilterException.
+  - Support for non-silent exceptions removed.
+  - Added property IOmniTaskControl.FatalExecption containing exception that was 
+    caught at the task level.
+  - Change signature for exception filters in OtlHook.FilterException.
   - IOmniTaskControl termination empties task message queue and calls appropriate
     OnMessage handlers.
 
