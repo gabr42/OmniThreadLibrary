@@ -46,7 +46,7 @@
 			<DCC_WriteableConstants>True</DCC_WriteableConstants>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
-			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_MapFile>3</DCC_MapFile>
