@@ -126,7 +126,7 @@
 			<Projects Include="40_Mandelbrot\app_40_Mandelbrot.2010.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="41_Cascade\app_41_Pipeline.2010.dproj">
+			<Projects Include="41_Pipeline\app_41_Pipeline.2010.dproj">
 				<Dependencies/>
 			</Projects>
 			<Projects Include="42_MessageQueue\app_42_MessageQueue.2010.dproj">
@@ -525,13 +525,13 @@
 			<MSBuild Targets="Make" Projects="40_Mandelbrot\app_40_Mandelbrot.2010.dproj"/>
 		</Target>
 		<Target Name="app_41_Pipeline_2010">
-			<MSBuild Projects="41_Cascade\app_41_Pipeline.2010.dproj"/>
+			<MSBuild Projects="41_Pipeline\app_41_Pipeline.2010.dproj"/>
 		</Target>
 		<Target Name="app_41_Pipeline_2010:Clean">
-			<MSBuild Targets="Clean" Projects="41_Cascade\app_41_Pipeline.2010.dproj"/>
+			<MSBuild Targets="Clean" Projects="41_Pipeline\app_41_Pipeline.2010.dproj"/>
 		</Target>
 		<Target Name="app_41_Pipeline_2010:Make">
-			<MSBuild Targets="Make" Projects="41_Cascade\app_41_Pipeline.2010.dproj"/>
+			<MSBuild Targets="Make" Projects="41_Pipeline\app_41_Pipeline.2010.dproj"/>
 		</Target>
 		<Target Name="app_42_MessageQueue_2010">
 			<MSBuild Projects="42_MessageQueue\app_42_MessageQueue.2010.dproj"/>
