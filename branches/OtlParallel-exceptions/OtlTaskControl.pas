@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-14
-///   Version           : 1.27
+///   Last modification : 2011-07-17
+///   Version           : 1.28
 ///</para><para>
 ///   History:
+///     1.28: 2011-07-17
+///       - Implemented IOmniTaskControl.DetachException.
 ///     1.27: 2011-07-14
 ///       - IOmniTaskControl implements FatalException property.
 ///       - Support for non-silent exceptions removed.
@@ -333,6 +335,7 @@ type
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer): IOmniTaskControl;
+    function  DetachException: Exception;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  GetFatalException: Exception;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
@@ -839,6 +842,7 @@ type
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer = 0): IOmniTaskControl;
+    function DetachException: Exception;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
@@ -2334,6 +2338,16 @@ begin
     otcEventMonitorInternal := false;
   end;
 end; { TOmniTaskControl.DestroyMonitor }
+
+function TOmniTaskControl.DetachException: Exception;
+begin
+  if not assigned(otcExecutor) then
+    Result := nil
+  else begin
+    Result := otcExecutor.TaskException;
+    otcExecutor.TaskException := nil;
+  end;
+end; { TOmniTaskControl.DetachException }
 
 function TOmniTaskControl.Enforced(forceExecution: boolean = true): IOmniTaskControl;
 begin

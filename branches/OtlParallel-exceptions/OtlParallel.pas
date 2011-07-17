@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-07-16
-///   Version           : 1.11
+///   Last modification : 2011-07-17
+///   Version           : 1.12
 ///</para><para>
 ///   History:
+///     1.12: 2011-07-17
+///       - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
+///         in .Value. New function .FatalException and .DetachException.
 ///     1.11: 2011-07-16
 ///       - GParallelPool and GPipelinePool are now initialized on the fly which allows
 ///         OtlParallel to be used inside a DLL.
@@ -269,6 +272,8 @@ type
 
   IOmniFuture<T> = interface
     procedure Cancel;
+    function  DetachException: Exception;
+    function  FatalException: Exception;
     function  IsCancelled: boolean;
     function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
@@ -278,19 +283,23 @@ type
   { TODO : maybe add Value(timeout_ms) }
   TOmniFuture<T> = class(TInterfacedObject, IOmniFuture<T>)
   strict private
-    ofCancellable: boolean;
-    ofCancelled  : boolean;
-    ofCompleted  : boolean;
-    ofResult     : T;
-    ofTask       : IOmniTaskControl;
+    ofCancellable  : boolean;
+    ofCancelled    : boolean;
+    ofCompleted    : boolean;
+    ofTaskException: Exception;
+    ofResult       : T;
+    ofTask         : IOmniTaskControl;
   strict protected
     procedure DestroyTask;
+    procedure DetachExceptionFromTask;
     procedure Execute(action: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
   public
     constructor Create(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil); // sadly, those two Creates cannot be overloaded as this crashes the compiler (internal error T888)
     constructor CreateEx(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig = nil);
     destructor  Destroy; override;
     procedure Cancel;
+    function DetachException: Exception; inline;
+    function  FatalException: Exception; inline;
     function  IsCancelled: boolean; inline;
     function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
@@ -1910,8 +1919,11 @@ begin
   Execute(
     procedure (const task: IOmniTask)
     begin
-      ofResult := action();
-      ofCompleted := true;
+      try
+        ofResult := action();
+      finally // action may raise exception
+        ofCompleted := true;
+      end;
     end,
     taskConfig);
 end; { TOmniFuture<T>.Create }
@@ -1924,8 +1936,11 @@ begin
   Execute(
     procedure (const task: IOmniTask)
     begin
-      ofResult := action(task);
-      ofCompleted := true;
+      try
+        ofResult := action(task);
+      finally // action may raise exception
+        ofCompleted := true;
+      end;
     end,
     taskConfig);
 end; { TOmniFuture<T>.CreateEx }
@@ -1933,6 +1948,7 @@ end; { TOmniFuture<T>.CreateEx }
 destructor TOmniFuture<T>.Destroy;
 begin
   DestroyTask;
+  FreeAndNil(ofTaskException);
   inherited;
 end; { TOmniFuture<T>.Destroy }
 
@@ -1955,12 +1971,32 @@ begin
   end;
 end; { TOmniFuture<T>.DestroyTask }
 
+function TOmniFuture<T>.DetachException: Exception;
+begin
+  Result := FatalException; // this will in turn detach exception from task
+  ofTaskException := nil;
+end; { TOmniFuture }
+
+procedure TOmniFuture<T>.DetachExceptionFromTask;
+begin
+  if IsDone and assigned(ofTask) and (not assigned(ofTaskException)) then begin
+    ofTask.WaitFor(INFINITE); // task may not have terminated yet
+    ofTaskException := ofTask.DetachException;
+  end;
+end; { TOmniFuture }
+
 procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 begin
   ofTask := CreateTask(action, 'TOmniFuture action');
   ApplyConfig(taskConfig, ofTask);
   ofTask.Schedule(GlobalParallelPool);
 end; { TOmniFuture<T>.Execute }
+
+function TOmniFuture<T>.FatalException: Exception;
+begin
+  DetachExceptionFromTask;
+  Result := ofTaskException;
+end; { TOmniFuture }
 
 function TOmniFuture<T>.IsCancelled: boolean;
 begin
@@ -1973,6 +2009,8 @@ begin
 end; { TOmniFuture<T>.IsDone }
 
 function TOmniFuture<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;
+var
+  taskExcept: Exception;
 begin
   Result := false;
   if ofCancelled then
@@ -1980,7 +2018,13 @@ begin
   if assigned(ofTask) then begin
     if not ofTask.WaitFor(timeout_ms) then
       Exit;
+    DetachExceptionFromTask;
     DestroyTask;
+  end;
+  if assigned(ofTaskException) then begin
+    taskExcept := ofTaskException;
+    ofTaskException := nil;
+    raise taskExcept;
   end;
   value := ofResult;
   Result := true;
