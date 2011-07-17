@@ -1015,7 +1015,7 @@ var
        .SetParameter('Proc', intProc);
     ApplyConfig(taskConfig, task);
     task.Schedule(GlobalParallelPool);
-  end; { InternalCreateJoinTask }
+  end; { CreateJoinTask }
 
 begin { Parallel.Join }
   Assert(SizeOf(integer) = SizeOf(TProc));

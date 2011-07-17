@@ -34,11 +34,11 @@ object Form34: TForm34
   object btnJoin: TButton
     Left = 16
     Top = 47
-    Width = 75
+    Width = 91
     Height = 25
     Caption = 'Join'
-    Enabled = False
     TabOrder = 2
+    OnClick = btnJoinClick
   end
   object btnForeach: TButton
     Left = 16

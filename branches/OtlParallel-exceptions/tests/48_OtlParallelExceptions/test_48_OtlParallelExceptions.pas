@@ -20,6 +20,7 @@ type
     procedure btnFuture1Click(Sender: TObject);
     procedure btnFuture2Click(Sender: TObject);
     procedure btnFuture3Click(Sender: TObject);
+    procedure btnJoinClick(Sender: TObject);
   private
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const param: array of const); overload;
@@ -36,6 +37,7 @@ uses
 {$R *.dfm}
 
 type
+  EJoinException = class(Exception);
   EFutureException = class(Exception);
 
 procedure TForm34.btnFuture1Click(Sender: TObject);
@@ -95,6 +97,22 @@ begin
     else
       Log('Future retured: %d', [future.Value]);
   finally FreeAndNil(excFuture); end;
+end;
+
+procedure TForm34.btnJoinClick(Sender: TObject);
+begin
+  try
+    Parallel.Join(
+      procedure begin
+        raise EJoinException.Create('Exception 1 in Parallel.Join');
+      end,
+      procedure begin
+        raise EJoinException.Create('Exception 2 in Parallel.Join');
+      end);
+  except
+    on E: Exception do
+      Log('Join raised exception: %s:%s', [E.ClassName, E.Message]);
+  end;
 end;
 
 procedure TForm34.Log(const msg: string);
