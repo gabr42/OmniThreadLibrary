@@ -49,34 +49,13 @@ uses
 const
   MSG_CHANGE_MESSAGE = 1;
 
-type
-  ITestIntf = interface ['{A58F9E95-9C3E-45D6-A05D-84B7731800F2}']
-    function GetMessage: string;
-  end;
-
-  TTestIntf = class(TInterfacedObject, ITestIntf)
-  strict private
-    FMessage: string;
-  public
-    constructor Create(const msg: string);
-    function GetMessage: string;
-  end;
-
-function CreateTestInterface(const msg: string): ITestIntf;
-begin
-  Result := TTestIntf.Create(msg);
-end;
-
 procedure RunHello(const task: IOmniTask);
 var
-  iIntf  : ITestIntf;
   msg    : string;
   msgData: TOmniValue;
   msgID  : word;
 begin
   msg := task.Param['Message'];
-  Assert(Supports(task.Param['Interface2'].AsInterface, ITestIntf, iIntf));
-  task.Comm.Send(0, iIntf.GetMessage);
   repeat
     case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.Param['Delay']) of
       WAIT_OBJECT_1:
@@ -107,16 +86,11 @@ begin
 end;
 
 procedure TfrmTestTwoWayHello.actStartHelloExecute(Sender: TObject);
-var
-  iMessage: ITestIntf;
 begin
-  iMessage := CreateTestInterface('Interface test');
   FHelloTask :=
     FMessageDispatch.Monitor(CreateTask(RunHello, 'Hello'))
     .SetParameter('Delay', 1000)
     .SetParameter('Message', 'Hello')
-    .SetParameter('Interface', iMessage)
-    .SetParameter('Interface2', CreateTestInterface('Interface test 2'))
     .Run;
 end;
 
@@ -153,19 +127,6 @@ procedure TfrmTestTwoWayHello.HandleTaskMessage(const task: IOmniTaskControl; co
 begin
   lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
     [task.UniqueID, task.Name, msg.MsgID, msg.MsgData.AsString]));
-end;
-
-{ TTestIntf }
-
-constructor TTestIntf.Create(const msg: string);
-begin
-  inherited Create;
-  FMessage := msg;
-end;
-
-function TTestIntf.GetMessage: string;
-begin
-  Result := FMessage;
 end;
 
 initialization
