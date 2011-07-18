@@ -55,6 +55,11 @@ uses
 
 {$R *.dfm}
 
+{$IFNDEF OTL_HasArrayOfT}
+type
+  TArray<T> = array of T;
+{$ENDIF ~OTL_HasArrayOfT}
+
 procedure TfrmDemoParallelTaskConfig.btnAsyncClick(Sender: TObject);
 var
   i: integer;
@@ -132,7 +137,10 @@ var
   data: TArray<integer>;
   max : integer;
 begin
-  data := TArray<integer>.Create(1, 17, 4, 99, -250, 7, 13, 132, 101);
+  //D2009 doesn't have (array of T).Create initializers
+  SetLength(data, 9);
+  data[0] := 1; data[1] := 17; data[2] := 4; data[3] := 99; data[4] := -250;
+  data[5] := 7; data[6] := 13; data[7] := 132; data[8] := 101;
   max := ParallelMax(
     data,
     Parallel.ForkJoin<integer>.TaskConfig(Parallel.TaskConfig.OnTerminated(
