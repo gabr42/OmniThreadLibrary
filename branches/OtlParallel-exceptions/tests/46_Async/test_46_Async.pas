@@ -22,7 +22,7 @@ var
 implementation
 
 uses
-  OtlTask,
+  OtlTaskControl,
   OtlParallel;
 
 {$R *.dfm}
@@ -38,12 +38,13 @@ begin
       Sleep(500);
       MessageBeep($FFFFFFFF);
     end,
-
-    procedure
-    begin
-      // executed in main thread
-      btnAsync.Enabled := true;
-    end
+    Parallel.TaskConfig.OnTerminated(
+      procedure (const task: IOmniTaskControl)
+      begin
+        // executed in main thread
+        btnAsync.Enabled := true;
+      end
+    )
   );
 end;
 

@@ -38,6 +38,9 @@
 ///     1.13: 2011-07-18
 ///       - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
 ///         in EJoinException and raised at the end of Parallel.Join method.
+///       - Two version of Parallel.Async (the ones with explicit termination handlers)
+///         were removed as this functionality can be achieved by using
+///         Parallel.TaskConfig.OnTerminated.
 ///     1.12: 2011-07-17
 ///       - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
 ///         in .Value. New function .FatalException and .DetachException.
@@ -651,8 +654,6 @@ type
   // Async
     class procedure Async(task: TProc; taskConfig: IOmniTaskConfig = nil); overload;
     class procedure Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Async(task: TProc; onTermination: TProc; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Async(task: TOmniTaskDelegate; onTermination: TProc; taskConfig: IOmniTaskConfig = nil); overload;
 
   // task configuration
     class function TaskConfig: IOmniTaskConfig;
@@ -890,35 +891,6 @@ begin
     begin
       task;
     end,
-    taskConfig
-  );
-end; { Parallel.Async }
-
-class procedure Parallel.Async(task: TOmniTaskDelegate; onTermination: TProc;
-  taskConfig: IOmniTaskConfig);
-var
-  omniTask: IOmniTaskControl;
-begin
-  omniTask := CreateTask(task, 'Parallel.Async')
-    .Unobserved
-    .OnTerminated(
-      procedure (const task: IOmniTaskControl)
-      begin
-        onTermination;
-      end
-    );
-  ApplyConfig(taskConfig, omniTask);
-  omniTask.Schedule(GlobalParallelPool);
-end; { Parallel.Async }
-
-class procedure Parallel.Async(task, onTermination: TProc; taskConfig: IOmniTaskConfig);
-begin
-  Async(
-    procedure (const omniTask: IOmniTask)
-    begin
-      task;
-    end,
-    onTermination,
     taskConfig
   );
 end; { Parallel.Async }
