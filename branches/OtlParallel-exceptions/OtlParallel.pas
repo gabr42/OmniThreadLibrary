@@ -653,7 +653,8 @@ type
 
   // Async
     class procedure Async(task: TProc; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil);
+      overload;
 
   // task configuration
     class function TaskConfig: IOmniTaskConfig;
@@ -875,15 +876,6 @@ begin
   Result := Parallel.ForEach(enumerable.GetEnumerator);
 end; { Parallel.ForEach }
 
-class procedure Parallel.Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
-begin
-  Async(
-    task,
-    procedure begin end,
-    taskConfig
-  );
-end; { Parallel.Async }
-
 class procedure Parallel.Async(task: TProc; taskConfig: IOmniTaskConfig);
 begin
   Async(
@@ -893,6 +885,15 @@ begin
     end,
     taskConfig
   );
+end; { Parallel.Async }
+
+class procedure Parallel.Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
+var
+  omniTask: IOmniTaskControl;
+begin
+  omniTask := CreateTask(task, 'Parallel.Async').Unobserved;
+  ApplyConfig(taskConfig, omniTask);
+  omniTask.Schedule(GlobalParallelPool);
 end; { Parallel.Async }
 
 class function Parallel.ForEach(low, high: integer; step: integer = 1):
