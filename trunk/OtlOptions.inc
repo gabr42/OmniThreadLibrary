@@ -61,6 +61,7 @@
   {$DEFINE OTL_DeprecatedResume}
   {$DEFINE OTL_KnowsParamCount}
   {$DEFINE OTL_HasTkPointer}
+  {$DEFINE OTL_HasArrayOfT}
 {$IFEND}
 
 {$IF CompilerVersion >= 22}
