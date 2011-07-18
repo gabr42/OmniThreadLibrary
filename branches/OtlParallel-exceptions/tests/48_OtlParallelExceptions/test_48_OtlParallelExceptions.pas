@@ -37,25 +37,24 @@ uses
 {$R *.dfm}
 
 type
-  EJoinException = class(Exception);
-  EFutureException = class(Exception);
+  ETestException = class(Exception);
 
 procedure TForm34.btnFuture1Click(Sender: TObject);
 var
   future: IOmniFuture<integer>;
 begin
+  future := Parallel.Future<integer>(
+    function: integer
+    begin
+      raise ETestException.Create('Exception in Parallel.Future');
+    end
+  );
+  Log('Future is executing ...'); Sleep(1000);
   try
-    future := Parallel.Future<integer>(
-      function: integer
-      begin
-        raise EFutureException.Create('Exception in Parallel.Future');
-      end
-    );
-    Log('Future is executing ...'); Sleep(1000);
     Log('Future retured: %d', [future.Value]);
   except
     on E: Exception do
-      Log('Future raised exception: %s:%s', [E.ClassName, E.Message]);
+      Log('Future raised exception %s:%s', [E.ClassName, E.Message]);
   end;
 end;
 
@@ -66,13 +65,13 @@ begin
   future := Parallel.Future<integer>(
     function: integer
     begin
-      raise EFutureException.Create('Exception in Parallel.Future');
+      raise ETestException.Create('Exception in Parallel.Future');
     end
   );
   Log('Future is executing ...'); Sleep(1000);
   Log('Future is done: %d', [Ord(future.IsDone)]);
   if assigned(future.FatalException) then
-    Log('Future raised exception: %s:%s', [future.FatalException.ClassName, future.FatalException.Message])
+    Log('Future raised exception %s:%s', [future.FatalException.ClassName, future.FatalException.Message])
   else
     Log('Future retured: %d', [future.Value]);
 end;
@@ -85,7 +84,7 @@ begin
   future := Parallel.Future<integer>(
     function: integer
     begin
-      raise EFutureException.Create('Exception in Parallel.Future');
+      raise ETestException.Create('Exception in Parallel.Future');
     end
   );
   Log('Future is executing ...'); Sleep(1000);
@@ -93,25 +92,34 @@ begin
   excFuture := future.DetachException;
   try
     if assigned(excFuture) then
-      Log('Future raised exception: %s:%s', [excFuture.ClassName, excFuture.Message])
+      Log('Future raised exception %s:%s', [excFuture.ClassName, excFuture.Message])
     else
       Log('Future retured: %d', [future.Value]);
   finally FreeAndNil(excFuture); end;
 end;
 
 procedure TForm34.btnJoinClick(Sender: TObject);
+var
+  iInnerExc: integer;
 begin
   try
-    Parallel.Join(
+    Parallel.Join([
       procedure begin
-        raise EJoinException.Create('Exception 1 in Parallel.Join');
+        raise ETestException.Create('Exception 1 in Parallel.Join');
       end,
       procedure begin
-        raise EJoinException.Create('Exception 2 in Parallel.Join');
-      end);
+      end,
+      procedure begin
+        raise ETestException.Create('Exception 2 in Parallel.Join');
+      end]);
   except
-    on E: Exception do
-      Log('Join raised exception: %s:%s', [E.ClassName, E.Message]);
+    on E: EJoinException do begin
+      Log('Join raised exception %s:%s', [E.ClassName, E.Message]);
+      for iInnerExc := 0 to E.Count - 1 do
+        Log('  Task #%d raised exception: %s:%s', [E[iInnerExc].TaskNumber,
+          E[iInnerExc].FatalException.ClassName,
+          E[iInnerExc].FatalException.Message]);
+    end;
   end;
 end;
 

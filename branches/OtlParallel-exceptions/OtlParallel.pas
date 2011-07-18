@@ -571,9 +571,21 @@ type
   end; { TOmniParallelLoop<T> }
 
   EJoinException = class(Exception)
+  strict private
+    jeExceptions: TGpIntegerObjectList;
+  public type
+    TJoinInnerException = record
+      FatalException: Exception;
+      TaskNumber    : integer;
+    end;
+  strict protected
+    function  GetInner(idxException: integer): TJoinInnerException;
   public
     constructor Create; reintroduce;
+    destructor  Destroy; override;
     procedure Add(iTask: integer; taskException: Exception);
+    function  Count: integer;
+    property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
   {$REGION 'Documentation'}
@@ -825,12 +837,30 @@ end; { GlobalPipelinePool }
 constructor EJoinException.Create;
 begin
   inherited Create('');
+  jeExceptions := TGpIntegerObjectList.Create(true);
 end; { EJoinException.Create }
+
+destructor EJoinException.Destroy;
+begin
+  FreeAndNil(jeExceptions);
+  inherited;
+end; { EJoinException.Destroy }
 
 procedure EJoinException.Add(iTask: integer; taskException: Exception);
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: EJoinException.Add
+  jeExceptions.AddObject(iTask, taskException);
 end; { EJoinException.Add }
+
+function EJoinException.Count: integer;
+begin
+  Result := jeExceptions.Count;
+end; { EJoinException.Count }
+
+function EJoinException.GetInner(idxException: integer): TJoinInnerException;
+begin
+  Result.FatalException := Exception(jeExceptions.Objects[idxException]);
+  Result.TaskNumber := jeExceptions[idxException];
+end; { EJoinException.GetInner }
 
 { Parallel }
 
@@ -1013,7 +1043,7 @@ end; { Parallel.Join }
 
 class procedure Parallel.Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig);
 var
-  countStopped : TOmniResourceCount;
+  countStopped : IOmniResourceCount;
   joinException: EJoinException;
   otlTasks     : array of IOmniTaskControl;
 
