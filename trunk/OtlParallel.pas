@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-07-16
-///   Version           : 1.11
+///   Last modification : 2011-07-18
+///   Version           : 1.11a
 ///</para><para>
 ///   History:
+///     1.12: 2011-07-18
+///       - Parallel.Join with TProc parameters was leaking memory.
 ///     1.11: 2011-07-16
 ///       - GParallelPool and GPipelinePool are now initialized on the fly which allows
 ///         OtlParallel to be used inside a DLL.
@@ -987,7 +989,7 @@ end; { Parallel.Join }
 
 class procedure Parallel.Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig);
 var
-  countStopped: TOmniResourceCount;
+  countStopped: IOmniResourceCount;
   prevProc    : TProc;
   proc        : TProc;
 
