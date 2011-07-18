@@ -39,7 +39,7 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_Optimize>false</DCC_Optimize>
-			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="app_37_ParallelJoin.dpr">
