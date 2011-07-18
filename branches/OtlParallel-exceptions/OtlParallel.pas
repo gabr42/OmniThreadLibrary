@@ -570,13 +570,18 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
 
+  EJoinException = class(Exception)
+  public
+    constructor Create; reintroduce;
+    procedure Add(iTask: integer; taskException: Exception);
+  end; { EJoinException }
+
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
   ///	features in the OmniThreadLibrary. Most features are implemented as factories while
   ///	two (Async, Join) are implemented as a class procedures that does the real work.</summary>
   {$ENDREGION}
   Parallel = class
-  strict protected
   public
   // ForEach
     ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
@@ -815,6 +820,18 @@ begin
   Result := GPipelinePool;
 end; { GlobalPipelinePool }
 
+{ EJoinException }
+
+constructor EJoinException.Create;
+begin
+  inherited Create('');
+end; { EJoinException.Create }
+
+procedure EJoinException.Add(iTask: integer; taskException: Exception);
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: EJoinException.Add
+end; { EJoinException.Add }
+
 { Parallel }
 
 class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
@@ -996,51 +1013,81 @@ end; { Parallel.Join }
 
 class procedure Parallel.Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig);
 var
-  countStopped: TOmniResourceCount;
-  prevProc    : TProc;
-  proc        : TProc;
+  countStopped : TOmniResourceCount;
+  joinException: EJoinException;
+  otlTasks     : array of IOmniTaskControl;
 
-  procedure CreateJoinTask(proc: TProc);
-  var
-    intProc: integer absolute proc;
-    task   : IOmniTaskControl;
+  function EnsureException: EJoinException;
   begin
-    task := CreateTask(
+    if not assigned(joinException) then
+      joinException := EJoinException.Create;
+    Result := joinException;
+  end; { EnsureException }
+
+  procedure Execute(iTask: integer);
+  begin
+    try
+      tasks[iTask]();
+    except
+      on E: Exception do
+        EnsureException.Add(iTask, AcquireExceptionObject);
+    end;
+  end; { Execute }
+
+  procedure CreateJoinTask(iTask: integer);
+  var
+    proc   : TProc;
+    intProc: integer absolute proc;
+  begin
+    proc := tasks[iTask];
+    otlTasks[iTask] := CreateTask(
         procedure (const task: IOmniTask)
         begin
-          TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
-          countStopped.Allocate;
+          try
+            TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
+          finally // task may raise an exception
+            countStopped.Allocate;
+          end;
         end
       ).Unobserved
        .SetParameter('Proc', intProc);
-    ApplyConfig(taskConfig, task);
-    task.Schedule(GlobalParallelPool);
+    ApplyConfig(taskConfig, otlTasks[iTask]);
+    otlTasks[iTask].Schedule(GlobalParallelPool);
   end; { CreateJoinTask }
+
+var
+  iProc         : integer;
+  numInlineTasks: integer;
 
 begin { Parallel.Join }
   Assert(SizeOf(integer) = SizeOf(TProc));
+  joinException := nil;
+  SetLength(otlTasks, Length(tasks));
   if ((Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1)) and (not assigned(taskConfig)) then
   begin
-    for proc in tasks do
-      proc;
+    for iProc := Low(tasks) to High(tasks) do
+      Execute(iProc);
   end
   else begin
-    countStopped := TOmniResourceCount.Create(Length(tasks));
-    if not assigned(taskConfig) then
-      countStopped.Allocate; // last task will be executed inline
-    prevProc := nil;
-    for proc in tasks do begin
-      if assigned(prevProc) then
-        CreateJoinTask(prevProc);
-      prevProc := proc;
-    end;
-    Assert(assigned(prevProc));
     if assigned(taskConfig) then
-      CreateJoinTask(prevProc)
+      numInlineTasks := 0
     else
-      prevProc(); // last task is executed inline
+      numInlineTasks := 1;
+    countStopped := TOmniResourceCount.Create(Length(tasks) - numInlineTasks);
+    for iProc := Low(tasks)+numInlineTasks to High(tasks) do
+      CreateJoinTask(iProc);
+    if numInlineTasks = 1 then
+      Execute(Low(tasks));
     WaitForSingleObject(countStopped.Handle, INFINITE);
+    for iProc := Low(otlTasks) to High(otlTasks) do
+      if assigned(otlTasks[iProc]) then begin
+        otlTasks[iProc].WaitFor(INFINITE);
+        if assigned(otlTasks[iProc].FatalException) then
+          EnsureException.Add(iProc, otlTasks[iProc].DetachException);
+      end;
   end;
+  if assigned(joinException) then
+    raise joinException;
 end; { Parallel.Join }
 
 class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);

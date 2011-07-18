@@ -35,6 +35,7 @@
 			<DCC_K>false</DCC_K>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
