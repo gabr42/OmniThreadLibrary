@@ -24,25 +24,25 @@ object Form34: TForm34
   end
   object btnFuture1: TButton
     Left = 16
-    Top = 78
+    Top = 110
     Width = 91
     Height = 25
     Caption = 'Future 1'
     TabOrder = 1
     OnClick = btnFuture1Click
   end
-  object btnJoin: TButton
+  object btnJoin1: TButton
     Left = 16
     Top = 47
     Width = 91
     Height = 25
-    Caption = 'Join'
+    Caption = 'Join 1'
     TabOrder = 2
-    OnClick = btnJoinClick
+    OnClick = btnJoin1Click
   end
   object btnForeach: TButton
     Left = 16
-    Top = 171
+    Top = 203
     Width = 75
     Height = 25
     Caption = 'ForEach'
@@ -51,7 +51,7 @@ object Form34: TForm34
   end
   object btnPipeline: TButton
     Left = 16
-    Top = 202
+    Top = 234
     Width = 75
     Height = 25
     Caption = 'Pipeline'
@@ -60,7 +60,7 @@ object Form34: TForm34
   end
   object btnForkJoin: TButton
     Left = 16
-    Top = 233
+    Top = 265
     Width = 75
     Height = 25
     Caption = 'Fork/Join'
@@ -79,7 +79,7 @@ object Form34: TForm34
   end
   object btnFuture2: TButton
     Left = 16
-    Top = 109
+    Top = 141
     Width = 91
     Height = 25
     Caption = 'Future 2'
@@ -88,11 +88,20 @@ object Form34: TForm34
   end
   object btnFuture3: TButton
     Left = 16
-    Top = 140
+    Top = 172
     Width = 91
     Height = 25
     Caption = 'Future 3'
     TabOrder = 8
     OnClick = btnFuture3Click
+  end
+  object btnJoin2: TButton
+    Left = 16
+    Top = 78
+    Width = 91
+    Height = 25
+    Caption = 'Join 2'
+    TabOrder = 9
+    OnClick = btnJoin2Click
   end
 end
