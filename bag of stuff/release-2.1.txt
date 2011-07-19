@@ -1,0 +1,93 @@
+OmniThreadLibrary 2.1 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-2.1) 
+or as a ZIP archive
+(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-2.1.zip).
+UML diagrams for this release are available (thanks to Rich Shealer) 
+as a ZIP archive
+(http://code.google.com/p/omnithreadlibrary/downloads/detail?name=OmniThreadLibrary-UML-2.1.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with 
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, and 
+XE on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 2.0
+===========================
+
+- New features:
+  - Parallel.Async can be used to start simple background tasks.
+    [http://www.thedelphigeek.com/2011/04/simple-background-tasks-with.html]
+  - Parallel.ForkJoin - divide and conquer (fork/join) framework.
+    [http://www.thedelphigeek.com/2011/05/divide-and-conquer-in-parallel.html]
+  - OtlParallel tasks can be configured with Parallel.TaskConfig;
+    you can also use it to communicated with the owner thread from 
+    the task.
+    http://www.thedelphigeek.com/2011/04/configuring-background-otlparallel.html
+  - IOmniTask[Control] can call Invoke method to asynchronously execute 
+    a block of code in the other thread.
+    [http://www.thedelphigeek.com/2011/03/synchronize-comes-to-omnithreadlibrary.html]
+  - Passes timer ID to timer proc if it accepts const TOmniValue 
+    parameter.
+  - Support for non-silent exceptions removed.
+  - Added property IOmniTaskControl.FatalExecption containing exception 
+    that was caught at the task level.
+  - Change signature for exception filters in OtlHook.FilterException.
+  - IOmniTaskControl termination empties task message queue and calls 
+    appropriate OnMessage handlers.
+
+- Bug fixes:
+  - Fixed race condition in TOmniTask.Execute.
+  - OtlParallel compiles in Delphi 2009.
+  - OTL monitor message window could be used after it was destroyed.
+  - Parallel.ForEach was never running on more than 
+    Process.Affinity.Count tasks.
+  - OtlParallel pools are created on the fly - Otlparallel unit can be 
+    used from a DLL.
+  - [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always 
+    returned False.
+  - Enumerating over TOmniTaskControlList (for example when using
+    IOmniTaskGroup.SendToAll) leaked one object.
+  - Makes sure timers are called even if there's a constant stream of 
+    messages in registered message queues.
+  - Fixed exception handling in the thread pool.
+  
+- New demos:
+  - 43_InvokeAnonymous: Demo for IOmniTaskControl.Invoke and     
+    IOmniTask.Invoke.
+  - 44_Fork-Join QuickSort: QuickSort implemented with 
+    Parallel.ForkJoin.
+  - 45_Fork-Join max: Selecting maximum element in an array using 
+    Parallel.ForkJoin.
+  - 46_Async: Demo for Parallel.Async.
+  - 47_TaskConfig: Demo for Parallel.TaskConfig.
+  
+-- 
+Primoz
+[http://thedelphigeek.com]
