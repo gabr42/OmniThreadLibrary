@@ -68,7 +68,7 @@ Changes since version 2.0
   - OTL monitor message window could be used after it was destroyed.
   - Parallel.ForEach was never running on more than 
     Process.Affinity.Count tasks.
-  - OtlParallel pools are created on the fly - Otlparallel unit can be 
+  - OtlParallel pools are created on the fly - OtlParallel unit can be 
     used from a DLL.
   - [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always 
     returned False.
