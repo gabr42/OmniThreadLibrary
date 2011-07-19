@@ -1,4 +1,4 @@
-2.1 2011-07-??
+2.1 2011-07-19
 - New features:
   - Parallel.Async can be used to start simple background tasks.
     [http://www.thedelphigeek.com/2011/04/simple-background-tasks-with.html]
