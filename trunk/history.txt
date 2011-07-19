@@ -1,3 +1,11 @@
+  - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
+    in EJoinException and raised at the end of Parallel.Join method.
+  - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
+    in .Value. New function .FatalException and .DetachException.
+  - Two version of Parallel.Async (the ones with explicit termination handlers)
+    were removed as this functionality can be achieved by using
+    Parallel.TaskConfig.OnTerminated.
+
 2.1 2011-07-19
 - New features:
   - Parallel.Async can be used to start simple background tasks.
