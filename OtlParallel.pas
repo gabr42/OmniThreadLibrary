@@ -290,7 +290,6 @@ type
     function  WaitFor(timeout_ms: cardinal): boolean;
    end; { IOmniFuture<T> }
 
-  { TODO : maybe add Value(timeout_ms) }
   TOmniFuture<T> = class(TInterfacedObject, IOmniFuture<T>)
   strict private
     ofCancellable  : boolean;
