@@ -71,8 +71,9 @@ begin
       raise ETestException.Create('Exception in Parallel.Future');
     end
   );
-  Log('Future is executing ...'); Sleep(1000);
-  Log('Future is done: %d', [Ord(future.IsDone)]);
+  Log('Future is executing ...');
+  while not future.IsDone do
+    Sleep(100);
   if assigned(future.FatalException) then
     Log('Future raised exception %s:%s', [future.FatalException.ClassName, future.FatalException.Message])
   else
@@ -91,7 +92,8 @@ begin
     end
   );
   Log('Future is executing ...'); Sleep(1000);
-  Log('Future is done: %d', [Ord(future.IsDone)]);
+  while not future.IsDone do
+    Sleep(100);
   excFuture := future.DetachException;
   try
     if assigned(excFuture) then
