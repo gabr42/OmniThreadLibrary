@@ -52,7 +52,8 @@ begin
       raise ETestException.Create('Exception in Parallel.Future');
     end
   );
-  Log('Future is executing ...'); Sleep(1000);
+  Log('Future is executing ...');
+  Sleep(1000); // another long task
   try
     Log('Future retured: %d', [future.Value]);
   except
@@ -72,8 +73,7 @@ begin
     end
   );
   Log('Future is executing ...');
-  while not future.IsDone do
-    Sleep(100);
+  future.WaitFor(INFINITE);
   if assigned(future.FatalException) then
     Log('Future raised exception %s:%s', [future.FatalException.ClassName, future.FatalException.Message])
   else
@@ -91,9 +91,8 @@ begin
       raise ETestException.Create('Exception in Parallel.Future');
     end
   );
-  Log('Future is executing ...'); Sleep(1000);
-  while not future.IsDone do
-    Sleep(100);
+  Log('Future is executing ...');
+  future.WaitFor(INFINITE);
   excFuture := future.DetachException;
   try
     if assigned(excFuture) then
