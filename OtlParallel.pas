@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-07-18
-///   Version           : 1.13
+///   Last modification : 2011-07-21
+///   Version           : 1.14
 ///</para><para>
 ///   History:
+///     1.14: 2011-07-21
+///       - Parallel.Future implements WaitFor.
 ///     1.13: 2011-07-18
 ///       - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
 ///         in EJoinException and raised at the end of Parallel.Join method.
@@ -285,7 +287,8 @@ type
     function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
     function  Value: T;
-  end; { IOmniFuture<T> }
+    function  WaitFor(timeout_ms: cardinal): boolean;
+   end; { IOmniFuture<T> }
 
   { TODO : maybe add Value(timeout_ms) }
   TOmniFuture<T> = class(TInterfacedObject, IOmniFuture<T>)
@@ -311,6 +314,7 @@ type
     function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
     function  Value: T;
+    function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniFuture<T> }
 
   EFutureError = class(Exception);
@@ -2115,6 +2119,14 @@ function TOmniFuture<T>.Value: T;
 begin
   TryValue(INFINITE, Result);
 end; { TOmniFuture<T>.Value }
+
+function TOmniFuture<T>.WaitFor(timeout_ms: cardinal): boolean;
+begin
+  if assigned(ofTask) then
+    Result := ofTask.WaitFor(timeout_ms)
+  else
+    Result := true;
+end; { TOmniFuture }
 
 { TOmniPipelineStage }
 
