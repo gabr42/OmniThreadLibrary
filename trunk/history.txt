@@ -5,6 +5,7 @@
   - Two version of Parallel.Async (the ones with explicit termination handlers)
     were removed as this functionality can be achieved by using
     Parallel.TaskConfig.OnTerminated.
+  - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
 
 2.1 2011-07-19
 - New features:
