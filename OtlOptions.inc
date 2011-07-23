@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2010-12-02
-///   Version           : 1.02
+///   Last modification : 2011-07-23
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2011-07-23
+///       - Assertions must be always enabled.
 ///     1.02: 2010-12-02
 ///       - Removed OTL_ParallelAggregate.
 ///     1.01: 2010-07-25
@@ -50,6 +52,7 @@
 {$OPENSTRINGS ON}
 {$OVERFLOWCHECKS OFF}
 {$TYPEDADDRESS OFF}
+{$ASSERTIONS ON}
 
 {$IF CompilerVersion >= 20}
   {$DEFINE OTL_Anonymous}

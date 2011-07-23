@@ -132,6 +132,7 @@ interface
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
 // TODO 5 -oPrimoz Gabrijelcic : Single-threaded access to a data source - how? (datasets etc)
+// TODO 3 -oPrimoz Gabrijelcic : Parallel.MapReduce?
 
 // Notes for OTL 3
 // - Parallel.ForEach should use task pool.
@@ -140,7 +141,7 @@ interface
 //   ForEach) and would balance load so that all different kinds of tasks would get executed.
 // - ForEach would support .DegreeOfConcurrency (or something like that) which would
 //   default to one meaning that one task can easily consume one core. Setting it to two
-//   (it would be a real number) would mean that one task can only consume one half of a
+//   (it would be a real, not integer) would mean that one task can only consume one half of a
 //   core and that 2*<number of cores> is a good number of threads for this particular task.
 
 uses
@@ -598,6 +599,24 @@ type
     property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
+  TOmniJoinState = interface
+    procedure Cancel;
+    function  IsCancelled: boolean;
+    function  IsExceptional: boolean;
+  end; { TOmniJoinState }
+
+  IOmniParallelJoin = interface
+    procedure Cancel;
+    function  DetachException: Exception;
+    procedure Execute;
+    function  FatalException: Exception;
+    function  IsCancelled: boolean;
+    function  NumTasks(numTasks: integer): IOmniParallelJoin;
+  end; { IOmniParallelJoin }
+
+  TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
+  end; { TOmniParallelJoin }
+
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
   ///	features in the OmniThreadLibrary. Most features are implemented as factories while
@@ -637,10 +656,10 @@ type
     {$ENDIF OTL_ERTTI}
 
   // Join
-    class procedure Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class function  Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+    class function  Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+    class function  Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+    class function  Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
 
   // Future
     class function Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
