@@ -31,10 +31,20 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-07-21
-///   Version           : 1.14
+///   Last modification : 2011-07-26
+///   Version           : 1.15
 ///</para><para>
 ///   History:
+///     1.15: 2011-07-26
+///       - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
+///         to add exception and cancellation support. User code must call .Execute on the
+///         interface returned from the Parallel.Join to start the execution.
+///       - Parallel.Join(const task: TOmniTaskDelegate) is no longer supported. It was
+///         replaced with the Parallel.Join(const task: IOmniJoinState).
+///       - Parallel.Join no longer supports taskConfig parameter (replaced by the
+///         IOmniParallelJoin.TaskConfig function).
+///       - Number of simultaneously executed task in Parallel.Join may be set by calling
+///         the new IOmniParallelJoin.NumTasks function.
 ///     1.14: 2011-07-21
 ///       - Parallel.Future implements WaitFor.
 ///     1.13: 2011-07-18
@@ -599,11 +609,45 @@ type
     property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
-  TOmniJoinState = interface
+  IOmniJoinState = interface
+    function  GetTask: IOmniTask;
+  //
     procedure Cancel;
     function  IsCancelled: boolean;
     function  IsExceptional: boolean;
+    property Task: IOmniTask read GetTask;
+  end; { IOmniJoinState }
+
+  IOmniJoinStateEx = interface ['{24FD5999-A016-4427-A3CA-9C4D5A865209}']
+    function  GetTaskControl: IOmniTaskControl;
+    procedure SetTaskControl(const aTask: IOmniTaskControl);
+  //
+    procedure SetTask(const aTask: IOmniTask);
+    property TaskControl: IOmniTaskControl read GetTaskControl write SetTaskControl;
+  end; { IOmniJoinStateEx }
+
+  TOmniJoinState = class(TInterfacedObject, IOmniJoinState, IOmniJoinStateEx)
+  strict private
+    ojsGlobalCancelationFlag: IOmniCancellationToken;
+    ojsGlobalExceptionFlag  : IOmniCancellationToken;
+    ojsTask                 : IOmniTask;
+    ojsTaskControl          : IOmniTaskControl;
+  protected
+    function  GetTask: IOmniTask;
+    function  GetTaskControl: IOmniTaskControl;
+    procedure SetTaskControl(const aTask: IOmniTaskControl);
+  public
+    constructor Create(const globalCancelationFlag, globalExceptionFlag:
+      IOmniCancellationToken);
+    procedure Cancel;
+    function  IsCancelled: boolean;
+    function  IsExceptional: boolean;
+    procedure SetTask(const aTask: IOmniTask);
+    property Task: IOmniTask read GetTask;
+    property TaskControl: IOmniTaskControl read GetTaskControl write SetTaskControl;
   end; { TOmniJoinState }
+
+  TOmniJoinDelegate = reference to procedure (const joinState: IOmniJoinState);
 
   IOmniParallelJoin = interface
     procedure Cancel;
@@ -612,10 +656,43 @@ type
     function  FatalException: Exception;
     function  IsCancelled: boolean;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
+    function  Task(const task: TProc): IOmniParallelJoin; overload;
+    function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
+    function  NoWait: IOmniParallelJoin;
+    function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelJoin }
 
-//  TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
-//  end; { TOmniParallelJoin }
+  TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
+  strict private
+    opjCountStopped          : IOmniResourceCount;
+    opjGlobalCancellationFlag: IOmniCancellationToken;
+    opjGlobalExceptionFlag   : IOmniCancellationToken;
+    opjJoinStates            : array of IOmniJoinState;
+    opjNoWait                : boolean;
+    opjNumTasks              : integer;
+    opjTaskConfig            : IOmniTaskConfig;
+    opjTaskException         : Exception;
+    opjTasks                 : TList<TOmniJoinDelegate>;
+  strict protected
+    procedure DetachExceptionFromTasks;
+    function  InternalWaitFor(timeout_ms: cardinal): boolean;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Cancel;
+    function  DetachException: Exception;
+    procedure Execute;
+    function  FatalException: Exception;
+    function  IsCancelled: boolean;
+    function IsExceptional: boolean;
+    function  NoWait: IOmniParallelJoin;
+    function  NumTasks(numTasks: integer): IOmniParallelJoin;
+    function  Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin; overload;
+    function  Task(const aTask: TProc): IOmniParallelJoin; overload;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
+    function  WaitFor(timeout_ms: cardinal): boolean;
+  end; { TOmniParallelJoin }
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -656,14 +733,10 @@ type
     {$ENDIF OTL_ERTTI}
 
   // Join
-//    class function  Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-//    class function  Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-//    class function  Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-//    class function  Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-    class procedure Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil) ; overload;
-    class procedure Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil); overload;
-    class procedure Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class function  Join(const task1, task2: TProc): IOmniParallelJoin; overload;
+    class function Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin; overload;
+    class function  Join(const tasks: array of TProc): IOmniParallelJoin; overload;
+    class function  Join(const tasks: array of TOmniJoinDelegate): IOmniParallelJoin; overload;
 
   // Future
     class function Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
@@ -881,6 +954,10 @@ end; { EJoinException.Destroy }
 procedure EJoinException.Add(iTask: integer; taskException: Exception);
 begin
   jeExceptions.AddObject(iTask, taskException);
+  if Message = '' then
+    Message := taskException.Message
+  else
+    Message := Message + #13#10 + taskException.Message;
 end; { EJoinException.Add }
 
 function EJoinException.Count: integer;
@@ -893,6 +970,207 @@ begin
   Result.FatalException := Exception(jeExceptions.Objects[idxException]);
   Result.TaskNumber := jeExceptions[idxException];
 end; { EJoinException.GetInner }
+
+{ TOmniJoinState }
+
+constructor TOmniJoinState.Create(const globalCancelationFlag, globalExceptionFlag:
+  IOmniCancellationToken);
+begin
+  inherited Create;
+  ojsGlobalCancelationFlag := globalCancelationFlag;
+  ojsGlobalExceptionFlag := globalExceptionFlag;
+end; { TOmniJoinState.Create }
+
+procedure TOmniJoinState.Cancel;
+begin
+  ojsGlobalCancelationFlag.Signal;
+end; { TOmniJoinState.Cancel }
+
+function TOmniJoinState.GetTask: IOmniTask;
+begin
+  Result := ojsTask;
+end; { TOmniJoinState.GetTask }
+
+function TOmniJoinState.GetTaskControl: IOmniTaskControl;
+begin
+  Result := ojsTaskControl;
+end; { TOmniJoinState.GetTaskControl }
+
+function TOmniJoinState.IsCancelled: boolean;
+begin
+  Result := ojsGlobalCancelationFlag.IsSignalled;
+end; { TOmniJoinState.IsCancelled }
+
+function TOmniJoinState.IsExceptional: boolean;
+begin
+  Result := ojsGlobalExceptionFlag.IsSignalled;
+end; { TOmniJoinState.IsExceptional }
+
+procedure TOmniJoinState.SetTask(const aTask: IOmniTask);
+begin
+  ojsTask := aTask;
+end; { TOmniJoinState.SetTask }
+
+procedure TOmniJoinState.SetTaskControl(const aTask: IOmniTaskControl);
+begin
+  ojsTaskControl := aTask;
+end; { TOmniJoinState.SetTaskControl }
+
+{ TOmniParallelJoin }
+
+constructor TOmniParallelJoin.Create;
+begin
+  inherited Create;
+  opjTasks := TList<TOmniJoinDelegate>.Create;
+  opjNumTasks := Environment.Process.Affinity.Count;
+  opjGlobalCancellationFlag := CreateOmniCancellationToken;
+  opjGlobalExceptionFlag := CreateOmniCancellationToken;
+end; { TOmniParallelJoin.Create }
+
+destructor TOmniParallelJoin.Destroy;
+begin
+  FreeAndNil(opjTasks);
+  inherited Destroy;
+end; { TOmniParallelJoin.Destroy }
+
+procedure TOmniParallelJoin.Cancel;
+begin
+  opjGlobalCancellationFlag.Signal;
+end; { TOmniParallelJoin.Cancel }
+
+function TOmniParallelJoin.DetachException: Exception;
+begin
+  Result := FatalException; // this will in turn detach exception from task
+  opjTaskException := nil;
+end; { TOmniParallelJoin.DetachException }
+
+procedure TOmniParallelJoin.DetachExceptionFromTasks;
+var
+  iTask      : integer;
+  taskControl: IOmniTaskControl;
+begin
+  opjTaskException := nil;
+  for iTask := Low(opjJoinStates) to High(opjJoinStates) do begin
+    taskControl := (opjJoinStates[iTask] as IOmniJoinStateEx).TaskControl;
+    taskControl.WaitFor(INFINITE);
+    if assigned(taskControl.FatalException) then begin
+      if not assigned(opjTaskException) then
+        opjTaskException := EJoinException.Create;
+      EJoinException(opjTaskException).Add(iTask, taskControl.DetachException);
+    end;
+  end;
+end; { TOmniParallelJoin.DetachExceptionFromTasks }
+
+procedure TOmniParallelJoin.Execute;
+var
+  iProc      : integer;
+  numTasks   : integer;
+  taskControl: IOmniTaskControl;
+begin
+  numTasks := opjTasks.Count;
+  GlobalParallelPool.MaxExecuting := opjNumTasks;
+  SetLength(opjJoinStates, numTasks);
+  opjCountStopped := TOmniResourceCount.Create(numTasks);
+  for iProc := 0 to opjTasks.Count - 1 do begin
+    opjJoinStates[iProc] := TOmniJoinState.Create(opjGlobalCancellationFlag, opjGlobalExceptionFlag);
+    taskControl :=
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          procNum: integer;
+          joinStateEx: IOmniJoinStateEx;
+        begin
+          procNum := task.Param['ProcNum'];
+          joinStateEx := (opjJoinStates[procNum] as IOmniJoinStateEx);
+          joinStateEx.SetTask(task);
+          try
+            try
+              opjTasks[procNum](opjJoinStates[procNum]);
+            except
+              opjGlobalExceptionFlag.Signal;
+              raise;
+            end;
+          finally
+            opjCountStopped.Allocate;
+          end;
+        end
+      ).SetParameter('ProcNum', iProc);
+    ApplyConfig(opjTaskConfig, taskControl);
+    taskControl.Schedule(GlobalParallelPool);
+    (opjJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
+  end;
+  if not opjNoWait then
+    WaitFor(INFINITE);
+end; { TOmniParallelJoin.Execute }
+
+function TOmniParallelJoin.FatalException: Exception;
+begin
+  DetachExceptionFromTasks;
+  Result := opjTaskException;
+end; { TOmniParallelJoin.FatalException }
+
+function TOmniParallelJoin.InternalWaitFor(timeout_ms: cardinal): boolean;
+begin
+  Result := WaitForSingleObject(opjCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0;
+end; { TOmniParallelJoin.InternalWaitFor }
+
+function TOmniParallelJoin.IsCancelled: boolean;
+begin
+  Result := opjGlobalCancellationFlag.IsSignalled;
+end; { TOmniParallelJoin.IsCancelled }
+
+function TOmniParallelJoin.IsExceptional: boolean;
+begin
+  Result := opjGlobalExceptionFlag.IsSignalled;
+end; { TOmniParallelJoin.IsExceptional }
+
+function TOmniParallelJoin.NoWait: IOmniParallelJoin;
+begin
+  opjNoWait := true;
+  Result := Self;
+end; { TOmniParallelJoin.NoWait }
+
+function TOmniParallelJoin.NumTasks(numTasks: integer): IOmniParallelJoin;
+begin
+  opjNumTasks := numTasks;
+  Result := Self;
+end; { TOmniParallelJoin.NumTasks }
+
+function TOmniParallelJoin.Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin;
+begin
+  opjTasks.Add(aTask);
+  Result := Self;
+end; { TOmniParallelJoin.Task }
+
+function TOmniParallelJoin.Task(const aTask: TProc): IOmniParallelJoin;
+begin
+  Result := Task(
+    procedure (const joinState: IOmniJoinState)
+    begin
+      aTask
+    end);
+end; { TOmniParallelJoin.Task }
+
+function TOmniParallelJoin.TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
+begin
+  opjTaskConfig := config;
+  Result := Self;
+end; { TOmniParallelJoin.TaskConfig }
+
+function TOmniParallelJoin.WaitFor(timeout_ms: cardinal): boolean;
+var
+  taskExcept: Exception;
+begin
+  Result := InternalWaitFor(timeout_ms);
+  if Result then begin
+    DetachExceptionFromTasks;
+    if assigned(opjTaskException) then begin
+      taskExcept := opjTaskException;
+      opjTaskException := nil;
+      raise taskExcept;
+    end;
+  end;
+end; { TOmniParallelJoin.WaitFor }
 
 { Parallel }
 
@@ -1039,166 +1317,32 @@ begin
   Result := TOmniFuture<T>.CreateEx(action, taskConfig);
 end; { Parallel.Future<T> }
 
-class procedure Parallel.Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig);
+class function Parallel.Join(const task1, task2: TProc): IOmniParallelJoin;
 begin
-  Join([task1, task2], taskConfig);
+  Result := TOmniParallelJoin.Create.Task(task1).Task(task2);
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig);
+class function Parallel.Join(const tasks: array of TProc): IOmniParallelJoin;
 var
-  countStopped : IOmniResourceCount;
-  joinException: EJoinException;
-  otlTasks     : array of IOmniTaskControl;
-
-  function EnsureException: EJoinException;
-  begin
-    if not assigned(joinException) then
-      joinException := EJoinException.Create;
-    Result := joinException;
-  end; { EnsureException }
-
-  procedure Execute(iTask: integer);
-  begin
-    try
-      tasks[iTask]();
-    except
-      on E: Exception do
-        EnsureException.Add(iTask, AcquireExceptionObject);
-    end;
-  end; { Execute }
-
-  procedure CreateJoinTask(iTask: integer);
-  var
-    proc   : TProc;
-    intProc: integer absolute proc;
-  begin
-    proc := tasks[iTask];
-    otlTasks[iTask] := CreateTask(
-        procedure (const task: IOmniTask)
-        begin
-          try
-            TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
-          finally // task may raise an exception
-            countStopped.Allocate;
-          end;
-        end
-      ).Unobserved
-       .SetParameter('Proc', intProc);
-    ApplyConfig(taskConfig, otlTasks[iTask]);
-    otlTasks[iTask].Schedule(GlobalParallelPool);
-  end; { CreateJoinTask }
-
-var
-  iProc         : integer;
-  numInlineTasks: integer;
-
-begin { Parallel.Join }
-  Assert(SizeOf(integer) = SizeOf(TProc));
-  joinException := nil;
-  SetLength(otlTasks, Length(tasks));
-  if ((Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1)) and (not assigned(taskConfig)) then
-  begin
-    for iProc := Low(tasks) to High(tasks) do
-      Execute(iProc);
-  end
-  else begin
-    if assigned(taskConfig) then
-      numInlineTasks := 0
-    else
-      numInlineTasks := 1;
-    countStopped := TOmniResourceCount.Create(Length(tasks) - numInlineTasks);
-    for iProc := Low(tasks)+numInlineTasks to High(tasks) do
-      CreateJoinTask(iProc);
-    if numInlineTasks = 1 then
-      Execute(Low(tasks));
-    WaitForSingleObject(countStopped.Handle, INFINITE);
-    for iProc := Low(otlTasks) to High(otlTasks) do
-      if assigned(otlTasks[iProc]) then begin
-        otlTasks[iProc].WaitFor(INFINITE);
-        if assigned(otlTasks[iProc].FatalException) then
-          EnsureException.Add(iProc, otlTasks[iProc].DetachException);
-      end;
-  end;
-  if assigned(joinException) then
-    raise joinException;
-end; { Parallel.Join }
-
-class procedure Parallel.Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
+  aTask: TProc;
 begin
-  Join([task1, task2], taskConfig);
+  Result := TOmniParallelJoin.Create;
+  for aTask in tasks do
+    Result.Task(aTask);
 end; { Parallel.Join }
 
-class procedure Parallel.Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
+class function Parallel.Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin;
+begin
+  Result := TOmniParallelJoin.Create.Task(task1).Task(task2);
+end; { Parallel.Join }
+
+class function Parallel.Join(const tasks: array of TOmniJoinDelegate): IOmniParallelJoin;
 var
-  joinException: EJoinException;
-
-  function EnsureException: EJoinException;
-  begin
-    if not assigned(joinException) then
-      joinException := EJoinException.Create;
-    Result := joinException;
-  end; { EnsureException }
-
-var
-  proc        : TOmniTaskDelegate;
-  countStopped: IOmniResourceCount;
-  firstTask   : IOmniTaskControl;
-  intProc     : integer absolute proc;
-  intTasks    : array of TOmniTaskDelegate;
-  iProc       : integer;
-  otlTasks    : array of IOmniTaskControl;
-  prevTask    : IOmniTaskControl;
-
-begin { EnsureException }
-  Assert(SizeOf(integer) = SizeOf(TProc));
-  joinException := nil;
-  SetLength(otlTasks, Length(tasks));
-  if (Environment.Process.Affinity.Count = 1) or (Length(tasks) = 1) then begin
-    prevTask := nil;
-    for iProc := Low(tasks) to High(tasks) do begin
-      proc := tasks[iProc];
-      otlTasks[iProc] := CreateTask(proc).Unobserved;
-      ApplyConfig(taskConfig, otlTasks[iProc]);
-      if assigned(prevTask) then
-        prevTask.ChainTo(otlTasks[iProc]);
-      prevTask := otlTasks[iProc];
-      if not assigned(firstTask) then
-        firstTask := otlTasks[iProc];
-    end;
-    if assigned(firstTask) then begin
-      firstTask.Schedule;
-      prevTask.WaitFor(INFINITE);
-    end;
-  end
-  else begin
-    countStopped := TOmniResourceCount.Create(Length(tasks));
-    SetLength(intTasks, Length(tasks));
-    for iProc := Low(tasks) to High(tasks) do begin
-      proc := tasks[iProc];
-      otlTasks[iProc] := CreateTask(
-          procedure (const task: IOmniTask)
-          begin
-            try
-              TOmniTaskDelegate(task.Param['Proc'].AsInteger)(task);
-            finally
-              countStopped.Allocate;
-            end;
-          end
-        ).Unobserved
-         .SetParameter('Proc', intProc);
-      ApplyConfig(taskConfig, otlTasks[iProc]);
-      otlTasks[iProc].Schedule(GlobalParallelPool);
-    end;
-    WaitForSingleObject(countStopped.Handle, INFINITE);
-  end;
-  for iProc := Low(otlTasks) to High(otlTasks) do
-    if assigned(otlTasks[iProc]) then begin
-      otlTasks[iProc].WaitFor(INFINITE);
-      if assigned(otlTasks[iProc].FatalException) then
-        EnsureException.Add(iProc, otlTasks[iProc].DetachException);
-    end;
-  if assigned(joinException) then
-    raise joinException;
+  aTask: TOmniJoinDelegate;
+begin
+  Result := TOmniParallelJoin.Create;
+  for aTask in tasks do
+    Result.Task(aTask);
 end; { Parallel.Join }
 
 class function Parallel.Pipeline: IOmniPipeline;

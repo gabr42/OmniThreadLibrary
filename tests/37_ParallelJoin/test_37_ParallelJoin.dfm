@@ -29,7 +29,7 @@ object frmTestParallelJoin: TfrmTestParallelJoin
     Height = 25
     Caption = 'Join (one core)'
     TabOrder = 1
-    OnClick = btnJointOneClick
+    OnClick = btnJoinAllClick
   end
   object lbLog: TListBox
     Left = 119
