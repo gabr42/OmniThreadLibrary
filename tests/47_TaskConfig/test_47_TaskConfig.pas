@@ -79,12 +79,12 @@ begin
       task.Comm.Send(WM_LOG, 'Completed');
     end,
 
-    procedure
-    begin
-      btnAsync.Enabled := true;
-    end,
-
-    Parallel.TaskConfig.OnMessage(Self)
+    Parallel.TaskConfig.OnMessage(Self).OnTerminated(
+      procedure (const task: IOmniTaskControl)
+      begin
+        btnAsync.Enabled := true;
+      end
+    )
   );
 
   for i := 1 to 10 do begin
@@ -172,28 +172,28 @@ procedure TfrmDemoParallelTaskConfig.btnJoinClick(Sender: TObject);
 begin
   FSharedValue := 42;
   Parallel.Join(
-    procedure (const task: IOmniTask)
+    procedure (const joinState: IOmniJoinState)
     var
       i: integer;
     begin
       for i := 1 to 1000000 do begin
-        task.Lock.Acquire;
+        joinState.Task.Lock.Acquire;
         FSharedValue := FSharedValue + 17;
-        task.Lock.Release;
+        joinState.Task.Lock.Release;
       end;
     end,
-    procedure (const task: IOmniTask)
+    procedure (const joinState: IOmniJoinState)
     var
       i: integer;
     begin
       for i := 1 to 1000000 do begin
-        task.Lock.Acquire;
+        joinState.Task.Lock.Acquire;
         FSharedValue := FSharedValue - 17;
-        task.Lock.Release;
+        joinState.Task.Lock.Release;
       end;
     end
-    ,Parallel.TaskConfig.WithLock(CreateOmniCriticalSection)
-  );
+  ).TaskConfig(Parallel.TaskConfig.WithLock(CreateOmniCriticalSection))
+   .Execute;
   lbLog.ItemIndex := lbLog.Items.Add(Format('JOIN: Shared value = %d (should be 42)', [FSharedValue]));
 end;
 

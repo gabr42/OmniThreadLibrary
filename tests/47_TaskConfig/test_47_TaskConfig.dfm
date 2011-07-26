@@ -34,7 +34,7 @@ object frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig
   end
   object btnJoin: TButton
     Left = 8
-    Top = 40
+    Top = 41
     Width = 75
     Height = 25
     Caption = 'Join'
