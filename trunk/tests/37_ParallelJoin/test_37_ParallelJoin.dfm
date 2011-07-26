@@ -24,7 +24,7 @@ object frmTestParallelJoin: TfrmTestParallelJoin
   end
   object btnJointOne: TButton
     Left = 8
-    Top = 39
+    Top = 40
     Width = 105
     Height = 25
     Caption = 'Join (one core)'
@@ -49,5 +49,23 @@ object frmTestParallelJoin: TfrmTestParallelJoin
     Caption = 'Join (TProc)'
     TabOrder = 3
     OnClick = btnJoinTProcClick
+  end
+  object btnCancel: TButton
+    Left = 8
+    Top = 136
+    Width = 105
+    Height = 25
+    Caption = 'Cancel'
+    TabOrder = 4
+    OnClick = btnCancelClick
+  end
+  object btnNoWait: TButton
+    Left = 8
+    Top = 183
+    Width = 105
+    Height = 25
+    Caption = 'NoWait'
+    TabOrder = 5
+    OnClick = btnNoWaitClick
   end
 end
