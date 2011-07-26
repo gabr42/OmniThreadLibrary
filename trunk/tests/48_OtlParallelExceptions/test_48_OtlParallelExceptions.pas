@@ -18,10 +18,13 @@ type
     btnJoin2: TButton;
     btnPipeline: TButton;
     lbLog: TListBox;
+    btnJoin3: TButton;
     procedure btnFuture1Click(Sender: TObject);
     procedure btnFuture2Click(Sender: TObject);
     procedure btnFuture3Click(Sender: TObject);
     procedure btnJoin1Click(Sender: TObject);
+    procedure btnJoin2Click(Sender: TObject);
+    procedure btnJoin3Click(Sender: TObject);
   private
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const param: array of const); overload;
@@ -123,6 +126,67 @@ begin
           E[iInnerExc].FatalException.ClassName,
           E[iInnerExc].FatalException.Message]);
     end;
+  end;
+end;
+
+procedure TForm34.btnJoin2Click(Sender: TObject);
+begin
+  try
+    Parallel.Join(
+      procedure (const joinState: IOmniJoinState)
+      begin
+        Sleep(500);
+        raise Exception.Create('Exception in first task');
+      end,
+      procedure (const joinState: IOmniJoinState)
+      var
+        i: integer;
+      begin
+        for i := 1 to 10 do begin
+          Sleep(100);
+          if joinState.IsExceptional then
+            raise Exception.CreateFmt('Exception in second task, i = %d', [i]);
+        end;
+      end).Execute;
+  except
+    on E: Exception do
+      Log('Join raised exception %s:%s', [E.ClassName, E.Message]);
+  end;
+end;
+
+procedure TForm34.btnJoin3Click(Sender: TObject);
+var
+  j      : integer;
+  join   : IOmniParallelJoin;
+  joinExc: Exception;
+begin
+  join := Parallel.Join(
+    procedure (const joinState: IOmniJoinState)
+    begin
+      Sleep(500);
+      raise Exception.Create('Exception in first task');
+    end,
+    procedure (const joinState: IOmniJoinState)
+    var
+      i: integer;
+    begin
+      for i := 1 to 10 do begin
+        Sleep(100);
+        if joinState.IsExceptional then
+          raise Exception.CreateFmt('Exception in second task, i = %d', [i]);
+      end;
+    end).NoWait.Execute;
+  for j := 1 to 10 do begin
+    Sleep(100);
+    if join.IsExceptional then begin
+      Log(Format('Join raised exception, j = %d', [j]));
+      break; //for j
+    end;
+  end;
+  joinExc := join.DetachException; // includes implicit WaitFor
+  if assigned(joinExc) then begin
+    Log(Format('Join raised exception %s:%s', [joinExc.ClassName, joinExc.Message]));
+    FreeAndNil(joinExc);
   end;
 end;
 

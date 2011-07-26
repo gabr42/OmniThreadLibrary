@@ -24,48 +24,48 @@ object Form34: TForm34
   end
   object btnFuture1: TButton
     Left = 16
-    Top = 110
+    Top = 144
     Width = 91
     Height = 25
     Caption = 'Future 1'
-    TabOrder = 1
+    TabOrder = 4
     OnClick = btnFuture1Click
   end
   object btnJoin1: TButton
     Left = 16
-    Top = 47
+    Top = 48
     Width = 91
     Height = 25
     Caption = 'Join 1'
-    TabOrder = 2
+    TabOrder = 1
     OnClick = btnJoin1Click
   end
   object btnForeach: TButton
     Left = 16
-    Top = 203
+    Top = 240
     Width = 75
     Height = 25
     Caption = 'ForEach'
     Enabled = False
-    TabOrder = 3
+    TabOrder = 7
   end
   object btnPipeline: TButton
     Left = 16
-    Top = 234
+    Top = 272
     Width = 75
     Height = 25
     Caption = 'Pipeline'
     Enabled = False
-    TabOrder = 4
+    TabOrder = 8
   end
   object btnForkJoin: TButton
     Left = 16
-    Top = 265
+    Top = 304
     Width = 75
     Height = 25
     Caption = 'Fork/Join'
     Enabled = False
-    TabOrder = 5
+    TabOrder = 9
   end
   object lbLog: TListBox
     Left = 128
@@ -75,32 +75,42 @@ object Form34: TForm34
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
-    TabOrder = 6
+    TabOrder = 10
   end
   object btnFuture2: TButton
     Left = 16
-    Top = 141
+    Top = 176
     Width = 91
     Height = 25
     Caption = 'Future 2'
-    TabOrder = 7
+    TabOrder = 5
     OnClick = btnFuture2Click
   end
   object btnFuture3: TButton
     Left = 16
-    Top = 172
+    Top = 208
     Width = 91
     Height = 25
     Caption = 'Future 3'
-    TabOrder = 8
+    TabOrder = 6
     OnClick = btnFuture3Click
   end
   object btnJoin2: TButton
     Left = 16
-    Top = 78
+    Top = 80
     Width = 91
     Height = 25
     Caption = 'Join 2'
-    TabOrder = 9
+    TabOrder = 2
+    OnClick = btnJoin2Click
+  end
+  object btnJoin3: TButton
+    Left = 16
+    Top = 112
+    Width = 91
+    Height = 25
+    Caption = 'Join 3'
+    TabOrder = 3
+    OnClick = btnJoin3Click
   end
 end

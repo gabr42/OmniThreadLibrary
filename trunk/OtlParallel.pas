@@ -655,6 +655,7 @@ type
     function  Execute: IOmniParallelJoin;
     function  FatalException: Exception;
     function  IsCancelled: boolean;
+    function  IsExceptional: boolean;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
     function  Task(const task: TProc): IOmniParallelJoin; overload;
     function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
