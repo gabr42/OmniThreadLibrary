@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-14
-///   Version           : 1.06
+///   Last modification : 2011-07-26
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2011-07-26
+///       - TOmniTaskEvent, TOmniTaskMessageEvent, TOmniPoolThreadEvent, and
+///         TOmniPoolWorkItemEvent renamed to TOmniMonitorTaskEvent,
+///         TOmniMonitorTaskMessageEvent, TOmniMonitorPoolThreadEvent and
+///         TOmniMonitorPoolWorkItemEvent, respectively.
 ///     1.06: 2011-07-14
 ///       - Removed task exception object parameter from OnPoolWorkItemCompleted.
 ///     1.05: 2011-07-04
@@ -89,23 +94,23 @@ uses
   OtlThreadPool;
 
 type
-  TOmniTaskEvent = procedure(const task: IOmniTaskControl) of object;
-  TOmniTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
-  TOmniPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
-  TOmniPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
+  TOmniMonitorTaskEvent = procedure(const task: IOmniTaskControl) of object;
+  TOmniMonitorTaskMessageEvent = procedure(const task: IOmniTaskControl; const msg: TOmniMessage) of object;
+  TOmniMonitorPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
+  TOmniMonitorPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
     emMessageWindow           : THandle;
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
-    emOnPoolThreadCreated     : TOmniPoolThreadEvent;
-    emOnPoolThreadDestroying  : TOmniPoolThreadEvent;
-    emOnPoolThreadKilled      : TOmniPoolThreadEvent;
-    emOnPoolWorkItemEvent     : TOmniPoolWorkItemEvent;
-    emOnTaskMessage           : TOmniTaskMessageEvent;
-    emOnTaskUndeliveredMessage: TOmniTaskMessageEvent;
-    emOnTaskTerminated        : TOmniTaskEvent;
+    emOnPoolThreadCreated     : TOmniMonitorPoolThreadEvent;
+    emOnPoolThreadDestroying  : TOmniMonitorPoolThreadEvent;
+    emOnPoolThreadKilled      : TOmniMonitorPoolThreadEvent;
+    emOnPoolWorkItemEvent     : TOmniMonitorPoolWorkItemEvent;
+    emOnTaskMessage           : TOmniMonitorTaskMessageEvent;
+    emOnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent;
+    emOnTaskTerminated        : TOmniMonitorTaskEvent;
     emCurrentMsg              : TOmniMessage;
   strict protected
     procedure WndProc(var msg: TMessage);
@@ -119,19 +124,19 @@ type
     procedure ProcessMessages;
   published
     property MessageWindow: THandle read emMessageWindow;
-    property OnPoolThreadCreated: TOmniPoolThreadEvent read emOnPoolThreadCreated
+    property OnPoolThreadCreated: TOmniMonitorPoolThreadEvent read emOnPoolThreadCreated
       write emOnPoolThreadCreated;
-    property OnPoolThreadDestroying: TOmniPoolThreadEvent read emOnPoolThreadDestroying
+    property OnPoolThreadDestroying: TOmniMonitorPoolThreadEvent read emOnPoolThreadDestroying
       write emOnPoolThreadDestroying;
-    property OnPoolThreadKilled: TOmniPoolThreadEvent read emOnPoolThreadKilled
+    property OnPoolThreadKilled: TOmniMonitorPoolThreadEvent read emOnPoolThreadKilled
       write emOnPoolThreadKilled;
-    property OnPoolWorkItemCompleted: TOmniPoolWorkItemEvent read emOnPoolWorkItemEvent
+    property OnPoolWorkItemCompleted: TOmniMonitorPoolWorkItemEvent read emOnPoolWorkItemEvent
       write emOnPoolWorkItemEvent;
-    property OnTaskMessage: TOmniTaskMessageEvent read emOnTaskMessage
+    property OnTaskMessage: TOmniMonitorTaskMessageEvent read emOnTaskMessage
       write emOnTaskMessage;
-    property OnTaskTerminated: TOmniTaskEvent read emOnTaskTerminated
+    property OnTaskTerminated: TOmniMonitorTaskEvent read emOnTaskTerminated
       write emOnTaskTerminated;
-    property OnTaskUndeliveredMessage: TOmniTaskMessageEvent
+    property OnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent
       read emOnTaskUndeliveredMessage write emOnTaskUndeliveredMessage;
   end; { TOmniEventMonitor }
 

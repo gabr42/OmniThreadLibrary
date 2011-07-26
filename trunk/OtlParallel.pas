@@ -614,8 +614,8 @@ type
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
   end; { IOmniParallelJoin }
 
-  TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
-  end; { TOmniParallelJoin }
+//  TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
+//  end; { TOmniParallelJoin }
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -656,10 +656,14 @@ type
     {$ENDIF OTL_ERTTI}
 
   // Join
-    class function  Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-    class function  Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-    class function  Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
-    class function  Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+//    class function  Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+//    class function  Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+//    class function  Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+//    class function  Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil): IOmniParallelJoin; overload;
+    class procedure Join(const task1, task2: TProc; taskConfig: IOmniTaskConfig = nil) ; overload;
+    class procedure Join(const task1, task2: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Join(const tasks: array of TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Join(const tasks: array of TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil); overload;
 
   // Future
     class function Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
