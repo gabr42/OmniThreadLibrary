@@ -102,6 +102,5 @@ object Form34: TForm34
     Height = 25
     Caption = 'Join 2'
     TabOrder = 9
-    OnClick = btnJoin2Click
   end
 end
