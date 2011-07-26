@@ -957,7 +957,7 @@ begin
   if Message = '' then
     Message := taskException.Message
   else
-    Message := Message + ';'#13#10 + taskException.Message;
+    Message := Message + '; '#13#10 + taskException.Message;
 end; { EJoinException.Add }
 
 function EJoinException.Count: integer;
