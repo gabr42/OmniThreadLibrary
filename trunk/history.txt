@@ -1,5 +1,15 @@
+  - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
+    to add exception and cancellation support. User code must call .Execute on the
+    interface returned from the Parallel.Join to start the execution.
+  - Parallel.Join(const task: TOmniTaskDelegate) is no longer supported. It was
+    replaced with the Parallel.Join(const task: IOmniJoinState).
+  - Parallel.Join no longer supports taskConfig parameter (replaced by the
+    IOmniParallelJoin.TaskConfig function).
+  - Number of simultaneously executed task in Parallel.Join may be set by calling
+    the new IOmniParallelJoin.NumTasks function.
   - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
-    in EJoinException and raised at the end of Parallel.Join method.
+    in EJoinException and raised at the end of Parallel.Join method (or when WaitFor is
+    called if Join is executed with the .NoWait modifier).
   - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
     in .Value. New function .FatalException and .DetachException.
   - Two version of Parallel.Async (the ones with explicit termination handlers)
