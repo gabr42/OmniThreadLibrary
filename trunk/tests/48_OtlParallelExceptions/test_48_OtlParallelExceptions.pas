@@ -22,7 +22,6 @@ type
     procedure btnFuture2Click(Sender: TObject);
     procedure btnFuture3Click(Sender: TObject);
     procedure btnJoin1Click(Sender: TObject);
-    procedure btnJoin2Click(Sender: TObject);
   private
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const param: array of const); overload;
@@ -115,32 +114,7 @@ begin
       end,
       procedure begin
         raise ETestException.Create('Exception 2 in Parallel.Join');
-      end]);
-  except
-    on E: EJoinException do begin
-      Log('Join raised exception %s:%s', [E.ClassName, E.Message]);
-      for iInnerExc := 0 to E.Count - 1 do
-        Log('  Task #%d raised exception: %s:%s', [E[iInnerExc].TaskNumber,
-          E[iInnerExc].FatalException.ClassName,
-          E[iInnerExc].FatalException.Message]);
-    end;
-  end;
-end;
-
-procedure TForm34.btnJoin2Click(Sender: TObject);
-var
-  iInnerExc: integer;
-begin
-  try
-    Parallel.Join([
-      procedure (const task: IOmniTask) begin
-        raise ETestException.Create('Exception 1 in Parallel.Join');
-      end,
-      procedure (const task: IOmniTask) begin
-      end,
-      procedure (const task: IOmniTask) begin
-        raise ETestException.Create('Exception 2 in Parallel.Join');
-      end]);
+      end]).Execute;
   except
     on E: EJoinException do begin
       Log('Join raised exception %s:%s', [E.ClassName, E.Message]);
