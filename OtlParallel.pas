@@ -650,9 +650,9 @@ type
   TOmniJoinDelegate = reference to procedure (const joinState: IOmniJoinState);
 
   IOmniParallelJoin = interface
-    procedure Cancel;
+    function  Cancel: IOmniParallelJoin;
     function  DetachException: Exception;
-    procedure Execute;
+    function  Execute: IOmniParallelJoin;
     function  FatalException: Exception;
     function  IsCancelled: boolean;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
@@ -680,12 +680,12 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Cancel;
+    function  Cancel: IOmniParallelJoin;
     function  DetachException: Exception;
-    procedure Execute;
+    function  Execute: IOmniParallelJoin;
     function  FatalException: Exception;
     function  IsCancelled: boolean;
-    function IsExceptional: boolean;
+    function  IsExceptional: boolean;
     function  NoWait: IOmniParallelJoin;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
     function  Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin; overload;
@@ -1033,9 +1033,10 @@ begin
   inherited Destroy;
 end; { TOmniParallelJoin.Destroy }
 
-procedure TOmniParallelJoin.Cancel;
+function TOmniParallelJoin.Cancel: IOmniParallelJoin;
 begin
   opjGlobalCancellationFlag.Signal;
+  Result := Self;
 end; { TOmniParallelJoin.Cancel }
 
 function TOmniParallelJoin.DetachException: Exception;
@@ -1061,7 +1062,7 @@ begin
   end;
 end; { TOmniParallelJoin.DetachExceptionFromTasks }
 
-procedure TOmniParallelJoin.Execute;
+function TOmniParallelJoin.Execute: IOmniParallelJoin;
 var
   iProc      : integer;
   numTasks   : integer;
@@ -1100,7 +1101,9 @@ begin
     (opjJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
   end;
   if not opjNoWait then
-    WaitFor(INFINITE);
+    WaitFor(INFINITE)
+  else
+    Result := Self;
 end; { TOmniParallelJoin.Execute }
 
 function TOmniParallelJoin.FatalException: Exception;

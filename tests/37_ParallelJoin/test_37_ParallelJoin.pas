@@ -4,7 +4,8 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls;
+  Dialogs, StdCtrls,
+  GpStuff;
 
 type
   TfrmTestParallelJoin = class(TForm)
@@ -12,12 +13,16 @@ type
     btnJointOne: TButton;
     lbLog: TListBox;
     btnJoinTProc: TButton;
+    btnCancel: TButton;
+    btnNoWait: TButton;
+    procedure btnCancelClick(Sender: TObject);
     procedure btnJoinAllClick(Sender: TObject);
     procedure btnJoinTProcClick(Sender: TObject);
-  private
+    procedure btnNoWaitClick(Sender: TObject);
   protected
+    FJoinCount: TGp4AlignedInt;
+    FJoinCount2: TGp4AlignedInt;
     procedure Log(const msg: string);
-  public
   end;
 
 var
@@ -32,6 +37,30 @@ uses
   OtlParallel;
 
 {$R *.dfm}
+
+procedure TfrmTestParallelJoin.btnCancelClick(Sender: TObject);
+begin
+  FJoinCount.Value := 0;
+  Parallel.Join(
+    procedure (const joinState: IOmniJoinState)
+    begin
+      Sleep(500);
+      joinState.Cancel;
+    end,
+    procedure (const joinState: IOmniJoinState)
+    var
+      i: integer;
+    begin
+      for i := 1 to 10 do begin
+        Sleep(100);
+        FJoinCount.Increment;
+        if joinState.IsCancelled then
+          break; //for
+      end;
+    end
+  ).Execute;
+  Log(Format('Join counted up to %d', [FJoinCount.Value]));
+end;
 
 procedure TfrmTestParallelJoin.btnJoinAllClick(Sender: TObject);
 var
@@ -83,6 +112,44 @@ begin
     end).Execute;
   Log(Format('Tasks stopped, execution time was %s seconds',
     [FormatDateTime('s.zzz', DSiElapsedTime64(startTime)/MSecsPerDay)]));
+end;
+
+procedure TfrmTestParallelJoin.btnNoWaitClick(Sender: TObject);
+var
+  join: IOmniParallelJoin;
+  time: int64;
+begin
+  FJoinCount.Value := 0;
+  FJoinCount2.Value := 0;
+  join := Parallel.Join(
+    procedure (const joinState: IOmniJoinState)
+    var
+      i: integer;
+    begin
+      for i := 1 to 10 do begin
+        Sleep(100);
+        FJoinCount.Increment;
+        if joinState.IsCancelled then
+          break; //for
+      end;
+    end,
+    procedure (const joinState: IOmniJoinState)
+    var
+      i: integer;
+    begin
+      for i := 1 to 10 do begin
+        Sleep(200);
+        FJoinCount2.Increment;
+        if joinState.IsCancelled then
+          break; //for
+      end;
+    end
+  ).NoWait.Execute;
+  Sleep(500);
+  time := DSiTimeGetTime64;
+  join.Cancel.WaitFor(INFINITE);
+  Log(Format('Waited %d ms for joins to terminate', [DSiElapsedTime64(time)]));
+  Log(Format('Joins counted up to %d and %d', [FJoinCount.Value, FJoinCount2.Value]));
 end;
 
 procedure TfrmTestParallelJoin.Log(const msg: string);
