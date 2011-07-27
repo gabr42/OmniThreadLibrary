@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-26
-///   Version           : 1.07
+///   Last modification : 2011-07-27
+///   Version           : 1.07a
 ///</para><para>
 ///   History:
+///     1.07a: 2011-07-27
+///       - Removed 'FreeAndNil(uninitialized variable)' which was leftover from
+///         incorrectly removed code in version 1.06.
 ///     1.07: 2011-07-26
 ///       - TOmniTaskEvent, TOmniTaskMessageEvent, TOmniPoolThreadEvent, and
 ///         TOmniPoolWorkItemEvent renamed to TOmniMonitorTaskEvent,
@@ -260,7 +263,6 @@ var
   endpoint     : IOmniCommunicationEndpoint;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
-  taskException: Exception;
   timeStart    : int64;
   tpMonitorInfo: TOmniThreadPoolMonitorInfo;
 
@@ -330,10 +332,8 @@ begin { TOmniEventMonitor.WndProc }
             OnPoolThreadKilled(pool, tpMonitorInfo.ThreadID);
         end
         else if tpMonitorInfo.ThreadPoolOperation = tpoWorkItemCompleted then begin
-          if assigned(OnPoolWorkItemCompleted) then begin
+          if assigned(OnPoolWorkItemCompleted) then
             OnPoolWorkItemCompleted(pool, tpMonitorInfo.TaskID);
-            FreeAndNil(taskException);
-          end;
         end;
       end;
     finally FreeAndNil(tpMonitorInfo); end;
