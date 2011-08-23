@@ -138,6 +138,9 @@ unit OtlParallel;
 
 interface
 
+// TODO 1 -oPrimoz Gabrijelcic : IOmniFuture<T>.IsExceptional
+// TODO 1 -oPrimoz Gabrijelcic : ??TryFatalException with timeout??
+
 // TODO 3 -oPrimoz Gabrijelcic : Maybe we could use .Aggregate<T> where T is the aggregate type?
 // TODO 3 -oPrimoz Gabrijelcic : Change .Aggregate to use .Into signature for loop body?
 // TODO 1 -oPrimoz Gabrijelcic : How to combine Futures and NoWait version of Aggregate?
@@ -735,7 +738,7 @@ type
 
   // Join
     class function  Join(const task1, task2: TProc): IOmniParallelJoin; overload;
-    class function Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin; overload;
+    class function  Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin; overload;
     class function  Join(const tasks: array of TProc): IOmniParallelJoin; overload;
     class function  Join(const tasks: array of TOmniJoinDelegate): IOmniParallelJoin; overload;
 
