@@ -2,7 +2,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Left = 0
   Top = 0
   Caption = 'TOmniBlockingCollection tester'
-  ClientHeight = 443
+  ClientHeight = 445
   ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,7 +15,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   OnCreate = FormCreate
   DesignSize = (
     630
-    443)
+    445)
   PixelsPerInch = 96
   TextHeight = 13
   object lblNumCPU: TLabel
@@ -29,11 +29,12 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Left = 152
     Top = 0
     Width = 478
-    Height = 443
+    Height = 445
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
+    ExplicitHeight = 443
   end
   object btnTest: TButton
     Left = 8
@@ -86,13 +87,14 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   end
   object btnTestIntf: TButton
     Left = 8
-    Top = 410
+    Top = 412
     Width = 138
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
+    ExplicitTop = 410
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -117,7 +119,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Top = 293
     Width = 138
     Height = 78
-    Caption = 'Collection class'
+    Caption = 'Take method'
     ItemIndex = 0
     Items.Strings = (
       '.Take'
@@ -151,7 +153,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
-    Value = 0
+    Value = 1
     OnChange = inpNumCPUChange
   end
   object OtlMonitor: TOmniEventMonitor

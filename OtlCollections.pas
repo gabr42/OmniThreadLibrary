@@ -96,9 +96,40 @@ type
   {$ENDREGION}
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
+    {$REGION 'Documentation'}
+    ///	<summary>Prevents any element to be added to the queue and marks queue as
+    ///	'Completed'. Not synchronized with Add.</summary>
+    ///	<remarks>
+    ///	  May not work correctly if multiple writers are active and one calls
+    ///	  CompleteAdding at the same time another calls Add.
+    ///	  <list type="bullet">
+    ///	    <item>[thread 1] Calls Add.</item>
+    ///	    <item>[thread 2] Calls CompleteAdding.</item>
+    ///	    <item>[thread 1] Checks if queue is completed (is not).</item>
+    ///	    <item>[thread 2] Sets 'completed' flag and returns.</item>
+    ///	    <item>[thread 1] Adds the element to the queue and returns.</item>
+    ///	  </list>Another scenario:
+    ///	  <list type="bullet">
+    ///	    <item>[T1] Calls Add.</item>
+    ///	    <item>[T1] Checks if queue is completed (is not).</item>
+    ///	    <item>[T2] Calls TryTake(INFINITE).</item>
+    ///	    <item>[T2] Calls TryDequeue (fails).</item>
+    ///	    <item>[T3] Calls CompleteAdding.</item>
+    ///	    <item>[T3] Marks queue as 'completed'.</item>
+    ///	    <item>[T2] Calls WaitForMultipleObjects which returns immediately as the
+    ///	    queue is 'completed'.</item>
+    ///	    <item>[T2] Returns without data.</item>
+    ///	    <item>[T1] Adds data to the queue.</item>
+    ///	    <item>[T1] Returns.</item>
+    ///	  </list>
+    ///	</remarks>
+    {$ENDREGION}
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
+    ///	<summary>Collection is finalized when it is both completed (i.e. CompleteAdding
+    ///	was called) and empty (TryTake would fail).</summary>
+    function  IsFinalized: boolean;
     function  Next: TOmniValue;
     procedure SetThrottling(highWatermark, lowWatermark: integer);
     function  Take(var value: TOmniValue): boolean;
@@ -133,6 +164,7 @@ type
     procedure CompleteAdding; inline;
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
+    function  IsFinalized: boolean;
     function  Next: TOmniValue;
 
     {$REGION 'Documentation'}
@@ -240,6 +272,14 @@ begin
   Result := obcCompleted;
 end; { TOmniBlockingCollection.IsCompleted }
 
+function TOmniBlockingCollection.IsFinalized: boolean;
+begin
+  Result := IsCompleted;
+  if not Result then
+    Exit;
+
+end; { TOmniBlockingCollection.IsFinalized }
+
 function TOmniBlockingCollection.Next: TOmniValue;
 begin
   if not Take(Result) then
@@ -265,7 +305,8 @@ end; { TOmniBlockingCollection.Take }
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 begin
-  // CompleteAdding and TryAdd are not synchronised
+  // CompleteAdding and TryAdd are not synchronised, which may cause problems in multiple
+  // writer scenario - see commens in IOmniBlockingCollection definition.
   Result := not obcCompleted;
   if Result then begin
     obcAccessed := true;
