@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2010-11-30
-///   Version           : 1.03c
+///   Last modification : 2011-08-25
+///   Version           : 1.03d
 ///</para><para>
 ///   History:
+///     1.03d: 2011-08-25
+///       - Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition.
 ///     1.03c: 2010-11-30
 ///       - Fixed deadlock condition in TryAdd when throttling was used.
 ///     1.03b: 2010-11-22
@@ -96,34 +98,6 @@ type
   {$ENDREGION}
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
     procedure Add(const value: TOmniValue);
-    {$REGION 'Documentation'}
-    ///	<summary>Prevents any element to be added to the queue and marks queue as
-    ///	'Completed'. Not synchronized with Add.</summary>
-    ///	<remarks>
-    ///	  May not work correctly if multiple writers are active and one calls
-    ///	  CompleteAdding at the same time another calls Add.
-    ///	  <list type="bullet">
-    ///	    <item>[thread 1] Calls Add.</item>
-    ///	    <item>[thread 2] Calls CompleteAdding.</item>
-    ///	    <item>[thread 1] Checks if queue is completed (is not).</item>
-    ///	    <item>[thread 2] Sets 'completed' flag and returns.</item>
-    ///	    <item>[thread 1] Adds the element to the queue and returns.</item>
-    ///	  </list>Another scenario:
-    ///	  <list type="bullet">
-    ///	    <item>[T1] Calls Add.</item>
-    ///	    <item>[T1] Checks if queue is completed (is not).</item>
-    ///	    <item>[T2] Calls TryTake(INFINITE).</item>
-    ///	    <item>[T2] Calls TryDequeue (fails).</item>
-    ///	    <item>[T3] Calls CompleteAdding.</item>
-    ///	    <item>[T3] Marks queue as 'completed'.</item>
-    ///	    <item>[T2] Calls WaitForMultipleObjects which returns immediately as the
-    ///	    queue is 'completed'.</item>
-    ///	    <item>[T2] Returns without data.</item>
-    ///	    <item>[T1] Adds data to the queue.</item>
-    ///	    <item>[T1] Returns.</item>
-    ///	  </list>
-    ///	</remarks>
-    {$ENDREGION}
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
@@ -140,18 +114,25 @@ type
   TOmniBlockingCollection = class(TInterfacedObject,
                                   IOmniBlockingCollection,
                                   IOmniValueEnumerable)
+  const
+    CCompletedFlag = $40000000; // 30-bit so we don't have cardinal/integer problems
   strict private
-    obcAccessed       : boolean;
-    obcApproxCount    : TGp4AlignedInt;
-    obcCollection     : TOmniQueue;
-    obcCompleted      : boolean;
-    obcCompletedSignal: TDSiEventHandle;
-    obcHighWaterMark  : integer;
-    obcLowWaterMark   : integer;
-    obcNotOverflow    : THandle {event};
-    obcObserver       : TOmniContainerWindowsEventObserver;
-    obcResourceCount  : TOmniResourceCount;
-    obcThrottling     : boolean;
+    obcAccessed            : boolean;
+    {$REGION 'Documentation'}
+    ///	<summary>Combination of 'is completed' flag and 'number of active TryAdd calls'
+    ///	counter. Must be kept together as those two have to be modified atomically so
+    ///	that CompleteAdding and Add/TryAdd can stay synchronized.</summary>
+    {$ENDREGION}
+    obcAddCountAndCompleted: TGp4AlignedInt;
+    obcApproxCount         : TGp4AlignedInt;
+    obcCollection          : TOmniQueue;
+    obcCompletedSignal     : TDSiEventHandle;
+    obcHighWaterMark       : integer;
+    obcLowWaterMark        : integer;
+    obcNotOverflow         : THandle {event};
+    obcObserver            : TOmniContainerWindowsEventObserver;
+    obcResourceCount       : TOmniResourceCount;
+    obcThrottling          : boolean;
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -161,12 +142,11 @@ type
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
     procedure Add(const value: TOmniValue); inline;
-    procedure CompleteAdding; inline;
+    procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
     function  IsFinalized: boolean;
     function  Next: TOmniValue;
-
     {$REGION 'Documentation'}
     ///	<remarks>When throttling is set, Add will block if there is &gt;=
     ///	highWaterMark elements in the queue. It will only unblock when number
@@ -256,10 +236,15 @@ end; { TOmniBlockingCollection.Add }
 
 procedure TOmniBlockingCollection.CompleteAdding;
 begin
-  if not obcCompleted then begin
-    obcCompleted := true;
-    Win32Check(SetEvent(obcCompletedSignal));
-  end;
+  repeat
+    if IsCompleted then // CompleteAdding was already called
+      Exit;
+    if obcAddCountAndCompleted.CAS(0, CCompletedFlag) then begin // there must be no active writers
+      Win32Check(SetEvent(obcCompletedSignal)); // tell blocked readers to quit
+      Exit;
+    end;
+    asm pause; end;
+  until false;
 end; { TOmniBlockingCollection.CompleteAdding }
 
 function TOmniBlockingCollection.GetEnumerator: IOmniValueEnumerator;
@@ -269,7 +254,7 @@ end; { TOmniBlockingCollection.GetEnumerator }
 
 function TOmniBlockingCollection.IsCompleted: boolean;
 begin
-  Result := obcCompleted;
+  Result := (obcAddCountAndCompleted.Value AND CCompletedFlag) = CCompletedFlag;
 end; { TOmniBlockingCollection.IsCompleted }
 
 function TOmniBlockingCollection.IsFinalized: boolean;
@@ -305,26 +290,28 @@ end; { TOmniBlockingCollection.Take }
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 begin
-  // CompleteAdding and TryAdd are not synchronised, which may cause problems in multiple
-  // writer scenario - see commens in IOmniBlockingCollection definition.
-  Result := not obcCompleted;
-  if Result then begin
-    obcAccessed := true;
-    if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-      Win32Check(ResetEvent(obcNotOverflow));
-      // it's possible that messages were removed and obcNotOverflow set *before* the
-      // previous line has executed so test again ...
+  obcAddCountAndCompleted.Increment;
+  try
+    // IsCompleted can not change during the execution of this function
+    Result := not IsCompleted;
+    if Result then begin
+      obcAccessed := true;
       if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-        if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
-          Result := false; // completed
-          Exit;
+        Win32Check(ResetEvent(obcNotOverflow));
+        // it's possible that messages were removed and obcNotOverflow set *before* the
+        // previous line has executed so test again ...
+        if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
+          if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
+            Result := false; // completed
+            Exit;
+          end;
         end;
       end;
+      obcCollection.Enqueue(value);
+      if obcThrottling then
+        obcApproxCount.Increment;
     end;
-    obcCollection.Enqueue(value);
-    if obcThrottling then
-      obcApproxCount.Increment;
-  end;
+  finally obcAddCountAndCompleted.Decrement; end;
 end; { TOmniBlockingCollection.TryAdd }
 
 function TOmniBlockingCollection.TryTake(var value: TOmniValue;
@@ -360,7 +347,7 @@ var
 begin { TOmniBlockingCollection.TryTake }
   if obcCollection.TryDequeue(value) then
     Result := true
-  else begin
+  else begin // must be executed even if timeout_ms = 0 or the algorithm will break
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
     try
@@ -370,22 +357,20 @@ begin { TOmniBlockingCollection.TryTake }
       if assigned(obcResourceCount) then
         waitHandles[2] := obcResourceCount.Handle;
       Result := false;
-      while not (IsCompleted or Elapsed) do begin
-        if obcCollection.TryDequeue(value) then begin
-          Result := true;
-          break; //while
-        end;
+      repeat
         awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
                      @waitHandles, false, TimeLeft_ms);
+        if obcCollection.TryDequeue(value) then begin // there may still be data in completed queue
+          Result := true;
+          break; //repeat
+        end;
         if awaited <> WAIT_OBJECT_1 then begin
           if awaited = WAIT_OBJECT_2 then
             CompleteAdding;
           Result := false;
           break; //while
         end;
-      end;
-      if not Result then // there may still be data in completed queue
-        Result := obcCollection.TryDequeue(value);
+      until Elapsed;
     finally
       if assigned(obcResourceCount) then
         obcResourceCount.Release;
