@@ -18,6 +18,8 @@
   - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
   - Bug fixed: Event monitor in connection to the thread pool was totally broken. 
     (Big thanks to [anton alisov] for finding the problem.)
+  - Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition in
+    TOmniBlockingCollection.
   
 2.1 2011-07-19
 - New features:
