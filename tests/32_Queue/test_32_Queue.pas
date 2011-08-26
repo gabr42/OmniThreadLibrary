@@ -14,6 +14,9 @@ uses
   OtlTaskControl,
   OtlContainers;
 
+const
+  MSG_ERR = WM_USER + 1;
+
 type
   TfrmTestOmniQueue = class(TForm)
     btn1to1         : TButton;
@@ -31,6 +34,7 @@ type
     lbLog           : TListBox;
     rgCollectionType: TRadioGroup;
     spinBlockSize   : TSpinButton;
+    cbTestIsEmpty: TCheckBox;
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
@@ -63,6 +67,7 @@ type
     procedure StopReaders;
     procedure StopWorkers;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
+    procedure MsgError(var msg: TOmniMessage); message MSG_ERR;
   strict protected
     function CreateCollection: TOmniBaseQueue;
   end; { TfrmTestOtlCollections }
@@ -89,44 +94,62 @@ var
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseQueue;
-  msg     : TOmniMessage;
-  srcColl : TOmniBaseQueue;
-  value   : TOmniValue;
+  chanColl   : TOmniBaseQueue;
+  isEmpty    : boolean;
+  msg        : TOmniMessage;
+  srcColl    : TOmniBaseQueue;
+  testIsEmpty: boolean;
+  value      : TOmniValue;
 begin
   value := task.Param['Source'];  srcColl := TOmniBaseQueue(value.AsObject);
   value := task.Param['Channel']; chanColl := TOmniBaseQueue(value.AsObject);
+  testIsEmpty := task.Param['TestIsEmpty'];
+  isEmpty := false; //to keep compiler happy
   GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
-  while not GStopForwarders do
+  while not GStopForwarders do begin
+    if testIsEmpty then
+      isEmpty := srcColl.IsEmpty;
     while srcColl.TryDequeue(value) do begin
+      if testIsEmpty and isEmpty then
+        task.Comm.Send(MSG_ERR, Format('Forwarder: Queue was empty before reading element %d', [value.AsInteger]));
       chanColl.Enqueue(value);
       if GForwardersCount.Increment = CCountThreadedTest then begin
         GStopForwarders := true;
         break; //while
       end;
     end;
+  end;
+  if testIsEmpty and (not srcColl.IsEmpty) then
+    task.Comm.Send(MSG_ERR, 'Forwarder: Queue was not empty at the end');
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
-  chanColl: TOmniBaseQueue;
-  dstColl : TOmniBaseQueue;
-  msg     : TOmniMessage;
-  value   : TOmniValue;
+  chanColl   : TOmniBaseQueue;
+  dstColl    : TOmniBaseQueue;
+  msg        : TOmniMessage;
+  testIsEmpty: boolean;
+  value      : TOmniValue;
 begin
   value := task.Param['Channel'];     chanColl := TOmniBaseQueue(value.AsObject);
   value := task.Param['Destination']; dstColl := TOmniBaseQueue(value.AsObject);
+  testIsEmpty := task.Param['TestIsEmpty'];
   GStartedWorkers.Increment;
   Assert(task.Comm.ReceiveWait(msg, 10000));
-  while not GStopReaders do
+  while not GStopReaders do begin
     while chanColl.TryDequeue(value) do begin
+      if testIsEmpty then
+        chanColl.IsEmpty; // can contain anything
       dstColl.Enqueue(value);
       if GReadersCount.Increment = CCountThreadedTest then begin
         GStopReaders := true;
         break; //while
       end;
     end;
+  end;
+  if testIsEmpty and (chanColl.IsEmpty) then
+    task.Comm.Send(MSG_ERR, 'Reader: Queue was not empty at the end');
 end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
@@ -206,9 +229,12 @@ begin
   try
     testList := TGpIntegerList.Create;
     try
+      Assert(FSrcCollection.IsEmpty);
+      Assert(not FDstCollection.IsEmpty);
       while FDstCollection.TryDequeue(value) do
         testList.Add(value.AsInteger);
       testList.Sorted := true;
+      Assert(FDstCollection.IsEmpty);
       if testList.Count <> CCountThreadedTest then
         raise Exception.CreateFmt('Expected %d items, got %d', [CCountThreadedTest, testList.Count]);
       for i := 1 to CCountThreadedTest do
@@ -255,6 +281,11 @@ begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
 
+procedure TfrmTestOmniQueue.MsgError(var msg: TOmniMessage);
+begin
+  Log(msg.MsgData);
+end;
+
 procedure TfrmTestOmniQueue.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
   time: int64;
@@ -277,8 +308,10 @@ begin
     FForwarders[iForwarder] :=
       CreateTask(ForwarderWorker, Format('Forwarder %d', [iForwarder]))
       .OnTerminated(OtlMonitorTaskTerminated)
+      .OnMessage(Self)
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
+      .SetParameter('TestIsEmpty', cbTestIsEmpty.Checked)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareForwarders }
@@ -294,6 +327,7 @@ begin
       .OnTerminated(OtlMonitorTaskTerminated)
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
+      .SetParameter('TestIsEmpty', cbTestIsEmpty.Checked)
       .Run;
   end;
 end; { TfrmTestOtlCollections.PrepareReaders }
@@ -314,8 +348,11 @@ begin
   FDstCollection := CreateCollection; OutputDebugString(PChar(Format('Dest: %p', [pointer(FDstCollection)])));
   FChanCollection := CreateCollection;OutputDebugString(PChar(Format('Chan: %p', [pointer(FChanCollection)])));
   FNumWorkers.Value := numForwarders + numReaders;
-  for i := 1 to CCountThreadedTest do
+  Assert(FSrcCollection.IsEmpty);
+  for i := 1 to CCountThreadedTest do begin
     FSrcCollection.Enqueue(i);
+    Assert(not FSrcCollection.IsEmpty);
+  end;
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);
   while GStartedWorkers.Value < (numForwarders + numReaders) do
@@ -401,3 +438,4 @@ end; { TfrmTestOtlCollections.WMRestartTest }
 initialization
   Assert(SizeOf(cardinal) = SizeOf(pointer));
 end.
+
