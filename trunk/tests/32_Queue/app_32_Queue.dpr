@@ -10,5 +10,7 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TfrmTestOmniQueue, frmTestOmniQueue);
+  Application.CreateForm(TfrmTestOmniQueue, frmTestOmniQueue);
+  Application.CreateForm(TfrmTestOmniQueue, frmTestOmniQueue);
   Application.Run;
 end.

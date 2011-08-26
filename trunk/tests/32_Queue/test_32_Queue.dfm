@@ -20,9 +20,10 @@ object frmTestOmniQueue: TfrmTestOmniQueue
   TextHeight = 13
   object lblBlockSize: TLabel
     Left = 8
-    Top = 368
+    Top = 408
     Width = 49
     Height = 13
+    Anchors = [akLeft, akBottom]
     Caption = 'Block size:'
   end
   object lbLog: TListBox
@@ -144,17 +145,19 @@ object frmTestOmniQueue: TfrmTestOmniQueue
   end
   object inpBlockSize: TEdit
     Left = 63
-    Top = 365
+    Top = 405
     Width = 63
     Height = 21
+    Anchors = [akLeft, akBottom]
     ReadOnly = True
     TabOrder = 12
   end
   object spinBlockSize: TSpinButton
     Left = 126
-    Top = 363
+    Top = 403
     Width = 20
     Height = 25
+    Anchors = [akLeft, akBottom]
     DownGlyph.Data = {
       0E010000424D0E01000000000000360000002800000009000000060000000100
       200000000000D800000000000000000000000000000000000000008080000080
@@ -178,5 +181,13 @@ object frmTestOmniQueue: TfrmTestOmniQueue
       800000808000008080000080800000808000}
     OnDownClick = spinBlockSizeDownClick
     OnUpClick = spinBlockSizeUpClick
+  end
+  object cbTestIsEmpty: TCheckBox
+    Left = 8
+    Top = 359
+    Width = 97
+    Height = 17
+    Caption = 'Test IsEmpty'
+    TabOrder = 14
   end
 end

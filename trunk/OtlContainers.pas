@@ -36,9 +36,9 @@
 ///</para><para>
 ///   History:
 ///     2.05: 2011-08-26
-///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that this the returned
-///         value may not be valid for any ammount of time if other threads are
-///         reading from/writing to the queue.
+///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may
+///         not be valid for any ammount of time if other threads are reading from/
+///         writing to the queue.
 ///     2.04: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     2.03a: 2010-05-06
