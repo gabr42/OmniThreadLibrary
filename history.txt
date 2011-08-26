@@ -17,6 +17,7 @@
     Parallel.TaskConfig.OnTerminated.
   - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may not be
     valid for any ammount of time if other threads are reading from/writing to the queue.
+  - Implemented [I|T]OmniBlockingCollection.IsFinalized.
   - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
   - Bug fixed: Event monitor in connection to the thread pool was totally broken. 
     (Big thanks to [anton alisov] for finding the problem.)
