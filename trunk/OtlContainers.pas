@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2011 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,14 +31,18 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2010-07-01
-///   Version           : 2.04
+///   Last modification : 2011-08-26
+///   Version           : 2.05
 ///</para><para>
 ///   History:
+///     2.05: 2011-08-26
+///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that this the returned
+///         value may not be valid for any ammount of time if other threads are
+///         reading from/writing to the queue.
 ///     2.04: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     2.03a: 2010-05-06
-///       - Fixed memory leak in TOmni{Base}Queue when queueing String, WideString,
+///       - Fixed memory leak in TOmni[Base]Queue when queueing String, WideString,
 ///         Variant and Extended values.
 ///     2.03: 2010-02-18
 ///       - Reversed head and tail because they were used illogically.
@@ -274,6 +278,7 @@ type
     destructor  Destroy; override;
     function  Dequeue: TOmniValue;
     procedure Enqueue(const value: TOmniValue);
+    function  IsEmpty: boolean;
     function  TryDequeue(var value: TOmniValue): boolean;
   end; { TOmniBaseQueue }
 
@@ -840,7 +845,7 @@ begin
   end;
 end; { TOmniBoundedQueue.Enqueue }
 
-(*                  
+(*
 TOmniQueue
 ===============
 
@@ -1110,6 +1115,68 @@ begin
   obcCachedBlock := AllocateBlock; // pre-allocate memory
 end; { TOmniBaseQueue.Initialize }
 
+function TOmniBaseQueue.IsEmpty: boolean;
+var
+  caughtTheHead: boolean;
+  header       : POmniTaggedValue;
+  next         : POmniTaggedValue;
+  tag          : TOmniQueueTag;
+  tail         : POmniTaggedValue;
+begin
+  // Basically the same as TryDequeue except that it doesn't dequeue anything.
+  Result := false; // to keep compiler happy
+  tag := tagSentinel;
+  while tag = tagSentinel do begin
+    repeat
+      tail := obcTailPointer.Slot;
+      caughtTheHead := NextSlot(obcTailPointer.Slot) = obcHeadPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
+      if (obcTailPointer.Tag = tagAllocated) then begin
+        Result := false;
+        Exit;
+      end
+      else if (obcTailPointer.Tag = tagSentinel) then begin
+        if caughtTheHead then begin
+          Result := true;
+          Exit;
+        end
+        else if obcTailPointer.CAS(tail, tagSentinel, tail, tagRemoving) then begin
+          tag := tagSentinel;
+          break; //repeat
+        end
+      end
+      else if (obcTailPointer.Tag = tagBlockPointer)
+              and obcTailPointer.CAS(tail, tagBlockPointer, tail, tagDestroying) then
+      begin
+        tag := tagBlockPointer;
+        break; //repeat
+      end
+      else
+        asm pause; end;
+    until false;
+    {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
+    header := tail;
+    Dec(header, header.Offset);
+    {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
+    {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag <> tagAllocated); {$ENDIF}
+    {$IFDEF DEBUG_OMNI_QUEUE} Assert(not caughtTheHead); {$ENDIF}
+    if tag = tagSentinel then begin
+      next := NextSlot(tail);
+      {$IFDEF USE_MOVE64} // release the lock
+      obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag)); {$ENDIF}
+    end
+    else begin // releasing memory
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
+      next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
+      {$IFDEF USE_MOVE64} // release the lock
+      obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
+      tag := tagSentinel; // retry
+    end;
+    if assigned(header) and (InterlockedDecrement(PInteger(header)^) = 0) then
+      ReleaseBlock(header);
+  end; //while tag = tagSentinel
+end; { TOmniBaseQueue.IsEmpty }
+
 function TOmniBaseQueue.NextSlot(slot: POmniTaggedValue): POmniTaggedValue;
 begin
   Result := slot;
@@ -1291,3 +1358,4 @@ initialization
   Assert(SizeOf(pointer) = SizeOf(cardinal));
   InitializeTimingInfo;
 end.
+
