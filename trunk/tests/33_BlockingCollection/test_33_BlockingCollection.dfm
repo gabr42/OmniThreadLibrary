@@ -2,7 +2,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Left = 0
   Top = 0
   Caption = 'TOmniBlockingCollection tester'
-  ClientHeight = 445
+  ClientHeight = 466
   ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,26 +15,27 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   OnCreate = FormCreate
   DesignSize = (
     630
-    445)
+    466)
   PixelsPerInch = 96
   TextHeight = 13
   object lblNumCPU: TLabel
-    Left = 16
-    Top = 384
+    Left = 8
+    Top = 404
     Width = 48
     Height = 13
+    Anchors = [akLeft, akBottom]
     Caption = 'Num CPU:'
+    ExplicitTop = 432
   end
   object lbLog: TListBox
     Left = 152
     Top = 0
     Width = 478
-    Height = 445
+    Height = 466
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
-    ExplicitHeight = 443
   end
   object btnTest: TButton
     Left = 8
@@ -87,14 +88,13 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   end
   object btnTestIntf: TButton
     Left = 8
-    Top = 412
+    Top = 433
     Width = 138
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
-    ExplicitTop = 410
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -146,17 +146,27 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     OnClick = btn7to1Click
   end
   object inpNumCPU: TSpinEdit
-    Left = 68
-    Top = 381
+    Left = 60
+    Top = 401
     Width = 49
     Height = 22
+    Anchors = [akLeft, akBottom]
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
     Value = 1
     OnChange = inpNumCPUChange
   end
+  object cbTestFinalized: TCheckBox
+    Left = 8
+    Top = 377
+    Width = 97
+    Height = 17
+    Caption = 'Test IsFinalized'
+    TabOrder = 13
+  end
   object OtlMonitor: TOmniEventMonitor
+    OnTaskMessage = OtlMonitorTaskMessage
     OnTaskTerminated = OtlMonitorTaskTerminated
     Left = 224
     Top = 8

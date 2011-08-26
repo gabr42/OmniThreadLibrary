@@ -16,6 +16,9 @@ uses
   OtlCollections,
   OtlEventMonitor;
 
+const
+  MSG_ERR = WM_USER + 1;
+
 type
   TfrmTestOmniBlockingCollection = class(TForm)
     btn1to1         : TButton;
@@ -33,6 +36,7 @@ type
     lbLog           : TListBox;
     OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
+    cbTestFinalized: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
@@ -40,6 +44,7 @@ type
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure inpNumCPUChange(Sender: TObject);
+    procedure OtlMonitorTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure OtlMonitorTaskTerminated(const task: IOmniTaskControl);
     procedure StartTest(Sender: TObject);
   private
@@ -82,10 +87,12 @@ var
 
 procedure ForwarderWorker(const task: IOmniTask);
 var
-  chanColl  : TOmniBlockingCollection;
-  srcColl   : TOmniBlockingCollection;
-  useTryTake: boolean;
-  value     : TOmniValue;
+  chanColl       : TOmniBlockingCollection;
+  isFinalized    : boolean;
+  srcColl        : TOmniBlockingCollection;
+  testIsFinalized: boolean;
+  useTryTake     : boolean;
+  value          : TOmniValue;
 
   function MyTake: boolean;
   begin
@@ -107,13 +114,19 @@ begin
   value := task.Param['Source'];     srcColl := TOmniBlockingCollection(value.AsObject);
   value := task.Param['Channel'];    chanColl := TOmniBlockingCollection(value.AsObject);
   useTryTake := task.Param['UseTryTake'];
+  testIsFinalized := task.Param['TestIsFinalized'];
+  isFinalized := true;
   repeat
+    if testIsFinalized then
+      isFinalized := srcColl.IsFinalized;
     if useTryTake then begin
       if not MyTake then
         break //repeat
     end
     else if not srcColl.Take(value) then
       break; //repeat
+    if testIsFinalized and isFinalized then
+      task.Comm.Send(MSG_ERR, Format('Forwarder: Queue was empty before reading element %d', [value.AsInteger]));
     chanColl.Add(value);
     if GForwardersCount.Increment = CCountThreadedTest then begin
       GStopForwarders := true;
@@ -121,14 +134,18 @@ begin
       break; //repeat
     end;
   until false;
+  if testIsFinalized and (not srcColl.IsFinalized) then
+    task.Comm.Send(MSG_ERR, 'Forwarder: Queue was not empty at the end');
 end; { ForwarderWorker }
 
 procedure ReaderWorker(const task: IOmniTask);
 var
-  chanColl  : TOmniBlockingCollection;
-  dstColl   : TOmniBlockingCollection;
-  useTryTake: boolean;
-  value     : TOmniValue;
+  chanColl       : TOmniBlockingCollection;
+  dstColl        : TOmniBlockingCollection;
+  isFinalized    : boolean;
+  testIsFinalized: boolean;
+  useTryTake     : boolean;
+  value          : TOmniValue;
 
   function MyTake: boolean;
   begin
@@ -146,18 +163,22 @@ var
     until false;
   end; { MyTake }
 
-  
 begin
   value := task.Param['Channel'];     chanColl := TOmniBlockingCollection(value.AsObject);
   value := task.Param['Destination']; dstColl := TOmniBlockingCollection(value.AsObject);
   useTryTake := task.Param['UseTryTake'];
+  testIsFinalized := task.Param['TestIsFinalized'];
+  isFinalized := true;
   repeat
+    if testIsFinalized then
+      chanColl.IsFinalized; // can be anythings
     if useTryTake then begin
       if not MyTake then
         break; //repeat
     end
     else if not chanColl.Take(value) then
       break; //repeat
+
     dstColl.Add(value);
     if GReadersCount.Increment = CCountThreadedTest then begin
       GStopReaders := true;
@@ -165,6 +186,8 @@ begin
       break; //while
     end;
   until false;
+  if testIsFinalized and (not chanColl.IsFinalized) then
+    task.Comm.Send(MSG_ERR, 'Reader: Queue was not empty at the end');
 end; { ReaderWorker }
 
 { TfrmTestOtlCollections }
@@ -254,8 +277,10 @@ begin
   try
     testList := TGpIntegerList.Create;
     try
+      Assert(not FDstCollection.IsFinalized);
       while FDstCollection.Take(value) do
         testList.Add(value.AsInteger);
+      Assert(FDstCollection.IsFinalized);
       testList.Sorted := true;
       if testList.Count <> CCountThreadedTest then
         raise Exception.CreateFmt('Expected %d items, got %d', [CCountThreadedTest, testList.Count]);
@@ -286,6 +311,13 @@ begin
   Log(Format(msg, params));
 end; { TfrmTestOtlCollections.Log }
 
+procedure TfrmTestOmniBlockingCollection.OtlMonitorTaskMessage(const task:
+  IOmniTaskControl; const msg: TOmniMessage);
+begin
+  if msg.MsgID = MSG_ERR then
+    Log(msg.MsgData);
+end; { TfrmTestOmniBlockingCollection.OtlMonitorTaskMessage }
+
 procedure TfrmTestOmniBlockingCollection.OtlMonitorTaskTerminated(const task: IOmniTaskControl);
 var
   time: int64;
@@ -310,6 +342,7 @@ begin
       .SetParameter('Source', FSrcCollection)
       .SetParameter('Channel', FChanCollection)
       .SetParameter('UseTryTake', UseTryTake)
+      .SetParameter('TestIsFinalized', cbTestFinalized.Checked)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -326,6 +359,7 @@ begin
       .SetParameter('Channel', FChanCollection)
       .SetParameter('Destination', FDstCollection)
       .SetParameter('UseTryTake', UseTryTake)
+      .SetParameter('TestIsFinalized', cbTestFinalized.Checked)
       .MonitorWith(OtlMonitor)
       .Run;
   end;
@@ -346,9 +380,15 @@ begin
   FDstCollection := TOmniBlockingCollection.Create;
   FChanCollection := TOmniBlockingCollection.Create;
   FNumWorkers.Value := numForwarders + numReaders;
+  Assert(not FSrcCollection.IsCompleted);
+  Assert(not FSrcCollection.IsFinalized);
   for i := 1 to CCountThreadedTest do
     FSrcCollection.Add(i);
+  Assert(not FSrcCollection.IsCompleted);
+  Assert(not FSrcCollection.IsFinalized);
   FSrcCollection.CompleteAdding;
+  Assert(FSrcCollection.IsCompleted);
+  Assert(not FSrcCollection.IsFinalized);
   FStartTime := DSiTimeGetTime64;
   PrepareReaders(numReaders);
   PrepareForwarders(numForwarders);

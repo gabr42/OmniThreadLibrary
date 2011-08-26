@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2011 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2011-08-25
-///   Version           : 1.03d
+///   Last modification : 2011-08-26
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2011-08-26
+///       - Implemented [I|T]OmniBlockingCollection.IsFinalized.
 ///     1.03d: 2011-08-25
 ///       - Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition.
 ///     1.03c: 2010-11-30
@@ -259,10 +261,7 @@ end; { TOmniBlockingCollection.IsCompleted }
 
 function TOmniBlockingCollection.IsFinalized: boolean;
 begin
-  Result := IsCompleted;
-  if not Result then
-    Exit;
-
+  Result := IsCompleted and obcCollection.IsEmpty;
 end; { TOmniBlockingCollection.IsFinalized }
 
 function TOmniBlockingCollection.Next: TOmniValue;
