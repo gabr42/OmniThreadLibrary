@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2011-08-26
-///   Version           : 1.04
+///   Last modification : 2011-08-27
+///   Version           : 1.04a
 ///</para><para>
 ///   History:
+///     1.04a: 2011-08-27
+///       - [Try]Add works correctly when throttling is used. (Broken in 1.03d.)
 ///     1.04: 2011-08-26
 ///       - Implemented [I|T]OmniBlockingCollection.IsFinalized.
 ///     1.03d: 2011-08-25
@@ -288,6 +290,8 @@ begin
 end; { TOmniBlockingCollection.Take }
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
+var
+  awaited: cardinal;
 begin
   obcAddCountAndCompleted.Increment;
   try
@@ -300,7 +304,10 @@ begin
         // it's possible that messages were removed and obcNotOverflow set *before* the
         // previous line has executed so test again ...
         if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-          if DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE) = WAIT_OBJECT_0 then begin
+          obcAddCountAndCompleted.Decrement; // Leave the Add temporarily so that CompleteAdding can succeed
+          awaited := DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE);
+          obcAddCountAndCompleted.Increment; // Re-enter Add; queue may be now in 'completed' state
+          if (awaited = WAIT_OBJECT_0) or IsCompleted then begin
             Result := false; // completed
             Exit;
           end;
