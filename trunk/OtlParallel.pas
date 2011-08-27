@@ -38,6 +38,7 @@
 ///     1.16: 2011-08-27
 ///       - Added another Parallel.Pipeline overload.
 ///       - Implemented IOmniPipeline.WaitFor.
+///       - Added support for parameterless OnTerminated version to the TaskConfig.
 ///     1.15: 2011-07-26
 ///       - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
 ///         to add exception and cancellation support. User code must call .Execute on the
@@ -192,6 +193,7 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
@@ -893,6 +895,7 @@ type
     otcOnMessageList           : TGpIntegerObjectList;
     otcOnTerminated            : TOmniTaskTerminatedEvent;
     otcOnTerminatedFunc        : TOmniOnTerminatedFunction;
+    otcOnTerminatedFuncSimp    : TOmniOnTerminatedFunctionSimple;
     otcWithCounterCounter      : IOmniCounter;
     otcWithLockAutoDestroy     : boolean;
     otcWithLockOmniLock        : IOmniCriticalSection;
@@ -909,6 +912,8 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
+    function OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig;
+      overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
@@ -2777,6 +2782,8 @@ begin
     task.OnTerminated(otcOnTerminated);
   if assigned(otcOnTerminatedFunc) then
     task.OnTerminated(otcOnTerminatedFunc);
+  if assigned(otcOnTerminatedFuncSimp) then
+    task.OnTerminated(otcOnTerminatedFuncSimp);
   if assigned(otcWithCounterCounter) then
     task.WithCounter(otcWithCounterCounter);
   if assigned(otcWithLockOmniLock) then
@@ -2835,6 +2842,13 @@ function TOmniTaskConfig.OnTerminated(eventHandler: TOmniOnTerminatedFunction):
   IOmniTaskConfig;
 begin
   otcOnTerminatedFunc := eventHandler;
+  Result := Self;
+end; { TOmniTaskConfig.OnTerminated }
+
+function TOmniTaskConfig.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
+  IOmniTaskConfig;
+begin
+  otcOnTerminatedFuncSimp := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 

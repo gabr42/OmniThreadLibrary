@@ -15,7 +15,7 @@ object frmDemoParallelTaskConfig: TfrmDemoParallelTaskConfig
   TextHeight = 13
   object btnAsync: TButton
     Left = 8
-    Top = 8
+    Top = 10
     Width = 75
     Height = 25
     Caption = 'Async'
