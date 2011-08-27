@@ -211,6 +211,8 @@
 
 // TODO 1 -oPrimoz Gabrijelcic : Add cache to TOmniTaskExecutor.DispatchOmniMessage
 
+// TODO 1 -oPrimoz Gabrijelcic : OnTerminated without the 'task' parameter - useful for anonymous functions
+
 unit OtlTaskControl;
 
 {$I OtlOptions.inc}
