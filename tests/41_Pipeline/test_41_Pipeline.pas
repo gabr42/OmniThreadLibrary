@@ -19,6 +19,7 @@ type
     btnExtended2: TButton;
     btnStressTest: TButton;
     btnCancelPipe: TButton;
+    btnCancelPipe2: TButton;
     procedure btnCancelPipeClick(Sender: TObject);
     procedure btnExtended2Click(Sender: TObject);
     procedure btnForEachClick(Sender: TObject);
@@ -26,7 +27,7 @@ type
     procedure btnSimpleClick(Sender: TObject);
     procedure btnStressTestClick(Sender: TObject);
   private
-    procedure StageMod5(const input, output: IOmniBlockingCollection);
+    procedure StageMod5(const input, output: IOmniBlockingCollection; const task: IOmniTask);
   strict protected
     procedure RunStressTest(numTest: integer);
   public
@@ -88,42 +89,56 @@ begin
   lbLog.Items.Add(Format('Sum = %d; Total time = %d ms', [sum, GetTickCount - startTime]));
 end;
 
-procedure StageGenerate(const input, output: IOmniBlockingCollection);
+procedure StageGenerate(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   i: integer;
 begin
-  for i := 1 to 1000000 do
+  for i := 1 to 1000000 do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
     if not output.TryAdd(i) then Exit;
+  end;
 end;
 
-procedure StageMult2(const input, output: IOmniBlockingCollection);
+procedure StageMult2(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   value: TOmniValue;
 begin
   // This one is a global method - just for demo purposes.
-  for value in input do
+  for value in input do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
     if not output.TryAdd(2 * value.AsInteger) then Exit;
+  end;
 end;
 
-procedure StageMinus3(const input, output: IOmniBlockingCollection);
+procedure StageMinus3(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   value: TOmniValue;
 begin
   // This one is a global method - just for demo purposes.
-  for value in input do
-    if not output.TryAdd(value.AsInteger - 3) then Exit;
+  for value in input do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
+    if not output.TryAdd(value.AsInteger - 3) then
+      Exit;
+  end;
 end;
 
-procedure TfrmPipelineDemo.StageMod5(const input, output: IOmniBlockingCollection);
+procedure TfrmPipelineDemo.StageMod5(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   value: TOmniValue;
 begin
   // This one is a method - just for demo purposes.
-  for value in input do
-    if not output.TryAdd(value.AsInteger mod 5) then Exit;
+  for value in input do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
+    if not output.TryAdd(value.AsInteger mod 5) then
+      Exit;
+  end;
 end;
 
-procedure StageSum(const input, output: IOmniBlockingCollection);
+procedure StageSum(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   sum  : integer;
   value: TOmniValue;
@@ -134,19 +149,17 @@ begin
   output.TryAdd(sum);
 end;
 
-var
-  GWasCancelled: boolean;
-
 procedure StageSumEx(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
   sum  : integer;
   value: TOmniValue;
 begin
   sum := 0;
-  for value in input do
+  for value in input do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
     Inc(sum, value);
-  if task.CancellationToken.IsSignalled then // this and next line as here just for testing
-    GWasCancelled := true;
+  end;
   output.TryAdd(sum);
 end;
 
@@ -307,7 +320,6 @@ var
   pipeOut : IOmniBlockingCollection;
   sum     : TOmniValue;
 begin
-  GWasCancelled := false;
   pipeline := Parallel
     .Pipeline
     .Throttle(102400)
@@ -319,12 +331,16 @@ begin
   pipeout := pipeline.Run;
   Sleep(500);
   pipeline.Cancel;
-  while not GWasCancelled do // this and next line are here just for testing
-    Sleep(1);
-  if pipeOut.TryTake(sum) then
-    lbLog.Items.Add('*** ERRROR *** there should be no data in the output pipe')
-  else
-    lbLog.Items.Add('Cancelled');
+  if Sender = btnCancelPipe then begin
+    // TryTake will block until all stages in the pipeline have completed their work
+    if pipeOut.TryTake(sum) then
+      lbLog.Items.Add('*** ERRROR *** there should be no data in the output pipe')
+    else
+      lbLog.Items.Add('Cancelled');
+  end
+  else begin
+    // Another approach is to call pipeline.WaitFor
+  end;
 end;
 
 procedure TfrmPipelineDemo.RunStressTest(numTest: integer);
