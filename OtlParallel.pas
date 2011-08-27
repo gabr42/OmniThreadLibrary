@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-07-26
-///   Version           : 1.15
+///   Last modification : 2011-08-27
+///   Version           : 1.16
 ///</para><para>
 ///   History:
+///     1.16: 2011-08-27
+///       - Added another Parallel.Pipeline overload.
 ///     1.15: 2011-07-26
 ///       - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
 ///         to add exception and cancellation support. User code must call .Execute on the
@@ -750,6 +752,8 @@ type
     class function Pipeline: IOmniPipeline; overload;
     class function Pipeline(const stages: array of TPipelineStageDelegate;
       const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
+    class function Pipeline(const stages: array of TPipelineStageDelegateEx;
+      const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
 
   // Fork/Join
     class function ForkJoin: IOmniForkJoin; overload;
@@ -1358,6 +1362,14 @@ begin
 end; { Parallel.Pipeline }
 
 class function Parallel.Pipeline(const stages: array of TPipelineStageDelegate; const
+  input: IOmniBlockingCollection): IOmniPipeline;
+begin
+  Result := Parallel.Pipeline
+    .Input(input)
+    .Stages(stages);
+end; { Parallel.Pipeline }
+
+class function Parallel.Pipeline(const stages: array of TPipelineStageDelegateEx; const
   input: IOmniBlockingCollection): IOmniPipeline;
 begin
   Result := Parallel.Pipeline
