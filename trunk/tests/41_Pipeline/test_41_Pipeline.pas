@@ -143,7 +143,7 @@ end;
 
 procedure StageSum(const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
-  sum  : integer;
+   sum  : integer;
   value: TOmniValue;
 begin
   sum := 0;
@@ -179,7 +179,11 @@ begin
     .Pipeline
     .Throttle(102400)
     .Stage(StageGenerate)
-    .Stage(StageMult2)
+    .Stage(
+      procedure (const input: TOmniValue; var output: TOmniValue)
+      begin
+        output := input.AsInteger * 2;
+      end)
     .Stages([StageMinus3, StageMod5])
       .NumTasks(2)
     .Stage(StageSum);
@@ -337,12 +341,21 @@ begin
   pipeline := Parallel
     .Pipeline
     .Throttle(102400)
-    .Stage(StageGenerate)
-    .Stage(StageMult2)
-    .Stages([StageMinus3, StageMod5])
-      .NumTasks(2)
-    .Stage(StageSumEx);
-  pipeout := pipeline.Run;
+    .Stage(StageGenerate);
+  if Sender = btnCancelPipe then
+    pipeline.Stage(StageMult2)
+  else
+    pipeline.Stage(
+      procedure (const input: TOmniValue; var output: TOmniValue)
+      begin
+        output := input.AsInteger * 2;
+      end);
+  pipeout :=
+    pipeline
+      .Stages([StageMinus3, StageMod5])
+        .NumTasks(2)
+      .Stage(StageSum)
+      .Run;
   Sleep(500);
   pipeline.Cancel;
   if Sender = btnCancelPipe then begin
