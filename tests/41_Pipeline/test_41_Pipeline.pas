@@ -38,6 +38,9 @@ var
 
 implementation
 
+uses
+  DSiWin32;
+
 const
   CNumStressTests = 100;
 
@@ -165,18 +168,29 @@ end;
 
 procedure TfrmPipelineDemo.btnExtended2Click(Sender: TObject);
 var
-  pipeOut: IOmniBlockingCollection;
+  outValue: TOmniValue;
+  pipeline: IOmniPipeline;
+  pipeOut : IOmniBlockingCollection;
+  t1      : int64;
+  t2      : int64;
+  t3      : int64;
 begin
-  pipeOut := Parallel
+  pipeline := Parallel
     .Pipeline
     .Throttle(102400)
     .Stage(StageGenerate)
     .Stage(StageMult2)
     .Stages([StageMinus3, StageMod5])
       .NumTasks(2)
-    .Stage(StageSum)
-    .Run;
-  lbLog.Items.Add(Format('Pipeline result: %d', [pipeOut.Next.AsInteger]));
+    .Stage(StageSum);
+  pipeOut := pipeline.Run;
+  t1 := DSiTimeGetTime64;
+  pipeline.WaitFor(INFINITE); // just for test
+  t2 := DSiTimeGetTime64;
+  outValue := pipeOut.Next;
+  t3 := DSiTimeGetTime64;
+  lbLog.Items.Add(Format('Pipeline result: %d; time in Wait: %d ms; time in Next: %d ms',
+    [outValue.AsInteger, t2-t1, t3-t2]));
 end;
 
 procedure TfrmPipelineDemo.btnExtendedClick(Sender: TObject);
@@ -340,6 +354,9 @@ begin
   end
   else begin
     // Another approach is to call pipeline.WaitFor
+    Assert(pipeline.WaitFor(INFINITE));
+    Assert(pipeOut.IsFinalized);
+    lbLog.Items.Add('Cancelled');
   end;
 end;
 
