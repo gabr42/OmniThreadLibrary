@@ -20,6 +20,7 @@
   - Implemented another IOmniTaskControl.OnTerminated overload acception parameterless
     anonymous function.
   - Implemented [I|T]OmniBlockingCollection.IsFinalized.
+  - Parallel.Pipeline accepts 'simple stage' (for loop implemented internally).
   - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
   - Bug fixed: Event monitor in connection to the thread pool was totally broken. 
     (Big thanks to [anton alisov] for finding the problem.)

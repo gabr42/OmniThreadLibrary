@@ -36,7 +36,9 @@
 ///</para><para>
 ///   History:
 ///     1.16: 2011-08-27
-///       - Added another Parallel.Pipeline overload.
+///       - Added two more Parallel.Pipeline overloads.
+///       - Parallel.Pipeline accepts simple stages - TPipelineSimpleStageDelegate -
+///         where collection iteration is implemented internally.
 ///       - Implemented IOmniPipeline.WaitFor.
 ///       - Added support for parameterless OnTerminated version to the TaskConfig.
 ///     1.15: 2011-07-26
@@ -338,6 +340,8 @@ type
   EFutureError = class(Exception);
   EFutureCancelled = class(Exception);
 
+  TPipelineSimpleStageDelegate = reference to procedure (const input: TOmniValue;
+    var output: TOmniValue);
   TPipelineStageDelegate = reference to procedure (const input, output:
     IOmniBlockingCollection);
   TPipelineStageDelegateEx = reference to procedure (const input, output:
@@ -348,8 +352,10 @@ type
     function  Input(const queue: IOmniBlockingCollection): IOmniPipeline;
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  Run: IOmniBlockingCollection;
+    function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
+    function  Stages(const pipelineStages: array of TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
@@ -826,6 +832,7 @@ type
   TOmniPipelineStage = class(TInterfacedObject, IOmniPipelineStage)
   strict private
     opsNumTasks      : integer;
+    opsSimpleStage   : TPipelineSimpleStageDelegate;
     opsStage         : TPipelineStageDelegate;
     opsStageEx       : TPipelineStageDelegateEx;
     opsTaskConfig    : IOmniTaskConfig;
@@ -842,7 +849,11 @@ type
     procedure SetThrottle(const value: integer);
     procedure SetThrottleLow(const value: integer);
     procedure SetThrottleLowSat(const value: integer);
+  strict protected
+    procedure ExecuteSimpleStage(const task: IOmniTask; const stage:
+      TPipelineSimpleStageDelegate; const input, output: IOmniBlockingCollection);
   public
+    constructor Create(stage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig); overload;
     constructor Create(stage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig); overload;
     constructor Create(stage: TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig); overload;
     procedure Execute(const inQueue, outQueue: IOmniBlockingCollection;
@@ -868,7 +879,7 @@ type
     opThrottleLowSat: integer;
   strict protected
     procedure AddSingleStage(const stage: IOmniPipelineStage);
-    function GetStage(idxStage: integer): IOmniPipelineStage;
+    function  GetStage(idxStage: integer): IOmniPipelineStage;
     property PipeStage[idxStage: integer]: IOmniPipelineStage read GetStage;
   public
     constructor Create;
@@ -878,8 +889,11 @@ type
     { TODO 1 -ogabr : When running stages in parallel, additional work has to be done to ensure proper output order! }
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  Run: IOmniBlockingCollection;
+    function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
+    function  Stages(const pipelineStages: array of TPipelineSimpleStageDelegate; taskConfig:
+      IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
@@ -2340,12 +2354,23 @@ begin
   opsTaskConfig := taskConfig;
 end; { TOmniPipelineStage.Create }
 
+constructor TOmniPipelineStage.Create(stage: TPipelineSimpleStageDelegate; taskConfig:
+  IOmniTaskConfig);
+begin
+  inherited Create;
+  opsSimpleStage := stage;
+  opsNumTasks := 1;
+  opsTaskConfig := taskConfig;
+end; { TOmniPipelineStage.Create }
+
 procedure TOmniPipelineStage.Execute(const inQueue, outQueue: IOmniBlockingCollection;
   const task: IOmniTask);
 begin
   // D2009 doesn't like TProc casts so we're casting to integer
   Assert(SizeOf(TProc) = SizeOf(integer));
-  if PInteger(@opsStage)^ <> integer(nil) then begin
+  if PInteger(@opsSimpleStage)^ <> integer(nil) then
+    ExecuteSimpleStage(task, opsSimpleStage, inQueue, outQueue)
+  else if PInteger(@opsStage)^ <> integer(nil) then begin
     Assert(PInteger(@opsStageEx)^ = integer(nil));
     opsStage(inQueue, outQueue);
   end
@@ -2354,6 +2379,26 @@ begin
     opsStageEx(inQueue, outQueue, task);
   end;
 end; { TOmniPipelineStage.Execute }
+
+procedure TOmniPipelineStage.ExecuteSimpleStage(const task: IOmniTask; const stage:
+  TPipelineSimpleStageDelegate; const input, output: IOmniBlockingCollection);
+var
+  inValue : TOmniValue;
+  outValue: TOmniValue;
+begin
+  outValue.Clear;
+  for inValue in input do begin
+    if task.CancellationToken.IsSignalled then
+      Exit;
+    stage(inValue, outValue);
+    if not outValue.IsEmpty then begin
+      if not output.TryAdd(outValue) then
+        // output collection is completed - pipeline is shutting down
+        break; //for inValue
+      outValue.Clear;
+    end;
+  end;
+end; { TOmniPipelineStage.ExecuteSimpleStage }
 
 function TOmniPipelineStage.GetNumTasks: integer;
 begin
@@ -2463,6 +2508,7 @@ end; { TOmniPipeline.NumTasks }
 
 function TOmniPipeline.Run: IOmniBlockingCollection;
 var
+  countStopped  : IOmniResourceCount;
   inQueue     : IOmniBlockingCollection;
   iStage      : integer;
   iTask       : integer;
@@ -2475,6 +2521,7 @@ begin
   totalTasks := 0;
   for iStage := 0 to opStages.Count - 1 do
     Inc(totalTasks, PipeStage[iStage].NumTasks);
+  opCountStopped := TOmniResourceCount.Create(totalTasks);
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
     outQueue := TOmniBlockingCollection.Create;
@@ -2483,7 +2530,7 @@ begin
     else
       outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
     opOutQueues.Add(outQueue);
-    opCountStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
+    countStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
       stageName := Format('Pipeline stage #%d', [iStage]);
       if PipeStage[iStage].NumTasks > 1 then
@@ -2496,13 +2543,17 @@ begin
             outQueue   : IOmniBlockingCollection;
           begin
             try
-              inQueue := Task.Param['Input'].AsInterface as IOmniBlockingCollection;
-              outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
-              opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
-              opStage.Execute(inQueue, outQueue, Task);
+              try
+                inQueue := Task.Param['Input'].AsInterface as IOmniBlockingCollection;
+                outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
+                opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
+                opStage.Execute(inQueue, outQueue, Task);
+              finally
+                if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+                  outQueue.CompleteAdding;
+              end;
             finally
-              if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
-                outQueue.CompleteAdding;
+              (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate;
             end;
           end,
           stageName
@@ -2512,7 +2563,8 @@ begin
         .SetParameter('Input', inQueue)
         .SetParameter('Stage', opStages[iStage])
         .SetParameter('Output', outQueue)
-        .SetParameter('Stopped', opCountStopped)
+        .SetParameter('Stopped', countStopped)
+        .SetParameter('TotalStopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith);
       ApplyConfig((opStages[iStage] as IOmniPipelineStage).TaskConfig, task);
       task.Schedule(GlobalPipelinePool);
@@ -2521,6 +2573,14 @@ begin
   Result := outQueue;
 end; { TOmniPipeline.Run }
 
+function TOmniPipeline.Stage(pipelineStage: TPipelineSimpleStageDelegate;
+  taskConfig: IOmniTaskConfig): IOmniPipeline;
+begin
+  AddSingleStage(TOmniPipelineStage.Create(pipelineStage, taskConfig));
+  opCheckpoint := opStages.Count - 1;
+  Result := Self;
+end; { TOmniPipeline.Stage }
+
 function TOmniPipeline.Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig): IOmniPipeline;
 begin
   AddSingleStage(TOmniPipelineStage.Create(pipelineStage, taskConfig));
@@ -2528,15 +2588,28 @@ begin
   Result := Self;
 end; { TOmniPipeline.Stage }
 
-function TOmniPipeline.Stage(pipelineStage: TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig): IOmniPipeline;
+function TOmniPipeline.Stage(pipelineStage: TPipelineStageDelegateEx;
+  taskConfig: IOmniTaskConfig): IOmniPipeline;
 begin
   AddSingleStage(TOmniPipelineStage.Create(pipelineStage, taskConfig));
   opCheckpoint := opStages.Count - 1;
   Result := Self;
 end; { TOmniPipeline.Stage }
 
-function TOmniPipeline.Stages(const pipelineStages: array of TPipelineStageDelegate; taskConfig: IOmniTaskConfig):
-  IOmniPipeline;
+function TOmniPipeline.Stages(const pipelineStages: array of TPipelineSimpleStageDelegate;
+  taskConfig: IOmniTaskConfig): IOmniPipeline;
+var
+  oneStage: TPipelineSimpleStageDelegate;
+begin
+  Assert(Length(pipelineStages) > 0);
+  opCheckpoint := opStages.Count;
+  for oneStage in pipelineStages do
+    AddSingleStage(TOmniPipelineStage.Create(oneStage, taskConfig));
+  Result := Self;
+end; { TOmniPipeline.Stages }
+
+function TOmniPipeline.Stages(const pipelineStages: array of TPipelineStageDelegate;
+  taskConfig: IOmniTaskConfig): IOmniPipeline;
 var
   oneStage: TPipelineStageDelegate;
 begin
@@ -2547,8 +2620,8 @@ begin
   Result := Self;
 end; { TOmniPipeline.Stages }
 
-function TOmniPipeline.Stages(
-  const pipelineStages: array of TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig): IOmniPipeline;
+function TOmniPipeline.Stages(const pipelineStages: array of TPipelineStageDelegateEx;
+  taskConfig: IOmniTaskConfig): IOmniPipeline;
 var
   oneStage: TPipelineStageDelegateEx;
 begin
