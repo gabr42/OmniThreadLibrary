@@ -37,6 +37,7 @@
 ///   History:
 ///     1.16: 2011-08-27
 ///       - Added another Parallel.Pipeline overload.
+///       - Implemented IOmniPipeline.WaitFor.
 ///     1.15: 2011-07-26
 ///       - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
 ///         to add exception and cancellation support. User code must call .Execute on the
@@ -350,6 +351,7 @@ type
     function  Stages(const pipelineStages: array of TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
+    function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniPipeline }
 
   TOmniForkJoinDelegate = reference to procedure;
@@ -854,6 +856,7 @@ type
   strict private
     opCancelWith    : IOmniCancellationToken;
     opCheckpoint    : integer;
+    opCountStopped  : IOmniResourceCount;
     opInput         : IOmniBlockingCollection;
     opNumTasks      : integer;
     opOutQueues     : TInterfaceList;
@@ -878,6 +881,7 @@ type
     function  Stages(const pipelineStages: array of TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stages(const pipelineStages: array of TPipelineStageDelegateEx; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Throttle(numEntries: integer; unblockAtCount: integer = 0): IOmniPipeline;
+    function WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniPipeline }
 
   TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig)
@@ -2454,7 +2458,6 @@ end; { TOmniPipeline.NumTasks }
 
 function TOmniPipeline.Run: IOmniBlockingCollection;
 var
-  countStopped: IOmniResourceCount;
   inQueue     : IOmniBlockingCollection;
   iStage      : integer;
   iTask       : integer;
@@ -2475,7 +2478,7 @@ begin
     else
       outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
     opOutQueues.Add(outQueue);
-    countStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
+    opCountStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
       stageName := Format('Pipeline stage #%d', [iStage]);
       if PipeStage[iStage].NumTasks > 1 then
@@ -2487,12 +2490,15 @@ begin
             opStage    : IOmniPipelineStage;
             outQueue   : IOmniBlockingCollection;
           begin
-            inQueue := Task.Param['Input'].AsInterface as IOmniBlockingCollection;
-            outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
-            opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
-            opStage.Execute(inQueue, outQueue, Task);
-            if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
-              outQueue.CompleteAdding;
+            try
+              inQueue := Task.Param['Input'].AsInterface as IOmniBlockingCollection;
+              outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
+              opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStage;
+              opStage.Execute(inQueue, outQueue, Task);
+            finally
+              if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+                outQueue.CompleteAdding;
+            end;
           end,
           stageName
         )
@@ -2501,7 +2507,7 @@ begin
         .SetParameter('Input', inQueue)
         .SetParameter('Stage', opStages[iStage])
         .SetParameter('Output', outQueue)
-        .SetParameter('Stopped', countStopped)
+        .SetParameter('Stopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith);
       ApplyConfig((opStages[iStage] as IOmniPipelineStage).TaskConfig, task);
       task.Schedule(GlobalPipelinePool);
@@ -2575,6 +2581,12 @@ begin
   end;
   Result := Self;
 end; { TOmniPipeline.Throttle }
+
+function TOmniPipeline.WaitFor(timeout_ms: cardinal): boolean;
+begin
+  Assert(assigned(opCountStopped));
+  Result := (WaitForSingleObject(opCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0);
+end; { TOmniPipeline.WaitFor }
 
 { TOmniCompute<T> }
 
