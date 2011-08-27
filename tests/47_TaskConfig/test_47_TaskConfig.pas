@@ -80,7 +80,7 @@ begin
     end,
 
     Parallel.TaskConfig.OnMessage(Self).OnTerminated(
-      procedure (const task: IOmniTaskControl)
+      procedure
       begin
         btnAsync.Enabled := true;
       end

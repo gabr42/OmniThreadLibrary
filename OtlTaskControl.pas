@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-17
-///   Version           : 1.28
+///   Last modification : 2011-08-27
+///   Version           : 1.29
 ///</para><para>
 ///   History:
+///     1.29: 2011-08-27
+///       - Implemented another OnTerminated overload acception parameterless anonymous
+///         function.
 ///     1.28: 2011-07-17
 ///       - Implemented IOmniTaskControl.DetachException.
 ///     1.27: 2011-07-14
@@ -292,6 +295,7 @@ type
 {$IFDEF OTL_Anonymous}
   TOmniOnMessageFunction = reference to procedure(const task: IOmniTaskControl; const msg: TOmniMessage);
   TOmniOnTerminatedFunction = reference to procedure(const task: IOmniTaskControl);
+  TOmniOnTerminatedFunctionSimple = reference to procedure;
 {$ENDIF OTL_Anonymous}
 {$IFDEF OTL_Anonymous}
   TOmniTaskControlInvokeFunction = reference to procedure;
@@ -362,6 +366,7 @@ type
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
@@ -796,6 +801,7 @@ type
     otcOnMessageExec       : TOmniMessageExec;
     otcOnMessageList       : TGpIntegerObjectList;
     otcOnTerminatedExec    : TOmniMessageExec;
+    otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
     otcOwningPool          : IOmniThreadPool;
     otcParameters          : TOmniValueContainer;
     otcQueueLength         : integer;
@@ -834,6 +840,7 @@ type
     function  OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
   public
     constructor Create(const worker: IOmniWorker; const taskName: string); overload;
@@ -2636,6 +2643,21 @@ begin
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
+  CreateInternalMonitor;
+  Result := Self;
+end; { TOmniTaskControl.OnTerminated }
+
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
+  IOmniTaskControl;
+begin
+  if not assigned(otcOnTerminatedExec) then
+    otcOnTerminatedExec := TOmniMessageExec.Create;
+  otcOnTerminatedSimple := eventHandler;
+  otcOnTerminatedExec.SetOnTerminated(
+    procedure (const task: IOmniTaskControl)
+    begin
+      otcOnTerminatedSimple();
+    end);
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
