@@ -2,7 +2,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   Left = 0
   Top = 0
   Caption = 'TOmniBlockingCollection tester'
-  ClientHeight = 466
+  ClientHeight = 494
   ClientWidth = 630
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,27 +15,27 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   OnCreate = FormCreate
   DesignSize = (
     630
-    466)
+    494)
   PixelsPerInch = 96
   TextHeight = 13
   object lblNumCPU: TLabel
-    Left = 8
-    Top = 404
+    Left = 9
+    Top = 405
     Width = 48
     Height = 13
     Anchors = [akLeft, akBottom]
     Caption = 'Num CPU:'
-    ExplicitTop = 432
   end
   object lbLog: TListBox
     Left = 152
     Top = 0
     Width = 478
-    Height = 466
+    Height = 494
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
+    ExplicitHeight = 466
   end
   object btnTest: TButton
     Left = 8
@@ -88,13 +88,14 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
   end
   object btnTestIntf: TButton
     Left = 8
-    Top = 433
+    Top = 461
     Width = 138
     Height = 25
     Anchors = [akLeft, akBottom]
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
+    ExplicitTop = 433
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -146,15 +147,15 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     OnClick = btn7to1Click
   end
   object inpNumCPU: TSpinEdit
-    Left = 60
-    Top = 401
+    Left = 61
+    Top = 402
     Width = 49
     Height = 22
     Anchors = [akLeft, akBottom]
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
-    Value = 1
+    Value = 0
     OnChange = inpNumCPUChange
   end
   object cbTestFinalized: TCheckBox
@@ -164,6 +165,17 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Height = 17
     Caption = 'Test IsFinalized'
     TabOrder = 13
+  end
+  object btnRaiseExceptions: TButton
+    Left = 8
+    Top = 429
+    Width = 138
+    Height = 25
+    Anchors = [akLeft, akBottom]
+    Caption = 'Raise exceptions'
+    TabOrder = 14
+    OnClick = btnRaiseExceptionsClick
+    ExplicitTop = 424
   end
   object OtlMonitor: TOmniEventMonitor
     OnTaskMessage = OtlMonitorTaskMessage

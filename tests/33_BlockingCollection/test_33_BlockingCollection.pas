@@ -37,9 +37,11 @@ type
     OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
     cbTestFinalized: TCheckBox;
+    btnRaiseExceptions: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
+    procedure btnRaiseExceptionsClick(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
     procedure btnTestIntfClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -178,7 +180,6 @@ begin
     end
     else if not chanColl.Take(value) then
       break; //repeat
-
     dstColl.Add(value);
     if GReadersCount.Increment = CCountThreadedTest then begin
       GStopReaders := true;
@@ -207,6 +208,28 @@ procedure TfrmTestOmniBlockingCollection.btn7to1Click(Sender: TObject);
 begin
   PrepareTest(7, 1);
 end; { TfrmTestOtlCollections.btn7to1Click }
+
+procedure TfrmTestOmniBlockingCollection.btnRaiseExceptionsClick(Sender: TObject);
+var
+  coll : IOmniBlockingCollection;
+  value: TOmniValue;
+begin
+  coll := TOmniBlockingCollection.Create;
+  coll.Add(Exception.Create('test exception'));
+  //no exception in next line
+  coll.Take(value);
+  Assert(value.IsException);
+  value.AsException.Free;
+  coll.Add(Exception.Create('test exception'));
+  coll.ReraiseExceptions;
+  //exception is raised in next line
+  try
+    coll.Take(value);
+  except
+    on E: Exception do
+      Log(E.Message);
+  end;
+end; { TfrmTestOmniBlockingCollection.btnRaiseExceptionsClick }
 
 procedure TfrmTestOmniBlockingCollection.btnTestClick(Sender: TObject);
 var
