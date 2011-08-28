@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-14
-///   Version           : 1.20
+///   Last modification : 2011-08-28
+///   Version           : 1.21
 ///</para><para>
 ///   History:
+///     1.21: 2011-08-28
+///       - TOmniValue can natively store exception objects (AsException, IsException).
 ///     1.20: 2011-07-14
 ///       - Removed EXIT_EXCEPTION error code.
 ///     1.19a: 2010-12-12
@@ -161,11 +163,12 @@ type
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
              ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer, ovtDateTime);
+             ovtPointer, ovtDateTime, ovtException);
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
     function  GetAsDateTime: TDateTime;
+    function  GetAsException: Exception;
     function  GetAsExtended: Extended;
     function  GetAsInt64: int64; inline;
     function  GetAsInteger: integer; inline;
@@ -180,6 +183,7 @@ type
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
   	procedure SetAsDateTime(value: TDateTime); inline;
+    procedure SetAsException(value: Exception);
     procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
     procedure SetAsInteger(const value: integer); inline;
@@ -198,6 +202,7 @@ type
     procedure Clear; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
+    function  IsException: boolean; inline;
     function  IsFloating: boolean; inline;
   	function  IsDateTime: boolean; inline;
     function  IsInteger: boolean; inline;
@@ -221,9 +226,11 @@ type
     class operator Implicit(const a: string): TOmniValue; inline;
     class operator Implicit(const a: IInterface): TOmniValue; inline;
     class operator Implicit(const a: TObject): TOmniValue; inline;
+    class operator Implicit(const a: Exception): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
+    class operator Implicit(const a: TOmniValue): Exception; inline;
     class operator Implicit(const a: TOmniValue): Extended; inline;
     class operator Implicit(const a: TOmniValue): string; inline;
     class operator Implicit(const a: TOmniValue): integer; inline;
@@ -241,6 +248,7 @@ type
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
   	property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
+    property AsException: Exception read GetAsException write SetAsException;
     property AsExtended: Extended read GetAsExtended write SetAsExtended;
     property AsInt64: int64 read GetAsInt64 write SetAsInt64;
     property AsInteger: integer read GetAsInteger write SetAsInteger;
@@ -1290,7 +1298,8 @@ end; { TOmniValue.GetAsCardinal }
 function TOmniValue.GetAsDouble: Double;
 begin
   case ovType of
-    ovtInteger:  Result := AsInt64;
+    ovtInteger,
+    ovtNull:  Result := AsInt64;
     ovtDouble,
     ovtDateTime: Result := PDouble(RawData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
@@ -1303,14 +1312,28 @@ begin
   case ovType of
     ovtDouble,
     ovtDateTime: Result := PDouble(RawData)^;
+    ovtNull: Result := 0;
     else raise Exception.Create('TOmniValue cannot be converted to TDateTime');
   end;
 end; { TOmniValue.GetAsDateTime }
 
+function TOmniValue.GetAsException: Exception;
+begin
+  if IsException or
+     (IsObject and AsObject.InheritsFrom(Exception))
+  then
+    Result := Exception(RawData^)
+  else if IsEmpty then
+    Result := nil
+  else
+    raise Exception.Create('TOmniValue cannot be converted to exception');
+end; { TOmniValue.GetAsException }
+
 function TOmniValue.GetAsExtended: Extended;
 begin
   case ovType of
-    ovtInteger:  Result := AsInt64;
+    ovtInteger,
+    ovtNull:  Result := AsInt64;
     ovtDouble,
     ovtDateTime: Result := PDouble(RawData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
@@ -1320,12 +1343,11 @@ end; { TOmniValue.GetAsExtended }
 
 function TOmniValue.GetAsInt64: int64;
 begin
-  if IsInteger then
-    Result := ovData
-  else if IsEmpty then
-    Result := 0
-  else
-    raise Exception.Create('TOmniValue cannot be converted to int64');
+  case ovType of
+    ovtInteger: Result := ovData;
+    ovtNull: Result := 0;
+    else raise Exception.Create('TOmniValue cannot be converted to int64');
+  end;
 end; { TOmniValue.GetAsInt64 }
 
 function TOmniValue.GetAsInteger: integer;
@@ -1335,32 +1357,32 @@ end; { TOmniValue.GetAsInteger }
 
 function TOmniValue.GetAsInterface: IInterface;
 begin
-  if IsInterface then
-    Result := ovIntf
-  else if IsEmpty then
-    Result := nil
-  else
-    raise Exception.Create('TOmniValue cannot be converted to interface');
+  case ovType of
+    ovtInterface: Result := ovIntf;
+    ovtNull: Result := nil;
+    else raise Exception.Create('TOmniValue cannot be converted to interface');
+  end;
 end; { TOmniValue.GetAsInterface }
 
 function TOmniValue.GetAsObject: TObject;
 begin
-  if IsObject then
-    Result := TObject(RawData^)
-  else if IsEmpty then
-    Result := nil
-  else
-    raise Exception.Create('TOmniValue cannot be converted to object');
+  case ovType of
+    ovtObject,
+    ovtException: Result := TObject(RawData^);
+    ovtNull: Result := nil;
+    else raise Exception.Create('TOmniValue cannot be converted to object');
+  end;
 end; { TOmniValue.GetAsObject }
 
 function TOmniValue.GetAsPointer: pointer;
 begin
-  if IsPointer or IsObject then
-    Result := pointer(RawData^)
-  else if IsEmpty then
-    Result := nil
-  else
-    raise Exception.Create('TOmniValue cannot be converted to pointer');
+  case ovType of
+    ovtPointer,
+    ovtObject,
+    ovtException: Result := pointer(RawData^);
+    ovtNull: Result := nil;
+    else raise Exception.Create('TOmniValue cannot be converted to pointer');
+  end;
 end; { TOmniValue.GetAsPointer }
 
 function TOmniValue.GetAsString: string;
@@ -1395,6 +1417,8 @@ begin
       Result := AsString;
     ovtObject:
       Result := AsObject;
+    ovtException:
+      Result := AsException;
     ovtInterface:
       Result := TValue.From<IInterface>(AsInterface);
     ovtVariant:
@@ -1409,12 +1433,11 @@ end; { TOmniValue.GetAsTValue }
 
 function TOmniValue.GetAsVariant: Variant;
 begin
-  if IsVariant then
-    Result := (ovIntf as IOmniVariantData).Value
-  else if IsEmpty then
-    Result := Variants.Null
-  else
-    raise Exception.Create('TOmniValue cannot be converted to variant');
+  case ovType of
+    ovtVariant: Result := (ovIntf as IOmniVariantData).Value;
+    ovtNull: Result := Variants.Null;
+    else raise Exception.Create('TOmniValue cannot be converted to variant');
+  end;
 end; { TOmniValue.GetAsVariant }
 
 function TOmniValue.GetAsVariantArr(idx: integer): Variant;
@@ -1424,10 +1447,10 @@ end; { TOmniValue.GetAsVariantArr }
 
 function TOmniValue.GetAsWideString: WideString;
 begin
-  if ovType = ovtWideString then
-    Result := (ovIntf as IOmniWideStringData).Value
-  else
-    Result := GetAsString;
+  case ovType of
+    ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
+    else Result := GetAsString;
+  end;
 end; { TOmniValue.GetAsWideString }
 
 function TOmniValue.IsBoolean: boolean;
@@ -1449,6 +1472,11 @@ function TOmniValue.IsDateTime: boolean;
 begin
   Result := (ovType = ovtDateTime);
 end; { TOmniValue.IsDateTime }
+
+function TOmniValue.IsException: boolean;
+begin
+  Result := (ovType = ovtException);
+end; { TOmniValue.IsException }
 
 function TOmniValue.IsInteger: boolean;
 begin
@@ -1524,6 +1552,12 @@ begin
   PDouble(RawData)^ := value;
   ovType := ovtDateTime;
 end; { TOmniValue.SetAsDateTime }
+
+procedure TOmniValue.SetAsException(value: Exception);
+begin
+  RawData^ := int64(value);
+  ovType := ovtException
+end; { TOmniValue.SetAsException }
 
 procedure TOmniValue.SetAsExtended(value: Extended);
 begin
@@ -1688,6 +1722,11 @@ begin
   Result.AsObject := a;
 end; { TOmniValue.Implicit }
 
+class operator TOmniValue.Implicit(const a: Exception): TOmniValue;
+begin
+  Result.AsException := a;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
   Result := a.AsWideString;
@@ -1733,6 +1772,11 @@ end; { TOmniValue.Implicit }
 class operator TOmniValue.Implicit(const a: TOmniValue): TObject;
 begin
   Result := a.AsObject;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): Exception;
+begin
+  Result := a.AsException;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): string;
