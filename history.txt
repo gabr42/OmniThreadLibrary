@@ -21,6 +21,11 @@
     anonymous function.
   - Implemented [I|T]OmniBlockingCollection.IsFinalized.
   - Parallel.Pipeline accepts 'simple stage' (for loop implemented internally).
+  - TOmniValue can natively store exception objects (AsException, IsException).
+  - Implemented IOmniBlockingCollection.ReraiseExceptions. If enabled
+    (default: disabled), [Try]Take will check if returned value for exception
+    (TOmniValue.IsException) and if true, it will reraise this exception
+    instead of returning a result.
   - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
   - Bug fixed: Event monitor in connection to the thread pool was totally broken. 
     (Big thanks to [anton alisov] for finding the problem.)
