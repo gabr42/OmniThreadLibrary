@@ -30,14 +30,19 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2011-08-27
-///   Version           : 1.04a
+///   Last modification : 2011-08-28
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2011-08-28
+///       - Implemented IOmniBlockingCollection.ReraiseExceptions. If enabled
+///         (default: disabled), [Try]Take will check if returned value for exception
+///         (TOmniValue.IsException) and if true, it will reraise this exception
+///         instead of returning a result.
 ///     1.04a: 2011-08-27
 ///       - [Try]Add works correctly when throttling is used. (Broken in 1.03d.)
 ///     1.04: 2011-08-26
-///       - Implemented [I|T]OmniBlockingCollection.IsFinalized.
+///       - Implemented IOmniBlockingCollection.IsFinalized.
 ///     1.03d: 2011-08-25
 ///       - Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition.
 ///     1.03c: 2010-11-30
@@ -109,6 +114,17 @@ type
     ///	was called) and empty (TryTake would fail).</summary>
     function  IsFinalized: boolean;
     function  Next: TOmniValue;
+    {$REGION 'Documentation'}
+    /// <summary>If enabled (default: disabled), [Try]Take will check if returned value
+    /// for exception (TOmniValue.IsException) and if true, it will reraise this exception
+    /// instead of returning a result.</summary>
+    {$ENDREGION}
+    procedure ReraiseExceptions(enable: boolean = true);
+    {$REGION 'Documentation'}
+    ///	<remarks>When throttling is set, Add will block if there is &gt;=
+    ///	highWaterMark elements in the queue. It will only unblock when number
+    ///	of elements drops below lowWaterMark.</remarks>
+    {$ENDREGION}
     procedure SetThrottling(highWatermark, lowWatermark: integer);
     function  Take(var value: TOmniValue): boolean;
     function  TryAdd(const value: TOmniValue): boolean;
@@ -135,6 +151,7 @@ type
     obcLowWaterMark        : integer;
     obcNotOverflow         : THandle {event};
     obcObserver            : TOmniContainerWindowsEventObserver;
+    obcReraiseExceptions   : boolean;
     obcResourceCount       : TOmniResourceCount;
     obcThrottling          : boolean;
   public
@@ -151,11 +168,7 @@ type
     function  IsCompleted: boolean; inline;
     function  IsFinalized: boolean;
     function  Next: TOmniValue;
-    {$REGION 'Documentation'}
-    ///	<remarks>When throttling is set, Add will block if there is &gt;=
-    ///	highWaterMark elements in the queue. It will only unblock when number
-    ///	of elements drops below lowWaterMark.</remarks>
-    {$ENDREGION}
+    procedure ReraiseExceptions(enable: boolean = true);
     procedure SetThrottling(highWaterMark, lowWaterMark: integer);
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
@@ -272,6 +285,11 @@ begin
     raise ECollectionCompleted.Create('Collection is empty');
 end; { TOmniBlockingCollection.Next }
 
+procedure TOmniBlockingCollection.ReraiseExceptions(enable: boolean);
+begin
+  obcReraiseExceptions := enable;
+end; { TOmniBlockingCollection.ReraiseExceptions }
+
 ///<summary>When throttling is set, Add will block if there is >= highWaterMark elements
 ///  in the queue. It will only unblock when number of elements drops below lowWaterMark.</summary>
 procedure TOmniBlockingCollection.SetThrottling(highWaterMark, lowWaterMark: integer);
@@ -387,6 +405,8 @@ begin { TOmniBlockingCollection.TryTake }
     if obcApproxCount.Value <= obcLowWaterMark then
       SetEvent(obcNotOverflow);
   end;
+  if Result and obcReraiseExceptions and value.IsException then
+    raise value.AsException;
 end; { TOmniBlockingCollection.TryTake }
 
 end.
