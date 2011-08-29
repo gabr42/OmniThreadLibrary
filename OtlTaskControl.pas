@@ -791,6 +791,10 @@ type
   end; { IOmniTaskControlInternals }
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
+  {$IFDEF OTL_Anonymous}
+  strict private
+    otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
+  {$ENDIF OTL_Anonymous}
   strict private
     otcDelayedTerminate    : boolean;
     otcDestroyLock         : boolean;
