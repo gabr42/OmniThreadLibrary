@@ -805,7 +805,6 @@ type
     otcOnMessageExec       : TOmniMessageExec;
     otcOnMessageList       : TGpIntegerObjectList;
     otcOnTerminatedExec    : TOmniMessageExec;
-    otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
     otcOwningPool          : IOmniThreadPool;
     otcParameters          : TOmniValueContainer;
     otcQueueLength         : integer;
