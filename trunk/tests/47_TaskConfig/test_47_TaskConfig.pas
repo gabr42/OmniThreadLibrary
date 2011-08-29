@@ -199,13 +199,14 @@ end;
 
 procedure TfrmDemoParallelTaskConfig.btnPipelineClick(Sender: TObject);
 var
-  pipeOut: IOmniBlockingCollection;
-  value  : TOmniValue;
+  value: TOmniValue;
 begin
-  pipeOut := Parallel.Pipeline
-    .Stages([PipelineStage1, PipelineStage2], Parallel.TaskConfig.OnMessage(Self))
-    .Run;
-  while not pipeOut.TryTake(value) do
+  for value in
+    Parallel.Pipeline
+     .Stages([PipelineStage1, PipelineStage2], Parallel.TaskConfig.OnMessage(Self))
+     .Run
+     .Output
+  do
     Application.ProcessMessages;
   lbLog.ItemIndex := lbLog.Items.Add('PIPELINE: ' + IntToStr(value) + ' (should be 500500)');
 end;

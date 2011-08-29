@@ -170,7 +170,6 @@ procedure TfrmPipelineDemo.btnExtended2Click(Sender: TObject);
 var
   outValue: TOmniValue;
   pipeline: IOmniPipeline;
-  pipeOut : IOmniBlockingCollection;
   t1      : int64;
   t2      : int64;
   t3      : int64;
@@ -186,12 +185,12 @@ begin
       end)
     .Stages([StageMinus3, StageMod5])
       .NumTasks(2)
-    .Stage(StageSum);
-  pipeOut := pipeline.Run;
+    .Stage(StageSum)
+    .Run;
   t1 := DSiTimeGetTime64;
   pipeline.WaitFor(INFINITE); // just for test
   t2 := DSiTimeGetTime64;
-  outValue := pipeOut.Next;
+  outValue := pipeline.Output.Next;
   t3 := DSiTimeGetTime64;
   lbLog.Items.Add(Format('Pipeline result: %d; time in Wait: %d ms; time in Next: %d ms',
     [outValue.AsInteger, t2-t1, t3-t2]));
@@ -200,10 +199,10 @@ end;
 procedure TfrmPipelineDemo.btnExtendedClick(Sender: TObject);
 var
   i         : integer;
-  pipeOut   : IOmniBlockingCollection;
+  pipeline  : IOmniPipeline;
   testResult: integer;
 begin
-  pipeOut := Parallel
+  pipeline := Parallel
     .Pipeline
     //.Input not set - first stage will have no input; if you use .Intput(), don't forget to call CompleteAdding on the input collection
     .Throttle(102400) // optional command - by default throttling level is set to 10240
@@ -236,15 +235,15 @@ begin
   testResult := 0;
   for i := 1 to 1000000 do
     Inc(testResult, (2*i - 3) mod 5);
-  lbLog.Items.Add(Format('Pipeline result: %d; expected result: %d', [pipeOut.Next.AsInteger, testResult]));
+  lbLog.Items.Add(Format('Pipeline result: %d; expected result: %d', [pipeline.Output.Next.AsInteger, testResult]));
 end;
 
 procedure TfrmPipelineDemo.btnSimpleClick(Sender: TObject);
 var
-  pipeOut: IOmniBlockingCollection;
+  pipeline: IOmniPipeline;
 begin
-  pipeOut := Parallel.Pipeline([StageGenerate, StageMult2, StageMinus3, StageMod5, StageSum]).Run;
-  lbLog.Items.Add(Format('Pipeline result: %d', [pipeOut.Next.AsInteger]));
+  pipeline := Parallel.Pipeline([StageGenerate, StageMult2, StageMinus3, StageMod5, StageSum]).Run;
+  lbLog.Items.Add(Format('Pipeline result: %d', [pipeline.Output.Next.AsInteger]));
 end;
 
 procedure TfrmPipelineDemo.btnStressTestClick(Sender: TObject);
@@ -335,7 +334,6 @@ end;
 procedure TfrmPipelineDemo.btnCancelPipeClick(Sender: TObject);
 var
   pipeline: IOmniPipeline;
-  pipeOut : IOmniBlockingCollection;
   sum     : TOmniValue;
 begin
   pipeline := Parallel
@@ -350,17 +348,16 @@ begin
       begin
         output := input.AsInteger * 2;
       end);
-  pipeout :=
-    pipeline
-      .Stages([StageMinus3, StageMod5])
-        .NumTasks(2)
-      .Stage(StageSum)
-      .Run;
+  pipeline
+    .Stages([StageMinus3, StageMod5])
+      .NumTasks(2)
+    .Stage(StageSum)
+    .Run;
   Sleep(500);
   pipeline.Cancel;
   if Sender = btnCancelPipe then begin
     // TryTake will block until all stages in the pipeline have completed their work
-    if pipeOut.TryTake(sum) then
+    if pipeline.Output.TryTake(sum) then
       lbLog.Items.Add('*** ERRROR *** there should be no data in the output pipe')
     else
       lbLog.Items.Add('Cancelled');
@@ -368,7 +365,7 @@ begin
   else begin
     // Another approach is to call pipeline.WaitFor
     Assert(pipeline.WaitFor(INFINITE));
-    Assert(pipeOut.IsFinalized);
+    Assert(pipeline.Output.IsFinalized);
     lbLog.Items.Add('Cancelled');
   end;
 end;
@@ -380,7 +377,6 @@ var
   numStages: integer;
   numTasks : integer;
   pipeline : IOmniPipeline;
-  pipeOut  : IOmniBlockingCollection;
   retVal   : int64;
 
   procedure AddThrottle;
@@ -452,8 +448,8 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add('#' + IntToStr(numTest) + ': ' + descr);
   lbLog.Update;
   OutputDebugString(PChar(descr));
-  pipeOut := pipeline.Run;
-  retVal := pipeOut.Next;
+  pipeline.Run;
+  retVal := pipeline.Output.Next;
   lbLog.ItemIndex := lbLog.Items.Add(IntToStr(retVal));
   if retVal <> 500000500000 then
     raise Exception.Create('Wrong value calculated!');

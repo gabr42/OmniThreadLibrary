@@ -1,8 +1,8 @@
-object Form34: TForm34
+object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   Left = 0
   Top = 0
   Caption = 'Exceptions in OtlParallel'
-  ClientHeight = 337
+  ClientHeight = 436
   ClientWidth = 635
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -49,18 +49,18 @@ object Form34: TForm34
     Enabled = False
     TabOrder = 7
   end
-  object btnPipeline: TButton
+  object btnPipeline1: TButton
     Left = 16
     Top = 272
-    Width = 75
+    Width = 91
     Height = 25
-    Caption = 'Pipeline'
-    Enabled = False
+    Caption = 'Pipeline 1'
     TabOrder = 8
+    OnClick = btnPipeline1Click
   end
   object btnForkJoin: TButton
     Left = 16
-    Top = 304
+    Top = 396
     Width = 75
     Height = 25
     Caption = 'Fork/Join'
@@ -71,11 +71,12 @@ object Form34: TForm34
     Left = 128
     Top = 0
     Width = 507
-    Height = 337
+    Height = 436
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 10
+    ExplicitHeight = 337
   end
   object btnFuture2: TButton
     Left = 16
@@ -112,5 +113,32 @@ object Form34: TForm34
     Caption = 'Join 3'
     TabOrder = 3
     OnClick = btnJoin3Click
+  end
+  object btnPipeline2: TButton
+    Left = 16
+    Top = 303
+    Width = 91
+    Height = 25
+    Caption = 'Pipeline 2'
+    TabOrder = 11
+    OnClick = btnPipeline2Click
+  end
+  object btnPipeline3: TButton
+    Left = 16
+    Top = 334
+    Width = 91
+    Height = 25
+    Caption = 'Pipeline 3'
+    TabOrder = 12
+    OnClick = btnPipeline3Click
+  end
+  object btnPipeline4: TButton
+    Left = 16
+    Top = 365
+    Width = 91
+    Height = 25
+    Caption = 'Pipeline 4'
+    TabOrder = 13
+    OnClick = btnPipeline4Click
   end
 end

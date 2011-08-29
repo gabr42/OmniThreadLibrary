@@ -7,7 +7,7 @@ uses
   Dialogs, StdCtrls;
 
 type
-  TForm34 = class(TForm)
+  TfrmOtlParallelExceptions = class(TForm)
     btnAsync: TButton;
     btnForeach: TButton;
     btnForkJoin: TButton;
@@ -16,27 +16,36 @@ type
     btnFuture3: TButton;
     btnJoin1: TButton;
     btnJoin2: TButton;
-    btnPipeline: TButton;
+    btnPipeline1: TButton;
     lbLog: TListBox;
     btnJoin3: TButton;
+    btnPipeline2: TButton;
+    btnPipeline3: TButton;
+    btnPipeline4: TButton;
     procedure btnFuture1Click(Sender: TObject);
     procedure btnFuture2Click(Sender: TObject);
     procedure btnFuture3Click(Sender: TObject);
     procedure btnJoin1Click(Sender: TObject);
     procedure btnJoin2Click(Sender: TObject);
     procedure btnJoin3Click(Sender: TObject);
+    procedure btnPipeline1Click(Sender: TObject);
+    procedure btnPipeline2Click(Sender: TObject);
+    procedure btnPipeline3Click(Sender: TObject);
+    procedure btnPipeline4Click(Sender: TObject);
   private
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const param: array of const); overload;
   end;
 
 var
-  Form34: TForm34;
+  frmOtlParallelExceptions: TfrmOtlParallelExceptions;
 
 implementation
 
 uses
   OtlTask,
+  OtlCommon,
+  OtlCollections,
   OtlParallel;
 
 {$R *.dfm}
@@ -44,7 +53,7 @@ uses
 type
   ETestException = class(Exception);
 
-procedure TForm34.btnFuture1Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnFuture1Click(Sender: TObject);
 var
   future: IOmniFuture<integer>;
 begin
@@ -64,7 +73,7 @@ begin
   end;
 end;
 
-procedure TForm34.btnFuture2Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnFuture2Click(Sender: TObject);
 var
   future: IOmniFuture<integer>;
 begin
@@ -82,7 +91,7 @@ begin
     Log('Future retured: %d', [future.Value]);
 end;
 
-procedure TForm34.btnFuture3Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnFuture3Click(Sender: TObject);
 var
   excFuture: Exception;
   future   : IOmniFuture<integer>;
@@ -104,7 +113,7 @@ begin
   finally FreeAndNil(excFuture); end;
 end;
 
-procedure TForm34.btnJoin1Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnJoin1Click(Sender: TObject);
 var
   iInnerExc: integer;
 begin
@@ -129,7 +138,7 @@ begin
   end;
 end;
 
-procedure TForm34.btnJoin2Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnJoin2Click(Sender: TObject);
 begin
   try
     Parallel.Join(
@@ -154,7 +163,7 @@ begin
   end;
 end;
 
-procedure TForm34.btnJoin3Click(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnJoin3Click(Sender: TObject);
 var
   j      : integer;
   join   : IOmniParallelJoin;
@@ -190,13 +199,163 @@ begin
   end;
 end;
 
-procedure TForm34.Log(const msg: string);
+procedure StageException1(const input: TOmniValue; var output: TOmniValue);
+begin
+  output := input.AsInteger * 42;
+end;
+
+procedure StageException2(const input, output: IOmniBlockingCollection);
+var
+  outVal: TOmniValue;
+  value : TOmniValue;
+begin
+  for value in input do begin
+    if value.IsException then begin
+      value.AsException.Free;
+      outVal.Clear;
+    end
+    else
+      outVal := 1 / value.AsInteger;
+    if not output.TryAdd(outVal) then
+      break; //for
+  end;
+end;
+
+procedure TfrmOtlParallelExceptions.btnPipeline1Click(Sender: TObject);
+var
+  pipeline: IOmniPipeline;
+  value   : TOmniValue;
+begin
+  Log('Should catch pipeline exception "TOmniValue cannot be converted to int64" in stage 1');
+  pipeline := Parallel.Pipeline
+    .Stage(StageException1)
+    .Stage(StageException2);
+  pipeline.Run;
+
+  // Provide input
+  with pipeline.Input do begin
+    // few normal elements
+    Add(1);
+    Add(2);
+    // then trigger the exception in the first stage
+    Add('three');
+    // this should never reach the pipeline output
+    Add(4);
+    CompleteAdding;
+  end;
+
+  // Process output
+  try
+    for value in pipeline.Output do
+      Log(value.AsString);
+  except
+    on E: Exception do
+      Log('Caught pipeline exception %s:%s', [E.ClassName, E.Message]);
+  end;
+end;
+
+procedure TfrmOtlParallelExceptions.btnPipeline2Click(Sender: TObject);
+var
+  pipeline: IOmniPipeline;
+  value   : TOmniValue;
+begin
+  Log('Should catch pipeline exception "Floating point division by zero" in stage 2');
+  pipeline := Parallel.Pipeline
+    .Stage(StageException1)
+    .Stage(StageException2);
+  pipeline.Run;
+
+  // Provide input
+  with pipeline.Input do begin
+    // few normal elements
+    Add(1);
+    Add(2);
+    // then trigger the exception in the second stage
+    Add(0);
+    // this should never reach the pipeline output
+    Add(4);
+    CompleteAdding;
+  end;
+
+  // Process output
+  try
+    for value in pipeline.Output do
+      Log(value.AsString);
+  except
+    on E: Exception do
+      Log('Caught pipeline exception %s:%s', [E.ClassName, E.Message]);
+  end;
+end;
+
+procedure TfrmOtlParallelExceptions.btnPipeline3Click(Sender: TObject);
+var
+  pipeline: IOmniPipeline;
+  value   : TOmniValue;
+begin
+  Log('Stage 2 should accept and correct stage 1 exception (third output will be empty)');
+  pipeline := Parallel.Pipeline
+    .Stage(StageException1)
+    .Stage(StageException2)
+      .HandleExceptions
+    .Run;
+
+  // Provide input
+  with pipeline.Input do begin
+    // few normal elements
+    Add(1);
+    Add(2);
+    // then trigger the exception in the first stage; this exception should be 'corrected' in the second stage
+    Add('three');
+    Add(4);
+    CompleteAdding;
+  end;
+
+  // Process output; there should be no exception in the output collection
+  for value in pipeline.Output do
+    Log(value.AsString);
+end;
+
+procedure TfrmOtlParallelExceptions.btnPipeline4Click(Sender: TObject);
+var
+  pipeline: IOmniPipeline;
+  value   : TOmniValue;
+begin
+ Log('Should catch pipeline exception "TOmniValue cannot be converted to int64" in stage 1, then log it without reraising');
+  pipeline := Parallel.Pipeline
+    .Stage(StageException1)
+    .Stage(StageException2);
+  pipeline.Run;
+
+  // Provide input
+  with pipeline.Input do begin
+    // few normal elements
+    Add(1);
+    Add(2);
+    // then trigger the exception in the first stage
+    Add('three');
+    // this should never reach the pipeline output
+    Add(4);
+    CompleteAdding;
+  end;
+
+  // Process output; exceptions will be processed manually
+  pipeline.Output.ReraiseExceptions(false);
+  for value in pipeline.Output do
+    if not value.IsException then
+      Log(value.AsString)
+    else begin
+      Log('%s:%s', [value.AsException.ClassName, value.AsException.Message]);
+      value.AsException.Free;
+    end;
+end;
+
+procedure TfrmOtlParallelExceptions.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
   lbLog.Update;
 end;
 
-procedure TForm34.Log(const msg: string; const param: array of const);
+procedure TfrmOtlParallelExceptions.Log(const msg: string; const param: array of const);
 begin
   Log(Format(msg, param));
 end;

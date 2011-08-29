@@ -52,7 +52,7 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="test_48_OtlParallelExceptions.pas">
-				<Form>Form34</Form>
+				<Form>frmOtlParallelExceptions</Form>
 			</DCCReference>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
