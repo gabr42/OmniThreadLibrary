@@ -35,7 +35,6 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 5
-    ExplicitHeight = 466
   end
   object btnTest: TButton
     Left = 8
@@ -95,7 +94,6 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Caption = 'Send interfaces'
     TabOrder = 6
     OnClick = btnTestIntfClick
-    ExplicitTop = 433
   end
   object cbRepeat: TCheckBox
     Left = 8
@@ -155,7 +153,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
-    Value = 0
+    Value = 1
     OnChange = inpNumCPUChange
   end
   object cbTestFinalized: TCheckBox
@@ -175,7 +173,6 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Caption = 'Raise exceptions'
     TabOrder = 14
     OnClick = btnRaiseExceptionsClick
-    ExplicitTop = 424
   end
   object OtlMonitor: TOmniEventMonitor
     OnTaskMessage = OtlMonitorTaskMessage

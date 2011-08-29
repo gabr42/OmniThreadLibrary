@@ -271,9 +271,9 @@ var
   value: TOmniValue;
 begin
   time := DSiTimeGetTime64;
-  coll := TOmniBlockingCollection.Create;
-  try
-    for loop := 1 to 10 do begin
+  for loop := 1 to 10 do begin
+    coll := TOmniBlockingCollection.Create;
+    try
       for i := 1 to CCountSingleTest do
         coll.Add(CreateCounter(i));
       coll.CompleteAdding;
@@ -285,8 +285,8 @@ begin
       end;
       if coll.TryTake(value) then
         raise Exception.Create('Collection is not empty at the end');
-    end; //for loop
-  finally FreeAndNil(coll); end;
+    finally FreeAndNil(coll); end;
+  end; //for loop
   time := DSiTimeGetTime64 - time;
   Log('TOmniBlockingCollection, 10x (%d enqueues and %0:d dequeues), %d ms', [CCountSingleTest, time]);
 end; { TfrmTestOtlCollections.btnTestIntfClick }
