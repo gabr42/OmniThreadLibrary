@@ -38,9 +38,13 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-08-28
-///   Version           : 1.21
+///   Version           : 1.22
 ///</para><para>
 ///   History:
+///     1.22: 2011-08-31
+///       - [Lee_Nover] SetThreadName implementation moved into a separate unit with debug
+///         info disabled. That way, debugger doesn't stop on SetThreadName while 
+///         single-stepping in another thread.
 ///     1.21: 2011-08-28
 ///       - TOmniValue can natively store exception objects (AsException, IsException).
 ///     1.20: 2011-07-14
@@ -555,7 +559,8 @@ var
 implementation
 
 uses
-  GpStringHash;
+  GpStringHash, 
+  OtlCommon.Utils;
 
 type
   IOmniStringData = interface ['{21E52E56-390C-4066-B9FC-83862FFBCBF3}']
@@ -782,27 +787,8 @@ begin
 end; { Environment }
 
 procedure SetThreadName(const name: string);
-type
-  TThreadNameInfo = record
-    FType    : LongWord; // must be 0x1000
-    FName    : PAnsiChar;// pointer to name (in user address space)
-    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
-    FFlags   : LongWord; // reserved for future use, must be zero
-  end; { TThreadNameInfo }
-var
-  ansiName      : AnsiString;
-  threadNameInfo: TThreadNameInfo;
 begin
-  if DebugHook <> 0 then begin
-    ansiName := AnsiString(name);
-    threadNameInfo.FType := $1000;
-    threadNameInfo.FName := PAnsiChar(ansiName);
-    threadNameInfo.FThreadID := $FFFFFFFF;
-    threadNameInfo.FFlags := 0;
-    try
-      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
-    except {ignore} end;
-  end;
+ OtlCommon.Utils.SetThreadName(name);
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;
