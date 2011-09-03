@@ -1696,14 +1696,13 @@ begin
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
   end
-  else if awaited = (WAIT_OBJECT_0 + msgInfo.NumWaitHandles) then //message
-    ProcessThreadMessages
   else if awaited = WAIT_IO_COMPLETION then
     // do-nothing
   else if awaited = WAIT_TIMEOUT then
     CheckTimers
   else //errors
     RaiseLastOSError;
+  ProcessThreadMessages;
   TestForInternalRebuild(task, msgInfo);
   Result := true;
 end; { TOmniTaskExecutor.DispatchEvent } 
