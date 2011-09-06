@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-08-28
-///   Version           : 1.22
+///   Last modification : 2011-09-06
+///   Version           : 1.23
 ///</para><para>
 ///   History:
+///     1.23: 2011-09-06
+///       - Implemented IOmniCounter.Take.
 ///     1.22: 2011-08-31
 ///       - [Lee_Nover] SetThreadName implementation moved into a separate unit with debug
 ///         info disabled. That way, debugger doesn't stop on SetThreadName while 
@@ -367,12 +369,15 @@ type
     property Item[const param: TOmniValue]: TOmniValue read GetItem; default;
   end; { TOmniValueContainer }
 
+  //:Thread-safe counter
   IOmniCounter = interface ['{3A73CCF3-EDC5-484F-8459-532B8C715E3C}']
     function  GetValue: integer;
     procedure SetValue(const value: integer);
   //
     function  Increment: integer;
     function  Decrement: integer;
+    function  Take(count: integer): integer; overload;
+    function  Take(count: integer; var taken: integer): boolean; overload;
     property Value: integer read GetValue write SetValue;
   end; { IOmniCounter }
 
@@ -385,6 +390,8 @@ type
     procedure Initialize;
     function  Increment: integer;
     function  Decrement: integer;
+    function  Take(count: integer): integer; overload;
+    function  Take(count: integer; var taken: integer): boolean; overload;
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
@@ -631,12 +638,14 @@ type
   strict private
     ocValue: TGp4AlignedInt;
   protected
-    function  GetValue: integer;
-    procedure SetValue(const value: integer);
+    function  GetValue: integer; inline;
+    procedure SetValue(const value: integer); inline;
   public
     constructor Create(initialValue: integer);
-    function Decrement: integer;
-    function Increment: integer;
+    function  Decrement: integer; inline;
+    function  Increment: integer; inline;
+    function  Take(count: integer): integer; overload;
+    function  Take(count: integer; var taken: integer): boolean; overload; inline;
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounterImpl }
 
@@ -984,6 +993,16 @@ begin
   ocCounter.SetValue(value);
 end; { TOmniCounter.SetValue }
 
+function TOmniCounter.Take(count: integer): integer;
+begin
+  Result := ocCounter.Take(count);
+end; { TOmniCounter.Take }
+
+function TOmniCounter.Take(count: integer; var taken: integer): boolean;
+begin
+  Result := ocCounter.Take(count, taken);
+end; { TOmniCounter.Take }
+
 { TOmniCounterImpl }
 
 constructor TOmniCounterImpl.Create(initialValue: integer);
@@ -1010,6 +1029,33 @@ procedure TOmniCounterImpl.SetValue(const value: integer);
 begin
   ocValue.Value := value;
 end; { TOmniCounterImpl.SetValue }
+
+function TOmniCounterImpl.Take(count: integer): integer;
+var
+  current : integer;
+  newValue: integer;
+begin
+  repeat
+    current := Value;
+    if current <= 0 then begin
+      Result := 0;
+      Exit;
+    end;
+    newValue := current - count;
+    if newValue < 0 then
+      newValue := 0;
+    if ocValue.CAS(current, newValue) then begin
+      Result := current - newValue;
+      Exit;
+    end;
+  until false;
+end; { TOmniCounterImpl.Take }
+
+function TOmniCounterImpl.Take(count: integer; var taken: integer): boolean;
+begin
+  taken := Take(count);
+  Result := (taken > 0);
+end; { TOmniCounterImpl.Take }
 
 { TOmniInterfaceDictionaryPair }
 
