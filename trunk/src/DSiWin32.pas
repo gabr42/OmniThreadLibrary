@@ -5,12 +5,19 @@
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
-                       Christian Wimmer, Tommi Prami
+                       Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2011-05-06
-   Version           : 1.61b
+   Last modification : 2011-11-07
+   Version           : 1.62a
 </pre>*)(*
    History:
+     1.62a: 2011-11-07
+       - Compiles with XE2 (in 32-bit mode).
+     1.62: 2011-09-26
+       - Implemented DSiGetThreadTime (two overloaded versions).
+     1.61c: 2011-07-26
+       - [miha] SetErrorMode (SEM_NOOPENFILEERRORBOX) is called before LoadLibrary to 
+         prevent opening messagebox by Windows.
      1.61b: 2011-06-27
        - [tommi prami] Compiles with D7.
      1.61a: 2011-05-06
@@ -804,6 +811,8 @@ const
   function  DSiGetSystemAffinityMask: DWORD;
   function  DSiGetThreadAffinity: string;
   function  DSiGetThreadAffinityMask: DWORD;
+  function  DSiGetThreadTime: int64; overload;
+  function  DSiGetThreadTime(thread: THandle): int64; overload;
   function  DSiGetThreadTimes(var creationTime: TDateTime; var userTime,
     kernelTime: int64): boolean; overload;
   function  DSiGetThreadTimes(thread: THandle; var creationTime, exitTime: TDateTime;
@@ -3930,12 +3939,15 @@ const
   }        
   function DSiGetProcessAffinityMask: DWORD;
   var
-    systemAffinityMask: DWORD;
+    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   begin
     if not DSiIsWinNT then
       Result := 1
-    else 
-      GetProcessAffinityMask(GetCurrentProcess, Result, systemAffinityMask);
+    else begin
+      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, systemAffinityMask);
+      Result := processAffinityMask;
+    end;
   end; { DSiGetProcessAffinityMask }
 
   {:Returns memory counters for the current process.
@@ -4148,12 +4160,15 @@ const
   }
   function DSiGetSystemAffinityMask: DWORD;
   var
-    processAffinityMask: DWORD;
+    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   begin
     if not DSiIsWinNT then
       Result := 1
-    else 
-      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, Result);
+    else begin
+      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, systemAffinityMask);
+      Result := systemAffinityMask;
+    end;
   end; { TDSiRegistry.DSiGetSystemAffinityMask }
   
   {:Retrieves affinity mask of the current thread as a list of CPU IDs (0..9,
@@ -4175,8 +4190,8 @@ const
   }
   function DSiGetThreadAffinityMask: DWORD;
   var
-    processAffinityMask: DWORD;
-    systemAffinityMask : DWORD;
+    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   begin
     if not DSiIsWinNT then
       Result := 1
@@ -4186,6 +4201,33 @@ const
       SetThreadAffinityMask(GetCurrentThread, Result);
     end;
   end; { DSiGetThreadAffinityMask }
+
+  {:Returns [kernel time] + [user time] for the current thread.
+    @author  gabr
+    @since   2011-09-26
+  }
+  function DSiGetThreadTime: int64;
+  var
+    creationTime: TDateTime;
+    kernelTime  : int64;
+    userTime    : int64;
+  begin
+    Result := 0;
+    if DSiGetThreadTimes(creationTime, userTime, kernelTime) then
+      Result := userTime + kernelTime;
+  end; { DSiGetThreadTime }
+
+  function DSiGetThreadTime(thread: THandle): int64;
+  var
+    creationTime: TDateTime;
+    exitTime    : TDateTime;
+    kernelTime  : int64;
+    userTime    : int64;
+  begin
+    Result := 0;
+    if DSiGetThreadTimes(thread, creationTime, exitTime, userTime, kernelTime) then
+      Result := userTime + kernelTime;
+  end; { DSiGetThreadTime }
 
   {:Returns various times of the current thread.
     @author  gabr
@@ -4251,8 +4293,8 @@ const
   function DSiIncrementWorkingSet(incMinSize, incMaxSize: integer): boolean;
   var
     hProcess         : THandle;
-    maxWorkingSetSize: DWORD;
-    minWorkingSetSize: DWORD;
+    maxWorkingSetSize: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    minWorkingSetSize: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   begin
     Result := false;
     hProcess := OpenProcess(PROCESS_QUERY_INFORMATION OR PROCESS_SET_QUOTA, false,
@@ -6565,9 +6607,12 @@ var
   var
     _Register: TDllRegisterServer;
     DLLHandle: THandle;
+    OldMode  : DWORD;
   begin
     Result := E_FAIL;
+    OldMode := SetErrorMode (SEM_NOOPENFILEERRORBOX);
     DLLHandle := LoadLibrary(PChar(FileName));
+    SetErrorMode (OldMode);
     if DLLHandle > 0 then
     try
       if RegisterDLL then
@@ -7112,12 +7157,15 @@ var
   }
   function DSiLoadLibrary(const libFileName: string): HMODULE;
   var
-    hLib  : HMODULE;
-    idxLib: integer;
+    hLib   : HMODULE;
+    idxLib : integer;
+    OldMode: DWORD;
   begin
     idxLib := GLibraryList.IndexOf(libFileName);
     if idxLib < 0 then begin
+      OldMode := SetErrorMode (SEM_NOOPENFILEERRORBOX);
       hLib := LoadLibrary(PChar(libFileName));
+      SetErrorMode (OldMode);
       if hLib <> 0 then
         idxLib := GLibraryList.AddObject(libFileName, TObject(hLib));
     end;

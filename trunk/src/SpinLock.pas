@@ -467,8 +467,8 @@ end;
 
 procedure TSpinLock.InitNoSleepCount(const NoSleepCount: Cardinal);
 var
-  LPAM: Cardinal;
-  LSAM: Cardinal;
+  LPAM: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+  LSAM: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   LCPUCount: Cardinal;
   I: Integer;
 begin
@@ -570,8 +570,8 @@ end;
 
 procedure TSharedSpinLock.InitNoSleepCount(const NoSleepCount: Cardinal);
 var
-  LPAM: Cardinal;
-  LSAM: Cardinal;
+  LPAM: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+  LSAM: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
   LCPUCount: Cardinal;
   I: Integer;
 begin
