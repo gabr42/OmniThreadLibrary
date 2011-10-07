@@ -1858,7 +1858,7 @@ var
   paramType       : PTypeInfo;
   returnInfo      : PReturnInfo;
 
-  function VerifyObjectFlags(flags, requiredFlags: TParamFlags): boolean;
+  function VerifyObjectFlags(flags, requiredFlags: {$IF CompilerVersion >= 23}System.TypInfo.{$IFEND}TParamFlags): boolean;
   begin
     Result := ((flags * requiredFlags) = requiredFlags);
     if not Result then
@@ -1875,7 +1875,7 @@ var
     {$IFEND}
   end; { VerifyObjectFlags }
 
-  function VerifyConstFlags(flags: TParamFlags): boolean;
+  function VerifyConstFlags(flags: {$IF CompilerVersion >= 23}System.TypInfo.{$IFEND}TParamFlags): boolean;
   begin
     {$IF CompilerVersion < 21}
     Result := (flags = [pfVar]);
