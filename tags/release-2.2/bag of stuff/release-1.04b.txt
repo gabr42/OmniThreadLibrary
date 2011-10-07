@@ -1,0 +1,44 @@
+OmniThreadLibrary 1.04b has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-1.04b) or
+as a ZIP archive
+(http://code.google.com/p/omnithreadlibrary/downloads/list).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, and 2010 
+on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 1.04a
+===========================
+
+- [ahwux, gabr] Fixed Delphi 2010 Update 4 compatibility.
+- [ahwux] Added missing task interface cleanup to OnTerminated in demo 18.
+
+-- 
+Primoz
+[http://thedelphigeek.com]
