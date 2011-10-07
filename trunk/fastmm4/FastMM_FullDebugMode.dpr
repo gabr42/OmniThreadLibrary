@@ -71,24 +71,56 @@ uses
 
 {$R *.res}
 
-{$STACKFRAMES ON}
+{$stackframes on}
+
+{The name of the 64-bit DLL has a '64' at the end.}
+{$if SizeOf(Pointer) = 8}
+{$libsuffix '64'}
+{$ifend}
+
+{--------------------------Stack Tracing Subroutines--------------------------}
+
+procedure GetStackRange(var AStackBaseAddress, ACurrentStackPointer: NativeUInt);
+asm
+  {$if SizeOf(Pointer) = 8}
+  mov rax, gs:[abs 8]
+  mov [rcx], rax
+  mov [rdx], rbp
+  {$else}
+  mov ecx, fs:[4]
+  mov [eax], ecx
+  mov [edx], ebp
+  {$ifend}
+end;
 
 {--------------------------Frame Based Stack Tracing--------------------------}
+
+{$if SizeOf(Pointer) = 8}
+
+function CaptureStackBackTrace(FramesToSkip, FramesToCapture: DWORD;
+  BackTrace: Pointer; BackTraceHash: PDWORD): Word;
+  external kernel32 name 'RtlCaptureStackBackTrace';
+
+{We use the Windows API to do frame based stack tracing under 64-bit.}
+procedure GetFrameBasedStackTrace(AReturnAddresses: PNativeUInt;
+  AMaxDepth, ASkipFrames: Cardinal);
+begin
+  CaptureStackBackTrace(ASkipFrames, AMaxDepth, AReturnAddresses, nil);
+end;
+
+{$else}
 
 {Dumps the call stack trace to the given address. Fills the list with the
  addresses where the called addresses can be found. This is the fast stack
  frame based tracing routine.}
-procedure GetFrameBasedStackTrace(AReturnAddresses: PCardinal; AMaxDepth, ASkipFrames: Cardinal);
+procedure GetFrameBasedStackTrace(AReturnAddresses: PNativeUInt;
+  AMaxDepth, ASkipFrames: Cardinal);
 var
-  LStackTop, LStackBottom, LCurrentFrame: Cardinal;
+  LStackTop, LStackBottom, LCurrentFrame: NativeUInt;
 begin
   {Get the call stack top and current bottom}
-  asm
-    mov eax, FS:[4]
-    sub eax, 3
-    mov LStackTop, eax
-    mov LStackBottom, ebp
-  end;
+  GetStackRange(LStackTop, LStackBottom);
+  Dec(LStackTop, SizeOf(Pointer) - 1);
   {Get the current frame start}
   LCurrentFrame := LStackBottom;
   {Fill the call stack}
@@ -99,23 +131,24 @@ begin
     {Ignore the requested number of levels}
     if ASkipFrames = 0 then
     begin
-      AReturnAddresses^ := PCardinal(LCurrentFrame + 4)^;
+      AReturnAddresses^ := PNativeUInt(LCurrentFrame + SizeOf(Pointer))^;
       Inc(AReturnAddresses);
       Dec(AMaxDepth);
     end
     else
       Dec(ASkipFrames);
     {Get the next frame}
-    LCurrentFrame := PCardinal(LCurrentFrame)^;
+    LCurrentFrame := PNativeUInt(LCurrentFrame)^;
   end;
-  {Clear the remaining dwords}
-  while (AMaxDepth > 0) do
+  {Clear the remaining entries}
+  while AMaxDepth > 0 do
   begin
     AReturnAddresses^ := 0;
     Inc(AReturnAddresses);
     Dec(AMaxDepth);
   end;
 end;
+{$ifend}
 
 {-----------------------------Raw Stack Tracing-----------------------------}
 
@@ -129,15 +162,16 @@ type
   TMemoryPageAccess = (mpaUnknown, mpaNotExecutable, mpaExecutable);
 
 var
-  {There are a total of 1M x 4K pages in the 4GB address space}
+  {There are a total of 1M x 4K pages in the (low) 4GB address space}
   MemoryPageAccessMap: array[0..1024 * 1024 - 1] of TMemoryPageAccess;
 
-{Updates the memory page}
-procedure UpdateMemoryPageAccessMap(AAddress: Cardinal);
+{Updates the memory page access map. Currently only supports the low 4GB of
+ address space.}
+procedure UpdateMemoryPageAccessMap(AAddress: NativeUInt);
 var
   LMemInfo: TMemoryBasicInformation;
   LAccess: TMemoryPageAccess;
-  LStartPage, LPageCount: Cardinal;
+  LStartPage, LPageCount: NativeUInt;
 begin
   {Query the page}
   if VirtualQuery(Pointer(AAddress), LMemInfo, SizeOf(LMemInfo)) <> 0 then
@@ -153,10 +187,14 @@ begin
     else
       LAccess := mpaNotExecutable;
     {Update the map}
-    LStartPage := Cardinal(LMemInfo.BaseAddress) div 4096;
+    LStartPage := NativeUInt(LMemInfo.BaseAddress) div 4096;
     LPageCount := LMemInfo.RegionSize div 4096;
-    if (LStartPage + LPageCount) < Cardinal(Length(MemoryPageAccessMap)) then
+    if LStartPage < NativeUInt(Length(MemoryPageAccessMap)) then
+    begin
+      if (LStartPage + LPageCount) >= NativeUInt(Length(MemoryPageAccessMap)) then
+        LPageCount := NativeUInt(Length(MemoryPageAccessMap)) - LStartPage;
       FillChar(MemoryPageAccessMap[LStartPage], LPageCount, Ord(LAccess));
+    end;
   end
   else
   begin
@@ -167,11 +205,14 @@ end;
 
 {Returns true if the return address is a valid call site. This function is only
  safe to call while exceptions are being handled.}
-function IsValidCallSite(AReturnAddress: Cardinal): boolean;
+function IsValidCallSite(AReturnAddress: NativeUInt): boolean;
 var
-  LCallAddress, LCode8Back, LCode4Back, LTemp: Cardinal;
+  LCallAddress: NativeUInt;
+  LCode8Back, LCode4Back, LTemp: Cardinal;
 begin
-  if AReturnAddress > $ffff then
+  {We assume (for now) that all code will execute within the first 4GB of
+   address space.}
+  if (AReturnAddress > $ffff) and (AReturnAddress <= $ffffffff) then
   begin
     {The call address is up to 8 bytes before the return address}
     LCallAddress := AReturnAddress - 8;
@@ -276,10 +317,12 @@ end;
 {Dumps the call stack trace to the given address. Fills the list with the
  addresses where the called addresses can be found. This is the "raw" stack
  tracing routine.}
-procedure GetRawStackTrace(AReturnAddresses: PCardinal; AMaxDepth, ASkipFrames: Cardinal);
+procedure GetRawStackTrace(AReturnAddresses: PNativeUInt;
+  AMaxDepth, ASkipFrames: Cardinal);
 var
   LStackTop, LStackBottom, LCurrentFrame, LNextFrame, LReturnAddress,
-    LStackAddress, LLastOSError: Cardinal;
+    LStackAddress: NativeUInt;
+  LLastOSError: Cardinal;
 begin
   {Are exceptions being handled? Can only do a raw stack trace if the possible
    access violations are going to be handled.}
@@ -288,12 +331,8 @@ begin
     {Save the last Windows error code}
     LLastOSError := GetLastError;
     {Get the call stack top and current bottom}
-    asm
-      mov eax, FS:[4]
-      sub eax, 3
-      mov LStackTop, eax
-      mov LStackBottom, ebp
-    end;
+    GetStackRange(LStackTop, LStackBottom);
+    Dec(LStackTop, SizeOf(Pointer) - 1);
     {Get the current frame start}
     LCurrentFrame := LStackBottom;
     {Fill the call stack}
@@ -301,16 +340,16 @@ begin
       and (LCurrentFrame < LStackTop) do
     begin
       {Get the next frame}
-      LNextFrame := PCardinal(LCurrentFrame)^;
+      LNextFrame := PNativeUInt(LCurrentFrame)^;
       {Is it a valid stack frame address?}
       if (LNextFrame < LStackTop)
         and (LNextFrame > LCurrentFrame) then
       begin
         {The pointer to the next stack frame appears valid: Get the return
          address of the current frame}
-        LReturnAddress := PCardinal(LCurrentFrame + 4)^;
+        LReturnAddress := PNativeUInt(LCurrentFrame + SizeOf(Pointer))^;
         {Does this appear to be a valid return address}
-        if (LReturnAddress and $ffff0000) <> 0 then
+        if (LReturnAddress > $ffff) and (LReturnAddress <= $ffffffff) then
         begin
           {Is the map for this return address incorrect? It may be unknown or marked
            as non-executable because a library was previously not yet loaded, or
@@ -354,12 +393,12 @@ begin
       else
       begin
         {Check all stack entries up to the next stack frame}
-        LStackAddress := LCurrentFrame + 8;
+        LStackAddress := LCurrentFrame + 2 * SizeOf(Pointer);
         while (AMaxDepth > 0)
           and (LStackAddress < LNextFrame) do
         begin
           {Get the return address}
-          LReturnAddress := PCardinal(LStackAddress)^;
+          LReturnAddress := PNativeUInt(LStackAddress)^;
           {Is this a valid call site?}
           if IsValidCallSite(LReturnAddress) then
           begin
@@ -368,14 +407,14 @@ begin
             Dec(AMaxDepth);
           end;
           {Check the next stack address}
-          Inc(LStackAddress, 4);
+          Inc(LStackAddress, SizeOf(Pointer));
         end;
       end;
       {Do the next stack frame}
       LCurrentFrame := LNextFrame;
     end;
-    {Clear the remaining dwords}
-    while (AMaxDepth > 0) do
+    {Clear the remaining entries}
+    while AMaxDepth > 0 do
     begin
       AReturnAddresses^ := 0;
       Inc(AReturnAddresses);
@@ -397,88 +436,28 @@ end;
 {Gets the textual representation of the stack trace into ABuffer and returns
  a pointer to the position just after the last character.}
 {$ifdef JCLDebug}
-{Converts a cardinal to a hexadecimal string at the buffer location, returning
- the new buffer position.}
-function CardinalToHexBuf(ACardinal: integer; ABuffer: PAnsiChar): PAnsiChar;
-asm
-  {On entry:
-    eax = ACardinal
-    edx = ABuffer}
-  push ebx
-  push edi
-  {Save ACardinal in ebx}
-  mov ebx, eax
-  {Get a pointer to the first character in edi}
-  mov edi, edx
-  {Get the number in ecx as well}
-  mov ecx, eax
-  {Keep the low nibbles in ebx and the high nibbles in ecx}
-  and ebx, $0f0f0f0f
-  and ecx, $f0f0f0f0
-  {Swap the bytes into the right order}
-  ror ebx, 16
-  ror ecx, 20
-  {Get nibble 7}
-  movzx eax, ch
-  mov dl, ch
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 6}
-  movzx eax, bh
-  or dl, bh
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 5}
-  movzx eax, cl
-  or dl, cl
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 4}
-  movzx eax, bl
-  or dl, bl
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Rotate ecx and ebx so we get access to the rest}
-  shr ebx, 16
-  shr ecx, 16
-  {Get nibble 3}
-  movzx eax, ch
-  or dl, ch
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 2}
-  movzx eax, bh
-  or dl, bh
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 1}
-  movzx eax, cl
-  or dl, cl
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  cmp dl, 1
-  sbb edi, -1
-  {Get nibble 0}
-  movzx eax, bl
-  mov al, byte ptr HexTable[eax]
-  mov [edi], al
-  {Return a pointer to the end of the string}
-  lea eax, [edi + 1]
-  {Restore registers}
-  pop edi
-  pop ebx
+{Converts an unsigned integer to a hexadecimal string at the buffer location,
+ returning the new buffer position.}
+function NativeUIntToHexBuf(ANum: NativeUInt; APBuffer: PAnsiChar): PAnsiChar;
+const
+  MaxDigits = 16;
+var
+  LDigitBuffer: array[0..MaxDigits - 1] of AnsiChar;
+  LCount: Cardinal;
+  LDigit: NativeUInt;
+begin
+  {Generate the digits in the local buffer}
+  LCount := 0;
+  repeat
+    LDigit := ANum;
+    ANum := ANum div 16;
+    LDigit := LDigit - ANum * 16;
+    Inc(LCount);
+    LDigitBuffer[MaxDigits - LCount] := HexTable[LDigit];
+  until ANum = 0;
+  {Copy the digits to the output buffer and advance it}
+  System.Move(LDigitBuffer[MaxDigits - LCount], APBuffer^, LCount);
+  Result := APBuffer + LCount;
 end;
 
 {Subroutine used by LogStackTrace}
@@ -488,10 +467,11 @@ begin
     AString := Format('%s[%s]', [AString, AInfo]);
 end;
 
-function LogStackTrace(AReturnAddresses: PCardinal;
-  AMaxDepth: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
+function LogStackTrace(AReturnAddresses: PNativeUInt; AMaxDepth: Cardinal;
+  ABuffer: PAnsiChar): PAnsiChar;
 var
-  LInd, LAddress: Cardinal;
+  LInd: Cardinal;
+  LAddress: NativeUInt;
   LNumChars: Integer;
   LInfo: TJCLLocationInfo;
   LTempStr: string;
@@ -506,7 +486,7 @@ begin
     Inc(Result);
     Result^ := #10;
     Inc(Result);
-    Result := CardinalToHexBuf(LAddress, Result);
+    Result := NativeUIntToHexBuf(LAddress, Result);
     {Get location info for the caller (at least one byte before the return
      address).}
     GetLocationInfo(Pointer(Cardinal(LAddress) - 1), LInfo);
@@ -531,7 +511,7 @@ end;
 {$endif}
 
 {$ifdef madExcept}
-function LogStackTrace(AReturnAddresses: PCardinal;
+function LogStackTrace(AReturnAddresses: PNativeUInt;
   AMaxDepth: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
 begin
   {Needs madExcept 2.7i or madExcept 3.0a or a newer build}
@@ -549,7 +529,8 @@ end;
 {$endif}
 
 {$ifdef EurekaLog}
-function LogStackTrace(AReturnAddresses: PCardinal; AMaxDepth: Cardinal; ABuffer: PAnsiChar): PAnsiChar;
+function LogStackTrace(AReturnAddresses: PNativeUInt; AMaxDepth: Cardinal;
+  ABuffer: PAnsiChar): PAnsiChar;
 begin
   {Needs EurekaLog 5.0.5 or a newer build}
   Result := ExceptionLog.FastMM_LogStackTrace(
