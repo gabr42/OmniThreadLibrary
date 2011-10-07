@@ -76,7 +76,7 @@ Set the default options for FastMM here.
    NeverSleepOnThreadContention option, and has no effect unless
    NeverSleepOnThreadContention is also defined. This option may improve
    performance with many CPU cores and/or threads of different priorities. Note
-   that the SwitchToThread API call is only available on Windows 2000 and later.
+   that the SwitchToThread API call is only available on Windows 2000 and later.}
   {.$define UseSwitchToThread}
 
 {-----------------------------Debugging Options-------------------------------}
@@ -84,7 +84,7 @@ Set the default options for FastMM here.
 {Enable this option to suppress the generation of debug info for the
  FastMM4.pas unit. This will prevent the integrated debugger from stepping into
  the memory manager code.}
-{.$define NoDebugInfo}
+{$define NoDebugInfo}
 
 {Enable this option to suppress the display of all message dialogs. This is
  useful in service applications that should not be interrupted.}
@@ -187,6 +187,12 @@ Set the default options for FastMM here.
    propagate.}
   {$define SuppressFreeMemErrorsInsideException}
 
+  {Adds support for notification of memory manager events in FullDebugMode.
+   With this define set, the application may assign the OnDebugGetMemFinish,
+   OnDebugFreeMemStart, etc. callbacks in order to be notified when the
+   particular memory manager event occurs.}
+  {.$define FullDebugModeCallBacks}
+
 {---------------------------Memory Leak Reporting-----------------------------}
 
 {Set this option to enable reporting of memory leaks. Combine it with the two
@@ -281,6 +287,22 @@ Set the default options for FastMM here.
 {Define this to enable backward compatibility for the memory manager sharing
  mechanism used by Delphi 2006 and 2007, as well as older FastMM versions.}
 {$define EnableBackwardCompatibleMMSharing}
+
+{-----------------------Security Options------------------------}
+
+{Windows clears physical memory before reusing it in another process. However,
+ it is not known how quickly this clearing is performed, so it is conceivable
+ that confidential data may linger in physical memory longer than absolutely
+ necessary. If you're paranoid about this kind of thing, enable this option to
+ clear all freed memory before returning it to the operating system. Note that
+ this incurs a noticeable performance hit.}
+{.$define ClearMemoryBeforeReturningToOS}
+
+{With this option enabled freed memory will immediately be cleared inside the
+ FreeMem routine. This incurs a big performance hit, but may be worthwhile for
+ additional peace of mind when working with highly sensitive data. This option
+ supersedes the ClearMemoryBeforeReturningToOS option.}
+{.$define AlwaysClearFreedMemory}
 
 {--------------------------------Option Grouping------------------------------}
 

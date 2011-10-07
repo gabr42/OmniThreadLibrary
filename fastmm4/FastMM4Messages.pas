@@ -14,7 +14,8 @@ interface
 
 const
   {The name of the debug info support DLL}
-  FullDebugModeLibraryName = 'FastMM_FullDebugMode.dll';
+  FullDebugModeLibraryName32Bit = 'FastMM_FullDebugMode.dll';
+  FullDebugModeLibraryName64Bit = 'FastMM_FullDebugMode64.dll';
   {Event log strings}
   LogFileExtension = '_MemoryManager_EventLog.txt'#0;
   CRLF = #13#10;
