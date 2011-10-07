@@ -396,6 +396,9 @@ uses
   {$IFDEF NeedFileCtrl}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
   {$ENDIF NeedFileCtrl}
+  {$IF CompilerVersion >= 23}
+  UITypes,
+  {$IFEND}
   SysUtils,
   ShellAPI,
   ShlObj,
