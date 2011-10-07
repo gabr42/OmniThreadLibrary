@@ -5155,13 +5155,15 @@ type
        oldSize := 0;
       registry.WriteString(CShellIconSize, IntToStr(oldSize + 1));
       SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE,
-        SPI_SETNONCLIENTMETRICS, 0, SMTO_ABORTIFHUNG, CTimeout, dwResult);
+        SPI_SETNONCLIENTMETRICS, 0, SMTO_ABORTIFHUNG, CTimeout,
+        {$IF CompilerVersion >= 23}@{$IFEND}dwResult);
       if oldSize > 0 then
         registry.WriteString(CShellIconSize, IntToStr(oldSize))
       else
         registry.DeleteValue(CShellIconSize);
       SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE,
-        SPI_SETNONCLIENTMETRICS,0, SMTO_ABORTIFHUNG, CTimeout, dwResult);
+        SPI_SETNONCLIENTMETRICS,0, SMTO_ABORTIFHUNG, CTimeout,
+        {$IF CompilerVersion >= 23}@{$IFEND}dwResult);
       registry.CloseKey;
     finally FreeAndNil(registry);end;
   end; { DSiRebuildDesktopIcons }

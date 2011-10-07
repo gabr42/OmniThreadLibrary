@@ -70,3 +70,7 @@
 {$IF CompilerVersion >= 22}
   {$DEFINE OTL_TOmniValueImplicitDateTime}
 {$IFEND}
+
+{$IF CompilerVersion >= 23}
+  {$DEFINE OTL_Supports64Bit}
+{$IFEND}
