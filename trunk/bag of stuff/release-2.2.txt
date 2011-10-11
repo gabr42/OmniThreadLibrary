@@ -1,0 +1,95 @@
+OmniThreadLibrary 2.2 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-2.2) 
+or as a ZIP archive
+(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-2.2.zip).
+UML diagrams for this release are available (thanks to Rich Shealer) 
+as a ZIP archive
+(http://code.google.com/p/omnithreadlibrary/downloads/detail?name=OmniThreadLibrary-UML-2.2.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with 
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+and XE2 on the Win32 platform. Currently, there are no plans to support 
+older Delphi compilers and .NET. XE2 support is limited to 32-bit Windows
+target.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 2.1
+===========================
+
+- New features:
+  - Delphi XE2 support (Windows 32-bit only).
+  - Parallel.Task can be used to execute multiple copies of a common code.
+    [http://www.thedelphigeek.com/2011/09/life-after-21-parallel-data-production.html]
+  - Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface
+    to add exception and cancellation support. User code must call .Execute on the
+    interface returned from the Parallel.Join to start the execution.
+    [http://www.thedelphigeek.com/2011/07/life-after-21-paralleljoins-new-clothes.html]
+  - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
+    in EJoinException and raised at the end of Parallel.Join method (or when WaitFor is
+    called if Join is executed with the .NoWait modifier).
+  - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
+    in .Value. New function .FatalException and .DetachException.
+    [http://www.thedelphigeek.com/2011/07/life-after-21-exceptions-in.html]
+  - Two version of Parallel.Async (the ones with explicit termination handlers)
+    were removed as this functionality can be achieved by using
+    Parallel.TaskConfig.OnTerminated.
+    [http://www.thedelphigeek.com/2011/07/life-after-21-async-redux.html]
+  - Parallel.Join(const task: TOmniTaskDelegate) is no longer supported. It was
+    replaced with the Parallel.Join(const task: IOmniJoinState).
+  - Parallel.Join no longer supports taskConfig parameter (replaced by the
+    IOmniParallelJoin.TaskConfig function).
+  - Number of simultaneously executed task in Parallel.Join may be set by calling
+    the new IOmniParallelJoin.NumTasks function.
+  - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may not be
+    valid for any ammount of time if other threads are reading from/writing to the queue.
+  - Implemented another IOmniTaskControl.OnTerminated overload acception parameterless
+    anonymous function.
+  - Implemented [I|T]OmniBlockingCollection.IsFinalized.
+  - Parallel.Pipeline accepts 'simple stage' (for loop implemented internally).
+    [http://www.thedelphigeek.com/2011/09/life-after-21-pimp-my-pipeline.html]
+  - TOmniValue can natively store exception objects (AsException, IsException).
+  - Implemented IOmniBlockingCollection.ReraiseExceptions. If enabled
+    (default: disabled), [Try]Take will check if returned value for exception
+    (TOmniValue.IsException) and if true, it will reraise this exception
+    instead of returning a result.
+  - Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
+  
+- Bug fixes:
+  - Event monitor in connection to the thread pool was totally broken. 
+    (Big thanks to [anton alisov] for finding the problem.)
+  - Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition in
+    TOmniBlockingCollection.
+    [http://www.thedelphigeek.com/2011/08/multithreading-is-hard.html]    
+    
+- New demos:
+  - 48_OtlParallelExceptions: Exception handling in high-level OTL constructs.      
+  
+-- 
+Primoz
+[http://thedelphigeek.com]
