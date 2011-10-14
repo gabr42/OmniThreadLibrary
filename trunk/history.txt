@@ -1,3 +1,6 @@
+- New demos:
+  - 49_FramedWorkers: Multiple frames each communication with own worker task.
+
 2.2 2011-10-07
 - New features:
   - Delphi XE2 support (Windows 32-bit only).
