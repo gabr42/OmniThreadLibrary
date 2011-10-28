@@ -744,10 +744,11 @@ type
   end; { TOmniParallelJoin }
 
   IOmniParallelTask = interface
+    function  Execute(const aTask: TProc): IOmniParallelTask;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
-    function  Execute(const aTask: TProc): IOmniParallelTask;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
@@ -970,10 +971,11 @@ type
     optNumTasks: integer;
   public
     constructor Create;
+    function  Execute(const aTask: TProc): IOmniParallelTask;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
-    function  Execute(const aTask: TProc): IOmniParallelTask;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
@@ -3028,6 +3030,12 @@ begin
   optJoin.OnStop(stopCode);
   Result := Self;
 end; { TOmniParallelTask.OnStop }
+
+function TOmniParallelTask.TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
+begin
+  optJoin.TaskConfig(config);
+  Result := Self;
+end; { TOmniParallelTask.TaskConfig }
 
 function TOmniParallelTask.WaitFor(timeout_ms: cardinal): boolean;
 begin
