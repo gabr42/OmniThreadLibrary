@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-09-06
-///   Version           : 1.18
+///   Last modification : 2011-11-01
+///   Version           : 1.19
 ///</para><para>
 ///   History:
+///     1.19: 2011-11-01
+///       - Implemented IOmniParallelTask.TaskConfig.
+///       - Added IOmniParallelTask.Execute overload.
 ///     1.18: 2011-09-06
 ///       - Initial implementation of the Parallel.ParallelTask.
 ///       - Parallel.Join implements OnStop.
@@ -268,11 +271,13 @@ type
   end; { IOmniParallelInitializedLoop }
 
   IOmniParallelIntoLoop = interface
-    procedure Execute(loopBody: TOmniIteratorIntoDelegate);
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
   end; { IOmniParallelIntoLoop }
 
   IOmniParallelIntoLoop<T> = interface
-    procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>);
+    procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
+    procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
   end; { IOmniParallelIntoLoop<T> }
 
   IOmniParallelLoop = interface
@@ -743,8 +748,11 @@ type
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniParallelJoin }
 
+  TOmniParallelTaskDelegate = reference to procedure (const task: IOmniTask);
+
   IOmniParallelTask = interface
-    function  Execute(const aTask: TProc): IOmniParallelTask;
+    function  Execute(const aTask: TProc): IOmniParallelTask; overload;
+    function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
@@ -791,7 +799,7 @@ type
     {$ENDIF OTL_ERTTI}
 
   // Join
-    class function Join: IOmniParallelJoin; overload;
+    class function  Join: IOmniParallelJoin; overload;
     class function  Join(const task1, task2: TProc): IOmniParallelJoin; overload;
     class function  Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin; overload;
     class function  Join(const tasks: array of TProc): IOmniParallelJoin; overload;
@@ -971,7 +979,8 @@ type
     optNumTasks: integer;
   public
     constructor Create;
-    function  Execute(const aTask: TProc): IOmniParallelTask;
+    function  Execute(const aTask: TProc): IOmniParallelTask; overload;
+    function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
@@ -2992,6 +3001,16 @@ begin
 end; { TOmniParallelTask.Create }
 
 function TOmniParallelTask.Execute(const aTask: TProc): IOmniParallelTask;
+begin
+  Result := Execute(
+    procedure (const task: IOmniTask)
+    begin
+      aTask;
+    end);
+end; { TOmniParallelTask.Execute }
+
+function TOmniParallelTask.Execute(const aTask: TOmniParallelTaskDelegate):
+  IOmniParallelTask;
 var
   iTask: integer;
 begin
@@ -3000,12 +3019,16 @@ begin
   else
     optNumTasks := - optNumTasks;
   for iTask := 1 to optNumTasks do
-    optJoin.Task(aTask);
+    optJoin.Task(
+      procedure (const joinState: IOmniJoinState)
+      begin
+        aTask(joinState.Task);
+      end);
   optJoin.Execute;
   if not optNoWait then
     WaitFor(INFINITE);
   Result := Self;
-end; { TOmniParallelTask.Execute }
+end;
 
 function TOmniParallelTask.NoWait: IOmniParallelTask;
 begin
