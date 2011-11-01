@@ -38,6 +38,7 @@
 ///     1.19: 2011-11-01
 ///       - Implemented IOmniParallelTask.TaskConfig.
 ///       - Added IOmniParallelTask.Execute overload.
+///       - Added IOmniParallelIntoLoop and IOmniParallelIntoLoop<T> Execute overload.
 ///     1.18: 2011-09-06
 ///       - Initial implementation of the Parallel.ParallelTask.
 ///       - Parallel.Join implements OnStop.
