@@ -1,2 +1,2 @@
-"C:\Program Files (x86)\WinZip\WZZIP.EXE" -rP OmniThreadLibrary.zip *.pas *.dproj *.dpk *.res *.dfm *.dpr *.dcr *.groupproj *.inc
+"C:\Program Files (x86)\WinZip\WZZIP.EXE" -rP OmniThreadLibrary.zip *.pas *.dproj *.dpk *.res *.dfm *.dpr *.dcr *.groupproj *.inc *.ico
 "C:\Program Files (x86)\WinZip\WZZIP.EXE" -rP OmniThreadLibrary.zip -x*.dcu fastmm4\*.*
