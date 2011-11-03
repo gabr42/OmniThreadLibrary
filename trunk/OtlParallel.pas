@@ -31,10 +31,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-01
-///   Version           : 1.19
+///   Last modification : 2011-11-03
+///   Version           : 1.20
 ///</para><para>
 ///   History:
+///     1.20: 2011-11-03
+///       - Fixed two Parallel.Pipeline overloads to not override internal input
+///         collection if 'input' parameter was not provided.
+///       - Only one thread pool used internally.
+///       - GlobalParallelPool no longer limits maximum number of concurrent threads.
 ///     1.19: 2011-11-01
 ///       - Implemented IOmniParallelTask.TaskConfig.
 ///       - Added IOmniParallelTask.Execute overload.
@@ -850,12 +855,8 @@ type
   {$ENDREGION}
   procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
 
-  ///	<returns>Global pool used for almost all OtlParallel constructs with the excetion
-  ///	of Parallel.Pipeline.</returns>
+  ///	<returns>Global pool used for all OtlParallel constructs.</returns>
   function GlobalParallelPool: IOmniThreadPool;
-
-  ///	<returns>Global pool used for Parallel.Pipeline tasks..</returns>
-  function GlobalPipelinePool: IOmniThreadPool;
 
 implementation
 
@@ -1044,18 +1045,11 @@ begin
   if not assigned(GParallelPool) then begin
     GParallelPool := CreateThreadPool('OtlParallel pool');
     GParallelPool.IdleWorkerThreadTimeout_sec := 60*1000; // 1 minute
+    GParallelPool.MaxExecuting := -1;
+    GParallelPool.MaxQueuedTime_sec := 0;
   end;
   Result := GParallelPool;
 end; { GlobalParallelPool }
-
-function GlobalPipelinePool: IOmniThreadPool;
-begin
-  if not assigned(GPipelinePool) then begin
-    GPipelinePool := CreateThreadPool('Parallel.Pipeline pool');
-    GPipelinePool.MaxExecuting := -1;
-  end;
-  Result := GPipelinePool;
-end; { GlobalPipelinePool }
 
 { EJoinException }
 
@@ -1195,7 +1189,7 @@ var
   taskControl: IOmniTaskControl;
 begin
   numTasks := opjTasks.Count;
-  GlobalParallelPool.MaxExecuting := opjNumTasks;
+//  GlobalParallelPool.MaxExecuting := opjNumTasks;
   SetLength(opjJoinStates, numTasks);
   opjCountStopped := TOmniResourceCount.Create(numTasks + 1);
   for iProc := 0 to opjTasks.Count - 1 do begin
@@ -1513,17 +1507,19 @@ end; { Parallel.Pipeline }
 class function Parallel.Pipeline(const stages: array of TPipelineStageDelegate; const
   input: IOmniBlockingCollection): IOmniPipeline;
 begin
-  Result := Parallel.Pipeline
-    .From(input)
-    .Stages(stages);
+  Result := Parallel.Pipeline;
+  if assigned(input) then
+    Result.From(input);
+  Result.Stages(stages);
 end; { Parallel.Pipeline }
 
 class function Parallel.Pipeline(const stages: array of TPipelineStageDelegateEx; const
   input: IOmniBlockingCollection): IOmniPipeline;
 begin
-  Result := Parallel.Pipeline
-    .From(input)
-    .Stages(stages);
+  Result := Parallel.Pipeline;
+  if assigned(input) then
+    Result.From(input);
+  Result.Stages(stages);
 end; { Parallel.Pipeline }
 
 class function Parallel.TaskConfig: IOmniTaskConfig;
@@ -1811,8 +1807,8 @@ begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
     { TODO 3 -oPrimoz : Still not optimal - should know how many Parallel.ForEach are currently executing! }
-    if numTasks > GlobalParallelPool.MaxExecuting then
-      GlobalParallelPool.MaxExecuting := numTasks;
+//    if numTasks > GlobalParallelPool.MaxExecuting then
+//      GlobalParallelPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
@@ -2735,7 +2731,7 @@ begin
         .SetParameter('TotalStopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith);
       ApplyConfig((opStages[iStage] as IOmniPipelineStage).TaskConfig, task);
-      task.Schedule(GlobalPipelinePool);
+      task.Schedule(GlobalParallelPool);
     end; //for iTask
   end; //for iStage
   opOutput.ReraiseExceptions(not opHandleExceptions);
