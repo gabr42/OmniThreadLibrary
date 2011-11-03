@@ -540,7 +540,7 @@ type
     ismMsgData  : TOmniValue;
     ismMsgMethod: pointer;
   public
-    class function CreateMessage(const msgMethod: pointer; msgData: TOmniValue):
+    class function  CreateMessage(const msgMethod: pointer; msgData: TOmniValue):
       TOmniMessage; inline;
     class procedure UnpackMessage(const msg: TOmniMessage; var msgMethod: pointer; var
       msgData: TOmniValue); inline;

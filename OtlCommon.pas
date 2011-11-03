@@ -979,10 +979,15 @@ procedure TOmniCounter.Initialize;
 var
   countIntf: IOmniCounter;
 begin
-  Assert(cardinal(@ocCounter) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
+  Assert(cardinal(@ocCounter) mod SizeOf(ocCounter) = 0,
+    Format('TOmniCS.Initialize: ocsSync is not %d-aligned!', [SizeOf(ocCounter)]));
   if not assigned(ocCounter) then begin
     countIntf := CreateCounter;
+    {$IFDEF CPUX64}
+    if InterlockedCompareExchange64(PInt64(@ocCounter)^, int64(countIntf), 0) = 0 then
+    {$ELSE}
     if InterlockedCompareExchange(PInteger(@ocCounter)^, integer(countIntf), 0) = 0 then
+    {$ENDIF ~CPUX64}
       pointer(countIntf) := nil;
   end;
 end; { TOmniCounter.Initialize }
