@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2011-02-27
-   Version           : 1.10a
+   Last modification : 2011-10-25
+   Version           : 1.10b
 </pre>*)(*
    History:
+     1.10b: 2011-10-25
+       - Fixed bug in TGpStringInterfaceHash.Find implementation.
      1.10a: 2011-02-27
        - Fixed bugs in TGpStringInterfaceHash implementation.
      1.10: 2011-02-09
@@ -81,10 +83,15 @@ unit GpStringHash;
 interface
 
 {$IFDEF CONDITIONALEXPRESSIONS}
-  {$IF (CompilerVersion >= 17)} //Delphi 2005 or newer
+  {$IF CompilerVersion >= 17} //Delphi 2005 or newer
     {$DEFINE GpStringHash_Inline}
   {$IFEND}
+  {$IF CompilerVersion < 23} //pre-XE2
+    type NativeInt = integer;
+  {$IFEND}
 {$ENDIF}
+
+{$UNDEF GpStringHash_Inline}
 
 type
   ///<summary>Internal hash item representation.</summary>
@@ -92,17 +99,17 @@ type
   TGpHashItem = record
     Next : cardinal;
     Key  : string;
-    Value: integer;
+    Value: int64;
   end; { TGpHashItem }
 
   ///<summary>External (string, integer) hash item representation.</summary>
   TGpStringHashKV = class
   private
     kvKey  : string;
-    kvValue: integer;
+    kvValue: int64;
   public
     property Key: string read kvKey write kvKey;
-    property Value: integer read kvValue write kvValue;
+    property Value: int64 read kvValue write kvValue;
   end; { TGpStringHashKV }
 
   TGpStringHash = class;
@@ -114,7 +121,7 @@ type
     sheKV   : TGpStringHashKV;
   public
     constructor Create(stringHash: TGpStringHash);
-    destructor Destroy; override;
+    destructor  Destroy; override;
     function  GetCurrent: TGpStringHashKV;          {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  MoveNext: boolean;                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
     property Current: TGpStringHashKV read GetCurrent;
@@ -134,25 +141,25 @@ type
     shSize      : cardinal;
   protected
     function  FindBucket(const key: string): cardinal;
-    function  GetHashItem(idxHashItem: cardinal): PGpHashItem;   {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    function  GetItems(const key: string): integer;              {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  GetHashItem(idxHashItem: cardinal): PGpHashItem;     {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  GetItems(const key: string): int64;              {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     procedure Grow;
-    procedure SetItems(const key: string; const value: integer); {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure SetItems(const key: string; const value: int64); {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpHashItem read GetHashItem;
   public
     constructor Create; overload;
     constructor Create(numItems: cardinal; canGrow: boolean = false); overload;
     constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
     destructor  Destroy; override;
-    procedure Add(const key: string; value: integer);
-    function  Count: integer;                                    {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    function  Find(const key: string; var value: integer): boolean;
-    procedure ForEach(enumerator: TGpStringHashEnumMethod);      
-    function  GetEnumerator: TGpStringHashEnumerator;            {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    function  HasKey(const key: string): boolean;                {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    procedure Update(const key: string; value: integer);
-    function  ValueOf(const key: string): integer;
-    property Items[const key: string]: integer read GetItems write SetItems; default;
+    procedure Add(const key: string; value: int64);
+    function  Count: integer;                                      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Find(const key: string; var value: int64): boolean;
+    procedure ForEach(enumerator: TGpStringHashEnumMethod);
+    function  GetEnumerator: TGpStringHashEnumerator;              {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  HasKey(const key: string): boolean;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure Update(const key: string; value: int64);
+    function  ValueOf(const key: string): int64;
+    property Items[const key: string]: int64 read GetItems write SetItems; default;
   end; { TGpStringHash }
 
   ///<summary>External (string, object) hash item representation.</summary>
@@ -372,18 +379,18 @@ type
     function  GetItems(const key: string): int64;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     procedure Grow;
     procedure LinkAtTail(bucket: PGpTableHashItem; bucketIdx: cardinal);
-    procedure SetItems(const key: string; const value: int64);   {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure SetItems(const key: string; const value: int64);     {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpTableHashItem read GetHashItem;
   public
     constructor Create(initialArraySize: cardinal);
     destructor  Destroy; override;
     function  Add(const key: string; value: int64): cardinal;
-    function  Count: integer;                                    {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  Count: integer;                                      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Find(const key: string; var index: cardinal; var value: int64): boolean;
     procedure ForEach(enumerator: TGpStringDictionaryEnumMethod);
     procedure Get(index: cardinal; var key: string; var value: int64);
-    function  GetEnumerator: TGpStringDictionaryEnumerator;      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    function  HasKey(const key: string): boolean;                {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  GetEnumerator: TGpStringDictionaryEnumerator;        {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  HasKey(const key: string): boolean;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     procedure Update(const key: string; value: int64);
     function  ValueOf(const key: string): int64;
     property Items[const key: string]: int64 read GetItems write SetItems; default;
@@ -549,7 +556,7 @@ begin
   inherited Destroy;
 end; { TGpStringHash.Destroy }
 
-procedure TGpStringHash.Add(const key: string; value: integer);
+procedure TGpStringHash.Add(const key: string; value: int64);
 var
   bucket: PGpHashItem;
   hash  : cardinal;
@@ -573,7 +580,7 @@ begin
   Result := shFirstEmpty - 1;
 end; { TGpStringHash.Count }
 
-function TGpStringHash.Find(const key: string; var value: integer): boolean;
+function TGpStringHash.Find(const key: string; var value: int64): boolean;
 var
   bucket: integer;
 begin
@@ -617,7 +624,7 @@ begin
     Result := nil;
 end; { TGpStringHash.GetHashItem }
 
-function TGpStringHash.GetItems(const key: string): integer;
+function TGpStringHash.GetItems(const key: string): int64;
 begin
   Result := ValueOf(key);
 end; { TGpStringHash.GetItems }
@@ -663,12 +670,12 @@ begin
   Result := (FindBucket(key) <> 0);
 end; { TGpStringHash.HasKey }
 
-procedure TGpStringHash.SetItems(const key: string; const value: integer);
+procedure TGpStringHash.SetItems(const key: string; const value: int64);
 begin
   Update(key, value);
 end; { TGpStringHash.SetItems }
 
-procedure TGpStringHash.Update(const key: string; value: integer);
+procedure TGpStringHash.Update(const key: string; value: int64);
 var
   bucket: integer;
 begin
@@ -679,7 +686,7 @@ begin
     Add(key, value);
 end; { TGpStringHash.Update }
 
-function TGpStringHash.ValueOf(const key: string): integer;
+function TGpStringHash.ValueOf(const key: string): int64;
 var
   bucket: integer;
 begin
@@ -755,8 +762,11 @@ begin
 end; { TGpStringObjectHash.Count }
 
 function TGpStringObjectHash.Find(const key: string; var value: TObject): boolean;
+var
+  intValue: int64;
 begin
-  Result := sohHash.Find(key, integer(value));
+  Result := sohHash.Find(key, intValue);
+  value := TObject(intValue);
 end;  { TGpStringObjectHash.Find }
 
 procedure TGpStringObjectHash.ForEach(enumerator: TGpStringObjectHashEnumMethod);
@@ -782,7 +792,7 @@ end; { TGpStringObjectHash.GetEnumerator }
 
 function TGpStringObjectHash.GetObjects(const key: string): TObject;
 var
-  value: integer;
+  value: int64;
 begin
   if sohHash.Find(key, value) then
     Result := TObject(value)
@@ -844,7 +854,7 @@ end; { TGpStringInterfaceHashEnumerator.Destroy }
 function TGpStringInterfaceHashEnumerator.GetCurrent: TGpStringInterfaceHashKV;
 begin
   siheKV.Key := siheStringEnumerator.GetCurrent.Key;
-  siheKV.Value := IInterface(siheStringEnumerator.GetCurrent.Value);
+  siheKV.Value := IInterface(NativeInt(siheStringEnumerator.GetCurrent.Value));
   Result := siheKV;
 end; { TGpStringInterfaceHashEnumerator.GetCurrent }
 
@@ -865,6 +875,7 @@ constructor TGpStringInterfaceHash.Create(numBuckets, numItems: cardinal;
   canGrow: boolean);
 begin
   inherited Create;
+  Assert(SizeOf(IInterface) <= SizeOf(int64));
   sihHash := TGpStringHash.Create(numBuckets, numItems, canGrow);
 end; { TGpStringInterfaceHash.Create }
 
@@ -878,8 +889,7 @@ end; { TGpStringInterfaceHash.Destroy }
 
 procedure TGpStringInterfaceHash.Add(const key: string; value: IInterface);
 begin
-  Assert(SizeOf(IInterface) = SizeOf(integer));
-  sihHash.Add(key, integer(value));
+  sihHash.Add(key, int64(NativeInt(value)));
   value._AddRef;
 end; { TGpStringInterfaceHash.Add }
 
@@ -889,10 +899,14 @@ begin
 end; { TGpStringInterfaceHash.Count }
 
 function TGpStringInterfaceHash.Find(const key: string; var value: IInterface): boolean;
+var
+  intValue: int64;
 begin
-  Result := sihHash.Find(key, integer(value));
-  if Result then
+  Result := sihHash.Find(key, intValue);
+  if Result then begin
+    value := IInterface(NativeInt(intValue));
     value._AddRef;
+  end;
 end; { TGpStringInterfaceHash.Find }
 
 procedure TGpStringInterfaceHash.ForEach(enumerator: TGpStringInterfaceHashEnumMethod);
@@ -913,10 +927,10 @@ end; { TGpStringInterfaceHash.GetEnumerator }
 
 function TGpStringInterfaceHash.GetInterfaces(const key: string): IInterface;
 var
-  value: integer;
+  value: int64;
 begin
   if sihHash.Find(key, value) then begin
-    integer(Result) := value;
+    NativeInt(Result) := value;
     Result._AddRef;
   end
   else
@@ -948,9 +962,8 @@ begin
   bucket := sihHash.FindBucket(key);
   if bucket > 0 then begin
     item := sihHash.HashItems[bucket];
-    IInterface(item.Value)._Release;
-    pointer(item.Value) := nil;
-    item.Value := integer(value);
+    IInterface(NativeInt(item.Value))._Release;
+    item.Value := int64(NativeInt(value));
     if assigned(value) then
       value._AddRef;
   end
@@ -960,7 +973,7 @@ end; { TGpStringInterfaceHash.Update }
 
 function TGpStringInterfaceHash.ValueOf(const key: string): IInterface;
 begin
-  Result := IInterface(sihHash.ValueOf(key));
+  Result := IInterface(NativeInt(sihHash.ValueOf(key)));
 end; { TGpStringInterfaceHash.ValueOf }
 
 { TGpStringTableEnumerator }

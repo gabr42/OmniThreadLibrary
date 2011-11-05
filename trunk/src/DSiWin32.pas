@@ -7,10 +7,15 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2011-11-07
-   Version           : 1.62a
+   Last modification : 2011-10-21
+   Version           : 1.63
 </pre>*)(*
    History:
+     1.63: 2011-10-21
+       - Interlocked*64 family implemented using Windows' InterlockedCompareExchange64
+         on Win64-bit platform.
+       - Removed dependency on the Consts unit.
+       - Scoped unit names are used in XE2.
      1.62a: 2011-11-07
        - Compiles with XE2 (in 32-bit mode).
      1.62: 2011-09-26
@@ -377,6 +382,7 @@ unit DSiWin32;
 interface 
 
 {$IFDEF Linux}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF Linux}
+{$IFDEF OSX}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF OSX}
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
 {$DEFINE NeedUTF}{$UNDEF NeedVariants}{$DEFINE NeedStartupInfo}
@@ -385,26 +391,27 @@ interface
   {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
   {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
 {$ENDIF}
+{$IFDEF Win64}{$DEFINE NeedWinInterlocked}{$ENDIF Win64}
+{$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
 
 uses
-  Windows,
-  Messages,
-  Consts,
+  {$IFDEF ScopedUnitNames}Winapi.Windows{$ELSE}Windows{$ENDIF},
+  {$IFDEF ScopedUnitNames}Winapi.Messages{$ELSE}Messages{$ENDIF},
   {$IFDEF NeedVariants}
-  Variants,
+  {$IFDEF ScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
   {$ENDIF}
   {$IFDEF NeedFileCtrl}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
   {$ENDIF NeedFileCtrl}
-  {$IF CompilerVersion >= 23}
-  UITypes,
-  {$IFEND}
-  SysUtils,
-  ShellAPI,
-  ShlObj,
-  Classes,
-  Graphics,
-  Registry;
+  {$IFDEF ScopedUnitNames}
+  System.UITypes,
+  {$ENDIF}
+  {$IFDEF ScopedUnitNames}System.SysUtils{$ELSE}SysUtils{$ENDIF},
+  {$IFDEF ScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
+  {$IFDEF ScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
+  {$IFDEF ScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
+  {$IFDEF ScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
+  {$IFDEF ScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF};
 
 const
   // pretty wrappers
@@ -1227,14 +1234,18 @@ type
 
 { Interlocked }
 
-{$IFNDEF WIN64}
-function  DSiInterlockedDecrement64(var addend: int64): int64; register;
-function  DSiInterlockedIncrement64(var addend: int64): int64; register;
-function  DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64; register;
-function  DSiInterlockedExchange64(var target: int64; value: int64): int64; register;
-function  DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64; register; overload;
-function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64; register; overload;
-{$ENDIF WIN64}
+function  DSiInterlockedDecrement64(var addend: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
+function  DSiInterlockedIncrement64(var addend: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
+function  DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
+function  DSiInterlockedExchange64(var target: int64; value: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
+function  DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF} overload;
+function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64;
+  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF} overload;
 
 { DynaLoad }
 
@@ -1309,10 +1320,18 @@ type
 type
   UTF8String = type string;
   PUTF8String = ^UTF8String;
-  
+
 function UTF8Encode(const ws: WideString): UTF8String;
 function UTF8Decode(const sUtf: UTF8String): WideString;
 {$ENDIF NeedUTF}
+
+{ internals used in inline functions }
+
+type
+  TInterlockedCompareExchange64 = function(destination: pointer; exchange, comparand: int64): int64; stdcall;
+
+var
+  GInterlockedCompareExchange64: TInterlockedCompareExchange64 = nil;
 
 implementation
 
@@ -4856,12 +4875,12 @@ var
       alreadyRegistered := GetClassInfo(HInstance, CDSiHiddenWindowName, tempClass);
       if (not alreadyRegistered) or (tempClass.lpfnWndProc <> @DSiClassWndProc) then begin
         if alreadyRegistered then
-          Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
+          {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
         utilWindowClass.lpszClassName := CDSiHiddenWindowName;
         utilWindowClass.hInstance := HInstance;
         utilWindowClass.lpfnWndProc := @DSiClassWndProc;
         utilWindowClass.cbWndExtra := SizeOf(TMethod);
-        if Windows.RegisterClass(utilWindowClass) = 0 then
+        if {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.RegisterClass(utilWindowClass) = 0 then
           raise Exception.CreateFmt('Unable to register DSiWin32 hidden window class. %s',
             [SysErrorMessage(GetLastError)]);
       end;
@@ -4890,7 +4909,7 @@ var
     try
       Dec(GDSiWndHandlerCount);
       if GDSiWndHandlerCount <= 0 then
-        Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
+        {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
   end; { DSiDeallocateHWnd }
 
@@ -5478,10 +5497,10 @@ var
       idxEndFragment := idxStartFragment + Length(sHtml);
       idxEndHtml := idxEndFragment + Length(CHTMLExtro);
       description := CVersion +
-        SysUtils.Format('%s%.8d', [CStartHTML, idxStartHtml]) + #13#10 +
-        SysUtils.Format('%s%.8d', [CEndHTML, idxEndHtml]) + #13#10 +
-        SysUtils.Format('%s%.8d', [CStartFragment, idxStartFragment]) + #13#10 +
-        SysUtils.Format('%s%.8d', [CEndFragment, idxEndFragment]) + #13#10;
+        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartHTML, idxStartHtml]) + #13#10 +
+        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndHTML, idxEndHtml]) + #13#10 +
+        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartFragment, idxStartFragment]) + #13#10 +
+        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndFragment, idxEndFragment]) + #13#10;
       Result := description + CHTMLIntro + sHtml + CHTMLExtro;
     end; { MakeFragment }
 
@@ -6814,7 +6833,7 @@ var
     KillTimer(dtWindowHandle, 1);
     if (Interval <> 0) and Enabled and Assigned(OnTimer) then
       if SetTimer(dtWindowHandle, 1, Interval, nil) = 0 then
-        raise EOutOfResources.Create(SNoTimers);
+        RaiseLastOSError;
   end; { TDSiTimer.UpdateTimer }
 
   procedure TDSiTimer.WndProc(var msgRec: TMessage);
@@ -6980,8 +6999,16 @@ var
 
 { Interlocked }
 
-{$IFNDEF WIN64}
 function DSiInterlockedDecrement64(var addend: int64): int64; register;
+{$IFDEF NeedWinInterlocked}
+var
+  old: int64;
+begin
+  repeat
+    old := addend;
+  until Winapi.Windows.InterlockedCompareExchange64(addend, old - 1, old) <> old;
+  Result := old - 1;
+{$ELSE}
 asm
 {     ->          EAX     addend }
 {     <-          EDX:EAX Result }
@@ -7008,9 +7035,19 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedDecrement64 }
 
-function DSiInterlockedIncrement64(var addend: int64): int64; register;
+function DSiInterlockedIncrement64(var addend: int64): int64;
+{$IFDEF NeedWinInterlocked}
+var
+  old: int64;
+begin
+  repeat
+    old := addend;
+  until Winapi.Windows.InterlockedCompareExchange64(addend, old + 1, old) <> old;
+  Result := old + 1;
+{$ELSE}
 asm
 {     ->          EAX     addend }
 {     <-          EDX:EAX Result }
@@ -7037,9 +7074,19 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedIncrement64 }
 
-function DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64; register;
+function DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64;
+{$IFDEF NeedWinInterlocked}
+var
+  old: int64;
+begin
+  repeat
+    old := addend;
+  until Winapi.Windows.InterlockedCompareExchange64(addend, old + value, old) <> old;
+  Result := old;
+{$ELSE}
 asm
 {     ->          EAX     addend }
 {                 ESP+4   value  }
@@ -7071,9 +7118,19 @@ LOCK      CMPXCHG8B [EBP]
           POP     EBP
           POP     ESI
           POP     EDI
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedExchangeAdd64 }
 
-function DSiInterlockedExchange64(var target: int64; value: int64): int64; register;
+function DSiInterlockedExchange64(var target: int64; value: int64): int64;
+{$IFDEF NeedWinInterlocked}
+var
+  old: int64;
+begin
+  repeat
+    old := target;
+  until Winapi.Windows.InterlockedCompareExchange64(target, value, old) <> old;
+  Result := old;
+{$ELSE}
 asm
 {     ->          EAX     target }
 {                 ESP+4   value  }
@@ -7095,9 +7152,14 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedExchange64 }
 
-function DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64; register;
+function DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64;
+{$IFDEF NeedWinInterlocked}
+begin
+  Result := Winapi.Windows.InterlockedCompareExchange64(destination, exchange, comparand);
+{$ELSE}
 asm
 {     ->          EAX     destination }
 {                 ESP+4   exchange    }
@@ -7118,9 +7180,14 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EDI
           POP     EBX
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedCompareExchange64 }
 
-function DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64; register;
+function DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64;
+{$IFDEF NeedWinInterlocked}
+begin
+  Result := Winapi.Windows.InterlockedCompareExchange64(destination^, exchange, comparand);
+{$ELSE}
 asm
 {     ->          EAX     destination }
 {                 ESP+4   exchange    }
@@ -7141,8 +7208,8 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EDI
           POP     EBX
+{$ENDIF ~NeedWinInterlocked}
 end; { DSiInterlockedCompareExchange64 }
-{$ENDIF}
 
 { DynaLoad }
 
@@ -7675,6 +7742,13 @@ begin
   FreeAndNil(btTask);
 end; { TBackgroundThread.Execute }
 
+{ initialization }
+
+procedure DynaLoadAPIs;
+begin
+  GInterlockedCompareExchange64 := DSiGetProcAddress('kernel.dll', 'InterlockedCompareExchange64');
+end; { DynaLoadAPIs }
+
 initialization
   InitializeCriticalSection(GDSiWndHandlerCritSect);
   GTerminateBackgroundTasks := CreateEvent(nil, false, false, nil);
@@ -7684,6 +7758,7 @@ initialization
   if not QueryPerformanceFrequency(GPerformanceFrequency) then
     GPerformanceFrequency := 0;
   GCF_HTML := RegisterClipboardFormat('HTML Format');
+  DynaLoadAPIs;
   timeBeginPeriod(1);
 finalization
   timeEndPeriod(1);

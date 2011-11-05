@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2011-06-21
-   Version           : 1.51
+   Last modification : 2011-11-02
+   Version           : 1.51a
 </pre>*)(*
    History:
+     1.51a: 2011-11-02
+       - Find functions check (in Assert) if the list is sorted.
      1.51: 2011-06-21
        - Implemented limited size FIFO buffer.
      1.50: 2011-03-01
@@ -1712,6 +1714,7 @@ function TGpIntegerList.Find(avalue: integer; var idx: integer): boolean;
 var
   L, H, I, C: integer;
 begin
+  Assert(ilSorted, 'Find only works on sorted lists!');
   Result := false;
   L := 0;
   H := Count - 1;
@@ -2300,6 +2303,7 @@ function TGpInt64List.Find(avalue: int64; var idx: integer): boolean;
 var
   L, H, I, C: integer;
 begin
+  Assert(ilSorted, 'Find only works on sorted lists!');
   Result := false;
   L := 0;
   H := Count - 1;
@@ -3584,6 +3588,7 @@ function TGpGUIDList.Find(const avalue: TGUID; var idx: integer): boolean;
 var
   L, H, I, C: integer;
 begin
+  Assert(glSorted, 'Find only works on sorted lists!');
   Result := false;
   L := 0;
   H := Count - 1;
