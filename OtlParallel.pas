@@ -2673,6 +2673,7 @@ var
   task        : IOmniTaskControl;
   totalTasks  : integer;
 begin
+  Assert(not assigned(opCountStopped), 'TOmniPipeline.Run: Pipeline is already running');
   totalTasks := 0;
   for iStage := 0 to opStages.Count - 1 do
     Inc(totalTasks, PipeStage[iStage].NumTasks);
