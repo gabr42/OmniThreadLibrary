@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-11-05
-///   Version           : 1.30
+///   Version           : 1.31
 ///</para><para>
 ///   History:
+///     1.31: 2011-11-05
+///       - Adapted to OtlCommon 1.24.
 ///     1.30: 2011-11-05
 ///       - Task parameters are exposed through IOmniTaskControl.Param property.
 ///     1.29: 2011-08-27
@@ -2521,7 +2523,7 @@ end; { TOmniTaskControl.Invoke }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl;
 begin
-  Invoke(msgMethod, OpenArrayToVarArray(msgData));
+  Invoke(msgMethod, TOmniValue.Create(msgData));
   Result := Self;
 end; { TOmniTaskControl.Invoke }
 
@@ -2539,7 +2541,7 @@ end; { TOmniCommunicationEndpoint.Invoke }
 
 function TOmniTaskControl.Invoke(const msgName: string; msgData: array of const): IOmniTaskControl;
 begin
-  Invoke(msgName, OpenArrayToVarArray(msgData));
+  Invoke(msgName, TOmniValue.Create(msgData));
   Result := Self;
 end; { TOmniCommunicationEndpoint.Invoke }
 

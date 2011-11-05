@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2011-01-28
-   Version           : 1.26
+   Last modification : 2011-11-05
+   Version           : 1.27
 </pre>*)(*
    History:
+     1.27: 2011-11-05
+       - Implemented IGpAutoDestroyObject.
      1.26: 2011-01-28
        - Implemented procedure DontOptimize. Call DontOptimize(x) if you want to prevent
          compiler from optimizing out the variable x.
@@ -190,6 +192,13 @@ type
     property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
   end; { TGpTraceable }
 
+  IGpAutoDestroyObject = interface ['{17A1E78B-69EF-42EE-A64B-DA4EA81A2C2C}']
+    function  GetObj: TObject;
+  //
+    procedure Free;
+    property Obj: TObject read GetObj;
+  end; { IGpAutoDestroyObject }
+
   PMethod = ^TMethod;
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -237,6 +246,8 @@ function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; asse
 function  OpenArrayToVarArray(aValues: array of const): Variant;
 
 function  FormatDataSize(value: int64): string;
+
+function AutoDestroyObject(obj: TObject): IGpAutoDestroyObject;
 
 ///<summary>Stops execution if the program is running in the debugger.</summary>
 procedure DebugBreak(triggerBreak: boolean = true);
@@ -295,7 +306,6 @@ function EnumList(const aList: string; delim: char; const quoteChar: string = ''
   stripQuotes: boolean = true): IGpStringValueEnumeratorFactory;
 
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
-
 {$ENDIF GpStuff_ValuesEnumerators}
 
 implementation
@@ -385,6 +395,23 @@ type
     destructor  Destroy; override;
     procedure Restore;
   end; { TGpDisableHandler }
+
+  TGpAutoDestroyObject = class(TInterfacedObject, IGpAutoDestroyObject)
+  strict private
+    FObject: TObject;
+  strict protected
+    function GetObj: TObject;
+  public
+    constructor Create(obj: TObject);
+    destructor  Destroy; override;
+    procedure Free;
+    property Obj: TObject read GetObj;
+  end; { IGpAutoDestroyObject }
+
+function AutoDestroyObject(obj: TObject): IGpAutoDestroyObject;
+begin
+  Result := TGpAutoDestroyObject.Create(obj);
+end; { AutoDestroyObject }
 
 //copied from GpString unit
 procedure GetDelimiters(const list: string; delim: char; const quoteChar: string;
@@ -1056,5 +1083,29 @@ procedure TGpDisableHandler.Restore;
 begin
   FHandler^ := FOldHandler;
 end; { TGpDisableHandler.Restore }
+
+{ TGpAutoDestroyObject }
+
+constructor TGpAutoDestroyObject.Create(obj: TObject);
+begin
+  inherited Create;
+  FObject := obj;
+end; { TGpAutoDestroyObject.Create }
+
+destructor TGpAutoDestroyObject.Destroy;
+begin
+  Free;
+  inherited;
+end; { TGpAutoDestroyObject.Destroy }
+
+procedure TGpAutoDestroyObject.Free;
+begin
+  FreeAndNil(FObject);
+end; { TGpAutoDestroyObject.Free }
+
+function TGpAutoDestroyObject.GetObj: TObject;
+begin
+  Result := FObject;
+end; { TGpAutoDestroyObject.GetObj }
 
 end.
