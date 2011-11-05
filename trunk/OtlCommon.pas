@@ -37,10 +37,18 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-09-06
-///   Version           : 1.23
+///   Last modification : 2011-11-05
+///   Version           : 1.24
 ///</para><para>
 ///   History:
+///     1.24: 2011-11-05
+///       - TOmniValue.Create now internally creates TOmniValueContainer to store values.
+///         Variant arrays are no longer used. IsArray tests it TOmniValue contains an
+///         array and AsArray returns this internal container. Default indexed property
+///         still accesses individual elements in this container. See demo
+///         50_OmniValueArray for an example.
+///       - TOmniValue.Create creates internal TOmniValueContainer containing named items.
+///         See demo 50_OmniValueArray for an example.
 ///     1.23: 2011-09-06
 ///       - Implemented IOmniCounter.Take.
 ///     1.22: 2011-08-31
@@ -163,13 +171,19 @@ type
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
+  TOmniValueContainer = class;
+
   TOmniValue = packed record
   private
     ovData: int64;
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
              ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer, ovtDateTime, ovtException);
+             ovtPointer, ovtDateTime, ovtException, ovtArray);
+    function  GetAsArray: TOmniValueContainer; inline;
+    function  GetAsArrayItem(idx: integer): TOmniValue; overload; inline;
+    function  GetAsArrayItem(const name: string): TOmniValue; overload; inline;
+    function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; inline;
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
@@ -183,7 +197,6 @@ type
     function  GetAsPointer: pointer;
     function  GetAsString: string;
     function  GetAsVariant: Variant;
-    function  GetAsVariantArr(idx: integer): Variant; inline;
     function  GetAsWideString: WideString;
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
@@ -201,11 +214,13 @@ type
     procedure SetAsWideString(const value: WideString);
   public
     constructor Create(const values: array of const);
+    constructor CreateNamed(const values: array of const);
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
     function  CastAsInt64: int64; inline;
     procedure Clear; inline;
+    function  IsArray: boolean; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsException: boolean; inline;
@@ -250,6 +265,10 @@ type
     class operator Implicit(const a: TDateTime): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): TDateTime; inline;
     {$ENDIF OTL_TOmniValueImplicitDateTime}
+    property AsArray: TOmniValueContainer read GetAsArray;
+    property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem; default;
+    property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem; default;
+    property AsArrayItem[const idx: TOmniValue]: TOmniValue read GetAsArrayItem; default;
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
@@ -263,12 +282,11 @@ type
     property AsPointer: pointer read GetAsPointer write SetAsPointer;
     property AsString: string read GetAsString write SetAsString;
     property AsVariant: Variant read GetAsVariant write SetAsVariant;
-    property AsVariantArr[idx: integer]: Variant read GetAsVariantArr; default;
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
   {$IFDEF OTL_Generics}
   public
     class function CastFrom<T>(const value: T): TOmniValue; static;
-    function CastAs<T>: T;
+    function  CastAs<T>: T;
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   private
@@ -881,6 +899,7 @@ end; { TOmniValueContainer.Exists }
 
 function TOmniValueContainer.GetItem(paramIdx: integer): TOmniValue;
 begin
+  Assert(paramIdx < ovcCount);
   Result := ovcValues[paramIdx];
 end; { TOmniValueContainer.GetItem }
 
@@ -1231,9 +1250,94 @@ end; { TOmniInterfaceDictionary.ValueOf }
 { TOmniValue }
 
 constructor TOmniValue.Create(const values: array of const);
+var
+  i  : integer;
+  ovc: TOmniValueContainer;
 begin
-  AsVariant := OpenArrayToVarArray(values);
+  ovc := TOmniValueContainer.Create;
+  for i := Low(values) to High(values) do begin
+    with values[i] do begin
+      case VType of
+        vtInteger:       ovc.Add(VInteger);
+        vtBoolean:       ovc.Add(VBoolean);
+        vtChar:          ovc.Add(string(VChar));
+        vtExtended:      ovc.Add(VExtended^);
+        vtString:        ovc.Add(string(VString^));
+        vtPointer:       ovc.Add(integer(VPointer));
+        vtPChar:         ovc.Add(string(StrPas(VPChar)));
+        vtAnsiString:    ovc.Add(string(VAnsiString));
+        vtCurrency:      ovc.Add(VCurrency^);
+        vtVariant:       ovc.Add(VVariant^);
+        vtObject:        ovc.Add(integer(VObject));
+        vtInterface:     ovc.Add(integer(VInterface));
+        vtWideString:    ovc.Add(WideString(VWideString));
+        vtInt64:         ovc.Add(VInt64^);
+        {$IFDEF UNICODE}
+        vtUnicodeString: ovc.Add(string(VUnicodeString));
+        {$ENDIF UNICODE}
+      else
+        raise Exception.Create ('TOmniValue.Create: invalid data type')
+      end; //case
+    end; //with
+  end; //for i
+  ovType := ovtArray;
+  ovIntf := AutoDestroyObject(ovc);
+  ovData := int64(ovc);
 end; { TOmniValue.Create }
+
+constructor TOmniValue.CreateNamed(const values: array of const);
+var
+  i   : integer;
+  name: string;
+  ovc : TOmniValueContainer;
+begin
+  ovc := TOmniValueContainer.Create;
+  Assert(not Odd(Low(values)));
+  name := '';
+  for i := Low(values) to High(values) do begin
+    with values[i] do begin
+      if not Odd(i) then
+        case VType of
+          vtChar:          name := string(VChar);
+          vtString:        name := string(VString^);
+          vtPChar:         name := string(StrPas(VPChar));
+          vtAnsiString:    name := string(VAnsiString);
+          vtVariant:       name := string(VVariant^);
+          vtWideString:    name := WideString(VWideString);
+          {$IFDEF UNICODE}
+          vtUnicodeString: name := string(VUnicodeString);
+          {$ENDIF UNICODE}
+        else
+          raise Exception.Create ('TOmniValue.CreateNamed: invalid name type')
+        end //case
+      else
+        case VType of
+          vtInteger:       ovc.Add(VInteger, name);
+          vtBoolean:       ovc.Add(VBoolean, name);
+          vtChar:          ovc.Add(string(VChar), name);
+          vtExtended:      ovc.Add(VExtended^, name);
+          vtString:        ovc.Add(string(VString^), name);
+          vtPointer:       ovc.Add(integer(VPointer), name);
+          vtPChar:         ovc.Add(string(StrPas(VPChar)), name);
+          vtAnsiString:    ovc.Add(string(VAnsiString), name);
+          vtCurrency:      ovc.Add(VCurrency^, name);
+          vtVariant:       ovc.Add(VVariant^, name);
+          vtObject:        ovc.Add(integer(VObject), name);
+          vtInterface:     ovc.Add(integer(VInterface), name);
+          vtWideString:    ovc.Add(WideString(VWideString), name);
+          vtInt64:         ovc.Add(VInt64^, name);
+          {$IFDEF UNICODE}
+          vtUnicodeString: ovc.Add(string(VUnicodeString), name);
+          {$ENDIF UNICODE}
+        else
+          raise Exception.Create ('TOmniValue.CreateNamed: invalid data type')
+        end; //case
+    end; //with
+  end; //for i
+  ovType := ovtArray;
+  ovIntf := AutoDestroyObject(ovc);
+  ovData := int64(ovc);
+end; { TOmniValue.CreateNamed }
 
 function TOmniValue.CastAsInt64: int64;
 begin
@@ -1319,6 +1423,34 @@ begin
   ovIntf := nil;
   ovType := ovtNull;
 end; { TOmniValue.Clear }
+
+function TOmniValue.GetAsArray: TOmniValueContainer;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData);
+end; { TOmniValue.GetAsArray }
+
+function TOmniValue.GetAsArrayItem(const name: string): TOmniValue;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData)[name];
+end; { TOmniValue.GetAsArrayItem }
+
+function TOmniValue.GetAsArrayItem(const idx: TOmniValue): TOmniValue;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData)[idx];
+end; { TOmniValue.GetAsArrayItem }
+
+function TOmniValue.GetAsArrayItem(idx: integer): TOmniValue;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData)[idx];
+end; { TOmniValue.GetAsArrayItem }
 
 function TOmniValue.GetAsBoolean: boolean;
 begin
@@ -1477,11 +1609,6 @@ begin
   end;
 end; { TOmniValue.GetAsVariant }
 
-function TOmniValue.GetAsVariantArr(idx: integer): Variant;
-begin
-  Result := AsVariant[idx];
-end; { TOmniValue.GetAsVariantArr }
-
 function TOmniValue.GetAsWideString: WideString;
 begin
   case ovType of
@@ -1489,6 +1616,11 @@ begin
     else Result := GetAsString;
   end;
 end; { TOmniValue.GetAsWideString }
+
+function TOmniValue.IsArray: boolean;
+begin
+  Result := (ovType = ovtArray);
+end; { TOmniValue.IsArray }
 
 function TOmniValue.IsBoolean: boolean;
 begin

@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2011, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2010-07-01
-///   Version           : 1.07
+///   Last modification : 2011-11-05
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2011-11-05
+///       - Adapted to OtlCommon 1.24.
 ///     1.07: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.06a: 2010-05-06
@@ -565,7 +567,7 @@ end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word; msgData: array of const);
 begin
-  Send(msgID, OpenArrayToVarArray(msgData));
+  Send(msgID, TOmniValue.Create(msgData));
 end; { TOmniCommunicationEndpoint.Send }
 
 procedure TOmniCommunicationEndpoint.Send(msgID: word);

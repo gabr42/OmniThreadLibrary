@@ -99,7 +99,7 @@ begin
       .WithCounter(FCounter)
       .MonitorWith(OtlEventMonitor1)
       .Schedule
-      .Invoke(@TQuickSortTask.Sort, [@FData, msg.MsgData[0], msg.MsgData[1], true]);
+      .Invoke(@TQuickSortTask.Sort, [@FData, msg.MsgData[0].AsInteger, msg.MsgData[1].AsInteger, true]);
   end
   else
     lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
