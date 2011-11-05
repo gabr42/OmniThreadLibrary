@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-08-27
-///   Version           : 1.29
+///   Last modification : 2011-11-05
+///   Version           : 1.30
 ///</para><para>
 ///   History:
+///     1.30: 2011-11-05
+///       - Task parameters are exposed through IOmniTaskControl.Param property.
 ///     1.29: 2011-08-27
 ///       - Implemented another OnTerminated overload acception parameterless anonymous
 ///         function.
@@ -344,6 +346,7 @@ type
     function  DetachException: Exception;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  GetFatalException: Exception;
+    function  GetParam: TOmniValueContainer;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
     function  Invoke(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
@@ -399,6 +402,7 @@ type
     property FatalException: Exception read GetFatalException;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
+    property Param: TOmniValueContainer read GetParam;
     property UniqueID: int64 read GetUniqueID;
     property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
   end; { IOmniTaskControl }
@@ -829,6 +833,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetOptions: TOmniTaskControlOptions;
+    function  GetParam: TOmniValueContainer;
     function  GetSharedInfo: TOmniSharedTaskInfo;
     function  GetTerminatedEvent: THandle;
     function  GetTerminateEvent: THandle;
@@ -907,6 +912,7 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
+    property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otcSharedInfo;
     property UniqueID: int64 read GetUniqueID;
     property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
@@ -2460,6 +2466,11 @@ function TOmniTaskControl.GetOptions: TOmniTaskControlOptions;
 begin
   Result := otcExecutor.Options;
 end; { TOmniTaskControl.GetOptions }
+
+function TOmniTaskControl.GetParam: TOmniValueContainer;
+begin
+  Result := otcParameters;
+end; { TOmniTaskControl.GetParam }
 
 function TOmniTaskControl.GetSharedInfo: TOmniSharedTaskInfo;
 begin
