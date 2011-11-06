@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-05
-///   Version           : 1.31
+///   Last modification : 2011-11-06
+///   Version           : 1.31a
 ///</para><para>
 ///   History:
+///     1.31a: 2011-11-06
+///       - Fixed wrong order in teardown sequence in TOmniTask.Execute. Great thanks to
+///         [Anton Alisov] for providing a reproducible test case.
 ///     1.31: 2011-11-05
 ///       - Adapted to OtlCommon 1.24.
 ///     1.30: 2011-11-05
@@ -1238,19 +1241,18 @@ begin
         end;
       end;
     finally
+      if assigned(otSharedInfo_ref.ChainTo) and
+         (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
+      then
+        chainTo := otSharedInfo_ref.ChainTo;
+      otSharedInfo_ref.ChainTo := nil;
+      terminateEvent := otSharedInfo_ref.TerminatedEvent;
+      otSharedInfo_ref.Stopped := true;
       // with internal monitoring this will not be processed if the task controller owner is also shutting down
       if assigned(otSharedInfo_ref.Monitor) then
         otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
           integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-
-      otSharedInfo_ref.Stopped := true;
-      terminateEvent := otSharedInfo_ref.TerminatedEvent;
     end;
-    if assigned(otSharedInfo_ref.ChainTo) and
-       (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
-    then
-      chainTo := otSharedInfo_ref.ChainTo;
-    otSharedInfo_ref.ChainTo := nil;
   finally
     //Task controller could die any time now. Make sure we're not using shared
     //structures anymore.

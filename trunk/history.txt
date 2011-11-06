@@ -1,3 +1,5 @@
+- Fixed wrong order in teardown sequence in TOmniTask.Execute which could cause access
+  violation crash. Great thanks to [Anton Alisov] for providing a reproducible test case.
 - New demos:
   - 49_FramedWorkers: Multiple frames each communication with own worker task.
 

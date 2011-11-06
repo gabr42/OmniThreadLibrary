@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-14
-///   Version           : 2.07
+///   Last modification : 2011-11-06
+///   Version           : 2.08
 /// </para><para>
 ///   History:
+///     2.08: 2011-11-06
+///       - Sets thread name to 'Idle thread worker' when a thread is idle.
 ///     2.07: 2011-07-14
 ///       - Exceptions are no longer reported through the OnPoolWorkItemCompleted event.
 ///     2.06: 2011-07-04
@@ -671,6 +673,7 @@ begin
       Comm.Send(MSG_COMPLETED, workItem);
     end;
   finally if assigned(owtWorkItemLock) then owtWorkItemLock.Release; end;
+  SetThreadName('Idle thread worker');
 end; { TOTPWorkerThread.ExecuteWorkItem }
 
 function TOTPWorkerThread.GetOwnerCommEndpoint: IOmniCommunicationEndpoint;
