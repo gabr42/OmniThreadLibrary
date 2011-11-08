@@ -1051,12 +1051,7 @@ begin
     Exit;
   end;
   {$IFDEF LogThreadPool}
-  if assigned(workItem.TaskException) then
-    Log('Thread %s completed request %s with exception %s: %s',
-      [worker.Description, workItem.Description, workItem.TaskException.ClassName,
-       workItem.TaskException.Message]);
-  else
-    Log('Thread %s completed request %s', [worker.Description, workItem.Description]);
+  Log('Thread %s completed request %s', [worker.Description, workItem.Description]);
   Log('Destroying %s', [workItem.Description]);
   {$ENDIF LogThreadPool}
   if assigned(owMonitorObserver) then
