@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-06
-///   Version           : 1.31a
+///   Last modification : 2011-11-08
+///   Version           : 1.31b
 ///</para><para>
 ///   History:
+///     1.31b: 2011-11-08
+///       - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
 ///     1.31a: 2011-11-06
 ///       - Fixed wrong order in teardown sequence in TOmniTask.Execute. Great thanks to
 ///         [Anton Alisov] for providing a reproducible test case.
@@ -1706,6 +1708,8 @@ begin
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
   end
+  else if awaited = (WAIT_OBJECT_0 + msgInfo.NumWaitHandles) then //message
+    // thread messages are always processed below
   else if awaited = WAIT_IO_COMPLETION then
     // do-nothing
   else if awaited = WAIT_TIMEOUT then
