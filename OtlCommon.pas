@@ -38,11 +38,15 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-11-08
-///   Version           : 1.24a
+///   Version           : 1.25
 ///</para><para>
 ///   History:
-///     1.24a: 2011-11-08
+///     1.25: 2011-11-08
 ///       - Less casting in TOmniValue.Create.
+///       - TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
+///       - Added a class which can wrap any record - TOmniRecordWrapper<T>.
+///       - Added an interface which can wrap any object and destroy it when the
+///         interface goes out of scope - IOmniAutoDestroyObject.
 ///     1.24: 2011-11-05
 ///       - TOmniValue.Create now internally creates TOmniValueContainer to store values.
 ///         Variant arrays are no longer used. IsArray tests it TOmniValue contains an
@@ -174,6 +178,7 @@ type
   EOmniValueConv = class(Exception);
 
   TOmniValueContainer = class;
+  IOmniAutoDestroyObject = interface;
 
   TOmniValue = packed record
   private
@@ -181,7 +186,7 @@ type
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
              ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer, ovtDateTime, ovtException, ovtArray);
+             ovtPointer, ovtDateTime, ovtException, ovtArray, ovtRecord);
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; inline;
     function  GetAsArrayItem(const name: string): TOmniValue; overload; inline;
@@ -197,6 +202,7 @@ type
     function  GetAsInterface: IInterface; inline;
     function  GetAsObject: TObject; inline;
     function  GetAsPointer: pointer;
+    function  GetAsRecord: IOmniAutoDestroyObject; inline;
     function  GetAsString: string;
     function  GetAsVariant: Variant;
     function  GetAsWideString: WideString;
@@ -211,6 +217,7 @@ type
     procedure SetAsInterface(const value: IInterface); inline;
     procedure SetAsObject(const value: TObject); inline;
     procedure SetAsPointer(const value: pointer); inline;
+    procedure SetAsRecord(const intf: IOmniAutoDestroyObject); inline;
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
@@ -287,6 +294,8 @@ type
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
   {$IFDEF OTL_Generics}
   public
+    function  AsRecord<T: record>: T;
+    class function FromRecord<T: record>(const value: T): TOmniValue; static;
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastAs<T>: T;
   {$ENDIF OTL_Generics}
@@ -568,10 +577,29 @@ type
     property MessageType: TOmniMessageIDType read omidMessageType;
   end; { TOmniMessageID }
 
+{$IFDEF OTL_Generics}
+  TOmniRecordWrapper<T: record> = class
+  strict private
+    FValue: T;
+  public
+    constructor Create(const value: T);
+    function  GetRecord: T;
+    procedure SetRecord(const value: T);
+    property Value: T read GetRecord write SetRecord;
+  end; { TOmniRecordWrapper<T> }
+{$ENDIF OTL_Generics}
+
+  IOmniAutoDestroyObject = interface
+    function GetValue: TObject;
+    //
+    property Value: TObject read GetValue;
+  end; { IOmniAutoDestroyObject }
+
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   function  CreateWaitableValue: IOmniWaitableValue;
-  
+  function  CreateAutoDestroyObject(obj: TObject): IOmniAutoDestroyObject;
+
   function  Environment: IOmniEnvironment;
   procedure SetThreadName(const name: string);
   function  VarToObj(const v: Variant): TObject; inline;
@@ -790,10 +818,27 @@ type
     property Thread: IOmniThreadEnvironment read GetThread;
   end; { TOmniEnvironment }
 
+  TOmniAutoDestroyObject = class(TInterfacedObject, IOmniAutoDestroyObject)
+  private
+    FValue: TObject;
+  protected
+    function  GetValue: TObject;
+    procedure SetValue(const value: TObject);
+  public
+    constructor Create(obj: TObject);
+    destructor  Destroy; override;
+    property Value: TObject read FValue write SetValue;
+  end; { TOmniAutoDestroyObject }
+
 var
   GEnvironment: IOmniEnvironment;
 
 { exports }
+
+function CreateAutoDestroyObject(obj: TObject): IOmniAutoDestroyObject;
+begin
+  Result := TOmniAutoDestroyObject.Create(obj);
+end; { CreateAutoDestroyObject }
 
 function CreateCounter(initialValue: integer): IOmniCounter;
 begin
@@ -822,8 +867,50 @@ end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;
 begin
-  Result := TObject(cardinal(v));
+  Result := TObject(NativeUInt(v));
 end; { VarToObj }
+
+{$IFDEF OTL_Generics}
+constructor TOmniRecordWrapper<T>.Create(const value: T);
+begin
+  inherited Create;
+  SetRecord(value);
+end; { TOmniRecordWrapper<T>.Create }
+
+function TOmniRecordWrapper<T>.GetRecord: T;
+begin
+  Result := FValue;
+end; { TOmniRecordWrapper<T>.GetRecord }
+
+procedure TOmniRecordWrapper<T>.SetRecord(const value: T);
+begin
+  FValue := value;
+end; { TOmniRecordWrapper<T>.SetRecord }
+{$ENDIF OTL_Generics}
+
+{ TOmniAutoDestroyObject }
+
+constructor TOmniAutoDestroyObject.Create(obj: TObject);
+begin
+  inherited Create;
+  FValue := obj;
+end; { TOmniAutoDestroyObject.Create }
+
+destructor TOmniAutoDestroyObject.Destroy;
+begin
+  FreeAndNil(FValue);
+  inherited;
+end; { TOmniAutoDestroyObject.Destroy }
+
+function TOmniAutoDestroyObject.GetValue: TObject;
+begin
+  Result := FValue;
+end; { TOmniAutoDestroyObject.GetValue }
+
+procedure TOmniAutoDestroyObject.SetValue(const value: TObject);
+begin
+  FValue := value;
+end; { TOmniAutoDestroyObject.SetValue }
 
 { TOmniValueContainer }
 
@@ -1354,6 +1441,11 @@ begin
 end; { TOmniValue.CastAsInt64 }
 
 {$IFDEF OTL_Generics}
+function TOmniValue.AsRecord<T>: T;
+begin
+  Result := TOmniRecordWrapper<T>(GetAsRecord.Value).Value;
+end; { TOmniValue.AsRecord }
+
 function TOmniValue.CastAs<T>: T;
 var
   ds      : integer;
@@ -1417,6 +1509,11 @@ begin
     end;
   end;
 end; { TOmniValue.CastFrom }
+
+class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
+begin
+  Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
+end; { TOmniValue.FromRecord<T> }
 {$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
@@ -1555,6 +1652,14 @@ begin
     else raise Exception.Create('TOmniValue cannot be converted to pointer');
   end;
 end; { TOmniValue.GetAsPointer }
+
+function TOmniValue.GetAsRecord: IOmniAutoDestroyObject;
+begin
+  case ovType of
+    ovtRecord: Result := IOmniAutoDestroyObject(ovIntf);
+    else raise Exception.Create('TOmniValue cannot be converted to string');
+  end;
+end; { TOmniValue.GetAsRecord }
 
 function TOmniValue.GetAsString: string;
 begin
@@ -1764,6 +1869,12 @@ begin
   RawData^ := int64(value);
   ovType := ovtPointer;
 end; { TOmniValue.SetAsPointer }
+
+procedure TOmniValue.SetAsRecord(const intf: IOmniAutoDestroyObject);
+begin
+  ovIntf := intf;
+  ovType := ovtRecord;
+end; { TOmniValue.SetAsRecord }
 
 procedure TOmniValue.SetAsString(const value: string);
 begin
