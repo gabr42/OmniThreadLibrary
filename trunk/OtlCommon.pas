@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-05
-///   Version           : 1.24
+///   Last modification : 2011-11-08
+///   Version           : 1.24a
 ///</para><para>
 ///   History:
+///     1.24a: 2011-11-08
+///       - Less casting in TOmniValue.Create.
 ///     1.24: 2011-11-05
 ///       - TOmniValue.Create now internally creates TOmniValueContainer to store values.
 ///         Variant arrays are no longer used. IsArray tests it TOmniValue contains an
@@ -1263,13 +1265,13 @@ begin
         vtChar:          ovc.Add(string(VChar));
         vtExtended:      ovc.Add(VExtended^);
         vtString:        ovc.Add(string(VString^));
-        vtPointer:       ovc.Add(integer(VPointer));
+        vtPointer:       ovc.Add(VPointer);
         vtPChar:         ovc.Add(string(StrPas(VPChar)));
         vtAnsiString:    ovc.Add(string(VAnsiString));
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
-        vtObject:        ovc.Add(integer(VObject));
-        vtInterface:     ovc.Add(integer(VInterface));
+        vtObject:        ovc.Add(VObject);
+        vtInterface:     ovc.Add(VInterface);
         vtWideString:    ovc.Add(WideString(VWideString));
         vtInt64:         ovc.Add(VInt64^);
         {$IFDEF UNICODE}
