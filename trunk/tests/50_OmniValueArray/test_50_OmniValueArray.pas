@@ -15,8 +15,10 @@ type
     lbLog: TListBox;
     btnSendHash: TButton;
     btnSendArray: TButton;
+    btnSendRecord: TButton;
     procedure btnSendArrayClick(Sender: TObject);
     procedure btnSendHashClick(Sender: TObject);
+    procedure btnSendRecordClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
@@ -34,18 +36,29 @@ uses
   DSiWin32;
 
 {$R *.dfm}
+{$I OtlOptions.inc}
 
 const
-  MSG_ARRAY = 1;
-  MSG_HASH = 2;
+  MSG_ARRAY  = 1;
+  MSG_HASH   = 2;
+  MSG_RECORD = 3;
 
   MSG_RESULT = WM_USER;
+
+type
+  TTestRecord = record
+    TestInt : integer;
+    TestStr : string;
+    TestObj : TOmniWaitableValue;
+    TestIntf: IOmniCounter;
+  end;
 
 procedure Worker(const task: IOmniTask);
 var
   i      : integer;
   msgData: TOmniValue;
   msgID  : word;
+  rec    : TTestRecord;
   s      : string;
 begin
   while DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, INFINITE) = WAIT_OBJECT_1 do
@@ -63,6 +76,14 @@ begin
         begin
           s := Format('%s is %s', [msgData['Person'].AsString, msgData['Location'].AsString]);
           task.Comm.Send(MSG_RESULT, s);
+        end;
+      MSG_RECORD:
+        begin
+          rec := msgData.AsRecord<TTestRecord>;
+          task.Comm.Send(MSG_RESULT, 'Received record with values: ' +
+            Format('%d, %s, %d, %d', [rec.TestInt, rec.TestStr,
+              rec.TestObj.Value.AsInteger, rec.TestIntf.Value]));
+          rec.TestObj.Free;
         end;
     end;
   end;
@@ -82,6 +103,20 @@ begin
     'Location', 'at home']));
 end;
 
+procedure TfrmOmniValueArray.btnSendRecordClick(Sender: TObject);
+var
+  rec: TTestRecord;
+begin
+  {$IFDEF OTL_Generics}
+  rec.TestInt := 42;
+  rec.TestStr := 'OTL';
+  rec.TestObj := TOmniWaitableValue.Create;
+  rec.TestObj.Signal(17);
+  rec.TestIntf := CreateCounter(127);
+  FWorker.Comm.Send(MSG_RECORD, TOmniValue.FromRecord<TTestRecord>(rec));
+  {$ENDIF OTL_Generics}
+end;
+
 procedure TfrmOmniValueArray.FormDestroy(Sender: TObject);
 begin
   FWorker.Terminate;
@@ -91,6 +126,9 @@ end;
 procedure TfrmOmniValueArray.FormCreate(Sender: TObject);
 begin
   FWorker := CreateTask(Worker).OnMessage(MSG_RESULT, ShowResult).Run;
+  {$IFNDEF OTL_Generics}
+  btnSendRecord.Enabled := false;
+  {$ENDIF ~OTL_Generics}
 end;
 
 procedure TfrmOmniValueArray.ShowResult(const task: IOmniTaskControl; const msg:

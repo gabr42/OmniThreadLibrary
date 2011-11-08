@@ -36,11 +36,20 @@ object frmOmniValueArray: TfrmOmniValueArray
   end
   object btnSendArray: TButton
     Left = 8
-    Top = 39
+    Top = 40
     Width = 106
     Height = 25
     Caption = 'Send Array'
     TabOrder = 2
     OnClick = btnSendArrayClick
+  end
+  object btnSendRecord: TButton
+    Left = 8
+    Top = 72
+    Width = 106
+    Height = 25
+    Caption = 'Send Record'
+    TabOrder = 3
+    OnClick = btnSendRecordClick
   end
 end
