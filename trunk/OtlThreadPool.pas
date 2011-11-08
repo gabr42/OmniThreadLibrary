@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-06
-///   Version           : 2.08
+///   Last modification : 2011-11-08
+///   Version           : 2.09
 /// </para><para>
 ///   History:
+///     2.09: 2011-11-08
+///       - Adapted to OtlCommon 1.24.
 ///     2.08: 2011-11-06
 ///       - Sets thread name to 'Idle thread worker' when a thread is idle.
 ///     2.07: 2011-07-14
@@ -772,6 +774,7 @@ var
   endWait_ms   : int64;
   iWorker      : integer;
   taskID       : int64;
+  waitParam    : TOmniValue;
   wasTerminated: boolean;
   worker       : TOTPWorkerThread;
   workItem     : TOTPWorkItem;
@@ -811,8 +814,9 @@ begin
       end;
       break; // for 
     end;
-  end; // for iWorker 
-  (VarToObj(params[1]) as TOmniWaitableValue).Signal(wasTerminated);
+  end; // for iWorker
+  waitParam := params[1];
+  (waitParam.AsObject as TOmniWaitableValue).Signal(wasTerminated);
 end; { TOTPWorker.Cancel }
 
 procedure TOTPWorker.CancelAll(var doneSignal: TOmniWaitableValue);
@@ -1206,7 +1210,8 @@ end; { TOTPWorker.ScheduleNext }
 
 procedure TOTPWorker.SetMonitor(const params: TOmniValue);
 var
-  hWindow: THandle;
+  hWindow  : THandle;
+  waitParam: TOmniValue;
 begin
   hWindow := params[0];
   if not assigned(owMonitorObserver) then
@@ -1216,7 +1221,8 @@ begin
     raise Exception.Create(
       'TOTPWorker.SetMonitor: Task can be only monitored with a single monitor'
       );
-  (VarToObj(params[1]) as TOmniWaitableValue).Signal;
+  waitParam := params[1];
+  (waitParam.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetMonitor }
 
 procedure TOTPWorker.SetName(const name: TOmniValue);
