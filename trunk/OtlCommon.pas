@@ -867,7 +867,7 @@ end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;
 begin
-  Result := TObject(NativeUInt(v));
+  Result := TObject({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(v));
 end; { VarToObj }
 
 {$IFDEF OTL_Generics}
