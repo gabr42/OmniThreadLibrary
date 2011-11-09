@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-03
-///   Version           : 1.20
+///   Last modification : 2011-11-09
+///   Version           : 1.20a
 ///</para><para>
 ///   History:
+///     1.20a: 2011-11-09
+///       - [Anton Alisov] Fixed potential leak in Pipeline exception handling.
 ///     1.20: 2011-11-03
 ///       - Fixed two Parallel.Pipeline overloads to not override internal input
 ///         collection if 'input' parameter was not provided.
@@ -2665,6 +2667,7 @@ end; { TOmniPipeline.NumTasks }
 function TOmniPipeline.Run: IOmniPipeline;
 var
   countStopped: IOmniResourceCount;
+  exc         : Exception;
   inQueue     : IOmniBlockingCollection;
   iStage      : integer;
   iTask       : integer;
@@ -2711,7 +2714,9 @@ begin
                 try
                   opStage.Execute(inQueue, outQueue, Task);
                 except
-                  outQueue.Add(Exception(AcquireExceptionObject));
+                  exc := AcquireExceptionObject;
+                  if not outQueue.TryAdd(exc) then
+                    Exc.Free;
                 end;
               finally
                 if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
