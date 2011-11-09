@@ -1,3 +1,7 @@
+- TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
+- Added a class which can wrap any record - TOmniRecordWrapper<T>.
+- Added an interface which can wrap any object and destroy it when the
+  interface goes out of scope - IOmniAutoDestroyObject.
 - Fixed wrong order in teardown sequence in TOmniTask.Execute which could cause access
   violation crash. Great thanks to [Anton Alisov] for providing a reproducible test case.
 - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
