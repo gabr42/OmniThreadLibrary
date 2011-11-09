@@ -1358,7 +1358,7 @@ begin
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
         vtObject:        ovc.Add(VObject);
-        vtInterface:     ovc.Add(VInterface);
+        vtInterface:     ovc.Add(IInterface(VInterface));
         vtWideString:    ovc.Add(WideString(VWideString));
         vtInt64:         ovc.Add(VInt64^);
         {$IFDEF UNICODE}
