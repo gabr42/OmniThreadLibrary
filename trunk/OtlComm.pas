@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-05
-///   Version           : 1.08
+///   Last modification : 2011-11-09
+///   Version           : 1.08a
 ///</para><para>
 ///   History:
+///     1.08a: 2011-11-09
+///       - TOmniMessageQueue.Enqueue leaked if queue was full and value contained
+///         reference counted value (found by [meishier]).
 ///     1.08: 2011-11-05
 ///       - Adapted to OtlCommon 1.24.
 ///     1.07: 2010-07-01
@@ -348,7 +351,9 @@ begin
   tmp.MsgData._AddRef;
   Result := inherited Enqueue(tmp);
   if Result then
-    tmp.MsgData.RawZero;
+    tmp.MsgData.RawZero
+  else
+    tmp.MsgData._Release;
 end; { TOmniMessageQueue.Enqueue }
 
 function TOmniMessageQueue.GetNewMessageEvent: THandle;
@@ -543,7 +548,7 @@ begin
     end; //if not Result
   end;
   if not Result then
-    msg.msgData := TOmniValue.Null;
+    msg.msgData._ReleaseAndClear;
 end; { TOmniCommunicationEndpoint.SendWait }
 
 function TOmniCommunicationEndpoint.SendWait(msgID: word;
