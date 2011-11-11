@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2011-08-28
-///   Version           : 1.05
+///   Last modification : 2011-11-11
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2011-11-11
+///       - Implemented IOmniBlockingCollection.ContainerSubject which gives access
+///         to the ContainerSubject property of the underlying TOmniQueue.
 ///     1.05: 2011-08-28
 ///       - Implemented IOmniBlockingCollection.ReraiseExceptions. If enabled
 ///         (default: disabled), [Try]Take will check if returned value for exception
@@ -106,6 +109,8 @@ type
   ///	</summary>
   {$ENDREGION}
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
+    function  GetContainerSubject: TOmniContainerSubject;
+    //
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
@@ -129,6 +134,7 @@ type
     function  Take(var value: TOmniValue): boolean;
     function  TryAdd(const value: TOmniValue): boolean;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
+    property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
   end; { IOmniBlockingCollection }
 
   TOmniBlockingCollection = class(TInterfacedObject,
@@ -154,6 +160,8 @@ type
     obcReraiseExceptions   : boolean;
     obcResourceCount       : TOmniResourceCount;
     obcThrottling          : boolean;
+  protected
+    function  GetContainerSubject: TOmniContainerSubject;
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -174,6 +182,7 @@ type
     function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
     property CompletedSignal: THandle read obcCompletedSignal;
+    property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
   end; { TOmniBlockingCollection }
 
   TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
@@ -263,6 +272,11 @@ begin
     asm pause; end;
   until false;
 end; { TOmniBlockingCollection.CompleteAdding }
+
+function TOmniBlockingCollection.GetContainerSubject: TOmniContainerSubject;
+begin
+  Result := obcCollection.ContainerSubject;
+end; { TOmniBlockingCollection.GetContainerSubject }
 
 function TOmniBlockingCollection.GetEnumerator: IOmniValueEnumerator;
 begin

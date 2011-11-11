@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-09
-///   Version           : 1.20a
+///   Last modification : 2011-11-11
+///   Version           : 1.21
 ///</para><para>
 ///   History:
+///     1.21: 2011-11-11
+///       - All interfaces decorated with GUIDs.
 ///     1.20a: 2011-11-09
 ///       - [Anton Alisov] Fixed potential leak in Pipeline exception handling.
 ///     1.20: 2011-11-03
@@ -219,7 +221,7 @@ const
   CDefaultPipelineThrottle = 10240;
 
 type
-  IOmniTaskConfig = interface
+  IOmniTaskConfig = interface ['{17B5B72B-DFE0-4D73-A86A-66A5925E2876}']
     procedure Apply(const task: IOmniTaskControl);
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
@@ -260,35 +262,35 @@ type
   TOmniTaskInitializerDelegate = reference to procedure(var taskState: TOmniValue);
   TOmniTaskFinalizerDelegate = reference to procedure(const taskState: TOmniValue);
 
-  IOmniParallelAggregatorLoop = interface
+  IOmniParallelAggregatorLoop = interface ['{AE291D7E-8EE4-47C2-B852-74C1DB0FEFB9}']
     function  Execute(loopBody: TOmniIteratorIntoDelegate): TOmniValue;
   end; { IOmniParallelAggregatorLoop }
 
-  IOmniParallelAggregatorLoop<T> = interface
+  IOmniParallelAggregatorLoop<T> = interface ['{BC8508B3-F47D-4A1E-BAD8-A625FA1FE46C}']
     function  Execute(loopBody: TOmniIteratorIntoDelegate<T>): TOmniValue;
   end; { IOmniParallelAggregatorLoop<T> }
 
-  IOmniParallelInitializedLoop = interface
+  IOmniParallelInitializedLoop = interface ['{637C9613-AB06-4EA8-9CDD-5648A4901765}']
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop;
     procedure Execute(loopBody: TOmniIteratorStateDelegate);
   end; { IOmniParallelInitializedLoop }
 
-  IOmniParallelInitializedLoop<T> = interface
+  IOmniParallelInitializedLoop<T> = interface ['{936EE3C0-7857-492D-9D7B-63FFB97C38AE}']
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop<T>;
     procedure Execute(loopBody: TOmniIteratorStateDelegate<T>);
   end; { IOmniParallelInitializedLoop }
 
-  IOmniParallelIntoLoop = interface
+  IOmniParallelIntoLoop = interface ['{18642876-7E92-4004-80AC-41D2C9C049E2}']
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
   end; { IOmniParallelIntoLoop }
 
-  IOmniParallelIntoLoop<T> = interface
+  IOmniParallelIntoLoop<T> = interface ['{CB66E10F-A800-49FB-A4DA-CE8CBCD7B995}']
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
   end; { IOmniParallelIntoLoop<T> }
 
-  IOmniParallelLoop = interface
+  IOmniParallelLoop = interface ['{558DECAE-27E5-4AEB-AF75-AC6ED250162E}']
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
     function  AggregateSum: IOmniParallelAggregatorLoop;
@@ -309,7 +311,7 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { IOmniParallelLoop }
 
-  IOmniParallelLoop<T> = interface
+  IOmniParallelLoop<T> = interface ['{3E52DE21-583E-447C-AC15-B505E45195AC}']
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
     function  AggregateSum: IOmniParallelAggregatorLoop<T>;
@@ -336,7 +338,7 @@ type
   TOmniFutureDelegate<T> = reference to function: T;
   TOmniFutureDelegateEx<T> = reference to function(const task: IOmniTask): T;
 
-  IOmniFuture<T> = interface
+  IOmniFuture<T> = interface ['{15BA0059-29D9-4F9F-B873-80E6A495A6DD}']
     procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
@@ -383,7 +385,7 @@ type
   TPipelineStageDelegateEx = reference to procedure (const input, output:
     IOmniBlockingCollection; const task: IOmniTask);
 
-  IOmniPipeline = interface
+  IOmniPipeline = interface ['{6E97C042-C961-4A61-9208-E4ABD27DF908}']
     function  GetInput: IOmniBlockingCollection;
     function  GetOutput: IOmniBlockingCollection;
   //
@@ -447,13 +449,13 @@ type
     function  IsDone: boolean;
   end; { TOmniCompute }
 
-  IOmniForkJoin = interface
+  IOmniForkJoin = interface ['{2DAD7D56-572A-4944-A3E8-8C200EF64AEE}']
     function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
     function  NumTasks(numTasks: integer): IOmniForkJoin;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin;
   end; { IOmniForkJoin }
 
-  IOmniForkJoin<T> = interface
+  IOmniForkJoin<T> = interface ['{896D2CAA-66E3-4710-A86C-612062F827B0}']
     function  Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin<T>;
@@ -666,7 +668,7 @@ type
     property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
-  IOmniJoinState = interface
+  IOmniJoinState = interface ['{02D8A3A5-6965-4C24-B7C3-DA0F2EE19A5D}']
     function  GetTask: IOmniTask;
   //
     procedure Cancel;
@@ -706,7 +708,7 @@ type
 
   TOmniJoinDelegate = reference to procedure (const joinState: IOmniJoinState);
 
-  IOmniParallelJoin = interface
+  IOmniParallelJoin = interface ['{063A18CF-4720-4231-9881-FA96BB5AC110}']
     function  Cancel: IOmniParallelJoin;
     function  DetachException: Exception;
     function  Execute: IOmniParallelJoin;
@@ -758,7 +760,7 @@ type
 
   TOmniParallelTaskDelegate = reference to procedure (const task: IOmniTask);
 
-  IOmniParallelTask = interface
+  IOmniParallelTask = interface ['{F3853E7C-F4A4-48CE-866A-5BB86184F84C}']
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  NoWait: IOmniParallelTask;
@@ -767,6 +769,41 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
+
+  IOmniWorkItem = interface ['{6D582E6B-96CA-449C-A626-A7358E9B6623}']
+    function  GetData: TOmniValue;
+    function  GetResult: TOmniValue;
+    function  GetUniqueID: int64;
+    procedure SetResult(const value: TOmniValue);
+  //
+    procedure Cancel;
+    function  DetachException: Exception;
+    function  FatalException: Exception;
+    function  IsCanceled: boolean;
+    function  IsExceptional: boolean;
+    property Data: TOmniValue read GetData;
+    property Result: TOmniValue read GetResult write SetResult;
+    property UniqueID: int64 read GetUniqueID;
+  end; { IOmniWorkItem }
+
+  IOmniBackgroundWorker = interface;
+
+  TOmniBackgroundWorkerDelegate = reference to procedure (const workItem: IOmniWorkItem);
+  TOmniWorkItemDoneDelegate = reference to procedure (const Sender: IOmniBackgroundWorker;
+    const workItem: IOmniWorkItem);
+
+  IOmniBackgroundWorker = interface ['{29E3A184-1657-4E2C-B02D-E9255F9C3733}']
+    function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
+    function  Execute(const aTask: TOmniBackgroundWorkerDelegate): IOmniBackgroundWorker;
+    function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
+    function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    procedure Schedule(const workItem: IOmniWorkItem);
+    function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
+    function  Terminate(maxWait_ms: cardinal): boolean;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
+  end; { IOmniBackgroundWorker }
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -836,6 +873,9 @@ type
   // Parallel
     class function ParallelTask: IOmniParallelTask;
 
+  // BackgroundWorker
+    class function BackgroundWorker: IOmniBackgroundWorker;
+
   // task configuration
     class function TaskConfig: IOmniTaskConfig;
 
@@ -864,10 +904,12 @@ implementation
 
 uses
   Windows,
+  Messages,
   Classes,
   DSiWin32,
   GpStuff,
-  OtlComm;
+  OtlComm,
+  OtlContainerObserver;
 
 type
   IOmniPipelineStage = interface ['{C34393C7-E9EE-4CE7-895F-EECA553F4E54}']
@@ -1018,12 +1060,69 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
-    function OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig;
       overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
   end; { TOmniTaskConfig }
+
+const
+  MSG_WORK_ITEM_DONE = WM_USER; // used only in internal window created inside TOmniBackgroundWorker
+
+type
+  TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem)
+  strict private
+    FData    : TOmniValue;
+    FResult: TOmniValue;
+    FUniqueID: int64;
+  protected
+    function  GetData: TOmniValue;
+    function  GetResult: TOmniValue;
+    function  GetUniqueID: int64;
+    procedure SetResult(const value: TOmniValue);
+  public
+    constructor Create(const data: TOmniValue; uniqueID: int64);
+    procedure Cancel;
+    function  DetachException: Exception;
+    function  FatalException: Exception;
+    function  IsCanceled: boolean;
+    function  IsExceptional: boolean;
+    property Data: TOmniValue read GetData;
+    property Result: TOmniValue read GetResult write SetResult;
+    property UniqueID: int64 read GetUniqueID;
+  end; { TOmniWorkItem }
+
+  TOmniBackgroundWorker = class(TInterfacedObject, IOmniBackgroundWorker)
+  strict private
+    FObserver         : TOmniContainerObserver;
+    FWindow           : THandle;
+    FNumTasks         : integer;
+    FOnRequestDone    : TOmniWorkItemDoneDelegate;
+    FOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
+    FProcessWorkItem  : TOmniBackgroundWorkerDelegate;
+    FStopOn           : IOmniCancellationToken;
+    FTaskConfig       : IOmniTaskConfig;
+    FUniqueID         : IOmniCounter;
+    FWorker           : IOmniPipeline;
+  strict protected
+    procedure BackgroundWorker(const input, output: IOmniBlockingCollection;
+      const task: IOmniTask);
+    procedure ObserverWndProc(var message: TMessage);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
+    function  Execute(const aTask: TOmniBackgroundWorkerDelegate): IOmniBackgroundWorker;
+    function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
+    function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    procedure Schedule(const workItem: IOmniWorkItem);
+    function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
+    function  Terminate(maxWait_ms: cardinal): boolean;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
+  end; { TOmniBackgroundWorker}
 
 var
   GParallelPool: IOmniThreadPool;
@@ -1337,6 +1436,11 @@ begin
   ApplyConfig(taskConfig, omniTask);
   omniTask.Schedule(GlobalParallelPool);
 end; { Parallel.Async }
+
+class function Parallel.BackgroundWorker: IOmniBackgroundWorker;
+begin
+  Result := TOmniBackgroundWorker.Create;
+end; { Parallel.BackgroundWorker }
 
 class function Parallel.CompleteQueue(const queue: IOmniBlockingCollection): TProc;
 begin
@@ -3068,6 +3172,185 @@ begin
   Result := optJoin.WaitFor(timeout_ms);
 end; { TOmniParallelTask.WaitFor }
 
+{ TOmniWorkItem }
+
+constructor TOmniWorkItem.Create(const data: TOmniValue; uniqueID: int64);
+begin
+  inherited Create;
+  FData := data;
+  FUniqueID := uniqueID;
+end; { TOmniWorkItem.Create }
+
+procedure TOmniWorkItem.Cancel;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.Cancel
+end; { TOmniWorkItem.Cancel }
+
+function TOmniWorkItem.DetachException: Exception;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.DetachException
+end; { TOmniWorkItem.DetachException }
+
+function TOmniWorkItem.FatalException: Exception;
+begin
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.FatalException
+end; { TOmniWorkItem.FatalException }
+
+function TOmniWorkItem.GetData: TOmniValue;
+begin
+  Result := FData;
+end; { TOmniWorkItem.GetData }
+
+function TOmniWorkItem.GetResult: TOmniValue;
+begin
+  Result := FResult;
+end; { TOmniWorkItem.GetResult }
+
+function TOmniWorkItem.GetUniqueID: int64;
+begin
+  Result := FUniqueID;
+end; { TOmniWorkItem.GetUniqueID }
+
+function TOmniWorkItem.IsCanceled: boolean;
+begin
+  Result := false;
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.IsCanceled
+end; { TOmniWorkItem.IsCanceled }
+
+function TOmniWorkItem.IsExceptional: boolean;
+begin
+  Result := false;
+  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.IsExceptional
+end; { TOmniWorkItem.IsExceptional }
+
+procedure TOmniWorkItem.SetResult(const value: TOmniValue);
+begin
+  FResult := value;
+end; { TOmniWorkItem.SetResult }
+
+{ TOmniBackgroundWorker }
+
+constructor TOmniBackgroundWorker.Create;
+begin
+  inherited Create;
+  FUniqueID := CreateCounter;
+  FNumTasks := 1;
+end; { TOmniBackgroundWorker.Create }
+
+function TOmniBackgroundWorker.CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
+begin
+  Result := TOmniWorkItem.Create(data, FUniqueID.Increment);
+end; { TOmniBackgroundWorker.CreateWorkItem }
+
+destructor TOmniBackgroundWorker.Destroy;
+begin
+  Terminate(INFINITE);
+  inherited;
+end; { TOmniBackgroundWorker.Destroy }
+
+procedure TOmniBackgroundWorker.BackgroundWorker(const input, output:
+  IOmniBlockingCollection; const task: IOmniTask);
+var
+  ovWorkItem: TOmniValue;
+  workItem  : IOmniWorkItem;
+begin
+  for ovWorkItem in input do begin
+    workItem := ovWorkItem.AsInterface as IOmniWorkItem;
+    if not workItem.IsCanceled then
+      FProcessWorkItem(workItem);
+    if assigned(FOnRequestDone_Asy) then
+      FOnRequestDone_Asy(Self, workItem);
+    if assigned(FOnRequestDone) then
+      output.TryAdd(workItem);
+  end;
+end; { TOmniBackgroundWorker.BackgroundWorker }
+
+function TOmniBackgroundWorker.Execute(const aTask: TOmniBackgroundWorkerDelegate):
+  IOmniBackgroundWorker;
+begin
+  Assert(FNumTasks > 0);
+  FProcessWorkItem := aTask;
+  FWorker := Parallel.Pipeline.NumTasks(FNumTasks).Stage(BackgroundWorker, FTaskConfig);
+  if assigned(FOnRequestDone) then begin
+    FWindow := DSiAllocateHWnd(ObserverWndProc);
+    FObserver := CreateContainerWindowsMessageObserver(FWindow, MSG_WORK_ITEM_DONE, 0, 0);
+    FWorker.Output.ContainerSubject.Attach(FObserver, coiNotifyOnAllInserts);
+  end;
+  FWorker.Run;
+  Result := Self;
+end; { TOmniBackgroundWorker.Execute }
+
+function TOmniBackgroundWorker.NumTasks(numTasks: integer): IOmniBackgroundWorker;
+begin
+  FNumTasks := numTasks;
+  Result := Self;
+end; { TOmniBackgroundWorker.NumTasks }
+
+procedure TOmniBackgroundWorker.ObserverWndProc(var message: TMessage);
+var
+  ovWorkItem: TOmniValue;
+begin
+  if message.Msg = MSG_WORK_ITEM_DONE then begin
+    while FWorker.Output.TryTake(ovWorkItem) do
+      FOnRequestDone(Self, ovWorkItem.AsInterface as IOmniWorkItem);
+    message.Result := Ord(true);
+  end;
+end; { TOmniBackgroundWorker.ObserverWndProc }
+
+function TOmniBackgroundWorker.OnRequestDone(const aTask: TOmniWorkItemDoneDelegate):
+  IOmniBackgroundWorker;
+begin
+  FOnRequestDone := aTask;
+  Result := Self;
+end; { TOmniBackgroundWorker.OnRequestDone }
+
+function TOmniBackgroundWorker.OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate):
+  IOmniBackgroundWorker;
+begin
+  FOnRequestDone_Asy := aTask;
+  Result := Self;
+end; { TOmniBackgroundWorker.OnRequestDone_Asy }
+
+procedure TOmniBackgroundWorker.Schedule(const workItem: IOmniWorkItem);
+begin
+  FWorker.Input.Add(workItem);
+end; { TOmniBackgroundWorker.Schedule }
+
+function TOmniBackgroundWorker.StopOn(const token: IOmniCancellationToken):
+  IOmniBackgroundWorker;
+begin
+  FStopOn := token;
+  Result := Self;
+end; { TOmniBackgroundWorker.StopOn }
+
+function TOmniBackgroundWorker.TaskConfig(const config: IOmniTaskConfig):
+  IOmniBackgroundWorker;
+begin
+  FTaskConfig := config;
+  Result := Self;
+end; { TOmniBackgroundWorker.TaskConfig }
+
+function TOmniBackgroundWorker.Terminate(maxWait_ms: cardinal): boolean;
+begin
+  Result := WaitFor(maxWait_ms);
+  if Result then begin
+    if assigned(FObserver) then begin
+      FWorker.Output.ContainerSubject.Detach(FObserver, coiNotifyOnAllInserts);
+      FreeAndNil(FObserver);
+    end;
+    DSiDeallocateHWnd(FWindow);
+  end;
+end; { TOmniBackgroundWorker.Terminate }
+
+function TOmniBackgroundWorker.WaitFor(maxWait_ms: cardinal): boolean;
+begin
+  Result := true;
+  if assigned(FWorker) then begin
+    FWorker.Input.CompleteAdding;
+    Result := FWorker.WaitFor(maxWait_ms);
+  end;
+end; { TOmniBackgroundWorker.WaitFor }
+
 { TOmniTaskConfig }
 
 constructor TOmniTaskConfig.Create;
@@ -3191,3 +3474,4 @@ begin
 end; { TOmniTaskConfig.WithLock }
 
 end.
+
