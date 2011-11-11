@@ -51,6 +51,8 @@ contains
   DSiWin32 in '..\src\DSiWin32.pas',
   OtlContainerObserver in '..\OtlContainerObserver.pas',
   OtlSync in '..\OtlSync.pas',
-  OtlHooks in '..\OtlHooks.pas';
+  OtlHooks in '..\OtlHooks.pas',
+  OtlCollections in '..\OtlCollections.pas',
+  OtlCommon.Utils in '..\OtlCommon.Utils.pas';
 
 end.
