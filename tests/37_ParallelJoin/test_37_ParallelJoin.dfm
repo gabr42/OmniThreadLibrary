@@ -22,7 +22,7 @@ object frmTestParallelJoin: TfrmTestParallelJoin
     TabOrder = 0
     OnClick = btnJoinAllClick
   end
-  object btnJointOne: TButton
+  object btnJoinOne: TButton
     Left = 8
     Top = 40
     Width = 105

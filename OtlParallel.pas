@@ -31,10 +31,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-11
-///   Version           : 1.21
+///   Last modification : 2011-11-15
+///   Version           : 1.22
 ///</para><para>
 ///   History:
+///     1.22: 2011-11-15
+///       - Parallel.Join implementation fixed to not depend on thread pool specifics.
+///         Parallel.Join.NumTasks works again.
+///       - GUIDs removed again (GUIDs on generic interfaces don't work). Hard casting is
+///         used whenever possible.
 ///     1.21: 2011-11-11
 ///       - All interfaces decorated with GUIDs.
 ///     1.20a: 2011-11-09
@@ -221,7 +226,7 @@ const
   CDefaultPipelineThrottle = 10240;
 
 type
-  IOmniTaskConfig = interface ['{17B5B72B-DFE0-4D73-A86A-66A5925E2876}']
+  IOmniTaskConfig = interface
     procedure Apply(const task: IOmniTaskControl);
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
@@ -262,35 +267,35 @@ type
   TOmniTaskInitializerDelegate = reference to procedure(var taskState: TOmniValue);
   TOmniTaskFinalizerDelegate = reference to procedure(const taskState: TOmniValue);
 
-  IOmniParallelAggregatorLoop = interface ['{AE291D7E-8EE4-47C2-B852-74C1DB0FEFB9}']
+  IOmniParallelAggregatorLoop = interface
     function  Execute(loopBody: TOmniIteratorIntoDelegate): TOmniValue;
   end; { IOmniParallelAggregatorLoop }
 
-  IOmniParallelAggregatorLoop<T> = interface ['{BC8508B3-F47D-4A1E-BAD8-A625FA1FE46C}']
+  IOmniParallelAggregatorLoop<T> = interface
     function  Execute(loopBody: TOmniIteratorIntoDelegate<T>): TOmniValue;
   end; { IOmniParallelAggregatorLoop<T> }
 
-  IOmniParallelInitializedLoop = interface ['{637C9613-AB06-4EA8-9CDD-5648A4901765}']
+  IOmniParallelInitializedLoop = interface
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop;
     procedure Execute(loopBody: TOmniIteratorStateDelegate);
   end; { IOmniParallelInitializedLoop }
 
-  IOmniParallelInitializedLoop<T> = interface ['{936EE3C0-7857-492D-9D7B-63FFB97C38AE}']
+  IOmniParallelInitializedLoop<T> = interface
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop<T>;
     procedure Execute(loopBody: TOmniIteratorStateDelegate<T>);
   end; { IOmniParallelInitializedLoop }
 
-  IOmniParallelIntoLoop = interface ['{18642876-7E92-4004-80AC-41D2C9C049E2}']
+  IOmniParallelIntoLoop = interface
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
   end; { IOmniParallelIntoLoop }
 
-  IOmniParallelIntoLoop<T> = interface ['{CB66E10F-A800-49FB-A4DA-CE8CBCD7B995}']
+  IOmniParallelIntoLoop<T> = interface
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
   end; { IOmniParallelIntoLoop<T> }
 
-  IOmniParallelLoop = interface ['{558DECAE-27E5-4AEB-AF75-AC6ED250162E}']
+  IOmniParallelLoop = interface
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
     function  AggregateSum: IOmniParallelAggregatorLoop;
@@ -311,7 +316,7 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { IOmniParallelLoop }
 
-  IOmniParallelLoop<T> = interface ['{3E52DE21-583E-447C-AC15-B505E45195AC}']
+  IOmniParallelLoop<T> = interface
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
     function  AggregateSum: IOmniParallelAggregatorLoop<T>;
@@ -338,7 +343,7 @@ type
   TOmniFutureDelegate<T> = reference to function: T;
   TOmniFutureDelegateEx<T> = reference to function(const task: IOmniTask): T;
 
-  IOmniFuture<T> = interface ['{15BA0059-29D9-4F9F-B873-80E6A495A6DD}']
+  IOmniFuture<T> = interface
     procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
@@ -385,7 +390,7 @@ type
   TPipelineStageDelegateEx = reference to procedure (const input, output:
     IOmniBlockingCollection; const task: IOmniTask);
 
-  IOmniPipeline = interface ['{6E97C042-C961-4A61-9208-E4ABD27DF908}']
+  IOmniPipeline = interface
     function  GetInput: IOmniBlockingCollection;
     function  GetOutput: IOmniBlockingCollection;
   //
@@ -412,13 +417,13 @@ type
   TOmniForkJoinDelegate<T> = reference to function: T;
   TOmniForkJoinDelegateEx<T> = reference to function(const task: IOmniTask): T;
 
-  IOmniCompute = interface ['{488441DC-D280-4F94-9B6A-296A19729DD5}']
+  IOmniCompute = interface
     procedure Execute;
     function  IsDone: boolean;
     procedure Await;
   end; { IOmniCompute<T> }
 
-  IOmniCompute<T> = interface ['{915A5BDB-ECAA-4928-B449-EFCB2311B28B}']
+  IOmniCompute<T> = interface
     procedure Execute;
     function  IsDone: boolean;
     function  TryValue(timeout_ms: cardinal; var value: T): boolean;
@@ -449,13 +454,13 @@ type
     function  IsDone: boolean;
   end; { TOmniCompute }
 
-  IOmniForkJoin = interface ['{2DAD7D56-572A-4944-A3E8-8C200EF64AEE}']
+  IOmniForkJoin = interface
     function  Compute(action: TOmniForkJoinDelegate): IOmniCompute;
     function  NumTasks(numTasks: integer): IOmniForkJoin;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin;
   end; { IOmniForkJoin }
 
-  IOmniForkJoin<T> = interface ['{896D2CAA-66E3-4710-A86C-612062F827B0}']
+  IOmniForkJoin<T> = interface
     function  Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
     function  NumTasks(numTasks: integer): IOmniForkJoin<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniForkJoin<T>;
@@ -668,7 +673,7 @@ type
     property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
-  IOmniJoinState = interface ['{02D8A3A5-6965-4C24-B7C3-DA0F2EE19A5D}']
+  IOmniJoinState = interface ['{8A198F20-24F3-44F8-A77B-CA93E83291D3}']
     function  GetTask: IOmniTask;
   //
     procedure Cancel;
@@ -677,7 +682,7 @@ type
     property Task: IOmniTask read GetTask;
   end; { IOmniJoinState }
 
-  IOmniJoinStateEx = interface ['{24FD5999-A016-4427-A3CA-9C4D5A865209}']
+  IOmniJoinStateEx = interface ['{BF2E87C9-99EC-4A52-9F37-7FC24111BD75}']
     function  GetTaskControl: IOmniTaskControl;
     procedure SetTaskControl(const aTask: IOmniTaskControl);
   //
@@ -708,7 +713,7 @@ type
 
   TOmniJoinDelegate = reference to procedure (const joinState: IOmniJoinState);
 
-  IOmniParallelJoin = interface ['{063A18CF-4720-4231-9881-FA96BB5AC110}']
+  IOmniParallelJoin = interface
     function  Cancel: IOmniParallelJoin;
     function  DetachException: Exception;
     function  Execute: IOmniParallelJoin;
@@ -729,15 +734,16 @@ type
     opjCountStopped          : IOmniResourceCount;
     opjGlobalCancellationFlag: IOmniCancellationToken;
     opjGlobalExceptionFlag   : IOmniCancellationToken;
+    opjInput                 : IOmniBlockingCollection;
     opjJoinStates            : array of IOmniJoinState;
     opjNoWait                : boolean;
     opjNumTasks              : integer;
     opjOnStop                : TProc;
     opjTaskConfig            : IOmniTaskConfig;
     opjTaskException         : Exception;
+    opjTaskExceptionLock     : TOmniCS;
     opjTasks                 : TList<TOmniJoinDelegate>;
   strict protected
-    procedure DetachExceptionFromTasks;
     procedure DoOnStop;
     function  InternalWaitFor(timeout_ms: cardinal): boolean;
   public
@@ -760,7 +766,7 @@ type
 
   TOmniParallelTaskDelegate = reference to procedure (const task: IOmniTask);
 
-  IOmniParallelTask = interface ['{F3853E7C-F4A4-48CE-866A-5BB86184F84C}']
+  IOmniParallelTask = interface
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  NoWait: IOmniParallelTask;
@@ -770,7 +776,7 @@ type
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
-  IOmniWorkItem = interface ['{6D582E6B-96CA-449C-A626-A7358E9B6623}']
+  IOmniWorkItem = interface ['{3CE2762F-B7A3-4490-BF22-2109C042EAD1}']
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
     function  GetUniqueID: int64;
@@ -792,7 +798,7 @@ type
   TOmniWorkItemDoneDelegate = reference to procedure (const Sender: IOmniBackgroundWorker;
     const workItem: IOmniWorkItem);
 
-  IOmniBackgroundWorker = interface ['{29E3A184-1657-4E2C-B02D-E9255F9C3733}']
+  IOmniBackgroundWorker = interface
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
     function  Execute(const aTask: TOmniBackgroundWorkerDelegate): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
@@ -1243,7 +1249,13 @@ begin
 end; { TOmniParallelJoin.Create }
 
 destructor TOmniParallelJoin.Destroy;
+var
+  iTask: integer;
 begin
+  for iTask := Low(opjJoinStates) to High(opjJoinStates) do begin
+    (opjJoinStates[iTask] as IOmniJoinStateEx).TaskControl.Terminate;
+    (opjJoinStates[iTask] as IOmniJoinStateEx).TaskControl := nil;
+  end;
   FreeAndNil(opjTasks);
   inherited Destroy;
 end; { TOmniParallelJoin.Destroy }
@@ -1260,23 +1272,6 @@ begin
   opjTaskException := nil;
 end; { TOmniParallelJoin.DetachException }
 
-procedure TOmniParallelJoin.DetachExceptionFromTasks;
-var
-  iTask      : integer;
-  taskControl: IOmniTaskControl;
-begin
-  opjTaskException := nil;
-  for iTask := Low(opjJoinStates) to High(opjJoinStates) do begin
-    taskControl := (opjJoinStates[iTask] as IOmniJoinStateEx).TaskControl;
-    taskControl.WaitFor(INFINITE);
-    if assigned(taskControl.FatalException) then begin
-      if not assigned(opjTaskException) then
-        opjTaskException := EJoinException.Create;
-      EJoinException(opjTaskException).Add(iTask, taskControl.DetachException);
-    end;
-  end;
-end; { TOmniParallelJoin.DetachExceptionFromTasks }
-
 procedure TOmniParallelJoin.DoOnStop;
 begin
   if assigned(opjOnStop) then
@@ -1289,29 +1284,41 @@ var
   numTasks   : integer;
   taskControl: IOmniTaskControl;
 begin
-  numTasks := opjTasks.Count;
-//  GlobalParallelPool.MaxExecuting := opjNumTasks;
+  numTasks := opjNumTasks;
+  if numTasks > opjTasks.Count then
+    numTasks := opjTasks.Count;
   SetLength(opjJoinStates, numTasks);
   opjCountStopped := TOmniResourceCount.Create(numTasks + 1);
-  for iProc := 0 to opjTasks.Count - 1 do begin
+  opjInput := TOmniBlockingCollection.Create;
+  for iProc := 0 to numTasks - 1 do
     opjJoinStates[iProc] := TOmniJoinState.Create(opjGlobalCancellationFlag, opjGlobalExceptionFlag);
+  for iProc := 0 to opjTasks.Count - 1 do
+    opjInput.Add(iProc);
+  opjInput.CompleteAdding;
+  for iProc := 0 to numTasks - 1 do begin
     taskControl :=
       CreateTask(
         procedure (const task: IOmniTask)
         var
-          procNum: integer;
           joinStateEx: IOmniJoinStateEx;
+          procNum    : TOmniValue;
         begin
-          procNum := task.Param['ProcNum'];
-          joinStateEx := (opjJoinStates[procNum] as IOmniJoinStateEx);
-          joinStateEx.SetTask(task);
           try
-            try
-              opjTasks[procNum](opjJoinStates[procNum]);
-            except
-              opjGlobalExceptionFlag.Signal;
-              raise;
-            end;
+            for procNum in opjInput do begin
+              joinStateEx := (opjJoinStates[task.Param['NumWorker'].AsInteger] as IOmniJoinStateEx);
+              joinStateEx.SetTask(task);
+              try
+                opjTasks[procNum](opjJoinStates[procNum.AsInteger]);
+              except
+                opjTaskExceptionLock.Acquire;
+                try
+                  if not assigned(opjTaskException) then
+                    opjTaskException := EJoinException.Create;
+                  EJoinException(opjTaskException).Add(procNum, AcquireExceptionObject);
+                finally opjTaskExceptionLock.Release; end;
+                opjGlobalExceptionFlag.Signal;
+              end;
+            end; //for ovTask
           finally
             if opjCountStopped.Allocate = 1 then begin
               if opjNoWait then
@@ -1319,11 +1326,12 @@ begin
               opjCountStopped.Allocate;
             end;
           end;
-        end
-      ).SetParameter('ProcNum', iProc);
+        end,
+        Format('Join worker #%d', [iProc + 1])
+      ).SetParameter('NumWorker', iProc);
     ApplyConfig(opjTaskConfig, taskControl);
-    taskControl.Schedule(GlobalParallelPool);
     (opjJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
+    taskControl.Schedule(GlobalParallelPool);
   end;
   if not opjNoWait then begin
     WaitFor(INFINITE);
@@ -1335,7 +1343,6 @@ end; { TOmniParallelJoin.Execute }
 
 function TOmniParallelJoin.FatalException: Exception;
 begin
-  DetachExceptionFromTasks;
   Result := opjTaskException;
 end; { TOmniParallelJoin.FatalException }
 
@@ -1399,7 +1406,6 @@ var
 begin
   Result := InternalWaitFor(timeout_ms);
   if Result then begin
-    DetachExceptionFromTasks;
     if assigned(opjTaskException) then begin
       taskExcept := opjTaskException;
       opjTaskException := nil;
@@ -1912,9 +1918,6 @@ begin
   else begin
     countStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
-    { TODO 3 -oPrimoz : Still not optimal - should know how many Parallel.ForEach are currently executing! }
-//    if numTasks > GlobalParallelPool.MaxExecuting then
-//      GlobalParallelPool.MaxExecuting := numTasks;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
         procedure (const task: IOmniTask)
@@ -2970,7 +2973,7 @@ begin
   Result := false;
   while not ocComputed do begin
     if ocInput.Take(compute) then
-      (compute.AsInterface as IOmniCompute<T>).Execute
+      IOmniCompute<T>(compute.AsInterface).Execute
     else
       DSiYield;
   end;
@@ -3014,7 +3017,7 @@ var
   computation: TOmniValue;
 begin
   for computation in input do
-    (computation.AsInterface as IOmniCompute<T>).Execute;
+    IOmniCompute<T>(computation.AsInterface).Execute;
 end; { TOmniForkJoin }
 
 function TOmniForkJoin<T>.Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
@@ -3255,7 +3258,7 @@ var
   workItem  : IOmniWorkItem;
 begin
   for ovWorkItem in input do begin
-    workItem := ovWorkItem.AsInterface as IOmniWorkItem;
+    workItem := IOmniWorkItem(ovWorkItem.AsInterface);
     if not workItem.IsCanceled then
       FProcessWorkItem(workItem);
     if assigned(FOnRequestDone_Asy) then
