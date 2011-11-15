@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-08
-///   Version           : 1.25
+///   Last modification : 2011-11-15
+///   Version           : 1.25a
 ///</para><para>
 ///   History:
+///     1.25a: 2011-11-15
+///       - Some inlining removed because it would not work reliably.
 ///     1.25: 2011-11-08
 ///       - Less casting in TOmniValue.Create.
 ///       - TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
@@ -214,7 +216,7 @@ type
     procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
     procedure SetAsInteger(const value: integer); inline;
-    procedure SetAsInterface(const value: IInterface); inline;
+    procedure SetAsInterface(const value: IInterface); //don't inline, something is broken in codegen (XE)
     procedure SetAsObject(const value: TObject); inline;
     procedure SetAsPointer(const value: pointer); inline;
     procedure SetAsRecord(const intf: IOmniAutoDestroyObject); inline;
@@ -254,7 +256,7 @@ type
     class operator Implicit(const a: int64): TOmniValue; inline;
     class operator Implicit(const a: pointer): TOmniValue; inline;
     class operator Implicit(const a: string): TOmniValue; inline;
-    class operator Implicit(const a: IInterface): TOmniValue; inline;
+    class operator Implicit(const a: IInterface): TOmniValue; //don't inline, something is broken in codegen (XE)
     class operator Implicit(const a: TObject): TOmniValue; inline;
     class operator Implicit(const a: Exception): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): int64; inline;
@@ -819,7 +821,7 @@ type
   end; { TOmniEnvironment }
 
   TOmniAutoDestroyObject = class(TInterfacedObject, IOmniAutoDestroyObject)
-  private
+  strict private
     FValue: TObject;
   protected
     function  GetValue: TObject;
@@ -862,7 +864,7 @@ end; { Environment }
 
 procedure SetThreadName(const name: string);
 begin
- OtlCommon.Utils.SetThreadName(name);
+  OtlCommon.Utils.SetThreadName(name);
 end; { SetThreadName }
 
 function VarToObj(const v: Variant): TObject;

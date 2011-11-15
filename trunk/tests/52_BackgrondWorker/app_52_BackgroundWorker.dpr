@@ -1,9 +1,9 @@
-program app_51_BackgroundWorker;
+program app_52_BackgroundWorker;
 
 uses
   FastMM4,
   Forms,
-  test_51_BackgroundWorker in 'test_51_BackgroundWorker.pas' {Form16};
+  test_52_BackgroundWorker in 'test_52_BackgroundWorker.pas' {Form16};
 
 {$R *.res}
 

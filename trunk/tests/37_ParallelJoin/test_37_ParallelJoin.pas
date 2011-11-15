@@ -10,7 +10,7 @@ uses
 type
   TfrmTestParallelJoin = class(TForm)
     btnJoinAll: TButton;
-    btnJointOne: TButton;
+    btnJoinOne: TButton;
     lbLog: TListBox;
     btnJoinTProc: TButton;
     btnCancel: TButton;
@@ -68,7 +68,7 @@ var
   join        : IOmniParallelJoin;
   startTime   : int64;
 begin
-  if Environment.Process.Affinity.Count = 1 then
+  if Sender = btnJoinOne then
     expectedTime := 5
   else
     expectedTime := 3;
@@ -83,7 +83,7 @@ begin
     begin
       Sleep(2000);
     end);
-  if Sender = btnJointOne then
+  if Sender = btnJoinOne then
     join.NumTasks(1);
   join.Execute;
   Log(Format('Tasks stopped, execution time was %s seconds',

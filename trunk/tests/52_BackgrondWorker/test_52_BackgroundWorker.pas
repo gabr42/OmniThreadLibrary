@@ -1,4 +1,4 @@
-unit test_51_BackgroundWorker;
+unit test_52_BackgroundWorker;
 
 interface
 
