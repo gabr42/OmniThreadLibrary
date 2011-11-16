@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-15
-///   Version           : 1.22
+///   Last modification : 2011-11-16
+///   Version           : 1.22a
 ///</para><para>
 ///   History:
+///     1.22a: 2011-11-16
+///       - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off
+///         by 1. Thanks to [meishier] for tracking the bug down.
 ///     1.22: 2011-11-15
 ///       - Parallel.Join implementation fixed to not depend on thread pool specifics.
 ///         Parallel.Join.NumTasks works again.
@@ -2803,7 +2806,7 @@ begin
     opOutQueues.Add(outQueue);
     countStopped := TOmniResourceCount.Create(PipeStage[iStage].NumTasks);
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
-      stageName := Format('Pipeline stage #%d', [iStage]);
+      stageName := Format('Pipeline stage #%d', [iStage+1]);
       if PipeStage[iStage].NumTasks > 1 then
         stageName := Format('%s worker %d', [stageName, iTask]);
       task := CreateTask(
@@ -3045,7 +3048,7 @@ procedure TOmniForkJoin<T>.StartWorkerTasks;
 begin
   if not assigned(ofjTaskPool) then begin
     //Use pipeline with one parallelized stage as a simple task pool.
-    ofjPoolInput := TOmniBlockingCollection.Create(ofjNumTasks+1);
+    ofjPoolInput := TOmniBlockingCollection.Create(ofjNumTasks);
     if ofjNumTasks > 0 then begin
       ofjTaskPool := Parallel.Pipeline
         .NumTasks(ofjNumTasks)
