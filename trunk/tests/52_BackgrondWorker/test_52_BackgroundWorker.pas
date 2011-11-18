@@ -11,6 +11,8 @@ type
   TForm16 = class(TForm)
     btnWork: TButton;
     lbLog: TListBox;
+    btnWork3: TButton;
+    procedure btnWork3Click(Sender: TObject);
     procedure btnWorkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
@@ -26,6 +28,14 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TForm16.btnWork3Click(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := 1 to 3 do
+    btnWorkClick(Sender);
+end;
 
 procedure TForm16.btnWorkClick(Sender: TObject);
 var

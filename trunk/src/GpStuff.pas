@@ -399,7 +399,7 @@ type
   TGpAutoDestroyObject = class(TInterfacedObject, IGpAutoDestroyObject)
   strict private
     FObject: TObject;
-  strict protected
+  protected
     function GetObj: TObject;
   public
     constructor Create(obj: TObject);

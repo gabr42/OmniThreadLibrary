@@ -33,4 +33,13 @@ object Form16: TForm16
     ItemHeight = 13
     TabOrder = 1
   end
+  object btnWork3: TButton
+    Left = 8
+    Top = 39
+    Width = 75
+    Height = 25
+    Caption = 'Work x3!'
+    TabOrder = 2
+    OnClick = btnWork3Click
+  end
 end
