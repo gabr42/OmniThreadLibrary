@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-15
-///   Version           : 1.25a
+///   Last modification : 2011-11-18
+///   Version           : 1.25b
 ///</para><para>
 ///   History:
+///     1.25b: 2011-11-18
+///       - Overloaded property getters in TOmniValue are not inlined on 2009/
+///         2010 because of the buggy compiler.
 ///     1.25a: 2011-11-15
 ///       - Some inlining removed because it would not work reliably.
 ///     1.25: 2011-11-08
@@ -190,9 +193,9 @@ type
              ovtObject, ovtInterface, ovtVariant, ovtWideString,
              ovtPointer, ovtDateTime, ovtException, ovtArray, ovtRecord);
     function  GetAsArray: TOmniValueContainer; inline;
-    function  GetAsArrayItem(idx: integer): TOmniValue; overload; inline;
-    function  GetAsArrayItem(const name: string): TOmniValue; overload; inline;
-    function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; inline;
+    function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsBoolean: boolean; inline;
     function  GetAsCardinal: cardinal; inline;
     function  GetAsDouble: Double;
