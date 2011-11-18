@@ -7,8 +7,13 @@
 - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
 - TOmniMessageQueue.Enqueue leaked if queue was full and value contained reference counted
   value (found by [meishier]).
+- Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off by 1 
+  (found by [meishier]).
 - New demos:
   - 49_FramedWorkers: Multiple frames each communication with own worker task.
+  - 50_OmniValueArray: http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
+  - 51_PipelineStressTest: [Anton Alisov]
+  - 52_BackgrondWorker
 
 2.2 2011-10-07
 - New features:
