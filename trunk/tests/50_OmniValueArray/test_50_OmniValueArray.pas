@@ -97,10 +97,13 @@ begin
 end;
 
 procedure TfrmOmniValueArray.btnSendHashClick(Sender: TObject);
+var
+  ov: TOmniValue;
 begin
-  FWorker.Comm.Send(MSG_HASH, TOmniValue.CreateNamed([
+  ov := TOmniValue.CreateNamed([
     'Person', 'Primoz',
-    'Location', 'at home']));
+    'Location', 'at home']);
+  FWorker.Comm.Send(MSG_HASH, ov);
 end;
 
 procedure TfrmOmniValueArray.btnSendRecordClick(Sender: TObject);
