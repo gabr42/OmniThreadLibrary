@@ -42,4 +42,13 @@ object Form16: TForm16
     TabOrder = 2
     OnClick = btnWork3Click
   end
+  object btnException: TButton
+    Left = 8
+    Top = 70
+    Width = 75
+    Height = 25
+    Caption = 'Exception'
+    TabOrder = 3
+    OnClick = btnExceptionClick
+  end
 end
