@@ -12,6 +12,8 @@ type
     btnWork: TButton;
     lbLog: TListBox;
     btnWork3: TButton;
+    btnException: TButton;
+    procedure btnExceptionClick(Sender: TObject);
     procedure btnWork3Click(Sender: TObject);
     procedure btnWorkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -28,6 +30,14 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TForm16.btnExceptionClick(Sender: TObject);
+begin
+  lbLog.ItemIndex := lbLog.Items.Add('Scheduling three work items, first will raise an exception, next two will not');
+  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(true)); // raise exception
+  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(false)); // no exception
+  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(false)); // no exception
+end;
 
 procedure TForm16.btnWork3Click(Sender: TObject);
 var
@@ -57,15 +67,36 @@ end;
 
 procedure TForm16.HandleRequestDone(const Sender: IOmniBackgroundWorker;
   const workItem: IOmniWorkItem);
+var
+  eClass: string;
+  exc   : Exception;
 begin
-  lbLog.ItemIndex := lbLog.Items.Add(Format('Work item %d returned %d',
-    [workItem.UniqueID, workItem.Result.AsInteger]));
+  if workItem.IsExceptional then begin
+    eClass := workItem.FatalException.ClassName;
+    exc := workItem.DetachException;
+    lbLog.ItemIndex := lbLog.Items.Add(Format('Exception raised in work item: %s:%s',
+      [eClass, exc.Message]));
+    FreeAndNil(exc);
+  end
+  else if workItem.Result.IsString then
+    lbLog.ItemIndex := lbLog.Items.Add(workItem.Result)
+  else
+    lbLog.ItemIndex := lbLog.Items.Add(Format('Work item %d returned %d',
+      [workItem.UniqueID, workItem.Result.AsInteger]));
 end;
 
 procedure TForm16.ProcessWorkItem(const workItem: IOmniWorkItem);
 begin
-  Sleep(workItem.Data);
-  workItem.Result := - workItem.Data.AsInteger;
+  if workItem.Data.IsBoolean then begin // exception test
+    if workItem.Data then
+      raise Exception.Create('Exception in work item')
+    else
+      workItem.Result := 'Processing complete';
+  end
+  else begin // 'sleep' test
+    Sleep(workItem.Data);
+    workItem.Result := - workItem.Data.AsInteger;
+  end;
 end;
 
 end.

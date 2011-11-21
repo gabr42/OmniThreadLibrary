@@ -1083,8 +1083,10 @@ type
   TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem)
   strict private
     FData    : TOmniValue;
-    FResult: TOmniValue;
+    FResult  : TOmniValue;
     FUniqueID: int64;
+  strict protected
+    procedure FreeException;
   protected
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
@@ -1092,6 +1094,7 @@ type
     procedure SetResult(const value: TOmniValue);
   public
     constructor Create(const data: TOmniValue; uniqueID: int64);
+    destructor Destroy; override;
     procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
@@ -3187,6 +3190,12 @@ begin
   FUniqueID := uniqueID;
 end; { TOmniWorkItem.Create }
 
+destructor TOmniWorkItem.Destroy;
+begin
+  FreeException;
+  inherited;
+end; { TOmniWorkItem.Destroy }
+
 procedure TOmniWorkItem.Cancel;
 begin
   // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.Cancel
@@ -3194,13 +3203,24 @@ end; { TOmniWorkItem.Cancel }
 
 function TOmniWorkItem.DetachException: Exception;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.DetachException
+  Result := FatalException;
+  FResult := nil;
 end; { TOmniWorkItem.DetachException }
 
 function TOmniWorkItem.FatalException: Exception;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.FatalException
+  Result := nil;
+  if IsExceptional then
+    Result := FResult.AsException;
 end; { TOmniWorkItem.FatalException }
+
+procedure TOmniWorkItem.FreeException;
+begin
+  if IsExceptional then begin
+    FResult.AsException.Free;
+    FResult := nil;
+  end;
+end; { TOmniWorkItem.FreeException }
 
 function TOmniWorkItem.GetData: TOmniValue;
 begin
@@ -3210,6 +3230,8 @@ end; { TOmniWorkItem.GetData }
 function TOmniWorkItem.GetResult: TOmniValue;
 begin
   Result := FResult;
+  if IsExceptional then
+    raise DetachException;
 end; { TOmniWorkItem.GetResult }
 
 function TOmniWorkItem.GetUniqueID: int64;
@@ -3225,8 +3247,7 @@ end; { TOmniWorkItem.IsCanceled }
 
 function TOmniWorkItem.IsExceptional: boolean;
 begin
-  Result := false;
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.IsExceptional
+  Result := FResult.IsException;
 end; { TOmniWorkItem.IsExceptional }
 
 procedure TOmniWorkItem.SetResult(const value: TOmniValue);
@@ -3262,8 +3283,13 @@ var
 begin
   for ovWorkItem in input do begin
     workItem := IOmniWorkItem(ovWorkItem.AsInterface);
-    if not workItem.IsCanceled then
-      FProcessWorkItem(workItem);
+    if not workItem.IsCanceled then begin
+      try
+        FProcessWorkItem(workItem);
+      except
+        workItem.Result := Exception(AcquireExceptionObject);
+      end;
+    end;
     if assigned(FOnRequestDone_Asy) then
       FOnRequestDone_Asy(Self, workItem);
     if assigned(FOnRequestDone) then
