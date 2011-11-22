@@ -801,13 +801,21 @@ type
   TOmniWorkItemDoneDelegate = reference to procedure (const Sender: IOmniBackgroundWorker;
     const workItem: IOmniWorkItem);
 
+  IOmniWorkItemConfig = interface
+    function  OnExecute(const aTask: TOmniBackgroundWorkerDelegate): IOmniWorkItemConfig;
+    function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+    function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+  end; { IOmniWorkItemConfig }
+
   IOmniBackgroundWorker = interface
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
-    function  Execute(const aTask: TOmniBackgroundWorkerDelegate): IOmniBackgroundWorker;
+    procedure CancelAll;
+    function  Config: IOmniWorkItemConfig;
+    function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
-    procedure Schedule(const workItem: IOmniWorkItem);
+    procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil); overload;
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
     function  Terminate(maxWait_ms: cardinal): boolean;
@@ -1080,21 +1088,39 @@ const
   MSG_WORK_ITEM_DONE = WM_USER; // used only in internal window created inside TOmniBackgroundWorker
 
 type
-  TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem)
+  IOmniWorkItemConfigEx = interface ['{42CEC5CB-404F-4868-AE81-6A13AD7E3C6B}']
+    function  GetOnExecute: TOmniBackgroundWorkerDelegate;
+    function  GetOnRequestDone: TOmniWorkItemDoneDelegate;
+    function  GetOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
+  end; { IOmniWorkItemConfigEx }
+
+  IOmniWorkItemEx = interface ['{3B48D012-CF1C-4B47-A4A0-3072A9067A3E}']
+    function  GetConfig: IOmniWorkItemConfig;
+    procedure SetConfig(const value: IOmniWorkItemConfig);
+  //
+    property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
+  end; { IOmniWorkItemEx }
+
+  TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem, IOmniWorkItemEx)
   strict private
+    FConfig  : IOmniWorkItemConfig;
     FData    : TOmniValue;
     FResult  : TOmniValue;
     FUniqueID: int64;
   strict protected
     procedure FreeException;
-  protected
+  protected //IOmniWorkItem
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
+  protected //IOmniWorkItemEx
+    function  GetConfig: IOmniWorkItemConfig;
+    procedure SetConfig(const value: IOmniWorkItemConfig);
   public
     constructor Create(const data: TOmniValue; uniqueID: int64);
     destructor Destroy; override;
+  public //IOmniWorkItem
     procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
@@ -1103,19 +1129,37 @@ type
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
     property UniqueID: int64 read GetUniqueID;
+  public  //IOmniWorkItemEx
+    property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
   end; { TOmniWorkItem }
+
+  TOmniWorkItemConfig = class(TInterfacedObject, IOmniWorkItemConfig, IOmniWorkItemConfigEx)
+  strict private
+    FOnExecute        : TOmniBackgroundWorkerDelegate;
+    FOnRequestDone    : TOmniWorkItemDoneDelegate;
+    FOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
+  public
+    constructor Create(defaults: IOmniWorkItemConfig = nil);
+  public //IOmniWorkItemConfig
+    function  OnExecute(const aTask: TOmniBackgroundWorkerDelegate): IOmniWorkItemConfig;
+    function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+    function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+  public //IOmniWorkItemConfigEx
+    function  GetOnExecute: TOmniBackgroundWorkerDelegate;
+    function  GetOnRequestDone: TOmniWorkItemDoneDelegate;
+    function  GetOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
+  end; { TOmniWorkItemConfig }
 
   TOmniBackgroundWorker = class(TInterfacedObject, IOmniBackgroundWorker)
   strict private
-    FObserver         : TOmniContainerObserver;
-    FWindow           : THandle;
+    FDefaultConfig    : IOmniWorkItemConfig;
+    FDefaultConfigEx  : IOmniWorkItemConfigEx;
     FNumTasks         : integer;
-    FOnRequestDone    : TOmniWorkItemDoneDelegate;
-    FOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
-    FProcessWorkItem  : TOmniBackgroundWorkerDelegate;
+    FObserver         : TOmniContainerObserver;
     FStopOn           : IOmniCancellationToken;
     FTaskConfig       : IOmniTaskConfig;
     FUniqueID         : IOmniCounter;
+    FWindow           : THandle;
     FWorker           : IOmniPipeline;
   strict protected
     procedure BackgroundWorker(const input, output: IOmniBlockingCollection;
@@ -1124,12 +1168,14 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+    procedure CancelAll;
+    function  Config: IOmniWorkItemConfig;
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
-    function  Execute(const aTask: TOmniBackgroundWorkerDelegate): IOmniBackgroundWorker;
+    function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
-    procedure Schedule(const workItem: IOmniWorkItem);
+    procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil);
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
     function  Terminate(maxWait_ms: cardinal): boolean;
@@ -3222,6 +3268,11 @@ begin
   end;
 end; { TOmniWorkItem.FreeException }
 
+function TOmniWorkItem.GetConfig: IOmniWorkItemConfig;
+begin
+  Result := FConfig;
+end; { TOmniWorkItem.GetConfig }
+
 function TOmniWorkItem.GetData: TOmniValue;
 begin
   Result := FData;
@@ -3250,16 +3301,74 @@ begin
   Result := FResult.IsException;
 end; { TOmniWorkItem.IsExceptional }
 
+procedure TOmniWorkItem.SetConfig(const value: IOmniWorkItemConfig);
+begin
+  FConfig := value;
+end; { TOmniWorkItem.SetConfig }
+
 procedure TOmniWorkItem.SetResult(const value: TOmniValue);
 begin
   FResult := value;
 end; { TOmniWorkItem.SetResult }
+
+{ TOmniWorkItemConfig }
+
+constructor TOmniWorkItemConfig.Create(defaults: IOmniWorkItemConfig = nil);
+var
+  defaultsEx: IOmniWorkItemConfigEx;
+begin
+  inherited Create;
+  if assigned(defaults) then begin
+    defaultsEx := defaults as IOmniWorkItemConfigEx;
+    FOnExecute := defaultsEx.GetOnExecute;
+    FOnRequestDone := defaultsEx.GetOnRequestDone;
+    FOnRequestDone_Asy := defaultsEx.GetOnRequestDone_Asy;
+  end;
+end; { TOmniWorkItemConfig.Create }
+
+function TOmniWorkItemConfig.GetOnExecute: TOmniBackgroundWorkerDelegate;
+begin
+  Result := FOnExecute;
+end; { TOmniWorkItemConfig.GetOnExecute }
+
+function TOmniWorkItemConfig.GetOnRequestDone: TOmniWorkItemDoneDelegate;
+begin
+  Result := FOnRequestDone;
+end; { TOmniWorkItemConfig.GetOnRequestDone }
+
+function TOmniWorkItemConfig.GetOnRequestDone_Asy: TOmniWorkItemDoneDelegate;
+begin
+  Result := FOnRequestDone_Asy;
+end; { TOmniWorkItemConfig.GetOnRequestDone_Asy }
+
+function TOmniWorkItemConfig.OnExecute(
+  const aTask: TOmniBackgroundWorkerDelegate): IOmniWorkItemConfig;
+begin
+  FOnExecute := aTask;
+  Result := Self;
+end; { TOmniWorkItemConfig.OnExecute }
+
+function TOmniWorkItemConfig.OnRequestDone(
+  const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+begin
+  FOnRequestDone := aTask;
+  Result := Self;
+end; { TOmniWorkItemConfig.OnRequestDone }
+
+function TOmniWorkItemConfig.OnRequestDone_Asy(
+  const aTask: TOmniWorkItemDoneDelegate): IOmniWorkItemConfig;
+begin
+  FOnRequestDone_Asy := aTask;
+  Result := Self;
+end; { TOmniWorkItemConfig.OnRequestDone_Asy }
 
 { TOmniBackgroundWorker }
 
 constructor TOmniBackgroundWorker.Create;
 begin
   inherited Create;
+  FDefaultConfig := TOmniWorkItemConfig.Create;
+  FDefaultConfigEx := (FDefaultConfig as IOmniWorkItemConfigEx);
   FUniqueID := CreateCounter;
   FNumTasks := 1;
 end; { TOmniBackgroundWorker.Create }
@@ -3275,39 +3384,51 @@ begin
   inherited;
 end; { TOmniBackgroundWorker.Destroy }
 
-procedure TOmniBackgroundWorker.BackgroundWorker(const input, output:
-  IOmniBlockingCollection; const task: IOmniTask);
+procedure TOmniBackgroundWorker.BackgroundWorker(
+  const input, output: IOmniBlockingCollection; const task: IOmniTask);
 var
+  configEx  : IOmniWorkItemConfigEx;
   ovWorkItem: TOmniValue;
   workItem  : IOmniWorkItem;
+  workItemEx: IOmniWorkItemEx;
 begin
   for ovWorkItem in input do begin
-    workItem := IOmniWorkItem(ovWorkItem.AsInterface);
+    workItem := ovWorkItem.AsInterface as IOmniWorkItem;
+    workItemEx := workItem as IOmniWorkItemEx;
+    configEx := workItemEx.Config as IOmniWorkItemConfigEx;
     if not workItem.IsCanceled then begin
       try
-        FProcessWorkItem(workItem);
+        configEx.GetOnExecute()(workItem);
       except
         workItem.Result := Exception(AcquireExceptionObject);
       end;
     end;
-    if assigned(FOnRequestDone_Asy) then
-      FOnRequestDone_Asy(Self, workItem);
-    if assigned(FOnRequestDone) then
+    if assigned(configEx.GetOnRequestDone_Asy()) then
+      configEx.GetOnRequestDone_Asy()(Self, workItem);
+    if assigned(configEx.GetOnRequestDone()) then
       output.TryAdd(workItem);
   end;
 end; { TOmniBackgroundWorker.BackgroundWorker }
+
+procedure TOmniBackgroundWorker.CancelAll;
+begin
+  // TODO -cMM: TOmniBackgroundWorker.CancelAll default body inserted
+end; { TOmniBackgroundWorker.CancelAll }
+
+function TOmniBackgroundWorker.Config: IOmniWorkItemConfig;
+begin
+  Result := TOmniWorkItemConfig.Create(FDefaultConfig);
+end; { TOmniBackgroundWorker.Config }
 
 function TOmniBackgroundWorker.Execute(const aTask: TOmniBackgroundWorkerDelegate):
   IOmniBackgroundWorker;
 begin
   Assert(FNumTasks > 0);
-  FProcessWorkItem := aTask;
+  FDefaultConfig.OnExecute(aTask);
   FWorker := Parallel.Pipeline.NumTasks(FNumTasks).Stage(BackgroundWorker, FTaskConfig);
-  if assigned(FOnRequestDone) then begin
-    FWindow := DSiAllocateHWnd(ObserverWndProc);
-    FObserver := CreateContainerWindowsMessageObserver(FWindow, MSG_WORK_ITEM_DONE, 0, 0);
-    FWorker.Output.ContainerSubject.Attach(FObserver, coiNotifyOnAllInserts);
-  end;
+  FWindow := DSiAllocateHWnd(ObserverWndProc);
+  FObserver := CreateContainerWindowsMessageObserver(FWindow, MSG_WORK_ITEM_DONE, 0, 0);
+  FWorker.Output.ContainerSubject.Attach(FObserver, coiNotifyOnAllInserts);
   FWorker.Run;
   Result := Self;
 end; { TOmniBackgroundWorker.Execute }
@@ -3321,10 +3442,13 @@ end; { TOmniBackgroundWorker.NumTasks }
 procedure TOmniBackgroundWorker.ObserverWndProc(var message: TMessage);
 var
   ovWorkItem: TOmniValue;
+  workItem  : IOmniWorkItem;
 begin
   if message.Msg = MSG_WORK_ITEM_DONE then begin
-    while FWorker.Output.TryTake(ovWorkItem) do
-      FOnRequestDone(Self, ovWorkItem.AsInterface as IOmniWorkItem);
+    while FWorker.Output.TryTake(ovWorkItem) do begin
+      workItem := ovWorkItem.AsInterface as IOmniWorkItem;
+      ((workItem as IOmniWorkItemEx).Config as IOmniWorkItemConfigEx).GetOnRequestDone()(Self, workItem);
+    end;
     message.Result := Ord(true);
   end;
 end; { TOmniBackgroundWorker.ObserverWndProc }
@@ -3332,19 +3456,24 @@ end; { TOmniBackgroundWorker.ObserverWndProc }
 function TOmniBackgroundWorker.OnRequestDone(const aTask: TOmniWorkItemDoneDelegate):
   IOmniBackgroundWorker;
 begin
-  FOnRequestDone := aTask;
+  FDefaultConfig.OnRequestDone(aTask);
   Result := Self;
 end; { TOmniBackgroundWorker.OnRequestDone }
 
 function TOmniBackgroundWorker.OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate):
   IOmniBackgroundWorker;
 begin
-  FOnRequestDone_Asy := aTask;
+  FDefaultConfig.OnRequestDone_Asy(aTask);
   Result := Self;
 end; { TOmniBackgroundWorker.OnRequestDone_Asy }
 
-procedure TOmniBackgroundWorker.Schedule(const workItem: IOmniWorkItem);
+procedure TOmniBackgroundWorker.Schedule(const workItem: IOmniWorkItem;
+  const workItemConfig: IOmniWorkItemConfig);
 begin
+  if assigned(workItemConfig) then
+    (workItem as IOmniWorkItemEx).Config := workItemConfig
+  else
+    (workItem as IOmniWorkItemEx).Config := FDefaultConfig;
   FWorker.Input.Add(workItem);
 end; { TOmniBackgroundWorker.Schedule }
 
@@ -3506,4 +3635,3 @@ begin
 end; { TOmniTaskConfig.WithLock }
 
 end.
-

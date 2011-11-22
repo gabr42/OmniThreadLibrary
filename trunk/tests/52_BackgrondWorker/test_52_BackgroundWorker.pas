@@ -13,14 +13,19 @@ type
     lbLog: TListBox;
     btnWork3: TButton;
     btnException: TButton;
+    procedure FormCreate(Sender: TObject);
     procedure btnExceptionClick(Sender: TObject);
     procedure btnWork3Click(Sender: TObject);
     procedure btnWorkClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
   private
-    FBackgroundWorker: IOmniBackgroundWorker;
-    procedure HandleRequestDone(const Sender: IOmniBackgroundWorker; const workItem: IOmniWorkItem);
-    procedure ProcessWorkItem(const workItem: IOmniWorkItem);
+    FBackgroundWorker1: IOmniBackgroundWorker;
+    FBackgroundWorker2: IOmniBackgroundWorker;
+    procedure HandleRequestDone1(const Sender: IOmniBackgroundWorker;
+      const workItem: IOmniWorkItem);
+    procedure ProcessWorkItem1(const workItem: IOmniWorkItem);
+    procedure HandleRequestDone2(const Sender: IOmniBackgroundWorker;
+      const workItem: IOmniWorkItem);
+    procedure ProcessWorkItem2(const workItem: IOmniWorkItem);
   public
   end;
 
@@ -31,12 +36,23 @@ implementation
 
 {$R *.dfm}
 
+procedure TForm16.FormCreate(Sender: TObject);
+begin
+  FBackgroundWorker1 := Parallel.BackgroundWorker
+    .Execute(ProcessWorkItem1);
+  FBackgroundWorker2 := Parallel.BackgroundWorker
+    .NumTasks(2)
+    .OnRequestDone(HandleRequestDone2)
+    .Execute(ProcessWorkItem2);
+end;
+
 procedure TForm16.btnExceptionClick(Sender: TObject);
 begin
-  lbLog.ItemIndex := lbLog.Items.Add('Scheduling three work items, first will raise an exception, next two will not');
-  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(true)); // raise exception
-  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(false)); // no exception
-  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(false)); // no exception
+  lbLog.ItemIndex := lbLog.Items.Add('Scheduling two work items, first will raise an exception, second will not');
+  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(true),
+    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1)); // raise exception
+  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(false),
+    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1)); // no exception
 end;
 
 procedure TForm16.btnWork3Click(Sender: TObject);
@@ -51,22 +67,14 @@ procedure TForm16.btnWorkClick(Sender: TObject);
 var
   workItem: IOmniWorkItem;
 begin
-  workItem := FBackgroundWorker.CreateWorkItem(1000 + 100 * Random(10) {sleep time in ms});
-  FBackgroundWorker.Schedule(workItem);
+  workItem := FBackgroundWorker2.CreateWorkItem(1000 + 100 * Random(10) {sleep time in ms});
+  FBackgroundWorker2.Schedule(workItem);
   lbLog.ItemIndex := lbLog.Items.Add(Format('Created work item %d with delay %d',
     [workItem.UniqueID, workItem.Data.AsInteger]));
 end;
 
-procedure TForm16.FormCreate(Sender: TObject);
-begin
-  FBackgroundWorker := Parallel.BackgroundWorker
-    .NumTasks(2)
-    .OnRequestDone(HandleRequestDone)
-    .Execute(ProcessWorkItem);
-end;
-
-procedure TForm16.HandleRequestDone(const Sender: IOmniBackgroundWorker;
-  const workItem: IOmniWorkItem);
+procedure TForm16.HandleRequestDone1(const Sender: IOmniBackgroundWorker; const workItem:
+  IOmniWorkItem);
 var
   eClass: string;
   exc   : Exception;
@@ -78,25 +86,29 @@ begin
       [eClass, exc.Message]));
     FreeAndNil(exc);
   end
-  else if workItem.Result.IsString then
-    lbLog.ItemIndex := lbLog.Items.Add(workItem.Result)
   else
-    lbLog.ItemIndex := lbLog.Items.Add(Format('Work item %d returned %d',
-      [workItem.UniqueID, workItem.Result.AsInteger]));
+    lbLog.ItemIndex := lbLog.Items.Add(workItem.Result)
 end;
 
-procedure TForm16.ProcessWorkItem(const workItem: IOmniWorkItem);
+procedure TForm16.HandleRequestDone2(const Sender: IOmniBackgroundWorker; const workItem:
+  IOmniWorkItem);
 begin
-  if workItem.Data.IsBoolean then begin // exception test
-    if workItem.Data then
-      raise Exception.Create('Exception in work item')
-    else
-      workItem.Result := 'Processing complete';
-  end
-  else begin // 'sleep' test
-    Sleep(workItem.Data);
-    workItem.Result := - workItem.Data.AsInteger;
-  end;
+  lbLog.ItemIndex := lbLog.Items.Add(Format('Work item %d returned %d',
+    [workItem.UniqueID, workItem.Result.AsInteger]));
+end;
+
+procedure TForm16.ProcessWorkItem1(const workItem: IOmniWorkItem);
+begin
+  if workItem.Data then
+    raise Exception.Create('Exception in work item')
+  else
+    workItem.Result := 'Processing complete';
+end;
+
+procedure TForm16.ProcessWorkItem2(const workItem: IOmniWorkItem);
+begin
+  Sleep(workItem.Data);
+  workItem.Result := - workItem.Data.AsInteger;
 end;
 
 end.

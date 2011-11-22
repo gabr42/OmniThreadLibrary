@@ -906,6 +906,7 @@ begin
   endWait_ms := DSiTimeGetTime64 + int64(WaitOnTerminate_sec) * 1000;
   while (endWait_ms > DSiTimeGetTime64) and (NumRunningStoppedThreads > 0) do begin
     ProcessMessages;
+    // TODO 1 -oPrimoz Gabrijelcic : ! what happens here during CancelAll? can the task die? !
     Sleep(10);
   end;
   for iWorker := 0 to owStoppingWorkers.Count - 1 do begin
