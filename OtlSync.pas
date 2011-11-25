@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-03-01
-///   Version           : 1.06
+///   Last modification : 2011-11-25
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2011-11-25
+///       - Implemented Atomic<T> class for atomic interface initialization.
 ///     1.06: 2011-03-01
 ///       - [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always returned False.
 ///     1.05: 2010-07-01
@@ -145,6 +147,13 @@ type
     procedure Signal;
     property Handle: THandle read GetHandle;
   end; { IOmniCancellationToken }
+
+  {$IFDEF OTL_Generics}
+  Atomic<T: IInterface> = class
+    type TInterfaceFactory = reference to function: T;
+    class function Initialize(var storage: T; factory: TInterfaceFactory): T;
+  end; { Atomic<T> }
+  {$ENDIF OTL_Generics}
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
@@ -329,10 +338,11 @@ procedure TOmniCS.Initialize;
 var
   syncIntf: IOmniCriticalSection;
 begin
-  Assert(cardinal(@ocsSync) mod 4 = 0, 'TOmniCS.Initialize: ocsSync is not 4-aligned!');
+  Assert(cardinal(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
+  Assert(cardinal(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
   if not assigned(ocsSync) then begin
     syncIntf := CreateOmniCriticalSection;
-    if InterlockedCompareExchange(PInteger(@ocsSync)^, integer(syncIntf), 0) = 0 then
+    if InterlockedCompareExchangePointer(PPointer(@ocsSync)^, pointer(syncIntf), nil) = nil then
       pointer(syncIntf) := nil;
   end;
 end; { TOmniCS.Initialize }
@@ -526,6 +536,24 @@ begin
   until false;
   orcLock.Release; 
 end; { TOmniResourceCount.TryAllocate }
+
+{$IFDEF OTL_Generics}
+{ Atomic<T> }
+
+class function Atomic<T>.Initialize(var storage: T; factory: TInterfaceFactory): T;
+var
+  tmpIntf: T;
+begin
+  if not assigned(storage) then begin
+    Assert(cardinal(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
+    Assert(cardinal(@tmpIntf) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpIntf is not properly aligned!');
+    tmpIntf := factory();
+    if InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpIntf)^, nil) = nil then
+      PPointer(@tmpIntf)^ := nil;
+  end;
+  Result := storage;
+end; { Atomic<T>.Initialize }
+{$ENDIF OTL_Generics}
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;

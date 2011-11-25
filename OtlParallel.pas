@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-16
-///   Version           : 1.22a
+///   Last modification : 2011-11-25
+///   Version           : 1.23
 ///</para><para>
 ///   History:
+///     1.23: 2011-11-25
+///       - Implemented background worker abstraction, Parallel.BackgroundWorker.
 ///     1.22a: 2011-11-16
 ///       - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off
 ///         by 1. Thanks to [meishier] for tracking the bug down.
@@ -780,16 +782,16 @@ type
   end; { IOmniParallelTask }
 
   IOmniWorkItem = interface ['{3CE2762F-B7A3-4490-BF22-2109C042EAD1}']
+    function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
   //
-    procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
-    function  IsCanceled: boolean;
     function  IsExceptional: boolean;
+    property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
     property UniqueID: int64 read GetUniqueID;
@@ -809,7 +811,8 @@ type
 
   IOmniBackgroundWorker = interface
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
-    procedure CancelAll;
+    procedure CancelAll; overload;
+    procedure CancelAll(upToUniqueID: int64); overload;
     function  Config: IOmniWorkItemConfig;
     function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
@@ -1103,13 +1106,16 @@ type
 
   TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem, IOmniWorkItemEx)
   strict private
-    FConfig  : IOmniWorkItemConfig;
-    FData    : TOmniValue;
-    FResult  : TOmniValue;
-    FUniqueID: int64;
+    FCancelAllUpToID_ref: ^TGp8AlignedInt64;
+    FCancellationToken  : IOmniCancellationToken;
+    FConfig             : IOmniWorkItemConfig;
+    FData               : TOmniValue;
+    FResult             : TOmniValue;
+    FUniqueID           : int64;
   strict protected
     procedure FreeException;
   protected //IOmniWorkItem
+    function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
     function  GetUniqueID: int64;
@@ -1118,13 +1124,12 @@ type
     function  GetConfig: IOmniWorkItemConfig;
     procedure SetConfig(const value: IOmniWorkItemConfig);
   public
-    constructor Create(const data: TOmniValue; uniqueID: int64);
-    destructor Destroy; override;
+    constructor Create(const data: TOmniValue; uniqueID: int64;
+      var cancelAllUpToID: TGp8AlignedInt64);
+    destructor  Destroy; override;
   public //IOmniWorkItem
-    procedure Cancel;
     function  DetachException: Exception;
     function  FatalException: Exception;
-    function  IsCanceled: boolean;
     function  IsExceptional: boolean;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
@@ -1152,6 +1157,7 @@ type
 
   TOmniBackgroundWorker = class(TInterfacedObject, IOmniBackgroundWorker)
   strict private
+    FCancelAllToID    : TGp8AlignedInt64;
     FDefaultConfig    : IOmniWorkItemConfig;
     FDefaultConfigEx  : IOmniWorkItemConfigEx;
     FNumTasks         : integer;
@@ -1168,7 +1174,8 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure CancelAll;
+    procedure CancelAll; overload;
+    procedure CancelAll(upToUniqueID: int64); overload;
     function  Config: IOmniWorkItemConfig;
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
     function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
@@ -3229,11 +3236,13 @@ end; { TOmniParallelTask.WaitFor }
 
 { TOmniWorkItem }
 
-constructor TOmniWorkItem.Create(const data: TOmniValue; uniqueID: int64);
+constructor TOmniWorkItem.Create(const data: TOmniValue; uniqueID: int64; var
+  cancelAllUpToID: TGp8AlignedInt64);
 begin
   inherited Create;
   FData := data;
   FUniqueID := uniqueID;
+  FCancelAllUpToID_ref := @cancelAllUpToID;
 end; { TOmniWorkItem.Create }
 
 destructor TOmniWorkItem.Destroy;
@@ -3241,11 +3250,6 @@ begin
   FreeException;
   inherited;
 end; { TOmniWorkItem.Destroy }
-
-procedure TOmniWorkItem.Cancel;
-begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.Cancel
-end; { TOmniWorkItem.Cancel }
 
 function TOmniWorkItem.DetachException: Exception;
 begin
@@ -3268,6 +3272,16 @@ begin
   end;
 end; { TOmniWorkItem.FreeException }
 
+function TOmniWorkItem.GetCancellationToken: IOmniCancellationToken;
+var
+  cancelUpToID: int64;
+begin
+  Result := Atomic<IOmniCancellationToken>.Initialize(FCancellationToken, CreateOmniCancellationToken);
+  cancelUpToID := FCancelAllUpToID_ref^.Value;
+  if (cancelUpToID > 0) and (UniqueID <= cancelUpToID) then
+    Result.Signal;
+end; { TOmniWorkItem.GetCancellationToken }
+
 function TOmniWorkItem.GetConfig: IOmniWorkItemConfig;
 begin
   Result := FConfig;
@@ -3289,12 +3303,6 @@ function TOmniWorkItem.GetUniqueID: int64;
 begin
   Result := FUniqueID;
 end; { TOmniWorkItem.GetUniqueID }
-
-function TOmniWorkItem.IsCanceled: boolean;
-begin
-  Result := false;
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TOmniWorkItem.IsCanceled
-end; { TOmniWorkItem.IsCanceled }
 
 function TOmniWorkItem.IsExceptional: boolean;
 begin
@@ -3375,7 +3383,7 @@ end; { TOmniBackgroundWorker.Create }
 
 function TOmniBackgroundWorker.CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
 begin
-  Result := TOmniWorkItem.Create(data, FUniqueID.Increment);
+  Result := TOmniWorkItem.Create(data, FUniqueID.Increment, FCancelAllToID);
 end; { TOmniBackgroundWorker.CreateWorkItem }
 
 destructor TOmniBackgroundWorker.Destroy;
@@ -3396,7 +3404,7 @@ begin
     workItem := ovWorkItem.AsInterface as IOmniWorkItem;
     workItemEx := workItem as IOmniWorkItemEx;
     configEx := workItemEx.Config as IOmniWorkItemConfigEx;
-    if not workItem.IsCanceled then begin
+    if not workItem.CancellationToken.IsSignalled then begin
       try
         configEx.GetOnExecute()(workItem);
       except
@@ -3412,7 +3420,12 @@ end; { TOmniBackgroundWorker.BackgroundWorker }
 
 procedure TOmniBackgroundWorker.CancelAll;
 begin
-  // TODO -cMM: TOmniBackgroundWorker.CancelAll default body inserted
+  CancelAll(FUniqueID.Value);
+end; { TOmniBackgroundWorker.CancelAll }
+
+procedure TOmniBackgroundWorker.CancelAll(upToUniqueID: int64);
+begin
+  FCancelAllToID.Value := upToUniqueID;
 end; { TOmniBackgroundWorker.CancelAll }
 
 function TOmniBackgroundWorker.Config: IOmniWorkItemConfig;
