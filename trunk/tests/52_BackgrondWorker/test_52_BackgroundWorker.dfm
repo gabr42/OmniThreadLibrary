@@ -51,4 +51,31 @@ object Form16: TForm16
     TabOrder = 3
     OnClick = btnExceptionClick
   end
+  object btnCancel: TButton
+    Left = 8
+    Top = 101
+    Width = 75
+    Height = 25
+    Caption = 'Cancel'
+    TabOrder = 4
+    OnClick = btnCancelClick
+  end
+  object btnCancelAll: TButton
+    Left = 8
+    Top = 132
+    Width = 75
+    Height = 25
+    Caption = 'Cancel all'
+    TabOrder = 5
+    OnClick = btnCancelAllClick
+  end
+  object btnCancel2: TButton
+    Left = 8
+    Top = 163
+    Width = 75
+    Height = 25
+    Caption = 'Cancel 2'
+    TabOrder = 6
+    OnClick = btnCancel2Click
+  end
 end

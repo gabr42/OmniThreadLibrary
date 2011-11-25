@@ -13,6 +13,12 @@ type
     lbLog: TListBox;
     btnWork3: TButton;
     btnException: TButton;
+    btnCancel: TButton;
+    btnCancelAll: TButton;
+    btnCancel2: TButton;
+    procedure btnCancel2Click(Sender: TObject);
+    procedure btnCancelAllClick(Sender: TObject);
+    procedure btnCancelClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnExceptionClick(Sender: TObject);
     procedure btnWork3Click(Sender: TObject);
@@ -26,6 +32,7 @@ type
     procedure HandleRequestDone2(const Sender: IOmniBackgroundWorker;
       const workItem: IOmniWorkItem);
     procedure ProcessWorkItem2(const workItem: IOmniWorkItem);
+    function ScheduleRandomSleep: IOmniWorkItem;
   public
   end;
 
@@ -36,10 +43,37 @@ implementation
 
 {$R *.dfm}
 
+procedure TForm16.btnCancel2Click(Sender: TObject);
+var
+  workItem: IOmniWorkItem;
+begin
+  ScheduleRandomSleep;
+  workItem := ScheduleRandomSleep;
+  ScheduleRandomSleep;
+  FBackgroundWorker2.CancelAll(workItem.UniqueID);
+end;
+
+procedure TForm16.btnCancelAllClick(Sender: TObject);
+begin
+  ScheduleRandomSleep;
+  ScheduleRandomSleep;
+  FBackgroundWorker2.CancelAll;
+  ScheduleRandomSleep;
+end;
+
+procedure TForm16.btnCancelClick(Sender: TObject);
+var
+  workItem: IOmniWorkItem;
+begin
+  ScheduleRandomSleep;
+  workItem := ScheduleRandomSleep;
+  ScheduleRandomSleep;
+  workItem.CancellationToken.Signal;
+end;
+
 procedure TForm16.FormCreate(Sender: TObject);
 begin
-  FBackgroundWorker1 := Parallel.BackgroundWorker
-    .Execute(ProcessWorkItem1);
+  FBackgroundWorker1 := Parallel.BackgroundWorker.Execute(ProcessWorkItem1);
   FBackgroundWorker2 := Parallel.BackgroundWorker
     .NumTasks(2)
     .OnRequestDone(HandleRequestDone2)
@@ -49,10 +83,10 @@ end;
 procedure TForm16.btnExceptionClick(Sender: TObject);
 begin
   lbLog.ItemIndex := lbLog.Items.Add('Scheduling two work items, first will raise an exception, second will not');
-  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(true),
-    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1)); // raise exception
-  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(false),
-    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1)); // no exception
+  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(true),  // raise exception
+    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1));
+  FBackgroundWorker1.Schedule(FBackgroundWorker1.CreateWorkItem(false), // no exception
+    FBackgroundWorker1.Config.OnRequestDone(HandleRequestDone1));
 end;
 
 procedure TForm16.btnWork3Click(Sender: TObject);
@@ -64,13 +98,8 @@ begin
 end;
 
 procedure TForm16.btnWorkClick(Sender: TObject);
-var
-  workItem: IOmniWorkItem;
 begin
-  workItem := FBackgroundWorker2.CreateWorkItem(1000 + 100 * Random(10) {sleep time in ms});
-  FBackgroundWorker2.Schedule(workItem);
-  lbLog.ItemIndex := lbLog.Items.Add(Format('Created work item %d with delay %d',
-    [workItem.UniqueID, workItem.Data.AsInteger]));
+  ScheduleRandomSleep;
 end;
 
 procedure TForm16.HandleRequestDone1(const Sender: IOmniBackgroundWorker; const workItem:
@@ -106,9 +135,25 @@ begin
 end;
 
 procedure TForm16.ProcessWorkItem2(const workItem: IOmniWorkItem);
+var
+  i: integer;
 begin
-  Sleep(workItem.Data);
+  for i := 1 to workItem.Data.AsInteger div 100 do begin
+    Sleep(100);
+    if workItem.CancellationToken.IsSignalled then begin
+      workItem.Result := -42;
+      Exit;
+    end;
+  end;
   workItem.Result := - workItem.Data.AsInteger;
+end;
+
+function TForm16.ScheduleRandomSleep: IOmniWorkItem;
+begin
+  Result := FBackgroundWorker2.CreateWorkItem(1000 + 100 * Random(10) {sleep time in ms});
+  FBackgroundWorker2.Schedule(Result);
+  lbLog.ItemIndex := lbLog.Items.Add(Format('Created work item %d with delay %d',
+    [Result.UniqueID, Result.Data.AsInteger]));
 end;
 
 end.
