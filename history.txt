@@ -1,3 +1,4 @@
+- Atomic<T>, Locked<T>.
 - TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
 - Added a class which can wrap any record - TOmniRecordWrapper<T>.
 - Added an interface which can wrap any object and destroy it when the
