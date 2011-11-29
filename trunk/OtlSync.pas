@@ -149,9 +149,9 @@ type
   end; { IOmniCancellationToken }
 
   {$IFDEF OTL_Generics}
-  Atomic<T: IInterface> = class
-    type TInterfaceFactory = reference to function: T;
-    class function Initialize(var storage: T; factory: TInterfaceFactory): T;
+  Atomic<T> = class
+    type TFactory = reference to function: T;
+    class function Initialize(var storage: T; factory: TFactory): T;
   end; { Atomic<T> }
   {$ENDIF OTL_Generics}
 
@@ -540,11 +540,12 @@ end; { TOmniResourceCount.TryAllocate }
 {$IFDEF OTL_Generics}
 { Atomic<T> }
 
-class function Atomic<T>.Initialize(var storage: T; factory: TInterfaceFactory): T;
+class function Atomic<T>.Initialize(var storage: T; factory: TFactory): T;
 var
   tmpIntf: T;
 begin
-  if not assigned(storage) then begin
+  Assert(SizeOf(T) = SizeOf(pointer));
+  if not assigned(PPointer(@storage)^) then begin
     Assert(cardinal(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
     Assert(cardinal(@tmpIntf) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpIntf is not properly aligned!');
     tmpIntf := factory();
