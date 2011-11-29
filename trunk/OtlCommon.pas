@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-18
-///   Version           : 1.25b
+///   Last modification : 2011-11-29
+///   Version           : 1.25c
 ///</para><para>
 ///   History:
+///     1.25c: 2011-11-29
+///       - Reference count handling in TOmniValue was ignoring array and record wrappers.
 ///     1.25b: 2011-11-18
 ///       - Overloaded property getters in TOmniValue are not inlined on 2009/
 ///         2010 because of the buggy compiler.
@@ -1934,19 +1936,19 @@ end; { TOmniValue.SetAsWideString }
 
 procedure TOmniValue._AddRef;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then
     ovIntf._AddRef;
 end; { TOmniValue._AddRef }
 
 procedure TOmniValue._Release;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then
     ovIntf._Release;
 end; { TOmniValue._Release }
 
 procedure TOmniValue._ReleaseAndClear;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString] then begin
+  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then begin
     ovIntf._Release;
     RawZero;
   end;

@@ -250,13 +250,13 @@ type
     constructor Create(numItems: cardinal; canGrow: boolean = false); overload;
     constructor Create(numBuckets, numItems: cardinal; canGrow: boolean = false); overload;
     destructor  Destroy; override;
-    procedure Add(const key: string; value: IInterface);               {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure Add(const key: string; const value: IInterface);         {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Count: integer;                                          {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  Find(const key: string; var value: IInterface): boolean; {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     procedure ForEach(enumerator: TGpStringInterfaceHashEnumMethod);
     function  GetEnumerator: TGpStringInterfaceHashEnumerator;         {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     function  HasKey(const key: string): boolean;                      {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    procedure Update(const key: string; value: IInterface);
+    procedure Update(const key: string; const value: IInterface);
     function  ValueOf(const key: string): IInterface;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property Interfaces[const key: string]: IInterface read GetInterfaces write SetInterfaces; default;
   end; { TGpStringInterfaceHash }
@@ -887,7 +887,7 @@ begin
   inherited;
 end; { TGpStringInterfaceHash.Destroy }
 
-procedure TGpStringInterfaceHash.Add(const key: string; value: IInterface);
+procedure TGpStringInterfaceHash.Add(const key: string; const value: IInterface);
 begin
   sihHash.Add(key, int64(NativeInt(value)));
   value._AddRef;
@@ -903,10 +903,8 @@ var
   intValue: int64;
 begin
   Result := sihHash.Find(key, intValue);
-  if Result then begin
+  if Result then
     value := IInterface(NativeInt(intValue));
-    value._AddRef;
-  end;
 end; { TGpStringInterfaceHash.Find }
 
 procedure TGpStringInterfaceHash.ForEach(enumerator: TGpStringInterfaceHashEnumMethod);
@@ -931,7 +929,8 @@ var
 begin
   if sihHash.Find(key, value) then begin
     NativeInt(Result) := value;
-    Result._AddRef;
+    if assigned(Result) then
+      Result._AddRef;
   end
   else
     Result := nil;
@@ -954,7 +953,7 @@ begin
   Update(key, value);
 end; { TGpStringInterfaceHash.SetInterfaces }
 
-procedure TGpStringInterfaceHash.Update(const key: string; value: IInterface);
+procedure TGpStringInterfaceHash.Update(const key: string; const value: IInterface);
 var
   bucket: cardinal;
   item  : PGpHashItem;
