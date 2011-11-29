@@ -38,10 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-11-25
-///   Version           : 1.07
+///   Last modification : 2011-11-29
+///   Version           : 1.07a
 ///</para><para>
 ///   History:
+///     1.08: 2011-11-29
+///       - Implements Locked<T> class.
+///     1.07a: 2011-11-29
+///       - Compiles with D2007.
 ///     1.07: 2011-11-25
 ///       - Implemented Atomic<T> class for atomic interface initialization.
 ///     1.06: 2011-03-01
@@ -154,7 +158,7 @@ type
     class function Initialize(var storage: T; factory: TFactory): T;
   end; { Atomic<T> }
 
-  Locked<T: class> = record
+  Locked<T> = record
   strict private
     FLock    : IOmniCriticalSection;
     FValue   : T;
@@ -166,7 +170,7 @@ type
     procedure Acquire;
     procedure Release;
     property Value: T read GetValue;
-  end;
+  end; { Locked<T> }
   {$ENDIF OTL_Generics}
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
@@ -333,6 +337,15 @@ function GetCPUTimeStamp: int64;
 asm
   rdtsc
 end; { GetCPUTimeStamp }
+
+{$IFNDEF OTL_HasInterlockedCompareExchangePointer}
+function InterlockedCompareExchangePointer(var destination: pointer; exchange: pointer;
+  comparand: pointer): pointer;
+begin
+  Result := pointer(InterlockedCompareExchange(integer(destination), integer(exchange),
+    integer(comparand)));
+end; { InterlockedCompareExchangePointer }
+{$ENDIF OTL_HasInterlockedCompareExchangePointer}
 
 { TOmniCS }
 
@@ -574,7 +587,7 @@ end; { Atomic<T>.Initialize }
 constructor Locked<T>.Create(const value: T);
 begin
   FLock := CreateOmniCriticalSection;
-  FValue := T;
+  FValue := value;
 end; { Locked<T>.Create }
 
 class operator Locked<T>.Implicit(const value: Locked<T>): T;
@@ -601,7 +614,6 @@ procedure Locked<T>.Release;
 begin
   FLock.Release;
 end; { Locked<T>.Release }
-
 {$ENDIF OTL_Generics}
 
 initialization
