@@ -160,11 +160,15 @@ type
 
   Locked<T> = record
   strict private
-    FLock    : IOmniCriticalSection;
-    FValue   : T;
+    FLock : TOmniCS;
+    FValue: T;
+  strict private
+    FInitialized: boolean;
     function GetValue: T;
   public
+    type TFactory = reference to function: T;
     constructor Create(const value: T);
+    function Initialize(factory: TFactory): T;
     class operator Implicit(const value: Locked<T>): T;
     class operator Implicit(const value: T): Locked<T>;
     procedure Acquire;
@@ -586,9 +590,23 @@ end; { Atomic<T>.Initialize }
 
 constructor Locked<T>.Create(const value: T);
 begin
-  FLock := CreateOmniCriticalSection;
   FValue := value;
+  FInitialized := true;
 end; { Locked<T>.Create }
+
+function Locked<T>.Initialize(factory: TFactory): T;
+begin
+  if not FInitialized then begin
+    Acquire;
+    try
+      if not FInitialized then begin
+        FValue := factory();
+        FInitialized := true;
+      end;
+    finally Release; end;
+  end;
+  Result := FValue;
+end; { Locked }
 
 class operator Locked<T>.Implicit(const value: Locked<T>): T;
 begin
