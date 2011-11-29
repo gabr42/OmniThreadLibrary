@@ -153,6 +153,20 @@ type
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T;
   end; { Atomic<T> }
+
+  Locked<T: class> = record
+  strict private
+    FLock    : IOmniCriticalSection;
+    FValue   : T;
+    function GetValue: T;
+  public
+    constructor Create(const value: T);
+    class operator Implicit(const value: Locked<T>): T;
+    class operator Implicit(const value: T): Locked<T>;
+    procedure Acquire;
+    procedure Release;
+    property Value: T read GetValue;
+  end;
   {$ENDIF OTL_Generics}
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
@@ -554,6 +568,40 @@ begin
   end;
   Result := storage;
 end; { Atomic<T>.Initialize }
+
+{ Locked<T> }
+
+constructor Locked<T>.Create(const value: T);
+begin
+  FLock := CreateOmniCriticalSection;
+  FValue := T;
+end; { Locked<T>.Create }
+
+class operator Locked<T>.Implicit(const value: Locked<T>): T;
+begin
+  Result := value.Value;
+end; { Locked<T>.Implicit }
+
+class operator Locked<T>.Implicit(const value: T): Locked<T>;
+begin
+  Result := Locked<T>.Create(value);
+end; { Locked<T>.Implicit }
+
+procedure Locked<T>.Acquire;
+begin
+  FLock.Acquire;
+end; { Locked<T>.Acquire }
+
+function Locked<T>.GetValue: T;
+begin
+  Result := FValue;
+end; { Locked<T>.GetValue }
+
+procedure Locked<T>.Release;
+begin
+  FLock.Release;
+end; { Locked<T>.Release }
+
 {$ENDIF OTL_Generics}
 
 initialization
