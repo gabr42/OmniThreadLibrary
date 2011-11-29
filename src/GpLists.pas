@@ -30,10 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2011-11-25
-   Version           : 1.54
+   Last modification : 2011-11-29
+   Version           : 1.55
 </pre>*)(*
    History:
+     1.55: 2011-11-29
+       - Each list implements class function CreateInterface which creates corresponding
+         interface-implementing object.
      1.54: 2011-11-25
        - TGpIntegerObjectList implements IGpIntegerObjectList.
        - TGpIntegerObjectList<T> implements IGpIntegerObjectList<T>.
@@ -488,15 +491,19 @@ type
     procedure SetText(const value: string); virtual;
   public
     constructor Create; overload;
-    constructor Create(elements: array of integer); overload;
+    constructor Create(const elements: array of integer); overload;
     destructor  Destroy; override;
+    class function CreateInterface: IGpIntegerList; overload;
+    class function CreateInterface(const elements: array of integer): IGpIntegerList; overload;
     function  Add(item: integer): integer; virtual;
     procedure Append(const elements: array of integer); overload;
     procedure Append(list: TGpIntegerList); overload; virtual;
+    procedure Append(list: IGpIntegerList); overload; virtual;
     function  AsDelimitedText(const delimiter: string): string; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  AsHexText(const delimiter: string = ''): string;
     procedure Assign(const elements: array of integer); overload;
     procedure Assign(list: TGpIntegerList); overload; virtual;
+    procedure Assign(list: IGpIntegerList); overload; virtual;
     procedure Clear; virtual;
     function  Contains(item: integer): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure CustomSort(sortMethod: TGpIntegerListSortCompare);
@@ -685,17 +692,23 @@ type
     procedure SetText(const value: string); virtual;
   public
     constructor Create; overload;
-    constructor Create(elements: array of int64); overload;
+    constructor Create(const elements: array of int64); overload;
+    class function CreateInterface: IGpInt64List; overload;
+    class function CreateInterface(const elements: array of int64): TGpInt64List; overload;
     destructor  Destroy; override;
     function  Add(item: int64): integer; virtual;
     procedure Append(const elements: array of int64); overload;
-    procedure Append(list: TGpInt64List); overload; virtual;
     procedure Append(list: TGpIntegerList); overload; virtual;
+    procedure Append(list: IGpIntegerList); overload; virtual;
+    procedure Append(list: TGpInt64List); overload; virtual;
+    procedure Append(list: IGpInt64List); overload; virtual;
     function  AsDelimitedText(const delimiter: string): string; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  AsHexText(const delimiter: string = ''): string;
     procedure Assign(const elements: array of int64); overload;
     procedure Assign(list: TGpInt64List); overload; virtual;
+    procedure Assign(list: IGpInt64List); overload; virtual;
     procedure Assign(list: TGpIntegerList); overload; virtual;
+    procedure Assign(list: IGpIntegerList); overload; virtual;
     procedure Clear; virtual;
     function  Contains(item: int64): boolean;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer); virtual;
@@ -797,6 +810,7 @@ type
   public
     constructor Create(ownsObjects: boolean = true);
     destructor  Destroy; override;
+    class function CreateInterface(ownsObjects: boolean = true): IGpIntegerObjectList;
     function  Add(item: integer): integer; override;
     function  AddObject(item: integer; obj: TObject): integer; virtual;
     procedure Clear; override;
@@ -843,6 +857,7 @@ type
     function  GetObject(idxObject: integer): T; reintroduce;
     procedure SetObject(idxObject: integer; const value: T); reintroduce;
   public
+    class function CreateInterface(ownsObjects: boolean = true): IGpIntegerObjectList<T>;
     function  AddObject(item: integer; obj: T): integer; reintroduce; inline;
     function  EnsureObject(item: integer): integer; overload; inline;
     function  EnsureObject(item: integer; obj: T): integer; reintroduce; overload; inline;
@@ -879,6 +894,7 @@ type
     procedure SetItemCounter(item: integer; const value: integer);
   public
     constructor Create; reintroduce;
+    class function CreateInterface: IGpCountedIntegerList;
     function  Add(item, count: integer): integer; reintroduce;
     function  Ensure(item, count: integer): integer; reintroduce;
     function  Fetch(item: integer): integer;
@@ -955,6 +971,7 @@ type
   public
     constructor Create(ownsObjects: boolean = true);
     destructor  Destroy; override;
+    class function CreateInterface(ownsObjects: boolean = true): IGpInt64ObjectList;
     function  Add(item: int64): integer; override;
     function  AddObject(item: int64; obj: TObject): integer; virtual;
     procedure Clear; override;
@@ -1003,6 +1020,7 @@ type
     procedure SetCounter(idx: integer; const value: int64); virtual;
     procedure SetItemCounter(item: int64; const value: int64);
   public
+    class function CreateInterface(ownsObjects: boolean = true): IGpCountedInt64List;
     function  Add(item: int64; count: int64): integer; reintroduce;
     function  Ensure(item: int64; count: int64): integer; reintroduce;
     function  Fetch(item: integer): int64;
@@ -1162,12 +1180,15 @@ type
   public
     constructor Create; overload;
     destructor  Destroy; override;
+    class function CreateInterface: IGpGUIDList;
     function  Add(item: TGUID): integer; virtual;
     procedure Append(const elements: array of TGUID); overload;
     procedure Append(list: TGpGUIDList); overload; virtual;
+    procedure Append(list: IGpGUIDList); overload; virtual;
     function  AsDelimitedText(const delimiter: string): string; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Assign(const elements: array of TGUID); overload;
     procedure Assign(list: TGpGUIDList); overload; virtual;
+    procedure Assign(list: IGpGUIDList); overload; virtual;
     procedure Clear; virtual;
     function  Contains(const item: TGUID): boolean; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure CustomSort(sortMethod: TGpGUIDListSortCompare); virtual;
@@ -1248,6 +1269,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+    class function CreateInterface: IGpInterfaceList<T>;
     function  Add(const item: T): integer;          {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Contains(const item: T): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -1376,8 +1398,9 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+    class function CreateInterface: IGpTMethodList;
     function  Add(item: TMethod): integer;          {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Assign(list: TGpTMethodList);         {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Assign(list: TGpTMethodList); overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Contains(item: TMethod): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer);                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -1448,6 +1471,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+    class function CreateInterface: IGpClassList;
     function  Add(aClass: TClass): integer;
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer);                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -1552,6 +1576,8 @@ type
     constructor Create(bufferSize: integer; ownsObjects: boolean = true;
       multithreaded: boolean = false);
     destructor  Destroy; override;
+    class function CreateInterface(bufferSize: integer; ownsObjects: boolean = true;
+      multithreaded: boolean = false): IGpObjectRingBuffer;
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Count: integer;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Dequeue: TObject;                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -1612,6 +1638,7 @@ type
   public
     constructor Create(ownsObjects: boolean = true); overload;
     destructor  Destroy; override;
+    class function CreateInterface(ownsObjects: boolean = true): IGpObjectMap;
     procedure Clear; virtual;
     function  Count: integer;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Exists(value: TObject; compareFunc: TGpObjectMapCompare): boolean;
@@ -1651,6 +1678,7 @@ type
   public
     constructor Create(ownsObjects: boolean = true); overload;
     destructor  Destroy; override;
+    class function CreateInterface(ownsObjects: boolean = true): IGpObjectObjectMap;
     procedure Clear; virtual;
     function  Exists(value: TObject; compareFunc: TGpObjectMapCompare): boolean; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Find(value: TObject; compareFunc: TGpObjectMapCompare; var item1,
@@ -1737,6 +1765,7 @@ type
   public
     constructor Create(multithreaded: boolean = false); overload;
     destructor  Destroy; override;
+    class function CreateInterface(multithreaded: boolean = false): IGpDoublyLinkedList;
     function  Count: integer;                               {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure FreeAll;
     {$IFDEF GpLists_Enumerators}
@@ -1829,6 +1858,7 @@ type
   public
     constructor Create(maxSize: integer; threadSafe: boolean);
     destructor  Destroy; override;
+    class function CreateInterface(maxSize: integer; threadSafe: boolean): IFifoBuffer;
     function  FifoPlace: integer;
     function  Read(data: TStream; maxSize: integer = MaxInt): integer;
     function  Write(const buf; bufSize: integer): boolean; overload;
@@ -2088,7 +2118,7 @@ begin
   ilNotificationHandlers := TGpTMethodList.Create;
 end; { TGpIntegerList.Create }
 
-constructor TGpIntegerList.Create(elements: array of integer);
+constructor TGpIntegerList.Create(const elements: array of integer);
 begin
   Create;
   Assign(elements);
@@ -2135,6 +2165,15 @@ begin
     Add(list[iItem]);
 end; { TGpIntegerList.Append }
 
+procedure TGpIntegerList.Append(list: IGpIntegerList);
+var
+  iItem: integer;
+begin
+  SetCapacity(Count + list.Count);
+  for iItem := 0 to list.Count-1 do
+    Add(list[iItem]);
+end; { TGpIntegerList.Append }
+
 function TGpIntegerList.AsDelimitedText(const delimiter: string): string;
 begin
   Result := GetAsDelimitedText(delimiter, false);
@@ -2169,6 +2208,12 @@ begin
   Append(list);
 end; { TGpIntegerList.Assign }
 
+procedure TGpIntegerList.Assign(list: IGpIntegerList);
+begin
+  Clear;
+  Append(list);
+end; { TGpIntegerList.Assign }
+
 procedure TGpIntegerList.Clear;
 begin
   ilList.Clear;
@@ -2178,6 +2223,16 @@ function TGpIntegerList.Contains(item: integer): boolean;
 begin
   Result := (IndexOf(item) >= 0);
 end; { TGpIntegerList.Contains }
+
+class function TGpIntegerList.CreateInterface: IGpIntegerList;
+begin
+  Result := TGpIntegerList.Create;
+end; { TGpIntegerList.CreateInterface }
+
+class function TGpIntegerList.CreateInterface(const elements: array of integer): IGpIntegerList;
+begin
+  Result := TGpIntegerList.Create(elements);
+end; { TGpIntegerList.CreateInterface }
 
 procedure TGpIntegerList.CustomSort(sortMethod: TGpIntegerListSortCompare);
 begin
@@ -2691,7 +2746,7 @@ begin
   ilNotificationHandlers := TGpTMethodList.Create;
 end; { TGpInt64List.Create }
 
-constructor TGpInt64List.Create(elements: array of int64);
+constructor TGpInt64List.Create(const elements: array of int64);
 begin
   Create;
   Assign(elements);
@@ -2730,7 +2785,7 @@ begin
     Add(elements[iElement]);
 end; { TGpInt64List.Append }
 
-procedure TGpInt64List.Append(list: TGpInt64List);
+procedure TGpInt64List.Append(list: IGpIntegerList);
 var
   iItem: integer;
 begin
@@ -2740,6 +2795,24 @@ begin
 end; { TGpInt64List.Append }
 
 procedure TGpInt64List.Append(list: TGpIntegerList);
+var
+  iItem: integer;
+begin
+  SetCapacity(Count + list.Count);
+  for iItem := 0 to list.Count-1 do
+    Add(list[iItem]);
+end; { TGpInt64List.Append }
+
+procedure TGpInt64List.Append(list: IGpInt64List);
+var
+  iItem: integer;
+begin
+  SetCapacity(Count + list.Count);
+  for iItem := 0 to list.Count-1 do
+    Add(list[iItem]);
+end; { TGpInt64List.Append }
+
+procedure TGpInt64List.Append(list: TGpInt64List);
 var
   iItem: integer;
 begin
@@ -2782,7 +2855,19 @@ begin
   Append(list);
 end; { TGpInt64List.Assign }
 
+procedure TGpInt64List.Assign(list: IGpInt64List);
+begin
+  Clear;
+  Append(list);
+end; { TGpInt64List.Assign }
+
 procedure TGpInt64List.Assign(list: TGpIntegerList);
+begin
+  Clear;
+  Append(list);
+end; { TGpInt64List.Assign }
+
+procedure TGpInt64List.Assign(list: IGpIntegerList);
 begin
   Clear;
   Append(list);
@@ -2797,6 +2882,16 @@ function TGpInt64List.Contains(item: int64): boolean;
 begin
   Result := (IndexOf(item) >= 0);
 end; { TGpInt64List.Contains }
+
+class function TGpInt64List.CreateInterface: IGpInt64List;
+begin
+  Result := TGpInt64List.Create;
+end; { TGpInt64List.CreateInterface }
+
+class function TGpInt64List.CreateInterface(const elements: array of int64): TGpInt64List;
+begin
+  Result := TGpInt64List.Create(elements);
+end; { TGpInt64List.CreateInterface }
 
 procedure TGpInt64List.CustomSort(sortMethod: TGpInt64ListSortCompare);
 begin
@@ -3282,6 +3377,12 @@ begin
   iolObjects.Clear;
 end; { TGpIntegerObjectList.Clear }
 
+class function TGpIntegerObjectList.CreateInterface(ownsObjects: boolean):
+  IGpIntegerObjectList;
+begin
+  Result := TGpIntegerObjectList.Create(ownsObjects);
+end; { TGpIntegerObjectList.CreateInterface }
+
 procedure TGpIntegerObjectList.Delete(idx: integer);
 begin
   inherited;
@@ -3461,15 +3562,21 @@ end; { TGpIntegerObjectList.WalkKV }
 {$IFDEF Unicode}
 { TGpIntegerObjectList<T> }
 
+class function TGpIntegerObjectList<T>.CreateInterface(ownsObjects: boolean = true):
+  IGpIntegerObjectList<T>;
+begin
+  Result := TGpIntegerObjectList<T>.Create(ownsObjects);
+end; { TGpIntegerObjectList<T>.CreateInterface }
+
 function TGpIntegerObjectList<T>.AddObject(item: integer; obj: T): integer;
 begin
   Result := inherited AddObject(item, obj);
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.AddObject }
 
 function TGpIntegerObjectList<T>.EnsureObject(item: integer; obj: T): integer;
 begin
   Result := inherited EnsureObject(item, obj);
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.EnsureObject }
 
 function TGpIntegerObjectList<T>.EnsureObject(item: integer): integer;
 begin
@@ -3479,27 +3586,27 @@ end; { TGpIntegerObjectList<T>.EnsureObject }
 function TGpIntegerObjectList<T>.ExtractObject(idxObject: integer): T;
 begin
   Result := T(inherited ExtractObject(idxObject));
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.ExtractObject }
 
 function TGpIntegerObjectList<T>.FetchObject(item: integer): T;
 begin
   Result := T(inherited FetchObject(item));
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.FetchObject }
 
 function TGpIntegerObjectList<T>.GetObject(idxObject: integer): T;
 begin
   Result := T(inherited GetObject(idxObject));
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.GetObject }
 
 procedure TGpIntegerObjectList<T>.InsertObject(idx, item: integer; obj: T);
 begin
   inherited InsertObject(idx, item, obj);
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.InsertObject }
 
 procedure TGpIntegerObjectList<T>.SetObject(idxObject: integer; const value: T);
 begin
   inherited SetObject(idxObject, value);
-end; { TGpIntegerObjectList<T> }
+end; { TGpIntegerObjectList<T>.SetObject }
 
 {$ENDIF Unicode}
 
@@ -3544,6 +3651,11 @@ function TGpCountedIntegerList.Add(item, count: integer): integer;
 begin
   Result := inherited AddObject(item, TObject(count));
 end; { TGpCountedIntegerList.Add }
+
+class function TGpCountedIntegerList.CreateInterface: IGpCountedIntegerList;
+begin
+  Result := TGpCountedIntegerList.Create;
+end; { TGpCountedIntegerList.CreateInterface }
 
 function TGpCountedIntegerList.Ensure(item, count: integer): integer;
 begin
@@ -3691,6 +3803,12 @@ begin
   inherited;
   iolObjects.Clear;
 end; { TGpInt64ObjectList.Clear }
+
+class function TGpInt64ObjectList.CreateInterface(ownsObjects: boolean):
+  IGpInt64ObjectList;
+begin
+  Result := TGpInt64ObjectList.Create(ownsObjects);
+end; { TGpInt64ObjectList.CreateInterface }
 
 procedure TGpInt64ObjectList.Delete(idx: integer);
 begin
@@ -3909,6 +4027,12 @@ begin
   Result := inherited AddObject(item, TGpInt64.Create(count));
 end; { TGpCountedInt64List.Add }
 
+class function TGpCountedInt64List.CreateInterface(ownsObjects: boolean):
+  IGpCountedInt64List;
+begin
+  Result := TGpCountedInt64List.Create(ownsObjects);
+end; { TGpCountedInt64List.CreateInterface }
+
 function TGpCountedInt64List.Ensure(item: int64; count: int64): integer;
 begin
   Result := IndexOf(item);
@@ -4123,6 +4247,15 @@ begin
     Add(list[iItem]);
 end; { TGpGUIDList.Append }
 
+procedure TGpGUIDList.Append(list: IGpGUIDList);
+var
+  iItem: integer;
+begin
+  SetCapacity(Count + list.Count);
+  for iItem := 0 to list.Count-1 do
+    Add(list[iItem]);
+end; { TGpGUIDList.Append }
+
 function TGpGUIDList.AsDelimitedText(const delimiter: string): string;
 begin
   Result := GetAsDelimitedText(delimiter, false);
@@ -4140,6 +4273,12 @@ begin
   Append(list);
 end; { TGpGUIDList.Assign }
 
+procedure TGpGUIDList.Assign(list: IGpGUIDList);
+begin
+  Clear;
+  Append(list);
+end; { TGpGUIDList.Assign }
+
 procedure TGpGUIDList.Clear;
 begin
   glList.Clear;
@@ -4149,6 +4288,11 @@ function TGpGUIDList.Contains(const item: TGUID): boolean;
 begin
   Result := (IndexOf(item) >= 0);
 end; { TGpGUIDList.Contains }
+
+class function TGpGUIDList.CreateInterface: IGpGUIDList;
+begin
+  Result := TGpGUIDList.Create;
+end; { TGpGUIDList.CreateInterface }
 
 procedure TGpGUIDList.CustomSort(sortMethod: TGpGUIDListSortCompare);
 begin
@@ -4507,6 +4651,11 @@ begin
   Result := (IndexOf(item) >= 0);
 end; { TGpInterfaceList<T>.Contains }
 
+class function TGpInterfaceList<T>.CreateInterface: IGpInterfaceList<T>;
+begin
+  Result := TGpInterfaceList<T>.Create;
+end; { TGpInterfaceList<T>.CreateInterface }
+
 procedure TGpInterfaceList<T>.Delete(idx: integer);
 begin
   Items[idx] := nil;
@@ -4828,6 +4977,11 @@ begin
   Result := (IndexOf(item) >= 0);
 end; { TGpTMethodList.Contains }
 
+class function TGpTMethodList.CreateInterface: IGpTMethodList;
+begin
+  Result := TGpTMethodList.Create;
+end; { TGpTMethodList.CreateInterface }
+
 procedure TGpTMethodList.Delete(idx: integer);
 begin
   mlCode.Delete(idx);
@@ -4974,6 +5128,11 @@ begin
     Result := clClasses.AddObject(aClass.ClassName, TObject(aClass));
 end; { TGpClassList.Add }
 
+class function TGpClassList.CreateInterface: IGpClassList;
+begin
+  Result := TGpClassList.Create;
+end; { TGpClassList.CreateInterface }
+
 function TGpClassList.CreateObject(sClass: string): TObject;
 var
   idxClass: integer;
@@ -5100,6 +5259,12 @@ function TGpObjectRingBuffer.Count: integer;
 begin
   Result := orbCount;
 end; { TGpObjectRingBuffer.Count }
+
+class function TGpObjectRingBuffer.CreateInterface(bufferSize: integer;
+  ownsObjects: boolean; multithreaded: boolean): IGpObjectRingBuffer;
+begin
+  Result := TGpObjectRingBuffer.Create(bufferSize, ownsObjects, multithreaded);
+end; { TGpObjectRingBuffer.CreateInterface }
 
 {:Removes tail object from the buffer, without destroying it. Returns nil if
   buffer is empty.
@@ -5313,6 +5478,11 @@ begin
   Result := omList.Count;
 end; { TGpObjectMap.Count }
 
+class function TGpObjectMap.CreateInterface(ownsObjects: boolean): IGpObjectMap;
+begin
+  Result := TGpObjectMap.Create(ownsObjects);
+end; { TGpObjectMap.CreateInterface }
+
 function TGpObjectMap.Exists(value: TObject; compareFunc: TGpObjectMapCompare): boolean;
 var
   item: TObject;
@@ -5398,6 +5568,12 @@ procedure TGpObjectObjectMap.Clear;
 begin
   oomMap.Clear;
 end; { TGpObjectObjectMap.Clear }
+
+class function TGpObjectObjectMap.CreateInterface(ownsObjects: boolean):
+  IGpObjectObjectMap;
+begin
+  Result := TGpObjectObjectMap.Create(ownsObjects);
+end; { TGpObjectObjectMap.CreateInterface }
 
 function TGpObjectObjectMap.Exists(value: TObject; compareFunc: TGpObjectMapCompare): boolean;
 var
@@ -5585,6 +5761,12 @@ function TGpDoublyLinkedList.Count: integer;
 begin
   Result := dllCount;
 end; { TGpDoublyLinkedList.Count }
+
+class function TGpDoublyLinkedList.CreateInterface(multithreaded: boolean):
+  IGpDoublyLinkedList;
+begin
+  Result := TGpDoublyLinkedList.Create(multithreaded);
+end; { TGpDoublyLinkedList.CreateInterface }
 
 {:Destroy all elements of the list.
   @since   2005-06-02
@@ -5816,6 +5998,12 @@ begin
   Inc(FCurrentSize, block.Size);
   Assert(FCurrentSize <= FMaxSize);
 end; { TFifoBuffer.AddBlock }
+
+class function TFifoBuffer.CreateInterface(maxSize: integer; threadSafe: boolean):
+  IFifoBuffer;
+begin
+  Result := TFifoBuffer.Create(maxSize, threadSafe);
+end; { TFifoBuffer.CreateInterface }
 
 function TFifoBuffer.FifoPlace: integer;
 begin
