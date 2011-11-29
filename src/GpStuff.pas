@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2011-11-05
-   Version           : 1.27
+   Last modification : 2011-11-22
+   Version           : 1.28
 </pre>*)(*
    History:
+     1.28: 2011-11-22
+       - Implemented IGpTraceable.LogReferences.
      1.27: 2011-11-05
        - Implemented IGpAutoDestroyObject.
      1.26: 2011-01-28
@@ -171,24 +173,33 @@ type
 type
   IGpTraceable = interface(IInterface)
     ['{EA2316AC-B5FA-45EA-86E0-9016CD51C336}']
+    function  GetLogReferences: boolean; stdcall;
     function  GetTraceReferences: boolean; stdcall;
     procedure SetTraceReferences(const value: boolean); stdcall;
+    procedure SetLogReferences(const value: boolean); stdcall;
+  //
     function  _AddRef: integer; stdcall;
     function  _Release: integer; stdcall;
     function  GetRefCount: integer; stdcall;
+    property LogReferences: boolean read GetLogReferences write SetLogReferences;
     property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
   end; { IGpTraceable }
 
   TGpTraceable = class(TInterfacedObject, IGpTraceable)
   private
+    gtLogRef  : boolean;
     gtTraceRef: boolean;
+  protected
+    function  GetLogReferences: boolean; stdcall;
+    function  GetRefCount: integer; stdcall;
+    function  GetTraceReferences: boolean; stdcall;
+    procedure SetLogReferences(const value: boolean); stdcall;
+    procedure SetTraceReferences(const value: boolean); stdcall;
   public
     destructor  Destroy; override;
     function  _AddRef: integer; stdcall;
     function  _Release: integer; stdcall;
-    function  GetRefCount: integer; stdcall;
-    function  GetTraceReferences: boolean; stdcall;
-    procedure SetTraceReferences(const value: boolean); stdcall;
+    property LogReferences: boolean read GetLogReferences write SetLogReferences;
     property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
   end; { TGpTraceable }
 
@@ -1017,10 +1028,17 @@ end; { EnumList }
 
 destructor TGpTraceable.Destroy;
 begin
+  if gtLogRef then
+    OutputDebugString(PChar(Format('TGpTraceable.Destroy: [%s]', [ClassName])));
   if gtTraceRef then
     asm int 3; end;
   inherited;
 end; { TGpTraceable.Destroy }
+
+function TGpTraceable.GetLogReferences: boolean;
+begin
+  Result := gtLogRef;
+end; { TGpTraceable.GetLogReferences }
 
 function TGpTraceable.GetRefCount: integer;
 begin
@@ -1032,6 +1050,11 @@ begin
   Result := gtTraceRef;
 end; { TGpTraceable.GetTraceReferences }
 
+procedure TGpTraceable.SetLogReferences(const value: boolean);
+begin
+  gtLogRef := value;
+end; { TGpTraceable.SetLogReferences }
+
 procedure TGpTraceable.SetTraceReferences(const value: boolean);
 begin
   gtTraceRef := value;
@@ -1040,6 +1063,8 @@ end; { TGpTraceable.SetTraceReferences }
 function TGpTraceable._AddRef: integer;
 begin
   Result := inherited _AddRef;
+  if gtLogRef then
+    OutputDebugString(PChar(Format('TGpTraceable._AddRef: [%s] %d', [ClassName, Result])));
   if gtTraceRef then
     asm int 3; end;
 end; { TGpTraceable._AddRef }
@@ -1049,6 +1074,8 @@ begin
   if gtTraceRef then
     asm int 3; end;
   Result := inherited _Release;
+  if gtLogRef then
+    OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [ClassName, Result])));
 end; { TGpTraceable._Release }
 
 { TGpDisableHandler }
