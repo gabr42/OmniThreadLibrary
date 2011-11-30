@@ -153,7 +153,7 @@ type
   end; { IOmniCancellationToken }
 
   {$IFDEF OTL_Generics}
-  Atomic<T: IInterface> = class
+  Atomic<T> = class
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T;
   end; { Atomic<T> }
@@ -202,7 +202,8 @@ implementation
 
 uses
   Windows,
-  SysUtils;
+  SysUtils,
+  TypInfo;
 
 type
   TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
@@ -573,15 +574,22 @@ end; { TOmniResourceCount.TryAllocate }
 
 class function Atomic<T>.Initialize(var storage: T; factory: TFactory): T;
 var
-  tmpIntf: T;
+  tmpT: T;
 begin
-  Assert(SizeOf(T) = SizeOf(pointer));
   if not assigned(PPointer(@storage)^) then begin
     Assert(cardinal(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
-    Assert(cardinal(@tmpIntf) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpIntf is not properly aligned!');
-    tmpIntf := factory();
-    if InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpIntf)^, nil) = nil then
-      PPointer(@tmpIntf)^ := nil;
+    Assert(cardinal(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
+    tmpT := factory();
+    if InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil) = nil then begin
+      case PTypeInfo(TypeInfo(T))^.Kind of
+        tkInterface:
+          PPointer(@tmpT)^ := nil;
+        tkClass:
+          TObject(tmpT).Free;
+        else
+          raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+      end;
+    end;
   end;
   Result := storage;
 end; { Atomic<T>.Initialize }
