@@ -153,7 +153,7 @@ type
   end; { IOmniCancellationToken }
 
   {$IFDEF OTL_Generics}
-  Atomic<T> = class
+  Atomic<T: IInterface> = class
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T;
   end; { Atomic<T> }
