@@ -38,10 +38,13 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-11-29
-///   Version           : 1.07a
+///   Last modification : 2011-12-01
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2011-12-01
+///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
+///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
 ///     1.08: 2011-11-29
 ///       - Implements Locked<T> class.
 ///     1.07a: 2011-11-29
@@ -83,6 +86,11 @@ uses
   GpStuff;
 
 type
+   TFixedCriticalSection = class(TCriticalSection)
+   strict private
+     FDummy: array [0..95] of byte;
+   end; { TFixedCriticalSection }
+
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
     procedure Acquire;
     procedure Release;
@@ -388,7 +396,7 @@ end; { TOmniCS.Release }
 
 constructor TOmniCriticalSection.Create;
 begin
-  ocsCritSect := TCriticalSection.Create;
+  ocsCritSect := TFixedCriticalSection.Create;
 end; { TOmniCriticalSection.Create }
 
 destructor TOmniCriticalSection.Destroy;
