@@ -45,6 +45,8 @@
 ///     1.09: 2011-12-01
 ///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
 ///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
+///       - Implemented IOmniCriticalSection.LockCount and TOmniCS.LockCount.
+///       - Locked<T>.GetValue raises exception if critical section's LockCount is 0.
 ///     1.08: 2011-11-29
 ///       - Implements Locked<T> class.
 ///     1.07a: 2011-11-29
@@ -87,26 +89,31 @@ uses
 
 type
    TFixedCriticalSection = class(TCriticalSection)
-   strict private
+   strict protected
      FDummy: array [0..95] of byte;
    end; { TFixedCriticalSection }
 
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
+    function  GetLockCount: integer;
+    //
     procedure Acquire;
     procedure Release;
     function  GetSyncObj: TSynchroObject;
+    property LockCount: integer read GetLockCount;
   end; { IOmniCriticalSection }
 
   ///<summary>Simple critical section wrapper. Critical section is automatically
   ///    initialised on first use.</summary>
   TOmniCS = record
   strict private
-    ocsSync: IOmniCriticalSection;
+    ocsLockCount: integer;
+    ocsSync     : IOmniCriticalSection;
     function  GetSyncObj: TSynchroObject;
   public
     procedure Initialize;
     procedure Acquire; inline;
     procedure Release; inline;
+    property LockCount: integer read ocsLockCount;
     property SyncObj: TSynchroObject read GetSyncObj;
   end; { TOmniCS }
 
@@ -171,17 +178,20 @@ type
     FLock : TOmniCS;
     FValue: T;
   strict private
+    FLockCount  : integer;
     FInitialized: boolean;
-    function GetValue: T;
+    function  GetValue: T; inline;
+    function GetUnsafe: T; inline;
   public
     type TFactory = reference to function: T;
     constructor Create(const value: T);
     function Initialize(factory: TFactory): T;
-    class operator Implicit(const value: Locked<T>): T;
-    class operator Implicit(const value: T): Locked<T>;
-    procedure Acquire;
-    procedure Release;
+    class operator Implicit(const value: Locked<T>): T; inline;
+    class operator Implicit(const value: T): Locked<T>; inline;
+    procedure Acquire; inline;
+    procedure Release; inline;
     property Value: T read GetValue;
+    property Unsafe: T read GetUnsafe;
   end; { Locked<T> }
   {$ENDIF OTL_Generics}
 
@@ -216,11 +226,13 @@ uses
 type
   TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
   strict private
-    ocsCritSect: TSynchroObject;
+    ocsCritSect : TSynchroObject;
+    ocsLockCount: integer;
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Acquire; inline;
+    function  GetLockCount: integer;
     function  GetSyncObj: TSynchroObject;
     procedure Release; inline;
   end; { TOmniCriticalSection }
@@ -366,6 +378,7 @@ procedure TOmniCS.Acquire;
 begin
   Initialize;
   ocsSync.Acquire;
+  Inc(ocsLockCount);
 end; { TOmniCS.Acquire }
 
 function TOmniCS.GetSyncObj: TSynchroObject;
@@ -390,6 +403,7 @@ end; { TOmniCS.Initialize }
 procedure TOmniCS.Release;
 begin
   ocsSync.Release;
+  Dec(ocsLockCount);
 end; { TOmniCS.Release }
 
 { TOmniCriticalSection }
@@ -407,7 +421,13 @@ end; { TOmniCriticalSection.Destroy }
 procedure TOmniCriticalSection.Acquire;
 begin
   ocsCritSect.Acquire;
+  Inc(ocsLockCount);
 end; { TOmniCriticalSection.Acquire }
+
+function TOmniCriticalSection.GetLockCount: integer;
+begin
+  Result := ocsLockCount;
+end; { TOmniCriticalSection.GetLockCount }
 
 function TOmniCriticalSection.GetSyncObj: TSynchroObject;
 begin
@@ -417,6 +437,7 @@ end; { TOmniCriticalSection.GetSyncObj }
 procedure TOmniCriticalSection.Release;
 begin
   ocsCritSect.Release;
+  Dec(ocsLockCount);
 end; { TOmniCriticalSection.Release }
 
 { TOmniCancellationToken }
@@ -608,6 +629,7 @@ constructor Locked<T>.Create(const value: T);
 begin
   FValue := value;
   FInitialized := true;
+  FLockCount := 0;
 end; { Locked<T>.Create }
 
 function Locked<T>.Initialize(factory: TFactory): T;
@@ -622,7 +644,7 @@ begin
     finally Release; end;
   end;
   Result := FValue;
-end; { Locked }
+end; { Locked<T>.Initialize }
 
 class operator Locked<T>.Implicit(const value: Locked<T>): T;
 begin
@@ -639,8 +661,14 @@ begin
   FLock.Acquire;
 end; { Locked<T>.Acquire }
 
+function Locked<T>.GetUnsafe: T;
+begin
+  Result := FValue;
+end; { Locked<T>.GetUnsafe }
+
 function Locked<T>.GetValue: T;
 begin
+  Assert(FLock.LockCount > 0, 'Locked<T>.GetValue: Not locked');
   Result := FValue;
 end; { Locked<T>.GetValue }
 
