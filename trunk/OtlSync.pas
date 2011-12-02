@@ -46,6 +46,7 @@
 ///       - Locked<class> by default takes ownership of the object and frees it when
 ///         Locked<> goes out of scope. You can change this by calling
 ///         Locked<T>.Create(obj, false). To free the object manually, call Locked<T>.Free.
+///       - Atomic<class>.Initialize was broken.
 ///     1.09: 2011-12-01
 ///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
 ///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
@@ -619,11 +620,19 @@ begin
       case PTypeInfo(TypeInfo(T))^.Kind of
         tkInterface:
           PPointer(@tmpT)^ := nil;
+        tkClass: ;
+        else
+          raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+      end; //case
+    end
+    else begin
+      case PTypeInfo(TypeInfo(T))^.Kind of
+        tkInterface: ;
         tkClass:
           TObject(PPointer(@tmpT)^).Free;
         else
           raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-      end;
+      end; //case
     end;
   end;
   Result := storage;
