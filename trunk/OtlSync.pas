@@ -47,6 +47,7 @@
 ///         Locked<> goes out of scope. You can change this by calling
 ///         Locked<T>.Create(obj, false). To free the object manually, call Locked<T>.Free.
 ///       - Atomic<class>.Initialize was broken.
+///       - Implemented Atomic<class>.Initialize(object) and Locked<class>.Initialize.
 ///     1.09: 2011-12-01
 ///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
 ///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
@@ -175,7 +176,8 @@ type
   {$IFDEF OTL_Generics}
   Atomic<T> = class
     type TFactory = reference to function: T;
-    class function Initialize(var storage: T; factory: TFactory): T;
+    class function Initialize(var storage: T; factory: TFactory): T; overload;
+    class function Initialize(var storage: T): T; overload;
   end; { Atomic<T> }
 
   Locked<T> = record
@@ -194,7 +196,8 @@ type
     constructor Create(const value: T; ownsObject: boolean = true);
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
-    function  Initialize(factory: TFactory): T;
+    function  Initialize(factory: TFactory): T; overload;
+    function  Initialize: T; overload;
     procedure Acquire; inline;
     procedure Release; inline;
     procedure Free; inline;
@@ -638,6 +641,19 @@ begin
   Result := storage;
 end; { Atomic<T>.Initialize }
 
+class function Atomic<T>.Initialize(var storage: T): T;
+begin
+  if not assigned(PPointer(@storage)^) then begin
+    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+    Result := Atomic<T>.Initialize(storage,
+      function: T
+      begin
+        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
+      end);
+  end;
+end; { Atomic<T>.Initialize }
+
 { Locked<T> }
 
 constructor Locked<T>.Create(const value: T; ownsObject: boolean);
@@ -649,20 +665,6 @@ begin
   FInitialized := true;
   FLockCount := 0;
 end; { Locked<T>.Create }
-
-function Locked<T>.Initialize(factory: TFactory): T;
-begin
-  if not FInitialized then begin
-    Acquire;
-    try
-      if not FInitialized then begin
-        FValue := factory();
-        FInitialized := true;
-      end;
-    finally Release; end;
-  end;
-  Result := FValue;
-end; { Locked<T>.Initialize }
 
 class operator Locked<T>.Implicit(const value: Locked<T>): T;
 begin
@@ -699,6 +701,33 @@ begin
   Assert(FLock.LockCount > 0, 'Locked<T>.GetValue: Not locked');
   Result := FValue;
 end; { Locked<T>.GetValue }
+
+function Locked<T>.Initialize(factory: TFactory): T;
+begin
+  if not FInitialized then begin
+    Acquire;
+    try
+      if not FInitialized then begin
+        FValue := factory();
+        FInitialized := true;
+      end;
+    finally Release; end;
+  end;
+  Result := FValue;
+end; { Locked<T>.Initialize }
+
+function Locked<T>.Initialize: T;
+begin
+  if not FInitialized then begin
+    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+      raise Exception.Create('Locked<T>.Initialize: Unsupported type');
+    Result := Initialize(
+      function: T
+      begin
+        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
+      end);
+  end;
+end; { Locked<T>.Initialize: }
 
 procedure Locked<T>.Release;
 begin
