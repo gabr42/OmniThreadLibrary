@@ -54,13 +54,13 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 
-{$IF CompilerVersion >= 20}
+{$IF CompilerVersion >= 20} //D2009
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
   {$DEFINE OTL_HasInterlockedCompareExchangePointer}
 {$IFEND}
 
-{$IF CompilerVersion >= 21}
+{$IF CompilerVersion >= 21} //D2010
   {$DEFINE OTL_ERTTI}
   {$DEFINE OTL_DeprecatedResume}
   {$DEFINE OTL_KnowsParamCount}
@@ -68,10 +68,10 @@
   {$DEFINE OTL_HasArrayOfT}
 {$IFEND}
 
-{$IF CompilerVersion >= 22}
+{$IF CompilerVersion >= 22} //DXE
   {$DEFINE OTL_TOmniValueImplicitDateTime}
 {$IFEND}
 
-{$IF CompilerVersion >= 23}
+{$IF CompilerVersion >= 23} //DXE2
   {$DEFINE OTL_Supports64Bit}
 {$IFEND}

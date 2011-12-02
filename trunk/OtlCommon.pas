@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-29
-///   Version           : 1.25c
+///   Last modification : 2011-12-02
+///   Version           : 1.25d
 ///</para><para>
 ///   History:
+///     1.25d: 2011-12-02
+///       - Removed compilation hint "Private symbol 'GetAsArrayItem' declared but never used".
 ///     1.25c: 2011-11-29
 ///       - Reference count handling in TOmniValue was ignoring array and record wrappers.
 ///     1.25b: 2011-11-18
@@ -228,6 +230,13 @@ type
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
+  private
+    {$REGION 'Documentation'}
+    ///	<summary>Most of the code in this method never executes. It is just here so that
+    ///	stupid "Private symbol 'GetAsArrayItem' declared but never used" compilation hint
+    /// is not shown.</summary>
+    {$ENDREGION}
+    class procedure _RemoveWarnings; inline; static;
   public
     constructor Create(const values: array of const);
     constructor CreateNamed(const values: array of const);
@@ -1813,6 +1822,18 @@ begin
   ovType := ovtNull;
 end; { TOmniValue.RawZero }
 
+class procedure TOmniValue._RemoveWarnings;
+var
+  a : integer;
+  ov: TOmniValue;
+begin
+  a := 0;
+  if a = (a + 1) then begin
+    ov := ov.GetAsArrayItem('');
+    ov := ov.GetAsArrayItem(ov);
+  end;
+end; { TOmniValue._RemoveWarnings }
+
 procedure TOmniValue.SetAsBoolean(const value: boolean);
 begin
   PByte(RawData)^ := Ord(value);
@@ -2593,4 +2614,5 @@ initialization
   {$IFDEF OTL_HasTkPointer}
   TOmniValue_DataSize[tkPointer] := SizeOf(pointer);
   {$ENDIF OTL_HasTkPointer}
+  TOmniValue._RemoveWarnings;
 end.

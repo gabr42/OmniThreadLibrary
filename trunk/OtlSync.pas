@@ -38,10 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-12-01
-///   Version           : 1.09
+///   Last modification : 2011-12-02
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2011-12-02
+///       - Locked<class> by default takes ownership of the object and frees it when
+///         Locked<> goes out of scope. You can change this by calling
+///         Locked<T>.Create(obj, false). To free the object manually, call Locked<T>.Free.
 ///     1.09: 2011-12-01
 ///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
 ///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
@@ -174,24 +178,26 @@ type
   end; { Atomic<T> }
 
   Locked<T> = record
+  strict private // keep those aligned!
+    FLock     : TOmniCS;
+    FValue    : T;
   strict private
-    FLock : TOmniCS;
-    FValue: T;
-  strict private
-    FLockCount  : integer;
     FInitialized: boolean;
+    FLifecycle  : IInterface;
+    FLockCount  : integer;
+    FOwnsObject : boolean;
+    procedure Clear; inline;
     function  GetValue: T; inline;
-    function GetUnsafe: T; inline;
   public
     type TFactory = reference to function: T;
-    constructor Create(const value: T);
-    function Initialize(factory: TFactory): T;
+    constructor Create(const value: T; ownsObject: boolean = true);
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
+    function  Initialize(factory: TFactory): T;
     procedure Acquire; inline;
     procedure Release; inline;
+    procedure Free; inline;
     property Value: T read GetValue;
-    property Unsafe: T read GetUnsafe;
   end; { Locked<T> }
   {$ENDIF OTL_Generics}
 
@@ -614,7 +620,7 @@ begin
         tkInterface:
           PPointer(@tmpT)^ := nil;
         tkClass:
-          TObject(tmpT).Free;
+          TObject(PPointer(@tmpT)^).Free;
         else
           raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
       end;
@@ -625,9 +631,12 @@ end; { Atomic<T>.Initialize }
 
 { Locked<T> }
 
-constructor Locked<T>.Create(const value: T);
+constructor Locked<T>.Create(const value: T; ownsObject: boolean);
 begin
+  Clear;
   FValue := value;
+  if ownsObject and (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
+    FLifecycle := AutoDestroyObject(TObject(PPointer(@value)^));
   FInitialized := true;
   FLockCount := 0;
 end; { Locked<T>.Create }
@@ -661,10 +670,20 @@ begin
   FLock.Acquire;
 end; { Locked<T>.Acquire }
 
-function Locked<T>.GetUnsafe: T;
+procedure Locked<T>.Clear;
 begin
-  Result := FValue;
-end; { Locked<T>.GetUnsafe }
+  FLifecycle := nil;
+  FInitialized := false;
+  FValue := Default(T);
+  FOwnsObject := false;
+end; { Locked }
+
+procedure Locked<T>.Free;
+begin
+  if (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
+    TObject(PPointer(@FValue)^).Free;
+  Clear;
+end; { Locked<T>.Free }
 
 function Locked<T>.GetValue: T;
 begin
@@ -676,6 +695,7 @@ procedure Locked<T>.Release;
 begin
   FLock.Release;
 end; { Locked<T>.Release }
+
 {$ENDIF OTL_Generics}
 
 initialization
