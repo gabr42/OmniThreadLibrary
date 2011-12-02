@@ -48,6 +48,9 @@
 ///         Locked<T>.Create(obj, false). To free the object manually, call Locked<T>.Free.
 ///       - Atomic<class>.Initialize was broken.
 ///       - Implemented Atomic<class>.Initialize(object) and Locked<class>.Initialize.
+///       - Implemented Mfence.
+///       - Locked<T>.Initialize creates memory barrier after storing newly created
+///         resource into shared variable.
 ///     1.09: 2011-12-01
 ///       - IOmniCriticalSection implements TFixedCriticalSection (as suggested by Eric
 ///         Grange in http://delphitools.info/2011/11/30/fixing-tcriticalsection/).
@@ -220,6 +223,8 @@ procedure Move64(var Source, Destination); overload;
 procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload; 
 procedure Move128(var Source, Destination);
 
+procedure MFence;
+
 function GetThreadId: cardinal;
 function GetCPUTimeStamp: int64;
 
@@ -380,7 +385,13 @@ begin
   Result := pointer(InterlockedCompareExchange(integer(destination), integer(exchange),
     integer(comparand)));
 end; { InterlockedCompareExchangePointer }
+
 {$ENDIF OTL_HasInterlockedCompareExchangePointer}
+
+procedure MFence; assembler;
+asm
+  mfence
+end; { MFence }
 
 { TOmniCS }
 
@@ -702,6 +713,7 @@ begin
   Result := FValue;
 end; { Locked<T>.GetValue }
 
+{$INLINE OFF}
 function Locked<T>.Initialize(factory: TFactory): T;
 begin
   if not FInitialized then begin
@@ -709,12 +721,14 @@ begin
     try
       if not FInitialized then begin
         FValue := factory();
+        MFence;
         FInitialized := true;
       end;
     finally Release; end;
   end;
   Result := FValue;
 end; { Locked<T>.Initialize }
+{$INLINE ON}
 
 function Locked<T>.Initialize: T;
 begin
