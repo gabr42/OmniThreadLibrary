@@ -30,10 +30,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2011-11-29
-   Version           : 1.55
+   Last modification : 2011-12-02
+   Version           : 1.56
 </pre>*)(*
    History:
+     1.56: 2011-12-02
+       - TGpIntegerObjectList<T> and TGpInterfaceList<T> are disabled in D2009
+         due to the limitations of the compiler.
+       - Fixed TGpIntegerObjectList<T>.Ensure(integer).
+       - TGpInterfaceList<T> compiles with D2010.
      1.55: 2011-11-29
        - Each list implements class function CreateInterface which creates corresponding
          interface-implementing object.
@@ -247,6 +252,9 @@ interface
     {$DEFINE GpLists_Inline}
     {$DEFINE GpLists_TStringsHelper}
     {$DEFINE GpLists_Enumerators}
+  {$IFEND}
+  {$IF CompilerVersion <= 20} //D2009
+    {$DEFINE GpLists_LimitedGenerics}
   {$IFEND}
 {$ENDIF}
 
@@ -836,6 +844,7 @@ type
   end; { TGpIntegerObjectList }
 
   {$IFDEF Unicode}
+  {$IFNDEF GpLists_LimitedGenerics}
   IGpIntegerObjectList<T> = interface
     function  GetObject(idxObject: integer): T;
     procedure SetObject(idxObject: integer; const value: T);
@@ -866,6 +875,7 @@ type
     procedure InsertObject(idx: integer; item: integer; obj: T); reintroduce; inline;
     property Objects[idxObject: integer]: T read GetObject write SetObject;
   end; { TGpIntegerObjectList }
+  {$ENDIF GpLists_LimitedGenerics}
   {$ENDIF Unicode}
 
   IGpCountedIntegerList = interface ['{DE728A7B-AE89-4F38-A052-6FEB943A00E0}']
@@ -1224,6 +1234,7 @@ type
   end; { TGpGUIDList }
 
   {$IFDEF Unicode}
+  {$IFNDEF GpLists_LimitedGenerics}
   IGpInterfaceListEnumerator<T: IInterface> = interface
     function  GetCurrent: T;
     function  MoveNext: boolean;
@@ -1287,6 +1298,7 @@ type
     property Count: integer read GetCount write SetCount;
     property Items[idx: integer]: T read GetItem write SetItem; default;
   end; { TGpInterfaceList<T> }
+  {$ENDIF GpLists_LimitedGenerics}
   {$ENDIF Unicode}
 
   {$IFDEF GpLists_TStringsHelper}
@@ -3560,6 +3572,7 @@ end; { TGpIntegerObjectList.WalkKV }
 {$ENDIF GpLists_Enumerators}
 
 {$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
 { TGpIntegerObjectList<T> }
 
 class function TGpIntegerObjectList<T>.CreateInterface(ownsObjects: boolean = true):
@@ -3575,7 +3588,7 @@ end; { TGpIntegerObjectList<T>.AddObject }
 
 function TGpIntegerObjectList<T>.EnsureObject(item: integer; obj: T): integer;
 begin
-  Result := inherited EnsureObject(item, obj);
+  Result := inherited EnsureObject(item, TObject(PPointer(@obj)^));
 end; { TGpIntegerObjectList<T>.EnsureObject }
 
 function TGpIntegerObjectList<T>.EnsureObject(item: integer): integer;
@@ -3607,6 +3620,7 @@ procedure TGpIntegerObjectList<T>.SetObject(idxObject: integer; const value: T);
 begin
   inherited SetObject(idxObject, value);
 end; { TGpIntegerObjectList<T>.SetObject }
+{$ENDIF GpLists_LimitedGenerics}
 
 {$ENDIF Unicode}
 
@@ -4622,6 +4636,7 @@ end; { TGpGUIDList.Walk }
 {$IFDEF GpLists_TStringsHelper}
 
 {$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
 { TGpInterfaceList<T> }
 
 constructor TGpInterfaceList<T>.Create;
@@ -4658,7 +4673,7 @@ end; { TGpInterfaceList<T>.CreateInterface }
 
 procedure TGpInterfaceList<T>.Delete(idx: integer);
 begin
-  Items[idx] := nil;
+  Items[idx] := Default(T);
   ilList.Delete(idx);
 end; { TGpInterfaceList<T>.Delete }
 
@@ -4742,6 +4757,7 @@ procedure TGpInterfaceList<T>.SetItem(idx: integer; const value: T);
 begin
   ilList[idx] := value;
 end; { TGpInterfaceList<T>.SetItem }
+{$ENDIF GpLists_LimitedGenerics}
 {$ENDIF Unicode}
 
 { TGpStringsHelperWalkKVEnumerator }
