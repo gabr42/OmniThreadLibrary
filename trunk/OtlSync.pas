@@ -624,30 +624,24 @@ end; { TOmniResourceCount.TryAllocate }
 
 class function Atomic<T>.Initialize(var storage: T; factory: TFactory): T;
 var
-  tmpT: T;
+  interlockRes: pointer;
+  tmpT        : T;
 begin
   if not assigned(PPointer(@storage)^) then begin
     Assert(cardinal(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
     Assert(cardinal(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
     tmpT := factory();
-    if InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil) = nil then begin
-      case PTypeInfo(TypeInfo(T))^.Kind of
-        tkInterface:
+    interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
+    case PTypeInfo(TypeInfo(T))^.Kind of
+      tkInterface:
+        if interlockRes = nil then
           PPointer(@tmpT)^ := nil;
-        tkClass: ;
-        else
-          raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-      end; //case
-    end
-    else begin
-      case PTypeInfo(TypeInfo(T))^.Kind of
-        tkInterface: ;
-        tkClass:
+      tkClass:
+        if interlockRes <> nil then
           TObject(PPointer(@tmpT)^).Free;
-        else
-          raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-      end; //case
-    end;
+      else
+        raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+    end; //case
   end;
   Result := storage;
 end; { Atomic<T>.Initialize }
@@ -721,7 +715,7 @@ begin
     try
       if not FInitialized then begin
         FValue := factory();
-        MFence;
+        //MFence; // not needed on x86 and x64, see comments to http://www.thedelphigeek.com/2011/12/on-optimistic-and-pessimistic.html
         FInitialized := true;
       end;
     finally Release; end;
