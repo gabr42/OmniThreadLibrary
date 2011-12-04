@@ -180,7 +180,7 @@ type
   Atomic<T> = class
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T; overload;
-    class function Initialize(var storage: T): T; overload;
+//    class function Initialize(var storage: T): T; overload;
   end; { Atomic<T> }
 
   Locked<T> = record
@@ -200,7 +200,7 @@ type
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
     function  Initialize(factory: TFactory): T; overload;
-    function  Initialize: T; overload;
+//    function  Initialize: T; overload;
     procedure Acquire; inline;
     procedure Release; inline;
     procedure Free; inline;
@@ -646,18 +646,18 @@ begin
   Result := storage;
 end; { Atomic<T>.Initialize }
 
-class function Atomic<T>.Initialize(var storage: T): T;
-begin
-  if not assigned(PPointer(@storage)^) then begin
-    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
-      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-    Result := Atomic<T>.Initialize(storage,
-      function: T
-      begin
-        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
-      end);
-  end;
-end; { Atomic<T>.Initialize }
+//class function Atomic<T>.Initialize(var storage: T): T;
+//begin
+//  if not assigned(PPointer(@storage)^) then begin
+//    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+//      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+//    Result := Atomic<T>.Initialize(storage,
+//      function: T
+//      begin
+//        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
+//      end);
+//  end;
+//end; { Atomic<T>.Initialize }
 
 { Locked<T> }
 
@@ -707,7 +707,6 @@ begin
   Result := FValue;
 end; { Locked<T>.GetValue }
 
-{$INLINE OFF}
 function Locked<T>.Initialize(factory: TFactory): T;
 begin
   if not FInitialized then begin
@@ -722,20 +721,19 @@ begin
   end;
   Result := FValue;
 end; { Locked<T>.Initialize }
-{$INLINE ON}
 
-function Locked<T>.Initialize: T;
-begin
-  if not FInitialized then begin
-    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
-      raise Exception.Create('Locked<T>.Initialize: Unsupported type');
-    Result := Initialize(
-      function: T
-      begin
-        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
-      end);
-  end;
-end; { Locked<T>.Initialize: }
+//function Locked<T>.Initialize: T;
+//begin
+//  if not FInitialized then begin
+//    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+//      raise Exception.Create('Locked<T>.Initialize: Unsupported type');
+//    Result := Initialize(
+//      function: T
+//      begin
+//        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
+//      end);
+//  end;
+//end; { Locked<T>.Initialize: }
 
 procedure Locked<T>.Release;
 begin
