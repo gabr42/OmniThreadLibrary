@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-11-25
-///   Version           : 1.23
+///   Last modification : 2011-12-09
+///   Version           : 1.23a
 ///</para><para>
 ///   History:
+///     1.23a: 2011-12-09
+///       - Removed unused global variable GPipelinePool.
 ///     1.23: 2011-11-25
 ///       - Implemented background worker abstraction, Parallel.BackgroundWorker.
 ///     1.22a: 2011-11-16
@@ -1191,7 +1193,6 @@ type
 
 var
   GParallelPool: IOmniThreadPool;
-  GPipelinePool: IOmniThreadPool;
 
 { exports }
 

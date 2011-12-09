@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-12-02
-///   Version           : 1.10
+///   Last modification : 2011-12-09
+///   Version           : 1.10a
 ///</para><para>
 ///   History:
+///     1.10a: 2011-12-09
+///       - TOmniCS reuses LockCount from owned TOmniCriticalSection.
 ///     1.10: 2011-12-02
 ///       - Locked<class> by default takes ownership of the object and frees it when
 ///         Locked<> goes out of scope. You can change this by calling
@@ -115,14 +117,15 @@ type
   ///    initialised on first use.</summary>
   TOmniCS = record
   strict private
-    ocsLockCount: integer;
-    ocsSync     : IOmniCriticalSection;
-    function  GetSyncObj: TSynchroObject;
+    ocsSync: IOmniCriticalSection;
+  private
+    function  GetLockCount: integer; inline;
+    function  GetSyncObj: TSynchroObject; inline;
   public
     procedure Initialize;
     procedure Acquire; inline;
     procedure Release; inline;
-    property LockCount: integer read ocsLockCount;
+    property LockCount: integer read GetLockCount;
     property SyncObj: TSynchroObject read GetSyncObj;
   end; { TOmniCS }
 
@@ -399,8 +402,12 @@ procedure TOmniCS.Acquire;
 begin
   Initialize;
   ocsSync.Acquire;
-  Inc(ocsLockCount);
 end; { TOmniCS.Acquire }
+
+function TOmniCS.GetLockCount: integer;
+begin
+  Result := ocsSync.LockCount;
+end; { TOmniCS.GetLockCount }
 
 function TOmniCS.GetSyncObj: TSynchroObject;
 begin
@@ -424,7 +431,6 @@ end; { TOmniCS.Initialize }
 procedure TOmniCS.Release;
 begin
   ocsSync.Release;
-  Dec(ocsLockCount);
 end; { TOmniCS.Release }
 
 { TOmniCriticalSection }
