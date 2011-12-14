@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-08
-///   Version           : 1.31b
+///   Last modification : 2011-12-14
+///   Version           : 1.31c
 ///</para><para>
 ///   History:
+///     1.31c: 2011-12-14
+///       - Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate.
+///       - Under some circumstances ProcessMessage failed to rebuild handle
+///         array before waiting which could cause 'invalid handle' error.
 ///     1.31b: 2011-11-08
 ///       - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
 ///     1.31a: 2011-11-06
@@ -629,6 +633,7 @@ type
       WaitFlags         : DWORD;
       WaitHandles       : array [0..63] of THandle;
       WaitWakeMask      : DWORD;
+      function  AsString: string;
     end;
   strict private // those must be 4-aligned, keep them on the top
     oteInternalLock      : TOmniCS;
@@ -681,6 +686,7 @@ type
     procedure RaiseInvalidSignature(const methodName: string);
     procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
       TOmniMessageInfo);
+    procedure ReportInvalidHandle(msgInfo: TOmniMessageInfo);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
       TOmniMessageID);
@@ -730,11 +736,14 @@ type
 
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
   strict private
-    otExecuting     : boolean;
-    otExecutor_ref  : TOmniTaskExecutor;
-    otParameters_ref: TOmniValueContainer;
-    otSharedInfo_ref: TOmniSharedTaskInfo;
-    otThreadData    : IInterface;
+    otCleanupLock             : TOmniMREW;
+    otExecuting               : boolean;
+    otExecutor_ref            : TOmniTaskExecutor;
+    otParameters_ref          : TOmniValueContainer;
+    otSharedInfo_ref          : TOmniSharedTaskInfo;
+    otTerminateWillCallExecute: boolean;
+    otThreadData              : IInterface;
+    otThreadID                : DWORD;
   protected
     function  GetCancellationToken: IOmniCancellationToken; inline;
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -746,6 +755,7 @@ type
     function  GetTerminateEvent: THandle; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
+    procedure InternalExecute(calledFromTerminate: boolean);
     procedure SetThreadData(const value: IInterface); inline;
     procedure Terminate;
   public
@@ -1218,54 +1228,8 @@ begin
 end; { TOmniTask.Enforced }
 
 procedure TOmniTask.Execute;
-var
-  chainTo       : IOmniTaskControl;
-  taskException : Exception;
-  terminateEvent: TDSiEventHandle;
 begin
-  otExecuting := true;
-  chainTo := nil;
-  terminateEvent := 0;
-  try
-    try
-      {$IFNDEF OTL_DontSetThreadName}
-      SetThreadName(otSharedInfo_ref.TaskName);
-      {$ENDIF OTL_DontSetThreadName}
-      if (tcoForceExecution in otExecutor_ref.Options) or (not Terminated) then
-      try
-        otExecutor_ref.Asy_Execute(Self);
-      except
-        on E: Exception do begin
-          taskException := AcquireExceptionObject;
-          FilterException(taskException);
-          if assigned(taskException) then
-            SetException(taskException);
-        end;
-      end;
-    finally
-      if assigned(otSharedInfo_ref.ChainTo) and
-         (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
-      then
-        chainTo := otSharedInfo_ref.ChainTo;
-      otSharedInfo_ref.ChainTo := nil;
-      terminateEvent := otSharedInfo_ref.TerminatedEvent;
-      otSharedInfo_ref.Stopped := true;
-      // with internal monitoring this will not be processed if the task controller owner is also shutting down
-      if assigned(otSharedInfo_ref.Monitor) then
-        otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-          integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-    end;
-  finally
-    //Task controller could die any time now. Make sure we're not using shared
-    //structures anymore.
-    otExecutor_ref   := nil;
-    otParameters_ref := nil;
-    otSharedInfo_ref := nil;
-    if terminateEvent <> 0 then
-      SetEvent(terminateEvent);
-  end;
-  if assigned(chainTo) then
-    chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should execute the chained task in the same thread (should work when run in a pool)
+  InternalExecute(false);
 end; { TOmniTask.Execute }
 
 function TOmniTask.GetCancellationToken: IOmniCancellationToken;
@@ -1320,6 +1284,66 @@ function TOmniTask.GetUniqueID: int64;
 begin
   Result := otSharedInfo_ref.UniqueID;
 end; { TOmniTask.GetUniqueID }
+
+procedure TOmniTask.InternalExecute(calledFromTerminate: boolean);
+var
+  chainTo       : IOmniTaskControl;
+  taskException : Exception;
+  terminateEvent: TDSiEventHandle;
+begin
+  otCleanupLock.EnterWriteLock;
+  try
+    if otTerminateWillCallExecute and (not calledFromTerminate) then
+      Exit;
+    otExecuting := true;
+  finally otCleanupLock.ExitWriteLock; end;
+  otThreadID := GetCurrentThreadID;
+  chainTo := nil;
+  terminateEvent := 0;
+  try
+    try
+      try
+        {$IFNDEF OTL_DontSetThreadName}
+        SetThreadName(otSharedInfo_ref.TaskName);
+        {$ENDIF OTL_DontSetThreadName}
+        if (tcoForceExecution in otExecutor_ref.Options) or (not Terminated) then
+        try
+          otExecutor_ref.Asy_Execute(Self);
+        except
+          on E: Exception do begin
+            taskException := AcquireExceptionObject;
+            FilterException(taskException);
+            if assigned(taskException) then
+              SetException(taskException);
+          end;
+        end;
+      finally
+        otCleanupLock.EnterWriteLock;
+        if assigned(otSharedInfo_ref.ChainTo) and
+           (otSharedInfo_ref.ChainIgnoreErrors or (otExecutor_ref.ExitCode = EXIT_OK))
+        then
+          chainTo := otSharedInfo_ref.ChainTo;
+        otSharedInfo_ref.ChainTo := nil;
+        terminateEvent := otSharedInfo_ref.TerminatedEvent;
+        otSharedInfo_ref.Stopped := true;
+        // with internal monitoring this will not be processed if the task controller owner is also shutting down
+        if assigned(otSharedInfo_ref.Monitor) then
+          otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
+            integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+      end;
+    finally
+      //Task controller could die any time now. Make sure we're not using shared
+      //structures anymore.
+      otExecutor_ref   := nil;
+      otParameters_ref := nil;
+      otSharedInfo_ref := nil;
+      if terminateEvent <> 0 then
+        SetEvent(terminateEvent);
+    end;
+    if assigned(chainTo) then
+      chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
+  finally otCleanupLock.ExitWriteLock; end;
+end; { TOmniTask.InternalExecute }
 
 {$IFDEF OTL_Anonymous}
 procedure TOmniTask.Invoke(remoteFunc: TOmniTaskInvokeFunction);
@@ -1382,10 +1406,18 @@ end; { TOmniTask.StopTimer }
 
 procedure TOmniTask.Terminate;
 begin
-  otSharedInfo_ref.Terminating := true;
-  SetEvent(otSharedInfo_ref.TerminateEvent);
-  if not otExecuting then //call Execute to run at least cleanup code
-    Execute;
+  otCleanupLock.EnterWriteLock;
+  try
+    if otExecuting and (not assigned(otSharedInfo_ref)) then
+      Exit; // thread has just completed execution
+    otSharedInfo_ref.Terminating := true;
+    SetEvent(otSharedInfo_ref.TerminateEvent);
+    if not otExecuting then
+      otTerminateWillCallExecute := true;
+  finally otCleanupLock.ExitWriteLock; end;
+  // TODO 1 -oPrimoz Gabrijelcic : This is very suspicious :(
+  if otTerminateWillCallExecute then //call Execute to run at least cleanup code
+    InternalExecute(true);
 end; { TOmniTask.Terminate }
 
 function TOmniTask.Terminated: boolean;
@@ -1470,6 +1502,17 @@ begin
   ottiInterval_ms := interval_ms;
   ottiMessageID := messageID;
 end; { TOmniTaskTimerInfo.Create }
+
+{ TOmniTaskExecutor.TOmniMessageInfo }
+
+function TOmniTaskExecutor.TOmniMessageInfo.AsString: string;
+var
+  iHandle: integer;
+begin
+  Result := '';
+  for iHandle := 0 to NumWaitHandles - 1 do
+    Result := Result + IntToStr(WaitHandles[iHandle]) + ' ';
+end; { TOmniTaskExecutor.TOmniMessageInfo.AsString }
 
 { TOmniTaskExecutor }
 
@@ -1675,6 +1718,7 @@ var
   msg            : TOmniMessage;
   responseHandler: TOmniWaitObjectMethod;
 begin
+  // Keep logic in sync with ReportInvalidHandle!
   Result := false;
   if ((msgInfo.IdxFirstTerminate <> cardinal(-1)) and
       ((awaited >= msgInfo.IdxFirstTerminate) and (awaited <= msgInfo.IdxLastTerminate)))
@@ -1682,6 +1726,8 @@ begin
      (awaited = WAIT_ABANDONED)
   then
     Exit
+  else if awaited = WAIT_FAILED then
+    // do-nothing; it is possible that the handle was closed and unregistered but handle array was not rebuilt yet and WaitForEvent returned this error
   else if (awaited >= msgInfo.IdxFirstMessage) and (awaited <= msgInfo.IdxLastMessage) then begin
     repeat
       if awaited = msgInfo.IdxFirstMessage then
@@ -1719,7 +1765,7 @@ begin
   ProcessThreadMessages;
   TestForInternalRebuild(task, msgInfo);
   Result := true;
-end; { TOmniTaskExecutor.DispatchEvent } 
+end; { TOmniTaskExecutor.DispatchEvent }
 
 procedure TOmniTaskExecutor.DispatchMessages(const task: IOmniTask);
 begin
@@ -2061,8 +2107,8 @@ begin
       Exit;
     MessageLoopPayload;
     if waitHandlesGen <> oteWaitHandlesGen then begin
-      //DispatchEvent just rebuilt our internal copy
       RebuildWaitHandles(task, oteMsgInfo);
+      RemoveTerminationEvents(oteMsgInfo, msgInfo);
       EmptyMessageQueues(task);
     end;
   until false;
@@ -2158,6 +2204,32 @@ begin
     (Length(dstMsgInfo.WaitHandles) - integer(offset)) * SizeOf(THandle));
 end; { TOmniTaskExecutor.RemoveTerminationEvents }
 
+procedure TOmniTaskExecutor.ReportInvalidHandle(msgInfo: TOmniMessageInfo);
+var
+  failedList: string;
+  iHandle   : integer;
+begin
+  failedList := SysErrorMessage(GetLastError);
+  for iHandle := 0 to msgInfo.NumWaitHandles - 1 do begin
+    if WaitForSingleObject(msgInfo.WaitHandles[iHandle], 0) = WAIT_FAILED then begin
+      failedList := failedList + #13#10;
+      failedList := failedList + Format('Invalid handle: %d; ', [msgInfo.WaitHandles[iHandle]]);
+      if ((msgInfo.IdxFirstTerminate <> cardinal(-1)) and
+          ((iHandle >= msgInfo.IdxFirstTerminate) and (iHandle <= msgInfo.IdxLastTerminate)))
+      then
+        failedList := failedList + 'termination'
+      else if (iHandle >= msgInfo.IdxFirstMessage) and (iHandle <= msgInfo.IdxLastMessage) then
+        failedList := failedList + 'message'
+      else if (iHandle >= msgInfo.IdxFirstWaitObject) and (iHandle <= msgInfo.IdxLastWaitObject) then
+        failedList := failedList + 'wait object'
+      else if iHandle = msgInfo.IdxRebuildHandles then
+        failedList := failedList + 'rebuild handles'
+    end;
+  end;
+  raise Exception.CreateFmt('[%d] TOmniTaskExecutor: Invalid handle!'#13#10'%s',
+    [GetCurrentThreadID, failedList]);
+end; { TOmniTaskExecutor.ReportInvalidHandle}
+
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
 begin
   if (([tcoAlertableWait, tcoMessageWait] * Options) <> []) and
@@ -2245,6 +2317,8 @@ function TOmniTaskExecutor.WaitForEvent(msgInfo: TOmniMessageInfo; timeout_ms: c
 begin
   Result := MsgWaitForMultipleObjectsEx(msgInfo.NumWaitHandles, msgInfo.WaitHandles,
     timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
+//  if Result = WAIT_FAILED then
+//    ReportInvalidHandle(msgInfo);
 end; { TOmniTaskExecutor.WaitForEvent }
 
 { TOmniTaskControl }

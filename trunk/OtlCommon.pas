@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-12-02
-///   Version           : 1.25d
+///   Version           : 1.25e
 ///</para><para>
 ///   History:
+///     1.25e: 2011-12-09
+///       - Removed compilation hint "Private symbol 'GetAsRecord' declared but never used".
 ///     1.25d: 2011-12-02
 ///       - Removed compilation hint "Private symbol 'GetAsArrayItem' declared but never used".
 ///     1.25c: 2011-11-29
@@ -1824,13 +1826,16 @@ end; { TOmniValue.RawZero }
 
 class procedure TOmniValue._RemoveWarnings;
 var
-  a : integer;
-  ov: TOmniValue;
+  a   : integer;
+  intf: IOmniAutoDestroyObject;
+  ov  : TOmniValue;
 begin
   a := 0;
   if a = (a + 1) then begin
     ov := ov.GetAsArrayItem('');
     ov := ov.GetAsArrayItem(ov);
+    intf := ov.GetAsRecord;
+    ov.SetAsRecord(intf);
   end;
 end; { TOmniValue._RemoveWarnings }
 

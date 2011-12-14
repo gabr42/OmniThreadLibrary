@@ -601,7 +601,7 @@ begin
   if not assigned(Self) then
     Result := '<none>'
   else
-    Result := Format('%p:%d', [pointer(Self), GetCurrentThreadID]);
+    Result := Format('%p:%d', [pointer(Self), ThreadID]);
 end; { TOTPWorkerThread.Description }
 
 procedure TOTPWorkerThread.Execute;
