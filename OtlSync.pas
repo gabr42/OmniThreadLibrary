@@ -38,10 +38,13 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-12-09
-///   Version           : 1.10a
+///   Last modification : 2011-12-14
+///   Version           : 1.11
 ///</para><para>
 ///   History:
+///     1.14: 2011-12-14
+///       - Implemented simplified versions of Atomic<T:class,constructor>.Initialize and
+///         Locked<T:class,constructor>.Initialize that work on D2010 and newer.
 ///     1.10a: 2011-12-09
 ///       - TOmniCS reuses LockCount from owned TOmniCriticalSection.
 ///     1.10: 2011-12-02
@@ -96,6 +99,9 @@ interface
 uses
   SyncObjs,
   DSiWin32,
+  {$IFDEF OTL_ERTTI}
+  RTTI,
+  {$ENDIF OTL_ERTTI}
   GpStuff;
 
 type
@@ -183,7 +189,9 @@ type
   Atomic<T> = class
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T; overload;
-//    class function Initialize(var storage: T): T; overload;
+    {$IFDEF OTL_ERTTI}
+    class function Initialize(var storage: T): T; overload;
+    {$ENDIF OTL_ERTTI}
   end; { Atomic<T> }
 
   Locked<T> = record
@@ -203,7 +211,9 @@ type
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
     function  Initialize(factory: TFactory): T; overload;
-//    function  Initialize: T; overload;
+    {$IFDEF OTL_ERTTI}
+    function  Initialize: T; overload;
+    {$ENDIF OTL_ERTTI}
     procedure Acquire; inline;
     procedure Release; inline;
     procedure Free; inline;
@@ -652,18 +662,25 @@ begin
   Result := storage;
 end; { Atomic<T>.Initialize }
 
-//class function Atomic<T>.Initialize(var storage: T): T;
-//begin
-//  if not assigned(PPointer(@storage)^) then begin
-//    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
-//      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-//    Result := Atomic<T>.Initialize(storage,
-//      function: T
-//      begin
-//        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
-//      end);
-//  end;
-//end; { Atomic<T>.Initialize }
+{$IFDEF OTL_ERTTI}
+class function Atomic<T>.Initialize(var storage: T): T;
+begin
+  if not assigned(PPointer(@storage)^) then begin
+    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+    Result := Atomic<T>.Initialize(storage,
+      function: T
+      var
+        inValue : TValue;
+        outValue: TValue;
+      begin
+        inValue := GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create;
+        inValue.TryCast(TypeInfo(T), outValue);
+        Result := outValue.AsType<T>;
+      end);
+  end;
+end; { Atomic<T>.Initialize }
+{$ENDIF OTL_ERTTI}
 
 { Locked<T> }
 
@@ -728,18 +745,25 @@ begin
   Result := FValue;
 end; { Locked<T>.Initialize }
 
-//function Locked<T>.Initialize: T;
-//begin
-//  if not FInitialized then begin
-//    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
-//      raise Exception.Create('Locked<T>.Initialize: Unsupported type');
-//    Result := Initialize(
-//      function: T
-//      begin
-//        Result := T(GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create);
-//      end);
-//  end;
-//end; { Locked<T>.Initialize: }
+{$IFDEF OTL_ERTTI}
+function Locked<T>.Initialize: T;
+begin
+  if not FInitialized then begin
+    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+      raise Exception.Create('Locked<T>.Initialize: Unsupported type');
+    Result := Initialize(
+      function: T
+      var
+        inValue : TValue;
+        outValue: TValue;
+      begin
+        inValue := GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create;
+        inValue.TryCast(TypeInfo(T), outValue);
+        Result := outValue.AsType<T>;
+      end);
+  end;
+end; { Locked<T>.Initialize }
+{$ENDIF OTL_ERTTI}
 
 procedure Locked<T>.Release;
 begin
