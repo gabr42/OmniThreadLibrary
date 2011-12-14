@@ -1,3 +1,6 @@
++ Implemented simplified versions of Atomic<T:class,constructor>.Initialize and Locked<T:class,constructor>.Initialize that work on D2010 and newer. Great thanks to [TOndrej] and [cjsalamon] for helping with the tricky parts!
+! Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate. [tnx to Zarko]
+! Under some circumstances ProcessMessage failed to rebuild handle array before waiting which could cause 'invalid handle' error.
 - Atomic<T>, Locked<T>.
 - TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
 - Added a class which can wrap any record - TOmniRecordWrapper<T>.
