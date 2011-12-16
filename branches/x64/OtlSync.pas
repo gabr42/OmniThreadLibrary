@@ -419,8 +419,8 @@ asm
   mov   rax, oldData
   mov   rbx, newData
   mov   rcx, newReference
-  mov   r8, destination
-  lock cmpxchg16B [r8]
+  mov   r8, [rsp + $30]
+  lock cmpxchg16b [r8]
   pop   rbx
 {$ENDIF CPUX64}
   setz  al
