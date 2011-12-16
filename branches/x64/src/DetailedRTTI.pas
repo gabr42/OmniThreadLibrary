@@ -144,12 +144,12 @@ begin
     begin
       // Scan method and get string about each
       Count := PWord(MethodInfo)^;
-      Inc(Integer(MethodInfo), 2);
+      Inc({$IFDEF CPUX64}NativeInt{$ELSE}integer{$ENDIF}(MethodInfo), 2);
       method := MethodInfo;
       for i := 0 to Count - 1 do
       begin
         Result := Result + DescriptionOfMethod(self, string(method.Name)) + sLineBreak;
-        Inc(Integer(method), PMethodInfoHeader(method)^.Len); // Get next method
+        Inc({$IFDEF CPUX64}NativeInt{$ELSE}Integer{$ENDIF}(method), PMethodInfoHeader(method)^.Len); // Get next method
       end;
     end;
 end;
