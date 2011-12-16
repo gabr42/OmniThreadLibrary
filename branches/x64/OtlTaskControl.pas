@@ -655,7 +655,7 @@ type
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
-    oteTerminateHandles  : TGpIntegerList;
+    oteTerminateHandles  : TGpInt64List;
     oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList; 
     oteWakeMask          : DWORD;
@@ -2268,9 +2268,9 @@ end; { TOmniTaskExecutor.SetTimer }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
 begin
-  Assert(SizeOf(THandle) = SizeOf(integer));
+  Assert(SizeOf(THandle) <= SizeOf(int64));
   if not assigned(oteTerminateHandles) then
-    oteTerminateHandles := TGpIntegerList.Create;
+    oteTerminateHandles := TGpInt64List.Create;
   oteTerminateHandles.Add(handle);
 end; { TOmniTaskExecutor.TerminateWhen }
 

@@ -1478,8 +1478,7 @@ begin
 end; { TOmniThreadPool.WorkerObj }
 
 initialization
-  // assumptions made in the code above
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
+  {$MESSAGE WARN 'The code in this unit may depend on SizeOf(pointer) being 4 - not yet confirmed not rejected'}
 finalization
   GOmniThreadPool := nil;
 end.

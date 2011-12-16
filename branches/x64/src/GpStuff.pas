@@ -720,8 +720,7 @@ end; { TGp4AlignedInt.Add }
 
 function TGp4AlignedInt.Addr: PInteger;
 begin
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Result := PInteger((cardinal(@aiData) + 3) AND NOT 3);
+  Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
 end; { TGp4AlignedInt.Addr }
 
 function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;
