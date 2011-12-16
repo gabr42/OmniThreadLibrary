@@ -148,10 +148,10 @@ type
   strict private
     omrewReference: NativeInt;      //Reference.Bit0 is 'writing in progress' flag
   public
-    procedure EnterReadLock; inline;
-    procedure EnterWriteLock; inline;
-    procedure ExitReadLock; inline;
-    procedure ExitWriteLock; inline;
+    procedure EnterReadLock;// inline;
+    procedure EnterWriteLock;// inline;
+    procedure ExitReadLock;// inline;
+    procedure ExitWriteLock;// inline;
   end; { TOmniMREW }
 
   IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
@@ -319,7 +319,6 @@ end; { CreateResourceCount }
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 asm
 {$IFDEF CPUX64}
-  .noframe
   mov   al, oldValue
 {$ENDIF CPUX64}
   lock cmpxchg [destination], dl
@@ -329,7 +328,6 @@ end; { CAS8 }
 function CAS16(const oldValue, newValue: word; var destination): boolean;
 asm
 {$IFDEF CPUX64}
-  .noframe
   mov     ax, oldValue
 {$ENDIF CPUX64}
   lock cmpxchg [destination], dx
@@ -339,9 +337,7 @@ end; { CAS16 }
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
 asm
 {$IFDEF CPUX64}
-  .noframe
-  // TODO 1 : Gorazd, tole spodaj ne dela!
-//  mov   rax, oldValue
+  mov   eax, oldValue
 {$ENDIF CPUX64}
   lock cmpxchg [destination], edx
   setz  al
@@ -351,8 +347,7 @@ end; { CAS32 }
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
 asm
 //{$IFDEF CPUX64}
-//  .noframe
-//  mov    rax, oldValue
+  mov    eax, oldValue
 //{$ENDIF CPUX64}
   lock cmpxchg [destination], edx
   setz  al
@@ -373,7 +368,6 @@ asm
   pop   ebx
   pop   edi
 {$ELSE CPUX64}
-  .noframe
   mov   rax, oldData
   lock cmpxchg [destination], newData
 {$ENDIF ~CPUX64}
@@ -383,7 +377,6 @@ end; { CAS64 }
 function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload;
 asm
 {$IFDEF CPUX64}
-  .noframe
   mov   rax, oldValue
 {$ENDIF CPUX64}
   lock cmpxchg [destination], newValue
@@ -393,7 +386,6 @@ end; { CAS }
 function CAS(const oldValue, newValue: pointer; var destination): boolean; overload;
 asm
 {$IFDEF CPUX64}
-  .noframe
   mov   rax, oldValue
 {$ENDIF CPUX64}
   lock cmpxchg [destination], newValue
@@ -419,6 +411,7 @@ asm
   mov   rax, oldData
   mov   rbx, newData
   mov   rcx, newReference
+  mov   r8, [destination]
   mov   r8, [rsp + $30]
   lock cmpxchg16b [r8]
   pop   rbx
@@ -451,7 +444,6 @@ asm
   movdqa  xmm0, dqword [Source]
   movdqa  dqword [Destination], xmm0
 {$ELSE CPUX64}
-  .noframe
 //Move 16 bytes atomically into 16-byte Destination!
   push  rbx
   mov   r8, destination
@@ -476,7 +468,6 @@ asm
   movq  qword [Destination], xmm0
   mov   eax, [eax + $24]
 {$ELSE CPUX64}
-  .noframe
 //Move 16 bytes atomically into 16-byte Destination!
   push  rbx
   mov   r8, destination
@@ -499,7 +490,6 @@ asm
   movq  xmm0, qword [Source]
   movq  qword [Destination], xmm0
 {$ELSE CPUX64}
-  .noframe
 //Move 16 bytes atomically into 16-byte Destination!
   push  rbx
   mov   r8, destination
@@ -528,9 +518,6 @@ end; { GetThreadId }
 
 function GetCPUTimeStamp: int64;
 asm
-{$IFDEF CPUX64}
-  .noframe
-{$ENDIF CPUX64}
   rdtsc
 {$IFDEF CPUX64}
   shl   rdx, 32
@@ -543,8 +530,6 @@ asm
 {$IFNDEF CPUX64}
   lock  xadd [addend], value
 {$ELSE CPUX64}
-  .noframe
-  lock  xadd [addend], value
   mov   rax, value
 {$ENDIF CPUX64}
 end; { NInterlockedExchangeAdd }
@@ -678,7 +663,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 2, omrewReference);
+  until CAS(currentReference, currentReference + 2, omrewReference );
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
@@ -688,7 +673,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 1, omrewReference);
+  until CAS(currentReference, currentReference + 1 ,omrewReference );
   //Now wait on all readers
   repeat
   until omrewReference = 1;
