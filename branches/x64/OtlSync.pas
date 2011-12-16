@@ -678,7 +678,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(omrewReference, currentReference + 2, currentReference);
+  until CAS(currentReference, currentReference + 2, omrewReference);
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
@@ -688,7 +688,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(omrewReference, currentReference + 1, currentReference);
+  until CAS(currentReference, currentReference + 1, omrewReference);
   //Now wait on all readers
   repeat
   until omrewReference = 1;
