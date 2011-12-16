@@ -3289,11 +3289,15 @@ function TOmniSharedTaskInfo.GetCancellationToken: IOmniCancellationToken;
 var
   token: IOmniCancellationToken;
 begin
-  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
+  Assert(NativeInt(@ostiCancellationToken) mod SizeOf(pointer) = 0,
     'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  Assert(NativeInt(@token) mod SizeOf(pointer) = 0,
+    'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  Assert(SizeOf(IOmniCancellationToken) = SizeOf(pointer));
+
   if not assigned(ostiCancellationToken) then begin
     token := CreateOmniCancellationToken;
-    if InterlockedCompareExchange(PInteger(@ostiCancellationToken)^, integer(token), 0) = 0 then
+    if CAS(nil, pointer(token), ostiCancellationToken) then
       pointer(token) := nil;
   end;
   Result := ostiCancellationToken;
@@ -3301,8 +3305,6 @@ end; { TOmniSharedTaskInfo.GetCancellationToken }
 
 procedure TOmniSharedTaskInfo.SetCancellationToken(const token: IOmniCancellationToken);
 begin
-  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
-    'TOmniSharedTaskInfo.SetCancellationToken: ostiCancellationToken is not 4-aligned!');
   // SetCancellationToken can only be called before the task is is created
   ostiCancellationToken := token;
 end; { TOmniSharedTaskInfo.SetCancellationToken }

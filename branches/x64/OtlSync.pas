@@ -38,11 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-12-14
-///   Version           : 1.11
+///   Last modification : 2011-12-16
+///   Version           : 1.12
 ///</para><para>
 ///   History:
-///     1.14: 2011-12-14
+///     1.12: 2011-12-16
+///       - [GJ] Converted low-level primitives to work in 64-bit platform and added few
+///         platform-independent versions (CAS, MoveDPtr).
+///     1.11: 2011-12-14
 ///       - Implemented simplified versions of Atomic<T:class,constructor>.Initialize and
 ///         Locked<T:class,constructor>.Initialize that work on D2010 and newer.
 ///     1.10a: 2011-12-09
@@ -105,6 +108,11 @@ uses
   GpStuff;
 
 type
+{$IFNDEF WIN64}
+  NativeInt = Integer;
+  PNativeInt = PInteger;
+{$ENDIF WIN64}
+
    TFixedCriticalSection = class(TCriticalSection)
    strict protected
      FDummy: array [0..95] of byte;
@@ -138,7 +146,7 @@ type
   ///<summary>Very lightweight multiple-readers-exclusive-writer lock.</summary>
   TOmniMREW = record
   strict private
-    omrewReference: integer;      //Reference.Bit0 is 'writing in progress' flag
+    omrewReference: NativeInt;      //Reference.Bit0 is 'writing in progress' flag
   public
     procedure EnterReadLock; inline;
     procedure EnterWriteLock; inline;
@@ -225,20 +233,31 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
-// Intel Atomic functions support
+function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
+
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 function CAS16(const oldValue, newValue: word; var destination): boolean;
 function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
+{$IFNDEF CPUX64}
 function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
-function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
-  newReference: cardinal; var destination): boolean;
+{$ENDIF ~CPUX64}
+function CAS64(const oldData, newData: int64; var destination): boolean; overload;
+
+function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload;
+function CAS(const oldValue, newValue: pointer; var destination): boolean; overload;
+function CAS(const oldData: pointer; oldReference: NativeInt; newData: pointer;
+  newReference: NativeInt; var destination): boolean; overload;
+
+{$IFNDEF CPUX64}
 procedure Move64(var Source, Destination); overload;
-procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload; 
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload;
+{$ENDIF ~CPUX64}
+
 procedure Move128(var Source, Destination);
+procedure MoveDPtr(var Source, Destination); overload;
+procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); overload;
 
-procedure MFence;
-
-function GetThreadId: cardinal;
+function GetThreadId: NativeInt;
 function GetCPUTimeStamp: int64;
 
 var
@@ -299,71 +318,123 @@ end; { CreateResourceCount }
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 asm
-  lock cmpxchg byte ptr [destination], newValue
+{$IFDEF CPUX64}
+  .noframe
+  mov   al, oldValue
+{$ENDIF CPUX64}
+  lock cmpxchg [destination], dl
   setz  al
 end; { CAS8 }
 
 function CAS16(const oldValue, newValue: word; var destination): boolean;
 asm
-  lock cmpxchg word ptr [destination], newValue
+{$IFDEF CPUX64}
+  .noframe
+  mov     ax, oldValue
+{$ENDIF CPUX64}
+  lock cmpxchg [destination], dx
   setz  al
 end; { CAS16 }
 
-function CAS32(const oldValue, newValue: cardinal; var destination): boolean;
-//ATOMIC FUNCTION
-//begin
-//  result := oldValue = PCardinal(destination)^;
-//  if result then
-//    PCardinal(destination)^ := newValue;
-//end;
+function CAS32(const oldValue, newValue: cardinal; var destination): boolean; overload;
 asm
-  lock cmpxchg dword ptr [destination], newValue
+{$IFDEF CPUX64}
+  .noframe
+  // TODO 1 : Gorazd, tole spodaj ne dela!
+//  mov   rax, oldValue
+{$ENDIF CPUX64}
+  lock cmpxchg [destination], edx
   setz  al
 end; { CAS32 }
 
-function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean;
-//ATOMIC FUNCTION
-//begin
-//  result := oldValue = PPointer(destination)^;
-//  if result then
-//    PPointer(destination)^ := newValue;
-//end;
+{$IFNDEF CPUX64}
+function CAS32(const oldValue: pointer; newValue: pointer; var destination): boolean; overload;
 asm
-  lock cmpxchg dword ptr [destination], newValue
+//{$IFDEF CPUX64}
+//  .noframe
+//  mov    rax, oldValue
+//{$ENDIF CPUX64}
+  lock cmpxchg [destination], edx
   setz  al
 end; { CAS32 }
+{$ENDIF ~CPUX64}
 
-function CAS64(const oldData: pointer; oldReference: cardinal; newData: pointer;
-  newReference: cardinal; var destination): boolean;
-//ATOMIC FUNCTION
-//begin
-//  result := (destination.PData = oldData) and (destination.Reference = oldReference);
-//  if result then
-//  begin
-//    destination.PData := newData;
-//    destination.Reference := newReference;
-//  end;
-//end;
+function CAS64(const oldData, newData: int64; var destination): boolean; overload;
 asm
+{$IFNDEF CPUX64}
+  push  edi
+  push  ebx
+  mov   edi, destination
+  mov   ebx, low newData
+  mov   ecx, high newData
+  mov   eax, low oldData
+  mov   edx, high oldData
+  lock cmpxchg8b [edi]
+  pop   ebx
+  pop   edi
+{$ELSE CPUX64}
+  .noframe
+  mov   rax, oldData
+  lock cmpxchg [destination], newData
+{$ENDIF ~CPUX64}
+  setz  al
+end; { CAS64 }
+
+function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload;
+asm
+{$IFDEF CPUX64}
+  .noframe
+  mov   rax, oldValue
+{$ENDIF CPUX64}
+  lock cmpxchg [destination], newValue
+  setz  al
+end; { CAS }
+
+function CAS(const oldValue, newValue: pointer; var destination): boolean; overload;
+asm
+{$IFDEF CPUX64}
+  .noframe
+  mov   rax, oldValue
+{$ENDIF CPUX64}
+  lock cmpxchg [destination], newValue
+  setz  al
+end; { CAS }
+
+//eighter 8-byte or 16-byte CAS, depending on the platform; destination must be propely aligned (8- or 16-byte)
+function CAS(const oldData: pointer; oldReference: NativeInt; newData: pointer;
+  newReference: NativeInt; var destination): boolean; overload;
+asm
+{$IFNDEF CPUX64}
   push  edi
   push  ebx
   mov   ebx, newData
   mov   ecx, newReference
   mov   edi, destination
   lock cmpxchg8b qword ptr [edi]
-  setz  al
   pop   ebx
   pop   edi
-end; { CAS64 }
+{$ELSE CPUX64}
+  .noframe
+  push  rbx
+  mov   rax, oldData
+  mov   rbx, newData
+  mov   rcx, newReference
+  mov   r8, destination
+  lock cmpxchg16B [r8]
+  pop   rbx
+{$ENDIF CPUX64}
+  setz  al
+end; { CAS }
 
-procedure Move64(var Source, Destination);
+{$IFNDEF CPUX64}
+procedure Move64(var Source, Destination); overload;
 //Move 8 bytes atomicly from Source 8-byte aligned to Destination!
 asm
   movq  xmm0, qword [Source]
   movq  qword [Destination], xmm0
 end;
 
-procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload; 
+procedure Move64(newData: pointer; newReference: cardinal; var Destination); overload;
 //Move 8 bytes atomically into 8-byte Destination!
 asm
   movd  xmm0, eax
@@ -371,25 +442,112 @@ asm
   punpckldq xmm0, xmm1
   movq  qword [Destination], xmm0
 end; { Move64 }
+{$ENDIF ~CPUX64}
 
 procedure Move128(var Source, Destination);
-//Move 16 bytes atomicly from Source to 16-byte aligned to Destination!
+//Move 16 bytes atomically from Source to 16-byte aligned to Destination!
 asm
+{$IFNDEF CPUX64}
   movdqa  xmm0, dqword [Source]
   movdqa  dqword [Destination], xmm0
+{$ELSE CPUX64}
+  .noframe
+//Move 16 bytes atomically into 16-byte Destination!
+  push  rbx
+  mov   r8, destination
+  mov   rbx, [Source]
+  mov   rcx, [Source + 8]
+  mov   rax, [r8]
+  mov   rdx, [r8 + 8]
+@repeat:
+  lock  cmpxchg16B [r8]
+  jnz   @repeat
+  pop   rbx
+{$ENDIF CPUX64}
+end; { Move128 }
+
+//eighter 8-byte or 16-byte atomic Move, depending on the platform; destination must be propely aligned (8- or 16-byte)
+procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); overload;
+asm
+{$IFNDEF CPUX64}
+  movd  xmm0, eax
+  movd  xmm1, edx
+  punpckldq xmm0, xmm1
+  movq  qword [Destination], xmm0
+  mov   eax, [eax + $24]
+{$ELSE CPUX64}
+  .noframe
+//Move 16 bytes atomically into 16-byte Destination!
+  push  rbx
+  mov   r8, destination
+  mov   rbx, newData
+  mov   rcx, newReference
+  mov   rax, [r8]
+  mov   rdx, [r8 + 8]
+@repeat:
+  lock  cmpxchg16B [r8]
+  jnz   @repeat
+  pop   rbx
+{$ENDIF CPUX64}
+end; { MoveDPtr }
+
+//eighter 8-byte or 16-byte atomic Move, depending on the platform; destination must be propely aligned (8- or 16-byte)
+procedure MoveDPtr(var Source, Destination);
+asm
+{$IFNDEF CPUX64}
+//Move 8 bytes atomically from Source 8-byte aligned to Destination!
+  movq  xmm0, qword [Source]
+  movq  qword [Destination], xmm0
+{$ELSE CPUX64}
+  .noframe
+//Move 16 bytes atomically into 16-byte Destination!
+  push  rbx
+  mov   r8, destination
+  mov   rbx, [Source]
+  mov   rcx, [Source + 8]
+  mov   rax, [r8]
+  mov   rdx, [r8 + 8]
+@repeat:
+  lock  cmpxchg16B [r8]
+  jnz   @repeat
+  pop   rbx
+{$ENDIF CPUX64}
 end;
 
-function GetThreadId: cardinal;
+function GetThreadId: NativeInt;
 //result := GetCurrentThreadId;
 asm
+{$IFNDEF CPUX64}
   mov   eax, fs:[$18]      //eax := thread information block
   mov   eax, [eax + $24]   //eax := thread id
+{$ELSE CPUX64}
+  mov   rax, gs:[abs $30]
+  mov   eax, [rax + $48]
+{$ENDIF CPUX64}
 end; { GetThreadId }
 
 function GetCPUTimeStamp: int64;
 asm
+{$IFDEF CPUX64}
+  .noframe
+{$ENDIF CPUX64}
   rdtsc
+{$IFDEF CPUX64}
+  shl   rdx, 32
+  or    rax, rdx
+{$ENDIF CPUX64}
 end; { GetCPUTimeStamp }
+
+function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
+asm
+{$IFNDEF CPUX64}
+  lock  xadd [addend], value
+{$ELSE CPUX64}
+  .noframe
+  lock  xadd [addend], value
+  mov   rax, value
+{$ENDIF CPUX64}
+end; { NInterlockedExchangeAdd }
 
 {$IFNDEF OTL_HasInterlockedCompareExchangePointer}
 function InterlockedCompareExchangePointer(var destination: pointer; exchange: pointer;
@@ -433,7 +591,7 @@ begin
   Assert(cardinal(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
   if not assigned(ocsSync) then begin
     syncIntf := CreateOmniCriticalSection;
-    if InterlockedCompareExchangePointer(PPointer(@ocsSync)^, pointer(syncIntf), nil) = nil then
+    if CAS(nil, pointer(syncIntf), ocsSync) then
       pointer(syncIntf) := nil;
   end;
 end; { TOmniCS.Initialize }
@@ -515,22 +673,22 @@ end; { TOmniCancellationToken.Signal }
 
 procedure TOmniMREW.EnterReadLock;
 var
-  currentReference: integer;
+  currentReference: NativeInt;
 begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := omrewReference AND NOT 1;
-  until currentReference = InterlockedCompareExchange(omrewReference, currentReference + 2, currentReference);
+  until CAS(omrewReference, currentReference + 2, currentReference);
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
 var
-  currentReference: integer;
+  currentReference: NativeInt;
 begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := omrewReference AND NOT 1;
-  until currentReference = InterlockedCompareExchange(omrewReference, currentReference + 1, currentReference);
+  until CAS(omrewReference, currentReference + 1, currentReference);
   //Now wait on all readers
   repeat
   until omrewReference = 1;
@@ -539,7 +697,7 @@ end; { TOmniMREW.EnterWriteLock }
 procedure TOmniMREW.ExitReadLock;
 begin
   //Decrease omrewReference
-  InterlockedExchangeAdd(omrewReference, -2);
+  NInterlockedExchangeAdd(omrewReference, -2);
 end; { TOmniMREW.ExitReadLock }
 
 procedure TOmniMREW.ExitWriteLock;
@@ -671,12 +829,22 @@ begin
     Result := Atomic<T>.Initialize(storage,
       function: T
       var
-        inValue : TValue;
-        outValue: TValue;
+        aMethCreate : TRttiMethod;
+        instanceType: TRttiInstanceType;
+        ctx         : TRttiContext;
+        resValue    : TValue;
+        rType       : TRttiType;
       begin
-        inValue := GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create;
-        inValue.TryCast(TypeInfo(T), outValue);
-        Result := outValue.AsType<T>;
+        ctx := TRttiContext.Create;
+        rType := ctx.GetType(TypeInfo(T));
+        for aMethCreate in rType.GetMethods do begin
+          if (aMethCreate.IsConstructor) and (Length(aMethCreate.GetParameters) = 0) then begin
+            instanceType := rType.AsInstance;
+            resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
+            Result := resValue.AsType<T>;
+            break; //for
+          end;
+        end; //for
       end);
   end;
 end; { Atomic<T>.Initialize }
@@ -754,12 +922,22 @@ begin
     Result := Initialize(
       function: T
       var
-        inValue : TValue;
-        outValue: TValue;
+        aMethCreate : TRttiMethod;
+        instanceType: TRttiInstanceType;
+        ctx         : TRttiContext;
+        resValue    : TValue;
+        rType       : TRttiType;
       begin
-        inValue := GetTypeData(PTypeInfo(TypeInfo(T)))^.ClassType.Create;
-        inValue.TryCast(TypeInfo(T), outValue);
-        Result := outValue.AsType<T>;
+        ctx := TRttiContext.Create;
+        rType := ctx.GetType(TypeInfo(T));
+        for aMethCreate in rType.GetMethods do begin
+          if (aMethCreate.IsConstructor) and (Length(aMethCreate.GetParameters) = 0) then begin
+            instanceType := rType.AsInstance;
+            resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
+            Result := resValue.AsType<T>;
+            break; //for
+          end;
+        end; //for
       end);
   end;
 end; { Locked<T>.Initialize }

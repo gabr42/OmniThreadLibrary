@@ -2605,9 +2605,7 @@ begin
 end; { TOmniMessageID.Implicit }         
 
 initialization
-  Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Assert(SizeOf(pointer) = 4);
+  Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
   GEnvironment := TOmniEnvironment.Create;
   {$IFDEF OTL_Generics}
   FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);
