@@ -1,0 +1,88 @@
+OmniThreadLibrary 1.01 has been released yesterday. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-1.01) or
+as a ZIP archive.
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007 and Delphi 2009
+on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 1.0a
+==========================
+
+- *** Breaking interface change ***
+- IOmniTask.Terminated renamed to IOmniTask.Stopped.
+- New IOmniTask.Terminated that check whether the task has been
+requested to terminate. [demo 22]
+- [GJ] Redesigned stack cotainer with better lock contention.
+- [GJ] Totally redesigned queue container, which is no longer based 
+on stack and allows multiple readers.
+- Full D2009 support; D2009 packages, project files and Tests 
+project group.
+- Invoke-by-name and invoke-by-address messaging implemented
+
+[http://17slon.com/blogs/gabr/2008/10/erlangenizing-omnithreadlibrary.html,
+
+http://17slon.com/blogs/gabr/2008/10/omnithreadlibrary-using-rtti-to-call.html,
+demos 18 and 19]
+- Implemented CreateTask(reference to function (task: ITaskControl)).
+[D2009 only, demo 21]
+- Implemented blocking wait (ReceiveWait). [demo 19]
+- Added enumerator to the IOmniTaskGroup interface.
+- Implemented IOmniTaskGroup.RegisterAllWithTask and
+.UnregisterAllFromTask.
+- Added automatic comm unregistration for
+IOmniTaskGroup.RegisterAllCommWith.
+- Implemented IOmniTaskGroup.SendToAll.
+- IOmniTaskControl.Terminate now kills the task after the timeout.
+- New/updated tests/demos:
+- 10_Containers
+- 2 -> 2, 1 -> 4 and 4 -> 4 tests for stacks and queues.
+- [1, 2, 4] -> [1, 2, 4] full tests.
+- Writes CSV file with cumulative test results.
+- 17_MsgWait: demo for the .MsgWait decorator.
+- 18_StringMsgDispatch: Invoke demo.
+- 19_StringMsgBenchmark: Invoke benchmark, ReceiveWait demo.
+- 20_QuickSort: Parallel quicksort demo.
+- 21_Anonymous_methods: Anonymous methods demo (D2009 only).
+- 22_TerminationTest: Task termination demo.
+- Message ID $FFFF is now reserved for internal purposes.
+- Better default queue length calculation that takes into account
+OtlContainers overhead and FastMM4 granulation.
+- Bug fixed: TOmniValue.Null was not really initialized to Null.
+- Bug fixed: Setting timer interval resets timer countdown.
+- Bug fixed: TOmniTaskControl.Schedule always scheduled task to the
+global thread pool.
+- Current versions of 3rd part units included.
+
+Known problems:
+- Thread pool is not stable under high load.
+
+-- 
+Primoz
+[http://thedelphigeek.com]
