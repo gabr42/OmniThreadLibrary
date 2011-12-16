@@ -91,8 +91,6 @@ interface
   {$IFEND}
 {$ENDIF}
 
-{$UNDEF GpStringHash_Inline}
-
 type
   ///<summary>Internal hash item representation.</summary>
   PGpHashItem = ^TGpHashItem;

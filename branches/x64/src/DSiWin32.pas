@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2011-10-21
-   Version           : 1.63
+   Last modification : 2011-12-16
+   Version           : 1.64
 </pre>*)(*
    History:
+     1.64: 2011-12-16
+       - [GJ] Assembler implementation of the x64 version of Interlocked*64 family of functions.
      1.63: 2011-10-21
        - Interlocked*64 family implemented using Windows' InterlockedCompareExchange64
          on Win64-bit platform.
@@ -391,7 +393,6 @@ interface
   {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
   {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
 {$ENDIF}
-{$IFDEF Win64}{$DEFINE NeedWinInterlocked}{$ENDIF Win64}
 {$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
 
 uses
@@ -1234,18 +1235,12 @@ type
 
 { Interlocked }
 
-function  DSiInterlockedDecrement64(var addend: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
-function  DSiInterlockedIncrement64(var addend: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
-function  DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
-function  DSiInterlockedExchange64(var target: int64; value: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF}
-function  DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF} overload;
-function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64;
-  {$IFNDEF NeedWinInterlocked}register;{$ELSE}inline;{$ENDIF} overload;
+function  DSiInterlockedDecrement64(var addend: int64): int64; register;
+function  DSiInterlockedIncrement64(var addend: int64): int64; register;
+function  DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64; register;
+function  DSiInterlockedExchange64(var target: int64; value: int64): int64; register;
+function  DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64; register; overload;
+function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64; register; overload;
 
 { DynaLoad }
 
@@ -7000,16 +6995,12 @@ var
 { Interlocked }
 
 function DSiInterlockedDecrement64(var addend: int64): int64; register;
-{$IFDEF NeedWinInterlocked}
-var
-  old: int64;
-begin
-  repeat
-    old := addend;
-  until Winapi.Windows.InterlockedCompareExchange64(addend, old - 1, old) <> old;
-  Result := old - 1;
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  mov   rax, dword - 1
+  lock xadd [addend], rax
+  dec   rax
+{$ELSE}
 {     ->          EAX     addend }
 {     <-          EDX:EAX Result }
           PUSH    EDI
@@ -7035,20 +7026,16 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedDecrement64 }
 
 function DSiInterlockedIncrement64(var addend: int64): int64;
-{$IFDEF NeedWinInterlocked}
-var
-  old: int64;
-begin
-  repeat
-    old := addend;
-  until Winapi.Windows.InterlockedCompareExchange64(addend, old + 1, old) <> old;
-  Result := old + 1;
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  mov   rax, 1
+  lock xadd [addend], rax
+  inc   rax
+{$ELSE}
 {     ->          EAX     addend }
 {     <-          EDX:EAX Result }
           PUSH    EDI
@@ -7074,20 +7061,16 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedIncrement64 }
 
 function DSiInterlockedExchangeAdd64(var addend: int64; value: int64): int64;
-{$IFDEF NeedWinInterlocked}
-var
-  old: int64;
-begin
-  repeat
-    old := addend;
-  until Winapi.Windows.InterlockedCompareExchange64(addend, old + value, old) <> old;
-  Result := old;
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  mov   rax, value
+  lock  xadd [addend], value
+  lea   rax, value + rax
+{$ELSE}
 {     ->          EAX     addend }
 {                 ESP+4   value  }
 {     <-          EDX:EAX Result }
@@ -7118,20 +7101,15 @@ LOCK      CMPXCHG8B [EBP]
           POP     EBP
           POP     ESI
           POP     EDI
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedExchangeAdd64 }
 
 function DSiInterlockedExchange64(var target: int64; value: int64): int64;
-{$IFDEF NeedWinInterlocked}
-var
-  old: int64;
-begin
-  repeat
-    old := target;
-  until Winapi.Windows.InterlockedCompareExchange64(target, value, old) <> old;
-  Result := old;
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  lock  xchg    [target], value
+  mov   rax, value
+{$ELSE}
 {     ->          EAX     target }
 {                 ESP+4   value  }
 {     <-          EDX:EAX Result }
@@ -7152,15 +7130,15 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EBX
           POP     EDI
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedExchange64 }
 
 function DSiInterlockedCompareExchange64(var destination: int64; exchange, comparand: int64): int64;
-{$IFDEF NeedWinInterlocked}
-begin
-  Result := Winapi.Windows.InterlockedCompareExchange64(destination, exchange, comparand);
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  mov   rax, comparand
+  lock cmpxchg [destination], exchange
+{$ELSE}
 {     ->          EAX     destination }
 {                 ESP+4   exchange    }
 {                 ESP+12  comparand   }
@@ -7180,15 +7158,15 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EDI
           POP     EBX
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedCompareExchange64 }
 
 function DSiInterlockedCompareExchange64(destination: PInt64; exchange, comparand: int64): int64;
-{$IFDEF NeedWinInterlocked}
-begin
-  Result := Winapi.Windows.InterlockedCompareExchange64(destination^, exchange, comparand);
-{$ELSE}
 asm
+{$IFDEF CPUX64}
+  mov   rax, comparand
+  lock cmpxchg [destination], exchange
+{$ELSE}
 {     ->          EAX     destination }
 {                 ESP+4   exchange    }
 {                 ESP+12  comparand   }
@@ -7208,7 +7186,7 @@ LOCK      CMPXCHG8B [EDI]
 
           POP     EDI
           POP     EBX
-{$ENDIF ~NeedWinInterlocked}
+{$ENDIF ~CPUX64}
 end; { DSiInterlockedCompareExchange64 }
 
 { DynaLoad }

@@ -6,10 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2011-11-22
-   Version           : 1.28
+   Last modification : 2011-12-16
+   Version           : 1.29
 </pre>*)(*
    History:
+     1.29: 2011-12-16
+       - X64 compatible.
+       - [GJ] Assembler implementation of the x64 implementation of the TableFind* functions.
      1.28: 2011-11-22
        - Implemented IGpTraceable.LogReferences.
      1.27: 2011-11-05
@@ -239,6 +242,7 @@ function  ReverseDWord(dw: DWORD): DWORD;
 ///<summary>Reverses byte order in a 2-byte number.</summary>
 function  ReverseWord(w: word): word;
 
+{$IFNDEF CPUX64}
 ///<summary>Locates specified value in a buffer.</summary>
 ///<returns>Offset of found value (0..dataLen-1) or -1 if value was not found.</returns>
 ///<since>2007-02-22</since>
@@ -248,6 +252,7 @@ function  TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; asse
 ///<returns>Offset of first differing value (0..dataLen-1) or -1 if buffer contains only specified values.</returns>
 ///<since>2007-02-22</since>
 function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
+{$ENDIF ~CPUX64}
 
 ///<summary>Converts open variant array to COM variant array.<para>
 ///  Written by Thomas Schubbauer and published in borland.public.delphi.objectpascal on
@@ -618,11 +623,23 @@ begin
     Result := Format('%.1f GB', [value/1024/1024/1024]);
 end; { FormatDataSize }
 
+{$IFDEF CPUX64}
+procedure X64AsmBreak;
+asm
+  .NOFRAME
+  INT 3
+end; { X64AsmBreak }
+{$ENDIF CPUX64}
+
 procedure DebugBreak(triggerBreak: boolean = true);
 begin
   {$IFDEF DEBUG}
   if triggerBreak and (DebugHook <> 0) then
+    {$IFDEF CPUX64}
+    X64AsmBreak;
+    {$ELSE}
     asm int 3 end;
+    {$ENDIF ~CPUX64}
   {$ENDIF DEBUG}
 end; { DebugBreak }
 
@@ -636,8 +653,23 @@ asm
    xchg   al, ah
 end; { ReverseWord }
 
+{$IFNDEF CPUX64}
 function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
 asm
+{$IFDEF WIN64}
+      PUSH  rDI
+      mov   al, value
+      MOV   rDI, data
+      xor   rcx, rcx
+      mov   ecx, dataLen
+      REPNE SCASB
+      MOV   rAX, -1
+      JNE   @@1
+      MOV   rAX,rDI
+      SUB   rAX,rDX
+      DEC   rAX
+@@1:  POP   rDI
+{$ELSE WIN64}
       PUSH  EDI
       MOV   EDI,EDX
       REPNE SCASB
@@ -647,10 +679,23 @@ asm
       SUB   EAX,EDX
       DEC   EAX
 @@1:  POP   EDI
+{$ENDIF WIN64}
 end; { TableFindEQ }
 
 function TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
 asm
+{$IFDEF WIN64}
+      PUSH  rDI
+      MOV   rDI,rDX
+      mov   ecx, dataLen
+      REPE  SCASB
+      MOV   rAX, -1
+      JE    @@1
+      MOV   rAX,rDI
+      SUB   rAX,rDX
+      DEC   rAX
+@@1:  POP   rDI
+{$ELSE WIN64}
       PUSH  EDI
       MOV   EDI,EDX
       REPE  SCASB
@@ -660,7 +705,9 @@ asm
       SUB   EAX,EDX
       DEC   EAX
 @@1:  POP   EDI
+{$ENDIF WIN64}
 end; { TableFindNE }
+{$ENDIF ~CPUX64}
 
 {$IFDEF GpStuff_AlignedInt}
 
@@ -1030,8 +1077,7 @@ destructor TGpTraceable.Destroy;
 begin
   if gtLogRef then
     OutputDebugString(PChar(Format('TGpTraceable.Destroy: [%s]', [ClassName])));
-  if gtTraceRef then
-    asm int 3; end;
+  DebugBreak(gtTraceRef);
   inherited;
 end; { TGpTraceable.Destroy }
 
@@ -1065,14 +1111,12 @@ begin
   Result := inherited _AddRef;
   if gtLogRef then
     OutputDebugString(PChar(Format('TGpTraceable._AddRef: [%s] %d', [ClassName, Result])));
-  if gtTraceRef then
-    asm int 3; end;
+  DebugBreak(gtTraceRef);
 end; { TGpTraceable._AddRef }
 
 function TGpTraceable._Release: integer;
 begin
-  if gtTraceRef then
-    asm int 3; end;
+  DebugBreak(gtTraceRef);
   Result := inherited _Release;
   if gtLogRef then
     OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [ClassName, Result])));
