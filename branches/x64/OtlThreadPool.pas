@@ -215,9 +215,9 @@ uses
   HVStringBuilder,
 {$ENDIF}
   DSiWin32,
-  SpinLock,
   GpStuff,
   OtlHooks,
+  OtlSync,
   OtlComm,
   OtlContainerObserver,
   OtlTaskControl,
@@ -281,7 +281,7 @@ type
     owtTerminateEvent   : TDSiEventHandle;
     owtThreadData       : IInterface;
     owtThreadDataFactory: TOTPThreadDataFactory;
-    owtWorkItemLock     : TTicketSpinLock;
+    owtWorkItemLock     : IOmniCriticalSection;
     owtWorkItem_ref     : TOTPWorkItem;
   strict protected
     function  Comm: IOmniCommunicationEndpoint;
@@ -535,14 +535,14 @@ begin
   owtThreadDataFactory := ThreadDataFactory;
   owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
-  owtWorkItemLock := TTicketSpinLock.Create;
+  owtWorkItemLock := CreateOmniCriticalSection;
   owtCommChannel := CreateTwoWayChannel(100, owtTerminateEvent);
 end; { TOTPWorkerThread.Create }
 
 destructor TOTPWorkerThread.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);{$ENDIF LogThreadPool}
-  FreeAndNil(owtWorkItemLock);
+  owtWorkItemLock := nil;
   DSiCloseHandleAndNull(owtTerminateEvent);
   DSiCloseHandleAndNull(owtNewWorkEvent);
   inherited Destroy;

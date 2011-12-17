@@ -308,7 +308,6 @@ end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
-Exit;
   FBaseStack := TOmniBaseBoundedStack.Create;
   FBaseStack.Initialize(CTestQueueLength, SizeOf(integer));
   FStack := TOmniBoundedStack.Create(CTestQueueLength, SizeOf(integer));

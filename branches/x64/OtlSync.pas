@@ -526,10 +526,12 @@ end; { GetCPUTimeStamp }
 
 function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
 asm
-{$IFDEF CPUX64}
+{$IFNDEF CPUX64}
+  lock  xadd [addend], value
+{$ELSE CPUX64}
+  lock  xadd [addend], value
   mov   rax, value
 {$ENDIF CPUX64}
-  lock  xadd [addend], value
 end; { NInterlockedExchangeAdd }
 
 {$IFNDEF OTL_HasInterlockedCompareExchangePointer}

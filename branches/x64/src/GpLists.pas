@@ -263,8 +263,7 @@ uses
   SysUtils,
   Classes,
   Contnrs,
-  SyncObjs,
-  SpinLock
+  SyncObjs
   {$IFDEF Unicode},
   Generics.Collections
   {$ENDIF};
@@ -1567,7 +1566,7 @@ type
     orbBufferSize                : integer;
     orbCount                     : integer;
     orbHead                      : integer;
-    orbLock                      : TSpinLock;
+    orbLock                      : TCriticalSection;
     orbOwnsObjects               : boolean;
     orbTail                      : integer;
   protected
@@ -1767,7 +1766,7 @@ type
   private
     dllCount: integer;
     dllHead : TGpDoublyLinkedListObject;
-    dllLock : TSpinLock;
+    dllLock : TCriticalSection;
     dllTail : TGpDoublyLinkedListObject;
   protected
     procedure Linking(obj: TGpDoublyLinkedListObject);      {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -5235,7 +5234,7 @@ begin
   if bufferSize = 0 then
     raise Exception.Create('TGpObjectRingBuffer.Create: buffer size is 0');
   if multithreaded then
-    orbLock := TSpinLock.Create;
+    orbLock := TCriticalSection.Create;
   orbBufferSize := bufferSize;
   orbOwnsObjects := ownsObjects;
   SetLength(orbBuffer, orbBufferSize+1);
@@ -5755,7 +5754,7 @@ constructor TGpDoublyLinkedList.Create(multithreaded: boolean);
 begin
   inherited Create;
   if multithreaded then
-    dllLock := TSpinLock.Create;
+    dllLock := TCriticalSection.Create;
   dllHead := TGpDoublyLinkedListObject.Create;
   dllTail := TGpDoublyLinkedListObject.Create;
   dllHead.dlloNext := dllTail;
