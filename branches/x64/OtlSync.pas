@@ -148,10 +148,10 @@ type
   strict private
     omrewReference: NativeInt;      //Reference.Bit0 is 'writing in progress' flag
   public
-    procedure EnterReadLock;// inline;
-    procedure EnterWriteLock;// inline;
-    procedure ExitReadLock;// inline;
-    procedure ExitWriteLock;// inline;
+    procedure EnterReadLock; inline;
+    procedure EnterWriteLock; inline;
+    procedure ExitReadLock; inline;
+    procedure ExitWriteLock; inline;
   end; { TOmniMREW }
 
   IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
@@ -407,12 +407,11 @@ asm
   pop   edi
 {$ELSE CPUX64}
   .noframe
-  push  rbx
+  push  rbx                     //rsp := rsp - 8 !
   mov   rax, oldData
   mov   rbx, newData
   mov   rcx, newReference
-  mov   r8, [destination]
-  mov   r8, [rsp + $30]
+  mov   r8, [destination + 8]   //+8 with respect to .noframe
   lock cmpxchg16b [r8]
   pop   rbx
 {$ENDIF CPUX64}
@@ -527,11 +526,10 @@ end; { GetCPUTimeStamp }
 
 function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
 asm
-{$IFNDEF CPUX64}
-  lock  xadd [addend], value
-{$ELSE CPUX64}
+{$IFDEF CPUX64}
   mov   rax, value
 {$ENDIF CPUX64}
+  lock  xadd [addend], value
 end; { NInterlockedExchangeAdd }
 
 {$IFNDEF OTL_HasInterlockedCompareExchangePointer}
@@ -663,7 +661,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 2, omrewReference );
+  until CAS(currentReference, currentReference + 2, omrewReference);
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
@@ -673,7 +671,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 1 ,omrewReference );
+  until CAS(currentReference, currentReference + 1, omrewReference);
   //Now wait on all readers
   repeat
   until omrewReference = 1;

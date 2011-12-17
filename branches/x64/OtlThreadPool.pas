@@ -1478,7 +1478,7 @@ begin
 end; { TOmniThreadPool.WorkerObj }
 
 initialization
-  {$MESSAGE WARN 'The code in this unit may depend on SizeOf(pointer) being 4 - not yet confirmed not rejected'}
+  {$MESSAGE WARN 'The code in this unit may depend on SizeOf(pointer) being 4 - not yet confirmed nor rejected'}
 finalization
   GOmniThreadPool := nil;
 end.

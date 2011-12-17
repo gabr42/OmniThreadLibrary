@@ -152,6 +152,7 @@ type
     obsNumElements  : integer;
     obsPublicChainP : PReferencedPtr;
     obsRecycleChainP: PReferencedPtr;
+  class var
     class var obsIsInitialized: boolean;                //default is false
     class var obsTaskPopLoops : NativeInt;
     class var obsTaskPushLoops: NativeInt;
@@ -189,19 +190,20 @@ type
 
   TOmniBaseBoundedQueue = class abstract(TInterfacedObject, IOmniQueue)
   strict private
-    obqDataBuffer               : pointer;
-    obqElementSize              : integer;
-    obqNumElements              : integer;
-    obqPublicRingBuffer         : POmniRingBuffer;
-    obqRecycleRingBuffer        : POmniRingBuffer;
+    obqDataBuffer       : pointer;
+    obqElementSize      : integer;
+    obqNumElements      : integer;
+    obqPublicRingBuffer : POmniRingBuffer;
+    obqRecycleRingBuffer: POmniRingBuffer;
+  class var
+    class var obqIsInitialized  : boolean;
     class var obqTaskInsertLoops: NativeInt;             //default is false
     class var obqTaskRemoveLoops: NativeInt;
-    class var obqIsInitialized  : boolean;
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
-    class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
     procedure MeasureExecutionTimes;
+    class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
   public
     destructor Destroy; override;
     function  Dequeue(var value): boolean;
@@ -339,19 +341,21 @@ end; { TOmniBaseBoundedStack.Empty }
 
 procedure TOmniBaseBoundedStack.Initialize(numElements, elementSize: integer);
 var
-  bufferElementSize: integer;
-  currElement      : POmniLinkedData;
-  iElement         : integer;
-  nextElement      : POmniLinkedData;
+  bufferElementSize : integer;
+  currElement       : POmniLinkedData;
+  iElement          : integer;
+  nextElement       : POmniLinkedData;
+  roundedElementSize: integer;
 begin
   Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obsNumElements := numElements;
-  //calculate element size, round up to next 4-aligned value
-  obsElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
-  //calculate buffer element size, round up to next 4-aligned value
-  bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
+  obsElementSize := elementSize;
+  //calculate element size, round up to next aligned value
+  roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
+  //calculate buffer element size, round up to next aligned value
+  bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr));
   if NativeInt(obsDataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
@@ -569,6 +573,14 @@ end; { TOmniBoundedStack.Push }
 
 { TOmniBaseBoundedQueue }
 
+destructor TOmniBaseBoundedQueue.Destroy;
+begin
+  FreeMem(obqDataBuffer);
+  FreeMem(obqPublicRingBuffer);
+  FreeMem(obqRecycleRingBuffer);
+  inherited;
+end; { TOmniBaseBoundedQueue.Destroy }
+
 function TOmniBaseBoundedQueue.Dequeue(var value): boolean;
 var
   Data: pointer;
@@ -580,14 +592,6 @@ begin
   Move(Data^, value, ElementSize);
   InsertLink(Data, obqRecycleRingBuffer);
 end; { TOmniBaseBoundedQueue.Dequeue }
-
-destructor TOmniBaseBoundedQueue.Destroy;
-begin
-  FreeMem(obqDataBuffer);
-  FreeMem(obqPublicRingBuffer);
-  FreeMem(obqRecycleRingBuffer);
-  inherited;
-end; { TOmniBaseBoundedQueue.Destroy }
 
 procedure TOmniBaseBoundedQueue.Empty;
 var
@@ -616,17 +620,19 @@ end; { TOmniBaseBoundedQueue.Enqueue }
 
 procedure TOmniBaseBoundedQueue.Initialize(numElements, elementSize: integer);
 var
-  n             : integer;
-  ringBufferSize: cardinal;
+  n                 : integer;
+  ringBufferSize    : cardinal;
+  roundedElementSize: integer;
 begin
   Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obqNumElements := numElements;
-  // calculate element size, round up to next 4-aligned value
-  obqElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
+  obqElementSize := elementSize;
+  // calculate element size, round up to next aligned value
+  roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
-  GetMem(obqDataBuffer, elementSize * numElements + elementSize);
+  GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize);
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
@@ -648,7 +654,7 @@ begin
   obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
   // format obqRecycleRingBuffer
   for n := 0 to numElements do
-    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(obqDataBuffer) + NativeInt(n * elementSize));
+    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(obqDataBuffer) + NativeInt(n * roundedElementSize));
   MeasureExecutionTimes;
 end; { TOmniBaseBoundedQueue.Initialize }
 
