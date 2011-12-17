@@ -829,8 +829,8 @@ end; { TGp8AlignedInt64.Add }
 
 function TGp8AlignedInt64.Addr: PInt64;
 begin
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Result := PInt64((cardinal(@aiData) + 7) AND NOT 7);
+  Assert(SizeOf(pointer) = SizeOf(NativeInt));
+  Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
 end; { TGp8AlignedInt64.Addr }
 
 function TGp8AlignedInt64.CAS(oldValue, newValue: int64): boolean;
