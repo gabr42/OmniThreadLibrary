@@ -233,7 +233,7 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
-function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
+procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 function CAS16(const oldValue, newValue: word; var destination): boolean;
@@ -524,14 +524,9 @@ asm
 {$ENDIF CPUX64}
 end; { GetCPUTimeStamp }
 
-function NInterlockedExchangeAdd(var addend; value: NativeInt): NativeInt;
+procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
 asm
-{$IFNDEF CPUX64}
   lock  xadd [addend], value
-{$ELSE CPUX64}
-  lock  xadd [addend], value
-  mov   rax, value
-{$ENDIF CPUX64}
 end; { NInterlockedExchangeAdd }
 
 {$IFNDEF OTL_HasInterlockedCompareExchangePointer}

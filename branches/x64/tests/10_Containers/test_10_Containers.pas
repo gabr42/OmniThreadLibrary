@@ -73,7 +73,7 @@ type
     procedure btnStackStressTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; msg: TOmniMessage);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   private
     FAllTestsStart   : int64;
     FBaseQueue       : TOmniBaseBoundedQueue;
@@ -356,7 +356,7 @@ begin
 end;
 
 procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
-  msg: TOmniMessage);
+  const msg: TOmniMessage);
 var
   f  : textfile;
 begin

@@ -133,6 +133,7 @@ type
   POmniRingBuffer = ^TOmniRingBuffer;
   TOmniRingBuffer  = packed record
     FirstIn        : TReferencedPtr;
+    Dummy          : array[1..128 - SizeOf(TReferencedPtr)] of byte; // push LastIn into next cache line
     LastIn         : TReferencedPtr;
     StartBuffer    : pointer;
     EndBuffer      : pointer;
@@ -417,7 +418,6 @@ var
   n          : integer;
 
 begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
-Exit;
   if not obsIsInitialized then begin
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
@@ -747,7 +747,6 @@ var
   n          : integer;
 
 begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
-Exit;
   if not obqIsInitialized then begin
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
