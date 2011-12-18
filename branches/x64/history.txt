@@ -1,3 +1,5 @@
+! Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed
+  until the program was terminated. [tnx to Zarko]
 + Implemented simplified versions of Atomic<T:class,constructor>.Initialize and Locked<T:class,constructor>.Initialize that work on D2010 and newer. Great thanks to [TOndrej] and [cjsalamon] for helping with the tricky parts!
 ! Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate. [tnx to Zarko]
 ! Under some circumstances ProcessMessage failed to rebuild handle array before waiting which could cause 'invalid handle' error.

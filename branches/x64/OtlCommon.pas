@@ -37,10 +37,16 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-12-02
-///   Version           : 1.25e
+///   Last modification : 2011-12-18
+///   Version           : 1.25f
 ///</para><para>
 ///   History:
+///     1.25f: 2011-12-18
+///       - Fixed various TOmniInterfaceDictionary bugs (big tnx to Zarko Gajic).
+///         - Clear properly clears interface refence before destroying the bucket.
+///         - Resize properly clears interface reference in old bucket after copy.
+///         - Resize preserves the internal item count.
+///         - Resize releases old buckets.
 ///     1.25e: 2011-12-09
 ///       - Removed compilation hint "Private symbol 'GetAsRecord' declared but never used".
 ///     1.25d: 2011-12-02
@@ -1272,6 +1278,7 @@ begin
     bucket := idBuckets[iBucket];
     while bucket <> nil do begin
       next := bucket^.Next;
+      bucket^.Value := nil;
       Dispose(bucket);
       bucket := next;
     end;
@@ -1327,20 +1334,28 @@ procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
 var
   bucket    : PHashItem;
   iBucket   : integer;
+  next      : PHashItem;
   oldBuckets: TBucketArray;
+  oldSize   : integer;
 begin
   if Cardinal(Length(idBuckets)) >= size then
     Exit;
+  oldSize := Count;
   oldBuckets := idBuckets;
   idBuckets := nil;
+  idCount := 0;
   SetLength(idBuckets, GetGoodHashSize(size));
   for iBucket := 0 to High(oldBuckets) do begin
     bucket := oldBuckets[iBucket];
     while assigned(bucket) do begin
        Add(bucket.Key, bucket.Value);
-       bucket := bucket.Next;
+       bucket.Value := nil;
+       next := bucket.Next;
+       Dispose(bucket);
+       bucket := next;
     end;
   end;
+  Assert(oldSize = Count);
 end; { TOmniInterfaceDictionary.Resize }
 
 function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
