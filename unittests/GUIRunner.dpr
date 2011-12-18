@@ -1,4 +1,4 @@
-program TestBlockingCollection;
+program GUIRunner;
 {
 
   Delphi DUnit Test Project
@@ -15,12 +15,16 @@ program TestBlockingCollection;
 {$ENDIF}
 
 uses
+  FastMM4,
   Forms,
   TestFramework,
   GUITestRunner,
   TextTestRunner,
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
-  OtlCollections in '..\OtlCollections.pas';
+  TestOtlDataManager1 in 'TestOtlDataManager1.pas',
+  OtlCollections in '..\OtlCollections.pas',
+  TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
+  OtlCommon in '..\OtlCommon.pas';
 
 {$R *.RES}
 

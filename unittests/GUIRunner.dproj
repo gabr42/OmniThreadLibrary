@@ -8,7 +8,7 @@
 			<AppType>Application</AppType>
 			<FrameworkType>VCL</FrameworkType>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-			<MainSource>TestBlockingCollection.dpr</MainSource>
+			<MainSource>GUIRunner.dpr</MainSource>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -32,8 +32,11 @@
 			<DCC_ExeOutput>.\$(Config)\$(Platform)</DCC_ExeOutput>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<DCC_UnitSearchPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_DcuOutput>.\$(Config)\$(Platform)</DCC_DcuOutput>
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
+			<DCC_MapFile>3</DCC_MapFile>
+			<DCC_UnitSearchPath>..\FastMM4;..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_Define>FullDebugMode;DEBUG;$(DCC_Define)</DCC_Define>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 		</PropertyGroup>
@@ -44,11 +47,14 @@
 			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="TestBlockingCollection.dpr">
+			<DelphiCompile Include="GUIRunner.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="TestBlockingCollection1.pas"/>
+			<DCCReference Include="TestOtlDataManager1.pas"/>
 			<DCCReference Include="..\OtlCollections.pas"/>
+			<DCCReference Include="TestOmniInterfaceDictionary.pas"/>
+			<DCCReference Include="..\OtlCommon.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -100,7 +106,7 @@
 						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 					</Excluded_Packages>
 					<Source>
-						<Source Name="MainSource">TestBlockingCollection.dpr</Source>
+						<Source Name="MainSource">GUIRunner.dpr</Source>
 					</Source>
 				</Delphi.Personality>
 				<Platforms>
