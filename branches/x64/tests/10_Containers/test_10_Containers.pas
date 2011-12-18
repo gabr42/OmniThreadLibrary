@@ -308,6 +308,7 @@ end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
+  {$IFDEF CPUX64}Log('64-bit');{$ELSE}Log('32-bit');{$ENDIF}
   FBaseStack := TOmniBaseBoundedStack.Create;
   FBaseStack.Initialize(CTestQueueLength, SizeOf(integer));
   FStack := TOmniBoundedStack.Create(CTestQueueLength, SizeOf(integer));
