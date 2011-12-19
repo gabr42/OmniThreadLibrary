@@ -202,6 +202,14 @@ implementation
 uses
   Classes;
 
+{$IFDEF CPUX64}
+procedure AsmPause;
+asm
+  .noframe
+  pause
+end; { AsmPause }
+{$ENDIF CPUX64}
+
 { TOmniBlockingCollectionEnumerator }
 
 constructor TOmniBlockingCollectionEnumerator.Create(collection: TOmniBlockingCollection);
@@ -269,7 +277,7 @@ begin
       Win32Check(SetEvent(obcCompletedSignal)); // tell blocked readers to quit
       Exit;
     end;
-    asm pause; end;
+    {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF CPUX64}
   until false;
 end; { TOmniBlockingCollection.CompleteAdding }
 

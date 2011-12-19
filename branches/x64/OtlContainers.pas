@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2011-08-26
-///   Version           : 2.05
+///   Last modification : 2011-12-18
+///   Version           : 3.0
 ///</para><para>
 ///   History:
+///     3.0: 2011-12-19
+///       - [GJ] Implemented 64-bit TOmni[Base]Bounded(Queue|Stack).
 ///     2.05: 2011-08-26
 ///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may
 ///         not be valid for any ammount of time if other threads are reading from/

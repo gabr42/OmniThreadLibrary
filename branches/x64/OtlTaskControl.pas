@@ -339,7 +339,7 @@ type
     {$ENDIF OTL_Anonymous}
   end; { TOmniMessageExec }
 
-  IOmniTaskControl = interface(IGpTraceable) ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -405,8 +405,6 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload;
-
-    procedure Log(const prefix: string);
   //
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -813,7 +811,7 @@ type
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TGpTraceable, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
   {$IFDEF OTL_Anonymous}
   strict private
     otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
@@ -923,8 +921,6 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload; inline;
-
-    procedure Log(const prefix: string);
 
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -2368,7 +2364,6 @@ begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;
   end;
-  OutputDebugString(PChar(Format('- %p', [pointer(otcExecutor)])));
   FreeAndNil(otcExecutor);
   otcSharedInfo.CommChannel := nil;
   if otcSharedInfo.TerminateEvent <> 0 then begin
@@ -2587,7 +2582,6 @@ end; { TOmniTaskControl.GetUserDataVal }
 
 procedure TOmniTaskControl.Initialize;
 begin
-  OutputDebugString(PChar(Format('+ %p', [pointer(otcExecutor)])));
   otcExecutor.Options := [tcoForceExecution];
   otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
@@ -2600,9 +2594,6 @@ begin
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
   otcUserData := TOmniValueContainer.Create;
   otcOnMessageList := TGpIntegerObjectList.Create(true);
-
-  if (cardinal(pointer(otcExecutor)) = $7FF49680) or (cardinal(pointer(otcExecutor)) = $7FB66600) then
-    TraceReferences := true;
 end; { TOmniTaskControl.Initialize }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
@@ -2666,11 +2657,6 @@ begin
   group.Remove(Self);
   Result := Self;
 end; { TOmniTaskControl.Leave }
-
-procedure TOmniTaskControl.Log(const prefix: string);
-begin
-  OutputDebugString(PChar(Format('%s %p %d', [prefix, pointer(otcExecutor), GetRefCount])));
-end; { TOmniTaskControl.Log }
 
 function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
 begin

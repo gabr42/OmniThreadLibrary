@@ -1,3 +1,4 @@
+- [GJ] Implemented 64-bit bounded queue and stack.
 ! Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed
   until the program was terminated. [tnx to Zarko]
 + Implemented simplified versions of Atomic<T:class,constructor>.Initialize and Locked<T:class,constructor>.Initialize that work on D2010 and newer. Great thanks to [TOndrej] and [cjsalamon] for helping with the tricky parts!
