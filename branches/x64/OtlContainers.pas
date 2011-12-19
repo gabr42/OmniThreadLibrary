@@ -1386,7 +1386,7 @@ begin
 end; { TOmniQueue.TryDequeue }
 
 initialization
-  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}2{$ENDIF}*SizeOf(pointer));
+  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
   Assert(SizeOf(TOmniTaggedPointer) = 2*SizeOf(pointer));
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   InitializeTimingInfo;
