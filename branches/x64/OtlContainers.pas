@@ -37,6 +37,7 @@
 ///   History:
 ///     3.0: 2011-12-19
 ///       - [GJ] Implemented 64-bit TOmni[Base]Bounded(Queue|Stack).
+///       - Fixed TOmni[Base]Queue to work in 64-bit world.
 ///     2.05: 2011-08-26
 ///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may
 ///         not be valid for any ammount of time if other threads are reading from/
@@ -240,11 +241,11 @@ type
     tagSentinel);
 
   TOmniTaggedValue = packed record
-    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be 4-aligned
+    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be pointer-aligned
     Tag     : TOmniQueueTag;
     Offset  : word;
     {$IFDEF CPUX64}
-    Stuffing: array[1..12] of byte; // make TOmniTaggedValue 4 pointers big
+    Stuffing: array[1..4] of byte; // make TOmniTaggedValue 3 pointers big
     {$ENDIF CPUX64}
     function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;
   end; { TOmniTaggedValue }
@@ -316,10 +317,17 @@ uses
   SysUtils;
 
 {$IFDEF CPUX64}
-procedure Pause;
+procedure AsmInt3;
 asm
+  .noframe
+  int 3
+end; { AsmInt3 }
+
+procedure AsmPause;
+asm
+  .noframe
   pause;
-end; { Pause }
+end; { AsmPause }
 {$ENDIF CPUX64}
 
 { TOmniBaseBoundedStack }
@@ -1044,7 +1052,7 @@ end; { TOmniBaseQueue.AllocateBlock }
 procedure TOmniBaseQueue.Assert(condition: boolean);
 begin
   if not condition then
-    asm int 3; end;
+    {$IFDEF CPUX64}AsmInt3;{$ELSE}asm int 3; end;{$ENDIF CPUX64}
 end; { TOmniBaseQueue.Assert }
 {$ENDIF DEBUG_OMNI_QUEUE}
 
@@ -1090,7 +1098,7 @@ begin
     then
       break //repeat
     else // very temporary condition, retry quickly
-      {$IFDEF CPUX64}Pause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+      {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
   until false;
   {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
   if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
@@ -1176,7 +1184,7 @@ begin
         break; //repeat
       end
       else
-        {$IFDEF CPUX64}Pause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+        {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
     until false;
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
     header := tail;
@@ -1295,7 +1303,7 @@ begin
         break; //repeat
       end
       else
-        {$IFDEF CPUX64}Pause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+        {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
     until false;
     if Result then begin // dequeueing
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
@@ -1378,7 +1386,7 @@ begin
 end; { TOmniQueue.TryDequeue }
 
 initialization
-  Assert(SizeOf(TOmniTaggedValue) = 4*SizeOf(pointer));
+  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}2{$ENDIF}*SizeOf(pointer));
   Assert(SizeOf(TOmniTaggedPointer) = 2*SizeOf(pointer));
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   InitializeTimingInfo;

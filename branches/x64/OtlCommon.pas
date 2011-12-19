@@ -197,13 +197,13 @@ type
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
 
-  TOmniValue = packed record
+  TOmniValue = packed record // 13 bytes in 32-bit, 17 bytes in 64-bits
   private
     ovData: int64;
     ovIntf: IInterface;
     ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
-             ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer, ovtDateTime, ovtException, ovtArray, ovtRecord);
+             ovtObject, ovtInterface, ovtVariant, ovtWideString, ovtPointer, ovtDateTime,
+             ovtException, ovtArray, ovtRecord);
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
@@ -245,6 +245,7 @@ type
     /// is not shown.</summary>
     {$ENDREGION}
     class procedure _RemoveWarnings; inline; static;
+    procedure ClearIntf; inline;
   public
     constructor Create(const values: array of const);
     constructor CreateNamed(const values: array of const);
@@ -1556,6 +1557,12 @@ begin
   ovType := ovtNull;
 end; { TOmniValue.Clear }
 
+procedure TOmniValue.ClearIntf;
+begin
+  if RawData^ <> 0 then
+    ovIntf := nil;
+end; { TOmniValue.ClearIntf }
+
 function TOmniValue.GetAsArray: TOmniValueContainer;
 begin
   if not IsArray then
@@ -1856,6 +1863,7 @@ end; { TOmniValue._RemoveWarnings }
 
 procedure TOmniValue.SetAsBoolean(const value: boolean);
 begin
+  ClearIntf;
   PByte(RawData)^ := Ord(value);
   ovType := ovtBoolean;
 end; { TOmniValue.SetAsBoolean }
@@ -1867,18 +1875,21 @@ end; { TOmniValue.SetAsCardinal }
 
 procedure TOmniValue.SetAsDouble(value: Double);
 begin
+  ClearIntf;
   PDouble(RawData)^ := value;
   ovType := ovtDouble;
 end; { TOmniValue.SetAsDouble }
 
 procedure TOmniValue.SetAsDateTime(value: TDateTime);
 begin
+  ClearIntf;
   PDouble(RawData)^ := value;
   ovType := ovtDateTime;
 end; { TOmniValue.SetAsDateTime }
 
 procedure TOmniValue.SetAsException(value: Exception);
 begin
+  ClearIntf;
   RawData^ := int64(value);
   ovType := ovtException
 end; { TOmniValue.SetAsException }
@@ -1891,6 +1902,7 @@ end; { TOmniValue.SetAsExtended }
 
 procedure TOmniValue.SetAsInt64(const value: int64);
 begin
+  ClearIntf;
   ovData := value;
   ovType := ovtInteger;
 end; { TOmniValue.SetAsInt64 }
@@ -1908,12 +1920,14 @@ end; { TOmniValue.SetAsInterface }
 
 procedure TOmniValue.SetAsObject(const value: TObject);
 begin
+  ClearIntf;
   RawData^ := int64(value);
   ovType := ovtObject;
 end; { TOmniValue.SetAsObject }
 
 procedure TOmniValue.SetAsPointer(const value: pointer);
 begin
+  ClearIntf;
   RawData^ := int64(value);
   ovType := ovtPointer;
 end; { TOmniValue.SetAsPointer }

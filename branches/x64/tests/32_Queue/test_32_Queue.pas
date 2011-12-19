@@ -29,12 +29,12 @@ type
     btnTest         : TButton;
     btnTestIntf     : TButton;
     cbRepeat        : TCheckBox;
+    cbTestIsEmpty   : TCheckBox;
     inpBlockSize    : TEdit;
     lblBlockSize    : TLabel;
     lbLog           : TListBox;
     rgCollectionType: TRadioGroup;
     spinBlockSize   : TSpinButton;
-    cbTestIsEmpty: TCheckBox;
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
@@ -58,6 +58,7 @@ type
     procedure DisplayParameters;
     procedure Log(const msg: string); overload;
     procedure Log(const msg: string; const params: array of const); overload;
+    procedure MsgError(var msg: TOmniMessage); message MSG_ERR;
     procedure PrepareForwarders(numForwarders: integer);
     procedure PrepareReaders(numReaders: integer);
     procedure PrepareTest(numForwarders, numReaders: integer);
@@ -67,7 +68,6 @@ type
     procedure StopReaders;
     procedure StopWorkers;
     procedure WMRestartTest(var msg: TMessage); message WM_USER;
-    procedure MsgError(var msg: TOmniMessage); message MSG_ERR;
   strict protected
     function CreateCollection: TOmniBaseQueue;
   end; { TfrmTestOtlCollections }
@@ -435,7 +435,5 @@ begin
   PrepareTest(Random(8)+1, Random(8)+1);
 end; { TfrmTestOtlCollections.WMRestartTest }
 
-initialization
-  Assert(SizeOf(cardinal) = SizeOf(pointer));
 end.
 
