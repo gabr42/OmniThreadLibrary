@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-07-27
-///   Version           : 1.07a
+///   Version           : 1.07b
 ///</para><para>
 ///   History:
+///     1.07b: 2011-12-19
+///       - COmniTaskMsg_Terminated is processed even if OnTaskTerminated handler is not set.
 ///     1.07a: 2011-07-27
 ///       - Removed 'FreeAndNil(uninitialized variable)' which was leftover from
 ///         incorrectly removed code in version 1.06.
@@ -295,22 +297,20 @@ begin { TOmniEventMonitor.WndProc }
     msg.Result := 0;
   end
   else if msg.Msg = COmniTaskMsg_Terminated then begin
-    if assigned(OnTaskTerminated) then begin
-      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then begin
-        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
-        while endpoint.Receive(emCurrentMsg) do
-          if Assigned(emOnTaskMessage) then
-            emOnTaskMessage(task, emCurrentMsg);
-        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
-        while endpoint.Receive(emCurrentMsg) do
-          if Assigned(emOnTaskUndeliveredMessage) then
-            emOnTaskUndeliveredMessage(task, emCurrentMsg);
-        emCurrentMsg.MsgData._ReleaseAndClear;
-        if Assigned(emOnTaskTerminated) then
-          OnTaskTerminated(task);
-        Detach(task);
-      end;
+    task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+    if assigned(task) then begin
+      endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
+      while endpoint.Receive(emCurrentMsg) do
+        if Assigned(emOnTaskMessage) then
+          emOnTaskMessage(task, emCurrentMsg);
+      endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
+      while endpoint.Receive(emCurrentMsg) do
+        if Assigned(emOnTaskUndeliveredMessage) then
+          emOnTaskUndeliveredMessage(task, emCurrentMsg);
+      emCurrentMsg.MsgData._ReleaseAndClear;
+      if Assigned(emOnTaskTerminated) then
+        OnTaskTerminated(task);
+      Detach(task);
     end;
     msg.Result := 0;
   end
