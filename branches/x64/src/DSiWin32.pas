@@ -4840,8 +4840,13 @@ var
     instanceWndProc: TMethod;
     msg            : TMessage;
   begin
+    {$IFDEF CPUX64}
     instanceWndProc.Code := pointer(GetWindowLongPtr(Window, GWL_METHODCODE));
     instanceWndProc.Data := pointer(GetWindowLongPtr(Window, GWL_METHODDATA));
+    {$ELSE}
+    instanceWndProc.Code := pointer(GetWindowLong(Window, GWL_METHODCODE));
+    instanceWndProc.Data := pointer(GetWindowLong(Window, GWL_METHODDATA));
+    {$ENDIF ~CPUX64}
     if Assigned(TWndMethod(instanceWndProc)) then
     begin
       msg.msg := Message;
@@ -4886,8 +4891,13 @@ var
       if Result = 0 then
         raise Exception.CreateFmt('Unable to create DSiWin32 hidden window. %s',
                 [SysErrorMessage(GetLastError)]);
+      {$IFDEF CPUX64}
       SetWindowLongPtr(Result, GWL_METHODDATA, NativeInt(TMethod(wndProcMethod).Data));
       SetWindowLongPtr(Result, GWL_METHODCODE, NativeInt(TMethod(wndProcMethod).Code));
+      {$ELSE}
+      SetWindowLong(Result, GWL_METHODDATA, cardinal(TMethod(wndProcMethod).Data));
+      SetWindowLong(Result, GWL_METHODCODE, cardinal(TMethod(wndProcMethod).Code));
+      {$ENDIF ~CPUX64}
       Inc(GDSiWndHandlerCount);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
   end; { DSiAllocateHWnd }
