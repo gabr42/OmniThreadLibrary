@@ -21,7 +21,7 @@ type
     OmniTED      : TOmniEventMonitor;
     procedure btnNoLockClick(Sender: TObject);
     procedure btnTestLockClick(Sender: TObject);
-    procedure OmniTEDTaskMessage(const task: IOmniTaskControl);
+    procedure OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   private
     procedure Log(const msg: string);
   public
@@ -35,8 +35,7 @@ implementation
 
 uses
   SyncObjs,
-  DSiWin32,
-  SpinLock;
+  DSiWin32;
 
 {$R *.dfm}
 
@@ -92,7 +91,7 @@ var
 begin
   task := CreateTask(TestLock);
   if Sender = btnLock then
-    task.WithLock(TTicketSpinLock.Create);
+    task.WithLock(TCriticalSection.Create);
   task.Run.Terminate;
   Log(Format('%d %s', [task.ExitCode, task.ExitMessage]));
 end;
@@ -104,7 +103,7 @@ var
 begin
   task := CreateTask(TestArray);
   if sender = btnTestLock then
-    task.WithLock(TTicketSpinLock.Create);
+    task.WithLock(TCriticalSection.Create);
   task.Run;
   for iRepeat := 1 to CTestRepetitions do
     if not OneTest(task.Lock) then begin
@@ -121,11 +120,8 @@ begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
 end;
 
-procedure TfrmTestLock.OmniTEDTaskMessage(const task: IOmniTaskControl);
-var
-  msg: TOmniMessage;
+procedure TfrmTestLock.OmniTEDTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
 begin
-  task.Comm.Receive(msg);
   Log(msg.MsgData);
 end;
 

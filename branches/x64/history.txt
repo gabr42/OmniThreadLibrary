@@ -1,3 +1,4 @@
++ TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue contains a Variant of the apropriate type.
 - [GJ] Implemented 64-bit bounded queue and stack.
 ! Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed
   until the program was terminated. [tnx to Zarko]

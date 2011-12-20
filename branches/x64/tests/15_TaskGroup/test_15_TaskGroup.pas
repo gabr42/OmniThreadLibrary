@@ -35,8 +35,7 @@ implementation
 
 uses
   SyncObjs,
-  DSiWin32,
-  SpinLock;
+  DSiWin32;
 
 {$R *.dfm}
 

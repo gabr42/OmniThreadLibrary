@@ -60,7 +60,6 @@ object frmTestLock: TfrmTestLock
     OnClick = btnTestLockClick
   end
   object OmniTED: TOmniEventMonitor
-    OnTaskMessage = OmniTEDTaskMessage
     Left = 8
     Top = 264
   end

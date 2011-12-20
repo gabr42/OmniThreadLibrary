@@ -158,7 +158,7 @@ end;
 
 procedure TQuickSortTask.Sort(const msgData: TOmniValue);
 begin
-  FData          := PData(cardinal(msgData[0]));
+  FData          := PData(msgData[0]);
   FSubdivideWork := msgData[3];
   QuickSort(msgData[1], msgData[2]);
   if Task.Counter.Decrement = 0 then

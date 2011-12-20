@@ -325,7 +325,7 @@ begin
   outQueue := TOmniBlockingCollection.Create;
   time := DSiTimeGetTime64;
   Parallel.ForEach(1, testSize)
-    .NumTasks(numCores)
+    .NumTasks(1{numCores})
     .Execute(
       procedure (const elem: integer)
       begin
@@ -601,6 +601,7 @@ begin
       outList.Sorted := false;
       outList.Insert(0, 0);
       for i := 1 to testSize do
+      if outList[i] <> i then
          Assert(outList[i] = i, Format('[%d] = %d; [%d] = %d; [%d] = %d',
           [i-1, outList[i-1], i, outList[i], i+1, outList[i+1]]));
     finally FreeAndNil(outList); end;
