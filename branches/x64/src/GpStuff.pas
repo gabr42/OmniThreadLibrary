@@ -333,6 +333,11 @@ uses
   SysUtils,
   Classes;
 
+{$IF CompilerVersion < 23} //pre-XE2
+type
+  NativeInt = integer;
+{$IFEND}
+
 {$IFDEF GpStuff_ValuesEnumerators}
 type
   TGpIntegerValueEnumerator = class(TInterfacedObject, IGpIntegerValueEnumerator)

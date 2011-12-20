@@ -13,6 +13,7 @@
    History:
      1.64a: 2011-12-20
        - DSiAllocateHWnd works in 64-bit mode.
+       - Fixed 64-bit DSiInterlockedExchangeAdd64.
      1.64: 2011-12-16
        - [GJ] Assembler implementation of the x64 version of Interlocked*64 family of functions.
      1.63: 2011-10-21
@@ -7081,7 +7082,7 @@ asm
 {$IFDEF CPUX64}
   mov   rax, value
   lock  xadd [addend], value
-  lea   rax, value + rax
+  mov   rax, value
 {$ELSE}
 {     ->          EAX     addend }
 {                 ESP+4   value  }

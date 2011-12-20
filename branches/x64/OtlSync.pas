@@ -108,10 +108,10 @@ uses
   GpStuff;
 
 type
-{$IFNDEF WIN64}
-  NativeInt = Integer;
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
   PNativeInt = PInteger;
-{$ENDIF WIN64}
+{$IFEND}
 
    TFixedCriticalSection = class(TCriticalSection)
    strict protected

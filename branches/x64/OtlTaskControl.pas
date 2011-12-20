@@ -252,6 +252,10 @@ uses
   GpStringHash;
 
 type
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
+{$IFEND}
+
   IOmniTaskControl = interface;
   TOmniSharedTaskInfo = class;
   
@@ -3421,3 +3425,4 @@ initialization
 finalization
   FreeAndNil(GTaskControlEventMonitorPool);
 end.
+

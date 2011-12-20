@@ -103,6 +103,10 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
+{$IFEND}
+
   {:Lock-free, multiple writer, multiple reader, bounded stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']

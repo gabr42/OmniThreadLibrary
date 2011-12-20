@@ -38,9 +38,12 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-12-18
-///   Version           : 1.25f
+///   Version           : 1.25g
 ///</para><para>
 ///   History:
+///     1.25g: 2011-12-20
+///       - TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue
+///         contains a Variant of the appropriate type.
 ///     1.25f: 2011-12-18
 ///       - Fixed various TOmniInterfaceDictionary bugs (big tnx to Zarko Gajic).
 ///         - Clear properly clears interface refence before destroying the bucket.
@@ -1655,6 +1658,7 @@ begin
   case ovType of
     ovtInteger: Result := ovData;
     ovtNull: Result := 0;
+    ovtVariant: Result := integer(AsVariant);
     else raise Exception.Create('TOmniValue cannot be converted to int64');
   end;
 end; { TOmniValue.GetAsInt64 }
@@ -1713,6 +1717,7 @@ begin
     ovtExtended:   Result := FloatToStr(AsExtended);
     ovtString:     Result := (ovIntf as IOmniStringData).Value;
     ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant:    Result := string(AsVariant);
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
 end; { TOmniValue.GetAsString }
@@ -1761,6 +1766,7 @@ function TOmniValue.GetAsWideString: WideString;
 begin
   case ovType of
     ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant: Result := WideString(AsVariant);
     else Result := GetAsString;
   end;
 end; { TOmniValue.GetAsWideString }
@@ -1973,7 +1979,7 @@ begin
       AsInt64 := value.AsInt64;
     tkPointer:
     begin
-      Assert(SizeOf(pointer) = SizeOf(integer));
+      Assert(SizeOf(pointer) <= SizeOf(int64));
       AsPointer := pointer(value.GetReferenceToRawData^);
     end;
     else
@@ -2640,7 +2646,7 @@ begin
 end; { TOmniMessageID.Implicit }         
 
 initialization
-  Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
+  Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
   GEnvironment := TOmniEnvironment.Create;
   {$IFDEF OTL_Generics}
   FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);
