@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2011-12-16
-   Version           : 1.64
+   Last modification : 2011-12-20
+   Version           : 1.64a
 </pre>*)(*
    History:
+     1.64a: 2011-12-20
+       - DSiAllocateHWnd works in 64-bit mode.
      1.64: 2011-12-16
        - [GJ] Assembler implementation of the x64 version of Interlocked*64 family of functions.
      1.63: 2011-10-21
@@ -4838,8 +4840,8 @@ var
     instanceWndProc: TMethod;
     msg            : TMessage;
   begin
-    instanceWndProc.Code := pointer(GetWindowLong(Window, GWL_METHODCODE));
-    instanceWndProc.Data := pointer(GetWindowLong(Window, GWL_METHODDATA));
+    instanceWndProc.Code := pointer(GetWindowLongPtr(Window, GWL_METHODCODE));
+    instanceWndProc.Data := pointer(GetWindowLongPtr(Window, GWL_METHODDATA));
     if Assigned(TWndMethod(instanceWndProc)) then
     begin
       msg.msg := Message;
@@ -4884,8 +4886,8 @@ var
       if Result = 0 then
         raise Exception.CreateFmt('Unable to create DSiWin32 hidden window. %s',
                 [SysErrorMessage(GetLastError)]);
-      SetWindowLong(Result, GWL_METHODDATA, Longint(TMethod(wndProcMethod).Data));
-      SetWindowLong(Result, GWL_METHODCODE, Longint(TMethod(wndProcMethod).Code));
+      SetWindowLongPtr(Result, GWL_METHODDATA, NativeInt(TMethod(wndProcMethod).Data));
+      SetWindowLongPtr(Result, GWL_METHODCODE, NativeInt(TMethod(wndProcMethod).Code));
       Inc(GDSiWndHandlerCount);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
   end; { DSiAllocateHWnd }
