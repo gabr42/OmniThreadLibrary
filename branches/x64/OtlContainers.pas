@@ -896,18 +896,19 @@ tags:
 
 header contains:
   tail
-    slot = 4 bytes
-    tag  = 4 bytes
+    slot = 4/8 bytes (32/64-bit)
+    tag  = 4/8 bytes
   head
-    slot = 4 bytes
-    tag  = 4 bytes
+    slot = 4/8 bytes
+    tag  = 4/8 bytes
 all are 4-aligned
 
 slot contains:
-  TOmniValue = 13 bytes
+  TOmniValue = 13/17 bytes
   tag        = 1 byte
   offset     = 2 bytes
-TOmniValues are 4-aligned
+  stuffing   = 0/4 bytes
+TOmniValues are 4/8-aligned
 
 block is initialized to:
 [tagHeader, num slots - 1, 0] [tagSentinel, 0, 1] [tagFree 0, 2] .. [tagFree, 0, num slots - 2] [tagEndOfList, 0, num slots - 1]
