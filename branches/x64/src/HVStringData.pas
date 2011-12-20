@@ -46,6 +46,11 @@ implementation
 uses
   SysUtils;
 
+{$IF CompilerVersion < 23} //pre-XE2
+type
+  NativeInt = integer;
+{$IFEND}
+
 { TStringData }
 
 constructor TStringData.Create;
