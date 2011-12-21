@@ -46,6 +46,11 @@ implementation
 uses
   SysUtils;
 
+{$IF CompilerVersion < 23} //pre-XE2
+type
+  NativeInt = integer;
+{$IFEND}
+
 { TStringData }
 
 constructor TStringData.Create;
@@ -81,7 +86,7 @@ begin
   if Value <> '' then
   begin
     // Faster than: ThisLength := System.Length(Value);
-    ThisLength := PInteger(Cardinal(Value) - SizeOf(Integer))^;
+    ThisLength := PInteger(NativeInt(Value) - SizeOf(Integer))^;
     if ThisLength = 1 then
       Append(Value[1])
     else
@@ -186,7 +191,7 @@ begin
       if ThisLength > SizeOf(ThisStringRec.Chars)
       then Move(ThisStringRec.StringP^, ResultP^, ThisLength)
       else Move(ThisStringRec.Chars, ResultP^, ThisLength);
-      Inc(Integer(ResultP), ThisLength);
+      Inc(NativeInt(ResultP), ThisLength);
       Inc(ThisStringRec);
     end;
     ThisBlock := ThisBlock^.Next;

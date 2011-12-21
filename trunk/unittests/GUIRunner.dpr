@@ -24,7 +24,9 @@ uses
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
   OtlCollections in '..\OtlCollections.pas',
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
-  OtlCommon in '..\OtlCommon.pas';
+  OtlCommon in '..\OtlCommon.pas',
+  TestOmniValue in 'TestOmniValue.pas',
+  TestValue in 'TestValue.pas';
 
 {$R *.RES}
 

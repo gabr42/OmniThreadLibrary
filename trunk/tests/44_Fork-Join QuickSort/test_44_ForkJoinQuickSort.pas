@@ -8,7 +8,7 @@ uses
   OtlParallel;
 
 const
-  CNumDataPoints = 10000000;
+  CNumDataPoints = 5000000;
 
 type
   TData = array of integer;

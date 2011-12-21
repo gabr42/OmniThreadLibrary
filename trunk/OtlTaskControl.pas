@@ -252,6 +252,10 @@ uses
   GpStringHash;
 
 type
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
+{$IFEND}
+
   IOmniTaskControl = interface;
   TOmniSharedTaskInfo = class;
   
@@ -339,7 +343,7 @@ type
     {$ENDIF OTL_Anonymous}
   end; { TOmniMessageExec }
 
-  IOmniTaskControl = interface(IGpTraceable) ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -405,8 +409,6 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload;
-
-    procedure Log(const prefix: string);
   //
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -657,7 +659,7 @@ type
     oteOptions           : TOmniTaskControlOptions;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
-    oteTerminateHandles  : TGpIntegerList;
+    oteTerminateHandles  : TGpInt64List;
     oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList; 
     oteWakeMask          : DWORD;
@@ -813,7 +815,7 @@ type
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TGpTraceable, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
   {$IFDEF OTL_Anonymous}
   strict private
     otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
@@ -923,8 +925,6 @@ type
     function  WithCounter(const counter: IOmniCounter): IOmniTaskControl;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskControl; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskControl; overload; inline;
-
-    procedure Log(const prefix: string);
 
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -2273,9 +2273,9 @@ end; { TOmniTaskExecutor.SetTimer }
 
 procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
 begin
-  Assert(SizeOf(THandle) = SizeOf(integer));
+  Assert(SizeOf(THandle) <= SizeOf(int64));
   if not assigned(oteTerminateHandles) then
-    oteTerminateHandles := TGpIntegerList.Create;
+    oteTerminateHandles := TGpInt64List.Create;
   oteTerminateHandles.Add(handle);
 end; { TOmniTaskExecutor.TerminateWhen }
 
@@ -2368,7 +2368,6 @@ begin
     otcSharedInfo.Lock.Free;
     otcSharedInfo.Lock := nil;
   end;
-  OutputDebugString(PChar(Format('- %p', [pointer(otcExecutor)])));
   FreeAndNil(otcExecutor);
   otcSharedInfo.CommChannel := nil;
   if otcSharedInfo.TerminateEvent <> 0 then begin
@@ -2587,7 +2586,6 @@ end; { TOmniTaskControl.GetUserDataVal }
 
 procedure TOmniTaskControl.Initialize;
 begin
-  OutputDebugString(PChar(Format('+ %p', [pointer(otcExecutor)])));
   otcExecutor.Options := [tcoForceExecution];
   otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
@@ -2600,9 +2598,6 @@ begin
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
   otcUserData := TOmniValueContainer.Create;
   otcOnMessageList := TGpIntegerObjectList.Create(true);
-
-  if (cardinal(pointer(otcExecutor)) = $7FF49680) or (cardinal(pointer(otcExecutor)) = $7FB66600) then
-    TraceReferences := true;
 end; { TOmniTaskControl.Initialize }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
@@ -2666,11 +2661,6 @@ begin
   group.Remove(Self);
   Result := Self;
 end; { TOmniTaskControl.Leave }
-
-procedure TOmniTaskControl.Log(const prefix: string);
-begin
-  OutputDebugString(PChar(Format('%s %p %d', [prefix, pointer(otcExecutor), GetRefCount])));
-end; { TOmniTaskControl.Log }
 
 function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
 begin
@@ -3304,11 +3294,15 @@ function TOmniSharedTaskInfo.GetCancellationToken: IOmniCancellationToken;
 var
   token: IOmniCancellationToken;
 begin
-  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
+  Assert(NativeInt(@ostiCancellationToken) mod SizeOf(pointer) = 0,
     'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  Assert(NativeInt(@token) mod SizeOf(pointer) = 0,
+    'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
+  Assert(SizeOf(IOmniCancellationToken) = SizeOf(pointer));
+
   if not assigned(ostiCancellationToken) then begin
     token := CreateOmniCancellationToken;
-    if InterlockedCompareExchange(PInteger(@ostiCancellationToken)^, integer(token), 0) = 0 then
+    if CAS(nil, pointer(token), ostiCancellationToken) then
       pointer(token) := nil;
   end;
   Result := ostiCancellationToken;
@@ -3316,8 +3310,6 @@ end; { TOmniSharedTaskInfo.GetCancellationToken }
 
 procedure TOmniSharedTaskInfo.SetCancellationToken(const token: IOmniCancellationToken);
 begin
-  Assert(cardinal(@ostiCancellationToken) mod 4 = 0,
-    'TOmniSharedTaskInfo.SetCancellationToken: ostiCancellationToken is not 4-aligned!');
   // SetCancellationToken can only be called before the task is is created
   ostiCancellationToken := token;
 end; { TOmniSharedTaskInfo.SetCancellationToken }
@@ -3433,3 +3425,4 @@ initialization
 finalization
   FreeAndNil(GTaskControlEventMonitorPool);
 end.
+

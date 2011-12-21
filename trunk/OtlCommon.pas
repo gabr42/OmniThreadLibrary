@@ -38,9 +38,12 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2011-12-18
-///   Version           : 1.25f
+///   Version           : 1.25g
 ///</para><para>
 ///   History:
+///     1.25g: 2011-12-20
+///       - TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue
+///         contains a Variant of the appropriate type.
 ///     1.25f: 2011-12-18
 ///       - Fixed various TOmniInterfaceDictionary bugs (big tnx to Zarko Gajic).
 ///         - Clear properly clears interface refence before destroying the bucket.
@@ -197,13 +200,13 @@ type
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
 
-  TOmniValue = packed record
+  TOmniValue = packed record // 13 bytes in 32-bit, 17 bytes in 64-bits
   private
     ovData: int64;
     ovIntf: IInterface;
-    ovType: (ovtNull, ovtBoolean, ovtInteger, ovtDouble, ovtExtended, ovtString,
-             ovtObject, ovtInterface, ovtVariant, ovtWideString,
-             ovtPointer, ovtDateTime, ovtException, ovtArray, ovtRecord);
+    ovType: (ovtNull,
+             {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
+             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord);
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
@@ -245,6 +248,8 @@ type
     /// is not shown.</summary>
     {$ENDREGION}
     class procedure _RemoveWarnings; inline; static;
+    procedure ClearIntf; inline;
+    function  IsInterfacedType: boolean; inline;
   public
     constructor Create(const values: array of const);
     constructor CreateNamed(const values: array of const);
@@ -267,7 +272,7 @@ type
     function  IsVariant: boolean; inline;
     function  IsWideString: boolean; inline;
     class function Null: TOmniValue; static;
-    function  RawData: PInt64; inline;
+    function RawData: PInt64; inline;
     procedure RawZero; inline;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
@@ -1556,6 +1561,12 @@ begin
   ovType := ovtNull;
 end; { TOmniValue.Clear }
 
+procedure TOmniValue.ClearIntf;
+begin
+  if pointer(ovIntf) <> nil then
+    ovIntf := nil;
+end; { TOmniValue.ClearIntf }
+
 function TOmniValue.GetAsArray: TOmniValueContainer;
 begin
   if not IsArray then
@@ -1588,7 +1599,7 @@ function TOmniValue.GetAsBoolean: boolean;
 begin
   if ovType <> ovtBoolean then
     raise Exception.Create('TOmniValue cannot be converted to boolean');
-  Result := PByte(RawData)^ <> 0;
+  Result := PByte(@ovData)^ <> 0;
 end; { TOmniValue.GetAsBoolean }
 
 function TOmniValue.GetAsCardinal: cardinal;
@@ -1602,7 +1613,7 @@ begin
     ovtInteger,
     ovtNull:  Result := AsInt64;
     ovtDouble,
-    ovtDateTime: Result := PDouble(RawData)^;
+    ovtDateTime: Result := PDouble(@ovData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to double');
   end;
@@ -1612,7 +1623,7 @@ function TOmniValue.GetAsDateTime: TDateTime;
 begin
   case ovType of
     ovtDouble,
-    ovtDateTime: Result := PDouble(RawData)^;
+    ovtDateTime: Result := PDouble(@ovData)^;
     ovtNull: Result := 0;
     else raise Exception.Create('TOmniValue cannot be converted to TDateTime');
   end;
@@ -1623,7 +1634,7 @@ begin
   if IsException or
      (IsObject and AsObject.InheritsFrom(Exception))
   then
-    Result := Exception(RawData^)
+    Result := Exception(ovData)
   else if IsEmpty then
     Result := nil
   else
@@ -1636,7 +1647,7 @@ begin
     ovtInteger,
     ovtNull:  Result := AsInt64;
     ovtDouble,
-    ovtDateTime: Result := PDouble(RawData)^;
+    ovtDateTime: Result := PDouble(@ovData)^;
     ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     else raise Exception.Create('TOmniValue cannot be converted to extended');
   end;
@@ -1647,6 +1658,7 @@ begin
   case ovType of
     ovtInteger: Result := ovData;
     ovtNull: Result := 0;
+    ovtVariant: Result := integer(AsVariant);
     else raise Exception.Create('TOmniValue cannot be converted to int64');
   end;
 end; { TOmniValue.GetAsInt64 }
@@ -1669,7 +1681,7 @@ function TOmniValue.GetAsObject: TObject;
 begin
   case ovType of
     ovtObject,
-    ovtException: Result := TObject(RawData^);
+    ovtException: Result := TObject(ovData);
     ovtNull: Result := nil;
     else raise Exception.Create('TOmniValue cannot be converted to object');
   end;
@@ -1680,7 +1692,7 @@ begin
   case ovType of
     ovtPointer,
     ovtObject,
-    ovtException: Result := pointer(RawData^);
+    ovtException: Result := pointer(ovData);
     ovtNull: Result := nil;
     else raise Exception.Create('TOmniValue cannot be converted to pointer');
   end;
@@ -1705,6 +1717,7 @@ begin
     ovtExtended:   Result := FloatToStr(AsExtended);
     ovtString:     Result := (ovIntf as IOmniStringData).Value;
     ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant:    Result := string(AsVariant);
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
 end; { TOmniValue.GetAsString }
@@ -1753,6 +1766,7 @@ function TOmniValue.GetAsWideString: WideString;
 begin
   case ovType of
     ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant: Result := WideString(AsVariant);
     else Result := GetAsString;
   end;
 end; { TOmniValue.GetAsWideString }
@@ -1796,6 +1810,11 @@ function TOmniValue.IsInterface: boolean;
 begin
   Result := (ovType = ovtInterface);
 end; { TOmniValue.IsInterface }
+
+function TOmniValue.IsInterfacedType: boolean;
+begin
+  Result := ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord];
+end; { TOmniValue.IsInterfacedType }
 
 function TOmniValue.IsObject: boolean;
 begin
@@ -1856,7 +1875,8 @@ end; { TOmniValue._RemoveWarnings }
 
 procedure TOmniValue.SetAsBoolean(const value: boolean);
 begin
-  PByte(RawData)^ := Ord(value);
+  ClearIntf;
+  PByte(@ovData)^ := Ord(value);
   ovType := ovtBoolean;
 end; { TOmniValue.SetAsBoolean }
 
@@ -1867,19 +1887,22 @@ end; { TOmniValue.SetAsCardinal }
 
 procedure TOmniValue.SetAsDouble(value: Double);
 begin
-  PDouble(RawData)^ := value;
+  ClearIntf;
+  PDouble(@ovData)^ := value;
   ovType := ovtDouble;
 end; { TOmniValue.SetAsDouble }
 
 procedure TOmniValue.SetAsDateTime(value: TDateTime);
 begin
-  PDouble(RawData)^ := value;
+  ClearIntf;
+  PDouble(@ovData)^ := value;
   ovType := ovtDateTime;
 end; { TOmniValue.SetAsDateTime }
 
 procedure TOmniValue.SetAsException(value: Exception);
 begin
-  RawData^ := int64(value);
+  ClearIntf;
+  PInt64(@ovData)^ := int64(value);
   ovType := ovtException
 end; { TOmniValue.SetAsException }
 
@@ -1891,6 +1914,7 @@ end; { TOmniValue.SetAsExtended }
 
 procedure TOmniValue.SetAsInt64(const value: int64);
 begin
+  ClearIntf;
   ovData := value;
   ovType := ovtInteger;
 end; { TOmniValue.SetAsInt64 }
@@ -1908,13 +1932,15 @@ end; { TOmniValue.SetAsInterface }
 
 procedure TOmniValue.SetAsObject(const value: TObject);
 begin
-  RawData^ := int64(value);
+  ClearIntf;
+  PInt64(@ovData)^ := int64(value);
   ovType := ovtObject;
 end; { TOmniValue.SetAsObject }
 
 procedure TOmniValue.SetAsPointer(const value: pointer);
 begin
-  RawData^ := int64(value);
+  ClearIntf;
+  PInt64(@ovData)^ := int64(value);
   ovType := ovtPointer;
 end; { TOmniValue.SetAsPointer }
 
@@ -1953,7 +1979,7 @@ begin
       AsInt64 := value.AsInt64;
     tkPointer:
     begin
-      Assert(SizeOf(pointer) = SizeOf(integer));
+      Assert(SizeOf(pointer) <= SizeOf(int64));
       AsPointer := pointer(value.GetReferenceToRawData^);
     end;
     else
@@ -1977,19 +2003,19 @@ end; { TOmniValue.SetAsWideString }
 
 procedure TOmniValue._AddRef;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then
+  if IsInterfacedType then
     ovIntf._AddRef;
 end; { TOmniValue._AddRef }
 
 procedure TOmniValue._Release;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then
+  if IsInterfacedType then
     ovIntf._Release;
 end; { TOmniValue._Release }
 
 procedure TOmniValue._ReleaseAndClear;
 begin
-  if ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord] then begin
+  if IsInterfacedType then begin
     ovIntf._Release;
     RawZero;
   end;
@@ -2620,9 +2646,7 @@ begin
 end; { TOmniMessageID.Implicit }         
 
 initialization
-  Assert(SizeOf(TObject) = SizeOf(cardinal)); //in VarToObj
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
-  Assert(SizeOf(pointer) = 4);
+  Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
   GEnvironment := TOmniEnvironment.Create;
   {$IFDEF OTL_Generics}
   FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);

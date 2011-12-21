@@ -73,7 +73,7 @@ type
     procedure btnStackStressTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; msg: TOmniMessage);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
   private
     FAllTestsStart   : int64;
     FBaseQueue       : TOmniBaseBoundedQueue;
@@ -308,6 +308,7 @@ end;
 
 procedure TfrmTestOtlContainers.FormCreate(Sender: TObject);
 begin
+  {$IFDEF CPUX64}Log('64-bit');{$ELSE}Log('32-bit');{$ENDIF}
   FBaseStack := TOmniBaseBoundedStack.Create;
   FBaseStack.Initialize(CTestQueueLength, SizeOf(integer));
   FStack := TOmniBoundedStack.Create(CTestQueueLength, SizeOf(integer));
@@ -356,7 +357,7 @@ begin
 end;
 
 procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
-  msg: TOmniMessage);
+  const msg: TOmniMessage);
 var
   f  : textfile;
 begin

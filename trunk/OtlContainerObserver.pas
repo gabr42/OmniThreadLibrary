@@ -269,7 +269,7 @@ begin
     csObserverLists[interest] := nil;
   end;
   inherited;
-end; { TOmniContainerSubject.Destroy }
+end; { TOmni ContainerSubject.Destroy }
 
 procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
   interest: TOmniContainerObserverInterest);
