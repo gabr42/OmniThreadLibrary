@@ -470,6 +470,4 @@ begin
   PrepareTest(Random(8)+1, Random(8)+1);
 end; { TfrmTestOtlCollections.WMRestartTest }
 
-initialization
-  Assert(SizeOf(cardinal) = SizeOf(pointer));
 end.

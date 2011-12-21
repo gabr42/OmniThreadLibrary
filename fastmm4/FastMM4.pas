@@ -1,6 +1,6 @@
 (*
 
-Fast Memory Manager 4.98
+Fast Memory Manager 4.99
 
 Description:
  A fast replacement memory manager for Embarcadero Delphi Win32 applications
@@ -806,7 +806,7 @@ Change log:
     defined. This option may improve performance with many CPU cores and/or
     threads of different priorities. Note that the SwitchToThread API call is
     only available on Windows 2000 and later. (Thanks to Zach Saw.)
-  Version 4.98 (23 September 2011)
+  Version 4.98 (23 September 2011):
   - Added the FullDebugModeCallBacks define which adds support for memory
     manager event callbacks. This allows the application to be notified of
     memory allocations, frees and reallocations as they occur. (Thanks to
@@ -821,6 +821,11 @@ Change log:
     InitUnits, which is required by some software protection tools.
   - Added support for Delphi XE2 (Windows 32-bit and Windows 64-bit platforms
     only).
+  Version 4.99 (6 November 2011):
+  - Fixed crashes in the 64-bit BASM codepath when more than 4GB of memory is
+    allocated.
+  - Fixed bad record alignment under 64-bit that affected performance.
+  - Fixed compilation errors with some older compilers.
 
 *)
 
@@ -1049,7 +1054,7 @@ interface
 {-------------------------Public constants-----------------------------}
 const
   {The current version of FastMM}
-  FastMMVersion = '4.98';
+  FastMMVersion = '4.99';
   {The number of small block types}
 {$ifdef Align16Bytes}
   NumSmallBlockTypes = 46;
@@ -1081,7 +1086,7 @@ type
   UIntPtr = Cardinal;
 {$endif}
 
-  TSmallBlockTypeState = packed record
+  TSmallBlockTypeState = record
     {The internal size of the block type}
     InternalBlockSize: Cardinal;
     {Useable block size: The number of non-reserved bytes inside the block.}
@@ -1094,7 +1099,7 @@ type
   end;
   TSmallBlockTypeStates = array[0..NumSmallBlockTypes - 1] of TSmallBlockTypeState;
 
-  TMemoryManagerState = packed record
+  TMemoryManagerState = record
     {Small block type states}
     SmallBlockTypeStates: TSmallBlockTypeStates;
     {Medium block stats}
@@ -1107,7 +1112,7 @@ type
     ReservedLargeBlockAddressSpace: NativeUInt;
   end;
 
-  TMemoryManagerUsageSummary = packed record
+  TMemoryManagerUsageSummary = record
     {The total number of bytes allocated by the application.}
     AllocatedBytes: NativeUInt;
     {The total number of address space bytes used by control structures, or
@@ -1125,7 +1130,7 @@ type
 
 {$ifdef EnableMemoryLeakReporting}
   {List of registered leaks}
-  TRegisteredMemoryLeak = packed record
+  TRegisteredMemoryLeak = record
     LeakAddress: Pointer;
     LeakedClass: TClass;
     {$ifdef CheckCppObjectTypeEnabled}
@@ -1354,7 +1359,7 @@ type
    Align16Bytes option will not work. Current size = 128 bytes under 32-bit,
    and 240 bytes under 64-bit.}
   PFullDebugBlockHeader = ^TFullDebugBlockHeader;
-  TFullDebugBlockHeader = packed record
+  TFullDebugBlockHeader = record
     {Space used by the medium block manager for previous/next block management.
      If a medium block is binned then these two fields will be modified.}
     Reserved1: Pointer;
@@ -1451,6 +1456,13 @@ procedure Move44(const ASource; var ADest; ACount: NativeInt); forward;
 procedure Move52(const ASource; var ADest; ACount: NativeInt); forward;
 procedure Move60(const ASource; var ADest; ACount: NativeInt); forward;
 procedure Move68(const ASource; var ADest; ACount: NativeInt); forward;
+{$ifdef 64Bit}
+{These are not needed and thus unimplemented under 32-bit}
+procedure Move8(const ASource; var ADest; ACount: NativeInt); forward;
+procedure Move24(const ASource; var ADest; ACount: NativeInt); forward;
+procedure Move40(const ASource; var ADest; ACount: NativeInt); forward;
+procedure Move56(const ASource; var ADest; ACount: NativeInt); forward;
+{$endif}
 
 {$ifdef DetectMMOperationsAfterUninstall}
 {Invalid handlers to catch MM operations after uninstall}
@@ -1635,7 +1647,7 @@ type
 
   {Small block type (Size = 32 bytes for 32-bit, 64 bytes for 64-bit).}
   PSmallBlockType = ^TSmallBlockType;
-  TSmallBlockType = packed record
+  TSmallBlockType = record
     {True = Block type is locked}
     BlockTypeLocked: Boolean;
     {Bitmap indicating which of the first 8 medium block groups contain blocks
@@ -1674,7 +1686,7 @@ type
   end;
 
   {Small block pool (Size = 32 bytes for 32-bit, 48 bytes for 64-bit).}
-  TSmallBlockPoolHeader = packed record
+  TSmallBlockPoolHeader = record
     {BlockType}
     BlockType: PSmallBlockType;
 {$ifdef 32Bit}
@@ -1709,7 +1721,7 @@ type
   {The medium block pool from which medium blocks are drawn. Size = 16 bytes
    for 32-bit and 32 bytes for 64-bit.}
   PMediumBlockPoolHeader = ^TMediumBlockPoolHeader;
-  TMediumBlockPoolHeader = packed record
+  TMediumBlockPoolHeader = record
     {Points to the previous and next medium block pools. This circular linked
      list is used to track memory leaks on program shutdown.}
     PreviousMediumBlockPoolHeader: PMediumBlockPoolHeader;
@@ -1730,7 +1742,7 @@ type
 
   {A medium block that is unused}
   PMediumFreeBlock = ^TMediumFreeBlock;
-  TMediumFreeBlock = packed record
+  TMediumFreeBlock = record
     PreviousFreeBlock: PMediumFreeBlock;
     NextFreeBlock: PMediumFreeBlock;
   end;
@@ -1739,7 +1751,7 @@ type
 
   {Large block header record (Size = 16 for 32-bit, 32 for 64-bit)}
   PLargeBlockHeader = ^TLargeBlockHeader;
-  TLargeBlockHeader = packed record
+  TLargeBlockHeader = record
     {Points to the previous and next large blocks. This circular linked
      list is used to track memory leaks on program shutdown.}
     PreviousLargeBlockHeader: PLargeBlockHeader;
@@ -1758,7 +1770,7 @@ type
    not.}
   PExpectedMemoryLeak = ^TExpectedMemoryLeak;
   PPExpectedMemoryLeak = ^PExpectedMemoryLeak;
-  TExpectedMemoryLeak = packed record
+  TExpectedMemoryLeak = record
     {Linked list pointers}
     PreviousLeak, NextLeak: PExpectedMemoryLeak;
     {Information about the expected leak}
@@ -1771,7 +1783,7 @@ type
     LeakCount: Integer;
   end;
 
-  TExpectedMemoryLeaks = packed record
+  TExpectedMemoryLeaks = record
     {The number of entries used in the expected leaks buffer}
     EntriesUsed: Integer;
     {Freed entries}
@@ -1783,7 +1795,7 @@ type
     {Entries with only size specified}
     FirstEntryBySizeOnly: PExpectedMemoryLeak;
     {The expected leaks buffer (Need to leave space for this header)}
-    ExpectedLeaks: packed array[0..(ExpectedMemoryLeaksListSize - 64) div SizeOf(TExpectedMemoryLeak) - 1] of TExpectedMemoryLeak;
+    ExpectedLeaks: array[0..(ExpectedMemoryLeaksListSize - 64) div SizeOf(TExpectedMemoryLeak) - 1] of TExpectedMemoryLeak;
   end;
   PExpectedMemoryLeaks = ^TExpectedMemoryLeaks;
 
@@ -1815,24 +1827,24 @@ var
   {The small block types. Sizes include the leading header. Sizes are
    picked to limit maximum wastage to about 10% or 256 bytes (whichever is
    less) where possible.}
-  SmallBlockTypes: packed array[0..NumSmallBlockTypes - 1] of TSmallBlockType =(
+  SmallBlockTypes: array[0..NumSmallBlockTypes - 1] of TSmallBlockType =(
     {8/16 byte jumps}
 {$ifndef Align16Bytes}
     (BlockSize: 8 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move4{$endif}),
 {$endif}
-    (BlockSize: 16 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move12{$endif}),
+    (BlockSize: 16 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: {$ifdef 32Bit}Move12{$else}Move8{$endif}{$endif}),
 {$ifndef Align16Bytes}
     (BlockSize: 24 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move20{$endif}),
 {$endif}
-    (BlockSize: 32 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move28{$endif}),
+    (BlockSize: 32 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: {$ifdef 32Bit}Move28{$else}Move24{$endif}{$endif}),
 {$ifndef Align16Bytes}
     (BlockSize: 40 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move36{$endif}),
 {$endif}
-    (BlockSize: 48 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move44{$endif}),
+    (BlockSize: 48 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: {$ifdef 32Bit}Move44{$else}Move40{$endif}{$endif}),
 {$ifndef Align16Bytes}
     (BlockSize: 56 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move52{$endif}),
 {$endif}
-    (BlockSize: 64 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move60{$endif}),
+    (BlockSize: 64 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: {$ifdef 32Bit}Move60{$else}Move56{$endif}{$endif}),
 {$ifndef Align16Bytes}
     (BlockSize: 72 {$ifdef UseCustomFixedSizeMoveRoutines}; UpsizeMoveProcedure: Move68{$endif}),
 {$endif}
@@ -1912,7 +1924,7 @@ var
     (BlockSize: MaximumSmallBlockSize),
     (BlockSize: MaximumSmallBlockSize));
   {Size to small block type translation table}
-  AllocSize2SmallBlockTypeIndX4: packed array[0..(MaximumSmallBlockSize - 1) div SmallBlockGranularity] of Byte;
+  AllocSize2SmallBlockTypeIndX4: array[0..(MaximumSmallBlockSize - 1) div SmallBlockGranularity] of Byte;
   {-----------------Medium block management------------------}
   {A dummy medium block pool header: Maintains a circular list of all medium
    block pools to enable memory leak detection on program shutdown.}
@@ -1928,12 +1940,12 @@ var
   MediumBlockBinGroupBitmap: Cardinal;
   {The medium block bins: total of 32 * 32 = 1024 bins of a certain
    minimum size.}
-  MediumBlockBinBitmaps: packed array[0..MediumBlockBinGroupCount - 1] of Cardinal;
+  MediumBlockBinBitmaps: array[0..MediumBlockBinGroupCount - 1] of Cardinal;
   {The medium block bins. There are 1024 LIFO circular linked lists each
    holding blocks of a specified minimum size. The sizes vary in size from
    MinimumMediumBlockSize to MaximumMediumBlockSize. The bins are treated as
    type TMediumFreeBlock to avoid pointer checks.}
-  MediumBlockBins: packed array[0..MediumBlockBinCount - 1] of TMediumFreeBlock;
+  MediumBlockBins: array[0..MediumBlockBinCount - 1] of TMediumFreeBlock;
   {-----------------Large block management------------------}
   {Are large blocks locked?}
   LargeBlocksLocked: Boolean;
@@ -1971,7 +1983,7 @@ var
   {The fake VMT used to catch virtual method calls on freed objects.}
   FreedObjectVMT: packed record
     VMTData: array[vmtSelfPtr .. vmtParent + SizeOf(Pointer) - 1] of byte;
-    VMTMethods: array[vmtParent + SizeOf(Pointer) .. vmtParent + MaxFakeVMTEntries * SizeOf(Pointer) + SizeOf(Pointer) - 1] of Byte;
+    VMTMethods: array[SizeOf(Pointer) + vmtParent .. vmtParent + MaxFakeVMTEntries * SizeOf(Pointer) + SizeOf(Pointer) - 1] of Byte;
   end;
   {$ifdef CatchUseOfFreedInterfaces}
   VMTBadInterface: array[0..MaxFakeVMTEntries - 1] of Pointer;
@@ -2247,6 +2259,14 @@ asm
 {$endif}
 end;
 
+{$ifdef 64Bit}
+procedure Move8(const ASource; var ADest; ACount: NativeInt);
+asm
+  mov rax, [rcx]
+  mov [rdx], rax
+end;
+{$endif}
+
 procedure Move12(const ASource; var ADest; ACount: NativeInt);
 asm
 {$ifdef 32Bit}
@@ -2286,6 +2306,16 @@ asm
   mov [rdx + 16], ecx
 {$endif}
 end;
+
+{$ifdef 64Bit}
+procedure Move24(const ASource; var ADest; ACount: NativeInt);
+asm
+  movdqa xmm0, [rcx]
+  mov r8, [rcx + 16]
+  movdqa [rdx], xmm0
+  mov [rdx + 16], r8
+end;
+{$endif}
 
 procedure Move28(const ASource; var ADest; ACount: NativeInt);
 asm
@@ -2338,6 +2368,18 @@ asm
   mov [rdx + 32], ecx
 {$endif}
 end;
+
+{$ifdef 64Bit}
+procedure Move40(const ASource; var ADest; ACount: NativeInt);
+asm
+  movdqa xmm0, [rcx]
+  movdqa xmm1, [rcx + 16]
+  mov r8, [rcx + 32]
+  movdqa [rdx], xmm0
+  movdqa [rdx + 16], xmm1
+  mov [rdx + 32], r8
+end;
+{$endif}
 
 procedure Move44(const ASource; var ADest; ACount: NativeInt);
 asm
@@ -2396,6 +2438,20 @@ asm
   mov [rdx + 48], ecx
 {$endif}
 end;
+
+{$ifdef 64Bit}
+procedure Move56(const ASource; var ADest; ACount: NativeInt);
+asm
+  movdqa xmm0, [rcx]
+  movdqa xmm1, [rcx + 16]
+  movdqa xmm2, [rcx + 32]
+  mov r8, [rcx + 48]
+  movdqa [rdx], xmm0
+  movdqa [rdx + 16], xmm1
+  movdqa [rdx + 32], xmm2
+  mov [rdx + 48], r8
+end;
+{$endif}
 
 procedure Move60(const ASource; var ADest; ACount: NativeInt);
 asm
@@ -3574,7 +3630,7 @@ end;
 {Bins what remains in the current sequential feed medium block pool. Medium
  blocks must be locked.}
 procedure BinMediumSequentialFeedRemainder;
-{$ifndef Use32BitAsm}
+{$ifndef ASMVersion}
 var
   LSequentialFeedFreeSize, LNextBlockSizeAndFlags: NativeUInt;
   LPRemainderBlock, LNextMediumBlock: Pointer;
@@ -3626,6 +3682,7 @@ begin
   end;
 end;
 {$else}
+{$ifdef 32Bit}
 asm
   cmp MediumSequentialFeedBytesLeft, 0
   jne @MustBinMedium
@@ -3683,6 +3740,61 @@ asm
   jmp @BinTheRemainder
 @Done:
 end;
+{$else}
+asm
+  .params 2
+  xor eax, eax
+  cmp MediumSequentialFeedBytesLeft, eax
+  je @Done
+  {Get a pointer to the last sequentially allocated medium block}
+  mov rax, LastSequentiallyFedMediumBlock
+  {Is the block that was last fed sequentially free?}
+  test byte ptr [rax - BlockHeaderSize], IsFreeBlockFlag
+  jnz @LastBlockFedIsFree
+  {Set the "previous block is free" flag in the last block fed}
+  or qword ptr [rax - BlockHeaderSize], PreviousMediumBlockIsFreeFlag
+  {Get the remainder in edx}
+  mov edx, MediumSequentialFeedBytesLeft
+  {Point eax to the start of the remainder}
+  sub rax, rdx
+@BinTheRemainder:
+  {Status: rax = start of remainder, edx = size of remainder}
+  {Store the size of the block as well as the flags}
+  lea rcx, [rdx + IsMediumBlockFlag + IsFreeBlockFlag]
+  mov [rax - BlockHeaderSize], rcx
+  {Store the trailing size marker}
+  mov [rax + rdx - 2 * BlockHeaderSize], rdx
+  {Bin this medium block}
+  cmp edx, MinimumMediumBlockSize
+  jb @Done
+  mov rcx, rax
+  call InsertMediumBlockIntoBin
+  jmp @Done
+@LastBlockFedIsFree:
+  {Drop the flags}
+  mov rdx, DropMediumAndLargeFlagsMask
+  and rdx, [rax - BlockHeaderSize]
+  {Free the last block fed}
+  cmp edx, MinimumMediumBlockSize
+  jb @DontRemoveLastFed
+  {Last fed block is free - remove it from its size bin}
+  mov rcx, rax
+  call RemoveMediumFreeBlock
+  {Re-read rax and rdx}
+  mov rax, LastSequentiallyFedMediumBlock
+  mov rdx, DropMediumAndLargeFlagsMask
+  and rdx, [rax - BlockHeaderSize]
+@DontRemoveLastFed:
+  {Get the number of bytes left in ecx}
+  mov ecx, MediumSequentialFeedBytesLeft
+  {Point rax to the start of the remainder}
+  sub rax, rcx
+  {edx = total size of the remainder}
+  add edx, ecx
+  jmp @BinTheRemainder
+@Done:
+end;
+{$endif}
 {$endif}
 
 {Allocates a new sequential feed medium block pool and immediately splits off a
@@ -4906,7 +5018,7 @@ asm
   {Increment the number of used blocks}
   add TSmallBlockPoolHeader[rdx].BlocksInUse, 1
   {Get the new first free block}
-  and rcx, [eax - BlockHeaderSize]
+  and rcx, [rax - BlockHeaderSize]
   {Set the new first free block}
   mov TSmallBlockPoolHeader[rdx].FirstFreeBlock, rcx
   {Set the block header}
@@ -5055,7 +5167,7 @@ asm
   {Get the address of the last block that was fed}
   mov rsi, LastSequentiallyFedMediumBlock
   {Enough sequential feed space: Will the remainder be usable?}
-  movzx ecx, TSmallBlockType[ebx].OptimalBlockPoolSize
+  movzx ecx, TSmallBlockType[rbx].OptimalBlockPoolSize
   lea edx, [ecx + MinimumMediumBlockSize]
   cmp edi, edx
   jb @NotMuchSpace
@@ -5071,7 +5183,7 @@ asm
 @AllocateNewSequentialFeed:
   {Need to allocate a new sequential feed medium block pool: use the
    optimal size for this small block pool}
-  movzx ecx, TSmallBlockType[ebx].OptimalBlockPoolSize
+  movzx ecx, TSmallBlockType[rbx].OptimalBlockPoolSize
   mov edi, ecx
   {Allocate the medium block pool}
   call AllocNewSequentialFeedMediumPool
@@ -6055,7 +6167,7 @@ asm
   {Can we combine this block with the previous free block? We need to
    re-read the flags since it could have changed before we could lock the
    medium blocks.}
-  test byte ptr [esi - BlockHeaderSize], PreviousMediumBlockIsFreeFlag
+  test byte ptr [rsi - BlockHeaderSize], PreviousMediumBlockIsFreeFlag
   jnz @PreviousBlockIsFree
 @PreviousBlockChecked:
   {Is the entire medium block pool free, and there are other free blocks
@@ -7514,7 +7626,7 @@ asm
   jae @Done
   {Make the counter negative based}
   neg rbx
-  {Load zero into st(0)}
+  {Load zero into xmm0}
   pxor xmm0, xmm0
   {Clear groups of 16 bytes. Block sizes are always 8 less than a multiple of
    16.}
@@ -8695,7 +8807,7 @@ begin
   else
   begin
 {$ifdef SuppressFreeMemErrorsInsideException}
-    if ExceptObject <> nil then
+    if {$ifdef BDS2006AndUp}ExceptObject{$else}RaiseList{$endif} <> nil then
       Result := 0
     else
 {$endif}
@@ -9599,7 +9711,7 @@ procedure CheckBlocksOnShutdown(ACheckForLeakedBlocks: Boolean);
 {$ifdef EnableMemoryLeakReporting}
 type
   {Leaked class type}
-  TLeakedClass = packed record
+  TLeakedClass = record
     ClassPointer: TClass;
     {$ifdef CheckCppObjectTypeEnabled}
     CppTypeIdPtr: Pointer;

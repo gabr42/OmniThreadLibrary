@@ -101,7 +101,7 @@ procedure TfrmParallelMandelbrot.WMDisplayLine(var msg: TOmniMessage);
 var
   bitmap: TBitmap;
 begin
-  bitmap := TBitmap(cardinal(msg.MsgData[1]));
+  bitmap := TBitmap(msg.MsgData[1]);
   DisplayLine(bitmap, msg.MsgData[0]);
   bitmap.Free;
 end;

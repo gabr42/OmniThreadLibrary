@@ -101,7 +101,7 @@ type
   TOmniWaitObjectList = class
   strict private
     owolResponseHandlers: TGpTMethodList;
-    owolWaitObjects     : TGpIntegerList;
+    owolWaitObjects     : TGpInt64List;
   strict protected
     function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
     function  GetWaitObjects(idxWaitObject: integer): THandle;
@@ -180,7 +180,7 @@ implementation
 constructor TOmniWaitObjectList.Create;
 begin
   inherited Create;
-  owolWaitObjects := TGpIntegerList.Create;
+  owolWaitObjects := TGpInt64List.Create;
   owolResponseHandlers := TGpTMethodList.Create;
 end; { TOmniWaitObjectList.Create }
 
@@ -229,5 +229,5 @@ end; { TOmniWaitObjectList.Remove }
 { TOmniTaskParam }
 
 initialization
-  Assert(SizeOf(THandle) = SizeOf(integer));
+  Assert(SizeOf(THandle) <= SizeOf(int64));
 end.

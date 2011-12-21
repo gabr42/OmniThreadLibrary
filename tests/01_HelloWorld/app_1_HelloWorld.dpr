@@ -13,7 +13,6 @@ uses
   GpStuff in '..\..\src\GpStuff.pas',
   HVStringBuilder in '..\..\src\HVStringBuilder.pas',
   HVStringData in '..\..\src\HVStringData.pas',
-  SpinLock in '..\..\src\SpinLock.pas',
   OtlContainers in '..\..\OtlContainers.pas',
   OtlCommBufferTest in '..\..\OtlCommBufferTest.pas',
   OtlEventMonitor in '..\..\OtlEventMonitor.pas',

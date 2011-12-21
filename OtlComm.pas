@@ -77,7 +77,6 @@ uses
   SysUtils,
   Classes,
   SyncObjs,
-  SpinLock,
   GpStuff,
   DSiWin32,
   OtlCommon,
@@ -246,7 +245,7 @@ type
   TOmniTwoWayChannel = class(TInterfacedObject, IOmniTwoWayChannel)
   strict private
     twcEndpoint             : array [1..2] of IOmniCommunicationEndpoint;
-    twcLock                 : TSynchroObject;
+    twcLock                 : TOmniCS;
     twcMessageQueueSize     : integer;
     twcTaskTerminatedEvt_ref: THandle;
     twcUnidirQueue          : array [1..2] of TOmniMessageQueue;
@@ -592,7 +591,6 @@ constructor TOmniTwoWayChannel.Create(messageQueueSize: integer; taskTerminatedE
 begin
   inherited Create;
   twcMessageQueueSize := messageQueueSize;
-  twcLock := TTicketSpinLock.Create;
   twcTaskTerminatedEvt_ref := taskTerminatedEvent;
 end; { TOmniTwoWayChannel.Create }
 
@@ -607,7 +605,6 @@ begin
     twcUnidirQueue[i].Free;
     twcUnidirQueue[i] := nil;
   end;
-  FreeAndNil(twcLock);
   inherited;
 end; { TOmniTwoWayChannel.Destroy }
 
@@ -621,7 +618,6 @@ end; { TOmniTwoWayChannel.CreateBuffers }
 
 function TOmniTwoWayChannel.Endpoint1: IOmniCommunicationEndpoint;
 begin
-  Assert((cardinal(@twcEndpoint[1]) AND 3) = 0);
   if twcEndpoint[1] = nil then begin
     twcLock.Acquire;
     try
@@ -636,7 +632,6 @@ end; { TOmniTwoWayChannel.Endpoint1 }
 
 function TOmniTwoWayChannel.Endpoint2: IOmniCommunicationEndpoint;
 begin
-  Assert((cardinal(@twcEndpoint[2]) AND 3) = 0);
   if twcEndpoint[2] = nil then begin
     twcLock.Acquire;
     try

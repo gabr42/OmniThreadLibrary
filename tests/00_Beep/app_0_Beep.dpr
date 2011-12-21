@@ -12,8 +12,7 @@ uses
   GpLists in '..\..\src\GpLists.pas',
   GpStuff in '..\..\src\GpStuff.pas',
   HVStringBuilder in '..\..\src\HVStringBuilder.pas',
-  HVStringData in '..\..\src\HVStringData.pas',
-  SpinLock in '..\..\src\SpinLock.pas';
+  HVStringData in '..\..\src\HVStringData.pas';
 
 {$R *.res}
 

@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2011-08-26
-///   Version           : 2.05
+///   Last modification : 2011-12-18
+///   Version           : 3.0
 ///</para><para>
 ///   History:
+///     3.0: 2011-12-19
+///       - [GJ] Implemented 64-bit TOmni[Base]Bounded(Queue|Stack).
+///       - Fixed TOmni[Base]Queue to work in 64-bit world.
 ///     2.05: 2011-08-26
 ///       - Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may
 ///         not be valid for any ammount of time if other threads are reading from/
@@ -80,7 +83,9 @@ unit OtlContainers;
 {$I OtlOptions.inc}
 {$OPTIMIZATION ON}
 {$WARN SYMBOL_PLATFORM OFF}
-{$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
+{$IFNDEF CPUX64}
+  {$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
+{$ENDIF ~CPUX64}
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
 interface
@@ -98,6 +103,10 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
+{$IFEND}
+
   {:Lock-free, multiple writer, multiple reader, bounded stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
@@ -123,14 +132,15 @@ type
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
     PData    : pointer;
-    Reference: cardinal;
+    Reference: NativeInt;
   end; { TReferencedPtr }
 
-  TReferencedPtrBuffer = array [0..MaxInt shr 4] of TReferencedPtr;
+  TReferencedPtrBuffer = array [0..MaxInt shr 5] of TReferencedPtr;
 
   POmniRingBuffer = ^TOmniRingBuffer;
   TOmniRingBuffer  = packed record
     FirstIn        : TReferencedPtr;
+    Dummy          : array[1..128 - SizeOf(TReferencedPtr)] of byte; // push LastIn into next cache line
     LastIn         : TReferencedPtr;
     StartBuffer    : pointer;
     EndBuffer      : pointer;
@@ -150,9 +160,10 @@ type
     obsNumElements  : integer;
     obsPublicChainP : PReferencedPtr;
     obsRecycleChainP: PReferencedPtr;
+  class var
     class var obsIsInitialized: boolean;                //default is false
-    class var obsTaskPopLoops : cardinal;
-    class var obsTaskPushLoops: cardinal;
+    class var obsTaskPopLoops : NativeInt;
+    class var obsTaskPushLoops: NativeInt;
   strict protected
     procedure MeasureExecutionTimes;
     class function  PopLink(var chain: TReferencedPtr): POmniLinkedData; static;
@@ -187,19 +198,20 @@ type
 
   TOmniBaseBoundedQueue = class abstract(TInterfacedObject, IOmniQueue)
   strict private
-    obqDataBuffer               : pointer;
-    obqElementSize              : integer;
-    obqNumElements              : integer;
-    obqPublicRingBuffer         : POmniRingBuffer;
-    obqRecycleRingBuffer        : POmniRingBuffer;
-    class var obqTaskInsertLoops: cardinal;             //default is false
-    class var obqTaskRemoveLoops: cardinal;
+    obqDataBuffer       : pointer;
+    obqElementSize      : integer;
+    obqNumElements      : integer;
+    obqPublicRingBuffer : POmniRingBuffer;
+    obqRecycleRingBuffer: POmniRingBuffer;
+  class var
     class var obqIsInitialized  : boolean;
+    class var obqTaskInsertLoops: NativeInt;             //default is false
+    class var obqTaskRemoveLoops: NativeInt;
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
-    class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
     procedure MeasureExecutionTimes;
+    class function  RemoveLink(const ringBuffer: POmniRingBuffer): pointer; static;
   public
     destructor Destroy; override;
     function  Dequeue(var value): boolean;
@@ -233,9 +245,12 @@ type
     tagSentinel);
 
   TOmniTaggedValue = packed record
-    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be 4-aligned
+    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be pointer-aligned
     Tag     : TOmniQueueTag;
     Offset  : word;
+    {$IFDEF CPUX64}
+    Stuffing: array[1..4] of byte; // make TOmniTaggedValue 3 pointers big
+    {$ENDIF CPUX64}
     function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;
   end; { TOmniTaggedValue }
   POmniTaggedValue = ^TOmniTaggedValue;
@@ -243,7 +258,11 @@ type
   TOmniTaggedPointer = packed record
     Slot    : POmniTaggedValue;
     Tag     : TOmniQueueTag;
+    {$IFNDEF CPUX64}
     Stuffing: array [1..3] of byte; // record size must be congruent to 0 (mod 4)
+    {$ELSE CPUX64}
+    Stuffing: array [1..7] of byte; // record size must be congruent to 0 (mod 8)
+    {$ENDIF CPUX64}
     function  CAS(oldSlot: POmniTaggedValue; oldTag: TOmniQueueTag;
       newSlot: POmniTaggedValue; newTag: TOmniQueueTag): boolean; inline;
     procedure Move(newSlot: POmniTaggedValue; newTag: TOmniQueueTag); inline;
@@ -301,6 +320,20 @@ uses
   Windows,
   SysUtils;
 
+{$IFDEF CPUX64}
+procedure AsmInt3;
+asm
+  .noframe
+  int 3
+end; { AsmInt3 }
+
+procedure AsmPause;
+asm
+  .noframe
+  pause;
+end; { AsmPause }
+{$ENDIF CPUX64}
+
 { TOmniBaseBoundedStack }
 
 destructor TOmniBaseBoundedStack.Destroy;
@@ -323,33 +356,35 @@ end; { TOmniBaseBoundedStack.Empty }
 
 procedure TOmniBaseBoundedStack.Initialize(numElements, elementSize: integer);
 var
-  bufferElementSize: integer;
-  currElement      : POmniLinkedData;
-  iElement         : integer;
-  nextElement      : POmniLinkedData;
+  bufferElementSize : integer;
+  currElement       : POmniLinkedData;
+  iElement          : integer;
+  nextElement       : POmniLinkedData;
+  roundedElementSize: integer;
 begin
-  Assert(SizeOf(cardinal) = SizeOf(pointer));
+  Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obsNumElements := numElements;
-  //calculate element size, round up to next 4-aligned value
-  obsElementSize := (elementSize + 3) AND NOT 3;
-  //calculate buffer element size, round up to next 4-aligned value
-  bufferElementSize := ((SizeOf(TOmniLinkedData) + obsElementSize) + 3) AND NOT 3;
+  obsElementSize := elementSize;
+  //calculate element size, round up to next aligned value
+  roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
+  //calculate buffer element size, round up to next aligned value
+  bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr));
-  if cardinal(obsDataBuffer) AND 7 <> 0 then
-    raise Exception.Create('TOmniBaseContainer: obcBuffer is not 8-aligned');
+  if NativeInt(obsDataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
+    raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
   obsPublicChainP := obsDataBuffer;
-  inc(cardinal(obsDataBuffer), SizeOf(TReferencedPtr));
+  inc(NativeInt(obsDataBuffer), SizeOf(TReferencedPtr));
   obsRecycleChainP := obsDataBuffer;
-  inc(cardinal(obsDataBuffer), SizeOf(TReferencedPtr));
+  inc(NativeInt(obsDataBuffer), SizeOf(TReferencedPtr));
   //Format buffer to recycleChain, init obsRecycleChain and obsPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
   obsRecycleChainP^.PData := obsDataBuffer;
   currElement := obsRecycleChainP^.PData;
   for iElement := 0 to obsNumElements - 2 do begin
-    nextElement := POmniLinkedData(integer(currElement) + bufferElementSize);
+    nextElement := POmniLinkedData(NativeInt(currElement) + bufferElementSize);
     currElement.Next := nextElement;
     currElement := nextElement;
   end;
@@ -441,10 +476,10 @@ class function TOmniBaseBoundedStack.PopLink(var chain: TReferencedPtr): POmniLi
 //FILO buffer logic                         ^------ < chainHead
 //Advanced stack PopLink model with idle/busy status bit
 var
-  AtStartReference: cardinal;
-  CurrentReference: cardinal;
-  TaskCounter     : cardinal;
-  ThreadReference : cardinal;
+  AtStartReference: NativeInt;
+  CurrentReference: NativeInt;
+  TaskCounter     : NativeInt;
+  ThreadReference : NativeInt;
 label
   TryAgain;
 begin
@@ -458,16 +493,16 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not CAS32(CurrentReference, ThreadReference, Reference)
+       not CAS(CurrentReference, ThreadReference, Reference)
     then
       goto TryAgain;
     //Reference is set...
     result := PData;
     //Empty test
     if result = nil then
-      CAS32(ThreadReference, 0, Reference)            //Clear Reference if task own reference
+      CAS(ThreadReference, 0, Reference)            //Clear Reference if task own reference
     else
-      if not CAS64(result, ThreadReference, result.Next, 0, chain) then
+      if not CAS(result, ThreadReference, result.Next, 0, chain) then
         goto TryAgain;
   end;
 end; { TOmniBaseBoundedStack.PopLink }
@@ -488,7 +523,7 @@ class procedure TOmniBaseBoundedStack.PushLink(const link: POmniLinkedData; var 
 //Advanced stack PushLink model with idle/busy status bit
 var
   PMemData   : pointer;
-  TaskCounter: cardinal;
+  TaskCounter: NativeInt;
 begin
   with chain do begin
     for TaskCounter := 0 to obsTaskPushLoops do
@@ -497,7 +532,7 @@ begin
     repeat
       PMemData := PData;
       link.Next := PMemData;
-    until CAS32(PMemData, link, PData);
+    until CAS(PMemData, link, PData);
   end;
 end; { TOmniBaseBoundedStack.PushLink }
 
@@ -539,7 +574,7 @@ end; { TOmniBoundedStack.Pop }
 
 function TOmniBoundedStack.Push(const value): boolean;
 var
-  countAfter : integer;
+  countAfter: integer;
 begin
   Result := inherited Push(value);
   if Result then begin
@@ -552,6 +587,14 @@ end; { TOmniBoundedStack.Push }
 
 { TOmniBaseBoundedQueue }
 
+destructor TOmniBaseBoundedQueue.Destroy;
+begin
+  FreeMem(obqDataBuffer);
+  FreeMem(obqPublicRingBuffer);
+  FreeMem(obqRecycleRingBuffer);
+  inherited;
+end; { TOmniBaseBoundedQueue.Destroy }
+
 function TOmniBaseBoundedQueue.Dequeue(var value): boolean;
 var
   Data: pointer;
@@ -563,14 +606,6 @@ begin
   Move(Data^, value, ElementSize);
   InsertLink(Data, obqRecycleRingBuffer);
 end; { TOmniBaseBoundedQueue.Dequeue }
-
-destructor TOmniBaseBoundedQueue.Destroy;
-begin
-  FreeMem(obqDataBuffer);
-  FreeMem(obqPublicRingBuffer);
-  FreeMem(obqRecycleRingBuffer);
-  inherited;
-end; { TOmniBaseBoundedQueue.Destroy }
 
 procedure TOmniBaseBoundedQueue.Empty;
 var
@@ -599,25 +634,27 @@ end; { TOmniBaseBoundedQueue.Enqueue }
 
 procedure TOmniBaseBoundedQueue.Initialize(numElements, elementSize: integer);
 var
-  n             : integer;
-  ringBufferSize: cardinal;
+  n                 : integer;
+  ringBufferSize    : cardinal;
+  roundedElementSize: integer;
 begin
-  Assert(SizeOf(cardinal) = SizeOf(pointer));
+  Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obqNumElements := numElements;
-  // calculate element size, round up to next 4-aligned value
-  obqElementSize := (elementSize + 3) AND NOT 3;
+  obqElementSize := elementSize;
+  // calculate element size, round up to next aligned value
+  roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
-  GetMem(obqDataBuffer, elementSize * numElements + elementSize);
+  GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize);
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
   obqPublicRingBuffer := AllocMem(ringBufferSize);
-  Assert(cardinal(obqPublicRingBuffer) mod 8 = 0,
+  Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
   obqRecycleRingBuffer := AllocMem(ringBufferSize);
-  Assert(cardinal(obqRecycleRingBuffer) mod 8 = 0,
+  Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
   // set obqPublicRingBuffer head
   obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
@@ -631,7 +668,7 @@ begin
   obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
   // format obqRecycleRingBuffer
   for n := 0 to numElements do
-    obqRecycleRingBuffer.Buffer[n].PData := pointer(cardinal(obqDataBuffer) + cardinal(n * elementSize));
+    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(obqDataBuffer) + NativeInt(n * roundedElementSize));
   MeasureExecutionTimes;
 end; { TOmniBaseBoundedQueue.Initialize }
 
@@ -640,12 +677,12 @@ class procedure TOmniBaseBoundedQueue.InsertLink(const data: pointer; const ring
 //FIFO buffer logic
 //Insert link to queue model with idle/busy status bit
 var
-  AtStartReference: cardinal;
+  AtStartReference: NativeInt;
   CurrentLastIn   : PReferencedPtr;
-  CurrentReference: cardinal;
+  CurrentReference: NativeInt;
   NewLastIn       : PReferencedPtr;
-  TaskCounter     : cardinal;
-  ThreadReference : cardinal;
+  TaskCounter     : NativeInt;
+  ThreadReference : NativeInt;
 label
   TryAgain;
 begin
@@ -659,22 +696,22 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not CAS32(CurrentReference, ThreadReference, LastIn.Reference)
+       not CAS(CurrentReference, ThreadReference, LastIn.Reference)
     then
       goto TryAgain;
     //Reference is set...
     CurrentLastIn := LastIn.PData;
-    CAS32(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
+    CAS(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
     if (ThreadReference <> LastIn.Reference) or
-      not CAS64(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
+      not CAS(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
     then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
-    NewLastIn := pointer(cardinal(CurrentLastIn) + SizeOf(TReferencedPtr));
-    if cardinal(NewLastIn) > cardinal(EndBuffer) then
+    NewLastIn := pointer(NativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
+    if NativeInt(NewLastIn) > NativeInt(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
-    if not CAS64(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
+    if not CAS(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseBoundedQueue.InsertLink }
@@ -688,10 +725,10 @@ function TOmniBaseBoundedQueue.IsFull: boolean;
 var
   NewLastIn: pointer;
 begin
-  NewLastIn := pointer(cardinal(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
-  if cardinal(NewLastIn) > cardinal(obqPublicRingBuffer.EndBuffer) then
+  NewLastIn := pointer(NativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
+  if NativeInt(NewLastIn) > NativeInt(obqPublicRingBuffer.EndBuffer) then
     NewLastIn := obqPublicRingBuffer.StartBuffer;
-  result := (cardinal(NewLastIn) = cardinal(obqPublicRingBuffer.LastIn.PData)) or
+  result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.LastIn.PData)) or
     (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
 end; { TOmniBaseBoundedQueue.IsFull }
 
@@ -753,12 +790,12 @@ class function TOmniBaseBoundedQueue.RemoveLink(const ringBuffer: POmniRingBuffe
 //FIFO buffer logic
 //Remove link from queue model with idle/busy status bit
 var
-  AtStartReference      : cardinal;
+  AtStartReference      : NativeInt;
   CurrentFirstIn        : pointer;
-  CurrentReference      : cardinal;
+  CurrentReference      : NativeInt;
   NewFirstIn            : pointer;
-  Reference             : cardinal;
-  TaskCounter           : cardinal;
+  Reference             : NativeInt;
+  TaskCounter           : NativeInt;
 label
   TryAgain;
 begin
@@ -772,7 +809,7 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-      not CAS32(CurrentReference, Reference, FirstIn.Reference)
+      not CAS(CurrentReference, Reference, FirstIn.Reference)
     then
       goto TryAgain;
     //Reference is set...
@@ -780,18 +817,18 @@ TryAgain:
     //Empty test
     if CurrentFirstIn = LastIn.PData then begin
       //Clear Reference if task own reference
-      CAS32(Reference, 0, FirstIn.Reference);
+      CAS(Reference, 0, FirstIn.Reference);
       Result := nil;
       Exit;
     end;
     //Load Result
     Result := PReferencedPtr(FirstIn.PData).PData;
     //Calculate ringBuffer next FirstIn address
-    NewFirstIn := pointer(cardinal(CurrentFirstIn) + SizeOf(TReferencedPtr));
-    if cardinal(NewFirstIn) > cardinal(EndBuffer) then
+    NewFirstIn := pointer(NativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
+    if NativeInt(NewFirstIn) > NativeInt(EndBuffer) then
       NewFirstIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
-    if not CAS64(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
+    if not CAS(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseBoundedQueue.RemoveLink }
@@ -863,18 +900,19 @@ tags:
 
 header contains:
   tail
-    slot = 4 bytes
-    tag  = 4 bytes
+    slot = 4/8 bytes (32/64-bit)
+    tag  = 4/8 bytes
   head
-    slot = 4 bytes
-    tag  = 4 bytes
+    slot = 4/8 bytes
+    tag  = 4/8 bytes
 all are 4-aligned
 
 slot contains:
-  TOmniValue = 13 bytes
+  TOmniValue = 13/17 bytes
   tag        = 1 byte
   offset     = 2 bytes
-TOmniValues are 4-aligned
+  stuffing   = 0/4 bytes
+TOmniValues are 4/8-aligned
 
 block is initialized to:
 [tagHeader, num slots - 1, 0] [tagSentinel, 0, 1] [tagFree 0, 2] .. [tagFree, 0, num slots - 2] [tagEndOfList, 0, num slots - 1]
@@ -943,9 +981,9 @@ Dequeue:
       retry from beginning
 *)
 
-{$DEFINE USE_MOVE64}
-{$IFDEF DEBUG_OMNI_QUEUE}{$UNDEF USE_MOVE64}{$ENDIF}
-{$IFDEF OTL_OLDCPU}{$UNDEF USE_MOVE64}{$ENDIF}
+{$DEFINE USE_MOVEDPTR}
+{$IFDEF DEBUG_OMNI_QUEUE}{$UNDEF USE_MOVEDPTR}{$ENDIF}
+{$IFDEF OTL_OLDCPU}{$UNDEF USE_MOVEDPTR}{$ENDIF}
 
 { TOmniTaggedValue }
 
@@ -959,12 +997,12 @@ end; { TOmniTaggedValue.CASTag }
 function TOmniTaggedPointer.CAS(oldSlot: POmniTaggedValue; oldTag: TOmniQueueTag;
   newSlot: POmniTaggedValue; newTag: TOmniQueueTag): boolean;
 begin
-  Result := CAS64(oldSlot, cardinal(oldTag), newSlot, cardinal(newTag), Self);
+  Result := OtlSync.CAS(oldSlot, NativeInt(oldTag), newSlot, NativeInt(newTag), Self);
 end; { TOmniTaggedPointer.CAS }
 
 procedure TOmniTaggedPointer.Move(newSlot: POmniTaggedValue; newTag: TOmniQueueTag);
 begin
-  Move64(newSlot, ord(newTag), Self);
+  MoveDPtr(newSlot, ord(newTag), Self);
 end; { TOmniTaggedPointer.Move }
 
 { TOmniBaseQueue }
@@ -1019,7 +1057,7 @@ end; { TOmniBaseQueue.AllocateBlock }
 procedure TOmniBaseQueue.Assert(condition: boolean);
 begin
   if not condition then
-    asm int 3; end;
+    {$IFDEF CPUX64}AsmInt3;{$ELSE}asm int 3; end;{$ENDIF CPUX64}
 end; { TOmniBaseQueue.Assert }
 {$ENDIF DEBUG_OMNI_QUEUE}
 
@@ -1065,7 +1103,7 @@ begin
     then
       break //repeat
     else // very temporary condition, retry quickly
-      asm pause; end;
+      {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
   until false;
   {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
   if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
@@ -1073,7 +1111,7 @@ begin
     head.Value := value; // this works because the slot was initialized to zero when allocating
     {$IFNDEF DEBUG_OMNI_QUEUE}
     head.Tag := tagAllocated; {$ELSE} Assert(head.CASTag(tagFree, tagAllocated)); {$ENDIF}
-    {$IFDEF USE_MOVE64} // release the lock
+    {$IFDEF USE_MOVEDPTR} // release the lock
     obcHeadPointer.Move(next, next.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagAllocating, next, next.Tag)); {$ENDIF}
   end
   else begin // allocating memory
@@ -1088,7 +1126,7 @@ begin
     {$IFNDEF DEBUG_OMNI_QUEUE}
     head.Tag := tagBlockPointer; {$ELSE} Assert(head.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
     Inc(extension, 2); // get to the first free slot
-    {$IFDEF USE_MOVE64} // release the lock
+    {$IFDEF USE_MOVEDPTR} // release the lock
     obcHeadPointer.Move(extension, extension.Tag); {$ELSE} Assert(obcHeadPointer.CAS(head, tagExtending, extension, extension.Tag)); {$ENDIF}
     PreallocateMemory;
   end;
@@ -1098,9 +1136,9 @@ procedure TOmniBaseQueue.Initialize;
 begin
   obcTailPointer := AllocMem(SizeOf(TOmniTaggedPointer));
   obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
-  Assert(cardinal(obcTailPointer) mod 8 = 0);
-  Assert(cardinal(obcHeadPointer) mod 8 = 0);
-  Assert(cardinal(@obcCachedBlock) mod 4 = 0);
+  Assert(NativeInt(obcTailPointer) mod (2*SizeOf(pointer)) = 0);
+  Assert(NativeInt(obcHeadPointer) mod (2*SizeOf(pointer)) = 0);
+  Assert(NativeInt(@obcCachedBlock) mod SizeOf(pointer) = 0);
   obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
@@ -1151,7 +1189,7 @@ begin
         break; //repeat
       end
       else
-        asm pause; end;
+        {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
     until false;
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
     header := tail;
@@ -1161,14 +1199,14 @@ begin
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(not caughtTheHead); {$ENDIF}
     if tag = tagSentinel then begin
       next := NextSlot(tail);
-      {$IFDEF USE_MOVE64} // release the lock
+      {$IFDEF USE_MOVEDPTR} // release the lock
       obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag)); {$ENDIF}
     end
     else begin // releasing memory
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
       next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
-      {$IFDEF USE_MOVE64} // release the lock
+      {$IFDEF USE_MOVEDPTR} // release the lock
       obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
       tag := tagSentinel; // retry
     end;
@@ -1270,7 +1308,7 @@ begin
         break; //repeat
       end
       else
-        asm pause; end;
+        {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
     until false;
     if Result then begin // dequeueing
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
@@ -1284,19 +1322,19 @@ begin
           tail.Value._ReleaseAndClear;
         end;
         if caughtTheHead then begin
-          {$IFDEF USE_MOVE64} // release the lock; as this is the last element, don't move forward
+          {$IFDEF USE_MOVEDPTR} // release the lock; as this is the last element, don't move forward
           obcTailPointer.Move(tail, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, tail, tagSentinel)); {$ENDIF}
           header := nil; // do NOT decrement the counter; this slot will be retagged again
         end
         else
-          {$IFDEF USE_MOVE64} // release the lock
+          {$IFDEF USE_MOVEDPTR} // release the lock
           obcTailPointer.Move(next, next.Tag); {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag)); {$ENDIF}
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
         next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
-        {$IFDEF USE_MOVE64} // release the lock
+        {$IFDEF USE_MOVEDPTR} // release the lock
         obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
         tag := tagSentinel; // retry
       end;
@@ -1353,9 +1391,9 @@ begin
 end; { TOmniQueue.TryDequeue }
 
 initialization
-  Assert(SizeOf(TOmniTaggedValue) = 16);
-  Assert(SizeOf(TOmniTaggedPointer) = 8);
-  Assert(SizeOf(pointer) = SizeOf(cardinal));
+  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
+  Assert(SizeOf(TOmniTaggedPointer) = 2*SizeOf(pointer));
+  Assert(SizeOf(pointer) = SizeOf(NativeInt));
   InitializeTimingInfo;
 end.
 
