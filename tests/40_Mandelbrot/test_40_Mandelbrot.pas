@@ -92,7 +92,7 @@ begin
       rV := 2 * rU * rV - rY;
       rU := rZ;
       Inc(color);
-    until (Sqr(rU) + Sqr(rV) > 9) or (color = 14);
+    until (Sqr(rU) + Sqr(rV) > 4) or (color = 14);
     bitmap.Canvas.Pixels[x, 0] := aColors[color];
   end;
 end;
