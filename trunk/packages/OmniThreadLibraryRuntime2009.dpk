@@ -34,7 +34,6 @@ requires
 contains
   GpLists in '..\src\GpLists.pas',
   GpStuff in '..\src\GpStuff.pas',
-  SpinLock in '..\src\SpinLock.pas',
   GpStringHash in '..\src\GpStringHash.pas',
   DetailedRTTI in '..\src\DetailedRTTI.pas',
   OtlCommon in '..\OtlCommon.pas',

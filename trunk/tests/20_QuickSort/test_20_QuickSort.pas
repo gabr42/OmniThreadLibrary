@@ -88,6 +88,9 @@ end;
 
 procedure TfrmQuickSortDemo.OtlEventMonitor1TaskMessage(
   const task: IOmniTaskControl; const msg: TOmniMessage);
+var
+  msgData0: TOmniValue;
+  msgData1: TOmniValue;
 begin
   if msg.MsgID = WM_STOP then begin
     FSortStart := DSiTimeGetTime64 - FSortStart;
@@ -95,11 +98,13 @@ begin
     VerifyData;
   end
   else if msg.MsgID = WM_SCHEDULE_SORTER then begin
+    msgData0 := msg.MsgData[0];
+    msgData1 := msg.MsgData[1];
     CreateTask(TQuickSortTask.Create())
       .WithCounter(FCounter)
       .MonitorWith(OtlEventMonitor1)
       .Schedule
-      .Invoke(@TQuickSortTask.Sort, [@FData, msg.MsgData[0].AsInteger, msg.MsgData[1].AsInteger, true]);
+      .Invoke(@TQuickSortTask.Sort, [@FData, msgData0.AsInteger, msgData1.AsInteger, true]);
   end
   else
     lbLog.ItemIndex := lbLog.Items.Add(Format('[%d/%s] %d|%s',
@@ -158,7 +163,7 @@ end;
 
 procedure TQuickSortTask.Sort(const msgData: TOmniValue);
 begin
-  FData          := PData(msgData[0]);
+  FData          := PData(msgData[0].AsPointer);
   FSubdivideWork := msgData[3];
   QuickSort(msgData[1], msgData[2]);
   if Task.Counter.Decrement = 0 then

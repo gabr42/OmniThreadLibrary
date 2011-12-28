@@ -29,7 +29,7 @@
 			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\7.0\Bpl\OmniThreadLibraryRuntime2010.bpl</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\7.0\Bpl\OmniThreadLibraryRuntime2010.bpl</DCC_DependencyCheckOutputName>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<GenDll>true</GenDll>
 			<GenPackage>true</GenPackage>
@@ -54,7 +54,6 @@
 			<DCCReference Include="vcl.dcp"/>
 			<DCCReference Include="..\src\GpLists.pas"/>
 			<DCCReference Include="..\src\GpStuff.pas"/>
-			<DCCReference Include="..\src\SpinLock.pas"/>
 			<DCCReference Include="..\src\GpStringHash.pas"/>
 			<DCCReference Include="..\src\DetailedRTTI.pas"/>
 			<DCCReference Include="..\OtlCommon.pas"/>
@@ -69,20 +68,21 @@
 			<DCCReference Include="..\OtlContainerObserver.pas"/>
 			<DCCReference Include="..\OtlSync.pas"/>
 			<DCCReference Include="..\OtlHooks.pas"/>
+			<DCCReference Include="..\OtlCollections.pas"/>
+			<DCCReference Include="..\OtlCommon.Utils.pas"/>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
+			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
-			</BuildConfiguration>
-			<BuildConfiguration Include="Base">
-				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_1</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
 		</ItemGroup>
-		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
-		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
+		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
 			<Borland.ProjectType>Package</Borland.ProjectType>
@@ -91,7 +91,11 @@
 					<Source>
 						<Source Name="MainSource">OmniThreadLibraryRuntime2010.dpk</Source>
 					</Source>
-					<Parameters/>
+					<Parameters>
+						<Parameters Name="UseLauncher">False</Parameters>
+						<Parameters Name="LoadAllSymbols">True</Parameters>
+						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
+					</Parameters>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
@@ -120,8 +124,8 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k120.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dclofficexp120.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="%BDSBIN%\dcloffice2k120.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="%BDSBIN%\dclofficexp120.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 					</Excluded_Packages>
 					<isVersionControl>
 						<isVersionControl Name="isVersionControlID"/>

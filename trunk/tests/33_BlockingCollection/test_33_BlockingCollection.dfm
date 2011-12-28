@@ -153,7 +153,7 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     MaxValue = 0
     MinValue = 1
     TabOrder = 12
-    Value = 1
+    Value = 0
     OnChange = inpNumCPUChange
   end
   object cbTestFinalized: TCheckBox
@@ -173,11 +173,5 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     Caption = 'Raise exceptions'
     TabOrder = 14
     OnClick = btnRaiseExceptionsClick
-  end
-  object OtlMonitor: TOmniEventMonitor
-    OnTaskMessage = OtlMonitorTaskMessage
-    OnTaskTerminated = OtlMonitorTaskTerminated
-    Left = 224
-    Top = 8
   end
 end

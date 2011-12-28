@@ -43,7 +43,7 @@ uses
   OtlCommon;
 
 {$R *.dfm}
-{$I OTLOptions.inc}
+{$I OtlOptions.inc}
 
 const
   CPrimesHigh = 1000000;

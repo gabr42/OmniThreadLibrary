@@ -38,6 +38,8 @@
     <Projects Include="33_BlockingCollection\app_33_BlockingCollection.2007.dproj" />
     <Projects Include="34_TreeScan\app_34_TreeScan.2007.dproj" />
     <Projects Include="42_MessageQueue\app_42_MessageQueue.2007.dproj" />
+    <Projects Include="49_FramedWorkers\app_49_FramedWorkers.2007.dproj" />
+    <Projects Include="50_OmniValueArray\app_50_OmniValueArray.2007.dproj" />
   </ItemGroup>
   <ProjectExtensions>
     <Borland.Personality>Default.Personality</Borland.Personality>
@@ -351,14 +353,32 @@
   <Target Name="app_42_MessageQueue_2007:Make">
     <MSBuild Projects="42_MessageQueue\app_42_MessageQueue.2007.dproj" Targets="Make" />
   </Target>
+  <Target Name="app_49_FramedWorkers_2007">
+    <MSBuild Projects="49_FramedWorkers\app_49_FramedWorkers.2007.dproj" Targets="" />
+  </Target>
+  <Target Name="app_49_FramedWorkers_2007:Clean">
+    <MSBuild Projects="49_FramedWorkers\app_49_FramedWorkers.2007.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_49_FramedWorkers_2007:Make">
+    <MSBuild Projects="49_FramedWorkers\app_49_FramedWorkers.2007.dproj" Targets="Make" />
+  </Target>
+  <Target Name="app_50_OmniValueArray_2007">
+    <MSBuild Projects="50_OmniValueArray\app_50_OmniValueArray.2007.dproj" Targets="" />
+  </Target>
+  <Target Name="app_50_OmniValueArray_2007:Clean">
+    <MSBuild Projects="50_OmniValueArray\app_50_OmniValueArray.2007.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="app_50_OmniValueArray_2007:Make">
+    <MSBuild Projects="50_OmniValueArray\app_50_OmniValueArray.2007.dproj" Targets="Make" />
+  </Target>
   <Target Name="Build">
-    <CallTarget Targets="app_0_Beep_2007;app_1_HelloWorld_2007;app_2_TwoWayHello_2007;app_3_HelloWorld_with_package_2007;app_4_TwoWayHello_with_package_2007;app_5_TwoWayHello_without_loop_2007;app_6_TwoWayHello_with_object_worker_2007;app_7_InitTest_2007;app_8_RegisterComm_2007;app_9_Communications_2007;app_10_Containers_2007;app_11_ThreadPool_2007;app_12_Lock_2007;app_13_Exceptions_2007;app_14_TerminateWhen_2007;app_15_TaskGroup_2007;app_16_ChainTo_2007;app_17_MsgWait_2007;app_18_StringMsgDispatch_2007;app_19_StringMsgBenchmark_2007;app_20_QuickSort_2007;app_22_TerminationTest_2007;app_23_BackgroundFileSearch_2007;app_24_ConnectionPool_2007;app_25_WaitableComm_2007;app_26_MultiEventMonitor_2007;app_27_RecursiveTree_2007;app_28_Hooks_2007;app_29_ImplicitEventMonitor_2007;app_31_WaitableObjects_2007;app_32_Queue_2007;app_33_BlockingCollection_2007;app_34_TreeScan_2007;app_42_MessageQueue_2007" />
+    <CallTarget Targets="app_0_Beep_2007;app_1_HelloWorld_2007;app_2_TwoWayHello_2007;app_3_HelloWorld_with_package_2007;app_4_TwoWayHello_with_package_2007;app_5_TwoWayHello_without_loop_2007;app_6_TwoWayHello_with_object_worker_2007;app_7_InitTest_2007;app_8_RegisterComm_2007;app_9_Communications_2007;app_10_Containers_2007;app_11_ThreadPool_2007;app_12_Lock_2007;app_13_Exceptions_2007;app_14_TerminateWhen_2007;app_15_TaskGroup_2007;app_16_ChainTo_2007;app_17_MsgWait_2007;app_18_StringMsgDispatch_2007;app_19_StringMsgBenchmark_2007;app_20_QuickSort_2007;app_22_TerminationTest_2007;app_23_BackgroundFileSearch_2007;app_24_ConnectionPool_2007;app_25_WaitableComm_2007;app_26_MultiEventMonitor_2007;app_27_RecursiveTree_2007;app_28_Hooks_2007;app_29_ImplicitEventMonitor_2007;app_31_WaitableObjects_2007;app_32_Queue_2007;app_33_BlockingCollection_2007;app_34_TreeScan_2007;app_42_MessageQueue_2007;app_49_FramedWorkers_2007;app_50_OmniValueArray_2007" />
   </Target>
   <Target Name="Clean">
-    <CallTarget Targets="app_0_Beep_2007:Clean;app_1_HelloWorld_2007:Clean;app_2_TwoWayHello_2007:Clean;app_3_HelloWorld_with_package_2007:Clean;app_4_TwoWayHello_with_package_2007:Clean;app_5_TwoWayHello_without_loop_2007:Clean;app_6_TwoWayHello_with_object_worker_2007:Clean;app_7_InitTest_2007:Clean;app_8_RegisterComm_2007:Clean;app_9_Communications_2007:Clean;app_10_Containers_2007:Clean;app_11_ThreadPool_2007:Clean;app_12_Lock_2007:Clean;app_13_Exceptions_2007:Clean;app_14_TerminateWhen_2007:Clean;app_15_TaskGroup_2007:Clean;app_16_ChainTo_2007:Clean;app_17_MsgWait_2007:Clean;app_18_StringMsgDispatch_2007:Clean;app_19_StringMsgBenchmark_2007:Clean;app_20_QuickSort_2007:Clean;app_22_TerminationTest_2007:Clean;app_23_BackgroundFileSearch_2007:Clean;app_24_ConnectionPool_2007:Clean;app_25_WaitableComm_2007:Clean;app_26_MultiEventMonitor_2007:Clean;app_27_RecursiveTree_2007:Clean;app_28_Hooks_2007:Clean;app_29_ImplicitEventMonitor_2007:Clean;app_31_WaitableObjects_2007:Clean;app_32_Queue_2007:Clean;app_33_BlockingCollection_2007:Clean;app_34_TreeScan_2007:Clean;app_42_MessageQueue_2007:Clean" />
+    <CallTarget Targets="app_0_Beep_2007:Clean;app_1_HelloWorld_2007:Clean;app_2_TwoWayHello_2007:Clean;app_3_HelloWorld_with_package_2007:Clean;app_4_TwoWayHello_with_package_2007:Clean;app_5_TwoWayHello_without_loop_2007:Clean;app_6_TwoWayHello_with_object_worker_2007:Clean;app_7_InitTest_2007:Clean;app_8_RegisterComm_2007:Clean;app_9_Communications_2007:Clean;app_10_Containers_2007:Clean;app_11_ThreadPool_2007:Clean;app_12_Lock_2007:Clean;app_13_Exceptions_2007:Clean;app_14_TerminateWhen_2007:Clean;app_15_TaskGroup_2007:Clean;app_16_ChainTo_2007:Clean;app_17_MsgWait_2007:Clean;app_18_StringMsgDispatch_2007:Clean;app_19_StringMsgBenchmark_2007:Clean;app_20_QuickSort_2007:Clean;app_22_TerminationTest_2007:Clean;app_23_BackgroundFileSearch_2007:Clean;app_24_ConnectionPool_2007:Clean;app_25_WaitableComm_2007:Clean;app_26_MultiEventMonitor_2007:Clean;app_27_RecursiveTree_2007:Clean;app_28_Hooks_2007:Clean;app_29_ImplicitEventMonitor_2007:Clean;app_31_WaitableObjects_2007:Clean;app_32_Queue_2007:Clean;app_33_BlockingCollection_2007:Clean;app_34_TreeScan_2007:Clean;app_42_MessageQueue_2007:Clean;app_49_FramedWorkers_2007:Clean;app_50_OmniValueArray_2007:Clean" />
   </Target>
   <Target Name="Make">
-    <CallTarget Targets="app_0_Beep_2007:Make;app_1_HelloWorld_2007:Make;app_2_TwoWayHello_2007:Make;app_3_HelloWorld_with_package_2007:Make;app_4_TwoWayHello_with_package_2007:Make;app_5_TwoWayHello_without_loop_2007:Make;app_6_TwoWayHello_with_object_worker_2007:Make;app_7_InitTest_2007:Make;app_8_RegisterComm_2007:Make;app_9_Communications_2007:Make;app_10_Containers_2007:Make;app_11_ThreadPool_2007:Make;app_12_Lock_2007:Make;app_13_Exceptions_2007:Make;app_14_TerminateWhen_2007:Make;app_15_TaskGroup_2007:Make;app_16_ChainTo_2007:Make;app_17_MsgWait_2007:Make;app_18_StringMsgDispatch_2007:Make;app_19_StringMsgBenchmark_2007:Make;app_20_QuickSort_2007:Make;app_22_TerminationTest_2007:Make;app_23_BackgroundFileSearch_2007:Make;app_24_ConnectionPool_2007:Make;app_25_WaitableComm_2007:Make;app_26_MultiEventMonitor_2007:Make;app_27_RecursiveTree_2007:Make;app_28_Hooks_2007:Make;app_29_ImplicitEventMonitor_2007:Make;app_31_WaitableObjects_2007:Make;app_32_Queue_2007:Make;app_33_BlockingCollection_2007:Make;app_34_TreeScan_2007:Make;app_42_MessageQueue_2007:Make" />
+    <CallTarget Targets="app_0_Beep_2007:Make;app_1_HelloWorld_2007:Make;app_2_TwoWayHello_2007:Make;app_3_HelloWorld_with_package_2007:Make;app_4_TwoWayHello_with_package_2007:Make;app_5_TwoWayHello_without_loop_2007:Make;app_6_TwoWayHello_with_object_worker_2007:Make;app_7_InitTest_2007:Make;app_8_RegisterComm_2007:Make;app_9_Communications_2007:Make;app_10_Containers_2007:Make;app_11_ThreadPool_2007:Make;app_12_Lock_2007:Make;app_13_Exceptions_2007:Make;app_14_TerminateWhen_2007:Make;app_15_TaskGroup_2007:Make;app_16_ChainTo_2007:Make;app_17_MsgWait_2007:Make;app_18_StringMsgDispatch_2007:Make;app_19_StringMsgBenchmark_2007:Make;app_20_QuickSort_2007:Make;app_22_TerminationTest_2007:Make;app_23_BackgroundFileSearch_2007:Make;app_24_ConnectionPool_2007:Make;app_25_WaitableComm_2007:Make;app_26_MultiEventMonitor_2007:Make;app_27_RecursiveTree_2007:Make;app_28_Hooks_2007:Make;app_29_ImplicitEventMonitor_2007:Make;app_31_WaitableObjects_2007:Make;app_32_Queue_2007:Make;app_33_BlockingCollection_2007:Make;app_34_TreeScan_2007:Make;app_42_MessageQueue_2007:Make;app_49_FramedWorkers_2007:Make;app_50_OmniValueArray_2007:Make" />
   </Target>
   <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
 </Project>

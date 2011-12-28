@@ -36,7 +36,6 @@ contains
   GpStuff in '..\src\GpStuff.pas',
   HVStringBuilder in '..\src\HVStringBuilder.pas',
   HVStringData in '..\src\HVStringData.pas',
-  SpinLock in '..\src\SpinLock.pas',
   GpStringHash in '..\src\GpStringHash.pas',
   DetailedRTTI in '..\src\DetailedRTTI.pas',
   OtlCommon in '..\OtlCommon.pas',

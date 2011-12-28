@@ -13,8 +13,8 @@ type
   TfrmConnectionPoolDemo = class(TForm)
     lbLog: TListBox;
     btnSchedule: TButton;
-    OTLMonitor: TOmniEventMonitor;
     btnScheduleAndWait: TButton;
+    OTLMonitor: TOmniEventMonitor;
     procedure btnScheduleAndWaitClick(Sender: TObject);
     procedure btnScheduleClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);

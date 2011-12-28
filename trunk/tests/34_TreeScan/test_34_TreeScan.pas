@@ -247,22 +247,33 @@ var
   iNode     : integer;
   node      : TNode;
   nodeQueue : TOmniBlockingCollection;
+  param0    : TOmniValue;
+  param1    : TOmniValue;
   scanResult: TOmniWaitableValue;
   scanValue : integer;
   value     : TOmniValue;
+
+  procedure Add(queue: TOmniBlockingCollection; value: TOmniValue);
+  begin
+    // triggers internal compiler error in D2007 if inlined
+    queue.Add(value);
+  end;
+
 begin
   try
-    nodeQueue := TOmniBlockingCollection(task.Param[0].AsPointer);
-    scanResult := TOmniWaitableValue(task.Param[1].AsPointer);
-    scanValue := task.Param[2];
+    param0 := task.Param[0];
+    nodeQueue := TOmniBlockingCollection(param0.AsPointer);
+    param1 := task.Param[1];
+    scanResult := TOmniWaitableValue(param1.AsPointer);
+    scanValue := task.Param[2].AsInteger;
     for value in nodeQueue do begin
       node := TNode(value.AsPointer);
       if node.Value = scanValue then begin
         scanResult.Signal(node);
         nodeQueue.CompleteAdding;
       end
-      else for iNode := 0 to node.NumChild - 1 do
-        nodeQueue.TryAdd(node.Child[iNode]);
+      else for iNode := 0 to node.NumChild - 1 do 
+        Add(nodeQueue, node.Child[iNode]);
     end;
   finally task.Counter.Decrement; end;
 end; { TfrmTreeScanDemo.ParaScanWorker }

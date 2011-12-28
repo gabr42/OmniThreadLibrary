@@ -57,6 +57,5 @@
     <DCCReference Include="..\src\GpStuff.pas" />
     <DCCReference Include="..\src\HVStringBuilder.pas" />
     <DCCReference Include="..\src\HVStringData.pas" />
-    <DCCReference Include="..\src\SpinLock.pas" />
   </ItemGroup>
 </Project>

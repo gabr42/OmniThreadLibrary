@@ -83,7 +83,7 @@
 						<VersionInfo Name="MajorVer">0</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
-						<VersionInfo Name="Build">0</VersionInfo>
+						<VersionInfo Name="Build">1</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -95,7 +95,7 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName">Ali Keshavarz</VersionInfoKeys>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">0.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">0.0.0.1</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright">Copyright © 2011 Ali Keshavarz. All rights reserved.</VersionInfoKeys>
 						<VersionInfoKeys Name="LegalTrademarks"/>

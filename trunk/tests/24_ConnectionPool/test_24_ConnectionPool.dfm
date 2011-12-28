@@ -44,7 +44,7 @@ object frmConnectionPoolDemo: TfrmConnectionPoolDemo
   end
   object OTLMonitor: TOmniEventMonitor
     OnTaskTerminated = OTLMonitorTaskTerminated
-    Left = 8
-    Top = 320
+    Left = 72
+    Top = 64
   end
 end

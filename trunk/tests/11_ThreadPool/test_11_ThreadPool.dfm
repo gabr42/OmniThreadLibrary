@@ -155,6 +155,11 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     TabOrder = 14
     OnClick = btnTestZeroExecutorThreadsClick
   end
+  object SaveDialog: TSaveDialog
+    DefaultExt = 'log'
+    Left = 160
+    Top = 64
+  end
   object OmniTED: TOmniEventMonitor
     OnPoolThreadCreated = OmniTEDPoolThreadCreated
     OnPoolThreadDestroying = OmniTEDPoolThreadDestroying
@@ -162,12 +167,7 @@ object frmTestOtlThreadPool: TfrmTestOtlThreadPool
     OnPoolWorkItemCompleted = OmniTEDPoolWorkItemCompleted
     OnTaskMessage = OmniTEDTaskMessage
     OnTaskTerminated = OmniTEDTaskTerminated
-    Left = 160
-    Top = 16
-  end
-  object SaveDialog: TSaveDialog
-    DefaultExt = 'log'
-    Left = 160
+    Left = 216
     Top = 64
   end
 end

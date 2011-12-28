@@ -21,7 +21,6 @@ type
     btnRunTask: TButton;
     btnScheduleTask: TButton;
     lbLog  : TListBox;
-    OmniTED: TOmniEventMonitor;
     btnSchedule6: TButton;
     btnScheduleAndCancel: TButton;
     btnCancelLong: TButton;
@@ -35,6 +34,7 @@ type
     btnScheduleAndWait: TButton;
     btnScheduleAndTerminate: TButton;
     btnTestZeroExecutorThreads: TButton;
+    OmniTED: TOmniEventMonitor;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
