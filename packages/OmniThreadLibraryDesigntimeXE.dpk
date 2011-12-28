@@ -1,7 +1,6 @@
 package OmniThreadLibraryDesigntimeXE;
 
 {$R *.res}
-{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -23,8 +22,6 @@ package OmniThreadLibraryDesigntimeXE;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
-{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'OmniThreadLibrary designtime'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}

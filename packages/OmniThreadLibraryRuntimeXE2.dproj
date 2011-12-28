@@ -89,7 +89,6 @@
 			<DCCReference Include="vcl.dcp"/>
 			<DCCReference Include="..\src\GpLists.pas"/>
 			<DCCReference Include="..\src\GpStuff.pas"/>
-			<DCCReference Include="..\src\SpinLock.pas"/>
 			<DCCReference Include="..\src\GpStringHash.pas"/>
 			<DCCReference Include="..\src\DetailedRTTI.pas"/>
 			<DCCReference Include="..\OtlCommon.pas"/>
