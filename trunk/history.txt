@@ -13,7 +13,11 @@
     http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
   - TOmniValue.AsInteger, AsString and AsWideString now work if the
     TOmniValue contains a Variant of the apropriate type.
-  - TOmniValue can store arrays, hashes and records.
+  - TOmniValue can store arrays, hashes and records. Variant arrays are no 
+    longer used. IsArray tests it TOmniValue contains an array and AsArray 
+    returns this internal container. Default indexed property still accesses 
+    individual elements in this container. See demo 50_OmniValueArray for an 
+    example.
     http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
   - Added a class which can wrap any record - TOmniRecordWrapper<T>.
   - Added an interface which can wrap any object and destroy it when the 
