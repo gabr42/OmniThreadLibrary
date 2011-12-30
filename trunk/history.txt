@@ -1,27 +1,43 @@
-+ TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue contains a Variant of the apropriate type.
-- [GJ] Implemented 64-bit bounded queue and stack.
-! Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed
-  until the program was terminated. [tnx to Zarko]
-+ Implemented simplified versions of Atomic<T:class,constructor>.Initialize and Locked<T:class,constructor>.Initialize that work on D2010 and newer. Great thanks to [TOndrej] and [cjsalamon] for helping with the tricky parts!
-! Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate. [tnx to Zarko]
-! Under some circumstances ProcessMessage failed to rebuild handle array before waiting which could cause 'invalid handle' error.
-- Atomic<T>, Locked<T>.
-- TOmniValue can store records by using FromRecord<T> and AsRecord<T>.
-- Added a class which can wrap any record - TOmniRecordWrapper<T>.
-- Added an interface which can wrap any object and destroy it when the
-  interface goes out of scope - IOmniAutoDestroyObject.
-- Fixed wrong order in teardown sequence in TOmniTask.Execute which could cause access
-  violation crash. Great thanks to [Anton Alisov] for providing a reproducible test case.
-- Fixed invalid "A call to an OS function failed" error in DispatchEvent.
-- TOmniMessageQueue.Enqueue leaked if queue was full and value contained reference counted
-  value (found by [meishier]).
-- Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off by 1 
-  (found by [meishier]).
+3.0 2011-12-30
+- New features:
+  - Support for 64-bit platform. Great thanks to [GJ] for doing most of
+    the work!
+  - Implemented background worker abstraction, Parallel.BackgroundWorker.
+  - Implemented Atomic<T> class for lock-free initialization of interfaces 
+    and objects.
+  - Implemented Locked<T> class for locking intialization of practically 
+    anything.
+    http://www.thedelphigeek.com/2011/11/atomic-interface-initialization.html
+    http://www.thedelphigeek.com/2011/11/per-object-locking.html
+    http://www.thedelphigeek.com/2011/12/on-optimistic-and-pessimistic.html
+    http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
+  - TOmniValue.AsInteger, AsString and AsWideString now work if the
+    TOmniValue contains a Variant of the apropriate type.
+  - TOmniValue can store arrays, hashes and records.
+    http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
+  - Added a class which can wrap any record - TOmniRecordWrapper<T>.
+  - Added an interface which can wrap any object and destroy it when the 
+    interface goes out of scope - IOmniAutoDestroyObject.
+- Bug fixes:
+  - Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not 
+    to be destroyed until the program was terminated. Great thanks to 
+    [Zarko] for providing a reproducible test case.
+  - Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate.
+  - Under some circumstances ProcessMessage failed to rebuild handle
+    array before waiting which could cause 'invalid handle' error.
+  - Fixed wrong order in teardown sequence in TOmniTask.Execute which could 
+    cause access violation crash. Great thanks to [Anton Alisov] for 
+    providing a reproducible test case.
+  - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
+  - TOmniMessageQueue.Enqueue leaked if queue was full and value contained 
+    reference counted value (found by [meishier]).
+  - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was 
+    off by 1 (found by [meishier]).
 - New demos:
-  - 49_FramedWorkers: Multiple frames each communication with own worker task.
-  - 50_OmniValueArray: http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
-  - 51_PipelineStressTest: [Anton Alisov]
-  - 52_BackgrondWorker
+  - 49_FramedWorkers: Multiple frames communication with each own worker task.
+  - 50_OmniValueArray: Wrapping arrays, hashes and records in TOmniValue.
+  - 51_PipelineStressTest: Stress test by [Anton Alisov].
+  - 52_BackgrondWorker: Demo for the new Parallel.BackgroundWorker abstraction.
 
 2.2 2011-10-07
 - New features:
