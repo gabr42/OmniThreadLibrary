@@ -69,7 +69,10 @@ begin
         begin
           s := '';
           for i := 0 to msgData.AsArray.Count - 1 do
-            s := s + IntToStr(msgData[i]) + ' ';
+            if msgData[i].IsInterface then
+              s := s + IntToStr((msgData[i].AsInterface as IOmniCounter).Value) + ' '
+            else
+              s := s + IntToStr(msgData[i]) + ' ';
           task.Comm.Send(MSG_RESULT, 'Received array with values: ' + s);
         end;
       MSG_HASH:
@@ -93,9 +96,9 @@ end;
 
 procedure TfrmOmniValueArray.btnSendArrayClick(Sender: TObject);
 begin
-  FWorker.Comm.Send(MSG_ARRAY, [0, 1, 1, 2, 3, 5, 8]);
+  FWorker.Comm.Send(MSG_ARRAY, [CreateCounter(0), 1, 1, 2, 3, 5, 8]);
   //equivalent code:
-  //FWorker.Comm.Send(MSG_ARRAY, TOmniValue.Create([0, 1, 1, 2, 3, 5, 8]));
+  //FWorker.Comm.Send(MSG_ARRAY, TOmniValue.Create([CreateCounter(0), 1, 1, 2, 3, 5, 8]));
 end;
 
 procedure TfrmOmniValueArray.btnSendHashClick(Sender: TObject);

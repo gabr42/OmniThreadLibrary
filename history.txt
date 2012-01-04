@@ -41,7 +41,7 @@
   - 49_FramedWorkers: Multiple frames communication with each own worker task.
   - 50_OmniValueArray: Wrapping arrays, hashes and records in TOmniValue.
   - 51_PipelineStressTest: Stress test by [Anton Alisov].
-  - 52_BackgrondWorker: Demo for the new Parallel.BackgroundWorker abstraction.
+  - 52_BackgroundWorker: Demo for the new Parallel.BackgroundWorker abstraction.
 
 2.2 2011-10-07
 - New features:
