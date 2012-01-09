@@ -27,12 +27,10 @@ Low-level solution:
 - This is an example of 'static partitioning' approach where each worker task works on
   pre-allocated part of the problem.
 
-High-level solution with Pipeline:
-- Uses Pipeline to implement the background worker thread and ParallelTask (in conjunction
-  with a static partitioning as above) to process data.
-- Uses external cancellation token and not Pipeline.Cancel because latter puts all
-  pipeline queues into 'completed' state which makes the background worker inactive (it
-  would not process any more requests).
+High-level solution:
+- Uses Background Worker to implement the background worker thread and ParallelTask
+  (in conjunction with a static partitioning as above) to process data.
+- Uses Background Worker's cancellation mechanism.
 *)
 
 unit StringListParser1;
@@ -71,12 +69,11 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
-    FPipeline: IOmniPipeline;
-    FPipelineCancel: IOmniCancellationToken;
+    FBackgroundWorker: IOmniBackgroundWorker;
     FStringProcessor: IOmniTaskControl;
+    procedure BreakStringHL(const workItem: IOmniWorkItem);
     procedure ShowResult(sl: TStringList);
-    procedure StringProcessorHL(const inputQueue, outputQueue: IOmniBlockingCollection; const
-      task: IOmniTask);
+    procedure ShowResultHL(const Sender: IOmniBackgroundWorker; const workItem: IOmniWorkItem);
     procedure WMProcessingCanceled(var msg: TOmniMessage); message WM_PROCESSING_CANCELED;
     procedure WMProcessingResult(var msg: TOmniMessage); message WM_PROCESSING_RESULT;
   end;
@@ -178,13 +175,15 @@ begin
   end;
 end;
 
-{ high-level approach }
+{ TfrmStringListParser }
 
-procedure BreakStringHL(input: string; output: TStringList; cancel: IOmniCancellationToken);
+procedure TfrmStringListParser.BreakStringHL(const workItem: IOmniWorkItem);
 var
   charsPerTask : integer;
+  input        : string;
   iTask        : integer;
   numTasks     : integer;
+  output       : TStringList;
   partialQueue : IOmniBlockingCollection;
   s            : string;
   stringBreaker: IOmniParallelTask;
@@ -198,18 +197,19 @@ begin
     taskResults[iTask] := TStringList.Create;
 
   stringBreaker := Parallel.ParallelTask.NumTasks(numTasks).NoWait
-    .TaskConfig(Parallel.TaskConfig.CancelWith(cancel))
+    .TaskConfig(Parallel.TaskConfig.CancelWith(workItem.CancellationToken))
     .Execute(
-      procedure
+      procedure (const task: IOmniTask)
       var
         workItem: TOmniValue;
       begin
         workItem := partialQueue.Next;
-        SplitPartialList(string(workItem[1]), taskResults[integer(workItem[0])], cancel);
+        SplitPartialList(workItem[1].AsString, taskResults[workItem[0].AsInteger], task.CancellationToken);
       end
     );
 
   // provide input to the ForEach loop above
+  input := workItem.Data;
   for iTask := 1 to numTasks do begin
     // divide the remaining part in as-equal-as-possible segments
     charsPerTask := Round(Length(input) / (numTasks - iTask + 1));
@@ -219,36 +219,21 @@ begin
 
   // process output
   stringBreaker.WaitFor(INFINITE);
-  for iTask := Low(taskResults) to High(taskResults) do begin
-    for s in taskResults[iTask] do
-      output.Add(s);
+  if not workItem.CancellationToken.IsSignalled then begin
+    output := TStringList.Create;
+    for iTask := Low(taskResults) to High(taskResults) do begin
+      for s in taskResults[iTask] do
+        output.Add(s);
+    end;
+    workItem.Result := output;
+  end;
+  for iTask := Low(taskResults) to High(taskResults) do
     taskResults[iTask].Free;
-  end;
-end;
-
-procedure TfrmStringListParser.StringProcessorHL(const inputQueue, outputQueue:
-  IOmniBlockingCollection; const task: IOmniTask);
-var
-  input   : TOmniValue;
-  slResult: TStringList;
-begin
-  for input in inputQueue do begin
-    slResult := TStringList.Create;
-    BreakStringHL(input.AsString, slResult, FPipelineCancel);
-    if FPipelineCancel.IsSignalled then begin
-      task.Comm.Send(WM_PROCESSING_CANCELED);
-      FreeAndNil(slResult);
-    end
-    else
-      task.Comm.Send(WM_PROCESSING_RESULT, slResult);
-  end;
-end;
-
-{ TfrmStringListParser }
+end; { TfrmStringListParser.BreakStringHL }
 
 procedure TfrmStringListParser.btnCancelHLClick(Sender: TObject);
 begin
-  FPipelineCancel.Signal;
+  FBackgroundWorker.CancelAll;
 end;
 
 procedure TfrmStringListParser.btnCancelLLClick(Sender: TObject);
@@ -264,16 +249,15 @@ end;
 
 procedure TfrmStringListParser.btnProcessHLClick(Sender: TObject);
 begin
-  FPipelineCancel.Clear;
-  FPipeline.Input.Add(inpString.Text);
+  FBackgroundWorker.Schedule(FBackgroundWorker.CreateWorkItem(inpString.Text));
 end;
 
 procedure TfrmStringListParser.FormCreate(Sender: TObject);
 begin
   FStringProcessor := CreateTask(StringProcessorLL).OnMessage(Self).Run;
-  FPipelineCancel := CreateOmniCancellationToken;
-  FPipeline := Parallel.Pipeline.Stage(StringProcessorHL,
-    Parallel.TaskConfig.OnMessage(Self)).Run;
+  FBackgroundWorker := Parallel.BackgroundWorker
+    .Execute(BreakStringHL)
+    .OnRequestDone(ShowResultHL);
 end;
 
 procedure TfrmStringListParser.FormDestroy(Sender: TObject);
@@ -281,10 +265,9 @@ begin
   FStringProcessor.CancellationToken.Signal;
   FStringProcessor.Terminate(INFINITE);
   FStringProcessor := nil;
-  FPipelineCancel.Signal;
-  FPipeline.Input.CompleteAdding;
-  FPipeline.WaitFor(INFINITE);
-  FPipeline := nil;
+  FBackgroundWorker.CancelAll;
+  FBackgroundWorker.WaitFor(INFINITE);
+  FBackgroundWorker := nil;
 end;
 
 procedure TfrmStringListParser.ShowResult(sl: TStringList);
@@ -292,6 +275,15 @@ begin
   sl.Delimiter := ',';
   lbLog.Items.Add(sl.DelimitedText);
   FreeAndNil(sl);
+end;
+
+procedure TfrmStringListParser.ShowResultHL(const Sender: IOmniBackgroundWorker;
+  const workItem: IOmniWorkItem);
+begin
+  if workItem.CancellationToken.IsSignalled then
+    lbLog.Items.Add('Canceled')
+  else
+    ShowResult(workItem.Result.AsObject as TStringList);
 end;
 
 procedure TfrmStringListParser.WMProcessingCanceled(var msg: TOmniMessage);
