@@ -266,7 +266,7 @@ begin
   FStringProcessor.Terminate(INFINITE);
   FStringProcessor := nil;
   FBackgroundWorker.CancelAll;
-  FBackgroundWorker.WaitFor(INFINITE);
+  FBackgroundWorker.Terminate(INFINITE);
   FBackgroundWorker := nil;
 end;
 
