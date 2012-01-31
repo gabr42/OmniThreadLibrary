@@ -339,6 +339,15 @@ type
   {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
 
+  ///<summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
+  TOmniValueObj = class
+  strict private
+    FValue: TOmniValue;
+  public
+    constructor Create(const value: TOmniValue);
+    property Value: TOmniValue read FValue;
+  end; { TOmniValueObj }
+
   ///<summary>Slightly different from the IEnumerable:
   ///    - Returns TOmniValue.
   ///    - Must ensure correct operation of multiple simultaneous enumerators.
@@ -2172,6 +2181,14 @@ begin
 end; { TOmniValue.Implicit }
 {$ENDIF OTL_ERTTI}
 
+{ TOmniValueObj }
+
+constructor TOmniValueObj.Create(const value: TOmniValue);
+begin
+  inherited Create;
+  FValue := value;
+end; { TOmniValueObj.Create }
+
 { TOmniWaitableValue }
 
 constructor TOmniWaitableValue.Create;
@@ -2643,7 +2660,7 @@ class operator TOmniMessageID.Implicit(const a: TOmniMessageID): pointer;
 begin
   Assert(a.omidMessageType = mitPointer);
   Result := a.omidPointer;
-end; { TOmniMessageID.Implicit }         
+end; { TOmniMessageID.Implicit }
 
 initialization
   Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
