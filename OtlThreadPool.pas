@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-08
-///   Version           : 2.09
+///   Last modification : 2012-01-31
+///   Version           : 2.09a
 /// </para><para>
 ///   History:
+///     2.09a: 2012-01-31
+///       - More accurate CountQueued.
 ///     2.09: 2011-11-08
 ///       - Adapted to OtlCommon 1.24.
 ///     2.08: 2011-11-06
@@ -342,6 +344,7 @@ type
     function  Initialize: boolean; override;
   public
     CountQueued                : TGp4AlignedInt;
+    CountQueuedLock            : TOmniCS;
     CountRunning               : TGp4AlignedInt;
     IdleWorkerThreadTimeout_sec: TGp4AlignedInt;
     MaxExecuting               : TGp4AlignedInt;
@@ -893,7 +896,7 @@ begin
       workItem := TOTPWorkItem(queuedItems[iWorkItem]);
       workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
       RequestCompleted(workItem, nil);
-    end; // for iWorkItem 
+    end; // for iWorkItem
   finally FreeAndNil(queuedItems); end;
   {$IFDEF LogThreadPool}Log('Stopping all threads', []); {$ENDIF LogThreadPool}
   for iWorker := 0 to owIdleWorkers.Count - 1 do
@@ -1155,7 +1158,11 @@ end; { TOTPWorker.RequestCompleted }
 
 procedure TOTPWorker.Schedule(var workItem: TOTPWorkItem);
 begin
-  ScheduleNext(workItem);
+  CountQueuedLock.Acquire;
+  try
+    CountQueued.Decrement;
+    ScheduleNext(workItem);
+  finally CountQueuedLock.Release; end;
   PruneWorkingQueue;
 end; { TOTPWorker.Schedule }
 
@@ -1324,7 +1331,10 @@ end; { TOmniThreadPool.CountExecuting }
 
 function TOmniThreadPool.CountQueued: integer;
 begin
-  Result := WorkerObj.CountQueued.Value;
+  WorkerObj.CountQueuedLock.Acquire;
+  try
+    Result := WorkerObj.CountQueued.Value;
+  finally WorkerObj.CountQueuedLock.Release; end;
 end; { TOmniThreadPool.CountQueued }
 
 function TOmniThreadPool.GetIdleWorkerThreadTimeout_sec: integer;
@@ -1399,6 +1409,7 @@ end; { TOmniThreadPool.RemoveMonitor }
 
 procedure TOmniThreadPool.Schedule(const task: IOmniTask);
 begin
+  WorkerObj.CountQueued.Increment;
   otpWorkerTask.Invoke(@TOTPWorker.Schedule, TOTPWorkItem.Create(task));
 end; { TOmniThreadPool.Schedule }
 
