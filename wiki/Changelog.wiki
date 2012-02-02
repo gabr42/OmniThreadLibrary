@@ -2,6 +2,143 @@
 #labels Featured
 #sidebar TableOfContents
 
+= 3.0: 2011-12-30 =
+  * New features
+    * Support for 64-bit platform. Great thanks to [GJ] for doing most of the work!
+    * Implemented background worker abstraction, Parallel.BackgroundWorker.
+    * Implemented Atomic<T> class for lock-free initialization of interfaces and objects.
+    * Implemented Locked<T> class for locking intialization of practically anything.
+      http://www.thedelphigeek.com/2011/11/atomic-interface-initialization.html
+      http://www.thedelphigeek.com/2011/11/per-object-locking.html
+      http://www.thedelphigeek.com/2011/12/on-optimistic-and-pessimistic.html
+      http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
+    * TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue contains a Variant of the apropriate type.
+    * TOmniValue can store arrays, hashes and records. Variant arrays are no longer used. IsArray tests it TOmniValue contains an array and AsArray returns this internal container. Default indexed property still accesses individual elements in this container. See demo 50_OmniValueArray for an example.
+      http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
+    * Added a class which can wrap any record - TOmniRecordWrapper<T>.
+    * Added an interface which can wrap any object and destroy it when the interface goes out of scope - IOmniAutoDestroyObject.
+  * Bug fixes
+    * Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed until the program was terminated. Great thanks to [Zarko] for providing a reproducible test case.
+    * Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate.
+    * Under some circumstances ProcessMessage failed to rebuild handle array before waiting which could cause 'invalid handle' error.
+    * Fixed wrong order in teardown sequence in TOmniTask.Execute which could cause access violation crash. Great thanks to [Anton Alisov] for providing a reproducible test case.
+    * Fixed invalid "A call to an OS function failed" error in DispatchEvent.
+    * TOmniMessageQueue.Enqueue leaked if queue was full and value contained reference counted value (found by [meishier]).
+    * Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off by 1 (found by [meishier]).
+  * New demos
+    * 49_FramedWorkers: Multiple frames communication with each own worker task.
+    * 50_OmniValueArray: Wrapping arrays, hashes and records in TOmniValue.
+    * 51_PipelineStressTest: Stress test by [Anton Alisov].
+    * 52_BackgrondWorker: Demo for the new Parallel.BackgroundWorker abstraction.
+
+= 2.2: 2011-10-11 =
+  * New features
+    * Delphi XE2 support (Windows 32-bit only).
+    * Parallel.Task can be used to execute multiple copies of a common code.
+      http://www.thedelphigeek.com/2011/09/life-after-21-parallel-data-production.html
+    * Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface to add exception and cancellation support. User code must call .Execute on the interface returned from the Parallel.Join to start the execution.
+      http://www.thedelphigeek.com/2011/07/life-after-21-paralleljoins-new-clothes.html
+    * Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped in EJoinException and raised at the end of Parallel.Join method (or when WaitFor is called if Join is executed with the .NoWait modifier).
+    * Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised in .Value. New function .FatalException and .DetachException.
+      http://www.thedelphigeek.com/2011/07/life-after-21-exceptions-in.html
+    * Two version of Parallel.Async (the ones with explicit termination handlers) were removed as this functionality can be achieved by using Parallel.TaskConfig.OnTerminated.
+      http://www.thedelphigeek.com/2011/07/life-after-21-async-redux.html
+    * Parallel.Join(const task: TOmniTaskDelegate) is no longer supported. It was replaced with the Parallel.Join(const task: IOmniJoinState).
+    * Parallel.Join no longer supports taskConfig parameter (replaced by the IOmniParallelJoin.TaskConfig function).
+    * Number of simultaneously executed task in Parallel.Join may be set by calling the new IOmniParallelJoin.NumTasks function.
+    * Implemented TOmni[Base]Queue.IsEmpty. Keep in mind that the returned value may not be valid for any amount of time if other threads are reading from/writing to the queue.
+    * Implemented another IOmniTaskControl.OnTerminated overload acception parameterless anonymous function.
+    * Implemented [I|T]OmniBlockingCollection.IsFinalized.
+    * Parallel.Pipeline accepts 'simple stage' (for loop implemented internally).
+      http://www.thedelphigeek.com/2011/09/life-after-21-pimp-my-pipeline.html
+    * TOmniValue can natively store exception objects (AsException, IsException).
+    * Implemented IOmniBlockingCollection.ReraiseExceptions. If enabled (default: disabled), [Try]Take will check if returned value for exception (TOmniValue.IsException) and if true, it will reraise this exception instead of returning a result.
+    * Assertions are enabled in OTLOptions.inc - OtlContainers needs them.
+  * Bug fixes
+    * Event monitor in connection to the thread pool was totally broken. (Big thanks to [anton alisov] for finding the problem.)
+    * Fixed [Try]Add/CompleteAdding/[Try]Take three-thread race condition in TOmniBlockingCollection.
+      http://www.thedelphigeek.com/2011/08/multithreading-is-hard.html
+  * New demos
+    * 48_OtlParallelExceptions: Exception handling in high-level OTL constructs.      
+
+= 2.1: 2011-07-19 =
+  * New features
+    * Parallel.Async can be used to start simple background tasks. 
+      http://www.thedelphigeek.com/2011/04/simple-background-tasks-with.html
+    * Parallel.ForkJoin - divide and conquer (fork/join) framework.
+      http://www.thedelphigeek.com/2011/05/divide-and-conquer-in-parallel.html
+    * OtlParallel tasks can be configured with Parallel.TaskConfig; you can also use it to communicated with the owner thread from the task.
+      http://www.thedelphigeek.com/2011/04/configuring-background-otlparallel.html
+    * IOmniTask[Control] can call Invoke method to asynchronously execute a block of code in the other thread.
+      http://www.thedelphigeek.com/2011/03/synchronize-comes-to-omnithreadlibrary.html
+    * Passes timer ID to timer proc if it accepts const TOmniValue parameter.
+    * Support for non-silent exceptions removed.
+    * Added property IOmniTaskControl.FatalExecption containing exception that was caught at the task level.
+    * Change signature for exception filters in OtlHook.FilterException.
+    * IOmniTaskControl termination empties task message queue and calls appropriate OnMessage handlers.
+  * Bug fixes
+    * Fixed race condition in TOmniTask.Execute.
+    * OtlParallel compiles in Delphi 2009.
+    * OTL monitor message window could be used after it was destroyed.
+    * Parallel.ForEach was never running on more than Process.Affinity.Count tasks.
+    * OtlParallel pools are created on the fly - OtlParallel unit can be used from a DLL.
+    * [dottor_jeckill] Bug fix: TOmniResourceCount.TryAllocate always returned False.
+    * Enumerating over TOmniTaskControlList (for example when using IOmniTaskGroup.SendToAll) leaked one object.
+    * Makes sure timers are called even if there's a constant stream of messages in registered message queues.
+    * Fixed exception handling in the thread pool.
+  * New demos
+    * 43_InvokeAnonymous: Demo for IOmniTaskControl.Invoke and IOmniTask.Invoke.
+    * 44_Fork-Join QuickSort: QuickSort implemented with Parallel.ForkJoin.
+    * 45_Fork-Join max: Selecting maximum element in an array using Parallel.ForkJoin.
+    * 46_Async: Demo for Parallel.Async.
+    * 47_TaskConfig: Demo for Parallel.TaskConfig.
+
+= 2.0: 2010-12-10 =
+  * New high-level primitives (unit OtlParallel):
+    * Improved parallel for (Parallel.ForEach).
+      http://www.thedelphigeek.com/2010/06/omnithreadlibrary-20-sneak-preview-1.html
+    * Futures (Parallel.Future<T>).
+      http://www.thedelphigeek.com/2010/06/future-of-delphi.html
+    * Pipelines (Parallel.Pipeline).
+      http://www.thedelphigeek.com/2010/11/multistage-processes-with.html
+  * Added support for multiple simultaneous timers. SetTimer takes additional 'timerID' parameter. The old SetTimer assumes timerID = 0.
+  * IOmniTask/IOmniTaskControl:
+    * ParamByName has been removed, use .Param[name: string].
+    * Param returns TOmniValueContainter.
+  * IOmniTaskControl.OnMessage also accepts an object (message dispatcher).
+  * TOmniValueContainer
+    * IndexOfName renamed to TOmniValueContainer.IndexOf.
+    * New methods in TOmniValueContainer class: ByName, Count, Exists. 
+    * New properties: Items[integer], Items[string] and Items[TOmniValue].
+  * TOmniValue
+    * Fixed memory leak when sending String, WideString, Variant and Extended values over the communication channel and when queueing them into TOmni[Base]Queue.
+    * Implemented _AddRef, _Release, _ReleaseAndClear.
+    * TOmniValue can be cast as Int64.
+    * Implemented conversions to/from TValue (Delphi 2010 and newer).
+    * Implemented constructor.
+    * [scarre] Added TDateTime support.
+  * New classes and interfaces
+    * TOmniMessageQueueTee
+    * IOmniCommDispatchingObserver
+    * TOmniCounter, auto-initialized wrapper around the IOmniCounter
+    * TOmniMessageID record, used internally to implement timers.
+  * TOmniThreadPool: ThreadDataFactory can now accept either a function or a method (but can be used only as a method - SetThreadDataFactory).
+  * TOmniEventMonitor: Message retrieving loop destroys interface immediately, not when the next message is received.
+  * TOmniTaskFunction renamed to TOmniTaskDelegate.
+  * Added function CreateResourceCount(initialCount): IOmniResourceCount.
+  * Renamed IOmniCancellationToken.IsSignaled -> IsSignalled.
+  * .dproj tests renamed to .2007.dproj.
+  * Added Delphi XE project files.
+  * Bugs fixed:
+    * Thread pool was immediately closing unused threads if MaxExecuting was set to -1.
+    * Ugly bugs in TOmniBlockingCollection removed.
+  * New demos
+    * 38_OrderedFor: Ordered parallel for loops.
+    * 39_Future: Futures.
+    * 40_Mandelbrot: Parallel graphics demo (very simple).
+    * 41_Pipeline: Pipelines.
+    * 42_MessageQueue: Stress tests for TOmniMessageQueue.
+
 = 1.05a: 2010-03-08 =
   * Bug fixed: TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent) was broken.
   * Bug fixed: TOmniTaskControl.OnMessage/OnTerminate uses event monitor created in the context of the task controller thread (was using global event monitor created in the main thread).
