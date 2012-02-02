@@ -7,16 +7,18 @@
     * Support for 64-bit platform. Great thanks to [GJ] for doing most of the work!
     * Implemented background worker abstraction, Parallel.BackgroundWorker.
     * Implemented `Atomic<T>` class for lock-free initialization of interfaces and objects.
-    * Implemented Locked<T> class for locking intialization of practically anything.
+    * Implemented `Locked<T>` class for locking intialization of practically anything.
       http://www.thedelphigeek.com/2011/11/atomic-interface-initialization.html
-
+      
       http://www.thedelphigeek.com/2011/11/per-object-locking.html
+      
       http://www.thedelphigeek.com/2011/12/on-optimistic-and-pessimistic.html
+      
       http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
     * TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue contains a Variant of the apropriate type.
     * TOmniValue can store arrays, hashes and records. Variant arrays are no longer used. IsArray tests it TOmniValue contains an array and AsArray returns this internal container. Default indexed property still accesses individual elements in this container. See demo 50_OmniValueArray for an example.
       http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
-    * Added a class which can wrap any record - TOmniRecordWrapper<T>.
+    * Added a class which can wrap any record - `TOmniRecordWrapper<T>`.
     * Added an interface which can wrap any object and destroy it when the interface goes out of scope - IOmniAutoDestroyObject.
   * Bug fixes
     * Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not to be destroyed until the program was terminated. Great thanks to [Zarko] for providing a reproducible test case.
@@ -25,7 +27,7 @@
     * Fixed wrong order in teardown sequence in TOmniTask.Execute which could cause access violation crash. Great thanks to [Anton Alisov] for providing a reproducible test case.
     * Fixed invalid "A call to an OS function failed" error in DispatchEvent.
     * TOmniMessageQueue.Enqueue leaked if queue was full and value contained reference counted value (found by [meishier]).
-    * Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off by 1 (found by [meishier]).
+    * Number of producers/consumers in `TOmniForkJoin<T>.StartWorkerTasks` was off by 1 (found by [meishier]).
   * New demos
     * 49_FramedWorkers: Multiple frames communication with each own worker task.
     * 50_OmniValueArray: Wrapping arrays, hashes and records in TOmniValue.
@@ -40,7 +42,7 @@
     * Breaking change! Parallel.Join reimplemented as IOmniParallelJoin interface to add exception and cancellation support. User code must call .Execute on the interface returned from the Parallel.Join to start the execution.
       http://www.thedelphigeek.com/2011/07/life-after-21-paralleljoins-new-clothes.html
     * Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped in EJoinException and raised at the end of Parallel.Join method (or when WaitFor is called if Join is executed with the .NoWait modifier).
-    * Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised in .Value. New function .FatalException and .DetachException.
+    * Added exception handling to `IOmniFuture<T>`. Tasks' fatal exception is raised in .Value. New function .FatalException and .DetachException.
       http://www.thedelphigeek.com/2011/07/life-after-21-exceptions-in.html
     * Two version of Parallel.Async (the ones with explicit termination handlers) were removed as this functionality can be achieved by using Parallel.TaskConfig.OnTerminated.
       http://www.thedelphigeek.com/2011/07/life-after-21-async-redux.html
@@ -98,7 +100,7 @@
   * New high-level primitives (unit OtlParallel):
     * Improved parallel for (Parallel.ForEach).
       http://www.thedelphigeek.com/2010/06/omnithreadlibrary-20-sneak-preview-1.html
-    * Futures (Parallel.Future<T>).
+    * Futures (`Parallel.Future<T>`).
       http://www.thedelphigeek.com/2010/06/future-of-delphi.html
     * Pipelines (Parallel.Pipeline).
       http://www.thedelphigeek.com/2010/11/multistage-processes-with.html
