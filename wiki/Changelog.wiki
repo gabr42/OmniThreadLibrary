@@ -6,7 +6,7 @@
   * New features
     * Support for 64-bit platform. Great thanks to [GJ] for doing most of the work!
     * Implemented background worker abstraction, Parallel.BackgroundWorker.
-    * Implemented Atomic<T> class for lock-free initialization of interfaces and objects.
+    * Implemented `Atomic<T>` class for lock-free initialization of interfaces and objects.
     * Implemented Locked<T> class for locking intialization of practically anything.
       http://www.thedelphigeek.com/2011/11/atomic-interface-initialization.html
       http://www.thedelphigeek.com/2011/11/per-object-locking.html
