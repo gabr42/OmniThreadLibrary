@@ -1,0 +1,116 @@
+#summary OmniThreadLibrary Book - Contents
+
+= Introduction =
+= Introduction to Multithreading =
+== About ==
+== Why Multithreading ==
+== When not to Multithread ==
+== Guidelines	==
+=== Think about the algorithm ===
+=== Think about the interaction points between threads ===
+==== Sending millions and millions of messages is bad ====
+==== Banging on a critical section is bad ====
+==== Hitting memory manager thousand times a second is bad ====
+= Introduction to OmniThreadLibrary =
+== Why Use OTL ==
+== Tasks vs. Threads ==
+== Locking (vs.) Messaging ==
+== TOmniValue ==
+= High-level Multithreading =
+== Introduction ==
+== Blocking Collection ==
+== Task Config ==
+== Async ==
+== Future ==
+== Join ==
+== ParallelTask ==
+== BackgroundWorker ==
+== Pipeline ==
+== ForEach ==
+== ForkJoin ==
+= Low-level multithreading =
+== Introduction ==
+=== Four ways to create a task ===
+=== Task Controller Needs an Owner ===
+== Thread Pooling ==
+== Lock-free Collections ==
+=== Bounded Stack ===
+=== Bounded Queue ===
+=== Dynamic Queue ===
+== Event Monitor ==
+== Simple Tasks ==
+=== Name ===
+=== UniqueID ===
+=== Parameters ===
+=== Communication ===
+==== Comm ====
+=== Termination ===
+==== Terminate ====
+==== Terminated ====
+==== Stopped ====
+==== TerminateEvent ====
+==== WaitFor ====
+==== ExitCode ====
+==== SetExitStatus ====
+=== Exceptions ===
+==== FatalException ====
+==== DetachException ====
+==== SetException ====
+=== ChainTo ===
+=== Groups – Join/Leave ===
+=== MonitorWith ===
+=== Enforced ===
+=== Unobserved ===
+=== CancellationToken/CancelWith ===
+=== Lock/WithLock ===
+=== Counter/WithCounter ===
+=== ThreadData ===
+=== SetPriority ===
+=== WaitForInit ===
+=== SetQueueSize ===
+== TOmniWorker Tasks ==
+=== Introduction ===
+=== Initialize, Run, Cleanup ===
+=== Timers ===
+=== Communication ===
+==== Sending to the Owner ====
+==== Receiving from the Owner ====
+==== Talking to other tasks ====
+=== Invoke ===
+=== Windows Message Processing ===
+==== Alertable ====
+==== MsgWait ====
+=== UserData ===
+=== RegisterWaitObject ===
+== Task Group ==
+= Synchronization =
+== IOmniCriticalSection ==
+== Hassle-Free Critical Sections (TOmniCS) ==
+== TOmniMREW ==
+== Pessimistic, Optimistic and Busy-Wait Initialization ==
+== Inverse Semaphore ==
+== Cancellation Token ==
+= Miscellaneous Stuff =
+== TOmniValue ==
+=== TOmniValueObj ===
+== TOmniWaitableValue ==
+== TOmniValueContainer ==
+== TOmniCounter ==
+== IOmniInterfaceDictionary ==
+== TOmniRecordWrapper ==
+== IOmniAutoDestroyObject ==
+== Environment ==
+== Hooks ==
+== IOmniTaskControlList ==
+== Atomic instructions (CAS, Move) ==
+== Communication Observers ==
+= How-to =
+== Web Download and Database Storage ==
+== Background Worker and List Partitioning ==
+== Background File Scanning ==
+== Building a Connection Pool ==
+== QuickSort ==
+== Parallel Search in a Tree ==
+== Multiple Workers with Multiple Frames ==
+== OmniThreadLibrary and Databases ==
+== OmniThreadLibrary and COM/OLE ==
