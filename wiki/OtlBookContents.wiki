@@ -1,11 +1,11 @@
 #summary OmniThreadLibrary Book - Contents
 
   * [Introduction]
-  * [Introduction to Multithreading]
+  * [IntroductionToMultithreading Introduction to Multithreading]
     * [About]
     * [Why Multithreading]
     * [When not to Multithread]
-    * [Guidelines      ]
+    * [Guidelines]
       * [Think about the algorithm]
       * [Think about the interaction points between threads]
         * [Sending millions and millions of messages is bad]
