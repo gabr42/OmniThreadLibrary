@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2012, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-12-18
-///   Version           : 1.25g
+///   Last modification : 2012-01-19
+///   Version           : 1.26
 ///</para><para>
 ///   History:
+///     1.26: 2012-01-19
+///       - Added TOmniValueObj, class wrapper for TOmniValue.
 ///     1.25g: 2011-12-20
 ///       - TOmniValue.AsInteger, AsString and AsWideString now work if the TOmniValue
 ///         contains a Variant of the appropriate type.
@@ -339,7 +341,7 @@ type
   {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
 
-  ///<summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
+  ///	<summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
   TOmniValueObj = class
   strict private
     FValue: TOmniValue;
