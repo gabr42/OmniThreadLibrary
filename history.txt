@@ -1,4 +1,6 @@
 TOmniValueObj
+///       - Bug fixed: It was not possible to change timer delay once it was created.
+///         Big thanks to [Unspoken] for finding the bug.
 
 3.0 2011-12-30
 - New features:
