@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2012, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-12-14
-///   Version           : 1.31c
+///   Last modification : 2012-02-02
+///   Version           : 1.31d
 ///</para><para>
 ///   History:
+///     1.31d: 2012-02-02
+///       - Bug fixed: It was not possible to change timer delay once it was created.
+///         Big thanks to [Unspoken] for finding the bug.
 ///     1.31c: 2011-12-14
 ///       - Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate.
 ///       - Under some circumstances ProcessMessage failed to rebuild handle
@@ -2255,6 +2258,7 @@ var
   timerInfo: TOmniTaskTimerInfo;
 begin
   // expects the caller to take care of the synchronicity
+  OutputDebugString(PChar(Format('SetTimer %d to %d', [timerID, interval_ms])));
   idxTimer := LocateTimer(timerID);
   if interval_ms = 0 then begin // delete the timer
     if idxTimer >= 0 then
@@ -2265,8 +2269,11 @@ begin
   else begin
     if idxTimer < 0 then // new timer
       timerInfo := TOmniTaskTimerInfo.Create(timerID, interval_ms, timerMessage)
-    else // rearm
+    else begin // rearm
       timerInfo := TOmniTaskTimerInfo(oteTimers.ExtractObject(idxTimer));
+      timerInfo.Interval_ms := interval_ms;
+      timerInfo.MessageID := timerMessage;
+    end;
     InsertTimer(DSiTimeGetTime64 + interval_ms, timerInfo);
   end;
 end; { TOmniTaskExecutor.SetTimer }
