@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-01-19
-///   Version           : 1.26
+///   Last modification : 2012-02-03
+///   Version           : 1.26a
 ///</para><para>
 ///   History:
+///     1.26a: 2012-02-03
+///       - TOmniValueContainer.Insert did not update internal 'count' field.
+///         Big thanks to [andi] for bug report and fix.
 ///     1.26: 2012-01-19
 ///       - Added TOmniValueObj, class wrapper for TOmniValue.
 ///     1.25g: 2011-12-20
@@ -1090,6 +1093,8 @@ procedure TOmniValueContainer.Insert(paramIdx: integer; const value: TOmniValue)
 begin
   if paramIdx > High(ovcValues) then
     Grow(paramIdx);
+  if paramIdx >= ovcCount then
+    ovcCount := paramIdx + 1;
   ovcValues[paramIdx] := value;
 end; { TOmniValueContainer.Insert }
 
