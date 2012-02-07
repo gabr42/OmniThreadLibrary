@@ -350,13 +350,13 @@ begin
   FTaskID := task.UniqueID;
   task.Comm.Send(MSG_HELLO,
     Format('Hello, world! Task %d reporting live from thread %d', [task.UniqueID, GetCurrentThreadID]));
-  Task.SetTimer(1, MSG_SLEEP);
+  Task.SetTimer(1, 1, MSG_SLEEP);
   Result := true;
 end;
 
 procedure THelloWorker.SleepTask(var msg: TMessage);
 begin
-  Task.SetTimer(0);
+  Task.ClearTimer(1);
   Sleep(FDelay_ms);
   Task.Terminate;
 end;
