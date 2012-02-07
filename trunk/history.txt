@@ -3,6 +3,9 @@ TOmniValueObj
 ///         Big thanks to [Unspoken] for finding the bug.
 ///       - TOmniValueContainer.Insert did not update internal 'count' field.
 ///         Big thanks to [andi] for bug report and fix.
+///Bug fixed: Internal event monitor messages must be processed in Terminate,
+///         otherwise OnTerminated is not called if the task is terminated from the task
+///         controller. Big thanks to [Qmodem] for finding the bug.
 
 3.0 2011-12-30
 - New features:

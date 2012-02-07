@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-02-02
-///   Version           : 1.31d
+///   Last modification : 2012-02-07
+///   Version           : 1.31e
 ///</para><para>
 ///   History:
+///     1.31e: 2012-02-07
+///       - Bug fixed: Internal event monitor messages must be processed in Terminate,
+///         otherwise OnTerminated is not called if the task is terminated from the task
+///         controller. Big thanks to [Qmodem] for finding the bug.
 ///     1.31d: 2012-02-02
 ///       - Bug fixed: It was not possible to change timer delay once it was created.
 ///         Big thanks to [Unspoken] for finding the bug.
@@ -2917,8 +2921,11 @@ begin
   Result := WaitFor(maxWait_ms);
   while Comm.Receive(msg) do
     ForwardTaskMessage(msg);
-  if otcEventMonitorInternal then
+  if otcEventMonitorInternal and assigned(otcEventMonitor) then begin
+    //! must process monitor messages first
+    TOmniEventMonitor(otcEventMonitor).ProcessMessages;
     DestroyMonitor;
+  end;
   if not Result then begin
     if assigned(otcThread) then begin
       TerminateThread(otcThread.Handle, cardinal(-1));
