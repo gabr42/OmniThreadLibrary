@@ -872,7 +872,7 @@ begin
   IdleWorkerThreadTimeout_sec.Value := CDefaultIdleWorkerThreadTimeout_sec;
   WaitOnTerminate_sec.Value := CDefaultWaitOnTerminate_sec;
   MaxExecuting.Value := Length(DSiGetThreadAffinity);
-  task.SetTimer(1000, @TOTPWorker.MaintainanceTimer);
+  task.SetTimer(1, 1000, @TOTPWorker.MaintainanceTimer);
   Result := true;
 end; { TOTPWorker.Initialize }
 
