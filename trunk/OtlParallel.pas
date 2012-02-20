@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011 Primoz Gabrijelcic
+///Copyright (c) 2012 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2011-12-09
-///   Version           : 1.23a
+///   Last modification : 2012-02-20
+///   Version           : 1.24
 ///</para><para>
 ///   History:
+///     1.24: 2012-02-20
+///       - Async re-raises task exception in OnTerminated handler.
 ///     1.23a: 2011-12-09
 ///       - Removed unused global variable GPipelinePool.
 ///     1.23: 2011-11-25
@@ -1502,7 +1504,16 @@ class procedure Parallel.Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskCon
 var
   omniTask: IOmniTaskControl;
 begin
-  omniTask := CreateTask(task, 'Parallel.Async').Unobserved;
+  omniTask := CreateTask(task, 'Parallel.Async').Unobserved.OnTerminated(
+    procedure (const task: IOmniTaskControl)
+    var
+      exc: Exception;
+    begin
+      exc := task.DetachException;
+      if assigned(exc) then
+        raise exc;
+    end
+  );
   ApplyConfig(taskConfig, omniTask);
   omniTask.Schedule(GlobalParallelPool);
 end; { Parallel.Async }
