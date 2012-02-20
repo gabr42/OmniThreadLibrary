@@ -16,11 +16,11 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   object btnAsync: TButton
     Left = 16
     Top = 16
-    Width = 75
+    Width = 91
     Height = 25
     Caption = 'Async'
-    Enabled = False
     TabOrder = 0
+    OnClick = btnAsyncClick
   end
   object btnFuture1: TButton
     Left = 16
@@ -76,7 +76,6 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 10
-    ExplicitHeight = 337
   end
   object btnFuture2: TButton
     Left = 16
