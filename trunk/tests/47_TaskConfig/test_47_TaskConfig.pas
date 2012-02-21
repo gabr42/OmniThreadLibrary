@@ -162,9 +162,15 @@ begin
     begin
       Sleep(500);
       Result := 42;
-      task.Comm.Send(WM_FUTURE_RESULT);
+//      task.Comm.Send(WM_FUTURE_RESULT);
     end,
-    Parallel.TaskConfig.OnMessage(Self)
+    Parallel.TaskConfig.OnMessage(Self).OnTerminated(
+      procedure
+      begin
+        lbLog.ItemIndex := lbLog.Items.Add('FUTURE: ' + IntToStr(FFuture.Value));
+        FFuture := nil;
+      end
+    )
   )
 end;
 
@@ -239,7 +245,7 @@ end;
 procedure TfrmDemoParallelTaskConfig.WMFutureResult(var msg: TOmniMessage);
 begin
   lbLog.ItemIndex := lbLog.Items.Add('FUTURE: ' + IntToStr(FFuture.Value));
-  FFuture := nil;
+//  FFuture := nil;
   btnFuture.Enabled := true;
 end;
 

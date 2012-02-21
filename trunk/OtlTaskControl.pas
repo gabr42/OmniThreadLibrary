@@ -2262,7 +2262,6 @@ var
   timerInfo: TOmniTaskTimerInfo;
 begin
   // expects the caller to take care of the synchronicity
-  OutputDebugString(PChar(Format('SetTimer %d to %d', [timerID, interval_ms])));
   idxTimer := LocateTimer(timerID);
   if interval_ms = 0 then begin // delete the timer
     if idxTimer >= 0 then
