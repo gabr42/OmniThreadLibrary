@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2012, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2011-12-16
-///   Version           : 1.12
+///   Last modification : 2012-02-21
+///   Version           : 1.13
 ///</para><para>
 ///   History:
+///     1.13: 2012-02-21
+///       - Implemented Locked<T>.Locked.
 ///     1.12: 2011-12-16
 ///       - [GJ] Converted low-level primitives to work in 64-bit platform and added few
 ///         platform-independent versions (CAS, MoveDPtr).
@@ -100,6 +102,7 @@ unit OtlSync;
 interface
 
 uses
+  SysUtils,
   SyncObjs,
   DSiWin32,
   {$IFDEF OTL_ERTTI}
@@ -215,6 +218,7 @@ type
     function  GetValue: T; inline;
   public
     type TFactory = reference to function: T;
+    type TProcT = reference to procedure(const value: T);
     constructor Create(const value: T; ownsObject: boolean = true);
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
@@ -223,6 +227,8 @@ type
     function  Initialize: T; overload;
     {$ENDIF OTL_ERTTI}
     procedure Acquire; inline;
+    procedure Locked(proc: TProc); overload; inline;
+    procedure Locked(proc: TProcT); overload; inline;
     procedure Release; inline;
     procedure Free; inline;
     property Value: T read GetValue;
@@ -267,7 +273,6 @@ implementation
 
 uses
   Windows,
-  SysUtils,
   TypInfo;
 
 type
@@ -921,7 +926,24 @@ begin
       end);
   end;
 end; { Locked<T>.Initialize }
+
 {$ENDIF OTL_ERTTI}
+
+procedure Locked<T>.Locked(proc: TProc);
+begin
+  Acquire;
+  try
+    proc;
+  finally Release; end;
+end; { Locked<T>.Locked }
+
+procedure Locked<T>.Locked(proc: TProcT);
+begin
+  Acquire;
+  try
+    proc(Value);
+  finally Release; end;
+end; { Locked<T>.Locked }
 
 procedure Locked<T>.Release;
 begin
