@@ -22,7 +22,11 @@ type
     btnPipeline2: TButton;
     btnPipeline3: TButton;
     btnPipeline4: TButton;
-    procedure btnAsyncClick(Sender: TObject);
+    btnAsync2: TButton;
+    btnAsync3: TButton;
+    procedure btnAsync2Click(Sender: TObject);
+    procedure btnAsync1Click(Sender: TObject);
+    procedure btnAsync3Click(Sender: TObject);
     procedure btnFuture1Click(Sender: TObject);
     procedure btnFuture2Click(Sender: TObject);
     procedure btnFuture3Click(Sender: TObject);
@@ -45,6 +49,7 @@ implementation
 
 uses
   OtlTask,
+  OtlTaskControl,
   OtlCommon,
   OtlCollections,
   OtlParallel;
@@ -222,7 +227,7 @@ begin
   end;
 end;
 
-procedure TfrmOtlParallelExceptions.btnAsyncClick(Sender: TObject);
+procedure TfrmOtlParallelExceptions.btnAsync1Click(Sender: TObject);
 begin
   Parallel.Async(
     procedure
@@ -230,6 +235,45 @@ begin
       Sleep(1000);
       raise Exception.Create('Exception in Async');
     end);
+end;
+
+procedure TfrmOtlParallelExceptions.btnAsync2Click(Sender: TObject);
+begin
+  Parallel.Async(
+    procedure
+    begin
+      Sleep(1000);
+      raise Exception.Create('Exception in Async');
+    end,
+    Parallel.TaskConfig.OnTerminated(
+      procedure (const task: IOmniTaskControl)
+      var
+        excp: Exception;
+      begin
+        if assigned(task.FatalException) then begin
+          excp := task.DetachException;
+          Log('Caught async exception %s:%s', [excp.ClassName, excp.Message]);
+          FreeAndNil(excp);
+        end;
+      end
+    ));
+end;
+
+procedure TfrmOtlParallelExceptions.btnAsync3Click(Sender: TObject);
+begin
+  // TODO -cMM: TfrmOtlParallelExceptions.btnAsync3Click default body inserted
+  Parallel.Async(
+    procedure
+    begin
+      Sleep(1000);
+      raise Exception.Create('Exception in Async');
+    end,
+    Parallel.TaskConfig.OnTerminated(
+      procedure
+      begin
+        Log('Async termination handler');
+      end
+    ));
 end;
 
 procedure TfrmOtlParallelExceptions.btnPipeline1Click(Sender: TObject);
@@ -372,3 +416,4 @@ begin
 end;
 
 end.
+

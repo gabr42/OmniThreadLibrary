@@ -2,7 +2,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   Left = 0
   Top = 0
   Caption = 'Exceptions in OtlParallel'
-  ClientHeight = 436
+  ClientHeight = 506
   ClientWidth = 635
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,13 +18,13 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
     Top = 16
     Width = 91
     Height = 25
-    Caption = 'Async'
+    Caption = 'Async 1'
     TabOrder = 0
-    OnClick = btnAsyncClick
+    OnClick = btnAsync1Click
   end
   object btnFuture1: TButton
     Left = 16
-    Top = 144
+    Top = 208
     Width = 91
     Height = 25
     Caption = 'Future 1'
@@ -33,7 +33,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnJoin1: TButton
     Left = 16
-    Top = 48
+    Top = 112
     Width = 91
     Height = 25
     Caption = 'Join 1'
@@ -42,7 +42,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnForeach: TButton
     Left = 16
-    Top = 240
+    Top = 304
     Width = 75
     Height = 25
     Caption = 'ForEach'
@@ -51,7 +51,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnPipeline1: TButton
     Left = 16
-    Top = 272
+    Top = 336
     Width = 91
     Height = 25
     Caption = 'Pipeline 1'
@@ -60,7 +60,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnForkJoin: TButton
     Left = 16
-    Top = 396
+    Top = 464
     Width = 75
     Height = 25
     Caption = 'Fork/Join'
@@ -71,15 +71,16 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
     Left = 128
     Top = 0
     Width = 507
-    Height = 436
+    Height = 506
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 10
+    ExplicitHeight = 436
   end
   object btnFuture2: TButton
     Left = 16
-    Top = 176
+    Top = 240
     Width = 91
     Height = 25
     Caption = 'Future 2'
@@ -88,7 +89,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnFuture3: TButton
     Left = 16
-    Top = 208
+    Top = 272
     Width = 91
     Height = 25
     Caption = 'Future 3'
@@ -97,7 +98,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnJoin2: TButton
     Left = 16
-    Top = 80
+    Top = 144
     Width = 91
     Height = 25
     Caption = 'Join 2'
@@ -106,7 +107,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnJoin3: TButton
     Left = 16
-    Top = 112
+    Top = 176
     Width = 91
     Height = 25
     Caption = 'Join 3'
@@ -115,7 +116,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnPipeline2: TButton
     Left = 16
-    Top = 303
+    Top = 368
     Width = 91
     Height = 25
     Caption = 'Pipeline 2'
@@ -124,7 +125,7 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnPipeline3: TButton
     Left = 16
-    Top = 334
+    Top = 400
     Width = 91
     Height = 25
     Caption = 'Pipeline 3'
@@ -133,11 +134,29 @@ object frmOtlParallelExceptions: TfrmOtlParallelExceptions
   end
   object btnPipeline4: TButton
     Left = 16
-    Top = 365
+    Top = 432
     Width = 91
     Height = 25
     Caption = 'Pipeline 4'
     TabOrder = 13
     OnClick = btnPipeline4Click
+  end
+  object btnAsync2: TButton
+    Left = 16
+    Top = 48
+    Width = 91
+    Height = 25
+    Caption = 'Async 2'
+    TabOrder = 14
+    OnClick = btnAsync2Click
+  end
+  object btnAsync3: TButton
+    Left = 16
+    Top = 80
+    Width = 91
+    Height = 25
+    Caption = 'Async 3'
+    TabOrder = 15
+    OnClick = btnAsync3Click
   end
 end
