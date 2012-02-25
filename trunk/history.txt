@@ -1,4 +1,5 @@
-TOmniValueObj
++ TOmniValueObj
++ exception handling in Parallel.Async: http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
 ///       - Bug fixed: It was not possible to change timer delay once it was created.
 ///         Big thanks to [Unspoken] for finding the bug.
 ///       - TOmniValueContainer.Insert did not update internal 'count' field.
