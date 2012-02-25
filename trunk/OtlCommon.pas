@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-02-03
-///   Version           : 1.26a
+///   Last modification : 2012-02-25
+///   Version           : 1.26b
 ///</para><para>
 ///   History:
+///     1.26b: 2012-02-25
+///       - TOmniValue.CreateNamed was casting pointer to integer.
 ///     1.26a: 2012-02-03
 ///       - TOmniValueContainer.Insert did not update internal 'count' field.
 ///         Big thanks to [andi] for bug report and fix.
@@ -1460,7 +1462,7 @@ begin
           vtChar:          ovc.Add(string(VChar), name);
           vtExtended:      ovc.Add(VExtended^, name);
           vtString:        ovc.Add(string(VString^), name);
-          vtPointer:       ovc.Add(integer(VPointer), name);
+          vtPointer:       ovc.Add(VPointer, name);
           vtPChar:         ovc.Add(string(StrPas(VPChar)), name);
           vtAnsiString:    ovc.Add(string(VAnsiString), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
