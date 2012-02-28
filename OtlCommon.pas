@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-02-25
-///   Version           : 1.26b
+///   Last modification : 2012-02-28
+///   Version           : 1.26c
 ///</para><para>
 ///   History:
+///     1.26c: 2012-02-28
+///       - Fixed object and interface casting in TOmniValue.CreateNamed.
 ///     1.26b: 2012-02-25
 ///       - TOmniValue.CreateNamed was casting pointer to integer.
 ///     1.26a: 2012-02-03
@@ -1467,8 +1469,8 @@ begin
           vtAnsiString:    ovc.Add(string(VAnsiString), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
           vtVariant:       ovc.Add(VVariant^, name);
-          vtObject:        ovc.Add(integer(VObject), name);
-          vtInterface:     ovc.Add(integer(VInterface), name);
+          vtObject:        ovc.Add(VObject, name);
+          vtInterface:     ovc.Add(IInterface(VInterface), name);
           vtWideString:    ovc.Add(WideString(VWideString), name);
           vtInt64:         ovc.Add(VInt64^, name);
           {$IFDEF UNICODE}
