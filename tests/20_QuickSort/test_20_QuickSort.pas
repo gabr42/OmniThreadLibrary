@@ -149,7 +149,7 @@ begin
       end;
     until idxLow > idxHigh;
     if dataLow < idxHigh then
-      if FSubdivideWork and ((idxHigh - dataLow) > 100000) and
+      if FSubdivideWork and ((idxHigh - dataLow) > 10000) and
          (Task.Counter.Value < GlobalOmniThreadPool.MaxExecuting) then
       begin
         Task.Counter.Increment;
