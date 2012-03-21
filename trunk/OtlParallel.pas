@@ -35,9 +35,11 @@
 ///   Version           : 1.23b
 ///</para><para>
 ///   History:
-///     1.23b: 2012-03-21
+///     1.24a: 2012-03-21
 ///       - IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute.
 ///         Thanks to [Mayjest] for reproducible test case.
+///     1.24: 2012-02-20
+///       - Async re-raises task exception in OnTerminated handler.
 ///     1.23a: 2011-12-09
 ///       - Removed unused global variable GPipelinePool.
 ///     1.23: 2011-11-25
