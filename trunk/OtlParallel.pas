@@ -32,12 +32,15 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
 ///   Last modification : 2012-03-21
-///   Version           : 1.23b
+///   Version           : 1.24b
 ///</para><para>
 ///   History:
-///     1.24a: 2012-03-21
+///     1.24b: 2012-03-21
 ///       - IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute.
 ///         Thanks to [Mayjest] for reproducible test case.
+///     1.24a: 2012-02-23
+///       - Exception handling in Async works correctly if Async has OnTerminated
+///         configured.
 ///     1.24: 2012-02-20
 ///       - Async re-raises task exception in OnTerminated handler.
 ///     1.23a: 2011-12-09
@@ -1065,16 +1068,26 @@ type
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
-  TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig)
+  TOmniTaskConfigTerminated = record
+    Event : TOmniTaskTerminatedEvent;
+    Func  : TOmniOnTerminatedFunction;
+    Simple: TOmniOnTerminatedFunctionSimple;
+    procedure Call(const task: IOmniTaskControl);
+    procedure Clear;
+  end; { TOmniTaskConfigTerminated }
+
+  IOmniTaskConfigInternal = interface ['{8678C3A4-7825-4E7C-8FEF-4DD6CD3D3E29}']
+    procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
+  end; { IOmniTaskConfigInternal }
+
+  TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig, IOmniTaskConfigInternal)
   strict private
     otcCancelWithToken         : IOmniCancellationToken;
     otcMonitorWithMonitor      : IOmniTaskControlMonitor;
     otcOnMessageEventDispatcher: TObject;
     otcOnMessageEventHandler   : TOmniTaskMessageEvent;
     otcOnMessageList           : TGpIntegerObjectList;
-    otcOnTerminated            : TOmniTaskTerminatedEvent;
-    otcOnTerminatedFunc        : TOmniOnTerminatedFunction;
-    otcOnTerminatedFuncSimp    : TOmniOnTerminatedFunctionSimple;
+    otcOnTerminated            : TOmniTaskConfigTerminated;
     otcWithCounterCounter      : IOmniCounter;
     otcWithLockAutoDestroy     : boolean;
     otcWithLockOmniLock        : IOmniCriticalSection;
@@ -1082,6 +1095,7 @@ type
   public
     constructor Create;
     destructor  Destroy; override;
+  public //IOmniTaskConfig
     procedure Apply(const task: IOmniTaskControl);
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig; inline;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig; inline;
@@ -1091,11 +1105,12 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
-    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig;
-      overload;
+    function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
+  public //IOmniTaskConfigInternal
+    procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
   end; { TOmniTaskConfig }
 
 const
@@ -1505,9 +1520,22 @@ end; { Parallel.Async }
 
 class procedure Parallel.Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 var
-  omniTask: IOmniTaskControl;
+  omniTask  : IOmniTaskControl;
+  terminated: TOmniTaskConfigTerminated;
 begin
-  omniTask := CreateTask(task, 'Parallel.Async').Unobserved;
+  if assigned(taskConfig) then
+    (taskConfig as IOmniTaskConfigInternal).DetachTerminated(terminated);
+  omniTask := CreateTask(task, 'Parallel.Async').Unobserved.OnTerminated(
+    procedure (const task: IOmniTaskControl)
+    var
+      exc: Exception;
+    begin
+      terminated.Call(task);
+      exc := task.DetachException;
+      if assigned(exc) then
+        raise exc;
+    end
+  );
   ApplyConfig(taskConfig, omniTask);
   omniTask.Schedule(GlobalParallelPool);
 end; { Parallel.Async }
@@ -3563,12 +3591,12 @@ begin
     task.OnMessage(otcOnMessageEventHandler);
   for kv in otcOnMessageList.WalkKV do
     TOmniMessageExec(kv.Value).Apply(kv.Key, task);
-  if assigned(otcOnTerminated) then
-    task.OnTerminated(otcOnTerminated);
-  if assigned(otcOnTerminatedFunc) then
-    task.OnTerminated(otcOnTerminatedFunc);
-  if assigned(otcOnTerminatedFuncSimp) then
-    task.OnTerminated(otcOnTerminatedFuncSimp);
+  if assigned(otcOnTerminated.Event) then
+    task.OnTerminated(otcOnTerminated.Event);
+  if assigned(otcOnTerminated.Func) then
+    task.OnTerminated(otcOnTerminated.Func);
+  if assigned(otcOnTerminated.Simple) then
+    task.OnTerminated(otcOnTerminated.Simple);
   if assigned(otcWithCounterCounter) then
     task.WithCounter(otcWithCounterCounter);
   if assigned(otcWithLockOmniLock) then
@@ -3588,6 +3616,12 @@ begin
   otcCancelWithToken := token;
   Result := Self;
 end; { TOmniTaskConfig.CancelWith }
+
+procedure TOmniTaskConfig.DetachTerminated(var terminated: TOmniTaskConfigTerminated);
+begin
+  terminated := otcOnTerminated;
+  otcOnTerminated.Clear;
+end; { TOmniTaskConfig.GetTerminated }
 
 function TOmniTaskConfig.MonitorWith(const monitor: IOmniTaskControlMonitor):
   IOmniTaskConfig;
@@ -3619,21 +3653,21 @@ end; { TOmniTaskConfig.OnMessage }
 function TOmniTaskConfig.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
   IOmniTaskConfig;
 begin
-  otcOnTerminated := eventHandler;
+  otcOnTerminated.Event := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 
 function TOmniTaskConfig.OnTerminated(eventHandler: TOmniOnTerminatedFunction):
   IOmniTaskConfig;
 begin
-  otcOnTerminatedFunc := eventHandler;
+  otcOnTerminated.Func := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 
 function TOmniTaskConfig.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
   IOmniTaskConfig;
 begin
-  otcOnTerminatedFuncSimp := eventHandler;
+  otcOnTerminated.Simple := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 
@@ -3656,5 +3690,24 @@ begin
   otcWithLockAutoDestroy := autoDestroyLock;
   Result := Self;
 end; { TOmniTaskConfig.WithLock }
+
+{ TOmniTaskConfigTerminated }
+
+procedure TOmniTaskConfigTerminated.Call(const task: IOmniTaskControl);
+begin
+  if assigned(Event) then
+    Event(task);
+  if assigned(Func) then
+    Func(task);
+  if assigned(Simple) then
+    Simple;
+end; { TOmniTaskConfigTerminated.Call }
+
+procedure TOmniTaskConfigTerminated.Clear;
+begin
+  Event := nil;
+  Func := nil;
+  Simple := nil;
+end; { TOmniTaskConfigTerminated.Clear }
 
 end.
