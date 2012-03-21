@@ -9,6 +9,7 @@
 ///         controller. Big thanks to [Qmodem] for finding the bug.
 ///Bug fixed: TOmniValue.CreateNamed was casting pointer to integer. tnx to [Mayjest]
 ///Bug fixed: Fixed object and interface casting in TOmniValue.CreateNamed. [Mayjest]
+///Bug fixed: IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute. [Mayjest]
 
 3.0 2011-12-30
 - New features:
