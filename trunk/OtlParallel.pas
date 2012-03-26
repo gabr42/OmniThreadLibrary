@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2012-03-21
-///   Version           : 1.24b
+///   Last modification : 2012-03-26
+///   Version           : 1.25
 ///</para><para>
 ///   History:
+///     1.25: 2012-03-26
+///       - Parallel.Pipeline implements OnStop.
 ///     1.24b: 2012-03-21
 ///       - IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute.
 ///         Thanks to [Mayjest] for reproducible test case.
@@ -413,6 +415,7 @@ type
     function  From(const queue: IOmniBlockingCollection): IOmniPipeline;
     function  HandleExceptions: IOmniPipeline;
     function  NumTasks(numTasks: integer): IOmniPipeline;
+    function  OnStop(const stopCode: TProc): IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -1017,6 +1020,7 @@ type
     opHandleExceptions: boolean;
     opInput           : IOmniBlockingCollection;
     opNumTasks        : integer;
+    opOnStop          : TProc;
     opOutput          : IOmniBlockingCollection;
     opOutQueues       : TInterfaceList;
     opStages          : TInterfaceList;
@@ -1025,6 +1029,7 @@ type
     opThrottleLowSat  : integer;
   strict protected
     procedure AddSingleStage(const stage: IOmniPipelineStage);
+    procedure DoOnStop;
     function  GetStage(idxStage: integer): IOmniPipelineStage;
     property PipeStage[idxStage: integer]: IOmniPipelineStage read GetStage;
   protected
@@ -1038,6 +1043,7 @@ type
     function  HandleExceptions: IOmniPipeline;
     { TODO 1 -ogabr : When running stages in parallel, additional work has to be done to ensure proper output order! }
     function  NumTasks(numTasks: integer): IOmniPipeline;
+    function  OnStop(const stopCode: TProc): IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -2825,6 +2831,12 @@ begin
     (outQueue as IOmniBlockingCollection).CompleteAdding;
 end; { TOmniPipeline.Cancel }
 
+procedure TOmniPipeline.DoOnStop;
+begin
+  if assigned(opOnStop) then
+    opOnStop();
+end; { TOmniPipeline.DoOnStop }
+
 function TOmniPipeline.From(const queue: IOmniBlockingCollection): IOmniPipeline;
 begin
   opInput := queue;
@@ -2867,6 +2879,12 @@ begin
     PipeStage[iStage].NumTasks := numTasks;
   Result := Self;
 end; { TOmniPipeline.NumTasks }
+
+function TOmniPipeline.OnStop(const stopCode: TProc): IOmniPipeline;
+begin
+  opOnStop := stopCode;
+  Result := Self;
+end; { TOmniPipeline.OnStop }
 
 function TOmniPipeline.Run: IOmniPipeline;
 var
@@ -2927,7 +2945,8 @@ begin
                   outQueue.CompleteAdding;
               end;
             finally
-              (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate;
+              if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+                DoOnStop;
             end;
           end,
           stageName
