@@ -1,4 +1,4 @@
-﻿///<summary>Sample implementation of a dynamically allocated, O(1) enqueue and dequeue,
+///<summary>Sample implementation of a dynamically allocated, O(1) enqueue and dequeue,
 ///    threadsafe, microlocking queue.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
@@ -58,6 +58,12 @@ unit GpLockFreeQueue;
 {$R-,O+,A8,B-}
 {$WARN SYMBOL_PLATFORM OFF}
 
+{$IFDEF CONDITIONALEXPRESSIONS}
+  {$IF (CompilerVersion >= 17)}
+    {$DEFINE USE_STRICT}
+  {$IFEND}
+{$ENDIF}
+
 interface
 
 uses
@@ -85,7 +91,8 @@ type
 
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
   TGpLockFreeQueue = class
-  strict private
+  {$IFDEF USE_STRICT} strict {$ENDIF}
+    private
     obcBlockSize  : integer;
     obcCachedBlock: PGpLFQueueTaggedValue;
     obcTailBuffer : pointer;
@@ -93,7 +100,8 @@ type
     obcNumSlots   : integer;
     obcHeadBuffer : pointer;
     obcHeadPointer: PGpLFQueueTaggedPointer;
-  strict protected
+  {$IFDEF USE_STRICT} strict {$ENDIF}
+  protected
     function  AllocateAligned(size, alignment: integer; var memPtr: pointer): pointer;
     function  AllocateBlock: PGpLFQueueTaggedValue;
     procedure Cleanup; virtual;
@@ -272,8 +280,6 @@ end; { TGpLockFreeQueue.Destroy }
 
 function TGpLockFreeQueue.AllocateAligned(size, alignment: integer; var memPtr: pointer):
   pointer;
-var
-  mask: byte;
 begin                     
   Assert(SizeOf(cardinal) = SizeOf(pointer));
   Assert(alignment in [2{WORD-aligned}, 3{DWORD-aligned}, 4{QWORD-aligned}]);

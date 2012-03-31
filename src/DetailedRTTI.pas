@@ -10,7 +10,11 @@ uses
   TypInfo,
   ObjAuto;
 
+  {$IFDEF ConditionalExpressions}
+    {$IF RTLVersion >= 18} {$DEFINE HAS_RECORDHELPERS} {$IFEND}
+  {$ENDIF}
 
+{$IFDEF HAS_RECORDHELPERS}
 type
 
   TParamInfoHelper = record helper for TParamInfo
@@ -38,6 +42,7 @@ type
 
   function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
 
+  {$ENDIF HAS_RECORDHELPERS}
 implementation
 
 uses
@@ -45,6 +50,8 @@ uses
 
 const
   SHORT_LEN = sizeof(ShortString) - 1;
+
+{$IFDEF HAS_RECORDHELPERS}
 
 function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
 var
@@ -154,4 +161,5 @@ begin
     end;
 end;
 
+{$ENDIF HAS_RECORDHELPERS} 
 end.
