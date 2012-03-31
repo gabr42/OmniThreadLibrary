@@ -43,6 +43,13 @@ implementation
 
 {$R *.dfm}
 
+uses
+  OtlTaskControl,
+  OtlComm;
+
+const
+  MSG_PROCESSING = 1;
+
 procedure TForm16.btnCancel2Click(Sender: TObject);
 var
   workItem: IOmniWorkItem;
@@ -73,10 +80,16 @@ end;
 
 procedure TForm16.FormCreate(Sender: TObject);
 begin
-  FBackgroundWorker1 := Parallel.BackgroundWorker.Execute(ProcessWorkItem1);
+  FBackgroundWorker1 := Parallel.BackgroundWorker
+    .Execute(ProcessWorkItem1);
   FBackgroundWorker2 := Parallel.BackgroundWorker
     .NumTasks(2)
     .OnRequestDone(HandleRequestDone2)
+    .TaskConfig(Parallel.TaskConfig.OnMessage(MSG_PROCESSING,
+      procedure (const task: IOmniTaskControl; const msg: TOmniMessage)
+      begin
+        lbLog.Items.Add(Format('Started processing work item %d', [msg.MsgData.AsInt64]));
+      end))
     .Execute(ProcessWorkItem2);
 end;
 
@@ -138,6 +151,7 @@ procedure TForm16.ProcessWorkItem2(const workItem: IOmniWorkItem);
 var
   i: integer;
 begin
+  workItem.Task.Comm.Send(MSG_PROCESSING, workItem.UniqueID);
   for i := 1 to workItem.Data.AsInteger div 100 do begin
     Sleep(100);
     if workItem.CancellationToken.IsSignalled then begin
