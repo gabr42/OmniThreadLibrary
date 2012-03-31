@@ -1,15 +1,20 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2011 Primoz Gabrijelcic
+   (c) 2012 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2011-12-16
-   Version           : 1.29
+   Last modification : 2012-01-23
+   Version           : 1.31
 </pre>*)(*
    History:
+     1.31: 2012-01-23
+       - Implemented EnumFiles enumerator.
+     1.30: 2012-01-12
+       - Added TGpMemoryBuffer - preallocated, growable caching memory buffer for one
+         specific memory size.
      1.29: 2011-12-16
        - X64 compatible.
        - [GJ] Assembler implementation of the x64 implementation of the TableFind* functions.
@@ -103,10 +108,14 @@ interface
 
 uses
   Windows,
+  Classes,
   Contnrs,
   DSiWin32;
 
 {$IFDEF ConditionalExpressions}
+  {$IF (CompilerVersion >= 17)}
+    {$DEFINE USE_STRICT}
+  {$IFEND}
   {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
     {$DEFINE GpStuff_AlignedInt}
@@ -212,6 +221,20 @@ type
     procedure Free;
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
+
+  ///	<summary>Preallocated, growable caching memory buffer for one specific memory size.</summary>
+  TGpMemoryBuffer = class
+  {$IFDEF USE_STRICT} strict {$ENDIF} private
+    FBaseBlock   : pointer;
+    FBaseBlockEnd: pointer;
+    FBufferSize  : integer;
+    FList        : pointer;
+  public
+    constructor Create(bufferSize, preallocateCount: integer);
+    destructor  Destroy; override;
+    procedure Allocate(var buf: pointer); overload;
+    procedure Release(buf: pointer); overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+  end; { TGpMemoryBuffer }
 
   PMethod = ^TMethod;
 
@@ -320,6 +343,8 @@ function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFa
 function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
 function EnumList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): IGpStringValueEnumeratorFactory;
+function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
+  enumSubfolders: boolean = false; maxEnumDepth: integer = 0): IGpStringValueEnumeratorFactory;
 
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
 {$ENDIF GpStuff_ValuesEnumerators}
@@ -330,12 +355,12 @@ uses
 {$IFDEF ConditionalExpressions}
   Variants,
 {$ENDIF ConditionalExpressions}
-  SysUtils,
-  Classes;
+  SysUtils;
 
-{$IF CompilerVersion < 23} //pre-XE2
+{$IF CompilerVersion <= 19} //pre-D2007
 type
-  NativeInt = integer;
+  NativeInt  = integer;
+  NativeUInt = cardinal;
 {$IFEND}
 
 {$IFDEF GpStuff_ValuesEnumerators}
@@ -407,6 +432,7 @@ type
 type
   TDelimiters = array of integer;
 
+  {$IFDEF GpStuff_ValuesEnumerators}
   TGpDisableHandler = class(TInterfacedObject, IGpDisableHandler)
   strict private
     FHandler   : PMethod;
@@ -416,9 +442,10 @@ type
     destructor  Destroy; override;
     procedure Restore;
   end; { TGpDisableHandler }
+  {$ENDIF}
 
   TGpAutoDestroyObject = class(TInterfacedObject, IGpAutoDestroyObject)
-  strict private
+  {$IFDEF USE_STRICT}  strict {$ENDIF}  private
     FObject: TObject;
   protected
     function GetObj: TObject;
@@ -1073,6 +1100,16 @@ begin
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
 
+function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
+  enumSubfolders: boolean; maxEnumDepth: integer): IGpStringValueEnumeratorFactory;
+var
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  DSiEnumFilesToSL(fileMask, attr, sl, returnFullPath, enumSubfolders, maxEnumDepth);
+  Result := TGpStringValueEnumeratorFactory.Create(sl);
+end; { EnumFiles }
+
 {$ENDIF GpStuff_ValuesEnumerators}
 
 { TGpTraceable }
@@ -1126,6 +1163,7 @@ begin
     OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [ClassName, Result])));
 end; { TGpTraceable._Release }
 
+{$IFDEF GpStuff_ValuesEnumerators}
 { TGpDisableHandler }
 
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
@@ -1133,11 +1171,14 @@ begin
   Result := TGpDisableHandler.Create(handler);
 end; { DisableHandler }
 
+{$ENDIF}
+
 procedure DontOptimize(var data);
 begin
   // do nothing
 end; { DontOptimize }
 
+{$IFDEF   GpStuff_ValuesEnumerators}
 constructor TGpDisableHandler.Create(const handler: PMethod);
 const
   CNilMethod: TMethod = (Code: nil; Data: nil);
@@ -1158,6 +1199,8 @@ procedure TGpDisableHandler.Restore;
 begin
   FHandler^ := FOldHandler;
 end; { TGpDisableHandler.Restore }
+
+{$ENDIF}
 
 { TGpAutoDestroyObject }
 
@@ -1182,5 +1225,67 @@ function TGpAutoDestroyObject.GetObj: TObject;
 begin
   Result := FObject;
 end; { TGpAutoDestroyObject.GetObj }
+
+{ TGpMemoryBuffer }
+
+constructor TGpMemoryBuffer.Create(bufferSize, preallocateCount: integer);
+var
+  baseBlockSize: NativeUInt;
+  iBuffer      : integer;
+  next         : pointer;
+  previous     : pointer;
+  stride       : integer;
+begin
+  inherited Create;
+  Assert(bufferSize >= SizeOf(pointer));
+  FBufferSize := bufferSize;
+  stride := (((bufferSize - 1) div 16) + 1) * 16;
+  baseBlockSize := NativeUInt(stride) * NativeUInt(preallocateCount);
+  GetMem(FBaseBlock, baseBlockSize);
+  Assert(assigned(FBaseBlock));
+  FBaseBlockEnd := pointer(NativeUInt(FBaseBlock) + baseBlockSize - 1);
+  previous := nil;
+  next := FBaseBlock;
+  for iBuffer := 1 to preallocateCount do begin
+    PPointer(next)^ := previous;
+    previous := next;
+    next := pointer(NativeUInt(next) + NativeUInt(stride));
+  end;
+  FList := previous;
+end; { TGpMemoryBuffer.Create }
+
+destructor TGpMemoryBuffer.Destroy;
+var
+  next    : pointer;
+  previous: pointer;
+begin
+  next := FList;
+  while assigned(next) do begin
+    previous := PPointer(next)^;
+    if (NativeUInt(next) < NativeUInt(FBaseBlock)) or
+       (NativeUInt(next) > NativeUInt(FBaseBlockEnd))
+    then
+      FreeMem(next);
+    next := previous;
+  end;
+  FreeMem(FBaseBlock);
+  inherited;
+end; { TGpMemoryBuffer.Destroy }
+
+procedure TGpMemoryBuffer.Allocate(var buf: pointer);
+begin
+  if assigned(FList) then begin
+    buf := FList;
+    FList := PPointer(FList)^;
+  end
+  else
+    GetMem(buf, FBufferSize);
+end; { TGpMemoryBuffer.Allocate }
+
+procedure TGpMemoryBuffer.Release(buf: pointer);
+begin
+  PPointer(buf)^ := FList;
+  FList := buf;
+end; { TGpMemoryBuffer.Release }
 
 end.

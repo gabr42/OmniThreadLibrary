@@ -1,7 +1,7 @@
 (*:Preallocated hasher.
    @author Primoz Gabrijelcic
    @desc <pre>
-Copyright (c) 2011, Primoz Gabrijelcic
+Copyright (c) 2012, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2011-12-20
-   Version           : 1.10c
+   Last modification : 2012-02-06
+   Version           : 1.11
 </pre>*)(*
    History:
+     1.11: 2012-02-06
+       - TGpStringObjectHash.Find returns 'nil' in 'value' parameter if key is not found.
      1.10c: 2011-12-20
        - Fixed HashOf operation in 64-bit code.
      1.10b: 2011-10-25
@@ -767,7 +769,10 @@ var
   intValue: int64;
 begin
   Result := sohHash.Find(key, intValue);
-  value := TObject(intValue);
+  if Result then
+    value := TObject(intValue)
+  else
+    value := nil;
 end;  { TGpStringObjectHash.Find }
 
 procedure TGpStringObjectHash.ForEach(enumerator: TGpStringObjectHashEnumMethod);

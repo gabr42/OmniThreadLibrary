@@ -7,10 +7,15 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2011-12-20
-   Version           : 1.64a
+   Last modification : 2012-02-06
+   Version           : 1.65
 </pre>*)(*
    History:
+     1.65: 2012-02-06
+       - Implemented DSiSetFileTime and DSiSetFileTimes.
+       - Implemented DSiDateTimeToFileTime.
+     1.64b: 2012-01-11
+       - Set msg.Result := 0; in DSiClassWndProc.
      1.64a: 2011-12-20
        - DSiAllocateHWnd works in 64-bit mode.
        - Fixed 64-bit DSiInterlockedExchangeAdd64.
@@ -778,6 +783,10 @@ const
   function  DSiMoveOnReboot(const srcName, destName: string): boolean;
   procedure DSiRemoveFolder(const folder: string);
   function  DSiRevertWow64FsRedirection(const oldStatus: pointer): boolean;
+  function DSiSetFileTime(const fileName: string; dateTime: TDateTime;
+    whatTime: TDSiFileTime): boolean;
+  function  DSiSetFileTimes(const fileName: string; creationTime, lastAccessTime,
+    lastModificationTime: TDateTime): boolean;
   function  DSiShareFolder(const folder, shareName, comment: string): boolean;
   function  DSiUncompressFile(fileHandle: THandle): boolean;
   function  DSiUnShareFolder(const shareName: string): boolean;
@@ -1220,6 +1229,7 @@ type
     property OnTimer: TNotifyEvent read dtOnTimer write SetOnTimer;
   end; { TDSiTimer }
 
+  function  DSiDateTimeToFileTime(dateTime: TDateTime; var fileTime: TFileTime): boolean;
   //Following three functions are based on GetTickCount
   function  DSiElapsedSince(midTime, startTime: int64): int64;
   function  DSiElapsedTime(startTime: int64): int64;
@@ -2852,9 +2862,7 @@ const
         DSiFileTimeToDateTime(fsCreationTime, creationTime) and
         DSiFileTimeToDateTime(fsLastAccessTime, lastAccessTime) and
         DSiFileTimeToDateTime(fsLastModificationTime, lastModificationTime);
-    finally
-      CloseHandle(fileHandle);
-    end;
+    finally CloseHandle(fileHandle); end;
   end; { DSiGetFileTimes }
 
   {:Returns the long pathname representation.
@@ -3191,7 +3199,55 @@ const
     else
       Result := true;
   end; { DSiRevertWow64FsRedirection }
-  
+
+  {:Sets one of the file times - creation time, last access time, last write time.
+    @author  gabr
+    @since   2012-02-06
+  }
+  function DSiSetFileTime(const fileName: string; dateTime: TDateTime;
+    whatTime: TDSiFileTime): boolean;
+  var
+    creationTime        : TDateTime;
+    lastAccessTime      : TDateTime;
+    lastModificationTime: TDateTime;
+  begin
+    Result := DSiGetFileTimes(fileName, creationTime, lastAccessTime, lastModificationTime);
+    if not Result then
+      Exit;
+    case whatTime of
+      ftCreation:         creationTime := dateTime;
+      ftLastAccess:       lastAccessTime := dateTime;
+      ftLastModification: lastModificationTime := dateTime;
+      else raise Exception.CreateFmt('DSiSetFileTime: Unexpected whatTime: %d', [Ord(whatTime)]);
+    end;
+    Result := DSiSetFileTimes(fileName, creationTime, lastAccessTime, lastModificationTime);
+  end; { DSiSetFileTime }
+
+  {:Setsfile creation, last access and last write time.
+    @author  gabr
+    @since   2012-02-06
+  }
+  function  DSiSetFileTimes(const fileName: string; creationTime, lastAccessTime,
+    lastModificationTime: TDateTime): boolean;
+  var
+    fileHandle            : cardinal;
+    fsCreationTime        : TFileTime;
+    fsLastAccessTime      : TFileTime;
+    fsLastModificationTime: TFileTime;
+  begin
+    Result := false;
+    fileHandle := CreateFile(PChar(fileName), GENERIC_READ + GENERIC_WRITE, 0, nil,
+      OPEN_EXISTING, 0, 0);
+    if fileHandle <> INVALID_HANDLE_VALUE then try
+      Result :=
+        DSiDateTimeToFileTime(creationTime, fsCreationTime) and
+        DSiDateTimeToFileTime(lastAccessTime, fsLastAccessTime) and
+        DSiDateTimeToFileTime(lastModificationTime, fsLastModificationTime) and
+        SetFileTime(fileHandle, @fsCreationTime, @fsLastAccessTime,
+           @fsLastModificationTime);
+    finally CloseHandle(fileHandle); end;
+  end; { DSiSetFileTimes }
+
   {ales}
   function DSiShareFolder(const folder, shareName, comment: string): boolean;
   var
@@ -4853,6 +4909,7 @@ var
       msg.msg := Message;
       msg.wParam := WParam;
       msg.lParam := LParam;
+      msg.Result := 0;
       TWndMethod(instanceWndProc)(msg);
       Result := msg.Result
     end
@@ -6855,6 +6912,19 @@ var
         Result := DefWindowProc(dtWindowHandle, Msg, wParam, lParam);
     end; //with msgRec
   end; { TDSiTimer.WndProc }
+
+  {:Converts time from Delphi TDateTime format to Windows TFileTime format.
+    @returns false if conversion failed.
+    @author  gabr
+    @since   2012-02-06
+  }
+  function DSiDateTimeToFileTime(dateTime: TDateTime; var fileTime: TFileTime): boolean;
+   var
+    sysTime: TSystemTime;
+  begin
+    DateTimeToSystemTime(dateTime, sysTime);
+    Result := SystemTimeToFileTime(sysTime, fileTime);
+  end; { DSiDateTimeToFileTime }
 
   {gp}
   function DSiElapsedSince(midTime, startTime: int64): int64;
