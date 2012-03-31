@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2012-03-26
-///   Version           : 1.25
+///   Last modification : 2012-03-31
+///   Version           : 1.26
 ///</para><para>
 ///   History:
+///     1.26: 2012-03-31
+///       - Task property added to the IOmniWorkItem interface.
+///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
 ///     1.25: 2012-03-26
 ///       - Parallel.Pipeline implements OnStop.
 ///     1.24b: 2012-03-21
@@ -250,7 +253,7 @@ type
     function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
-    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload;
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
@@ -798,6 +801,7 @@ type
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
+    function  GetTask: IOmniTask;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
   //
@@ -807,6 +811,7 @@ type
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
+    property Task: IOmniTask read GetTask;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniWorkItem }
 
@@ -1108,7 +1113,7 @@ type
     function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload; inline;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
-    function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskConfig; overload; inline;
+    function  OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
@@ -1132,6 +1137,7 @@ type
   IOmniWorkItemEx = interface ['{3B48D012-CF1C-4B47-A4A0-3072A9067A3E}']
     function  GetConfig: IOmniWorkItemConfig;
     procedure SetConfig(const value: IOmniWorkItemConfig);
+    procedure SetTask(const task: IOmniTask);
   //
     property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
   end; { IOmniWorkItemEx }
@@ -1143,6 +1149,7 @@ type
     FConfig             : IOmniWorkItemConfig;
     FData               : TOmniValue;
     FResult             : TOmniValue;
+    FTask               : IOmniTask;
     FUniqueID           : int64;
   strict protected
     procedure FreeException;
@@ -1150,14 +1157,16 @@ type
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
+    function GetTask: IOmniTask;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
   protected //IOmniWorkItemEx
     function  GetConfig: IOmniWorkItemConfig;
     procedure SetConfig(const value: IOmniWorkItemConfig);
+    procedure SetTask(const task: IOmniTask);
   public
-    constructor Create(const data: TOmniValue; uniqueID: int64;
-      var cancelAllUpToID: TGp8AlignedInt64);
+    constructor Create(const data: TOmniValue; uniqueID: int64; var cancelAllUpToID:
+      TGp8AlignedInt64);
     destructor  Destroy; override;
   public //IOmniWorkItem
     function  DetachException: Exception;
@@ -1166,7 +1175,7 @@ type
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
     property UniqueID: int64 read GetUniqueID;
-  public  //IOmniWorkItemEx
+  public //IOmniWorkItemEx
     property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
   end; { TOmniWorkItem }
 
@@ -3356,6 +3365,11 @@ begin
     raise DetachException;
 end; { TOmniWorkItem.GetResult }
 
+function TOmniWorkItem.GetTask: IOmniTask;
+begin
+  Result := FTask;
+end; { TOmniWorkItem.GetTask }
+
 function TOmniWorkItem.GetUniqueID: int64;
 begin
   Result := FUniqueID;
@@ -3375,6 +3389,11 @@ procedure TOmniWorkItem.SetResult(const value: TOmniValue);
 begin
   FResult := value;
 end; { TOmniWorkItem.SetResult }
+
+procedure TOmniWorkItem.SetTask(const task: IOmniTask);
+begin
+  FTask := task;
+end; { TOmniWorkItem.SetTask }
 
 { TOmniWorkItemConfig }
 
@@ -3460,6 +3479,7 @@ begin
   for ovWorkItem in input do begin
     workItem := ovWorkItem.AsInterface as IOmniWorkItem;
     workItemEx := workItem as IOmniWorkItemEx;
+    workItemEx.SetTask(task);
     configEx := workItemEx.Config as IOmniWorkItemConfigEx;
     if not workItem.CancellationToken.IsSignalled then begin
       try
@@ -3655,7 +3675,7 @@ begin
   Result := Self;
 end; { TOmniTaskConfig.OnMessage }
 
-function TOmniTaskConfig.OnMessage(msgID: word; eventHandler: TOmniMessageExec):
+function TOmniTaskConfig.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction):
   IOmniTaskConfig;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
