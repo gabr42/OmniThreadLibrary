@@ -1,10 +1,10 @@
-## Async
+## Async {#highlevel-async}
 
 Async is the simplest of high-level abstractions and is typically used for fire and forget scenarios. To create an Async task, call Parallel.Async.
 
 > ![](images/async.png)
 
-> *When you call Async, code is started in a new thread (indicated by the bold vertical line) and both main and background threads continue execution. At some time, background task completes execution and disappears.*
+> *When you call `Parallel.Async`, code is started in a new thread (indicated by the bold vertical line) and both main and background threads continue execution. At some time, background task completes execution and disappears.*
 
 Example:
 
@@ -19,7 +19,7 @@ Parallel.Async(
 
 This simple program creates a background task with a sole purpose to make some noise from it. The task is coded as an anonymous method but you can also use a [normal method or a normal procedure](#highLevel-intro-AnonymousEtAl) for the task code.
 
-The Parallel class defines two Async overloads. The first accepts a parameter-less background task and an optional [task configuration block](#highlevel-taskconfig) and the second accepts a background task with an [IOmniTask](#introotl-tasksvsthreads) parameter and an optional task configuration block.
+The `Parallel` class defines two `Async` overloads. The first accepts a parameter-less background task and an optional [task configuration block](#highlevel-taskconfig) and the second accepts a background task with an [IOmniTask](#introotl-tasksvsthreads) parameter and an optional task configuration block.
 
 {:lang="pascal"}
 ~~~~~~~~~~~~~~~
@@ -81,15 +81,15 @@ Parallel.Async(
 );
 ~~~~~~~~~~~~~~~
 
-Let me warn you that in such cases where you want to return a result from a background task, Async abstraction is not the most appropriate. You would be better off by using a [Future](#highlevel-future).
+Let me warn you that in cases where you want to return a result from a background task, Async abstraction is not the most appropriate. You would be better off by using a [Future](#highlevel-future).
 
 ### Handling Exceptions
 
-If the background code raises unhandled exception, OmniThreadLibrary will catch this exception and re-raise it in the OnTerminated handler. This way the exception will travel from the background thread to the owner thread where it can be processed.
+If the background code raises unhandled exception, OmniThreadLibrary will catch this exception and re-raise it in the `OnTerminated` handler. This way the exception will travel from the background thread to the owner thread where it can be processed.
 
-As the OnTerminated handler occurs at the unspecified moment when Windows are processing window messages, there is no good way to catch this message with a try..except block. The caller must install its own OnTerminated handler instead and handle exception there.
+As the `OnTerminated` handler occurs at the unspecified moment when Windows are processing window messages, there is no good way to catch this message with a try..except block. The caller must install its own `OnTerminated` handler instead and handle exception there.
 
-The following example uses OnTerminated handler to [detach fatal exception](#lowlevel-simpletasks-taskexceptions) from the task, log the exception details and destroy the exception object. 
+The following example uses `OnTerminated` handler to [detach fatal exception](#lowlevel-simpletasks-taskexceptions) from the task, log the exception details and destroy the exception object. 
 
 {:lang="pascal"}
 ~~~~~~~~~~~~~~~
@@ -113,4 +113,4 @@ Parallel.Async(
   ));
 ~~~~~~~~~~~~~~~
 
-If you don't install a OnTerminated handler, exception will be handled by the application-level filter, which will by default cause a message box to appear.
+If you don't install a `OnTerminated` handler, exception will be handled by the application-level filter, which will by default cause a message box to appear.
