@@ -2,49 +2,56 @@
 
 Async is the simplest of high-level abstractions and is typically used for fire and forget scenarios. To create an Async task, call Parallel.Async.
 
-> ![](http://otl.17slon.com/book/lib/exe/fetch.php?media=book:highlevel:async.png)
-
+> ![](images/async.png)
 > *When you call Async, code is started in a new thread (indicated by the bold vertical line) and both main and background threads continue execution. At some time, background task completes execution and disappears.*
 
 Example:
 
-	Parallel.Async(
-	  procedure
-	  begin
-	    MessageBeep($FFFFFFFF);
-	  end);
+~~~~~~~~~~~~~~~
+Parallel.Async(
+  procedure
+  begin
+    MessageBeep($FFFFFFFF);
+  end);
+~~~~~~~~~~~~~~~
 
 This simple program creates a background task with a sole purpose to make some noise from it. The task is coded as an anonymous method but you can also use a [normal method or a normal procedure](book:highLevel:intro:AnonymousEtAl) for the task code.
 
 The Parallel class defines two Async overloads. The first accepts a parameter-less background task and an optional [task configuration block](book:highlevel:taskconfig) and the second accepts a background task with an [IOmniTask](book:introotl:tasksvsthreads) parameter and an optional task configuration block.
 
-	type
-	  TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+type
+  TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
 	
-	  Parallel = class
-	    class procedure Async(task: TProc;
-	      taskConfig: IOmniTaskConfig = nil); overload;
-	    class procedure Async(task: TOmniTaskDelegate;
-	      taskConfig: IOmniTaskConfig = nil); overload;
-	    ...
-	  end;
+  Parallel = class
+    class procedure Async(task: TProc;
+      taskConfig: IOmniTaskConfig = nil); overload;
+    class procedure Async(task: TOmniTaskDelegate;
+      taskConfig: IOmniTaskConfig = nil); overload;
+    ...
+  end;
+~~~~~~~~~~~~~~~
 
 The second form is useful if the background code needs access to the [IOmniTask interface](book:introotl:tasksvsthreads), for example to send messages to the owner or to execute code in the owner thread (typically that will be the main thread). 
 
 The example below uses Async task to fetch the contents of a web page (by calling a mysterious function HttpGet) and then uses [Invoke](book:simpletasks:tomniworkerinvoke) to execute a code that logs the length of the result in the main thread.
 
-	Parallel.Async(
-	  procedure (const task: IOmniTask)
-	  var 
-	    page: string;
-	  begin
-	    HttpGet('otl.17slon.com', 80, 'tutorials.htm', page, '');
-	    task.Invoke(
-	      procedure
-	      begin
-	        lbLogAsync.Items.Add(Format('Async GET: %d ms; page length = %d', [time, Length(page)]))
-	      end);
-	  end);
+{:lang="delphi"}
+~~~~~~~~~~~~~~~
+Parallel.Async(
+  procedure (const task: IOmniTask)
+  var 
+    page: string;
+  begin
+    HttpGet('otl.17slon.com', 80, 'tutorials.htm', page, '');
+    task.Invoke(
+      procedure
+      begin
+        lbLogAsync.Items.Add(Format('Async GET: %d ms; page length = %d', [time, Length(page)]))
+      end);
+  end);
+~~~~~~~~~~~~~~~
 
 The same result could be achieved by sending a message from the background thread to the main thread. [TaskConfig](book:highlevel:taskconfig) block is used to configure message handler.
 
@@ -96,5 +103,5 @@ The following example uses OnTerminated handler to [detach fatal exception](book
 	    end
 	  ));
 
-If you don’t install a OnTerminated handler, exception will be handled by the application-level filter, which will by default cause a message box to appear.
+If you don't install a OnTerminated handler, exception will be handled by the application-level filter, which will by default cause a message box to appear.
 
