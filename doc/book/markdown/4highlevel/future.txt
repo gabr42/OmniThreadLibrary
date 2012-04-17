@@ -1,1 +1,268 @@
 ## Future {#highlevel-future}
+
+A *future* is a background calculation that returns a result. To create the task, call `Parallel.Future<T>` (where `T` is the type returned from the calculation). This will return a result of type `IOmniFuture<T>`, which is the interface you will use to work with the background task.
+
+To get the result of the calculation, call the `.Value` method on the interface returned from the `Parallel.Future` call.
+
+> ![](images/future.png)
+
+> *When you call `Parallel.Future`, a background task is started immediately. The task will continue with its (possibly long) execution and the main thread can do some other work. When you need the result of the background calculation, call the `.Value` method, which will return the result immediately if it is ready or which will wait on the background code to complete its work if necessary.*
+
+Example:
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+var
+  FCalculation: IOmniFuture<integer>;
+
+procedure StartCalculation;
+begin
+  FCalculation := Parallel.Future<integer>(
+    function: integer
+    var
+      i: integer;
+    begin
+      Result := 0;
+      for i := 1 to 100000 do
+        Result := Result + i;
+    end
+  );
+end;
+
+function GetResult: integer;
+begin
+  Result := FCalculation.Value;
+  FCalculation := nil;
+end;
+~~~~~~~~~~~~~~~
+
+The `Parallel` class implements two `Future<T>` overloads. The first accepts a parameter-less background task and an optional [task configuration block](#highlevel-taskconfig) and the second accepts a background task with an [IOmniTask](#introotl-tasksvsthreads) parameter and an optional task configuration block.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+type
+  TOmniFutureDelegate<T> = reference to function: T;
+  TOmniFutureDelegateEx<T> = reference to function(const task: IOmniTask): T;
+
+  Parallel = class
+    class function Future<T>(action: TOmniFutureDelegate<T>;
+      taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
+    class function Future<T>(action: TOmniFutureDelegateEx<T>;
+      taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
+    ...
+  end;
+~~~~~~~~~~~~~~~
+
+The second form is useful if the background code needs access to the [IOmniTask](#introotl-tasksvsthreads) interface, for example to send messages to the owner or to execute code in the owner thread (typically that will be the main thread). 
+
+A Future task always wraps a function of some type. In the example above the function added numbers from 1 to 100000 and returned an integer result. That's why the Future task was created by calling `Parallel.Future<integer>` and why the result – the interface that provides a way to manage the task – is declared as `IOmniFuture<integer>`. But a Future could equally well return result of any type – a string or a date/time or even a record, class or interface.
+
+The following example is a rewrite of the [Async](#highlevel-async) example. It uses the same mysterious `HttpGet` function but it is wrapped in a more flexible way. Function `StartHttpGet` accepts a url parameter specifying which page to retrieve from the web server. It then creates a future returning a string and passes it a simple code to execute – a one-liner anonymous function that only calls the already known `HttpGet`.
+
+This example illustrates two important points:
+
+  * Anonymous methods are great for *capturing* variables. If you look at the `StartHttpGet` again, you’ll see that the *url* parameter is used from two different threads. `StartHttpGet` is called in the main thread and the anonymous code is executed in the background thread. Still, the parameter somehow makes it across this thread boundary – and that is done by the anonymous method magic.
+  * Don’t write long and complicated anonymous methods – it is better to call external method from the anonymous code and make the long and complicated calculation in that external method (or in code called from that method etc).
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+var
+  FGetFuture: IOmniFuture<string>;
+
+function HttpGet(const url: string): string;
+begin
+  // this function fetches a page from the web server 
+  // and returns its contents
+end;
+
+procedure StartHttpGet(const url: string);
+begin
+  FGetFuture := Parallel.Future<string>(
+    function: string
+    begin
+      Result := HttpGet(url);
+    end
+  );
+end;
+
+function GetResult: string;
+begin
+  Result := FGetFuture.Value;
+  FGetFuture := nil;
+end;
+~~~~~~~~~~~~~~~
+
+### IOmniFuture<T> Interface
+
+The `IOmniFuture<T>` interface implements other methods besides the `Value`.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+type
+  IOmniFuture<T> = interface
+    procedure Cancel;
+    function  DetachException: Exception;
+    function  FatalException: Exception;
+    function  IsCancelled: boolean;
+    function  IsDone: boolean;
+    function  TryValue(timeout_ms: cardinal; var value: T): boolean;
+    function  Value: T;
+    function  WaitFor(timeout_ms: cardinal): boolean;
+   end;
+~~~~~~~~~~~~~~~
+
+The interface implements exception-handling functions, cancellation support and functions that check if the background calculation has completed.
+
+### Completion Detection
+
+When you call the `Value` function you don’t know ahead what will happen. If the background code has already calculated the result, the Value call will return immediately. Otherwise, the caller thread will be blocked until the result is available and if you are executing a long calculation (or if the web or database connection did not succeed and is now waiting for a timeout to occur) this may last a while. If you created the future in the main thread, then your whole application will be blocked until `Value` returns.
+
+There are few ways around this problem. One is to periodically call the `IsDone` function. It will return `False` while the background calculation is still working and `True` one the result is available. Another option is to call `WaitFor` with some (small) timeout. `WaitFor` will wait specified number of milliseconds and will return `True` if result is available. Third way to achieve the same is to call `TryValue` periodically. `TryValue` also waits some specified number of milliseconds and returns `True` if result is available but in addition it will also return the result in the *value* parameter.
+
+The fourth and completely different way is to specify the [termination handler](#highlevel-taskconfig) which will notify you when the background calculation is completed. The following example sets the termination handler to get the value of the background calculation into the memo field and then destroy the Future interface.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+procedure StartHttpGet(const url: string);
+begin
+  FGetFuture := Parallel.Future<string>(
+    function: string
+    begin
+      Result := HttpGet(url);
+    end,
+    Parallel.TaskConfig.OnTerminated(
+      procedure
+      begin
+        Memo1.Text := FGetFuture.Value;
+        FGetFuture := nil;
+      end
+     )
+  );
+end;
+~~~~~~~~~~~~~~~
+
+### Cancellation
+
+It is possible to cancel the background execution of the future before it is completed. The Future uses [Cancellation token mechanism](#lowlevel-simpletasks-cancellationtoken) to achieve this. Cancellation is cooperative – if the background task does not willingly cancel itself, cancellation will fail.
+
+To cancel a background task, the Future owner (the code that called `Parallel.Future`) has to call the `Cancel` method on the `IOmniFuture<T>` interface. This will signal the cancellation token which the background task must check periodically. To get access to the cancellation token, background code must be declared differently – not as parameterless function but as a function accepting a [IOmniTask](#introotl-tasksvsthreads) parameter.
+
+The following (pretty much pointless) program illustrates this concept.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+var
+  FCountFuture: IOmniFuture<integer>;
+
+function CountTo100(const task: IOmniTask): integer;
+var
+  i: integer;
+begin
+  for i := 1 to 100 do begin
+    Sleep(100);
+    Result := i;
+    if task.CancellationToken.IsSignalled then
+      break; //for
+  end;
+end;
+
+procedure StartCounting;
+begin
+  FCountFuture := Parallel.Future<integer>(CountTo100);
+  Sleep(100);
+  FCountFuture.Cancel;
+  FCountFuture.WaitFor(INFINITE);
+  FCountFuture := nil;
+end;
+~~~~~~~~~~~~~~~
+
+`StartCounting` creates a Future which executes `CountTo100` function in the background. It then sleeps 100 milliseconds, calls the `Cancel` function, waits for the Future to terminate and clears the Future interface.
+
+`CountTo100` function counts from 1 to 100. It sleeps for 100 milliseconds after each number, stores the current counter in the function result and then checks the cancellation token. If it is signaled (meaning that the owner called the `Cancel` function), it will break out of the for loop.
+
+If you put a breakpoint on the last line of the `StartCounting` function and run the program, you’ll see that it will be reached almost immediately, proving that the `CountTo100` did not take 10 seconds to return a result (100 repeats * 100 milliseconds = 10 seconds).
+
+You cannot call the `Value` function if the calculation was cancelled as it would raise a `EFutureCancelled` exception. If you don’t know whether the `Cancel` was called or not, you can call the `IOmniFuture<T>.IsCancelled` and check the result (`True` = calculation was cancelled).
+
+### Handling Exceptions
+
+If the background code raises unhandled exception (i.e. the exception was not captured in a try..except block), OmniThreadLibrary will catch this exception and gracefully complete the background task. When you call the `Value` function, this exception will be raised.
+
+This immensely helps with debugging as the background exceptions (exceptions in background threads) are ignored. Delphi ignores all exceptions in background threads – you can handle them if you write appropriate code but they are not automatically visible – and that can be quite dangerous. As the Future exceptions are re-raised in the  main thread when the Value is called this makes them equivalent to other exceptions in the main thread.
+
+There are few different ways to handle exceptions in Futures and they are most simply explained through the code. First example catches the exception by wrapping the `Value` call in try..except.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+procedure FutureException1;
+var
+  future: IOmniFuture<integer>;
+begin
+  future := Parallel.Future<integer>(
+    function: integer
+    begin
+      raise ETestException.Create('Exception in Parallel.Future');
+    end
+  );
+  Log('Future is executing ...');
+  Sleep(1000);
+  try
+    Log('Future retured: %d', [future.Value]);
+  except
+    on E: Exception do
+      Log('Future raised exception %s:%s', [E.ClassName, E.Message]);
+  end;
+end;
+~~~~~~~~~~~~~~~
+
+Second example uses `WaitFor` to wait on task completion and then checks the result of the `FatalException` function. It will return `Nil` if there was no exception or the exception object if there was an exception. Exception object itself will still be owner by the Future task and will be destroyed when the Future is destroyed.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+procedure FutureException2;
+var
+  future: IOmniFuture<integer>;
+begin
+  future := Parallel.Future<integer>(
+    function: integer
+    begin
+      raise ETestException.Create('Exception in Parallel.Future');
+    end
+  );
+  Log('Future is executing ...');
+  future.WaitFor(INFINITE);
+  if assigned(future.FatalException) then
+    Log('Future raised exception %s:%s', 
+      [future.FatalException.ClassName, future.FatalException.Message])
+  else
+    Log('Future retured: %d', [future.Value]);
+end;
+~~~~~~~~~~~~~~~
+
+Third example shows how you can detach exception from the future. By calling `DetachException` you will get the ownership of the exception object and you should destroy it at some appropriate point in time.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+procedure FutureException3;
+var
+  excFuture: Exception;
+  future   : IOmniFuture<integer>;
+begin
+  future := Parallel.Future<integer>(
+    function: integer
+    begin
+      raise ETestException.Create('Exception in Parallel.Future');
+    end
+  );
+  Log('Future is executing ...');
+  future.WaitFor(INFINITE);
+  excFuture := future.DetachException;
+  try
+    if assigned(excFuture) then
+      Log('Future raised exception %s:%s', 
+        [excFuture.ClassName, excFuture.Message])
+    else
+      Log('Future retured: %d', [future.Value]);
+  finally FreeAndNil(excFuture); end;
+end;
+~~~~~~~~~~~~~~~
