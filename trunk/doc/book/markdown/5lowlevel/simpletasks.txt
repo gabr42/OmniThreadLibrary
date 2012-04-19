@@ -5,3 +5,5 @@
 ### Exceptions {#lowlevel-simpletasks-taskexceptions}
 
 ### Cancellation Token / CancelWith {#lowlevel-simpletasks-cancellationtoken}
+
+### Lock / WithLock {#lowlevel-simpletasks-tasklock}
