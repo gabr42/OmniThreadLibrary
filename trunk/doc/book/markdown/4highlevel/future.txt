@@ -182,7 +182,7 @@ end;
 
 If you put a breakpoint on the last line of the `StartCounting` function and run the program, you’ll see that it will be reached almost immediately, proving that the `CountTo100` did not take 10 seconds to return a result (100 repeats * 100 milliseconds = 10 seconds).
 
-You cannot call the `Value` function if the calculation was cancelled as it would raise a `EFutureCancelled` exception. If you don’t know whether the `Cancel` was called or not, you can call the `IOmniFuture<T>.IsCancelled` and check the result (`True` = calculation was cancelled).
+You cannot call the `Value` function if the calculation was cancelled as it would raise an `EFutureCancelled` exception. If you don’t know whether the `Cancel` was called or not, you can call the `IOmniFuture<T>.IsCancelled` and check the result (`True` = calculation was cancelled).
 
 ### Handling Exceptions
 
@@ -215,7 +215,7 @@ begin
 end;
 ~~~~~~~~~~~~~~~
 
-Second example uses `WaitFor` to wait on task completion and then checks the result of the `FatalException` function. It will return `Nil` if there was no exception or the exception object if there was an exception. Exception object itself will still be owner by the Future task and will be destroyed when the Future is destroyed.
+Second example uses `WaitFor` to wait on task completion and then checks the result of the `FatalException` function. It will return `Nil` if there was no exception or the exception object if there was an exception. Exception object itself will still be owned by the Future task and will be destroyed when the Future is destroyed.
 
 {:lang="pascal"}
 ~~~~~~~~~~~~~~~
