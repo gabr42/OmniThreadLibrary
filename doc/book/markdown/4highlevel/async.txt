@@ -2,7 +2,7 @@
 
 Async is the simplest of high-level abstractions and is typically used for fire and forget scenarios. To create an Async task, call Parallel.Async.
 
-> ![](images/async.png)
+> ![](images/highlevel/async.png)
 
 > *When you call `Parallel.Async`, code is started in a new thread (indicated by the bold vertical line) and both main and background threads continue execution. At some time, background task completes execution and disappears.*
 

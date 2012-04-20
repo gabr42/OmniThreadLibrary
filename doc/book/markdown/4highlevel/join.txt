@@ -2,7 +2,7 @@
 
 Join abstraction enables you to start multiple background tasks in multiple threads. To create the task, call `Parallel.Join`.
 
-> ![](images/join.png)
+> ![](images/highlevel/join.png)
 
 > *When you use Parallel.Join, background tasks are started in background threads. By default, Join waits for all background threads to complete before the control is returned to the caller.*
 
