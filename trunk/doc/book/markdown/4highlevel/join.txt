@@ -4,7 +4,7 @@ Join abstraction enables you to start multiple background tasks in multiple thre
 
 > ![](images/join.png)
 
-> When you use Parallel.Join, background tasks are started in background threads. By default, Join waits for all background threads to complete before the control is returned to the caller. 
+> *When you use Parallel.Join, background tasks are started in background threads. By default, Join waits for all background threads to complete before the control is returned to the caller.*
 
 Example:
 
@@ -38,14 +38,17 @@ The `Parallel` class defines five `Join` overloads. The first creates empty  `IO
 {:lang="pascal"}
 ~~~~~~~~~~~~~~~
 type
-  TOmniJoinDelegate = reference to procedure (const joinState: IOmniJoinState);
+  TOmniJoinDelegate = reference to procedure (const joinState:
+                        IOmniJoinState);
 
   Parallel = class
     class function Join: IOmniParallelJoin; overload;
-    class function Join(const task1, task2: TProc): IOmniParallelJoin; overload;
+    class function Join(const task1, task2: TProc): IOmniParallelJoin;
+                     overload;
     class function Join(const task1, task2: TOmniJoinDelegate): 
                      IOmniParallelJoin; overload;
-    class function Join(const tasks: array of TProc): IOmniParallelJoin; overload;
+    class function Join(const tasks: array of TProc): IOmniParallelJoin;
+                     overload;
     class function Join(const tasks: array of TOmniJoinDelegate): 
                      IOmniParallelJoin; overload;
     ...
@@ -96,6 +99,7 @@ begin
   for aTask in tasks do
     Result.Task(aTask);
 end;
+~~~~~~~~~~~~~~~
 
 To set up [task configuration block](#highlevel-taskconfig), call the `TaskConfig` function. Following example uses `TaskConfig` to set up critical section which is then used in two parallel tasks to protect the shared resource. Workers use the `IOmniJoinState` instance to access the [`IOmniTask`](#introotl-tasksvsthreads) interface and through it the [`Lock`](#lowlevel-simpletasks-tasklock) property.
 
