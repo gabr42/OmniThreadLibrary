@@ -4,7 +4,7 @@ A *future* is a background calculation that returns a result. To create the task
 
 To get the result of the calculation, call the `.Value` method on the interface returned from the `Parallel.Future` call.
 
-> ![](images/future.png)
+> ![](images/highlevel/future.png)
 
 > *When you call `Parallel.Future`, a background task is started immediately. The task will continue with its (possibly long) execution and the main thread can do some other work. When you need the result of the background calculation, call the `.Value` method, which will return the result immediately if it is ready or which will wait on the background code to complete its work if necessary.*
 
