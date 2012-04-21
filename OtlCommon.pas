@@ -1644,6 +1644,7 @@ begin
   case ovType of
     ovtDouble,
     ovtDateTime: Result := PDouble(@ovData)^;
+    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
     ovtNull: Result := 0;
     else raise Exception.Create('TOmniValue cannot be converted to TDateTime');
   end;

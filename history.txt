@@ -1,3 +1,5 @@
+///       - Task property added to the IOmniWorkItem interface.
+///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
 + TOmniValueObj
 + exception handling in Parallel.Async: http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
 ///       - Bug fixed: It was not possible to change timer delay once it was created.
