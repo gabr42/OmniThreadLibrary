@@ -1,0 +1,71 @@
+OmniThreadLibrary 3.01 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-3.01)
+or as a ZIP archive
+(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-3.01.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+and XE2 on the Win32 and Win64 platforms. Currently, there are no plans
+to support older Delphi compilers and .NET. XE2 support is limited to
+Windows targets.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 3.01
+===========================
+
+- New features:
+  - Exception handling added to Parallel.Async.
+    http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
+  - Task property added to the IOmniWorkItem interface.
+  - Added TOmniValueObj class, a class wrapper for TOmniValue record.
+
+- Bug fixes:
+  - Fixed race condition in InternalStop.
+  - Fixed overloaded OnMessage declaration in the IOmniTaskConfig
+    interface.
+  - It was not possible to change timer delay once it was created.
+    Big thanks to [Unspoken] for finding the bug.
+  - TOmniValueContainer.Insert did not update internal 'count' field.
+    Big thanks to [andi] for bug report and fix.
+  - Internal event monitor messages must be processed in Terminate,
+    otherwise OnTerminated is not called if the task is terminated
+    from the task controller. 
+    Big thanks to [Qmodem] for finding the bug.
+  - TOmniValue.CreateNamed was casting pointer to integer.
+    Tnx to [Mayjest] for finding the problem.
+  - Fixed object and interface casting in TOmniValue.CreateNamed.
+    Tnx to [Mayjest] for finding the problem.
+  - IOmniJoinState.Task was not correctly set in
+    TOmniParallelJoin.Execute.
+    Tnx to [Mayjest] for finding the problem.
+
+--
+Primoz
+[http://thedelphigeek.com]
