@@ -1,0 +1,109 @@
+OmniThreadLibrary 1.05 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-1.05) or
+as a ZIP archive
+(http://code.google.com/p/omnithreadlibrary/downloads/list).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, and 2010 
+on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 1.05
+===========================
+
+- Big rename: TOmniBaseStack -> TOmniBaseBoundedStack,
+  TOmniStack -> TOmniBoundedStack, 
+  TOmniBaseQueue -> TOmniBaseBoundedQueue, 
+  TOmniQueue -> TOmniBoundedQueue, 
+  IInterfaceDictionary -> IOmniInterfaceDictionary, 
+  IInterfaceDictionaryEnumerator -> IOmniInterfaceDictionaryEnumerator,
+  TInterfaceDictionaryPair -> TOmniInterfaceDictionaryPair.
+  
+- Implemented dynamically allocated, O(1) enqueue and dequeue, 
+  threadsafe, microlocking queue. Class TOmniBaseQueue (unit 
+  OtlContainers) contains base implementation while TOmniQueue adds 
+  notification support.
+  More info: http://17slon.com/blogs/gabr/2010/02/dynamic-lock-free-queue-doing-it-right.html
+  
+- Implemented resource counter (inverse semaphore) with empty state 
+  signalling - TOmniResourceCount (unit OtlSync).
+  More info: http://17slon.com/blogs/gabr/2010/01/three-steps-to-blocking-collection-1.html
+  
+- New unit OtlCollection which contains blocking collection implementation
+  TOmniBlockingCollection.
+  More info: http://17slon.com/blogs/gabr/2010/02/three-steps-to-blocking-collection-3.html
+  
+- New high-level parallelism support (unit OtlParallel). Requires at least 
+  Delphi 2009.
+  - Parallel.ForEach wrapper.
+  - Parallel.Join wrapper.
+  More info: http://17slon.com/blogs/gabr/2010/02/parallelforeachaggregate.html,
+  http://17slon.com/blogs/gabr/2010/02/three-steps-to-blocking-collection-3.html
+
+- Implemented IOmniEnvironment interface and function Environment 
+  (unit OtlCommon) returning some information on system, process and 
+  thread.
+
+- Implemented IOmniCancellationToken, used in Parallel infrastructure 
+  and in IOmniTaskControl.TerminateWhen.
+- IOmniTaskControl and IOmniTask implement CancellationToken: 
+  IOmniCancellationToken property which can be used by the task and 
+  task controller.
+
+- IOmniTask implements Implementor property which points back to the 
+  worker instance (but only if worker is TOmniWorker-based).
+  
+- Implemented IOmniTaskControl.UserData[]. The application can store 
+  any values in this array. It can be accessed via the integer or 
+  string index.
+  
+- Implemented TOmniValue.IsInteger.
+
+- IOmniTaskControl implements OnMessage(msgID, handler).
+
+- Refactored and enhanced TOmniValueContainer.
+
+- TOmniTaskFunction now takes 'const' parameter.
+
+- Bugs fixed:
+  - TOmniEventMonitor.OnTaskUndeliveredMessage was missing 'message' parameter.
+  - Set package names and designtime/runtime type in D2009/D2010 packages.
+  
+- New demos:
+  - 32_Queue: Stress test for new TOmniBaseQueue and TOmniQueue.
+  - 33_BlockingCollection: Stress test for new TOmniBlockingCollection, also demoes
+    the use of Environment to set process affinity.
+  - 34_TreeScan: Parallel tree scan using TOmniBlockingCollection.
+  - 35_ParallelFor: Parallel tree scan using Parallel.ForEach (Delphi 2009 and newer).
+  - 36_ParallelAggregate: Parallel calculations using Parallel.ForEach.Aggregate
+    (Delphi 2009 and newer).
+  - 37_ParallelJoin: Parallel.Join demo.
+  
+-- 
+Primoz
+[http://thedelphigeek.com]
