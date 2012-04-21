@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2012-02-06
-   Version           : 1.65
+   Last modification : 2012-04-20
+   Version           : 1.66
 </pre>*)(*
    History:
+     1.66: 2012-04-20
+       - TDSiRegistry.ReadBinary, WriteBinary now use RawByteString for data buffer.
      1.65: 2012-02-06
        - Implemented DSiSetFileTime and DSiSetFileTimes.
        - Implemented DSiDateTimeToFileTime.
@@ -389,7 +391,7 @@ unit DSiWin32;
 
 {$J+,T-} // required!
 
-interface 
+interface
 
 {$IFDEF Linux}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF Linux}
 {$IFDEF OSX}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF OSX}
@@ -397,11 +399,13 @@ interface
 
 {$DEFINE NeedUTF}{$UNDEF NeedVariants}{$DEFINE NeedStartupInfo}
 {$DEFINE NeedFileCtrl}
+{$DEFINE NeedRawByteString}
 {$IFDEF ConditionalExpressions}
   {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
   {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
+  {$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
 {$ENDIF}
-{$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
+{$IFDEF Unicode}{$UNDEF NeedRawByteString}{$ENDIF}
 
 uses
   {$IFDEF ScopedUnitNames}Winapi.Windows{$ELSE}Windows{$ENDIF},
@@ -657,11 +661,15 @@ type
 
 const
   KEY_WOW64_64KEY = $0100;
-  
+
 type
+  {$IFDEF NeedRawByteString}
+  RawByteString = AnsiString;
+  {$ENDIF NeedRawByteString}
+
   TDSiRegistry = class(TRegistry)
   public
-    function  ReadBinary(const name, defval: string): string; overload;
+    function  ReadBinary(const name: string; const defval: RawByteString): RawByteString; overload;
     function  ReadBinary(const name: string; dataStream: TStream): boolean; overload;
     function  ReadBool(const name: string; defval: boolean): boolean;
     function  ReadDate(const name: string; defval: TDateTime): TDateTime;
@@ -671,7 +679,7 @@ type
     function  ReadString(const name, defval: string): string;
     procedure ReadStrings(const name: string; strings: TStrings);
     function  ReadVariant(const name: string; defval: variant): variant;
-    procedure WriteBinary(const name, data: string); overload;
+    procedure WriteBinary(const name: string; data: RawByteString); overload;
     procedure WriteBinary(const name: string; data: TStream); overload;
     procedure WriteFont(const name: string; font: TFont);
     procedure WriteInt64(const name: string; value: int64);
@@ -1798,21 +1806,21 @@ const
     @author  Lee_Nover
     @since   2004-11-29
   }
-  function TDSiRegistry.ReadBinary(const name, defval: string): string;
+  function TDSiRegistry.ReadBinary(const name: string; const defval: RawByteString): RawByteString;
   begin
     try
       if GetDataSize(name) < 0 then
         Abort; // D4 does not generate an exception!
       case GetDataType(name) of
         rdInteger:
-          Result := IntToStr(inherited ReadInteger(name));
+          Result := RawByteString(IntToStr(inherited ReadInteger(name)));
         rdBinary:
           begin
             SetLength(Result, GetDataSize(name));
             SetLength(Result, ReadBinaryData(name, pointer(Result)^, Length(Result)));
           end; //rdBinary
         else
-          Result := inherited ReadString(name);
+          Result := RawByteString(inherited ReadString(name));
       end;
     except ReadBinary := defval; end;
   end; { TDSiRegistry.ReadBinary }
@@ -1827,7 +1835,7 @@ const
   function TDSiRegistry.ReadBinary(const name: string; dataStream: TStream): boolean;
   var
     i: integer;
-    s: string;
+    s: RawByteString;
   begin
     try
       if GetDataSize(name) < 0 then
@@ -1854,7 +1862,7 @@ const
           end; //rdBinary
         else
           begin
-            s := ReadString(name, '');
+            s := RawByteString(ReadString(name, ''));
             if s <> '' then
               dataStream.Write(s[1], Length(s));
           end; //else
@@ -2024,9 +2032,12 @@ const
     @author  Lee_Nover
     @since   2004-11-29
   }
-  procedure TDSiRegistry.WriteBinary(const name, data: string);
+  procedure TDSiRegistry.WriteBinary(const name: string; data: RawByteString);
   begin
-    WriteBinaryData(name, pointer(data)^, Length(data));
+    if data = '' then
+      WriteBinaryData(name, data, 0)
+    else
+      WriteBinaryData(name, data[1], Length(data));
   end; { TDSiRegistry.WriteBinary }
 
   {:Writes stream into binary registry entry.
