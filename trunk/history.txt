@@ -1,3 +1,4 @@
+/// - Fixed race condition in InternalStop.
 ///       - Task property added to the IOmniWorkItem interface.
 ///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
 + TOmniValueObj

@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-02-07
-///   Version           : 1.31e
+///   Last modification : 2012-04-21
+///   Version           : 1.31f
 ///</para><para>
 ///   History:
+///     1.31f: 2012-04-21
+///       - Fixed race condition in InternalStop.
 ///     1.31e: 2012-02-07
 ///       - Bug fixed: Internal event monitor messages must be processed in Terminate,
 ///         otherwise OnTerminated is not called if the task is terminated from the task
@@ -1723,8 +1725,8 @@ begin
   FreeAndNil(oteTimers);
 end; { TOmniTaskExecutor.Cleanup }
 
-function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask; var
-  msgInfo: TOmniMessageInfo): boolean;
+function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask;
+  var msgInfo: TOmniMessageInfo): boolean;
 var
   gotMsg         : boolean;
   msg            : TOmniMessage;
@@ -1755,11 +1757,13 @@ begin
     until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
   end // comm handles
   else if (awaited >= msgInfo.IdxFirstWaitObject) and (awaited <= msgInfo.IdxLastWaitObject) then begin
-    oteInternalLock.Acquire;
-    try
-      responseHandler := oteWaitObjectList.ResponseHandlers[awaited - msgInfo.IdxFirstWaitObject];
-    finally oteInternalLock.Release; end;
-    responseHandler();
+    if assigned(oteWaitObjectList) then begin
+      oteInternalLock.Acquire;
+      try
+        responseHandler := oteWaitObjectList.ResponseHandlers[awaited - msgInfo.IdxFirstWaitObject];
+      finally oteInternalLock.Release; end;
+      responseHandler();
+    end;
     TestForInternalRebuild(task, msgInfo);
   end // comm handles
   else if awaited = msgInfo.IdxRebuildHandles then begin
