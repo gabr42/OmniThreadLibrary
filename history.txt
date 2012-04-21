@@ -1,18 +1,25 @@
-/// - Fixed race condition in InternalStop.
-///       - Task property added to the IOmniWorkItem interface.
-///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
-+ TOmniValueObj
-+ exception handling in Parallel.Async: http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
-///       - Bug fixed: It was not possible to change timer delay once it was created.
-///         Big thanks to [Unspoken] for finding the bug.
-///       - TOmniValueContainer.Insert did not update internal 'count' field.
-///         Big thanks to [andi] for bug report and fix.
-///Bug fixed: Internal event monitor messages must be processed in Terminate,
-///         otherwise OnTerminated is not called if the task is terminated from the task
-///         controller. Big thanks to [Qmodem] for finding the bug.
-///Bug fixed: TOmniValue.CreateNamed was casting pointer to integer. tnx to [Mayjest]
-///Bug fixed: Fixed object and interface casting in TOmniValue.CreateNamed. [Mayjest]
-///Bug fixed: IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute. [Mayjest]
+3.01: 2012-04-21
+- New features:
+  - Exception handling added to Parallel.Async.
+    http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
+  - Task property added to the IOmniWorkItem interface.
+  - Added TOmniValueObj class, a class wrapper for TOmniValue record.
+- Bug fixes:
+  - Fixed race condition in InternalStop.
+  - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
+  - It was not possible to change timer delay once it was created.
+    Big thanks to [Unspoken] for finding the bug.
+  - TOmniValueContainer.Insert did not update internal 'count' field.
+    Big thanks to [andi] for bug report and fix.
+  - Internal event monitor messages must be processed in Terminate,
+    otherwise OnTerminated is not called if the task is terminated from the task
+    controller. Big thanks to [Qmodem] for finding the bug.
+  - TOmniValue.CreateNamed was casting pointer to integer. 
+    Tnx to [Mayjest] for finding the problem.
+  - Fixed object and interface casting in TOmniValue.CreateNamed. 
+    Tnx to [Mayjest] for finding the problem.
+  - IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute. 
+    Tnx to [Mayjest] for finding the problem.
 
 3.0 2011-12-30
 - New features:
