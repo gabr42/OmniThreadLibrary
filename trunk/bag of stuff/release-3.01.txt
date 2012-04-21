@@ -37,8 +37,8 @@ http://code.google.com/p/omnithreadlibrary/source/checkout
 Author's blog: http://thedelphigeek.com
 Author's home page: http://gp.17slon.com
 
-Changes since version 3.01
-===========================
+Changes since version 3.0
+=========================
 
 - New features:
   - Exception handling added to Parallel.Async.
