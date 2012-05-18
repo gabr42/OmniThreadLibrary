@@ -58,6 +58,73 @@ To set up a [task configuration block](#highlevel-taskconfig), call the `TaskCon
 
 A call to the `WaitFor` function will wait for up to `timeout_ms` milliseconds (this value can be set to `INFINITE`) for all background tasks to terminate. If they will terminate in the specified time, `WaitFor` will return `True`. Otherwise, it will return `False`.
 
+### Example
+
+The following code uses `ParallelTask` to generate large quantities of pseudorandom data. The data is written to a output stream.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+procedure CreateRandomFile(fileSize: integer; output: TStream);
+const
+  CBlockSize = 1 * 1024 * 1024 {1 MB};
+var
+  buffer   : TOmniValue;
+  memStr   : TMemoryStream;
+  outQueue : IOmniBlockingCollection;
+  unwritten: IOmniCounter;
+begin
+  outQueue := TOmniBlockingCollection.Create;
+  unwritten := CreateCounter(fileSize);
+  Parallel.ParallelTask.NoWait
+    .NumTasks(Environment.Process.Affinity.Count)
+    .OnStop(Parallel.CompleteQueue(outQueue))
+    .Execute(
+      procedure
+      var
+        buffer      : TMemoryStream;
+        bytesToWrite: integer;
+        randomGen   : TGpRandom;
+      begin
+        randomGen := TGpRandom.Create;
+        try
+          while unwritten.Take(CBlockSize, bytesToWrite) do begin
+            buffer := TMemoryStream.Create;
+            buffer.Size := bytesToWrite;
+            FillBuffer(buffer.Memory, bytesToWrite, randomGen);
+            outQueue.Add(buffer);
+          end;
+        finally FreeAndNil(randomGen); end;
+      end
+    );
+  for buffer in outQueue do begin
+    memStr := buffer.AsObject as TMemoryStream;
+    output.CopyFrom(memStr, 0);
+    FreeAndNil(memStr);
+  end;
+end;
+~~~~~~~~~~~~~~~
+
+The code creates a [blocking collection](#highlevel-blocking-collection) to hold buffers with pseudorandom data. Then it creates a [counter](#misc-tomnicounter) which will hold the count of bytes that have yet to be written.
+
+`ParallelTask` is used to start parallel workers. Each worker initializes its own pseudorandom data generator and then keeps generating buffers with pseudorandom data until the counter drops to zero. Each buffer is written to the blocking collection.
+
+Because of the `NoWait` modifier, main thread continues with the execution immediately after all threads have been scheduled. Main thread keeps reading buffers from the blocking collection and writes the content of those buffers into the output stream. (As the TStream is not thread-safe, we cannot write to the output stream directly from multiple background threads.)
+
+`For..in` loop will block if there is no data in the blocking collection, but it will only stop looping after the blocking collection's `CompleteAdding` method is called. This is done with the help of the `Parallel.CompleteQueue` helper which is called from the termination handler (`OnStop`).
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+class function Parallel.CompleteQueue(
+  const queue: IOmniBlockingCollection): TProc;
+begin
+  Result :=
+    procedure
+    begin
+      queue.CompleteAdding;
+    end;
+end;
+~~~~~~~~~~~~~~~
+
 ### Handling Exceptions
 
 Exceptions in background tasks are caught and re-raised in the `WaitFor` method. If you are using synchronous version of ParallelTask (without the `NoWait` modifier), then `WaitFor` is called at the end of the `Execute` method (in other words, `Parallel.ParallelTask.Execute(…)` will re-raise task exceptions). If, however, you are using the asynchronous version (by calling `Parallel.Paralleltask.NoWait.Execute(…)`), exception will only be raised when you wait for the background tasks to complete by calling `WaitFor`. 
