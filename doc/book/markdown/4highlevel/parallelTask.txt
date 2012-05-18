@@ -1,3 +1,65 @@
-## Parallel Task
+## Parallel Task {#highlevel-paralleltask}
+
+ParallelTask abstraction enables you to start a background tasks in multiple threads. To create the task, call `Parallel.ParallelTask`.
 
 > ![](images/parallelTask.png)
+
+> *When you use Parallel.ParallelTask, same background task is started in multiple background threads. By default, ParallelTask waits for all background threads to complete before the control is returned to the caller.*
+
+Example:
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+Parallel.ParallelTask.NumTasks(3).Execute(
+  procedure
+  begin
+    while true do
+      ;
+  end
+);
+~~~~~~~~~~~~~~~
+
+This simple code fragment starts infinite loop in three threads. The task is coded as an anonymous method but you can also use a [normal method or a normal procedure](#highLevel-intro-AnonymousEtAl) for the task code.
+
+The `Parallel` class implements function ParallelTask which returns a `IOmniParallelTask` interface. All configuration of the parallel task is done via this interface.
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+type
+  Parallel = class
+    class function ParallelTask: IOmniParallelTask;
+    ...
+  end;
+~~~~~~~~~~~~~~~
+
+### IOmniParallelTask Interface
+
+{:lang="pascal"}
+~~~~~~~~~~~~~~~
+type
+  IOmniParallelTask = interface
+    function  Execute(const aTask: TProc): IOmniParallelTask; overload;
+    function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
+    function  NoWait: IOmniParallelTask;
+    function  NumTasks(numTasks: integer): IOmniParallelTask;
+    function  OnStop(const stopCode: TProc): IOmniParallelTask;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
+    function  WaitFor(timeout_ms: cardinal): boolean;
+  end;
+~~~~~~~~~~~~~~~
+
+The most important of these functions is `Execute`. It will start appropriate number of background threads and start executing task in those threads. By default, ParallelTask uses as many threads as there are tasks but you can override this behaviour by calling the `NumTasks` function.
+
+There are two overloaded versions of `Execute`. The first accepts a parameter-less background task and the second accepts a background task with an [IOmniTask](#introotl-tasksvsthreads) parameter.
+
+The `OnStop` function can be used to set up a termination handler - a code that will get executed when all background tasks will have complete execution.
+
+To set up a [task configuration block](#highlevel-taskconfig), call the `TaskConfig` function.
+
+A call to the `WaitFor` function will wait for up to `timeout_ms` milliseconds (this value can be set to `INFINITE`) for all background tasks to terminate. If they will terminate in the specified time, `WaitFor` will return `True`. Otherwise, it will return `False`.
+
+### Handling Exceptions
+
+Exceptions in background tasks are caught and re-raised in the `WaitFor` method. If you are using synchronous version of ParallelTask (without the `NoWait` modifier), then `WaitFor` is called at the end of the `Execute` method (in other words, `Parallel.ParallelTask.Execute(…)` will re-raise task exceptions). If, however, you are using the asynchronous version (by calling `Parallel.Paralleltask.NoWait.Execute(…)`), exception will only be raised when you wait for the background tasks to complete by calling `WaitFor`. 
+
+For more details on handling ParallelTask exceptions, see the `Handling Exception` section in the [Join](#highlevel-async) chapter.
