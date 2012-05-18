@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-02-28
-///   Version           : 1.26c
+///   Last modification : 2012-05-18
+///   Version           : 1.27
 ///</para><para>
 ///   History:
+///     1.27: 2012-05-18
+///       - Added property CountPhysical to the IOmniAffinity.
 ///     1.26c: 2012-02-28
 ///       - Fixed object and interface casting in TOmniValue.CreateNamed.
 ///     1.26b: 2012-02-25
@@ -501,6 +503,7 @@ type
   IOmniAffinity = interface ['{8A6DDC70-F705-4577-869B-6810E776132B}']
     function  GetAsString: string;
     function  GetCount: integer;
+    function  GetCountPhysical: integer;
     function  GetMask: DWORD;
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
@@ -508,6 +511,7 @@ type
   //
     property AsString: string read GetAsString write SetAsString;
     property Count: integer read GetCount write SetCount;
+    property CountPhysical: integer read GetCountPhysical;
     property Mask: DWORD read GetMask write SetMask;
   end; { IOmniAffinity }
 
@@ -797,8 +801,9 @@ type
   strict private
     oaTarget: TOmniAffinityTarget;
   protected
-    function GetAsString: string;
+    function  GetAsString: string;
     function  GetCount: integer;
+    function  GetCountPhysical: integer;
     function  GetMask: DWORD;
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
@@ -2343,6 +2348,28 @@ begin
     affMask := affMask SHR 1;
   end;
 end; { TOmniAffinity.GetCount }
+
+function TOmniAffinity.GetCountPhysical: integer;
+var
+  info: TSystemLogicalProcessorInformationArr;
+  item: TSystemLogicalProcessorInformation;
+  mask: DWORD;
+begin
+  if not DSiGetLogicalProcessorInfo(info) then
+    Result := GetCount // running on pre-XP SP3 OS, just get the best approximation
+  else begin
+    Result := 0;
+    mask := GetMask;
+    for item in info do begin
+      if (item.Relationship = RelationProcessorCore) and
+         ((item.ProcessorMask AND mask) <> 0) then
+      begin
+        mask := mask AND NOT item.ProcessorMask;
+        Inc(Result);
+      end;
+    end;
+  end;
+end; { TOmniAffinity.GetCountPhysical }
 
 function TOmniAffinity.GetMask: DWORD;
 begin
