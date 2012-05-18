@@ -30,12 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2012-03-16
+   Last modification : 2012-01-23
    Version           : 1.60
 </pre>*)(*
    History:
-     1.60: 2012-03-16
-       - Added TAnsiStringList, written by Remy Lebeau.
+     1.60: 2012-05-07
+       - Implemented TGpObjectRingBuffer.Remove.
      1.59: 2012-01-23
        - Added class TGpWideString.
      1.58: 2012-01-12
@@ -1672,6 +1672,7 @@ type
     function  GetOwnsObjects: boolean; virtual;
     function  IncPointer(const ptr: integer; increment: integer = 1): integer;
     function  InternalIsFull: boolean;              {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  InternalDequeue: TObject;
     procedure SetBufferAlmostEmptyEvent(const value: THandle); virtual;
     procedure SetBufferAlmostEmptyThreshold(const value: integer); virtual;
     procedure SetBufferAlmostFullEvent(const value: THandle); virtual;
@@ -1694,6 +1695,7 @@ type
     function  IsEmpty: boolean;                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  IsFull: boolean;                      {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Lock;
+    function  Remove(obj: TObject): TObject;
     function  Tail: TObject;                        {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Unlock;
     property BufferAlmostEmptyEvent: THandle read orbBufferAlmostEmptyEvent write
@@ -5507,15 +5509,7 @@ function TGpObjectRingBuffer.Dequeue: TObject;
 begin
   Lock;
   try
-    if IsEmpty then
-      Result := nil
-    else begin
-      Result := orbBuffer[orbTail];
-      orbTail := IncPointer(orbTail);
-      Dec(orbCount);
-      if (BufferAlmostEmptyEvent <> 0) and (BufferAlmostEmptyThreshold = orbCount) then
-        Win32Check(SetEvent(BufferAlmostEmptyEvent));
-    end;
+    Result := InternalDequeue;
   finally Unlock; end;
 end; { TGpObjectRingBuffer.Dequeue }
 
@@ -5608,6 +5602,19 @@ begin
   Result := (IncPointer(orbHead) = orbTail);
 end; { TGpObjectRingBuffer.InternalIsFull }
 
+function TGpObjectRingBuffer.InternalDequeue: TObject;
+begin
+  if IsEmpty then
+    Result := nil
+  else begin
+    Result := orbBuffer[orbTail];
+    orbTail := IncPointer(orbTail);
+    Dec(orbCount);
+    if (BufferAlmostEmptyEvent <> 0) and (BufferAlmostEmptyThreshold = orbCount) then
+      Win32Check(SetEvent(BufferAlmostEmptyEvent));
+  end;
+end; { TGpObjectRingBuffer.InternalDequeue }
+
 {:Checks whether the buffer is empty.
   @since   2003-07-26
 }
@@ -5632,6 +5639,22 @@ begin
   if assigned(orbLock) then
     orbLock.Acquire;
 end; { TGpObjectRingBuffer.Lock }
+
+function TGpObjectRingBuffer.Remove(obj: TObject): TObject;
+var
+  iObj: integer;
+begin
+  Lock;
+  try
+    for iObj := 0 to Count - 1 do begin
+      Result := InternalDequeue;
+      if Result = obj then
+        Exit;
+      Enqueue(Result);
+    end;
+  finally Unlock; end;
+  Result := nil;
+end; { TGpObjectRingBuffer.Remove }
 
 procedure TGpObjectRingBuffer.SetBufferAlmostEmptyEvent(const value: THandle);
 begin
