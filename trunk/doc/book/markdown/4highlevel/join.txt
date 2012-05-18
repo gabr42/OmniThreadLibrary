@@ -1,4 +1,4 @@
-## Join
+## Join {#highlevel-join}
 
 Join abstraction enables you to start multiple background tasks in multiple threads. To create the task, call `Parallel.Join`.
 
