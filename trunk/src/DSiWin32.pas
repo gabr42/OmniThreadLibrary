@@ -7,10 +7,18 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2012-04-20
-   Version           : 1.66
+   Last modification : 2012-05-18
+   Version           : 1.69
 </pre>*)(*
    History:
+     1.69: 2012-05-18
+       - Added dynamically loaded API forwarder DSiGetLogicalProcessorInformation.
+       - Added function DSiGetLogicalProcessorInfo. 
+       - Fixed a bug in DSiEnumFilesToOL.
+     1.68: 2012-05-16
+       - New function: DSiEnumFilesToOL.
+     1.67: 2012-05-15
+       - Callback functions are declared as anonymous delegates in D2009 and newer.
      1.66: 2012-04-20
        - TDSiRegistry.ReadBinary, WriteBinary now use RawByteString for data buffer.
      1.65: 2012-02-06
@@ -404,6 +412,7 @@ interface
   {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
   {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
+  {$IF CompilerVersion >= 20}{$DEFINE HasAnonymousFunctions}{$IFEND}
 {$ENDIF}
 {$IFDEF Unicode}{$UNDEF NeedRawByteString}{$ENDIF}
 
@@ -423,6 +432,7 @@ uses
   {$IFDEF ScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
   {$IFDEF ScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
   {$IFDEF ScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
+  {$IFDEF ScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
   {$IFDEF ScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
   {$IFDEF ScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF};
 
@@ -620,14 +630,19 @@ type
   SC_HANDLE = THandle;
 
   // DSiEnumFiles callback
-  TDSiEnumFilesCallback = procedure(const longFileName: string) of object;
+  TDSiEnumFilesCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+    procedure(const longFileName: string)
+    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
   // DSiEnumFilesEx callback
-  TDSiEnumFilesExCallback = procedure(const folder: string; S: TSearchRec;
-    isAFolder: boolean; var stopEnum: boolean) of object;
+  TDSiEnumFilesExCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+    procedure(const folder: string; S: TSearchRec;
+    isAFolder: boolean; var stopEnum: boolean)
+    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
 
   // DSiExecuteAndCapture callback
-  TDSiOnNewLineCallback = procedure(const line: string; var runningTimeLeft_sec: integer)
-    of object;
+  TDSiOnNewLineCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+    procedure(const line: string; var runningTimeLeft_sec: integer)
+    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
 
   TDSiFileTime = (ftCreation, ftLastAccess, ftLastModification);
 
@@ -739,6 +754,22 @@ const
     FOF_RENAMEONCOLLISION, FOF_SILENT, FOF_SIMPLEPROGRESS, FOF_WANTMAPPINGHANDLE,
     FOF_WANTNUKEWARNING, FOF_NO_UI);
 
+type
+  TDSiFileInfo = class
+  private
+    FDepth    : integer;
+    FFolder   : string;
+    FSearchRec: TSearchRec;
+  protected
+    function GetFullName: string;
+  public
+    constructor Create(const folder: string; searchRec: TSearchRec; depth: integer);
+    property Depth: integer read FDepth;
+    property Folder: string read FFolder;
+    property FullName: string read GetFullName;
+    property SearchRec: TSearchRec read FSearchRec;
+  end; { TDSiFileInfo }
+
   function  DSiCanWriteToFolder(const folderName: string): boolean;
   function  DSiCompressFile(fileHandle: THandle): boolean;
   function  DSiConnectToNetworkResource(const networkResource: string; const mappedLetter:
@@ -765,6 +796,9 @@ const
   procedure DSiEnumFilesToSL(const fileMask: string; attr: integer; fileList: TStrings;
     storeFullPath: boolean = false; enumSubfolders: boolean = false;
     maxEnumDepth: integer = 0);
+  procedure DSiEnumFilesToOL(const fileMask: string; attr: integer;
+    fileList: TObjectList {of TDSiFileInfo};
+    enumSubfolders: boolean = false; maxEnumDepth: integer = 0);
   function  DSiFileExistsW(const fileName: WideString): boolean;
   function  DSiFileExtensionIs(const fileName, extension: string): boolean; overload;
   function  DSiFileExtensionIs(const fileName: string; extension: array of string):
@@ -1050,6 +1084,51 @@ type
   TStartupInfoA = TStartupInfo;
   {$ENDIF NeedStartupInfo}
 
+  _LOGICAL_PROCESSOR_RELATIONSHIP = (RelationProcessorCore{ = 0}, RelationNumaNode{ = 1}, RelationCache{ = 2}, RelationProcessorPackage{ = 3}, RelationGroup{ = 4}, RelationAll = $FFFF);
+  {$EXTERNALSYM _LOGICAL_PROCESSOR_RELATIONSHIP}
+  LOGICAL_PROCESSOR_RELATIONSHIP = _LOGICAL_PROCESSOR_RELATIONSHIP;
+  {$EXTERNALSYM LOGICAL_PROCESSOR_RELATIONSHIP}
+  TLogicalProcessorRelationship = LOGICAL_PROCESSOR_RELATIONSHIP;
+
+  _PROCESSOR_CACHE_TYPE = (CacheUnified{ = 0}, CacheInstruction{ = 1}, CacheData{ = 2}, CacheTrace{ = 3});
+  {$EXTERNALSYM _PROCESSOR_CACHE_TYPE}
+  PROCESSOR_CACHE_TYPE = _PROCESSOR_CACHE_TYPE;
+  {$EXTERNALSYM PROCESSOR_CACHE_TYPE}
+  TProcessorCacheType = PROCESSOR_CACHE_TYPE;
+
+  _CACHE_DESCRIPTOR = record
+    Level: BYTE;
+    Associativity: BYTE;
+    LineSize: WORD;
+    Size: DWORD;
+    _Type: PROCESSOR_CACHE_TYPE;
+  end;
+  {$EXTERNALSYM _CACHE_DESCRIPTOR}
+  CACHE_DESCRIPTOR = _CACHE_DESCRIPTOR;
+  {$EXTERNALSYM CACHE_DESCRIPTOR}
+  PCACHE_DESCRIPTOR = ^_CACHE_DESCRIPTOR;
+  {$EXTERNALSYM PCACHE_DESCRIPTOR}
+  TCacheDescriptor = _CACHE_DESCRIPTOR;
+  PCacheDescriptor = PCACHE_DESCRIPTOR;
+
+  _SYSTEM_LOGICAL_PROCESSOR_INFORMATION = record
+    ProcessorMask: ULONG_PTR;
+    Relationship: LOGICAL_PROCESSOR_RELATIONSHIP;
+    case Integer of
+      0: (Flags: BYTE); // ProcessorCore
+      1: (NodeNumber: DWORD); // NumaNode
+      2: (Cache: CACHE_DESCRIPTOR); //Cache
+      3: (Reserved: array [0..1] of ULONGLONG);
+  end;
+  {$EXTERNALSYM _SYSTEM_LOGICAL_PROCESSOR_INFORMATION}
+  SYSTEM_LOGICAL_PROCESSOR_INFORMATION = _SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+  {$EXTERNALSYM SYSTEM_LOGICAL_PROCESSOR_INFORMATION}
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION = ^SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+  {$EXTERNALSYM PSYSTEM_LOGICAL_PROCESSOR_INFORMATION}
+  TSystemLogicalProcessorInformation = SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+  PSystemLogicalProcessorInformation = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+  TSystemLogicalProcessorInformationArr = array of TSystemLogicalProcessorInformation;
+
   function  DSiGetAppCompatFlags(const exeName: string): string;
   function  DSiGetBootType: TDSiBootType;
   function  DSiGetCompanyName: string;
@@ -1062,6 +1141,7 @@ type
   function  DSiGetEnvironmentVariable(const envVarName: string): string;
   function  DSiGetFolderLocation(const CSIDL: integer): string;
   procedure DSiGetKeyboardLayouts(layouts: TStrings);
+  function  DSiGetLogicalProcessorInfo(var info: TSystemLogicalProcessorInformationArr): boolean;
   function  DSiGetMyDocumentsFolder: string;
   function  DSiGetProgramFilesFolder: string;
   function  DSiGetRegisteredOwner: string;
@@ -1294,6 +1374,9 @@ type
   function  DSiDwmIsCompositionEnabled(var pfEnabled: BOOL): HRESULT; stdcall;
   function  DSiEnumProcessModules(hProcess: THandle; lphModule: PModule; cb: DWORD;
     var lpcbNeeded: DWORD): BOOL; stdcall;
+  function  DSiGetLogicalProcessorInformation(
+    pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnLength: DWORD): BOOL; stdcall;
   function  DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcAddress(const libFileName, procName: string): FARPROC;
@@ -1430,6 +1513,9 @@ type
     var lpcbNeeded: DWORD): BOOL; stdcall;
   TGetLongPathName = function(lpszShortPath, lpszLongPath: PChar;
     cchBuffer: DWORD): DWORD; stdcall;
+  TGetLogicalProcessorInformation = function(
+    pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnLength: DWORD): BOOL; stdcall;
   TGetModuleFileNameEx = function(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   TGetProcessImageFileName = function(hProcess: THandle; lpImageFileName: PChar;
@@ -1472,6 +1558,7 @@ const
   GDwmEnableComposition: TDwmEnableComposition = nil;
   GDwmIsCompositionEnabled: TDwmIsCompositionEnabled = nil;
   GEnumProcessModules: TEnumProcessModules = nil;
+  GGetLogicalProcessorInformation: TGetLogicalProcessorInformation = nil;
   GGetModuleFileNameEx: TGetModuleFileNameEx = nil;
   GGetLongPathName: TGetLongPathName = nil;
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
@@ -2298,6 +2385,20 @@ const
 
 { Files }
 
+  constructor TDSiFileInfo.Create(const folder: string; searchRec: TSearchRec; depth:
+    integer);
+  begin
+    inherited Create;
+    FFolder := folder;
+  FSearchRec := searchRec;
+  FDepth := depth;
+  end; { TDSiFileInfo.Create }
+
+  function TDSiFileInfo.GetFullName: string;
+  begin
+    Result := FFolder + FSearchRec.Name;
+  end; { TDSiFileInfo.GetFullName }
+
   {:Checks if application can write to a folder.
     @author  gabr
     @since   2005-12-08
@@ -2618,7 +2719,8 @@ const
 
   procedure _DSiEnumFilesEx(const folder, fileMask: string; attr: integer; enumSubfolders:
     boolean; enumCallback: TDSiEnumFilesExCallback; var totalFiles: integer; var stopEnum:
-    boolean; fileList: TStrings; storeFullPath: boolean; currentDepth, maxDepth: integer);
+    boolean; fileList: TStrings; fileObjectList: TObjectList; storeFullPath: boolean;
+    currentDepth, maxDepth: integer);
   var
     err: integer;
     s  : TSearchRec;
@@ -2639,9 +2741,11 @@ const
                   fileList.Add(folder + S.Name + '\')
                 else
                   fileList.Add(S.Name + '\');
+              if assigned(fileObjectList) then
+                fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
               _DSiEnumFilesEx(folder+S.Name+'\', fileMask, attr, enumSubfolders,
-                enumCallback, totalFiles, stopEnum, fileList, storeFullPath,
-                currentDepth + 1, maxDepth);
+                enumCallback, totalFiles, stopEnum, fileList, fileObjectList,
+                storeFullPath, currentDepth + 1, maxDepth);
             end;
           err := FindNext(S);
         until (err <> 0) or stopEnum;
@@ -2659,6 +2763,8 @@ const
             fileList.Add(folder + S.Name)
           else
             fileList.Add(S.Name);
+        if assigned(fileObjectList) then
+          fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
         Inc(totalFiles);
         err := FindNext(S);
       until (err <> 0) or stopEnum;
@@ -2686,7 +2792,7 @@ const
     Result := 0;
     stopEnum := false;
     _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, enumCallback, Result, stopEnum,
-      nil, false, 1, maxEnumDepth);
+      nil, nil, false, 1, maxEnumDepth);
   end; { DSiEnumFilesEx }
 
   {:Enumerates files (optionally in subfolders) and stores results into caller-provided
@@ -2709,8 +2815,32 @@ const
       folder := IncludeTrailingBackslash(folder);
     stopEnum := false;
     _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, totalFiles, stopEnum,
-      fileList, storeFullPath, 1, maxEnumDepth);
+      fileList, nil, storeFullPath, 1, maxEnumDepth);
   end; { DSiEnumFilesToSL }
+
+  {:Enumerates files (optionally in subfolders) and stores TDSiFileInfo objects into
+    caller-provided TObjectList.
+    @since   2012-05-16
+  }
+  procedure DSiEnumFilesToOL(const fileMask: string; attr: integer;
+    fileList: TObjectList {of TDSiFileInfo};
+    enumSubfolders: boolean; maxEnumDepth: integer);
+  var
+    folder    : string;
+    mask      : string;
+    stopEnum  : boolean;
+    totalFiles: integer;
+  begin
+    fileList.Clear;
+    mask := fileMask;
+    folder := ExtractFilePath(mask);
+    Delete(mask, 1, Length(folder));
+    if folder <> '' then
+      folder := IncludeTrailingBackslash(folder);
+    stopEnum := false;
+    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, totalFiles, stopEnum,
+      nil, fileList, true{ignored}, 1, maxEnumDepth);
+  end; { DSiEnumFilesToOL }
 
   {:Wide version of SysUtils.FileExists.
     @author  gabr
@@ -5842,6 +5972,22 @@ var
     end;
   end; { DSiGetKeyboardLayouts }
 
+  function DSiGetLogicalProcessorInfo(
+    var info: TSystemLogicalProcessorInformationArr): boolean;
+  var
+    infoLen: DWORD;
+  begin
+    infoLen := 0;
+    Result := DSiGetLogicalProcessorInformation(nil, infoLen);
+    if GetLastError = ERROR_INSUFFICIENT_BUFFER then begin
+      SetLength(info, infoLen div SizeOf(TSystemLogicalProcessorInformation));
+      infoLen := Length(info) * SizeOf(TSystemLogicalProcessorInformation);
+      Result := DSiGetLogicalProcessorInformation(@info[0], infoLen);
+    end;
+    if not Result then
+      SetLength(info, 0);
+  end; { DSiGetLogicalProcessorInfo }
+
   {:Returns My Documents folder.
     @author  xtreme
     @since   2003-10-09
@@ -7500,6 +7646,20 @@ var
     end;
   end; { DSiEnumProcessModules }
 
+  function DSiGetLogicalProcessorInformation(
+    pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnLength: DWORD): BOOL;
+  begin
+    if not assigned(GGetLogicalProcessorInformation) then
+      GGetLogicalProcessorInformation := DSiGetProcAddress('kernel32.dll', 'GetLogicalProcessorInformation');
+    if assigned(GGetLogicalProcessorInformation) then
+      Result := GGetLogicalProcessorInformation(pBuffer, ReturnLength)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetLogicalProcessorInformation }
+  
   function DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   begin
