@@ -1,2 +1,0 @@
-## Blocking collection {#highlevel-blocking-collection}
-
