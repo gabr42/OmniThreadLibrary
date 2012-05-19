@@ -2,7 +2,7 @@
 
 ParallelTask abstraction enables you to start a background tasks in multiple threads. To create the task, call `Parallel.ParallelTask`.
 
-> ![](images/parallelTask.png)
+> ![](images/highlevel/parallelTask.png)
 
 > *When you use Parallel.ParallelTask, same background task is started in multiple background threads. By default, ParallelTask waits for all background threads to complete before the control is returned to the caller.*
 
