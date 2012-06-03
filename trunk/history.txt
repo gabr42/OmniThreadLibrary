@@ -1,3 +1,5 @@
+! Parallel.Join was broken if number of task to be executed was larger than numberm of threads. THanks to [Passella] for reporting the problem.
+
 3.01: 2012-04-21
 - New features:
   - Exception handling added to Parallel.Async.
