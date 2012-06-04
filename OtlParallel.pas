@@ -868,7 +868,7 @@ type
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
-    class function  ForEach(low, high: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
+    class function  ForEach(first, last: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
     {$IFDEF OTL_ERTTI}
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     {$ENDIF OTL_ERTTI}
@@ -1572,10 +1572,10 @@ begin
     end;
 end; { Parallel.CompleteQueue }
 
-class function Parallel.ForEach(low, high: integer; step: integer = 1):
+class function Parallel.ForEach(first, last: integer; step: integer = 1):
   IOmniParallelLoop<integer>;
 begin
-  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(low, high, step), true);
+  Result := TOmniParallelLoop<integer>.Create(CreateSourceProvider(first, last, step), true);
 end; { Parallel.ForEach }
 
 class function Parallel.ForEach(const enumerable: IEnumerable): IOmniParallelLoop;
