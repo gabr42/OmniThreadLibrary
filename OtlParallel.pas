@@ -31,13 +31,16 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2012-06-03
-///   Version           : 1.26a
+///   Last modification : 2012-06-05
+///   Version           : 1.26b
 ///</para><para>
 ///   History:
+///     1.26b: 2012-06-05
+///       - Invalid 'joinState' was passed to the worker task in Parallel.Join if number
+///         of tasks to be executed was larger than the number of worker threads.
 ///     1.26a: 2012-06-03
 ///       - Parallel.Join was broken if number of task to be executed was larger than
-///         numberm of threads.
+///         the number of worker threads.
 ///     1.26: 2012-03-31
 ///       - Task property added to the IOmniWorkItem interface.
 ///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
@@ -1403,14 +1406,16 @@ begin
         procedure (const task: IOmniTask)
         var
           joinStateEx: IOmniJoinStateEx;
+          numWorker  : integer;
           procNum    : TOmniValue;
         begin
           try
-            joinStateEx := opjJoinStates[Task.Param['NumWorker'].AsInteger] as IOmniJoinStateEx;
+            numWorker := Task.Param['NumWorker'].AsInteger;
+            joinStateEx := opjJoinStates[numWorker] as IOmniJoinStateEx;
             for procNum in opjInput do begin
               joinStateEx.SetTask(task);
               try
-                opjTasks[procNum](opjJoinStates[procNum.AsInteger]);
+                opjTasks[procNum](opjJoinStates[numWorker]);
               except
                 opjTaskExceptionLock.Acquire;
                 try
