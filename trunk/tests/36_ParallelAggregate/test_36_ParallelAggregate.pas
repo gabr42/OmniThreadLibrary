@@ -53,6 +53,7 @@ var
   start    : int64;
 begin
   start := DSiTimeGetTime64;
+  numPrimes := 0;
   Parallel.ForEach(1, inpMaxPrime.Value)
     .NumTasks(inpNumCPU.Value)
     .Initialize(
@@ -65,7 +66,7 @@ begin
       begin
         lockNum.Acquire;
         try
-          numPrimes := numPrimes+ taskState.AsInteger;
+          numPrimes := numPrimes + taskState.AsInteger;
         finally lockNum.Release; end;
       end)
     .Execute(
