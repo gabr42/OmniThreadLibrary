@@ -1,8 +1,6 @@
 ! Parallel.Join was broken if number of task to be executed was larger than number of threads. Thanks to [Passella] for reporting the problem.
 ! Invalid 'joinState' was passed to the worker task in Parallel.Join if number of tasks to be executed was larger than the number of worker threads. Thanks to [meishier] for reporting the problem.
-+ Added OnStop overload to Parallel.ForEach that accepts 'reference to procedure (const task: IOmniTask)'.
-! ForEach finalizer is called if an exception occurs inside the ForEach task.
-* Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
+! Fixed race condition in task teardown. Big thanks to [meishier] for putting together a reproducible test case.
 
 3.01: 2012-04-21
 - New features:

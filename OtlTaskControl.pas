@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-04-21
-///   Version           : 1.31f
+///   Last modification : 2012-06-18
+///   Version           : 1.31g
 ///</para><para>
 ///   History:
+///     1.31g: 2012-06-18
+///       - Fixed race condition in task teardown. Big thanks to [meishier] for putting
+///         together a reproducible test case.
 ///     1.31f: 2012-04-21
 ///       - Fixed race condition in InternalStop.
 ///     1.31e: 2012-02-07
@@ -499,6 +502,7 @@ type
     ostiCounter           : IOmniCounter;
     ostiLock              : TSynchroObject;
     ostiMonitor           : TOmniContainerWindowsMessageObserver;
+    ostiMonitorLock       : TOmniCS;
     ostiStopped           : boolean;
     ostiTaskName          : string;
     ostiTerminatedEvent   : THandle;
@@ -517,6 +521,7 @@ type
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
     property Monitor: TOmniContainerWindowsMessageObserver read ostiMonitor write ostiMonitor;
+    property MonitorLock: TOmniCS read ostiMonitorLock;
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
     property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
@@ -1341,9 +1346,12 @@ begin
         terminateEvent := otSharedInfo_ref.TerminatedEvent;
         otSharedInfo_ref.Stopped := true;
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
-        if assigned(otSharedInfo_ref.Monitor) then
-          otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-            integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+        otSharedInfo_ref.MonitorLock.Acquire;
+        try
+          if assigned(otSharedInfo_ref.Monitor) then
+            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
+              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+        finally otSharedInfo_ref.MonitorLock.Release; end;
       end;
     finally
       //Task controller could die any time now. Make sure we're not using shared
@@ -2795,8 +2803,11 @@ begin
     EnsureCommChannel;
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
       otcSharedInfo.Monitor, coiNotifyOnAllInserts);
-    otcSharedInfo.Monitor.Free;
-    otcSharedInfo.Monitor := nil;
+    otcSharedInfo.MonitorLock.Acquire;
+    try
+      otcSharedInfo.Monitor.Free;
+      otcSharedInfo.Monitor := nil;
+    finally otcSharedInfo.MonitorLock.Release; end;
   end;
   Result := Self;
   if otcDelayedTerminate then begin
