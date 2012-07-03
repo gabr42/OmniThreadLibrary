@@ -518,7 +518,7 @@ begin
   numTasks := Environment.Process.Affinity.Count;
   nodeQueue := TOmniBlockingCollection.Create(numTasks);
   nodeQueue.Add(rootNode);
-  Parallel.ForEach<TNode>(nodeQueue as IOmniValueEnumerable)
+  Parallel.ForEach<TNode>(nodeQueue)
     .NumTasks(numTasks) // must be same number of task as in nodeQueue to ensure stopping
     .CancelWith(cancelToken)
     .Execute(
