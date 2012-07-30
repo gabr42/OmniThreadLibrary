@@ -27,7 +27,7 @@
 ///(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
-///<remarks><para>
+///<remarks><para>                   
 ///   Home              : http://otl.17slon.com
 ///   Support           : http://otl.17slon.com/forum/
 ///   Author            : Primoz Gabrijelcic
@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-05-18
-///   Version           : 1.27
+///   Last modification : 2012-07-30
+///   Version           : 1.28
 ///</para><para>
 ///   History:
+///     1.28: 2012-07-30
+///       - Implemented TOmniValue.IsRecord.
 ///     1.27: 2012-05-18
 ///       - Added property CountPhysical to the IOmniAffinity.
 ///     1.26c: 2012-02-28
@@ -279,6 +281,7 @@ type
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
     function  IsPointer: boolean; inline;
+    function  IsRecord: boolean; inline;
     function  IsString: boolean; inline;
     function  IsVariant: boolean; inline;
     function  IsWideString: boolean; inline;
@@ -1851,6 +1854,11 @@ function TOmniValue.IsPointer: boolean;
 begin
   Result := (ovType = ovtPointer);
 end; { TOmniValue.IsPointer }
+
+function TOmniValue.IsRecord: boolean;
+begin
+  Result := (ovType = ovtRecord);
+end; { TOmniValue.IsRecord }
 
 function TOmniValue.IsString: boolean;
 begin
