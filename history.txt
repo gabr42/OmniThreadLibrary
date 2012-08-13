@@ -6,6 +6,10 @@
 ! ForEach finalizer is called if an exception occurs inside the ForEach task.
 * Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
 + Implemented TOmniValue.IsRecord.
++ IOmniBackgroundWorker extended with task initializer (Initialize) and task finalizer (Finalize).
++ IOmniWorkItem extended with property TaskState.
++ Inlined bunch of TOmniWorkItem methods.
++ new examples: 'forEach output', 'twofish' (database)
 
 3.01: 2012-04-21
 - New features:
