@@ -35,6 +35,11 @@
 ///   Version           : 1.28
 ///</para><para>
 ///   History:
+///     1.29: 2012-08-12
+///       - IOmniBackgroundWorker extended with task initializer (Initialize) and
+///         task finalizer (Finalize).
+///       - IOmniWorkItem extended with property TaskState.
+///       - Inlined bunch of TOmniWorkItem methods.
 ///     1.28: 2012-07-03
 ///       - Added OnStop overload to Parallel.Pipeline that accepts
 ///         'reference to procedure (const task: IOmniTask)'.
@@ -828,6 +833,7 @@ type
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
     function  GetTask: IOmniTask;
+    function  GetTaskState: TOmniValue;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
   //
@@ -838,6 +844,7 @@ type
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
     property Task: IOmniTask read GetTask;
+    property TaskState: TOmniValue read GetTaskState;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniWorkItem }
 
@@ -859,6 +866,8 @@ type
     procedure CancelAll(upToUniqueID: int64); overload;
     function  Config: IOmniWorkItemConfig;
     function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
+    function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniBackgroundWorker;
+    function  Initialize(taskInitializer: TOmniTaskInitializerDelegate): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
@@ -1164,7 +1173,7 @@ type
   IOmniWorkItemEx = interface ['{3B48D012-CF1C-4B47-A4A0-3072A9067A3E}']
     function  GetConfig: IOmniWorkItemConfig;
     procedure SetConfig(const value: IOmniWorkItemConfig);
-    procedure SetTask(const task: IOmniTask);
+    procedure SetTask(const task: IOmniTask; const taskState: TOmniValue);
   //
     property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
   end; { IOmniWorkItemEx }
@@ -1177,20 +1186,22 @@ type
     FData               : TOmniValue;
     FResult             : TOmniValue;
     FTask               : IOmniTask;
+    FTaskState          : TOmniValue;
     FUniqueID           : int64;
   strict protected
     procedure FreeException;
   protected //IOmniWorkItem
     function  GetCancellationToken: IOmniCancellationToken;
-    function  GetData: TOmniValue;
-    function  GetResult: TOmniValue;
-    function GetTask: IOmniTask;
-    function  GetUniqueID: int64;
-    procedure SetResult(const value: TOmniValue);
+    function  GetData: TOmniValue; inline;
+    function  GetResult: TOmniValue; inline;
+    function  GetTask: IOmniTask; inline;
+    function  GetTaskState: TOmniValue; inline;
+    function  GetUniqueID: int64; inline;
+    procedure SetResult(const value: TOmniValue); inline;
   protected //IOmniWorkItemEx
-    function  GetConfig: IOmniWorkItemConfig;
-    procedure SetConfig(const value: IOmniWorkItemConfig);
-    procedure SetTask(const task: IOmniTask);
+    function  GetConfig: IOmniWorkItemConfig; inline;
+    procedure SetConfig(const value: IOmniWorkItemConfig); inline;
+    procedure SetTask(const task: IOmniTask; const taskState: TOmniValue); inline;
   public
     constructor Create(const data: TOmniValue; uniqueID: int64; var cancelAllUpToID:
       TGp8AlignedInt64);
@@ -1198,7 +1209,7 @@ type
   public //IOmniWorkItem
     function  DetachException: Exception;
     function  FatalException: Exception;
-    function  IsExceptional: boolean;
+    function  IsExceptional: boolean; inline;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
     property UniqueID: int64 read GetUniqueID;
@@ -1232,6 +1243,8 @@ type
     FObserver         : TOmniContainerObserver;
     FStopOn           : IOmniCancellationToken;
     FTaskConfig       : IOmniTaskConfig;
+    FTaskFinalizer    : TOmniTaskFinalizerDelegate;
+    FTaskInitializer  : TOmniTaskInitializerDelegate;
     FUniqueID         : IOmniCounter;
     FWindow           : THandle;
     FWorker           : IOmniPipeline;
@@ -1247,6 +1260,8 @@ type
     function  Config: IOmniWorkItemConfig;
     function  CreateWorkItem(const data: TOmniValue): IOmniWorkItem;
     function  Execute(const aTask: TOmniBackgroundWorkerDelegate = nil): IOmniBackgroundWorker;
+    function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniBackgroundWorker;
+    function  Initialize(taskInitializer: TOmniTaskInitializerDelegate): IOmniBackgroundWorker;
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
@@ -3431,6 +3446,11 @@ begin
   Result := FTask;
 end; { TOmniWorkItem.GetTask }
 
+function TOmniWorkItem.GetTaskState: TOmniValue;
+begin
+  Result := FTaskState;
+end; { TOmniWorkItem.GetTaskState }
+
 function TOmniWorkItem.GetUniqueID: int64;
 begin
   Result := FUniqueID;
@@ -3451,9 +3471,10 @@ begin
   FResult := value;
 end; { TOmniWorkItem.SetResult }
 
-procedure TOmniWorkItem.SetTask(const task: IOmniTask);
+procedure TOmniWorkItem.SetTask(const task: IOmniTask; const taskState: TOmniValue);
 begin
   FTask := task;
+  FTaskState := taskState;
 end; { TOmniWorkItem.SetTask }
 
 { TOmniWorkItemConfig }
@@ -3534,25 +3555,33 @@ procedure TOmniBackgroundWorker.BackgroundWorker(
 var
   configEx  : IOmniWorkItemConfigEx;
   ovWorkItem: TOmniValue;
+  taskState : TOmniValue;
   workItem  : IOmniWorkItem;
   workItemEx: IOmniWorkItemEx;
 begin
-  for ovWorkItem in input do begin
-    workItem := ovWorkItem.AsInterface as IOmniWorkItem;
-    workItemEx := workItem as IOmniWorkItemEx;
-    workItemEx.SetTask(task);
-    configEx := workItemEx.Config as IOmniWorkItemConfigEx;
-    if not workItem.CancellationToken.IsSignalled then begin
-      try
-        configEx.GetOnExecute()(workItem);
-      except
-        workItem.Result := Exception(AcquireExceptionObject);
+  if assigned(FTaskInitializer) then
+    FTaskInitializer(taskState);
+  try
+    for ovWorkItem in input do begin
+      workItem := ovWorkItem.AsInterface as IOmniWorkItem;
+      workItemEx := workItem as IOmniWorkItemEx;
+      workItemEx.SetTask(task, taskState);
+      configEx := workItemEx.Config as IOmniWorkItemConfigEx;
+      if not workItem.CancellationToken.IsSignalled then begin
+        try
+          configEx.GetOnExecute()(workItem);
+        except
+          workItem.Result := Exception(AcquireExceptionObject);
+        end;
       end;
+      if assigned(configEx.GetOnRequestDone_Asy()) then
+        configEx.GetOnRequestDone_Asy()(Self, workItem);
+      if assigned(configEx.GetOnRequestDone()) then
+        output.TryAdd(workItem);
     end;
-    if assigned(configEx.GetOnRequestDone_Asy()) then
-      configEx.GetOnRequestDone_Asy()(Self, workItem);
-    if assigned(configEx.GetOnRequestDone()) then
-      output.TryAdd(workItem);
+  finally
+    if assigned(FTaskFinalizer) then
+      FTaskFinalizer(taskState);
   end;
 end; { TOmniBackgroundWorker.BackgroundWorker }
 
@@ -3583,6 +3612,20 @@ begin
   FWorker.Run;
   Result := Self;
 end; { TOmniBackgroundWorker.Execute }
+
+function TOmniBackgroundWorker.Finalize(taskFinalizer: TOmniTaskFinalizerDelegate):
+  IOmniBackgroundWorker;
+begin
+  FTaskFinalizer := taskFinalizer;
+  Result := Self;
+end; { TOmniBackgroundWorker.Finalize }
+
+function TOmniBackgroundWorker.Initialize(taskInitializer: TOmniTaskInitializerDelegate):
+  IOmniBackgroundWorker;
+begin
+  FTaskInitializer := taskInitializer;
+  Result := Self;
+end; { TOmniBackgroundWorker.Initialize }
 
 function TOmniBackgroundWorker.NumTasks(numTasks: integer): IOmniBackgroundWorker;
 begin
