@@ -30,6 +30,8 @@ const
   CFrameWidth = 512;
   CFrameHeight = 400;
 
+  CDatabaseName = 'C:\Users\Public\Documents\RAD Studio\9.0\Samples\Data\dbdemos.gdb';
+
 function TfrmTwoFish.CreateFrame(left, top, width, height: integer;
   const name: string): TfrmTwoFishDB_GUI;
 begin
@@ -62,10 +64,13 @@ begin
   ClientWidth := CNumFrames * CFrameWidth;
   ClientHeight := CFrameHeight;
   for frame in FFrames do
-    frame.OpenConnection(
-      procedure (Sender: TObject)
+    frame.OpenConnection(CDatabaseName ,
+      procedure (Sender: TObject; FatalException: Exception)
       begin
-        (Sender as TfrmTwoFishDB_GUI).Reload;
+        if assigned(FatalException) then
+          ShowMessage('Failed to connect to the database!')
+        else
+          (Sender as TfrmTwoFishDB_GUI).Reload;
       end);
 end;
 
