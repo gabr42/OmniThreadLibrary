@@ -12,10 +12,10 @@ uses
   twoFishDB;
 
 type
-  TNotify = reference to procedure(Sender: TObject);
+  TNotify = reference to procedure(Sender: TObject; FatalException: Exception);
 
   TfrmTwoFishDB_GUI = class(TFrame)
-    Button1: TButton;
+    Button1    : TButton;
     DataSource1: TDataSource;
     DBGrid1    : TDBGrid;
     DBImage1   : TDBImage;
@@ -40,7 +40,7 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure CloseConnection;
-    procedure OpenConnection(onConnectionOpen: TNotify = nil);
+    procedure OpenConnection(const databaseName: string; onConnectionOpen: TNotify = nil);
     procedure Reload;
   end;
 
@@ -92,6 +92,7 @@ begin
   dataModule := (workItem.TaskState.AsObject as TdmTwoFishDB);
   GTwoFishLock.Acquire; //probably only necessary if using InterBase driver
   try
+    dataModule.IBDatabase1.DatabaseNAme := workItem.Data;
     dataModule.IBDatabase1.Connected := true;
     dataModule.IBTable1.Active := true;
   finally GTwoFishLock.Release; end;
@@ -136,15 +137,16 @@ begin
   workItem.Result := resultDS; // receiver will take ownershipt
 end;
 
-procedure TfrmTwoFishDB_GUI.OpenConnection(onConnectionOpen: TNotify);
+procedure TfrmTwoFishDB_GUI.OpenConnection(const databaseName: string;
+  onConnectionOpen: TNotify);
 begin
   FWorker.Schedule(
-    FWorker.CreateWorkItem(TOmniValue.Null),
+    FWorker.CreateWorkItem(databaseName),
     FWorker.Config.OnExecute(ConnectToDatabase).OnRequestDone(
       procedure (const Sender: IOmniBackgroundWorker; const workItem: IOmniWorkItem)
       begin
         if assigned(onConnectionOpen) then
-          onConnectionOpen(Self);
+          onConnectionOpen(Self, workItem.FatalException);
       end
     ));
 end;
