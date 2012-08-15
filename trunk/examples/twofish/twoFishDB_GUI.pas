@@ -90,20 +90,24 @@ var
   dataModule: TdmTwoFishDB;
 begin
   dataModule := (workItem.TaskState.AsObject as TdmTwoFishDB);
-  GTwoFishLock.Acquire; //probably only necessary if using InterBase driver
+  GTwoFishLock.Acquire; //probably only necessary when using InterBase driver
   try
-    dataModule.IBDatabase1.DatabaseNAme := workItem.Data;
+    dataModule.IBDatabase1.DatabaseName := workItem.Data.AsString;
     dataModule.IBDatabase1.Connected := true;
-    dataModule.IBTable1.Active := true;
   finally GTwoFishLock.Release; end;
 end;
 
-procedure TfrmTwoFishDB_GUI.DisplayData(const Sender: IOmniBackgroundWorker; const
-  workItem: IOmniWorkItem);
+procedure TfrmTwoFishDB_GUI.DisplayData(const Sender: IOmniBackgroundWorker;
+  const workItem: IOmniWorkItem);
 begin
   FreeAndNil(FDataSet);
-  FDataSet := workItem.Result.AsObject as TClientDataSet;
-  DataSource1.DataSet := FDataSet;
+
+  if workItem.IsExceptional then
+    ShowMessage('Failed to retrieve data. ' + workItem.FatalException.Message)
+  else begin
+    FDataSet := workItem.Result.AsObject as TClientDataSet;
+    DataSource1.DataSet := FDataSet;
+  end;
 end;
 
 procedure TfrmTwoFishDB_GUI.FinalizeDatabase(const taskState: TOmniValue);
@@ -124,6 +128,10 @@ var
   tempProvider: TDataSetProvider;
 begin
   dataModule := (workItem.TaskState.AsObject as TdmTwoFishDB);
+  if not dataModule.IBTable1.Active then
+    dataModule.IBTable1.Active := true
+  else
+    dataModule.IBTable1.Refresh;
 
   resultDS := TClientDataSet.Create(nil);
 

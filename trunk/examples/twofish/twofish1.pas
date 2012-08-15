@@ -15,6 +15,7 @@ type
     FFrames: array of TfrmTwoFishDB_GUI;
     function  CreateFrame(left, top, width, height: integer;
       const name: string): TfrmTwoFishDB_GUI;
+    procedure OpenConnections;
   public
   end;
 
@@ -54,7 +55,6 @@ end;
 
 procedure TfrmTwoFish.FormCreate(Sender: TObject);
 var
-  frame : TfrmTwoFishDB_GUI;
   iFrame: integer;
 begin
   SetLength(FFrames, CNumFrames);
@@ -63,12 +63,19 @@ begin
       Format('Frame%d', [iFrame+1]));
   ClientWidth := CNumFrames * CFrameWidth;
   ClientHeight := CFrameHeight;
+  OpenConnections;
+end;
+
+procedure TfrmTwoFish.OpenConnections;
+var
+  frame: TfrmTwoFishDB_GUI;
+begin
   for frame in FFrames do
     frame.OpenConnection(CDatabaseName ,
       procedure (Sender: TObject; FatalException: Exception)
       begin
         if assigned(FatalException) then
-          ShowMessage('Failed to connect to the database!')
+          ShowMessage('Failed to connect to the database! ' + FatalException.Message)
         else
           (Sender as TfrmTwoFishDB_GUI).Reload;
       end);
