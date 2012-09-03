@@ -2950,7 +2950,8 @@ begin
       otcOwningPool := nil;
     end;
   end;
-  otcOnMessageList.Clear;
+  if assigned(otcOnMessageList) then
+    otcOnMessageList.Clear;
   FreeAndNil(otcOnMessageExec);
   FreeAndNil(otcOnTerminatedExec);
 end; { TOmniTaskControl.Terminate }
