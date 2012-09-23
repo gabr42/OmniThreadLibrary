@@ -1,6 +1,6 @@
 {
 
-Fast Memory Manager: FullDebugMode Support DLL 1.60
+Fast Memory Manager: FullDebugMode Support DLL 1.62
 
 Description:
  Support DLL for FastMM. With this DLL available, FastMM will report debug info
@@ -47,6 +47,8 @@ Change log:
   - Recompiled using the latest JCL in order to fix a possible crash on shutdown
     when the executable contains no debug information. (Thanks to Hanspeter
     Widmer.)
+ Version 1.62 (19 July 2012):
+  - Added a workaround for QC 107209 (Thanks to David Heffernan.)
 
 }
 
@@ -75,7 +77,12 @@ uses
 
 {The name of the 64-bit DLL has a '64' at the end.}
 {$if SizeOf(Pointer) = 8}
-{$libsuffix '64'}
+{$LIBSUFFIX '64'}
+{$ifend}
+
+{$if CompilerVersion < 20}
+type
+  PNativeUInt = ^Cardinal;
 {$ifend}
 
 {--------------------------Stack Tracing Subroutines--------------------------}
@@ -203,12 +210,44 @@ begin
   end;
 end;
 
+{Thread-safe version that avoids the global variable Default8087CW.}
+procedure Set8087CW(ANewCW: Word);
+var
+  L8087CW: Word;
+asm
+  mov L8087CW, ANewCW
+  fnclex
+  fldcw L8087CW
+end;
+
+{$if CompilerVersion > 22}
+{Thread-safe version that avoids the global variable DefaultMXCSR.}
+procedure SetMXCSR(ANewMXCSR: Cardinal);
+var
+  LMXCSR: Cardinal;
+asm
+  {$if SizeOf(Pointer) <> 8}
+  cmp System.TestSSE, 0
+  je @exit
+  {$ifend}
+  {Remove the flag bits}
+  and ANewMXCSR, $ffc0
+  mov LMXCSR, ANewMXCSR
+  ldmxcsr LMXCSR
+@exit:
+end;
+{$ifend}
+
 {Returns true if the return address is a valid call site. This function is only
  safe to call while exceptions are being handled.}
 function IsValidCallSite(AReturnAddress: NativeUInt): boolean;
 var
   LCallAddress: NativeUInt;
   LCode8Back, LCode4Back, LTemp: Cardinal;
+  LOld8087CW: Word;
+{$if CompilerVersion > 22}
+  LOldMXCSR: Cardinal;
+{$ifend}
 begin
   {We assume (for now) that all code will execute within the first 4GB of
    address space.}
@@ -225,7 +264,14 @@ begin
     begin
       {Try to determine what kind of call it is (if any), more or less in order
        of frequency of occurrence. (Code below taken from the Jedi Code Library
-       (jcl.sourceforge.net).)}
+       (jcl.sourceforge.net).)  We need to retrieve the current floating point
+       control registers, since any external exception will reset it to the
+       DLL defaults which may not otherwise correspond to the defaults of the
+       main application (QC 107198).}
+      LOld8087CW := Get8087CW;
+{$if CompilerVersion > 22}
+      LOldMXCSR := GetMXCSR;
+{$ifend}
       try
         {5 bytes, CALL NEAR REL32}
         if PByteArray(LCallAddress)[3] = $E8 then
@@ -303,6 +349,13 @@ begin
       except
         {The access has changed}
         UpdateMemoryPageAccessMap(LCallAddress);
+        {The RTL sets the FPU control words to the default values if an
+        external exception occurs.  Reset their values here to the values on
+        entry to this call.}
+        Set8087CW(LOld8087CW);
+{$if CompilerVersion > 22}
+        SetMXCSR(LOldMXCSR);
+{$ifend}
         {Not executable}
         Result := False;
       end;
