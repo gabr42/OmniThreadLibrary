@@ -1,4 +1,4 @@
-program app_16_ChainTo;
+program app_16_ChainTo.XE3;
 
 uses
   Forms,

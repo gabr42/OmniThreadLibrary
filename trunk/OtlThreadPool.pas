@@ -213,7 +213,10 @@ uses
   Contnrs,
   Variants,
   TypInfo,
-{$IFNDEF Unicode} // D2009+ provides own TStringBuilder class 
+{$IFDEF OTL_HasSystemTypes}
+  System.Types,
+{$ENDIF}
+{$IFNDEF Unicode} // D2009+ provides own TStringBuilder class
   HVStringBuilder,
 {$ENDIF}
   DSiWin32,
@@ -439,7 +442,7 @@ const
 var
   GOmniThreadPool: IOmniThreadPool = nil;
 
-  { exports }
+{ exports }
 
 function GlobalOmniThreadPool: IOmniThreadPool;
 begin
@@ -497,8 +500,6 @@ function TOTPThreadDataFactory.IsEmpty: boolean;
 begin
   Result := tdfExecutable.IsNull;
 end; { TOTPThreadDataFactory.IsEmpty }
-
-{ TOTPWorkerExecutionModifier }
 
 { TOTPWorkItem }
 

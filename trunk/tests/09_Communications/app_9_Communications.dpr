@@ -1,4 +1,4 @@
-program app_9_Communications;
+program app_9_Communications.XE3;
 
 uses
   FastMM4,

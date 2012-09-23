@@ -1,4 +1,4 @@
-program app_30_AnonymousEventMonitor;
+program app_30_AnonymousEventMonitor.XE3;
 
 uses
   Forms,

@@ -1,4 +1,4 @@
-program app_17_MsgWait;
+program app_17_MsgWait.XE3;
 
 uses
   Forms,

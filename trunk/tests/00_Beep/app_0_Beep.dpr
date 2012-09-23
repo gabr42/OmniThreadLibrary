@@ -1,4 +1,4 @@
-program app_0_Beep;
+program app_0_Beep.XE3;
 
 uses
   FastMM4,

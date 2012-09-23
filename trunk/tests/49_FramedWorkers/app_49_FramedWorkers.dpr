@@ -1,4 +1,4 @@
-program app_49_FramedWorkers;
+program app_49_FramedWorkers.XE3;
 
 uses
   Forms,

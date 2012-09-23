@@ -1,4 +1,4 @@
-program app_20_QuickSort;
+program app_20_QuickSort.XE3;
 
 uses
   FastMM4,

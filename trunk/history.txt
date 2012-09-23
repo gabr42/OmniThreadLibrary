@@ -1,3 +1,5 @@
+! compiles with XE3
++ added XE3 packages and test projects
 ! Parallel.Join was broken if number of task to be executed was larger than number of threads. Thanks to [Passella] for reporting the problem.
 ! Invalid 'joinState' was passed to the worker task in Parallel.Join if number of tasks to be executed was larger than the number of worker threads. Thanks to [meishier] for reporting the problem.
 ! Fixed race condition in task teardown. Big thanks to [meishier] for putting together a reproducible test case.
@@ -10,6 +12,7 @@
 + IOmniWorkItem extended with property TaskState.
 + Inlined bunch of TOmniWorkItem methods.
 + new examples: 'forEach output', 'twofish' (database)
++ OtlParallel added to packages (thx to Mason Wheeler)
 
 3.01: 2012-04-21
 - New features:

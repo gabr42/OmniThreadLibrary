@@ -1,4 +1,4 @@
-program app_29_ImplicitEventMonitor;
+program app_29_ImplicitEventMonitor.XE3;
 
 uses
   FastMM4,

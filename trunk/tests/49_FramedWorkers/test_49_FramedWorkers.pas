@@ -26,6 +26,9 @@ var
 
 implementation
 
+uses
+  OtlCommon;
+
 {$R *.dfm}
 
 const

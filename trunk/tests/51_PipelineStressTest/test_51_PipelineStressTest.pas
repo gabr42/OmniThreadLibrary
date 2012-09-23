@@ -59,7 +59,6 @@ procedure TfrmPipelineStressTest.TestPipeline;
           s: String;
           i: Integer;
           vMS: TMemoryStream;
-          vStageDelay: Integer;
         begin
           while True do
           begin

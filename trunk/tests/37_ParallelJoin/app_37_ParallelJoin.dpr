@@ -1,4 +1,4 @@
-program app_37_ParallelJoin;
+program app_37_ParallelJoin.XE3;
 
 uses
   FastMM4,

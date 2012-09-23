@@ -1,4 +1,4 @@
-program app_31_WaitableObjects;
+program app_31_WaitableObjects.XE3;
 
 uses
   FastMM4,

@@ -1,4 +1,4 @@
-program app_27_RecursiveTree;
+program app_27_RecursiveTree.XE3;
 
 uses
   FastMM4,

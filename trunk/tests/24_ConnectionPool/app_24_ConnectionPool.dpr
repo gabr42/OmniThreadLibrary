@@ -1,4 +1,4 @@
-program app_24_ConnectionPool;
+program app_24_ConnectionPool.XE3;
 
 uses
   FastMM4,

@@ -35,7 +35,8 @@ implementation
 
 uses
   SyncObjs,
-  DSiWin32;
+  DSiWin32,
+  OtlCommon;
 
 {$R *.dfm}
 

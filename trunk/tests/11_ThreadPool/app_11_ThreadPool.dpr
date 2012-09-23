@@ -1,4 +1,4 @@
-program app_11_ThreadPool;
+program app_11_ThreadPool.XE3;
 
 uses
   FastMM4,

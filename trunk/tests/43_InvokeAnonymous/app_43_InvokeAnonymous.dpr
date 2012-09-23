@@ -1,4 +1,4 @@
-program app_43_InvokeAnonymous;
+program app_43_InvokeAnonymous.XE3;
 
 uses
   FastMM4,

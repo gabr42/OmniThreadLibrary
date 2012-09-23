@@ -191,6 +191,9 @@ implementation
 
 uses
   Variants,
+  {$IFDEF OTL_HasSystemTypes}
+  System.Types,
+  {$ENDIF}
   {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
   OtlEventMonitor;
 

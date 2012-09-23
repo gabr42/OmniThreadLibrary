@@ -1,4 +1,4 @@
-program app_36_ParallelAggregate;
+program app_36_ParallelAggregate.XE3;
 
 uses
   Forms,

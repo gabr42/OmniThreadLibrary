@@ -1,4 +1,4 @@
-program app_32_Queue;
+program app_32_Queue.XE3;
 
 uses
   FastMM4,

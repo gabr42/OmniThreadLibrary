@@ -1,4 +1,4 @@
-program app_38_OrderedFor;
+program app_38_OrderedFor.XE3;
 
 uses
   FastMM4,

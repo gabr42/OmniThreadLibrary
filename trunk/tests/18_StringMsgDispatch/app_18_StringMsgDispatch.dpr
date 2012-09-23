@@ -1,4 +1,4 @@
-program app_18_StringMsgDispatch;
+program app_18_StringMsgDispatch.XE3;
 
 uses
   FastMM4,

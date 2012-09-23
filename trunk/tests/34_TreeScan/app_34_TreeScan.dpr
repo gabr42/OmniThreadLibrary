@@ -1,4 +1,4 @@
-program app_34_TreeScan;
+program app_34_TreeScan.XE3;
 
 uses
   FastMM4,

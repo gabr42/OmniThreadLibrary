@@ -1,4 +1,4 @@
-program app_26_MultiEventMonitor;
+program app_26_MultiEventMonitor.XE3;
 
 uses
   FastMM4,

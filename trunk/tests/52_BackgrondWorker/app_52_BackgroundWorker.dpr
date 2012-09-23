@@ -1,4 +1,4 @@
-program app_52_BackgroundWorker;
+program app_52_BackgroundWorker.XE3;
 
 uses
   FastMM4,

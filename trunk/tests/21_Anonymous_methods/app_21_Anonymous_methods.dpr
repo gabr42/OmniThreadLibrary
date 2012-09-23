@@ -1,4 +1,4 @@
-program app_21_Anonymous_methods;
+program app_21_Anonymous_methods.XE3;
 
 uses
   Forms,

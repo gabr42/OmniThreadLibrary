@@ -1,4 +1,4 @@
-program app_5_TwoWayHello_without_loop;
+program app_5_TwoWayHello_without_loop.XE3;
 
 uses
   FastMM4,

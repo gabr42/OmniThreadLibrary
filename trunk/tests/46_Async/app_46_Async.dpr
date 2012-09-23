@@ -1,4 +1,4 @@
-program app_46_Async;
+program app_46_Async.XE3;
 
 uses
   Forms,

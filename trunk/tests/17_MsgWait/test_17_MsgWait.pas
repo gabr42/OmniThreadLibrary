@@ -8,7 +8,7 @@ uses
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor, System.Actions;
 
 type
   TfrmTestMsgWait = class(TForm)
@@ -34,7 +34,8 @@ var
 implementation
 
 uses
-  DSiWin32;
+  DSiWin32,
+  OtlCommon;
 
 {$R *.dfm}
 

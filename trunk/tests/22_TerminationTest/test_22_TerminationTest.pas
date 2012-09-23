@@ -30,6 +30,9 @@ var
 
 implementation
 
+uses
+  OtlCommon;
+
 {$R *.dfm}
 
 procedure WaitAndExit(const task: IOmniTask);

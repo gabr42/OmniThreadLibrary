@@ -123,6 +123,9 @@ implementation
 uses
   Windows,
   SysUtils,
+  {$IFDEF OTL_HasSystemTypes}
+  System.Types,
+  {$ENDIF}
   DSiWin32,
   OtlCommon;
 

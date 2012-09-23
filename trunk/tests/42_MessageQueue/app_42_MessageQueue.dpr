@@ -1,4 +1,4 @@
-program app_42_MessageQueue;
+program app_42_MessageQueue.XE3;
 
 uses
   FastMM4,

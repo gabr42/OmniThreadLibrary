@@ -1,4 +1,4 @@
-program app_51_PipelineStressTest;
+program app_51_PipelineStressTest.XE3;
 
 uses
   FastMM4,

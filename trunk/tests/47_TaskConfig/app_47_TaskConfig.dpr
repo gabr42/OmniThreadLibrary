@@ -1,4 +1,4 @@
-program app_47_TaskConfig;
+program app_47_TaskConfig.XE3;
 
 uses
   Forms,

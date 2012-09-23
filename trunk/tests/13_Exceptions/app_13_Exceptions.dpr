@@ -1,4 +1,4 @@
-program app_13_Exceptions;
+program app_13_Exceptions.XE3;
 
 uses
   FastMM4,

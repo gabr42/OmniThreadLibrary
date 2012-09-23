@@ -1,4 +1,4 @@
-program app_8_RegisterComm;
+program app_8_RegisterComm.XE3;
 
 uses
   FastMM4,

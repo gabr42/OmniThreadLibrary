@@ -1,4 +1,4 @@
-program app_48_OtlParallelExceptions;
+program app_48_OtlParallelExceptions.XE3;
 
 uses
   FastMM4,
