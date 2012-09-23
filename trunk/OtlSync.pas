@@ -910,17 +910,21 @@ begin
         aMethCreate : TRttiMethod;
         instanceType: TRttiInstanceType;
         ctx         : TRttiContext;
+        params      : TArray<TRttiParameter>;
         resValue    : TValue;
         rType       : TRttiType;
       begin
         ctx := TRttiContext.Create;
         rType := ctx.GetType(TypeInfo(T));
         for aMethCreate in rType.GetMethods do begin
-          if (aMethCreate.IsConstructor) and (Length(aMethCreate.GetParameters) = 0) then begin
-            instanceType := rType.AsInstance;
-            resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
-            Result := resValue.AsType<T>;
-            break; //for
+          if aMethCreate.IsConstructor then begin
+            params := aMethCreate.GetParameters;
+            if Length(params) = 0 then begin
+              instanceType := rType.AsInstance;
+              resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
+              Result := resValue.AsType<T>;
+              break; //for
+            end;
           end;
         end; //for
       end);

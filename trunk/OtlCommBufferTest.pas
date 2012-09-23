@@ -59,7 +59,8 @@ uses
 implementation
 
 uses
-  SysUtils;
+  SysUtils,
+  OtlCommon;
 
 procedure RingBufferTest;
 var
