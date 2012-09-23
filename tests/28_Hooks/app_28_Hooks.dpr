@@ -1,4 +1,4 @@
-program app_28_Hooks;
+program app_28_Hooks.XE3;
 
 uses
   FastMM4,

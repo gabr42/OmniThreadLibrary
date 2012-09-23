@@ -1,4 +1,4 @@
-program app_19_StringMsgBenchmark;
+program app_19_StringMsgBenchmark.XE3;
 
 uses
   FastMM4,

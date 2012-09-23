@@ -1,4 +1,4 @@
-program app_50_OmniValueArray;
+program app_50_OmniValueArray.XE3;
 
 uses
   FastMM4,

@@ -1,4 +1,4 @@
-program app_35_ParallelFor;
+program app_35_ParallelFor.XE3;
 
 uses
   FastMM4,

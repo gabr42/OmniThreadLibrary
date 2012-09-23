@@ -1,4 +1,4 @@
-program app_39_Futures;
+program app_39_Futures.XE3;
 
 uses
   Forms,

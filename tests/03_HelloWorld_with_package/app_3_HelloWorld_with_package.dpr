@@ -1,4 +1,4 @@
-program app_3_HelloWorld_with_package;
+program app_3_HelloWorld_with_package.XE3;
 
 uses
   FastMM4,

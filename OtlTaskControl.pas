@@ -1976,7 +1976,7 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
   methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor,
-    {$IFNDEF OTL_LONG_GETMETHODINFO}ShortString{$ENDIF}(methodName));
+    {$IFNDEF OTL_LongGetMethodInfo}ShortString{$ENDIF}(methodName));
   methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
   // find the method info
   if not (assigned(methodInfoHeader) and assigned(methodAddress)) then

@@ -1,4 +1,4 @@
-program app_4_TwoWayHello_with_package;
+program app_4_TwoWayHello_with_package.XE3;
 
 uses
   FastMM4,

@@ -130,6 +130,9 @@ uses
   SysUtils,
   Contnrs,
   Classes,
+  {$IFDEF OTL_HasSystemTypes}
+  System.Types,
+  {$ENDIF}
   DSiWin32,
   GpLists,
   OtlSync;

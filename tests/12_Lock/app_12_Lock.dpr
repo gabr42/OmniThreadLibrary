@@ -1,4 +1,4 @@
-program app_12_Lock;
+program app_12_Lock.XE3;
 
 uses
   Forms,

@@ -1,4 +1,4 @@
-program app_44_ForkJoinQuickSort.XE;
+program app_44_ForkJoinQuickSort.XE3;
 
 uses
   FastMM4,

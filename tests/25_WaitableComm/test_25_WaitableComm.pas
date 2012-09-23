@@ -27,6 +27,7 @@ implementation
 
 uses
   DSiWin32,
+  OtlCommon,
   OtlComm;
 
 type

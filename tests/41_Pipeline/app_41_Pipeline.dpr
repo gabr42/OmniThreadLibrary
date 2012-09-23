@@ -1,4 +1,4 @@
-program app_41_Pipeline;
+program app_41_Pipeline.XE3;
 
 uses
   FastMM4,

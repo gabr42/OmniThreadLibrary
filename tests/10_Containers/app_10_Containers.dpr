@@ -1,4 +1,4 @@
-program app_10_Containers;
+program app_10_Containers.XE3;
 
 uses
   FastMM4,

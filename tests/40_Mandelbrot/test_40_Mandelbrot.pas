@@ -25,6 +25,7 @@ implementation
 
 uses
   DSiWin32,
+  OtlCommon,
   OtlTask,
   OtlParallel;
 
@@ -45,7 +46,7 @@ begin
   start := DSiTimeGetTime64;
 
   Parallel.ForEach(0, ClientHeight - 1)
-    .OnMessage(frmParallelMandelbrot)
+    .TaskConfig(Parallel.TaskConfig.OnMessage(frmParallelMandelbrot))
     .Execute(
       procedure (const task: IOmniTask; const y: integer)
       var

@@ -1,4 +1,4 @@
-program app_1_HelloWorld;
+program app_1_HelloWorld.XE3;
 
 uses
   FastMM4,

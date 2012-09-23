@@ -35,6 +35,9 @@ var
 
 implementation
 
+uses
+  OtlCommon;
+
 const
   MSG_SIGNAL_2        = 1;
   MSG_CHANGE_SIGNAL_1 = 2;

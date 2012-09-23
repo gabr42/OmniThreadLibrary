@@ -1,4 +1,4 @@
-program app_7_InitTest;
+program app_7_InitTest.XE3;
 
 uses
   FastMM4,

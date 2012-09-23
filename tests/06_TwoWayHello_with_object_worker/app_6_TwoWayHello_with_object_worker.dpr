@@ -1,4 +1,4 @@
-program app_6_TwoWayHello_with_object_worker;
+program app_6_TwoWayHello_with_object_worker.XE3;
 
 uses
   FastMM4,

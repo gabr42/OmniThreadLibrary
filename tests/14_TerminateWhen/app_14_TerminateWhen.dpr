@@ -1,4 +1,4 @@
-program app_14_TerminateWhen;
+program app_14_TerminateWhen.XE3;
 
 uses
   Forms,

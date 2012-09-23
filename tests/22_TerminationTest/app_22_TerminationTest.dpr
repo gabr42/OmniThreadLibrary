@@ -1,4 +1,4 @@
-program app_22_TerminationTest;
+program app_22_TerminationTest.XE3;
 
 uses
   FastMM4,

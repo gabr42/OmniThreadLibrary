@@ -1,4 +1,4 @@
-program app_33_BlockingCollection;
+program app_33_BlockingCollection.XE3;
 
 uses
 //  FastMM4,

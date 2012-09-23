@@ -1,4 +1,4 @@
-program app_40_Mandelbrot;
+program app_40_Mandelbrot.XE3;
 
 uses
   FastMM4,

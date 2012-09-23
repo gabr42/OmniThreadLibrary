@@ -1,4 +1,4 @@
-program app_45_ForkJoinMax;
+program app_45_ForkJoinMax.XE3;
 
 uses
   FastMM4,

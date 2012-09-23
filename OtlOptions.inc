@@ -74,8 +74,9 @@
 
 {$IF CompilerVersion >= 23} //DXE2
   {$DEFINE OTL_Supports64Bit}
+  {$DEFINE OTL_HasSystemTypes}
 {$IFEND}
 
 {$IF CompilerVersion >= 24} //DXE3
-  {$DEFINE OTL_LONG_GETMETHODINFO}
+  {$DEFINE OTL_LongGetMethodInfo}
 {$IFEND}

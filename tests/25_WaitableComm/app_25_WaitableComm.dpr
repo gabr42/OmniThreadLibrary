@@ -1,4 +1,4 @@
-program app_25_WaitableComm;
+program app_25_WaitableComm.XE3;
 
 uses
   FastMM4,

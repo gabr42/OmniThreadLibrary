@@ -1,4 +1,4 @@
-program app_23_BackgroundFileSearch;
+program app_23_BackgroundFileSearch.XE3;
 
 uses
   FastMM4,

@@ -1,4 +1,4 @@
-program app_15_TaskGroup;
+program app_15_TaskGroup.XE3;
 
 uses
   Forms,
