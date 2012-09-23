@@ -12,6 +12,7 @@ uses
 
   {$IFDEF ConditionalExpressions}
     {$IF RTLVersion >= 18} {$DEFINE HAS_RECORDHELPERS} {$IFEND}
+    {$IF RTLVersion >= 24} {$DEFINE NO_SHORT_GETMETHODINFO} {$IFEND}
   {$ENDIF}
 
 {$IFDEF HAS_RECORDHELPERS}
@@ -60,7 +61,7 @@ var
   Params, Param: PParamInfo;
   returnInfo: PReturnInfo;
 begin
-  header := ObjAuto.GetMethodInfo( Obj, ShortString(MethodName) );
+  header := ObjAuto.GetMethodInfo( Obj, {$IFNDEF NO_SHORT_GETMETHODINFO}ShortString{$ENDIF}(MethodName) );
   // Check the length is greater than just that of the name
   if Header.Len <= SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Header.Name) then
   begin

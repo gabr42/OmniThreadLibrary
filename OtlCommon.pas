@@ -1,4 +1,4 @@
-//<summary>Stuff common to the OmniThreadLibrary project.</summary>
+///<summary>Stuff common to the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -265,7 +265,7 @@ type
     function  IsInterfacedType: boolean; inline;
   public
     constructor Create(const values: array of const);
-    constructor CreateNamed(const values: array of const);
+    constructor CreateNamed(const values: array of const; const cppDupConWorkaround: boolean = false);
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
@@ -1440,7 +1440,8 @@ begin
   ovData := int64(ovc);
 end; { TOmniValue.Create }
 
-constructor TOmniValue.CreateNamed(const values: array of const);
+constructor TOmniValue.CreateNamed(const values: array of const;
+  const cppDupConWorkaround: boolean);
 var
   i   : integer;
   name: string;
