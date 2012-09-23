@@ -7,10 +7,16 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2012-05-18
-   Version           : 1.69
+   Last modification : 2012-06-12
+   Version           : 1.70b
 </pre>*)(*
    History:
+     1.70b: 2012-06-12
+       - DSiEnumFiles* will also enumerate hidden folders if attributes contain faHidden flag.
+     1.70a: 2012-05-22
+       - [Tommi Prami, MihaR] Defined ULONG_PTR and ULONGLONG for Delphis up to D2006.
+     1.70: 2012-05-21
+       - TDSiRegistry.ReadBool accepts 't' and 'true' as True.
      1.69: 2012-05-18
        - Added dynamically loaded API forwarder DSiGetLogicalProcessorInformation.
        - Added function DSiGetLogicalProcessorInfo. 
@@ -413,6 +419,7 @@ interface
   {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
   {$IF CompilerVersion >= 20}{$DEFINE HasAnonymousFunctions}{$IFEND}
+  {$IF CompilerVersion < 18.5}{$DEFINE NeedULONGEtc}{$IFEND}
 {$ENDIF}
 {$IFDEF Unicode}{$UNDEF NeedRawByteString}{$ENDIF}
 
@@ -556,6 +563,13 @@ const
   SE_GROUP_ENABLED = $00000004;
 
 type
+  {$IFDEF NeedULONGEtc}
+    ULONG_PTR = Cardinal;
+    {$EXTERNALSYM ULONG_PTR}
+    ULONGLONG = UInt64;
+    {$EXTERNALSYM ULONGLONG}  
+  {$ENDIF}
+
   // API types not defined in Delphi 5
   PWkstaInfo100 = ^TWkstaInfo100;
   _WKSTA_INFO_100 = record
@@ -1964,12 +1978,24 @@ const
     @since   2002-11-25
   }
   function TDSiRegistry.ReadBool(const name: string; defval: boolean): boolean;
+  var
+    sBool: string;
   begin
     try
       if GetDataSize(name) < 0 then
         Abort; // D4 does not generate an exception!
-      ReadBool := inherited ReadBool(name);
-    except ReadBool := defval; end;
+      case GetDataType(name) of
+        rdString:
+          begin
+            sBool := ReadString(name, '');
+            if sBool = '' then
+              Result := defval
+            else
+              Result := SameText(sBool, 'true') or SameText(sBool, 't');
+          end //rdString
+        else Result := inherited ReadBool(name);
+      end;
+    except Result := defval; end;
   end; { TDSiRegistry.ReadBool }
 
   {:Reads date-time from the registry returning default value if name doesn't
@@ -1982,8 +2008,8 @@ const
     try
       if GetDataSize(name) < 0 then
         Abort; // D4 does not generate an exception!
-      ReadDate := inherited ReadDate(name);
-    except ReadDate := defval; end;
+      Result := inherited ReadDate(name);
+    except Result := defval; end;
   end; { TDSiRegistry.ReadDate }
 
   {:Reads TFont from the registry.
@@ -2726,7 +2752,7 @@ const
     s  : TSearchRec;
   begin
     if enumSubfolders and ((maxDepth <= 0) or (currentDepth < maxDepth)) then begin
-      err := FindFirst(folder+'*.*',faDirectory,S);
+      err := FindFirst(folder+'*.*', faDirectory or (attr and faHidden), S);
       if err = 0 then try
         repeat
           if (S.Attr and faDirectory) <> 0 then

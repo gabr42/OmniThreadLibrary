@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2012-01-23
-   Version           : 1.60
+   Last modification : 2012-07-04
+   Version           : 1.61
 </pre>*)(*
    History:
+     1.61: 2012-07-04
+       - Implemented IGpRingBuffer<T> and TGpRingBuffer<T>.
      1.60: 2012-05-07
        - Implemented TGpObjectRingBuffer.Remove.
      1.59: 2012-01-23
@@ -276,6 +278,9 @@ interface
   {$IF CompilerVersion <= 20} //D2009
     {$DEFINE GpLists_LimitedGenerics}
   {$IFEND}
+  {$IF CompilerVersion >= 23} //DXE2
+    {$DEFINE GpLists_HasSystemTypes}
+  {$IFEND}
 {$ENDIF}
 
 uses
@@ -284,6 +289,9 @@ uses
   Classes,
   Contnrs,
   SyncObjs
+  {$IFDEF GpLists_HasSystemTypes},
+  System.Types
+  {$ENDIF}
   {$IFDEF Unicode},
   Generics.Collections
   {$ENDIF};
@@ -1633,6 +1641,7 @@ type
     function  IsEmpty: boolean;
     function  IsFull: boolean;
     procedure Lock;
+    function  Remove(obj: TObject): TObject;
     function  Tail: TObject;
     procedure Unlock;
     property BufferAlmostEmptyEvent: THandle read GetBufferAlmostEmptyEvent write
@@ -1709,6 +1718,103 @@ type
     property Items[iObject: integer]: TObject read GetItem write SetItem; default;
     property OwnsObjects: boolean read orbOwnsObjects;
   end; { TGpObjectRingBuffer }
+
+{$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
+  IGpRingBuffer<T> = interface ['{6DBFE065-87AF-47E5-AF03-92B07D5ACAC1}']
+    function  GetBufferAlmostEmptyEvent: THandle;
+    function  GetBufferAlmostEmptyThreshold: integer;
+    function  GetBufferAlmostFullEvent: THandle;
+    function  GetBufferAlmostFullThreshold: integer;
+    function  GetItem(iItem: integer): T;
+    procedure SetBufferAlmostEmptyEvent(const Value: THandle);
+    procedure SetBufferAlmostEmptyThreshold(const Value: integer);
+    procedure SetBufferAlmostFullEvent(const Value: THandle);
+    procedure SetBufferAlmostFullThreshold(const Value: integer);
+    procedure SetItem(iItem: integer; const value: T);
+    //
+    procedure Clear;
+    function  Count: integer;
+    function  Dequeue: T; overload;
+    function  Dequeue(var item: T): boolean; overload;
+    function  Enqueue(item: T): boolean;
+    function  Head: T; overload;
+    function  Head(var item: T): boolean; overload;
+    function  IsEmpty: boolean;
+    function  IsFull: boolean;
+    procedure Lock;
+    function  Tail: T; overload;
+    function  Tail(var item: T): boolean; overload;
+    procedure Unlock;
+    property BufferAlmostEmptyEvent: THandle read GetBufferAlmostEmptyEvent write
+      SetBufferAlmostEmptyEvent;
+    property BufferAlmostEmptyThreshold: integer read GetBufferAlmostEmptyThreshold write
+      SetBufferAlmostEmptyThreshold;
+    property BufferAlmostFullEvent: THandle read GetBufferAlmostFullEvent write
+      SetBufferAlmostFullEvent;
+    property BufferAlmostFullThreshold: integer read GetBufferAlmostFullThreshold write
+      SetBufferAlmostFullThreshold;
+    property Items[iItem: integer]: T read GetItem write SetItem; default;
+  end; { IGpRingBuffer<T> }
+
+  {:Fixed-size ring buffer of T. Optionally thread-safe.
+  }
+  TGpRingBuffer<T> = class(TInterfacedObject, IGpRingBuffer<T>)
+  private
+    orbBuffer                    : array of T;
+    orbBufferAlmostEmptyEvent    : THandle;
+    orbBufferAlmostEmptyThreshold: integer;
+    orbBufferAlmostFullEvent     : THandle;
+    orbBufferAlmostFullThreshold : integer;
+    orbBufferSize                : integer;
+    orbCount                     : integer;
+    orbHead                      : integer;
+    orbLock                      : TCriticalSection;
+    orbTail                      : integer;
+  protected
+    function  GetBufferAlmostEmptyEvent: THandle; virtual;
+    function  GetBufferAlmostEmptyThreshold: integer; virtual;
+    function  GetBufferAlmostFullEvent: THandle; virtual;
+    function  GetBufferAlmostFullThreshold: integer; virtual;
+    function  GetItem(iItem: integer): T; virtual;
+    function  IncPointer(const ptr: integer; increment: integer = 1): integer;
+    function  InternalIsFull: boolean;              {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  InternalDequeue(var item: T): boolean;
+    procedure SetBufferAlmostEmptyEvent(const value: THandle); virtual;
+    procedure SetBufferAlmostEmptyThreshold(const value: integer); virtual;
+    procedure SetBufferAlmostFullEvent(const value: THandle); virtual;
+    procedure SetBufferAlmostFullThreshold(const value: integer); virtual;
+    procedure SetItem(iItem: integer; const value: T); virtual;
+  public
+    constructor Create(bufferSize: integer; multithreaded: boolean = false);
+    destructor  Destroy; override;
+    class function CreateInterface(bufferSize: integer;
+      multithreaded: boolean = false): IGpRingBuffer<T>;
+    procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Count: integer;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Dequeue: T; overload;                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Dequeue(var item: T): boolean; overload;{$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Enqueue(item: T): boolean;            {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Head: T; overload;                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Head(var item: T): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  IsEmpty: boolean;                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  IsFull: boolean;                      {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Lock;
+    function  Tail: T; overload;                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Tail(var item: T): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Unlock;
+    property BufferAlmostEmptyEvent: THandle read orbBufferAlmostEmptyEvent write
+      orbBufferAlmostEmptyEvent;
+    property BufferAlmostEmptyThreshold: integer read orbBufferAlmostEmptyThreshold write
+      orbBufferAlmostEmptyThreshold;
+    property BufferAlmostFullEvent: THandle read orbBufferAlmostFullEvent write
+      orbBufferAlmostFullEvent;
+    property BufferAlmostFullThreshold: integer read orbBufferAlmostFullThreshold write
+      orbBufferAlmostFullThreshold;
+    property Items[iItem: integer]: T read GetItem write SetItem; default;
+  end; { TGpRingBuffer<T> }
+{$ENDIF ~GpLists_LimitedGenerics}
+{$ENDIF Unicode}
 
   {:Object map comparision function.
     @since   2003-08-02
@@ -1978,18 +2084,18 @@ type
     procedure Truncate;
     procedure VerifyList;
   protected
-    function  GetDataSize: integer;                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  GetDataSize: integer;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetOnFreeMem: TGpFifoMemoryEvent;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetOnGetMem: TGpFifoMemoryEvent;        {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  GetSize: integer;                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  GetSize: integer;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure SetOnFreeMem(value: TGpFifoMemoryEvent);{$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure SetOnGetMem(value: TGpFifoMemoryEvent); {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure SetSize(value: integer);              {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure SetSize(value: integer);                {$IFDEF GpLists_Inline}inline;{$ENDIF}
   public
     constructor Create(maxSize: integer; threadSafe: boolean);
     destructor  Destroy; override;
     class function CreateInterface(maxSize: integer; threadSafe: boolean): IGpFifoBuffer;
-    function  FifoPlace: integer;              {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  FifoPlace: integer;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Read(data: TStream; maxSize: integer = MaxInt): integer;
     function  Write(const buf; bufSize: integer): boolean; overload;
     function  Write(data: TStream; dataSize: integer = MaxInt): boolean; overload;
@@ -5451,8 +5557,8 @@ end; { TGpObjectRingBufferEnumerator.MoveNext }
 constructor TGpObjectRingBuffer.Create(bufferSize: integer; ownsObjects,
   multithreaded: boolean);
 begin
-  if bufferSize = 0 then
-    raise Exception.Create('TGpObjectRingBuffer.Create: buffer size is 0');
+  if bufferSize <= 0 then
+    raise Exception.Create('TGpObjectRingBuffer.Create: invalid buffer size is');
   if multithreaded then
     orbLock := TCriticalSection.Create;
   orbBufferSize := bufferSize;
@@ -5709,6 +5815,245 @@ begin
   if assigned(orbLock) then
     orbLock.Release;
 end; { TGpObjectRingBuffer.Unlock }
+
+{$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
+{ TGpRingBuffer<T> }
+
+constructor TGpRingBuffer<T>.Create(bufferSize: integer; multithreaded: boolean);
+begin
+  if bufferSize <= 0 then
+    raise Exception.Create('TGpRingBuffer<T>.Create: invalid buffer size');
+  if multithreaded then
+    orbLock := TCriticalSection.Create;
+  orbBufferSize := bufferSize;
+  SetLength(orbBuffer, orbBufferSize+1);
+end; { TGpRingBuffer<T>.Create }
+
+{:Destroys ring buffer.
+}
+destructor TGpRingBuffer<T>.Destroy;
+begin
+  BufferAlmostEmptyEvent := 0;
+  BufferAlmostFullEvent := 0;
+  Clear;
+  FreeAndNil(orbLock);
+  inherited;
+end; { TGpRingBuffer<T>.Destroy }
+
+procedure TGpRingBuffer<T>.Clear;
+begin
+  Lock;
+  try
+    while not IsEmpty do
+      Dequeue;
+    orbCount := 0;
+  finally Unlock; end;
+end; { TGpRingBuffer<T>.Clear }
+
+{:Returns number of objects in the buffer.
+}
+function TGpRingBuffer<T>.Count: integer;
+begin
+  Result := orbCount;
+end; { TGpRingBuffer<T>.Count }
+
+class function TGpRingBuffer<T>.CreateInterface(bufferSize: integer;
+  multithreaded: boolean): IGpRingBuffer<T>;
+begin
+  Result := TGpRingBuffer<T>.Create(bufferSize, multithreaded);
+end; { TGpRingBuffer<T>.CreateInterface }
+
+{:Removes tail object from the buffer, without destroying it. Returns nil if
+  buffer is empty.
+}
+function TGpRingBuffer<T>.Dequeue: T;
+begin
+  Dequeue(Result);
+end; { TGpRingBuffer<T>.Dequeue }
+
+function TGpRingBuffer<T>.Dequeue(var item: T): boolean;
+begin
+  Lock;
+  try
+    Result := InternalDequeue(item);
+  finally Unlock; end;
+end; { TGpRingBuffer }
+
+{:Inserts object into the buffer. Returns false if the buffer is full.
+  @since   2003-07-26
+}
+function TGpRingBuffer<T>.Enqueue(item: T): boolean;
+begin
+  Lock;
+  try
+    if InternalIsFull then
+      Result := false
+    else begin
+      orbBuffer[orbHead] := item;
+      orbHead := IncPointer(orbHead);
+      Inc(orbCount);
+      if (BufferAlmostFullEvent <> 0) and (BufferAlmostFullThreshold = orbCount) then
+        Win32Check(SetEvent(BufferAlmostFullEvent));
+      Result := true;
+    end;
+  finally Unlock; end;
+end; { TGpRingBuffer<T>.Enqueue }
+
+function TGpRingBuffer<T>.GetBufferAlmostEmptyEvent: THandle;
+begin
+  Result := orbBufferAlmostEmptyEvent;
+end; { TGpRingBuffer<T>.GetBufferAlmostEmptyEvent }
+
+function TGpRingBuffer<T>.GetBufferAlmostEmptyThreshold: integer;
+begin
+  Result := orbBufferAlmostEmptyThreshold;
+end; { TGpRingBuffer<T>.GetBufferAlmostEmptyThreshold }
+
+function TGpRingBuffer<T>.GetBufferAlmostFullEvent: THandle;
+begin
+  Result := orbBufferAlmostFullEvent;
+end; { TGpRingBuffer<T>.GetBufferAlmostFullEvent }
+
+function TGpRingBuffer<T>.GetBufferAlmostFullThreshold: integer;
+begin
+  Result := orbBufferAlmostFullThreshold;
+end; { TGpRingBuffer<T>.GetBufferAlmostFullThreshold }
+
+function TGpRingBuffer<T>.GetItem(iItem: integer): T;
+begin
+  if (iItem < 0) or (iItem >= Count) then
+    raise Exception.CreateFmt('TGpObjectRingBuffer.GetItem: Invalid index %d', [iItem])
+  else
+    Result := orbBuffer[IncPointer(orbTail, iItem)];
+end; { TGpRingBuffer<T>.GetItem }
+
+{:Returns head (newest) item or nil if the buffer is empty.
+  @since   2003-07-26
+}
+function TGpRingBuffer<T>.Head: T;
+begin
+  Head(Result);
+end; { TGpRingBuffer<T>.Head }
+
+function TGpRingBuffer<T>.Head(var item: T): boolean;
+begin
+  Lock;
+  try
+    Result := not IsEmpty;
+    if Result then
+      item := orbBuffer[IncPointer(orbTail, Count-1)];
+  finally Unlock; end;
+end; { TGpRingBuffer }
+
+{:Increments internal pointer (head or tail), wraps it to the buffer size and
+  returns new value.
+  @since   2003-07-26
+}
+function TGpRingBuffer<T>.IncPointer(const ptr: integer;
+  increment: integer): integer;
+begin
+  Result := (ptr + increment) mod (orbBufferSize + 1);
+end; { TGpRingBuffer<T>.IncPointer }
+
+function TGpRingBuffer<T>.InternalIsFull: boolean;
+begin
+  Result := (IncPointer(orbHead) = orbTail);
+end; { TGpRingBuffer<T>.InternalIsFull }
+
+function TGpRingBuffer<T>.InternalDequeue(var item: T): boolean;
+begin
+  Result := not IsEmpty;
+  if Result then begin
+    item := orbBuffer[orbTail];
+    orbTail := IncPointer(orbTail);
+    Dec(orbCount);
+    if (BufferAlmostEmptyEvent <> 0) and (BufferAlmostEmptyThreshold = orbCount) then
+      Win32Check(SetEvent(BufferAlmostEmptyEvent));
+  end;
+end; { TGpRingBuffer<T>.InternalDequeue }
+
+{:Checks whether the buffer is empty.
+  @since   2003-07-26
+}
+function TGpRingBuffer<T>.IsEmpty: boolean;
+begin
+  Result := (orbCount = 0);
+end; { TGpRingBuffer<T>.IsEmpty }
+
+{:Checks whether the buffer is full.
+  @since   2003-07-26
+}
+function TGpRingBuffer<T>.IsFull: boolean;
+begin
+  Lock;
+  try
+    Result := InternalIsFull;
+  finally Unlock; end;
+end; { TGpRingBuffer<T>.IsFull }
+
+procedure TGpRingBuffer<T>.Lock;
+begin
+  if assigned(orbLock) then
+    orbLock.Acquire;
+end; { TGpRingBuffer<T>.Lock }
+
+procedure TGpRingBuffer<T>.SetBufferAlmostEmptyEvent(const value: THandle);
+begin
+  orbBufferAlmostEmptyEvent := value;
+end; { TGpRingBuffer<T>.SetBufferAlmostEmptyEvent }
+
+procedure TGpRingBuffer<T>.SetBufferAlmostEmptyThreshold(const value: integer);
+begin
+  orbBufferAlmostEmptyThreshold := value;
+end; { TGpRingBuffer<T>.SetBufferAlmostEmptyThreshold }
+
+procedure TGpRingBuffer<T>.SetBufferAlmostFullEvent(const value: THandle);
+begin
+  orbBufferAlmostFullEvent := value;
+end; { TGpRingBuffer<T>.SetBufferAlmostFullEvent }
+
+procedure TGpRingBuffer<T>.SetBufferAlmostFullThreshold(const value: integer);
+begin
+  orbBufferAlmostFullThreshold := value;
+end; { TGpRingBuffer<T>.SetBufferAlmostFullThreshold }
+
+procedure TGpRingBuffer<T>.SetItem(iItem: integer; const value: T);
+var
+  idxObject: integer;
+begin
+  if (iItem < 0) or (iItem >= Count) then
+    raise Exception.CreateFmt('TGpObjectRingBuffer.SetItem: Invalid index %d', [iItem])
+  else begin
+    idxObject := IncPointer(orbTail, iItem);
+    orbBuffer[idxObject] := value;
+  end;
+end; { TGpRingBuffer<T>.SetItem }
+
+{:Returns tail (oldest) object or nil if the buffer is empty.
+}
+function TGpRingBuffer<T>.Tail: T;
+begin
+  Tail(Result);
+end; { TGpRingBuffer<T>.Tail }
+
+function TGpRingBuffer<T>.Tail(var item: T): boolean;
+begin
+  Lock;
+  try
+    Result := not IsEmpty;
+    if Result then
+      item := orbBuffer[orbTail];
+  finally Unlock; end;
+end; { TGpRingBuffer }
+
+procedure TGpRingBuffer<T>.Unlock;
+begin
+  if assigned(orbLock) then
+    orbLock.Release;
+end; { TGpRingBuffer<T>.Unlock }
+{$ENDIF ~GpLists_LimitedGenerics}
+{$ENDIF Unicode}
 
 { TGpObjectMap }
 
@@ -6220,8 +6565,6 @@ begin
   FMemEventSender := memoryEventSender;
   FOnFreeMem := onFreeMem;
 end; { TFifoBlock.Create }
-
-
 
 constructor TFifoBlock.Create(const data: TStream; bufSize: integer;
   memoryEventSender: TObject; onGetMem, onFreeMem: TGpFifoMemoryEvent);
