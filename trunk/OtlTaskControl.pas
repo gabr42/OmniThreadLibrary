@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-06-18
-///   Version           : 1.31g
+///   Last modification : 2012-09-24
+///   Version           : 1.31h
 ///</para><para>
 ///   History:
+///     1.31h: 2012-09-24
+///       - Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored.
 ///     1.31g: 2012-06-18
 ///       - Fixed race condition in task teardown. Big thanks to [meishier] for putting
 ///         together a reproducible test case.
@@ -3252,7 +3254,7 @@ var
   iIntf: integer;
 begin
   for iIntf := 0 to otgTaskList.Count - 1 do
-    (otgTaskList[iIntf] as IOmniTaskControl).Terminate;
+    (otgTaskList[iIntf] as IOmniTaskControl).Terminate(0);
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
 

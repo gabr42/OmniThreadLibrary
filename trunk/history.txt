@@ -13,6 +13,7 @@
 + Inlined bunch of TOmniWorkItem methods.
 + new examples: 'forEach output', 'twofish' (database)
 + OtlParallel added to packages (thx to Mason Wheeler)
+! Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored (thx to [morlic])
 
 3.01: 2012-04-21
 - New features:
