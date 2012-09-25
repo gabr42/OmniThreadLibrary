@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2012-05-23
-   Version           : 1.32
+   Last modification : 2012-09-25
+   Version           : 1.32a
 </pre>*)(*
    History:
+     1.32: 2012-09-25
+       - Workaround for an internal error in D2009.
      1.32: 2012-05-23
        - Implemented FletcherChecksum function.
      1.31: 2012-01-23
@@ -361,11 +363,17 @@ uses
 {$ENDIF ConditionalExpressions}
   SysUtils;
 
-{$IF CompilerVersion <= 19} //pre-D2007
+{$IFDEF ConditionalExpressions}
+{$IF CompilerVersion <= 20} //D2009 or older
 type
   NativeInt  = integer;
   NativeUInt = cardinal;
 {$IFEND}
+{$ELSE}
+type
+  NativeInt  = integer;
+  NativeUInt = cardinal;
+{$ENDIF}
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
