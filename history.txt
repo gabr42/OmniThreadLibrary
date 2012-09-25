@@ -14,6 +14,7 @@
 + new examples: 'forEach output', 'twofish' (database)
 + OtlParallel added to packages (thx to Mason Wheeler)
 ! Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored (thx to [morlic])
+! Workaround for an internal error in D2009 (thx to Hallvard Vassbotn; http://code.google.com/p/omnithreadlibrary/issues/detail?id=29)
 
 3.01: 2012-04-21
 - New features:
