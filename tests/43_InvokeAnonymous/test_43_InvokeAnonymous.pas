@@ -5,17 +5,24 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls,
+  OtlComm,
   OtlTask,
-  OtlTaskControl;
+  OtlTaskControl,
+  OtlEventMonitor;
 
 type
   TfrmInvokeAnonymousDemo = class(TForm)
     lbLog: TListBox;
     btnInvoke: TButton;
+    btnInvokeMonitored: TButton;
+    OmniEventMonitor1: TOmniEventMonitor;
     procedure btnInvokeClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure OmniEventMonitor1TaskMessage(const task: IOmniTaskControl; const msg:
+      TOmniMessage);
   private
+    FMonitoredTask: IOmniTaskControl;
     FTask: IOmniTaskControl;
   public
   end;
@@ -34,9 +41,14 @@ type
 procedure TfrmInvokeAnonymousDemo.btnInvokeClick(Sender: TObject);
 var
   formThreadID: DWORD;
+  task        : IOmniTaskControl;
 begin
   formThreadID := GetCurrentThreadID;
-  FTask.Invoke(
+  if Sender = btnInvoke then
+    task := FTask
+  else
+    task := FMonitoredTask;
+  task.Invoke(
     procedure (const task: IOmniTask)
     var
       taskThreadID: DWORD;
@@ -61,6 +73,8 @@ procedure TfrmInvokeAnonymousDemo.FormDestroy(Sender: TObject);
 begin
   FTask.Terminate;
   FTask := nil;
+  FMonitoredTask.Terminate;
+  FMonitoredTask := nil;
 end;
 
 procedure TfrmInvokeAnonymousDemo.FormCreate(Sender: TObject);
@@ -68,6 +82,15 @@ begin
   FTask := CreateTask(TTask.Create())
     .OnMessage(Self)
     .Run;
+  FMonitoredTask := CreateTask(TTask.Create())
+    .MonitorWith(OmniEventMonitor1)
+    .Run;
 end; { TfrmInvokeAnonymousDemo.FormCreate }
+
+procedure TfrmInvokeAnonymousDemo.OmniEventMonitor1TaskMessage(const task:
+  IOmniTaskControl; const msg: TOmniMessage);
+begin
+  lbLog.Items.Add(Format('Received message %d', [msg.MsgID]));
+end;
 
 end.

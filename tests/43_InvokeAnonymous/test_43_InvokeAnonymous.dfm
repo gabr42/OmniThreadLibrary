@@ -16,9 +16,9 @@ object frmInvokeAnonymousDemo: TfrmInvokeAnonymousDemo
   PixelsPerInch = 96
   TextHeight = 13
   object lbLog: TListBox
-    Left = 89
+    Left = 119
     Top = 0
-    Width = 546
+    Width = 516
     Height = 337
     Align = alRight
     ItemHeight = 13
@@ -27,10 +27,24 @@ object frmInvokeAnonymousDemo: TfrmInvokeAnonymousDemo
   object btnInvoke: TButton
     Left = 8
     Top = 8
-    Width = 75
+    Width = 105
     Height = 25
     Caption = 'Invoke'
     TabOrder = 1
     OnClick = btnInvokeClick
+  end
+  object btnInvokeMonitored: TButton
+    Left = 8
+    Top = 39
+    Width = 105
+    Height = 25
+    Caption = 'Invoke Monitored'
+    TabOrder = 2
+    OnClick = btnInvokeClick
+  end
+  object OmniEventMonitor1: TOmniEventMonitor
+    OnTaskMessage = OmniEventMonitor1TaskMessage
+    Left = 8
+    Top = 72
   end
 end

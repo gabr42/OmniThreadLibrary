@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2012, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-27
-///   Version           : 1.07b
+///   Last modification : 2012-09-27
+///   Version           : 1.07c
 ///</para><para>
 ///   History:
+///     1.07c: 2012-09-27
+///       - Calls task controller's FilterMessage method to remove internal (Invoke)
+///         messages before passing messages to the event handler.
 ///     1.07b: 2011-12-19
 ///       - COmniTaskMsg_Terminated is processed even if OnTaskTerminated handler is not set.
 ///     1.07a: 2011-07-27
@@ -273,7 +276,9 @@ var
   begin
     Result := true;
     while task.Comm.Receive(emCurrentMsg) do begin
-      if assigned(emOnTaskMessage) then
+      if (not (task as IOmniTaskControlInternals).FilterMessage(emCurrentMsg)) and
+         assigned(emOnTaskMessage)
+      then
         emOnTaskMessage(task, emCurrentMsg);
       if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
         if rearmSelf then
