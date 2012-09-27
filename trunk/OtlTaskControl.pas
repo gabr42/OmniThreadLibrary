@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-09-24
-///   Version           : 1.31h
+///   Last modification : 2012-09-27
+///   Version           : 1.31i
 ///</para><para>
 ///   History:
+///     1.31i: 2012-09-27
+///       - Task controller implements method FilterMessage which allows the event
+///         monitor to filter out internal messages.
+///       - Removed TOmniTaskControlEventMonitor (no longer needed).
 ///     1.31h: 2012-09-24
 ///       - Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored.
 ///     1.31g: 2012-06-18
@@ -826,6 +830,7 @@ type
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetTerminatedEvent: THandle;
   //
+    function  FilterMessage(const msg: TOmniMessage): boolean;
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
     property TerminatedEvent: THandle read GetTerminatedEvent;
@@ -860,6 +865,7 @@ type
     procedure EnsureCommChannel; inline;
     procedure Initialize(const taskName: string);
   protected
+    function  FilterMessage(const msg: TOmniMessage): boolean;
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
     function  GetCancellationToken: IOmniCancellationToken;
@@ -1032,7 +1038,6 @@ uses
 type
   TOmniTaskControlEventMonitor = class(TOmniEventMonitor)
   strict protected
-    procedure ForwardTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure ForwardTaskTerminated(const task: IOmniTaskControl);
   public
     constructor Create(AOwner: TComponent); override; 
@@ -2494,36 +2499,40 @@ begin
       CreateTwoWayChannel(otcQueueLength, otcSharedInfo.TerminatedEvent);
 end; { TOmniTaskControl.EnsureCommChannel }
 
-procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
+function TOmniTaskControl.FilterMessage(const msg: TOmniMessage): boolean;
 {$IFDEF OTL_Anonymous}
 var
   func: TOmniTaskInvokeFunction;
 {$ENDIF OTL_Anonymous}
+begin
+  {$IFDEF OTL_Anonymous}
+  Result := (msg.MsgID = COtlReservedMsgID);
+  if TOmniInternalFuncMsg.UnpackMessage(msg, func) then
+    func;
+  {$ELSE}
+  Result := false;
+  {$ENDIF OTL_Anonymous}
+end; { TOmniTaskControl.FilterMessage }
+
+procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
 var
   exec: TOmniMessageExec;
   kv  : TGpKeyValue;
   msg1: TOmniMessage;
 begin
-  {$IFDEF OTL_Anonymous}
-  if (msg.MsgID = COtlReservedMsgID) and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
-    func
-  else
-  {$ENDIF OTL_Anonymous}
-  begin
-    for kv in otcOnMessageList.WalkKV do
-      if kv.Key = COtlReservedMsgID then begin
-        msg1 := msg;
-        TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
-      end;
-    exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-    otcInEventHandler := true;
-    try
-      if assigned(exec) then
-        exec.OnMessage(Self, msg)
-      else if assigned(otcOnMessageExec) then
-        otcOnMessageExec.OnMessage(Self, msg);
-    finally otcInEventHandler := false; end;
-  end;
+  for kv in otcOnMessageList.WalkKV do
+    if kv.Key = COtlReservedMsgID then begin
+      msg1 := msg;
+      TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+    end;
+  exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+  otcInEventHandler := true;
+  try
+    if assigned(exec) then
+      exec.OnMessage(Self, msg)
+    else if assigned(otcOnMessageExec) then
+      otcOnMessageExec.OnMessage(Self, msg);
+  finally otcInEventHandler := false; end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
@@ -3282,12 +3291,6 @@ begin
   OnTaskMessage := ForwardTaskMessage;
   OnTaskTerminated := ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.Create }
-
-procedure TOmniTaskControlEventMonitor.ForwardTaskMessage(
-  const task: IOmniTaskControl; const msg: TOmniMessage);
-begin
-  (task as IOmniTaskControlInternals).ForwardTaskMessage(msg);
-end; { TOmniTaskControlEventMonitor.ForwardTaskMessage }
 
 procedure TOmniTaskControlEventMonitor.ForwardTaskTerminated(
   const task: IOmniTaskControl);
