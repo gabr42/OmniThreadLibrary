@@ -3288,7 +3288,6 @@ end; { TOmniTaskGroup.WaitForAll }
 constructor TOmniTaskControlEventMonitor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  OnTaskMessage := ForwardTaskMessage;
   OnTaskTerminated := ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.Create }
 
