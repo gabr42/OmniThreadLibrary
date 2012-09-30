@@ -2507,7 +2507,7 @@ var
 begin
   {$IFDEF OTL_Anonymous}
   Result := (msg.MsgID = COtlReservedMsgID);
-  if TOmniInternalFuncMsg.UnpackMessage(msg, func) then
+  if Result and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
     func;
   {$ELSE}
   Result := false;
