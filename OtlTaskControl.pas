@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-09-27
-///   Version           : 1.31i
+///   Last modification : 2012-10-01
+///   Version           : 1.31j
 ///</para><para>
 ///   History:
+///     1.31j: 2012-10-01
+///       - Refactored TOmniTaskExecutor.DispatchEvent a bit more.
 ///     1.31i: 2012-09-27
 ///       - Task controller implements method FilterMessage which allows the event
 ///         monitor to filter out internal messages.
@@ -692,6 +694,8 @@ type
     procedure CallOmniTimer;
     procedure CheckTimers;
     procedure Cleanup;
+    procedure DispatchCommMessage(awaited: cardinal; const task: IOmniTask; var msgInfo:
+      TOmniMessageInfo);
     procedure DispatchMessages(const task: IOmniTask);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
@@ -1740,11 +1744,29 @@ begin
   FreeAndNil(oteTimers);
 end; { TOmniTaskExecutor.Cleanup }
 
+procedure TOmniTaskExecutor.DispatchCommMessage(awaited: cardinal; const task: IOmniTask;
+  var msgInfo: TOmniMessageInfo);
+var
+  gotMsg: boolean;
+  msg   : TOmniMessage;
+begin
+  repeat
+    if awaited = msgInfo.IdxFirstMessage then
+      gotMsg := task.Comm.Receive(msg)
+    else begin
+      oteInternalLock.Acquire;
+      try
+        gotMsg := (oteCommList[awaited - msgInfo.IdxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
+      finally oteInternalLock.Release; end;
+    end;
+    if gotMsg and assigned(WorkerIntf) then
+      DispatchOmniMessage(msg);
+  until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
+end; { TOmniTaskExecutor.DispatchCommMessage }
+
 function TOmniTaskExecutor.DispatchEvent(awaited: cardinal; const task: IOmniTask;
   var msgInfo: TOmniMessageInfo): boolean;
 var
-  gotMsg         : boolean;
-  msg            : TOmniMessage;
   responseHandler: TOmniWaitObjectMethod;
 begin
   // Keep logic in sync with ReportInvalidHandle!
@@ -1757,20 +1779,8 @@ begin
     Exit
   else if awaited = WAIT_FAILED then
     // do-nothing; it is possible that the handle was closed and unregistered but handle array was not rebuilt yet and WaitForEvent returned this error
-  else if (awaited >= msgInfo.IdxFirstMessage) and (awaited <= msgInfo.IdxLastMessage) then begin
-    repeat
-      if awaited = msgInfo.IdxFirstMessage then
-        gotMsg := task.Comm.Receive(msg)
-      else begin
-        oteInternalLock.Acquire;
-        try
-          gotMsg := (oteCommList[awaited - msgInfo.IdxFirstMessage - 1] as IOmniCommunicationEndpoint).Receive(msg);
-        finally oteInternalLock.Release; end;
-      end;
-      if gotMsg and assigned(WorkerIntf) then
-        DispatchOmniMessage(msg);
-    until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
-  end // comm handles
+  else if (awaited >= msgInfo.IdxFirstMessage) and (awaited <= msgInfo.IdxLastMessage) then
+    DispatchCommMessage(awaited, task, msgInfo)
   else if (awaited >= msgInfo.IdxFirstWaitObject) and (awaited <= msgInfo.IdxLastWaitObject) then begin
     if assigned(oteWaitObjectList) then begin
       oteInternalLock.Acquire;
