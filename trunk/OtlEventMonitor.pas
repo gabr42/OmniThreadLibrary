@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-09-27
-///   Version           : 1.07c
+///   Last modification : 2012-10-01
+///   Version           : 1.07d
 ///</para><para>
 ///   History:
+///     1.07d: 2012-10-01
+///       - COmniTaskMsg_NewMessage messages must be processed even if OnTaskMessage event
+///         is not assigned. Otherwise internal messages can get lost.
 ///     1.07c: 2012-09-27
 ///       - Calls task controller's FilterMessage method to remove internal (Invoke)
 ///         messages before passing messages to the event handler.
@@ -292,12 +295,10 @@ var
 
 begin { TOmniEventMonitor.WndProc }
   if msg.Msg = COmniTaskMsg_NewMessage then begin
-    if assigned(OnTaskMessage) then begin
-      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then begin
-        timeStart := GetTickCount;
-        ProcessMessages;
-      end;
+    task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+    if assigned(task) then begin
+      timeStart := GetTickCount;
+      ProcessMessages;
     end;
     msg.Result := 0;
   end
