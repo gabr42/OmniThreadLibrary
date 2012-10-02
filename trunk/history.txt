@@ -16,6 +16,8 @@
 ! Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored (thx to [morlic])
 ! Workaround for an internal error in D2009 (thx to [Hallvard Vassbotn]; http://code.google.com/p/omnithreadlibrary/issues/detail?id=29)
 ! Invoke was not working if task controller was monitored with the TOmniEventMonitor component (thx to [geskill] for providing a report and a test case)
+! XE2 and XE3 design packages were referring to wrong runtime package (XE)
+! TOmniEventMonitor is marked as 64-bit compliant in XE2+
 
 3.01: 2012-04-21
 - New features:

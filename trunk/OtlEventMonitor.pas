@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-10-01
-///   Version           : 1.07d
+///   Last modification : 2012-10-02
+///   Version           : 1.07e
 ///</para><para>
 ///   History:
+///     1.07e: 2012-10-02
+///       - TOmniEventMonitor is marked for 64-bit support.
 ///     1.07d: 2012-10-01
 ///       - COmniTaskMsg_NewMessage messages must be processed even if OnTaskMessage event
 ///         is not assigned. Otherwise internal messages can get lost.
@@ -110,6 +112,9 @@ type
   TOmniMonitorPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
   TOmniMonitorPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
+  {$IFDEF OTL_Supports64Bit}
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
+  {$ENDIF OTL_Supports64Bit}
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
     emMessageWindow           : THandle;
