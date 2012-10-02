@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2011-07-23
-///   Version           : 1.03
+///   Last modification : 2012-09-23
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2012-09-23
+///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
 ///       - Assertions must be always enabled.
 ///     1.02: 2010-12-02
