@@ -1,7 +1,7 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{2F2731B6-4F5B-4E88-8021-9B2320976810}</ProjectGuid>
-			<MainSource>app_45_ForkJoinMax.dpr</MainSource>
+			<ProjectGuid>{B072AE72-EEE2-4D37-8B02-6B1DC62134E7}</ProjectGuid>
+			<MainSource>app_53_AsyncAwait.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
@@ -20,37 +20,32 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_DependencyCheckOutputName>app_45_ForkJoinMax.exe</DCC_DependencyCheckOutputName>
+			<DCC_UnitSearchPath>..\..;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
+			<DCC_E>false</DCC_E>
 			<DCC_Platform>x86</DCC_Platform>
-			<DCC_StringChecks>off</DCC_StringChecks>
-			<DCC_UnitSearchPath>..\..;..\..\fastmm4;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_UsePackage>vclx;vcl;dbrtl;Rave76VCL;bdertl;rtl;vclactnband;vcldb;vcldbx;dsnap;dsnapcon;TeeUI;Tee;TeeDB;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;xmlrtl;inet;intrawebdb_100_120;Intraweb_100_120;VclSmp;vclie;websnap;webdsnap;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DataSnapIndy10ServerTransport;DataSnapProviderClient;DataSnapServer;DbxClientDriver;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;DBXSybaseASEDriver;DBXSybaseASADriver;DBXOracleDriver;DBXMSSQLDriver;DBXInformixDriver;DBXDb2Driver</DCC_UsePackage>
+			<DCC_DependencyCheckOutputName>app_53_AsyncAwait.exe</DCC_DependencyCheckOutputName>
+			<DCC_N>false</DCC_N>
+			<DCC_S>false</DCC_S>
+			<DCC_F>false</DCC_F>
+			<DCC_K>false</DCC_K>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
-			<DCC_AssertionsAtRuntime>false</DCC_AssertionsAtRuntime>
-			<BRCC_Defines>FINALVER;$(BRCC_Defines)</BRCC_Defines>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
-			<DCC_RangeChecking>true</DCC_RangeChecking>
-			<BRCC_Defines>DEBUG;$(BRCC_Defines)</BRCC_Defines>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="app_45_ForkJoinMax.dpr">
+			<DelphiCompile Include="app_53_AsyncAwait.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="test_45_ForkJoinMax.pas">
-				<Form>frmQuickSortDemo</Form>
+			<DCCReference Include="test_53_AsyncAwait.pas">
+				<Form>frmAsyncAwaitTest</Form>
 			</DCCReference>
-			<DCCReference Include="..\..\OtlCommon.pas"/>
-			<DCCReference Include="..\..\OtlTask.pas"/>
-			<DCCReference Include="..\..\OtlThreadPool.pas"/>
-			<DCCReference Include="..\..\OtlComm.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
@@ -70,7 +65,7 @@
 			<BorlandProject>
 				<Delphi.Personality>
 					<Source>
-						<Source Name="MainSource">app_45_ForkJoinMax.dpr</Source>
+						<Source Name="MainSource">app_53_AsyncAwait.dpr</Source>
 					</Source>
 					<Parameters>
 						<Parameters Name="UseLauncher">False</Parameters>
@@ -79,11 +74,11 @@
 					</Parameters>
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
-						<VersionInfo Name="AutoIncBuild">True</VersionInfo>
-						<VersionInfo Name="MajorVer">0</VersionInfo>
+						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
-						<VersionInfo Name="Build">2</VersionInfo>
+						<VersionInfo Name="Build">0</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
 						<VersionInfo Name="Special">False</VersionInfo>
@@ -93,20 +88,17 @@
 						<VersionInfo Name="CodePage">1252</VersionInfo>
 					</VersionInfo>
 					<VersionInfoKeys>
-						<VersionInfoKeys Name="CompanyName">Ali Keshavarz</VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">0.0.0.2</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
-						<VersionInfoKeys Name="LegalCopyright">Copyright © 2011 Ali Keshavarz. All rights reserved.</VersionInfoKeys>
+						<VersionInfoKeys Name="LegalCopyright"/>
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">1.0.0</VersionInfoKeys>
-						<VersionInfoKeys Name="Comments">Written by Ali Keshavarz</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Excluded_Packages>
-						<Excluded_Packages Name="$(BDS)\bin\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-					</Excluded_Packages>
 				</Delphi.Personality>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>

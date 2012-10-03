@@ -1,7 +1,7 @@
 program app_53_AsyncAwait;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_53_AsyncAwait in 'test_53_AsyncAwait.pas' {frmAsyncAwaitTest};
 
 {$R *.res}

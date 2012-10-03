@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
-  Vcl.StdCtrls;
+  StdCtrls;
 
 type
   TfrmAsyncAwaitTest = class(TForm)
