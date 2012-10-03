@@ -1042,6 +1042,7 @@ uses
 type
   TOmniTaskControlEventMonitor = class(TOmniEventMonitor)
   strict protected
+    procedure ForwardTaskMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
     procedure ForwardTaskTerminated(const task: IOmniTaskControl);
   public
     constructor Create(AOwner: TComponent); override; 
@@ -2525,24 +2526,35 @@ begin
 end; { TOmniTaskControl.FilterMessage }
 
 procedure TOmniTaskControl.ForwardTaskMessage(const msg: TOmniMessage);
+{$IFDEF OTL_Anonymous}
+var
+  func: TOmniTaskInvokeFunction;
+{$ENDIF OTL_Anonymous}
 var
   exec: TOmniMessageExec;
   kv  : TGpKeyValue;
   msg1: TOmniMessage;
 begin
-  for kv in otcOnMessageList.WalkKV do
-    if kv.Key = COtlReservedMsgID then begin
-      msg1 := msg;
-      TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
-    end;
-  exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-  otcInEventHandler := true;
-  try
-    if assigned(exec) then
-      exec.OnMessage(Self, msg)
-    else if assigned(otcOnMessageExec) then
-      otcOnMessageExec.OnMessage(Self, msg);
-  finally otcInEventHandler := false; end;
+  {$IFDEF OTL_Anonymous}
+  if (msg.MsgID = COtlReservedMsgID) and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
+    func
+  else
+  {$ENDIF OTL_Anonymous}
+  begin
+    for kv in otcOnMessageList.WalkKV do
+      if kv.Key = COtlReservedMsgID then begin
+        msg1 := msg;
+        TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+      end;
+    exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+    otcInEventHandler := true;
+    try
+      if assigned(exec) then
+        exec.OnMessage(Self, msg)
+      else if assigned(otcOnMessageExec) then
+        otcOnMessageExec.OnMessage(Self, msg);
+    finally otcInEventHandler := false; end;
+  end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
@@ -3298,8 +3310,15 @@ end; { TOmniTaskGroup.WaitForAll }
 constructor TOmniTaskControlEventMonitor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  OnTaskMessage := ForwardTaskMessage;
   OnTaskTerminated := ForwardTaskTerminated;
 end; { TOmniTaskControlEventMonitor.Create }
+
+procedure TOmniTaskControlEventMonitor.ForwardTaskMessage(
+  const task: IOmniTaskControl; const msg: TOmniMessage);
+begin
+  (task as IOmniTaskControlInternals).ForwardTaskMessage(msg);
+end; { TOmniTaskControlEventMonitor.ForwardTaskMessage }
 
 procedure TOmniTaskControlEventMonitor.ForwardTaskTerminated(
   const task: IOmniTaskControl);
