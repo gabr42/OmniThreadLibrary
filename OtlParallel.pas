@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2012-07-03
-///   Version           : 1.28
+///   Last modification : 2012-10-03
+///   Version           : 1.30
 ///</para><para>
 ///   History:
+///     1.30: 2012-10-03
+///       - Added Async/Await abstraction.
 ///     1.29: 2012-08-12
 ///       - IOmniBackgroundWorker extended with task initializer (Initialize) and
 ///         task finalizer (Finalize).
@@ -956,6 +958,12 @@ type
     class function CompleteQueue(const queue: IOmniBlockingCollection): TProc;
   end; { Parallel }
 
+  IOmniAwait = interface
+    procedure Await(proc: TProc);
+  end; { IOmniAwait }
+
+  function Async(proc: TProc): IOmniAwait;
+
   {$REGION 'Documentation'}
   ///	<summary>A workaround used in TOmniForkJoin&lt;T&gt; to add work units into
   ///	blocking collection. Calling IOmniBlockinCollection.Add directly causes internal
@@ -1272,6 +1280,14 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { TOmniBackgroundWorker}
 
+  TOmniAwait = class(TInterfacedObject, IOmniAwait)
+  strict private
+    FAsync: TProc;
+  public
+    constructor Create(async: TProc);
+    procedure Await(proc: TProc);
+  end; { TOmniAwait }
+
 var
   GParallelPool: IOmniThreadPool;
 
@@ -1287,6 +1303,11 @@ begin
   if assigned(taskConfig) then
     taskConfig.Apply(task);
 end; { ApplyConfig }
+
+function Async(proc: TProc): IOmniAwait;
+begin
+  Result := TOmniAwait.Create(proc);
+end; { Async }
 
 function GlobalParallelPool: IOmniThreadPool;
 begin
@@ -3853,4 +3874,21 @@ begin
   Simple := nil;
 end; { TOmniTaskConfigTerminated.Clear }
 
+{ TOmniAwait }
+
+constructor TOmniAwait.Create(async: TProc);
+begin
+  inherited Create;
+  FAsync := async;
+end; { TOmniAwait.Create }
+
+procedure TOmniAwait.Await(proc: TProc);
+begin
+  Parallel.Async(FAsync, Parallel.TaskConfig.OnTerminated(
+  procedure begin
+    proc;
+  end));
+end; { TOmniAwait.Await }
+
 end.
+

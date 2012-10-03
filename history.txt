@@ -1,23 +1,45 @@
-! compiles with XE3
-+ added XE3 packages and test projects
-! Parallel.Join was broken if number of task to be executed was larger than number of threads. Thanks to [Passella] for reporting the problem.
-! Invalid 'joinState' was passed to the worker task in Parallel.Join if number of tasks to be executed was larger than the number of worker threads. Thanks to [meishier] for reporting the problem.
-! Fixed race condition in task teardown. Big thanks to [meishier] for putting together a reproducible test case.
-+ Added OnStop overload to Parallel.ForEach that accepts 'reference to procedure (const task: IOmniTask)'.
-+ Added OnStop overload to Parallel.Pipeline that accepts 'reference to procedure (const task: IOmniTask)'.
-! ForEach finalizer is called if an exception occurs inside the ForEach task.
-* Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
-+ Implemented TOmniValue.IsRecord.
-+ IOmniBackgroundWorker extended with task initializer (Initialize) and task finalizer (Finalize).
-+ IOmniWorkItem extended with property TaskState.
-+ Inlined bunch of TOmniWorkItem methods.
-+ new examples: 'forEach output', 'twofish' (database)
-+ OtlParallel added to packages (thx to Mason Wheeler)
-! Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored (thx to [morlic])
-! Workaround for an internal error in D2009 (thx to [Hallvard Vassbotn]; http://code.google.com/p/omnithreadlibrary/issues/detail?id=29)
-! Invoke was not working if task controller was monitored with the TOmniEventMonitor component (thx to [geskill] for providing a report and a test case)
-! XE2 and XE3 design packages were referring to wrong runtime package (XE)
-! TOmniEventMonitor is marked as 64-bit compliant in XE2+
+3.02: 2012-10-03
+- New features:
+  - Compiles with XE3.
+  - Added XE3 packages and test projects.
+  - Added Async/Await abstraction
+    (http://www.thedelphigeek.com/2012/07/asyncawait-in-delphi.html).
+  - Added OnStop overload to Parallel.ForEach that accepts
+    'reference to procedure (const task: IOmniTask)'.
+  - Added OnStop overload to Parallel.Pipeline that accepts
+    'reference to procedure (const task: IOmniTask)'.
+  - Implemented TOmniValue.IsRecord.
+  - IOmniBackgroundWorker extended with task initializer (Initialize)
+    and task finalizer (Finalize).
+  - IOmniWorkItem extended with property TaskState.
+  - Inlined bunch of TOmniWorkItem methods.
+- Bug fixes:
+  - Parallel.Join was broken if number of task to be executed was larger
+    than number of threads. Thanks to [Passella] for reporting the problem.
+  - Invalid 'joinState' was passed to the worker task in Parallel.Join if
+    number of tasks to be executed was larger than the number of worker
+    threads. Thanks to [meishier] for reporting the problem.
+  - Fixed race condition in task teardown. Big thanks to [meishier] for
+    putting together a reproducible test case.
+  - ForEach finalizer is called if an exception occurs inside the ForEach task.
+  - OtlParallel added to packages. Thanks to [Mason Wheeler] for reporting the problem.
+  - OtlDataManager added to packages.
+  - Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored.
+    Thanks to [morlic] for reporting the problem.
+  - Workaround for an internal error in D2009. Thanks to [ToHugie] for reporting
+    the problem and to [Hallvard Vassbotn] for providing a fix.
+    http://code.google.com/p/omnithreadlibrary/issues/detail?id=29
+  - Fixed various scenarios where Invoke was not working. Thanks to [geskill]
+    for providing report, test case and incremental testing on my partial solutions.
+  - XE2 and XE3 design packages were referring to wrong runtime package (XE).
+  - TOmniEventMonitor is marked as 64-bit compliant in XE2+.
+    Thanks to [M.J. Brandt] for reporting a problem.
+- Other changes:
+  - Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
+- New examples:
+  - ForEach output: Demonstrates how to 'flow' ForEach output directly into
+    the main thread which immediately processes the data.
+  - Twofish: Parallel implementation of the FishFacts demo.
 
 3.01: 2012-04-21
 - New features:
@@ -57,7 +79,7 @@
     http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
   - TOmniValue.AsInteger, AsString and AsWideString now work if the
     TOmniValue contains a Variant of the apropriate type.
-  - TOmniValue can store arrays, hashes and records. Variant arrays are no 
+  - TOmniValue can store arrays, hashes and records. Variant arrays are no
     longer used. IsArray tests it TOmniValue contains an array and AsArray 
     returns this internal container. Default indexed property still accesses 
     individual elements in this container. See demo 50_OmniValueArray for an 
