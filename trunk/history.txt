@@ -36,6 +36,8 @@
     Thanks to [M.J. Brandt] for reporting a problem.
 - Other changes:
   - Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
+- New demos:
+  - 53_AsyncAwait: Demonstration of the new Async/Await abstraction.
 - New examples:
   - ForEach output: Demonstrates how to 'flow' ForEach output directly into
     the main thread which immediately processes the data.
