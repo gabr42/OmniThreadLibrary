@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-10-01
-///   Version           : 1.31j
+///   Last modification : 2012-10-03
+///   Version           : 1.31k
 ///</para><para>
 ///   History:
+///     1.31k: 2012-10-03
+///       - Fixed message processing.
 ///     1.31j: 2012-10-01
 ///       - Refactored TOmniTaskExecutor.DispatchEvent a bit more.
 ///     1.31i: 2012-09-27
