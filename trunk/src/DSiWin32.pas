@@ -8,9 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
    Last modification : 2012-06-12
-   Version           : 1.70b
+   Version           : 1.71
 </pre>*)(*
    History:
+     1.71: 2012-10-19
+       - Defined type DSiNativeInt and DSiNativeUInt which map to integer/cardinal on
+         Delphi XE and older.
+       - Fixed invalid casting in DSiAllocateHWnd.
+       - All internal DEFINEs were renamed with 'DSi' prefix.
      1.70b: 2012-06-12
        - DSiEnumFiles* will also enumerate hidden folders if attributes contain faHidden flag.
      1.70a: 2012-05-22
@@ -411,37 +416,37 @@ interface
 {$IFDEF OSX}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF OSX}
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
-{$DEFINE NeedUTF}{$UNDEF NeedVariants}{$DEFINE NeedStartupInfo}
-{$DEFINE NeedFileCtrl}
-{$DEFINE NeedRawByteString}
+{$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
+{$DEFINE DSiNeedFileCtrl}
+{$DEFINE DSiNeedRawByteString}
 {$IFDEF ConditionalExpressions}
-  {$UNDEF NeedUTF}{$DEFINE NeedVariants}{$UNDEF NeedStartupInfo}
-  {$IF RTLVersion >= 18}{$UNDEF NeedFileCtrl}{$IFEND}
-  {$IF CompilerVersion >= 23}{$DEFINE ScopedUnitNames}{$IFEND}
-  {$IF CompilerVersion >= 20}{$DEFINE HasAnonymousFunctions}{$IFEND}
-  {$IF CompilerVersion < 18.5}{$DEFINE NeedULONGEtc}{$IFEND}
+  {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}
+  {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
+  {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$IFEND}
+  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
+  {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
 {$ENDIF}
-{$IFDEF Unicode}{$UNDEF NeedRawByteString}{$ENDIF}
+{$IFDEF Unicode}{$UNDEF DSiNeedRawByteString}{$ENDIF}
 
 uses
-  {$IFDEF ScopedUnitNames}Winapi.Windows{$ELSE}Windows{$ENDIF},
-  {$IFDEF ScopedUnitNames}Winapi.Messages{$ELSE}Messages{$ENDIF},
-  {$IFDEF NeedVariants}
-  {$IFDEF ScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.Windows{$ELSE}Windows{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.Messages{$ELSE}Messages{$ENDIF},
+  {$IFDEF DSiNeedVariants}
+  {$IFDEF DSiScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
   {$ENDIF}
-  {$IFDEF NeedFileCtrl}
+  {$IFDEF DSiNeedFileCtrl}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
-  {$ENDIF NeedFileCtrl}
-  {$IFDEF ScopedUnitNames}
+  {$ENDIF DSiNeedFileCtrl}
+  {$IFDEF DSiScopedUnitNames}
   System.UITypes,
   {$ENDIF}
-  {$IFDEF ScopedUnitNames}System.SysUtils{$ELSE}SysUtils{$ENDIF},
-  {$IFDEF ScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
-  {$IFDEF ScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
-  {$IFDEF ScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
-  {$IFDEF ScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
-  {$IFDEF ScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
-  {$IFDEF ScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF};
+  {$IFDEF DSiScopedUnitNames}System.SysUtils{$ELSE}SysUtils{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF};
 
 const
   // pretty wrappers
@@ -563,11 +568,19 @@ const
   SE_GROUP_ENABLED = $00000004;
 
 type
-  {$IFDEF NeedULONGEtc}
+  {$IFDEF DSiNeedULONGEtc}
     ULONG_PTR = Cardinal;
     {$EXTERNALSYM ULONG_PTR}
     ULONGLONG = UInt64;
-    {$EXTERNALSYM ULONGLONG}  
+    {$EXTERNALSYM ULONGLONG}
+  {$ENDIF}
+  {$IFDEF DSiHasSafeNativeInt}
+  DSiNativeInt = NativeInt;
+  DSiNativeUInt = NativeUInt;
+  {$ELSE}
+  {$IFDEF CPUX64}! Implementation error{$ENDIF}
+  DSiNativeInt = integer;
+  DSiNativeUInt = cardinal;
   {$ENDIF}
 
   // API types not defined in Delphi 5
@@ -644,19 +657,19 @@ type
   SC_HANDLE = THandle;
 
   // DSiEnumFiles callback
-  TDSiEnumFilesCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+  TDSiEnumFilesCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
     procedure(const longFileName: string)
-    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
+    {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
   // DSiEnumFilesEx callback
-  TDSiEnumFilesExCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+  TDSiEnumFilesExCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
     procedure(const folder: string; S: TSearchRec;
     isAFolder: boolean; var stopEnum: boolean)
-    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
+    {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
 
   // DSiExecuteAndCapture callback
-  TDSiOnNewLineCallback = {$IFDEF HasAnonymousFunctions}reference to{$ENDIF}
+  TDSiOnNewLineCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
     procedure(const line: string; var runningTimeLeft_sec: integer)
-    {$IFNDEF HasAnonymousFunctions}of object{$ENDIF};
+    {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
 
   TDSiFileTime = (ftCreation, ftLastAccess, ftLastModification);
 
@@ -692,9 +705,9 @@ const
   KEY_WOW64_64KEY = $0100;
 
 type
-  {$IFDEF NeedRawByteString}
+  {$IFDEF DSiNeedRawByteString}
   RawByteString = AnsiString;
-  {$ENDIF NeedRawByteString}
+  {$ENDIF DSiNeedRawByteString}
 
   TDSiRegistry = class(TRegistry)
   public
@@ -1072,7 +1085,7 @@ type
   {$EXTERNALSYM OSVERSIONINFOEX}
   OSVERSIONINFOEX = OSVERSIONINFOEXA;
 
-  {$IFNDEF NeedStartupInfo}
+  {$IFNDEF DSiNeedStartupInfo}
   _STARTUPINFOW = record
     cb: DWORD;
     lpReserved: PWideChar;
@@ -1096,7 +1109,7 @@ type
   TStartupInfoW = _STARTUPINFOW;
   PStartupInfoW = ^TStartupInfoW;
   TStartupInfoA = TStartupInfo;
-  {$ENDIF NeedStartupInfo}
+  {$ENDIF DSiNeedStartupInfo}
 
   _LOGICAL_PROCESSOR_RELATIONSHIP = (RelationProcessorCore{ = 0}, RelationNumaNode{ = 1}, RelationCache{ = 2}, RelationProcessorPackage{ = 3}, RelationGroup{ = 4}, RelationAll = $FFFF);
   {$EXTERNALSYM _LOGICAL_PROCESSOR_RELATIONSHIP}
@@ -1426,7 +1439,7 @@ type
 
 { Helpers }
 
-{$IFDEF NeedUTF}
+{$IFDEF DSiNeedUTF}
 // UTF <-> 16-bit conversion. Same signature as D7 functions but custom implementation
 // (taken from http://gp.17slon.com/gp/gptextstream.htm with permission).
 
@@ -1436,7 +1449,7 @@ type
 
 function UTF8Encode(const ws: WideString): UTF8String;
 function UTF8Decode(const sUtf: UTF8String): WideString;
-{$ENDIF NeedUTF}
+{$ENDIF DSiNeedUTF}
 
 { internals used in inline functions }
 
@@ -1629,7 +1642,7 @@ const
     Result := (dum = 0);
   end; { FileOpenSafe }
 
-{$IFDEF NeedUTF}
+{$IFDEF DSiNeedUTF}
   {:Convers buffer of WideChars into UTF-8 encoded form. Target buffer must be
     pre-allocated and large enough (each WideChar will use at most three bytes
     in UTF-8 encoding).                                                            <br>
@@ -1764,7 +1777,7 @@ const
         div SizeOf(WideChar));
     end;
   end; { UTF8Decode }
-{$ENDIF NeedUTF}
+{$ENDIF DSiNeedUTF}
 
 { Handles }
 
@@ -4182,8 +4195,8 @@ const
   }        
   function DSiGetProcessAffinityMask: DWORD;
   var
-    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
-    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    processAffinityMask: DSiNativeUInt;
+    systemAffinityMask : DSiNativeUInt;
   begin
     if not DSiIsWinNT then
       Result := 1
@@ -4403,8 +4416,8 @@ const
   }
   function DSiGetSystemAffinityMask: DWORD;
   var
-    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
-    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    processAffinityMask: DSiNativeUInt;
+    systemAffinityMask : DSiNativeUInt;
   begin
     if not DSiIsWinNT then
       Result := 1
@@ -4433,8 +4446,8 @@ const
   }
   function DSiGetThreadAffinityMask: DWORD;
   var
-    processAffinityMask: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
-    systemAffinityMask : {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    processAffinityMask: DSiNativeUInt;
+    systemAffinityMask : DSiNativeUInt;
   begin
     if not DSiIsWinNT then
       Result := 1
@@ -4536,8 +4549,8 @@ const
   function DSiIncrementWorkingSet(incMinSize, incMaxSize: integer): boolean;
   var
     hProcess         : THandle;
-    maxWorkingSetSize: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
-    minWorkingSetSize: {$IF CompilerVersion >= 23}NativeUInt{$ELSE}Cardinal{$IFEND};
+    maxWorkingSetSize: DSiNativeUInt;
+    minWorkingSetSize: DSiNativeUInt;
   begin
     Result := false;
     hProcess := OpenProcess(PROCESS_QUERY_INFORMATION OR PROCESS_SET_QUOTA, false,
@@ -5102,12 +5115,12 @@ var
       alreadyRegistered := GetClassInfo(HInstance, CDSiHiddenWindowName, tempClass);
       if (not alreadyRegistered) or (tempClass.lpfnWndProc <> @DSiClassWndProc) then begin
         if alreadyRegistered then
-          {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
+          {$IFDEF DSiScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
         utilWindowClass.lpszClassName := CDSiHiddenWindowName;
         utilWindowClass.hInstance := HInstance;
         utilWindowClass.lpfnWndProc := @DSiClassWndProc;
         utilWindowClass.cbWndExtra := SizeOf(TMethod);
-        if {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.RegisterClass(utilWindowClass) = 0 then
+        if {$IFDEF DSiScopedUnitNames}Winapi.{$ENDIF}Windows.RegisterClass(utilWindowClass) = 0 then
           raise Exception.CreateFmt('Unable to register DSiWin32 hidden window class. %s',
             [SysErrorMessage(GetLastError)]);
       end;
@@ -5120,8 +5133,8 @@ var
       SetWindowLongPtr(Result, GWL_METHODDATA, NativeInt(TMethod(wndProcMethod).Data));
       SetWindowLongPtr(Result, GWL_METHODCODE, NativeInt(TMethod(wndProcMethod).Code));
       {$ELSE}
-      SetWindowLong(Result, GWL_METHODDATA, cardinal(TMethod(wndProcMethod).Data));
-      SetWindowLong(Result, GWL_METHODCODE, cardinal(TMethod(wndProcMethod).Code));
+      SetWindowLong(Result, GWL_METHODDATA, DSiNativeInt(TMethod(wndProcMethod).Data));
+      SetWindowLong(Result, GWL_METHODCODE, DSiNativeInt(TMethod(wndProcMethod).Code));
       {$ENDIF ~CPUX64}
       Inc(GDSiWndHandlerCount);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
@@ -5141,7 +5154,7 @@ var
     try
       Dec(GDSiWndHandlerCount);
       if GDSiWndHandlerCount <= 0 then
-        {$IFDEF ScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
+        {$IFDEF DSiScopedUnitNames}Winapi.{$ENDIF}Windows.UnregisterClass(CDSiHiddenWindowName, HInstance);
     finally LeaveCriticalSection(GDSiWndHandlerCritSect); end;
   end; { DSiDeallocateHWnd }
 
@@ -5729,10 +5742,10 @@ var
       idxEndFragment := idxStartFragment + Length(sHtml);
       idxEndHtml := idxEndFragment + Length(CHTMLExtro);
       description := CVersion +
-        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartHTML, idxStartHtml]) + #13#10 +
-        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndHTML, idxEndHtml]) + #13#10 +
-        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartFragment, idxStartFragment]) + #13#10 +
-        {$IFDEF ScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndFragment, idxEndFragment]) + #13#10;
+        {$IFDEF DSiScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartHTML, idxStartHtml]) + #13#10 +
+        {$IFDEF DSiScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndHTML, idxEndHtml]) + #13#10 +
+        {$IFDEF DSiScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CStartFragment, idxStartFragment]) + #13#10 +
+        {$IFDEF DSiScopedUnitNames}System.{$ENDIF}SysUtils.Format('%s%.8d', [CEndFragment, idxEndFragment]) + #13#10;
       Result := description + CHTMLIntro + sHtml + CHTMLExtro;
     end; { MakeFragment }
 
