@@ -2,30 +2,44 @@ unit ReportGeneratorEngine;
 
 interface
 
+uses
+  Classes;
+
 type
   IReportGenerator = interface;
 
   IReportInfo = interface ['{CDF09A38-11B0-4571-8908-AA5486D94A9A}']
     function GetClientName: string;
-    function GetReportDelay: integer;
+    function GetReportDelay_ms: integer;
     function GetReportName: string;
     function GetWorkerThread: cardinal;
   //
     property ClientName: string read GetClientName;
     property ReportName: string read GetReportName;
-    property ReportDelay: integer read GetReportDelay;
+    property ReportDelay_ms: integer read GetReportDelay_ms;
     property WorkerThread: cardinal read GetWorkerThread;
   end;
 
-  TReportGeneratorRequestDone = reference to procedure(Sender: IReportGenerator;
+  TReportGeneratorWorkerEvent = reference to procedure(Sender: IReportGenerator;
+    const clientName: string);
+
+  TReportGeneratorRequestDoneEvent = reference to procedure(Sender: IReportGenerator;
     const reportInfo: IReportInfo);
 
   IReportGenerator = interface
-    function  GetOnRequestDone_Asy: TReportGeneratorRequestDone;
-    procedure SetOnRequestDone_Asy(const value: TReportGeneratorRequestDone);
+    function  GetOnCreateWorker: TReportGeneratorWorkerEvent;
+    function  GetOnDestroyWorker: TReportGeneratorWorkerEvent;
+    function  GetOnRequestDone_Asy: TReportGeneratorRequestDoneEvent;
+    procedure SetOnCreateWorker(const value: TReportGeneratorWorkerEvent);
+    procedure SetOnDestroyWorker(const value: TReportGeneratorWorkerEvent);
+    procedure SetOnRequestDone_Asy(const value: TReportGeneratorRequestDoneEvent);
   //
-    procedure Schedule(const clientName, reportName: string; reportDelay: integer);
-    property OnRequestDone_Asy: TReportGeneratorRequestDone read GetOnRequestDone_Asy
+    procedure Schedule(const clientName, reportName: string; reportDelay_ms: integer);
+    property OnCreateWorker: TReportGeneratorWorkerEvent read GetOnCreateWorker
+      write SetOnCreateWorker;
+    property OnDestroyWorker: TReportGeneratorWorkerEvent read GetOnDestroyWorker
+      write SetOnDestroyWorker;
+    property OnRequestDone_Asy: TReportGeneratorRequestDoneEvent read GetOnRequestDone_Asy
       write SetOnRequestDone_Asy;
   end;
 
@@ -48,20 +62,20 @@ type
 
   TReportInfo = class(TInterfacedObject, IReportInfo, IReportInfoEx)
   strict private
-    FClientName  : string;
-    FReportDelay : integer;
-    FReportName  : string;
-    FWorkerThread: cardinal;
+    FClientName    : string;
+    FReportDelay_ms: integer;
+    FReportName    : string;
+    FWorkerThread  : cardinal;
   strict protected
     function  GetClientName: string;
-    function  GetReportDelay: integer;
+    function  GetReportDelay_ms: integer;
     function  GetReportName: string;
     function  GetWorkerThread: cardinal;
     procedure SetWorkerThread(value: cardinal);
   public
-    constructor Create(const clientName, reportName: string; reportDelay: integer);
+    constructor Create(const clientName, reportName: string; reportDelay_ms: integer);
     property ClientName: string read GetClientName;
-    property ReportDelay: integer read GetReportDelay;
+    property ReportDelay_ms: integer read GetReportDelay_ms;
     property ReportName: string read GetReportName;
     property WorkerThread: cardinal read GetWorkerThread;
   end;
@@ -73,23 +87,32 @@ type
 
   TReportGenerator = class(TInterfacedObject, IReportGenerator)
   strict private
+    FDestroyList      : TStringList;
     FLock             : TOmniCS;
-    FOnRequestDone_Asy: TReportGeneratorRequestDone;
+    FOnCreateWorker   : TReportGeneratorWorkerEvent;
+    FOnDestroyWorker  : TReportGeneratorWorkerEvent;
+    FOnRequestDone_Asy: TReportGeneratorRequestDoneEvent;
     FWorkerDict       : TDictionary<string,TReportWorkerInfo>;
   strict protected
+    function  GetOnCreateWorker: TReportGeneratorWorkerEvent;
+    function  GetOnDestroyWorker: TReportGeneratorWorkerEvent;
+    function  GetOnRequestDone_Asy: TReportGeneratorRequestDoneEvent;
+    procedure SetOnCreateWorker(const value: TReportGeneratorWorkerEvent);
+    procedure SetOnDestroyWorker(const value: TReportGeneratorWorkerEvent);
+    procedure SetOnRequestDone_Asy(const value: TReportGeneratorRequestDoneEvent);
+  strict protected
     procedure GenerateReport(const workItem: IOmniWorkItem);
-    function  GetOnRequestDone_Asy: TReportGeneratorRequestDone;
     function  AcquireWorker(const clientName: string): IOmniBackgroundWorker;
+    procedure ProcessDestroyList(const scheduledClient: string);
     procedure RequestDone_Asy(const Sender: IOmniBackgroundWorker; const workItem: IOmniWorkItem);
-    procedure Schedule(const clientName, reportName: string; reportDelay: integer);
-    procedure SetOnRequestDone_Asy(const value: TReportGeneratorRequestDone);
-    property OnRequestDone_Asy: TReportGeneratorRequestDone read GetOnRequestDone_Asy
-      write SetOnRequestDone_Asy;
+    procedure Schedule(const clientName, reportName: string; reportDelay_ms: integer);
   public
     constructor Create;
     destructor  Destroy; override;
     procedure ReleaseWorker_Asy(const clientName: string);
   end;
+
+{ exports }
 
 function CreateReportGenerator: IReportGenerator;
 begin
@@ -98,13 +121,13 @@ end;
 
 { TReportInfo }
 
-constructor TReportInfo.Create(const clientName, reportName: string; reportDelay:
-  integer);
+constructor TReportInfo.Create(const clientName, reportName: string;
+  reportDelay_ms: integer);
 begin
   inherited Create;
   FClientName := clientName;
   FReportName := reportName;
-  FReportDelay := reportDelay;
+  FReportDelay_ms := reportDelay_ms;
 end;
 
 function TReportInfo.GetClientName: string;
@@ -112,9 +135,9 @@ begin
   Result := FClientName;
 end;
 
-function TReportInfo.GetReportDelay: integer;
+function TReportInfo.GetReportDelay_ms: integer;
 begin
-  Result := FReportDelay;
+  Result := FReportDelay_ms;
 end;
 
 function TReportInfo.GetReportName: string;
@@ -138,11 +161,13 @@ constructor TReportGenerator.Create;
 begin
   inherited;
   FWorkerDict := TDictionary<string,TReportWorkerInfo>.Create;
+  FDestroyList := TStringList.Create;
   GlobalParallelPool.MaxExecuting := -1; //unlimited tasks
 end;
 
 destructor TReportGenerator.Destroy;
 begin
+  FreeAndNil(FDestroyList);
   FreeAndNil(FWorkerDict);
   inherited;
 end;
@@ -153,13 +178,13 @@ var
 begin
   reportInfo := workItem.Data.AsInterface as IReportInfo;
   // Simulate heavy work
-  Sleep(reportInfo.ReportDelay);
+  Sleep(reportInfo.ReportDelay_ms);
   // Return result
   (reportInfo as IReportInfoEx).SetWorkerThread(GetCurrentThreadID);
   workItem.Result := reportInfo;
 end;
 
-function TReportGenerator.GetOnRequestDone_Asy: TReportGeneratorRequestDone;
+function TReportGenerator.GetOnRequestDone_Asy: TReportGeneratorRequestDoneEvent;
 begin
   Result := FOnRequestDone_Asy;
 end;
@@ -177,10 +202,44 @@ begin
           .Execute(GenerateReport);
       workerInfo.WorkItemCount := CreateCounter(0);
       FWorkerDict.Add(clientName, workerInfo);
+      if assigned(FOnCreateWorker) then
+        FOnCreateWorker(Self, clientName);
     end;
     workerInfo.WorkItemCount.Increment;
+    ProcessDestroyList(clientName);
     Result := workerInfo.Worker;
   finally FLock.Release; end;
+end;
+
+function TReportGenerator.GetOnCreateWorker: TReportGeneratorWorkerEvent;
+begin
+  Result := FOnCreateWorker;
+end;
+
+function TReportGenerator.GetOnDestroyWorker: TReportGeneratorWorkerEvent;
+begin
+  Result := FOnDestroyWorker;
+end;
+
+procedure TReportGenerator.ProcessDestroyList(const scheduledClient: string);
+var
+  clientName: string;
+  workerInfo: TReportWorkerInfo;
+begin
+  // This methods is only called when FLock is acquired
+  // 'ScheduledClient' contains name of the client being scheduled which must not be destroyed
+  for clientName in FDestroyList do begin
+    if clientName = scheduledClient then
+      continue;
+    workerInfo := FWorkerDict[clientName];
+    workerInfo.Worker.Terminate(INFINITE);
+    workerInfo.Worker := nil;
+    workerInfo.WorkItemCount := nil;
+    FWorkerDict.Remove(clientName);
+    if assigned(FOnDestroyWorker) then
+      FOnDestroyWorker(Self, clientName);
+  end;
+  FDestroyList.Clear;
 end;
 
 procedure TReportGenerator.ReleaseWorker_Asy(const clientName: string);
@@ -190,12 +249,8 @@ begin
   FLock.Acquire;
   try
     workerInfo := FWorkerDict[clientName];
-    if workerInfo.WorkItemCount.Decrement = 0 then begin
-      workerInfo.Worker.Terminate(INFINITE);
-      workerInfo.Worker := nil;
-      workerInfo.WorkItemCount := nil;
-      FWorkerDict.Remove(clientName);
-    end;
+    if workerInfo.WorkItemCount.Decrement = 0 then
+      FDestroyList.Add(clientName);
   finally FLock.Release; end;
 end;
 
@@ -211,15 +266,27 @@ begin
 end;
 
 procedure TReportGenerator.Schedule(const clientName, reportName: string;
-  reportDelay: integer);
+  reportDelay_ms: integer);
 var
+  data  : IReportInfo;
   worker: IOmniBackgroundWorker;
 begin
   worker := AcquireWorker(clientName);
-  worker.Schedule(worker.CreateWorkItem(TReportInfo.Create(clientName, reportName, reportDelay)));
+  data := TReportInfo.Create(clientName, reportName, reportDelay_ms);
+  worker.Schedule(worker.CreateWorkItem(data));
 end;
 
-procedure TReportGenerator.SetOnRequestDone_Asy(const value: TReportGeneratorRequestDone);
+procedure TReportGenerator.SetOnCreateWorker(const value: TReportGeneratorWorkerEvent);
+begin
+  FOnCreateWorker := value;
+end;
+
+procedure TReportGenerator.SetOnDestroyWorker(const value: TReportGeneratorWorkerEvent);
+begin
+  FOnDestroyWorker := value;
+end;
+
+procedure TReportGenerator.SetOnRequestDone_Asy(const value: TReportGeneratorRequestDoneEvent);
 begin
   FOnRequestDone_Asy := value;
 end;

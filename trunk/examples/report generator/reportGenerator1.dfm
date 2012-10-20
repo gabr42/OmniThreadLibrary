@@ -3,7 +3,7 @@ object frmReportGenerator: TfrmReportGenerator
   Top = 0
   Caption = 'Report Generator'
   ClientHeight = 337
-  ClientWidth = 635
+  ClientWidth = 710
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -25,11 +25,18 @@ object frmReportGenerator: TfrmReportGenerator
   object lbLog: TListBox
     Left = 89
     Top = 0
-    Width = 546
+    Width = 621
     Height = 337
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 1
+    ExplicitWidth = 546
+  end
+  object SimulatorTimer: TTimer
+    Enabled = False
+    OnTimer = SimulatorTimerTimer
+    Left = 24
+    Top = 288
   end
 end

@@ -1,6 +1,7 @@
 program ReportGenerator;
 
 uses
+  FastMM4,
   Vcl.Forms,
   reportGenerator1 in 'reportGenerator1.pas' {frmReportGenerator},
   ReportGeneratorEngine in 'ReportGeneratorEngine.pas';
