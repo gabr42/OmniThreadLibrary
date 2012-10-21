@@ -33,6 +33,16 @@ object frmReportGenerator: TfrmReportGenerator
     ItemHeight = 13
     TabOrder = 1
   end
+  object btnStop: TButton
+    Left = 8
+    Top = 39
+    Width = 75
+    Height = 25
+    Caption = 'Stop'
+    Enabled = False
+    TabOrder = 2
+    OnClick = btnStopClick
+  end
   object SimulatorTimer: TTimer
     Enabled = False
     OnTimer = SimulatorTimerTimer

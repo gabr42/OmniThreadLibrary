@@ -1,5 +1,7 @@
 unit reportGenerator1;
 
+// Solution to the problem at http://otl.17slon.com/forum/index.php/topic,472.0.html.
+
 interface
 
 uses
@@ -15,8 +17,10 @@ type
     btnStart: TButton;
     lbLog: TListBox;
     SimulatorTimer: TTimer;
+    btnStop: TButton;
     procedure btnStartClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure btnStopClick(Sender: TObject);
     procedure SimulatorTimerTimer(Sender: TObject);
   private
     FReportGenerator: IReportGenerator;
@@ -24,6 +28,7 @@ type
     FSimulationStart: TDateTime;
     function Elapsed: string;
     procedure StartSimulator;
+    procedure StopSimulator;
     procedure WMReportDone(var msg: TMessage); message WM_REPORT_DONE;
   public
   end;
@@ -71,7 +76,18 @@ begin
         PostMessage(frmReportGenerator.Handle, WM_REPORT_DONE, WParam(reportInfo), 0);
       end;
   end;
+  btnStart.Enabled := false;
+  btnStop.Enabled := true;
   StartSimulator;
+end;
+
+procedure TfrmReportGenerator.btnStopClick(Sender: TObject);
+begin
+  StopSimulator;
+  FReportGenerator.Stop;
+  FReportGenerator := nil;
+  btnStart.Enabled := true;
+  btnStop.Enabled := false;
 end;
 
 procedure TfrmReportGenerator.WMReportDone(var msg: TMessage);
@@ -86,7 +102,10 @@ end;
 
 procedure TfrmReportGenerator.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  FReportGenerator := nil;
+  if assigned(FReportGenerator) then begin
+    FReportGenerator.OnRequestDone_Asy := nil;
+    btnStopClick(nil);
+  end;
   CanClose := true;
 end;
 
@@ -127,6 +146,11 @@ begin
   FSimulationStart := Now;
   SimulatorTimer.Interval := 1;
   SimulatorTimer.Enabled := true;
+end;
+
+procedure TfrmReportGenerator.StopSimulator;
+begin
+  SimulatorTimer.Enabled := false;
 end;
 
 end.
