@@ -35,6 +35,7 @@ type
     procedure SetOnRequestDone_Asy(const value: TReportGeneratorRequestDoneEvent);
   //
     procedure Schedule(const clientName, reportName: string; reportDelay_ms: integer);
+    procedure Stop;
     property OnCreateWorker: TReportGeneratorWorkerEvent read GetOnCreateWorker
       write SetOnCreateWorker;
     property OnDestroyWorker: TReportGeneratorWorkerEvent read GetOnDestroyWorker
@@ -104,12 +105,13 @@ type
     procedure GenerateReport(const workItem: IOmniWorkItem);
     function  AcquireWorker(const clientName: string): IOmniBackgroundWorker;
     procedure ProcessDestroyList(const scheduledClient: string);
+    procedure ReleaseWorker_Asy(const clientName: string);
     procedure RequestDone_Asy(const Sender: IOmniBackgroundWorker; const workItem: IOmniWorkItem);
-    procedure Schedule(const clientName, reportName: string; reportDelay_ms: integer);
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure ReleaseWorker_Asy(const clientName: string);
+    procedure Schedule(const clientName, reportName: string; reportDelay_ms: integer);
+    procedure Stop;
   end;
 
 { exports }
@@ -166,14 +168,8 @@ begin
 end;
 
 destructor TReportGenerator.Destroy;
-var
-  dictItem: TPair<string,TReportWorkerInfo>;
 begin
-  FOnRequestDone_Asy := nil;
-  for dictItem in FWorkerDict do // tell all workers to stop
-    dictItem.Value.Worker.Terminate(0);
-  for dictItem in FWorkerDict do // wait for all workers to stop
-    dictItem.Value.Worker.Terminate(INFINITE);
+  Stop;
   FreeAndNil(FDestroyList);
   FreeAndNil(FWorkerDict);
   inherited;
@@ -296,6 +292,16 @@ end;
 procedure TReportGenerator.SetOnRequestDone_Asy(const value: TReportGeneratorRequestDoneEvent);
 begin
   FOnRequestDone_Asy := value;
+end;
+
+procedure TReportGenerator.Stop;
+var
+  dictItem: TPair<string,TReportWorkerInfo>;
+begin
+  for dictItem in FWorkerDict do // tell all workers to stop
+    dictItem.Value.Worker.Terminate(0);
+  for dictItem in FWorkerDict do // wait for all workers to stop
+    dictItem.Value.Worker.Terminate(INFINITE);
 end;
 
 end.
