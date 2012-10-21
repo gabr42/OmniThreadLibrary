@@ -11,6 +11,7 @@ object frmReportGenerator: TfrmReportGenerator
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCloseQuery = FormCloseQuery
   PixelsPerInch = 96
   TextHeight = 13
   object btnStart: TButton
@@ -31,7 +32,6 @@ object frmReportGenerator: TfrmReportGenerator
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 1
-    ExplicitWidth = 546
   end
   object SimulatorTimer: TTimer
     Enabled = False

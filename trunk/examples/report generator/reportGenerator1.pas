@@ -16,12 +16,15 @@ type
     lbLog: TListBox;
     SimulatorTimer: TTimer;
     procedure btnStartClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure SimulatorTimerTimer(Sender: TObject);
   private
-    FScriptLine: integer;
     FReportGenerator: IReportGenerator;
-    procedure WMReportDone(var msg: TMessage); message WM_REPORT_DONE;
+    FScriptLine: integer;
+    FSimulationStart: TDateTime;
+    function Elapsed: string;
     procedure StartSimulator;
+    procedure WMReportDone(var msg: TMessage); message WM_REPORT_DONE;
   public
   end;
 
@@ -54,12 +57,12 @@ begin
     FReportGenerator.OnCreateWorker :=
       procedure(Sender: IReportGenerator; const clientName: string)
       begin
-        lbLog.Items.Add('Created worker for ' + clientName);
+        lbLog.Items.Add(Elapsed + 'Created worker for ' + clientName);
       end;
     FReportGenerator.OnDestroyWorker :=
       procedure(Sender: IReportGenerator; const clientName: string)
       begin
-        lbLog.Items.Add('Destroyed worker for ' + clientName);
+        lbLog.Items.Add(Elapsed + 'Destroyed worker for ' + clientName);
       end;
     FReportGenerator.OnRequestDone_Asy :=
       procedure(Sender: IReportGenerator; const reportInfo: IReportInfo)
@@ -77,8 +80,19 @@ var
 begin
   reportInfo := IReportInfo(msg.WParam);
   reportInfo._Release;
-  lbLog.Items.Add(Format('Completed report %s for client %s; worker thread %d',
+  lbLog.Items.Add(Format(Elapsed + 'Completed report %s for client %s; worker thread %d',
     [reportInfo.ReportName, reportInfo.ClientName, reportInfo.WorkerThread]));
+end;
+
+procedure TfrmReportGenerator.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  FReportGenerator := nil;
+  CanClose := true;
+end;
+
+function TfrmReportGenerator.Elapsed: string;
+begin
+  Result := Format('[T+%d] ', [Trunc((Now - FSimulationStart) * SecsPerDay)]);
 end;
 
 procedure TfrmReportGenerator.SimulatorTimerTimer(Sender: TObject);
@@ -95,7 +109,7 @@ begin
   report := CScript[FScriptLine];           Inc(FScriptLine);
   delay  := StrToInt(CScript[FScriptLine]); Inc(FScriptLine);
   desc   := CScript[FScriptLine];           Inc(FScriptLine);
-  lbLog.Items.Add('*** ' + desc);
+  lbLog.Items.Add(Elapsed + '*** ' + desc);
   if cmd = 'S' then
     SimulatorTimer.Interval := delay * 1000
   else if cmd = 'R' then begin
@@ -104,12 +118,13 @@ begin
   end;
   SimulatorTimer.Enabled := (FScriptLine < High(CScript));
   if not SimulatorTimer.Enabled then
-    lbLog.Items.Add('*** Simulation completed');
+    lbLog.Items.Add(Elapsed + '*** Simulation completed');
 end;
 
 procedure TfrmReportGenerator.StartSimulator;
 begin
   FScriptLine := 1;
+  FSimulationStart := Now;
   SimulatorTimer.Interval := 1;
   SimulatorTimer.Enabled := true;
 end;
