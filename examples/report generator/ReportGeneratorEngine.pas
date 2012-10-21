@@ -166,7 +166,14 @@ begin
 end;
 
 destructor TReportGenerator.Destroy;
+var
+  dictItem: TPair<string,TReportWorkerInfo>;
 begin
+  FOnRequestDone_Asy := nil;
+  for dictItem in FWorkerDict do // tell all workers to stop
+    dictItem.Value.Worker.Terminate(0);
+  for dictItem in FWorkerDict do // wait for all workers to stop
+    dictItem.Value.Worker.Terminate(INFINITE);
   FreeAndNil(FDestroyList);
   FreeAndNil(FWorkerDict);
   inherited;
