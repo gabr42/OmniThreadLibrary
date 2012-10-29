@@ -242,7 +242,7 @@ type
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
-  	procedure SetAsDateTime(value: TDateTime); inline;
+    procedure SetAsDateTime(value: TDateTime); inline;
     procedure SetAsException(value: Exception);
     procedure SetAsExtended(value: Extended);
     procedure SetAsInt64(const value: int64); inline;
@@ -256,8 +256,8 @@ type
     procedure SetAsWideString(const value: WideString);
   private
     {$REGION 'Documentation'}
-    ///	<summary>Most of the code in this method never executes. It is just here so that
-    ///	stupid "Private symbol 'GetAsArrayItem' declared but never used" compilation hint
+    ///  <summary>Most of the code in this method never executes. It is just here so that
+    ///  stupid "Private symbol 'GetAsArrayItem' declared but never used" compilation hint
     /// is not shown.</summary>
     {$ENDREGION}
     class procedure _RemoveWarnings; inline; static;
@@ -276,7 +276,7 @@ type
     function  IsEmpty: boolean; inline;
     function  IsException: boolean; inline;
     function  IsFloating: boolean; inline;
-  	function  IsDateTime: boolean; inline;
+    function  IsDateTime: boolean; inline;
     function  IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
@@ -324,7 +324,7 @@ type
     property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
     property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
     property AsDouble: Double read GetAsDouble write SetAsDouble;
-  	property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
+    property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
     property AsException: Exception read GetAsException write SetAsException;
     property AsExtended: Extended read GetAsExtended write SetAsExtended;
     property AsInt64: int64 read GetAsInt64 write SetAsInt64;
@@ -353,7 +353,7 @@ type
   {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
 
-  ///	<summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
+  ///  <summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
   TOmniValueObj = class
   strict private
     FValue: TOmniValue;
