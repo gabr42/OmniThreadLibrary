@@ -3,8 +3,7 @@ unit test_0_Beep;
 interface
 
 uses
-  Windows, SysUtils,
-  Classes, Controls, StdCtrls, Forms,
+  Windows, SysUtils, Classes, Controls, StdCtrls, Forms,
   OtlTask,
   OtlTaskControl;
 

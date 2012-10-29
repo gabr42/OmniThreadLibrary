@@ -1,6 +1,6 @@
 object frmTestSimple: TfrmTestSimple
-  Left = 0
-  Top = 0
+  Left = 388
+  Top = 174
   Caption = 'Simple test'
   ClientHeight = 77
   ClientWidth = 286
