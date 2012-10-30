@@ -1,12 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{6816e8eb-15a6-454d-bed9-acdc2a3c66c0}</ProjectGuid>
+    <ProjectGuid>{62a09cb7-66f2-4473-9e39-dc38aafaaceb}</ProjectGuid>
+    <MainSource>app_30_AnonymousEventMonitor.dpr</MainSource>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-    <DCC_DependencyCheckOutputName>app_28_Hooks.exe</DCC_DependencyCheckOutputName>
-    <MainSource>app_28_Hooks.dpr</MainSource>
+    <DCC_DependencyCheckOutputName>app_30_AnonymousEventMonitor.exe</DCC_DependencyCheckOutputName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Version>7.0</Version>
@@ -17,18 +16,17 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_Define>DEBUG;FullDebugMode</DCC_Define>
+    <DCC_Define>DEBUG</DCC_Define>
     <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
     <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
     <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
     <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
-    <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
-    <Borland.ProjectType />
+    <Borland.ProjectType>VCLApplication</Borland.ProjectType>
     <BorlandProject>
-<BorlandProject> <Delphi.Personality>   <Parameters>
+<BorlandProject xmlns=""> <Delphi.Personality>   <Parameters>
       <Parameters Name="UseLauncher">False</Parameters>
       <Parameters Name="LoadAllSymbols">True</Parameters>
       <Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
@@ -60,27 +58,28 @@
       <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
       <VersionInfoKeys Name="Comments"></VersionInfoKeys>
     </VersionInfoKeys>
-    <Excluded_Packages>
-      <Excluded_Packages Name="$(BDS)\bin\dcloffice2k100.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-      <Excluded_Packages Name="$(BDS)\bin\dclofficexp100.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-    </Excluded_Packages>
     <Source>
-      <Source Name="MainSource">app_28_Hooks.dpr</Source>
+      <Source Name="MainSource">app_30_AnonymousEventMonitor.dpr</Source>
     </Source>
   </Delphi.Personality> </BorlandProject></BorlandProject>
   </ProjectExtensions>
-  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
+  <ItemGroup />
   <ItemGroup>
-    <DelphiCompile Include="app_28_Hooks.dpr">
+    <DelphiCompile Include="app_30_AnonymousEventMonitor.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
     <RcCompile Include="..\..\res\MainIcon.rc">
       <ContainerId>RC</ContainerId>
       <Form>MainIcon.res</Form>
     </RcCompile>
-    <DCCReference Include="..\..\OtlHooks.pas" />
-    <DCCReference Include="test_28_Hooks.pas">
-      <Form>frmHooksDemo</Form>
+    <DCCReference Include="..\..\OtlComm.pas" />
+    <DCCReference Include="..\..\OtlCommon.pas" />
+    <DCCReference Include="..\..\OtlEventMonitor.pas" />
+    <DCCReference Include="..\..\OtlTask.pas" />
+    <DCCReference Include="..\..\OtlThreadPool.pas" />
+    <DCCReference Include="test_30_AnonymousEventMonitor.pas">
+      <Form>frmImplicitEventMonitor</Form>
     </DCCReference>
   </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
 </Project>
