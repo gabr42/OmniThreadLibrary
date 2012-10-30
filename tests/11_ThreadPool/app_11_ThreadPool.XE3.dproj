@@ -52,6 +52,7 @@
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1060</VerInfo_Locale>
+        <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_DependencyCheckOutputName>app_11_ThreadPool.exe</DCC_DependencyCheckOutputName>
@@ -78,11 +79,9 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <Version>7.0</Version>
+        <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_UnitSearchPath>P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ResourcePath)</DCC_ResourcePath>
-        <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ObjPath)</DCC_ObjPath>
-        <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_IncludePath)</DCC_IncludePath>
         <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
         <DCC_RangeChecking>True</DCC_RangeChecking>
         <DCC_Optimize>False</DCC_Optimize>
