@@ -3,6 +3,7 @@
 			<ProjectGuid>{B072AE72-EEE2-4D37-8B02-6B1DC62134E7}</ProjectGuid>
 			<MainSource>app_53_AsyncAwait.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

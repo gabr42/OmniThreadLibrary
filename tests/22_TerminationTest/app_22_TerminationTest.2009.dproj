@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{2e2efbe3-4baf-4014-9764-82a1f961aae9}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_22_TerminationTest.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_22_TerminationTest.dpr</MainSource>

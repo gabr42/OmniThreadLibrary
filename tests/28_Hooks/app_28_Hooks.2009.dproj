@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{6816e8eb-15a6-454d-bed9-acdc2a3c66c0}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_28_Hooks.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_28_Hooks.dpr</MainSource>

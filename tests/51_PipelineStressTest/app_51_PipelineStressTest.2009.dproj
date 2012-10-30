@@ -3,6 +3,7 @@
 			<ProjectGuid>{AC101E17-2945-4F41-AEA9-09B26C0469B8}</ProjectGuid>
 			<MainSource>app_51_PipelineStressTest.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

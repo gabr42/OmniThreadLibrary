@@ -3,6 +3,7 @@
 			<ProjectGuid>{CF14FD3A-8F97-4F62-A9BC-3F7014377396}</ProjectGuid>
 			<MainSource>app_38_OrderedFor.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

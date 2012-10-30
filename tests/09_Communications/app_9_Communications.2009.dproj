@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{5b4d7e19-e450-42a2-a0c7-e85a59fc3f8f}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_9_Communications.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_9_Communications.dpr</MainSource>
