@@ -3,6 +3,7 @@
 			<ProjectGuid>{B1CCC96E-5C93-44CD-B82C-8F81B742FF69}</ProjectGuid>
 			<MainSource>app_44_ForkJoinQuickSort.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

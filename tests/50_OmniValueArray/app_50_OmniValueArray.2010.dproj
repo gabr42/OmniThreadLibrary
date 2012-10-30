@@ -3,6 +3,7 @@
 			<ProjectGuid>{B22AC51A-B8D1-4D09-8639-4414405DF72B}</ProjectGuid>
 			<MainSource>app_50_OmniValueArray.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

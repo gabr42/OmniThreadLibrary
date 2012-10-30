@@ -3,6 +3,7 @@
 			<ProjectGuid>{8C56974A-3033-4917-8D58-290B0F6EB447}</ProjectGuid>
 			<MainSource>app_30_AnonymousEventMonitor.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

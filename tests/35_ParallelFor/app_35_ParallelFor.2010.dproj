@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{f44a99d0-e906-45dd-aa0e-e3529584ff1a}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_35_ParallelFor.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_35_ParallelFor.dpr</MainSource>

@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{fa850e77-a35b-422d-bccc-90b7e21b0b62}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_25_WaitableComm.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_25_WaitableComm.dpr</MainSource>
