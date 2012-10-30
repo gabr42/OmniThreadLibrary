@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{93d636ca-48af-403e-86c8-18801722fbcb}</ProjectGuid>
     <MainSource>app_42_MessageQueue.dpr</MainSource>
@@ -38,6 +38,10 @@
     <DelphiCompile Include="app_42_MessageQueue.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <RcCompile Include="..\..\res\MainIcon.rc">
+      <ContainerId>RC</ContainerId>
+      <Form>MainIcon.res</Form>
+    </RcCompile>
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="test_42_MessageQueue.pas">

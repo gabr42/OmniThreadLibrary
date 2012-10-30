@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{68905DC6-1CE6-455C-BF70-BFEC4AAF12A3}</ProjectGuid>
 			<MainSource>app_43_InvokeAnonymous.dpr</MainSource>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_43_InvokeAnonymous.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_43_InvokeAnonymous.pas">
 				<Form>frmInvokeAnonymousDemo</Form>
 			</DCCReference>

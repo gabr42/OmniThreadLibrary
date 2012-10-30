@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{2C00C3D0-0EA6-481F-B359-89E0765883C8}</ProjectGuid>
         <MainSource>app_52_BackgroundWorker.dpr</MainSource>
@@ -78,6 +78,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_52_BackgroundWorker.pas">
             <Form>Form16</Form>
         </DCCReference>

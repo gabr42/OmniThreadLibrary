@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{6e127b4c-3b7b-4761-bb2f-00ec67a5c497}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -91,6 +91,10 @@
 			<DelphiCompile Include="app_41_Pipeline.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_41_Pipeline.pas">
 				<Form>frmPipelineDemo</Form>
 			</DCCReference>

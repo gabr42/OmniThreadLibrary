@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{AAD8A589-4AEE-4D18-ADE6-D82218AEC90F}</ProjectGuid>
 			<MainSource>app_39_Futures.dpr</MainSource>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_39_Futures.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_39_Futures.pas">
 				<Form>frmFuturesDemo</Form>
 			</DCCReference>

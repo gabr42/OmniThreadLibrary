@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{B1CCC96E-5C93-44CD-B82C-8F81B742FF69}</ProjectGuid>
 			<MainSource>app_44_ForkJoinQuickSort.dpr</MainSource>
@@ -44,6 +44,10 @@
 			<DelphiCompile Include="app_44_ForkJoinQuickSort.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_44_ForkJoinQuickSort.pas">
 				<Form>frmQuickSortDemo</Form>
 			</DCCReference>

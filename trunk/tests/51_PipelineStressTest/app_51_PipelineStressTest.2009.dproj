@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{AC101E17-2945-4F41-AEA9-09B26C0469B8}</ProjectGuid>
 			<MainSource>app_51_PipelineStressTest.dpr</MainSource>
@@ -44,6 +44,10 @@
 			<DelphiCompile Include="app_51_PipelineStressTest.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_51_PipelineStressTest.pas">
 				<Form>frmPipelineStressTest</Form>
 			</DCCReference>

@@ -1,10 +1,10 @@
-program app_53_AsyncAwait;
+program app_53_AsyncAwait.XE3;
+
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
 
 uses
   Forms,
   test_53_AsyncAwait in 'test_53_AsyncAwait.pas' {frmAsyncAwaitTest};
-
-{$R *.res}
 
 begin
   Application.Initialize;

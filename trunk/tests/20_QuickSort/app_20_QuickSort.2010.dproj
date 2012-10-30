@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
 			<MainSource>app_20_QuickSort.dpr</MainSource>
@@ -56,6 +56,10 @@
 			<DelphiCompile Include="app_20_QuickSort.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_20_QuickSort.pas">
 				<Form>frmQuickSortDemo</Form>
 			</DCCReference>

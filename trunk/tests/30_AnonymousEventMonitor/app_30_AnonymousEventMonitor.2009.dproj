@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{8C56974A-3033-4917-8D58-290B0F6EB447}</ProjectGuid>
 			<MainSource>app_30_AnonymousEventMonitor.dpr</MainSource>
@@ -44,6 +44,10 @@
 			<DelphiCompile Include="app_30_AnonymousEventMonitor.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_30_AnonymousEventMonitor.pas">
 				<Form>frmAnonymousEventMonitorDemo</Form>
 			</DCCReference>

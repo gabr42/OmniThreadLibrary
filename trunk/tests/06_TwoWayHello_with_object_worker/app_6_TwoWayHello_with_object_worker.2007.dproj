@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
@@ -214,11 +214,11 @@
     <DelphiCompile Include="app_6_TwoWayHello_with_object_worker.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..\..\OtlComm.pas">
-      <Form>;
-
-{$R *.res</Form>
-    </DCCReference>
+    <RcCompile Include="..\..\res\MainIcon.rc">
+      <ContainerId>RC</ContainerId>
+      <Form>MainIcon.res</Form>
+    </RcCompile>
+    <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />

@@ -1,5 +1,7 @@
 program app_44_ForkJoinQuickSort.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -8,8 +10,6 @@ uses
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
   OtlComm in '..\..\OtlComm.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;

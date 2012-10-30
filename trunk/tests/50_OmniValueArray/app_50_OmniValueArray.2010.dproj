@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{B22AC51A-B8D1-4D09-8639-4414405DF72B}</ProjectGuid>
 			<MainSource>app_50_OmniValueArray.dpr</MainSource>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_50_OmniValueArray.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_50_OmniValueArray.pas">
 				<Form>frmOmniValueArray</Form>
 			</DCCReference>

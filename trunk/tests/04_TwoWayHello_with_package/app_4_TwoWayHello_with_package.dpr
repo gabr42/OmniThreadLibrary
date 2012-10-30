@@ -1,5 +1,7 @@
 program app_4_TwoWayHello_with_package.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -7,11 +9,7 @@ uses
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
-  OtlComm in '..\..\OtlComm.pas' {;
-
-{$R *.res};
-
-{$R *.res}
+  OtlComm in '..\..\OtlComm.pas';
 
 begin
   Application.Initialize;

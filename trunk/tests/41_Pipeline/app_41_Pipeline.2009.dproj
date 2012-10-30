@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{0DFD113F-C411-43C9-8BF8-A6E4BE051A28}</ProjectGuid>
 			<MainSource>app_41_Pipeline.dpr</MainSource>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_41_Pipeline.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_41_Pipeline.pas">
 				<Form>frmPipelineDemo</Form>
 			</DCCReference>

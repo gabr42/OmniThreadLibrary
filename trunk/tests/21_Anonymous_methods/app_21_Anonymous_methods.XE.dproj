@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{C8897778-B0D1-4895-BFC2-92688BA0FB5B}</ProjectGuid>
 			<ProjectVersion>12.3</ProjectVersion>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_21_Anonymous_methods.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_21_Anonymous_methods.pas">
 				<Form>frmAnonymousMethodsDemo</Form>
 			</DCCReference>

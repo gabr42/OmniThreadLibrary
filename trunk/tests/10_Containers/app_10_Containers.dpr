@@ -1,5 +1,7 @@
 program app_10_Containers.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -7,8 +9,6 @@ uses
   test_10_Containers in 'test_10_Containers.pas' {frmTestOtlContainers},
   OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;

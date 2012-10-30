@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
@@ -326,15 +326,15 @@
     <DelphiCompile Include="app_7_InitTest.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <RcCompile Include="..\..\res\MainIcon.rc">
+      <ContainerId>RC</ContainerId>
+      <Form>MainIcon.res</Form>
+    </RcCompile>
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlContainers.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />
-    <DCCReference Include="..\..\OtlTaskControl.pas">
-      <Form>;
-
-{$R *.res</Form>
-    </DCCReference>
+    <DCCReference Include="..\..\OtlTaskControl.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
     <DCCReference Include="test_7_InitTest.pas">
       <Form>frmTestInit</Form>

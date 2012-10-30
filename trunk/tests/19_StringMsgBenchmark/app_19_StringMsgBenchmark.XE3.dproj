@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{04B47B46-FE63-4918-9F7C-6B1D12BB3BF2}</ProjectGuid>
         <MainSource>app_19_StringMsgBenchmark.dpr</MainSource>
@@ -97,6 +97,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_19_StringMsgBenchmark.pas">
             <Form>frmTestStringMsgBenchmark</Form>
         </DCCReference>

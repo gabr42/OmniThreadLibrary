@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{7E4B4B45-CF9A-4DC7-8750-59BB66B3B549}</ProjectGuid>
         <MainSource>app_18_StringMsgDispatch.dpr</MainSource>
@@ -107,6 +107,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_18_StringMsgDispatch.pas">
             <Form>frmTestStringMsgDispatch</Form>
         </DCCReference>

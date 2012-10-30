@@ -1,5 +1,7 @@
 program app_1_HelloWorld.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -17,8 +19,6 @@ uses
   OtlCommBufferTest in '..\..\OtlCommBufferTest.pas',
   OtlEventMonitor in '..\..\OtlEventMonitor.pas',
   OtlTaskControl in '..\..\OtlTaskControl.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;
