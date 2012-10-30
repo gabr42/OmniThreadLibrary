@@ -40,7 +40,6 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <DCC_UsePackage>fmx;IndySystem;DBXInterBaseDriver;DbxCommonDriver;dbxcds;CustomIPTransport;dsnap;IndyCore;fmxase;inetdbxpress;IPIndyImpl;bindcompfmx;rtl;dbrtl;DbxClientDriver;bindcomp;inetdb;xmlrtl;IndyProtocols;DBXMySQLDriver;soaprtl;bindengine;inet;fmxobj;fmxdae;dbexpress;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
