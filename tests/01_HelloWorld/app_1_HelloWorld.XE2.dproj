@@ -50,7 +50,6 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_DcuOutput>..\..\DCU\$(Platform)\$(Config)</DCC_DcuOutput>
-			<Icon_MainIcon>app_1_HelloWorld.XE2_Icon.ico</Icon_MainIcon>
 			<Manifest_File>None</Manifest_File>
 			<DCC_ExeOutput>..\..\Bin\$(Platform)\$(Config)</DCC_ExeOutput>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
@@ -63,12 +62,10 @@
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
 			<DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1033</VerInfo_Locale>
-			<Icon_MainIcon>app_1_HelloWorld.XE2_Icon.ico</Icon_MainIcon>
 			<Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win32)'!=''">
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-			<Icon_MainIcon>app_1_HelloWorld.XE2_Icon.ico</Icon_MainIcon>
 			<DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 			<Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
