@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{910a1420-3637-406d-a20c-182b99f04d2c}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_33_BlockingCollection.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_33_BlockingCollection.dpr</MainSource>

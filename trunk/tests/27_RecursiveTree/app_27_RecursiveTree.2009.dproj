@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{80bd6232-7385-4d88-9fd1-b73ede6a974f}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_27_RecursiveTree.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_27_RecursiveTree.dpr</MainSource>

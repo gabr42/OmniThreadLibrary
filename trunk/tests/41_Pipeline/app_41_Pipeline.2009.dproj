@@ -3,6 +3,7 @@
 			<ProjectGuid>{0DFD113F-C411-43C9-8BF8-A6E4BE051A28}</ProjectGuid>
 			<MainSource>app_41_Pipeline.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

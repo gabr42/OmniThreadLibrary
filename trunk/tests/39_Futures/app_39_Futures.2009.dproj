@@ -3,6 +3,7 @@
 			<ProjectGuid>{AAD8A589-4AEE-4D18-ADE6-D82218AEC90F}</ProjectGuid>
 			<MainSource>app_39_Futures.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

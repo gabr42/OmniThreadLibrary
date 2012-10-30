@@ -2,6 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{EC7B207F-EB79-4226-ABE9-DAB62E572D40}</ProjectGuid>
 			<MainSource>app_48_OtlParallelExceptions.dpr</MainSource>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<ProjectVersion>12.3</ProjectVersion>
 			<Base>True</Base>
 			<Config Condition="'$(Config)'==''">Debug</Config>

@@ -3,6 +3,7 @@
 			<ProjectGuid>{B3B2603F-E6B8-4DE4-A952-ACF71BC54B20}</ProjectGuid>
 			<ProjectVersion>12.0</ProjectVersion>
 			<MainSource>app_36_ParallelAggregate.dpr</MainSource>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 		</PropertyGroup>

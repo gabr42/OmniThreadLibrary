@@ -3,6 +3,7 @@
 			<ProjectGuid>{68905DC6-1CE6-455C-BF70-BFEC4AAF12A3}</ProjectGuid>
 			<MainSource>app_43_InvokeAnonymous.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

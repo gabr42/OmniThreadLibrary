@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{857dd6ad-bb1f-404e-9bcd-7634a9450ce9}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_17_MsgWait.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_17_MsgWait.dpr</MainSource>
