@@ -3,6 +3,7 @@
 			<ProjectGuid>{405D1D80-B910-427B-87B3-F9E8CA16AC9E}</ProjectGuid>
 			<MainSource>app_52_BackgroundWorker.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>

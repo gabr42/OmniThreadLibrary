@@ -2,7 +2,7 @@
 		<PropertyGroup>
 			<ProjectGuid>{a8e9e1cf-932c-47cd-a688-afd148b0bd75}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-			<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<DCC_DependencyCheckOutputName>app_49_FramedWorkers.exe</DCC_DependencyCheckOutputName>
 			<MainSource>app_49_FramedWorkers.dpr</MainSource>
