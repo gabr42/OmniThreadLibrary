@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{c10e0077-08eb-4dfe-b490-7dab371d7416}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -146,7 +146,7 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<Form>MainIcon.res</Form>
+				<Form>..\..\res\MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_24_ConnectionPool.pas">
 				<Form>frmConnectionPoolDemo</Form>

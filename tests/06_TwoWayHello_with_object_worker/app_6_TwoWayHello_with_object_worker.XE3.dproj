@@ -97,7 +97,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <RcCompile Include="..\..\res\MainIcon.rc">
-            <Form>MainIcon.res</Form>
+            <Form>..\..\res\MainIcon.res</Form>
         </RcCompile>
         <DCCReference Include="test_6_TwoWayHello_with_object_worker.pas">
             <Form>frmTestTwoWayHello</Form>

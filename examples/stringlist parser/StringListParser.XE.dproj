@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{4395C5E8-ED17-4FA4-A0A9-1AB0D4F139EA}</ProjectGuid>
 			<MainSource>StringListParser.dpr</MainSource>
@@ -40,7 +40,7 @@
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
-			<DCC_UnitSearchPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;h:\razvoj\omnithreadlibrary\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

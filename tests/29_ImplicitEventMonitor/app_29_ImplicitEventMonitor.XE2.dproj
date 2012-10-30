@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{11BDE39C-7323-49F6-B8D0-6B2B5380C760}</ProjectGuid>
 			<MainSource>app_29_ImplicitEventMonitor.dpr</MainSource>
@@ -81,7 +81,7 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<Form>MainIcon.res</Form>
+				<Form>..\..\res\MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_29_ImplicitEventMonitor.pas">
 				<Form>frmImplicitEventMonitor</Form>
