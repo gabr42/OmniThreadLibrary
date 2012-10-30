@@ -20,7 +20,8 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;h:\razvoj\omnithreadlibrary\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_30_AnonymousEventMonitor.exe</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>

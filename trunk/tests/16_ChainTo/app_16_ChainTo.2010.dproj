@@ -28,6 +28,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_16_ChainTo.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
@@ -41,10 +42,8 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\src;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_Optimize>False</DCC_Optimize>
@@ -53,10 +52,8 @@
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;x:\mstpl\gp;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\src;x:\mstpl\gp;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;x:\mstpl\gp;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;x:\mstpl\gp;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>

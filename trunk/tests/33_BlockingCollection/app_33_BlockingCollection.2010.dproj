@@ -29,19 +29,15 @@
 			<Version>7.0</Version>
 			<DCC_SymbolReferenceInfo>2</DCC_SymbolReferenceInfo>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm4;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;ShowThreadNames;$(DCC_Define)</DCC_Define>
+			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;x:\common\src;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
