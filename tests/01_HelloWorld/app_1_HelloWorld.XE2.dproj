@@ -1,4 +1,4 @@
-	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
 			<MainSource>app_1_HelloWorld.dpr</MainSource>
