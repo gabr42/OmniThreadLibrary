@@ -57,7 +57,7 @@
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<Manifest_File>None</Manifest_File>
 			<DCC_ExeOutput>..\..\Lib\XE2\$(Platform)\$(Config)</DCC_ExeOutput>
-			<DCC_UnitSearchPath>..\..;..\..\fastmm4;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\fastmm;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<VerInfo_Locale>1060</VerInfo_Locale>

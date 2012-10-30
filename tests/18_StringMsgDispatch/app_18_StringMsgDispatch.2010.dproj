@@ -24,7 +24,7 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_18_StringMsgDispatch.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -49,10 +49,10 @@
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;$(DCC_IncludePath)</DCC_IncludePath>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm;$(DCC_ResourcePath)</DCC_ResourcePath>
+			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm;$(DCC_ObjPath)</DCC_ObjPath>
+			<DCC_IncludePath>..\..;..\..\src;..\..\fastmm;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="app_18_StringMsgDispatch.dpr">
