@@ -33,14 +33,14 @@
 			<Version>7.0</Version>
 			<DCC_SymbolReferenceInfo>2</DCC_SymbolReferenceInfo>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
-			<DCC_DcuOutput>..\..\Lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;ShowThreadNames;$(DCC_Define)</DCC_Define>
-			<DCC_DcuOutput>..\..\Lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;x:\common\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_RangeChecking>True</DCC_RangeChecking>

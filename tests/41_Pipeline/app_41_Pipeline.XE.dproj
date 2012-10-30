@@ -38,7 +38,7 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
 			<DCC_MapFile>3</DCC_MapFile>
-			<DCC_DcuOutput>..\..\Lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>

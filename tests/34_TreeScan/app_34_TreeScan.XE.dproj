@@ -39,7 +39,7 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
-			<DCC_DcuOutput>..\..\Lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
