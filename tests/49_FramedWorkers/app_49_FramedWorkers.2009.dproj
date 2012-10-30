@@ -23,6 +23,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_DcuOutput>..\..\Lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_49_FramedWorkers.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
@@ -36,10 +37,8 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-			<DCC_UnitSearchPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src;$(DCC_IncludePath)</DCC_IncludePath>
+			<DCC_DcuOutput>..\..\Lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 		</PropertyGroup>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
