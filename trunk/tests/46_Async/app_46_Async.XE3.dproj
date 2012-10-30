@@ -65,6 +65,7 @@
         <DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
         <DCC_Optimize>false</DCC_Optimize>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
+        <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_UnitSearchPath>..\..;..\..\fastmm4;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
