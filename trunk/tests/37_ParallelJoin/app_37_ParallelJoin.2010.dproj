@@ -4,6 +4,7 @@
 			<ProjectVersion>12.3</ProjectVersion>
 			<MainSource>app_37_ParallelJoin.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<Base>True</Base>
 			<Platform>Win32</Platform>
