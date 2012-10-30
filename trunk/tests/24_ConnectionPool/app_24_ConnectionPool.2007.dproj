@@ -17,10 +17,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG;FullDebugMode</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm</DCC_IncludePath>
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_RangeChecking>True</DCC_RangeChecking>
   </PropertyGroup>

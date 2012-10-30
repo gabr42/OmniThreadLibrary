@@ -47,7 +47,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1060</VerInfo_Locale>
         <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DependencyCheckOutputName>app_25_WaitableComm.exe</DCC_DependencyCheckOutputName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
@@ -73,9 +73,9 @@
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <Version>7.0</Version>
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-        <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm4;$(DCC_ResourcePath)</DCC_ResourcePath>
-        <DCC_ObjPath>..\..;..\..\src;..\..\fastmm4;$(DCC_ObjPath)</DCC_ObjPath>
-        <DCC_IncludePath>..\..;..\..\src;..\..\fastmm4;$(DCC_IncludePath)</DCC_IncludePath>
+        <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm;$(DCC_ResourcePath)</DCC_ResourcePath>
+        <DCC_ObjPath>..\..;..\..\src;..\..\fastmm;$(DCC_ObjPath)</DCC_ObjPath>
+        <DCC_IncludePath>..\..;..\..\src;..\..\fastmm;$(DCC_IncludePath)</DCC_IncludePath>
         <DCC_Optimize>False</DCC_Optimize>
         <DCC_RangeChecking>True</DCC_RangeChecking>
     </PropertyGroup>

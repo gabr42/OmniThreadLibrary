@@ -17,10 +17,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\fastmm4;..\..\src</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\fastmm4;..\..\src</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\fastmm4;..\..\src</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\fastmm4;..\..\src</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\fastmm;..\..\src</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\fastmm;..\..\src</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\fastmm;..\..\src</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\fastmm;..\..\src</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
