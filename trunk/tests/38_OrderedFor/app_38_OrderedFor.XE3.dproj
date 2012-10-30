@@ -80,7 +80,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <RcCompile Include="..\..\res\MainIcon.rc">
-            <Form>MainIcon.res</Form>
+            <Form>..\..\res\MainIcon.res</Form>
         </RcCompile>
         <DCCReference Include="test_38_OrderedFor.pas">
             <Form>frmOderedForDemo</Form>

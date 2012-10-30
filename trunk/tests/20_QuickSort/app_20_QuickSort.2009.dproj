@@ -57,7 +57,7 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<Form>MainIcon.res</Form>
+				<Form>..\..\res\MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_20_QuickSort.pas">
 				<Form>frmQuickSortDemo</Form>

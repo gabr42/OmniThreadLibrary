@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{910a1420-3637-406d-a20c-182b99f04d2c}</ProjectGuid>
 			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -140,7 +140,7 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<Form>MainIcon.res</Form>
+				<Form>..\..\res\MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_32_Queue.pas">
 				<Form>frmTestOmniQueue</Form>

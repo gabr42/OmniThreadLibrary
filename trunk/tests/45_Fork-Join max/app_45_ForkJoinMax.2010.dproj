@@ -47,7 +47,7 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<Form>MainIcon.res</Form>
+				<Form>..\..\res\MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_45_ForkJoinMax.pas">
 				<Form>frmQuickSortDemo</Form>
