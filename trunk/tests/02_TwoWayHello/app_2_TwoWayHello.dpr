@@ -6,6 +6,7 @@ uses
   FastMM4,
   Forms,
   test_2_TwoWayHello in 'test_2_TwoWayHello.pas' {frmTestTwoWayHello},
+  DSiWin32 in '..\..\src\DSiWin32.pas',
   OtlCommon in '..\..\OtlCommon.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',

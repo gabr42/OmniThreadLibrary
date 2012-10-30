@@ -3,12 +3,13 @@ unit test_3_HelloWorld_with_package;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ActnList,
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  StdCtrls, ActnList,
   OtlCommon,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor, OtlComm;
+  OtlEventMonitor,
+  OtlComm;
 
 type
   TfrmTestHelloWorld = class(TForm)
