@@ -35,7 +35,7 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
-			<DCC_DcuOutput>..\..\Lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm;$(DCC_ObjPath)</DCC_ObjPath>

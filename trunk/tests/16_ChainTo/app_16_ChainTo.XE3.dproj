@@ -51,7 +51,7 @@
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1060</VerInfo_Locale>
-        <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DependencyCheckOutputName>app_16_ChainTo.exe</DCC_DependencyCheckOutputName>
     </PropertyGroup>
@@ -93,7 +93,7 @@
     <PropertyGroup Condition="'$(Cfg_3)'!=''">
         <Version>7.0</Version>
         <DCC_Optimize>False</DCC_Optimize>
-        <DCC_DcuOutput>..\..\Lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_RangeChecking>True</DCC_RangeChecking>
         <DCC_UnitSearchPath>x:\mstpl\gp;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>

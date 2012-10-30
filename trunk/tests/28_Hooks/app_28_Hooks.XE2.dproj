@@ -47,7 +47,7 @@
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<VerInfo_Locale>1060</VerInfo_Locale>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_DcuOutput>..\..\Lib\XE2\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\XE2\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_DependencyCheckOutputName>app_28_Hooks.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win64)'!=''">

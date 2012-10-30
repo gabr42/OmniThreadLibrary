@@ -23,7 +23,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_18_StringMsgDispatch.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
@@ -48,7 +48,7 @@
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-			<DCC_DcuOutput>..\..\Lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ResourcePath>..\..;..\..\src;..\..\fastmm;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>..\..;..\..\src;..\..\fastmm;$(DCC_ObjPath)</DCC_ObjPath>

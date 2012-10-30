@@ -18,9 +18,9 @@
     <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
     <DCC_Define>RELEASE</DCC_Define>
     <DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
-    <DCC_DcuOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
-    <DCC_ObjOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
-    <DCC_HppOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
+    <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
+    <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
     <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm</DCC_UnitSearchPath>
     <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
     <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
@@ -40,9 +40,9 @@
     <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
     <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
     <DCC_IncludePath>..\..;..\..\src;..\..\fastmm</DCC_IncludePath>
-    <DCC_DcuOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
-    <DCC_ObjOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
-    <DCC_HppOutput>..\..\Lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
+    <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
+    <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

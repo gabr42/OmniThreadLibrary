@@ -21,7 +21,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_DcuOutput>..\..\Lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_DcuOutput>..\..\lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_DependencyCheckOutputName>app_37_ParallelJoin.exe</DCC_DependencyCheckOutputName>
