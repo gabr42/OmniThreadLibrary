@@ -1,5 +1,7 @@
 program app_3_HelloWorld_with_package.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -13,8 +15,6 @@ uses
   GpStuff in '..\..\src\GpStuff.pas',
   HVStringBuilder in '..\..\src\HVStringBuilder.pas',
   HVStringData in '..\..\src\HVStringData.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;

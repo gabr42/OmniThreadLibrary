@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{9B686D01-24D4-480A-94BD-06A83A2440D4}</ProjectGuid>
         <ProjectVersion>14.3</ProjectVersion>
@@ -74,6 +74,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_40_Mandelbrot.pas">
             <Form>frmParallelMandelbrot</Form>
         </DCCReference>

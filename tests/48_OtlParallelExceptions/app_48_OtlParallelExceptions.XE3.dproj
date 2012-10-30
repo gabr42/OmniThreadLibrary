@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{EC7B207F-EB79-4226-ABE9-DAB62E572D40}</ProjectGuid>
         <MainSource>app_48_OtlParallelExceptions.dpr</MainSource>
@@ -79,6 +79,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_48_OtlParallelExceptions.pas">
             <Form>frmOtlParallelExceptions</Form>
         </DCCReference>

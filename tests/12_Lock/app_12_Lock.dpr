@@ -1,12 +1,12 @@
 program app_12_Lock.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   Forms,
   test_12_Lock in 'test_12_Lock.pas' {frmTestLock},
   OtlComm in '..\..\OtlComm.pas',
   OtlTaskControl in '..\..\OtlTaskControl.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;

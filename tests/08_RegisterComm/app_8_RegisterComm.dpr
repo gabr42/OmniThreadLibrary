@@ -1,5 +1,7 @@
 program app_8_RegisterComm.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
@@ -7,8 +9,6 @@ uses
   OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlSync in '..\..\OtlSync.pas';
-
-{$R *.res}
 
 begin
   Application.Initialize;

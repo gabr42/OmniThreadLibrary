@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{B3B2603F-E6B8-4DE4-A952-ACF71BC54B20}</ProjectGuid>
         <ProjectVersion>14.3</ProjectVersion>
@@ -73,6 +73,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_36_ParallelAggregate.pas">
             <Form>frmParallelAggregateDemo</Form>
         </DCCReference>

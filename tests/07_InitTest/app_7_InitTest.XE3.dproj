@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{B09926A7-024F-4533-9333-BF1C70B796BA}</ProjectGuid>
         <MainSource>app_7_InitTest.dpr</MainSource>
@@ -98,6 +98,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_7_InitTest.pas">
             <Form>frmTestInit</Form>
         </DCCReference>
@@ -106,11 +109,7 @@
         <DCCReference Include="..\..\OtlThreadPool.pas"/>
         <DCCReference Include="..\..\OtlComm.pas"/>
         <DCCReference Include="..\..\OtlContainers.pas"/>
-        <DCCReference Include="..\..\OtlTaskControl.pas">
-            <Form>;
-
-{$R *.res</Form>
-        </DCCReference>
+        <DCCReference Include="..\..\OtlTaskControl.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

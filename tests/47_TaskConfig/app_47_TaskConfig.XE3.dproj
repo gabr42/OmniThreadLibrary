@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{9AB2415B-427B-4B1A-A4C3-824AD2DE26BF}</ProjectGuid>
         <MainSource>app_47_TaskConfig.dpr</MainSource>
@@ -79,6 +79,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_47_TaskConfig.pas">
             <Form>frmDemoParallelTaskConfig</Form>
         </DCCReference>

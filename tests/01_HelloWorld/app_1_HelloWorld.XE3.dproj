@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{B0E2165F-D60D-4479-8485-3DA5AE9F4694}</ProjectGuid>
         <MainSource>app_1_HelloWorld.dpr</MainSource>
@@ -108,6 +108,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <RcCompile Include="..\..\res\MainIcon.rc">
+            <Form>MainIcon.res</Form>
+        </RcCompile>
         <DCCReference Include="test_1_HelloWorld.pas">
             <Form>frmTestHelloWorld</Form>
         </DCCReference>

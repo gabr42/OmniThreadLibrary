@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{8DA64B63-05E9-490C-993B-AC4346755C3C}</ProjectGuid>
 			<MainSource>app_53_AsyncAwait.dpr</MainSource>
@@ -44,6 +44,10 @@
 			<DelphiCompile Include="app_53_AsyncAwait.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_53_AsyncAwait.pas">
 				<Form>frmAsyncAwaitTest</Form>
 			</DCCReference>

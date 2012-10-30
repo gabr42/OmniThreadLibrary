@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
     <MainSource>app_3_HelloWorld_with_package.dpr</MainSource>
@@ -269,6 +269,9 @@
     <DelphiCompile Include="app_3_HelloWorld_with_package.dpr">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <RcCompile Include="..\..\res\MainIcon.rc">
+      <Form>MainIcon.res</Form>
+    </RcCompile>
     <DCCReference Include="..\..\OtlComm.pas" />
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlTask.pas" />

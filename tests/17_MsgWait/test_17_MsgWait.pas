@@ -3,12 +3,12 @@ unit test_17_MsgWait;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ActnList, StdCtrls,
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  ActnList, StdCtrls,
   OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor, System.Actions;
+  OtlEventMonitor;
 
 type
   TfrmTestMsgWait = class(TForm)

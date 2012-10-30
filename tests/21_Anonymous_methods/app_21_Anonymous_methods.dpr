@@ -1,10 +1,10 @@
 program app_21_Anonymous_methods.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   Forms,
   test_21_Anonymous_methods in 'test_21_Anonymous_methods.pas' {frmAnonymousMethodsDemo};
-
-{$R *.res}
 
 begin
   Application.Initialize;

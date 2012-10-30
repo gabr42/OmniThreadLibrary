@@ -1,11 +1,11 @@
 program app_27_RecursiveTree.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   FastMM4,
   Forms,
   test_27_RecursiveTree in 'test_27_RecursiveTree.pas' {frmRecursiveTreeDemo};
-
-{$R *.res}
 
 begin
   Application.Initialize;

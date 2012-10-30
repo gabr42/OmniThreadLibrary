@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{F2FB29F1-066A-494D-9277-8F4F6056937C}</ProjectGuid>
 			<MainSource>app_45_ForkJoinMax.dpr</MainSource>
@@ -43,6 +43,10 @@
 			<DelphiCompile Include="app_45_ForkJoinMax.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_45_ForkJoinMax.pas">
 				<Form>frmQuickSortDemo</Form>
 			</DCCReference>

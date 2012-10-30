@@ -1,10 +1,10 @@
 program app_47_TaskConfig.XE3;
 
+{$R 'MainIcon.res' '..\..\res\MainIcon.rc'}
+
 uses
   Forms,
   test_47_TaskConfig in 'test_47_TaskConfig.pas' {frmDemoParallelTaskConfig};
-
-{$R *.res}
 
 begin
   Application.Initialize;

@@ -63,7 +63,6 @@
 			</DelphiCompile>
 			<RcCompile Include="..\..\res\MainIcon.rc">
 				<ContainerId>RC</ContainerId>
-				<ContainerId>RC</ContainerId>
 				<Form>MainIcon.res</Form>
 			</RcCompile>
 			<DCCReference Include="test_0_Beep.pas">

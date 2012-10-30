@@ -1,4 +1,4 @@
-﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{57B9DF85-D94A-47BE-BDEF-74FA8FDBECC5}</ProjectGuid>
 			<MainSource>app_38_OrderedFor.dpr</MainSource>
@@ -49,6 +49,10 @@
 			<DelphiCompile Include="app_38_OrderedFor.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>MainIcon.res</Form>
+			</RcCompile>
 			<DCCReference Include="test_38_OrderedFor.pas">
 				<Form>frmOderedForDemo</Form>
 			</DCCReference>
