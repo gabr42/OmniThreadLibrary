@@ -128,6 +128,9 @@ uses
     {$DEFINE GpStuff_ValuesEnumerators}
     {$DEFINE GpStuff_Helpers}
   {$IFEND}
+  {$IF CompilerVersion >= 21} //D2010+
+    {$DEFINE GpStuff_NativeInt}
+  {$IFEND}
 {$ENDIF}
 
 const
@@ -301,7 +304,11 @@ procedure DontOptimize(var data);
 
 function FletcherChecksum(const buffer; size: integer): word;
 
+{$IFDEF GpStuff_NativeInt}
 function RoundUpTo(value: NativeInt; granularity: integer): NativeInt; overload;
+{$ELSE}
+function RoundUpTo(value: integer; granularity: integer): integer; overload;
+{$ENDIF GpStuff_NativeInt}
 function RoundUpTo(value: pointer; granularity: integer): pointer; overload;
 
 {$IFDEF GpStuff_ValuesEnumerators}
@@ -1215,7 +1222,11 @@ begin
   {$R+,Q+}
 end; { FletcherChecksum }
 
+{$IFDEF GpStuff_NativeInt}
 function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+{$ELSE}
+function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+{$ENDIF GpStuff_NativeInt}
 begin
   Result := (((value - 1) div granularity) + 1) * granularity;
 end;
