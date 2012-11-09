@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011 Primoz Gabrijelcic
+///Copyright (c) 2012 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2011-12-18
-///   Version           : 3.0
+///   Last modification : 2012-11-09
+///   Version           : 3.01
 ///</para><para>
 ///   History:
+///     3.01: 2012-11-09
+///       - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
+///         CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
 ///     3.0: 2011-12-19
 ///       - [GJ] Implemented 64-bit TOmni[Base]Bounded(Queue|Stack).
 ///       - Fixed TOmni[Base]Queue to work in 64-bit world.
@@ -338,7 +341,7 @@ end; { AsmPause }
 
 destructor TOmniBaseBoundedStack.Destroy;
 begin
-  FreeMem(obsPublicChainP);
+  FreeMem(obsDataBuffer);
   inherited;
 end; { TOmniBaseBoundedStack.Destroy }
 
@@ -358,6 +361,7 @@ procedure TOmniBaseBoundedStack.Initialize(numElements, elementSize: integer);
 var
   bufferElementSize : integer;
   currElement       : POmniLinkedData;
+  dataBuffer        : pointer;
   iElement          : integer;
   nextElement       : POmniLinkedData;
   roundedElementSize: integer;
@@ -372,16 +376,17 @@ begin
   //calculate buffer element size, round up to next aligned value
   bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
-  GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr));
-  if NativeInt(obsDataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
+  GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
+  dataBuffer := pointer((((NativeInt(obsDataBuffer)-1) div CASAlignment) + 1) * CASAlignment);  
+  if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
-  obsPublicChainP := obsDataBuffer;
-  inc(NativeInt(obsDataBuffer), SizeOf(TReferencedPtr));
-  obsRecycleChainP := obsDataBuffer;
-  inc(NativeInt(obsDataBuffer), SizeOf(TReferencedPtr));
+  obsPublicChainP := dataBuffer;
+  inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
+  obsRecycleChainP := dataBuffer;
+  inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
   //Format buffer to recycleChain, init obsRecycleChain and obsPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
-  obsRecycleChainP^.PData := obsDataBuffer;
+  obsRecycleChainP^.PData := dataBuffer;
   currElement := obsRecycleChainP^.PData;
   for iElement := 0 to obsNumElements - 2 do begin
     nextElement := POmniLinkedData(NativeInt(currElement) + bufferElementSize);
@@ -634,6 +639,7 @@ end; { TOmniBaseBoundedQueue.Enqueue }
 
 procedure TOmniBaseBoundedQueue.Initialize(numElements, elementSize: integer);
 var
+  dataBuffer        : pointer;
   n                 : integer;
   ringBufferSize    : cardinal;
   roundedElementSize: integer;
@@ -647,6 +653,7 @@ begin
   roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
   GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize);
+  dataBuffer := pointer((((NativeInt(obqDataBuffer)-1) div CASAlignment) + 1) * CASAlignment);    
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
@@ -668,7 +675,7 @@ begin
   obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
   // format obqRecycleRingBuffer
   for n := 0 to numElements do
-    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(obqDataBuffer) + NativeInt(n * roundedElementSize));
+    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(dataBuffer) + NativeInt(n * roundedElementSize));
   MeasureExecutionTimes;
 end; { TOmniBaseBoundedQueue.Initialize }
 
