@@ -2,6 +2,10 @@ Problems ([alex]):
  app_23: [Fatal Error] F2084 Internal Error: BC3472
  app_26_MultiEventMonitor.XE2: 'System Error. Code: 1816. Not enough quota is available to process this command'
 
+- TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
+  CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
+  [tnx to Aleksadr Aleksejev]
+
 3.02: 2012-10-03
 - New features:
   - Compiles with XE3.

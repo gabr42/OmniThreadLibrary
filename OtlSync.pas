@@ -268,6 +268,7 @@ function GetCPUTimeStamp: int64;
 
 var
   GOmniCancellationToken: IOmniCancellationToken;
+  CASAlignment: integer; //required alignment for the CAS function - 8 or 16, depending on the platform
 
 implementation
 
@@ -958,4 +959,9 @@ end; { Locked<T>.Release }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
+  {$IFDEF CPUX64}
+  CASAlignment := 16;
+  {$ELSE}
+  CASAlignment := 8;
+  {$ENDIF CPUX64}
 end.
