@@ -38,6 +38,7 @@
 ///     3.01: 2012-11-09
 ///       - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
 ///         CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
+///       - TOmniBaseBoundedQueue's ring buffers are internally aligned to 2*SizeOf(pointer).
 ///     3.0: 2011-12-19
 ///       - [GJ] Implemented 64-bit TOmni[Base]Bounded(Queue|Stack).
 ///       - Fixed TOmni[Base]Queue to work in 64-bit world.
@@ -205,7 +206,9 @@ type
     obqElementSize      : integer;
     obqNumElements      : integer;
     obqPublicRingBuffer : POmniRingBuffer;
+    obqPublicRingMem    : pointer;
     obqRecycleRingBuffer: POmniRingBuffer;
+    obqRecycleRingMem   : pointer;
   class var
     class var obqIsInitialized  : boolean;
     class var obqTaskInsertLoops: NativeInt;             //default is false
@@ -377,7 +380,7 @@ begin
   bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
-  dataBuffer := pointer((((NativeInt(obsDataBuffer)-1) div CASAlignment) + 1) * CASAlignment);  
+  dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
   if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
   obsPublicChainP := dataBuffer;
@@ -595,8 +598,8 @@ end; { TOmniBoundedStack.Push }
 destructor TOmniBaseBoundedQueue.Destroy;
 begin
   FreeMem(obqDataBuffer);
-  FreeMem(obqPublicRingBuffer);
-  FreeMem(obqRecycleRingBuffer);
+  FreeMem(obqPublicRingMem);
+  FreeMem(obqRecycleRingMem);
   inherited;
 end; { TOmniBaseBoundedQueue.Destroy }
 
@@ -652,17 +655,19 @@ begin
   // calculate element size, round up to next aligned value
   roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
-  GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize);
-  dataBuffer := pointer((((NativeInt(obqDataBuffer)-1) div CASAlignment) + 1) * CASAlignment);    
+  GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize + CASAlignment);
+  dataBuffer := RoundUpTo(obqDataBuffer, CASAlignment);
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
-  obqPublicRingBuffer := AllocMem(ringBufferSize);
+  obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
+  obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    'TOmniBaseContainer: obcPublicRingBuffer is not 8-aligned');
-  obqRecycleRingBuffer := AllocMem(ringBufferSize);
+    Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+  obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
+  obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    'TOmniBaseContainer: obcRecycleRingBuffer is not 8-aligned');
+    Format('TOmniBaseContainer: obcRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   // set obqPublicRingBuffer head
   obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
   obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];

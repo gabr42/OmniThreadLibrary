@@ -4,7 +4,9 @@ Problems ([alex]):
 
 - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
   CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
-  [tnx to Aleksadr Aleksejev]
+  [tnx to Alexander Alexeev]
+- TOmniBaseBoundedQueue's ring buffers are internally aligned to 2*SizeOf(pointer).
+  [tnx to Alex Egorov]
 
 3.02: 2012-10-03
 - New features:
