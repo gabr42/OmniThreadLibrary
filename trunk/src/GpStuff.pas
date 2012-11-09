@@ -6,11 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2012-09-25
-   Version           : 1.32a
+   Last modification : 2012-11-09
+   Version           : 1.33
 </pre>*)(*
    History:
-     1.32: 2012-09-25
+     1.33: 2012-11-09
+       - Implemented RoundUpTo function.
+     1.32a: 2012-09-25
        - Workaround for an internal error in D2009.
      1.32: 2012-05-23
        - Implemented FletcherChecksum function.
@@ -298,6 +300,9 @@ procedure DebugBreak(triggerBreak: boolean = true);
 procedure DontOptimize(var data);
 
 function FletcherChecksum(const buffer; size: integer): word;
+
+function RoundUpTo(value: NativeInt; granularity: integer): NativeInt; overload;
+function RoundUpTo(value: pointer; granularity: integer): pointer; overload;
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -1210,6 +1215,16 @@ begin
   {$R+,Q+}
 end; { FletcherChecksum }
 
+function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+begin
+  Result := (((value - 1) div granularity) + 1) * granularity;
+end;
+
+function RoundUpTo(value: pointer; granularity: integer): pointer;
+begin
+  Result := pointer((((NativeInt(value) - 1) div granularity) + 1) * granularity);
+end;
+
 {$IFDEF   GpStuff_ValuesEnumerators}
 constructor TGpDisableHandler.Create(const handler: PMethod);
 const
@@ -1231,7 +1246,6 @@ procedure TGpDisableHandler.Restore;
 begin
   FHandler^ := FOldHandler;
 end; { TGpDisableHandler.Restore }
-
 {$ENDIF}
 
 { TGpAutoDestroyObject }
