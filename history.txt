@@ -2,11 +2,14 @@ Problems ([alex]):
  app_23: [Fatal Error] F2084 Internal Error: BC3472
  app_26_MultiEventMonitor.XE2: 'System Error. Code: 1816. Not enough quota is available to process this command'
 
+- Fixed XE2/XE3 package compilation
 - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
   CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
   [tnx to Alexander Alexeev]
 - TOmniBaseBoundedQueue's ring buffers are internally aligned to 2*SizeOf(pointer).
   [tnx to Alex Egorov]
+- Prevent memory leak if (Queue|Stack).Initialize is called more than once
+  (thx to [h.hasenack])
 
 3.02: 2012-10-03
 - New features:

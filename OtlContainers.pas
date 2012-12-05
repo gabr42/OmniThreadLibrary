@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : GJ, Primoz Gabrijelcic
 ///   Creation date     : 2008-07-13
-///   Last modification : 2012-11-09
-///   Version           : 3.01
+///   Last modification : 2012-12-05
+///   Version           : 3.01a
 ///</para><para>
 ///   History:
+///     3.01a: 2012-12-05
+///       - Prevent memory leak if (Queue|Stack).Initialize is called more than once
+///         (thx to [h.hasenack]).
 ///     3.01: 2012-11-09
 ///       - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
 ///         CAS granularity (8 bytes on 32-bit platforms, 16 bytes on 64-bit platforms).
@@ -379,6 +382,7 @@ begin
   //calculate buffer element size, round up to next aligned value
   bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
+  DSiFreeMemAndNil(obsDataBuffer);
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
   dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
   if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
@@ -655,15 +659,18 @@ begin
   // calculate element size, round up to next aligned value
   roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
+  DSiFreeMemAndNil(obqDataBuffer);
   GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize + CASAlignment);
   dataBuffer := RoundUpTo(obqDataBuffer, CASAlignment);
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
+  DSiFreeMemAndNil(obqPublicRingMem);
   obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+  DSiFreeMemAndNil(obqRecycleRingMem);
   obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
@@ -1146,7 +1153,11 @@ end; { TOmniBaseQueue.Enqueue }
 
 procedure TOmniBaseQueue.Initialize;
 begin
+  if assigned(obcTailPointer) then
+    FreeMem(obcTailPointer);
   obcTailPointer := AllocMem(SizeOf(TOmniTaggedPointer));
+  if assigned(obcHeadPointer) then
+    FreeMem(obcHeadPointer);
   obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
   Assert(NativeInt(obcTailPointer) mod (2*SizeOf(pointer)) = 0);
   Assert(NativeInt(obcHeadPointer) mod (2*SizeOf(pointer)) = 0);
