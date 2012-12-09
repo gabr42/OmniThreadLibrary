@@ -149,7 +149,9 @@ type
   ///<summary>Very lightweight multiple-readers-exclusive-writer lock.</summary>
   TOmniMREW = record
   strict private
-    omrewReference: NativeInt;      //Reference.Bit0 is 'writing in progress' flag
+    //Treated as an integer, IInterface is only used to provide automatic initialization to 0.
+    //Bit0 is 'writing in progress' flag.
+    omrewReference: IInterface;
   public
     procedure EnterReadLock; inline;
     procedure EnterWriteLock; inline;
@@ -663,8 +665,8 @@ var
 begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
-    currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 2, omrewReference);
+    currentReference := NativeInt(omrewReference) AND NOT 1;
+  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
@@ -673,22 +675,22 @@ var
 begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
-    currentReference := omrewReference AND NOT 1;
-  until CAS(currentReference, currentReference + 1, omrewReference);
+    currentReference := NativeInt(omrewReference) AND NOT 1;
+  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
   //Now wait on all readers
   repeat
-  until omrewReference = 1;
+  until NativeInt(omrewReference) = 1;
 end; { TOmniMREW.EnterWriteLock }
 
 procedure TOmniMREW.ExitReadLock;
 begin
   //Decrease omrewReference
-  NInterlockedExchangeAdd(omrewReference, -2);
+  NInterlockedExchangeAdd(NativeInt(omrewReference), -2);
 end; { TOmniMREW.ExitReadLock }
 
 procedure TOmniMREW.ExitWriteLock;
 begin
-  omrewReference := 0;
+  NativeInt(omrewReference) := 0;
 end; { TOmniMREW.ExitWriteLock }
 
 { TOmniResourceCount }

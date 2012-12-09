@@ -1,6 +1,7 @@
 Problems ([alex]):
  app_23: [Fatal Error] F2084 Internal Error: BC3472
  app_26_MultiEventMonitor.XE2: 'System Error. Code: 1816. Not enough quota is available to process this command'
+ + TOmniMREW is automatically initialized to 0
 
 - Fixed XE2/XE3 package compilation
 - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
