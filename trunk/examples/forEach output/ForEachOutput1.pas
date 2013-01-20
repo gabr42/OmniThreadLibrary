@@ -56,8 +56,10 @@ begin
     transactions := TList<TTransaction>.Create;
     try
       ProcessTransactions(bankStatements, transactions);
-      for transaction in transactions do
+      for transaction in transactions do begin
         ListBox1.Items.Add(transaction.Transaction);
+        transaction.Free;
+      end;
     finally FreeAndNil(transactions); end;
   finally FreeAndNil(bankStatements); end;
 end;

@@ -22,9 +22,5 @@ object frmForEachOutput: TfrmForEachOutput
     Align = alClient
     ItemHeight = 13
     TabOrder = 0
-    ExplicitLeft = 208
-    ExplicitTop = 96
-    ExplicitWidth = 121
-    ExplicitHeight = 97
   end
 end

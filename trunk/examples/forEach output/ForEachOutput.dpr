@@ -1,6 +1,7 @@
 program ForEachOutput;
 
 uses
+  FastMM4,
   Vcl.Forms,
   ForEachOutput1 in 'ForEachOutput1.pas' {frmForEachOutput};
 

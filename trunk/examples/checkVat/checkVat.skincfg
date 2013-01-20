@@ -1,8 +1,7 @@
 [ExpressSkins]
-Default=0
+Default=1
 ShowNotifications=1
 Enabled=1
-dxSkinsDefaultPainters=1
 dxSkinBlack=1
 dxSkinBlue=1
 dxSkinBlueprint=1
@@ -39,6 +38,7 @@ dxSkinSpringTime=1
 dxSkinStardust=1
 dxSkinSummer2008=1
 dxSkinTheAsphaltWorld=1
+dxSkinsDefaultPainters=1
 dxSkinValentine=1
 dxSkinVS2010=1
 dxSkinWhiteprint=1
