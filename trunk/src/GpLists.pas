@@ -30,10 +30,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2012-07-04
-   Version           : 1.61
+   Last modification : 2012-12-07
+   Version           : 1.64
 </pre>*)(*
    History:
+     1.64: 2012-12-07
+       - TGpSkipList implements Head, Tail, Next and various overloads working with
+         TGpSkipListEl<T>.
+     1.63: 2012-12-05
+       - Added missing TGpSkipList<T>.Locate.
+       - Implemented TGpSkipObjectList<T>.
+     1.62: 2012-11-21
+       - Implemented TGpSkipList<T> and TGpSkipList<T,K>.
      1.61: 2012-07-04
        - Implemented IGpRingBuffer<T> and TGpRingBuffer<T>.
      1.60: 2012-05-07
@@ -2104,6 +2112,138 @@ type
     property OnFreeMem: TGpFifoMemoryEvent read GetOnFreeMem write SetOnFreeMem;
     property OnGetMem: TGpFifoMemoryEvent read GetOnGetMem write SetOnGetMem;
   end; { TGpFifoBuffer }
+
+{$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
+const //http://www.csee.umbc.edu/courses/undergraduate/341/fall01/Lectures/SkipLists/skip_lists/skip_lists.html
+  CDefaultLevelProbability = 0.25;
+  CDefaultMaxLevels = 8; //good approximation: log(MaxElements)/log(1/LevelProbability)
+                         //8 levels are fine for max 65536 elements and probability 0.25
+
+type
+  TGpSkipListEl<T> = class;
+
+  TGpSkipListEl<T> = class
+  strict private
+    FElement : T;
+    FPointers: array of TGpSkipListEl<T>;
+  strict protected
+    function  GetPointers(idx: integer): TGpSkipListEl<T>;
+    procedure SetPointers(idx: integer; const value: TGpSkipListEl<T>);
+  public
+    constructor Create(const el: T; numLevels: integer); overload;
+    constructor Create(numLevels: integer); overload;
+    property Element: T read FElement write FElement;
+    property Pointers[idx: integer]: TGpSkipListEl<T> read GetPointers write SetPointers;
+  end; { TGpSkipListEl<T> }
+
+  TGpSkipListCompare<K> = {$IFDEF Unicode}reference to{$ENDIF}
+    function (const key1, key2: K): integer; {<0 => el1 < el2; 0 => el1 = el2; >0 => el1 > el2}
+
+  TGpSkipListExtractKey<T,K> = {$IFDEF Unicode}reference to{$ENDIF}
+    function (const el: T): K;
+
+  TGpSkipListEnumerator<T> = record
+  private
+    FHead   : TGpSkipListEL<T>;
+    FCurrent: TGpSkipListEl<T>;
+    FTail   : TGpSkipListEl<T>;
+  public
+    constructor Create(head, tail: TGpSkipListEl<T>);
+    function GetCurrent: T; inline;
+    function MoveNext: boolean; inline;
+    property Current: T read GetCurrent;
+  end;
+
+  TGpSkipList<T,K> = class
+  strict private
+    FComparer : TGpSkipListCompare<K>;
+    FCount    : integer;
+    FGetKey   : TGpSkipListExtractKey<T,K>;
+    FHead     : TGpSkipListEl<T>;
+    FLast     : array of TGpSkipListEl<T>;
+    FLevelProb: real;
+    FMaxLevels: integer;
+    FTail     : TGpSkipListEl<T>;
+    FTopLevel : integer;
+  private
+    procedure RemoveElements;
+  strict protected
+    function  GetKey(const el: T): K; inline;
+    function  Compare(const key1, key2: K): integer; overload; inline;
+    function  Compare(const key: K; el: TGpSkipListEl<T>): integer; overload; inline;
+    function  RandomLevel: integer;
+    function  WalkDown (const key: K; var x: TGpSkipListEl<T>): boolean;
+  protected
+    procedure Initialize;
+  public
+    constructor Create(
+      keyExtractor: TGpSkipListExtractKey<T,K>;
+      comparer: TGpSkipListCompare<K>;
+      levelProbability: real = CDefaultLevelProbability;
+      maxLevels: integer = CDefaultMaxLevels);
+    destructor  Destroy; override;
+    procedure Clear; virtual;
+    function  Contains(const key: K): boolean; inline;
+    function  ContainsElement(const element: T): boolean; inline;
+    function  Count: integer; inline;
+    function  Delete(const key: K): boolean; virtual;
+    procedure DeleteElement(const element: T); inline;
+    function  GetEnumerator: TGpSkipListEnumerator<T>; inline;
+    function  Insert(const element: T): boolean; overload;
+    function  Insert(const element: T; var position: TGpSkipListEl<T>): boolean; overload;
+    function  IsEmpty: boolean; inline;
+    function  Locate(const key: K; var element: T): boolean; overload;
+    function  Locate(const key: K; var element: TGpSkipListEl<T>): boolean; overload;
+    function  Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>; inline;
+    function  Replace(position: TGpSkipListEl<T>; const element: T): T; inline;
+    property Head: TGpSkipListEl<T> read FHead;
+    property Tail: TGpSkipListEl<T> read FTail;
+  end; { TGpSkipList<T,K> }
+
+  TGpSkipList<T> = class
+  strict private
+    FSkipList: TGpSkipList<T,T>;
+  strict protected
+    function  GetHead: TGpSkipListEl<T>; inline;
+    function  GetTail: TGpSkipListEl<T>; inline;
+  public
+    constructor Create(
+      comparer: TGpSkipListCompare<T>;
+      levelProbability: real = CDefaultLevelProbability;
+      maxLevels: integer = CDefaultMaxLevels);
+    destructor  Destroy; override;
+    class function CopyKeyExtractor(const el: T): T; inline;
+    procedure Clear; virtual;
+    function  Contains(const key: T): boolean; inline;
+    function  Count: integer; inline;
+    procedure Delete(const element: T); virtual;
+    function  GetEnumerator: TGpSkipListEnumerator<T>; inline;
+    function  Insert(const element: T): boolean; overload; inline;
+    function  Insert(const element: T; var position: TGpSkipListEl<T>): boolean; overload; inline;
+    function  IsEmpty: boolean; inline;
+    function  Locate(const key: T; var element: T): boolean; overload; inline;
+    function  Locate(const key: T; var element: TGpSkipListEl<T>): boolean; overload; inline;
+    function  Replace(position: TGpSkipListEl<T>; const element: T): T; virtual;
+    function Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>; inline;
+    property Head: TGpSkipListEl<T> read GetHead;
+    property Tail: TGpSkipListEl<T> read GetTail;
+  end; { TGpSkipList<T> }
+
+  TGpSkipObjectList<T: class> = class(TGpSkipList<T>)
+  strict private
+    FOwnsObjects: boolean;
+  public
+    constructor Create(
+      comparer: TGpSkipListCompare<T>;
+      ownsObjects: boolean = true;
+      levelProbability: real = CDefaultLevelProbability;
+      maxLevels: integer = CDefaultMaxLevels);
+    procedure Clear; override;
+    procedure Delete(const element: T); override;
+  end; { TGpSkipObjectList<T> }
+{$ENDIF}
+{$ENDIF}
 
   {:Compares two TGpInt64objects for equality. Ready for use in
     TGpObject(Object)Map.
@@ -6767,6 +6907,388 @@ begin
   if Result then
     AddBlock(TFifoBlock.Create(TStream(data), Min(dataSize, FifoPlace), Self, FOnGetMem, FOnFreeMem));
 end; { TGpFifoBuffer.Write }
+
+{$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
+{ TGpSkipListEnumerator<T, K> }
+
+constructor TGpSkipListEnumerator<T>.Create(head, tail: TGpSkipListEl<T>);
+begin
+  FHead := head;
+  FTail := tail;
+  FCurrent := FHead;
+end; { TGpSkipListEnumerator<T>.Create }
+
+function TGpSkipListEnumerator<T>.GetCurrent: T;
+begin
+  Result := FCurrent.Element;
+end; { TGpSkipListEnumerator<T>.GetCurrent }
+
+function TGpSkipListEnumerator<T>.MoveNext: boolean;
+begin
+  FCurrent := FCurrent.Pointers[1];
+  Result := (FCurrent <> FTail);
+end; { TGpSkipListEnumerator<T>.MoveNext }
+
+{ TGpSkipListEl<T> }
+
+constructor TGpSkipListEl<T>.Create(numLevels: integer);
+begin
+  inherited Create;
+  SetLength(FPointers, numLevels);
+end; { TGpSkipListEl<T>.Create }
+
+constructor TGpSkipListEl<T>.Create(const el: T; numLevels: integer);
+begin
+  Create(numLevels);
+  FElement := el;
+end; { TGpSkipListEl<T>.Create }
+
+function TGpSkipListEl<T>.GetPointers(idx: integer): TGpSkipListEl<T>;
+begin
+  Result := FPointers[idx-1];
+end; { TGpSkipListEl }
+
+procedure TGpSkipListEl<T>.SetPointers(idx: integer; const value: TGpSkipListEl<T>);
+begin
+  FPointers[idx-1] := value;
+end; { TGpSkipListEl }
+
+{ TGpSkipList<T,K> }
+
+constructor TGpSkipList<T,K>.Create(keyExtractor: TGpSkipListExtractKey<T,K>;
+  comparer: TGpSkipListCompare<K>; levelProbability: real; maxLevels: integer);
+var
+  iPtr: integer;
+begin
+  FGetKey := keyExtractor;
+  FComparer := comparer;
+  FLevelProb := levelProbability;
+  FMaxLevels := maxLevels;
+  SetLength(FLast, FMaxLevels+1); //1-base index
+  Initialize;
+end; { TGpSkipList<T,K>.Create }
+
+destructor TGpSkipList<T,K>.Destroy;
+begin
+  RemoveElements;
+  inherited;
+end; { TGpSkipList<T,K>.Destroy }
+
+function TGpSkipList<T,K>.Compare(const key1, key2: K): integer;
+begin
+  Result := FComparer(key1, key2);
+end; { TGpSkipList<T,K>.Compare }
+
+procedure TGpSkipList<T, K>.Clear;
+begin
+  RemoveElements;
+  Initialize;
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.Compare(const key: K; el: TGpSkipListEl<T>): integer;
+begin
+  Result := Compare(key, GetKey(el.Element));
+end; { TGpSkipList<T,K>.Compare }
+
+function TGpSkipList<T,K>.Contains(const key: K): boolean;
+var
+  x: TGpSkipListEl<T>;
+begin
+  Result := WalkDown(key, x);
+end; { TGpSkipList<T,K>.Contains }
+
+function TGpSkipList<T,K>.ContainsElement(const element: T): boolean;
+begin
+  Result := Contains(GetKey(element));
+end; { TGpSkipList<T,K>.ContainsElement }
+
+function TGpSkipList<T, K>.Count: integer;
+begin
+  Result := FCount;
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.WalkDown(const key: K; var x: TGpSkipListEl<T>): boolean;
+var
+  i: integer;
+begin
+  x := FHead;
+  for i := FTopLevel downto 1 do begin
+    while (x.Pointers[i] <> FTail) and (Compare(key, x.Pointers[i]) > 0) do
+      x := x.Pointers[i];
+    FLast[i] := x;
+  end;
+  x := x.Pointers[1];
+  Result := (x <> FTail) and assigned(x) and (Compare(key, x) = 0);
+end; { TGpSkipList<T,K>.WalkDown }
+
+function TGpSkipList<T,K>.Insert(const element: T): boolean;
+var
+  i    : integer;
+  level: integer;
+  x    : TGpSkipListEl<T>;
+begin
+  Result := false;
+  if not ContainsElement(element) then begin
+    level := RandomLevel;
+    if level > FTopLevel then begin
+      for i := FTopLevel+1 to level do
+        FLast[i] := FHead;
+      FTopLevel := level;
+    end;
+    x := TGpSkipListEl<T>.Create(element, level);
+    for i := 1 to level do begin
+      x.Pointers[i] := FLast[i].Pointers[i];
+      FLast[i].Pointers[i] := x;
+    end;
+    Inc(FCount);
+    Result := true;
+  end;
+end; { TGpSkipList<T,K>.Insert }
+
+function TGpSkipList<T, K>.Insert(const element: T; var position: TGpSkipListEl<T>): boolean;
+var
+  i    : integer;
+  level: integer;
+begin
+  Result := false;
+  if not ContainsElement(element) then begin
+    level := RandomLevel;
+    if level > FTopLevel then begin
+      for i := FTopLevel+1 to level do
+        FLast[i] := FHead;
+      FTopLevel := level;
+    end;
+    position := TGpSkipListEl<T>.Create(element, level);
+    for i := 1 to level do begin
+      position.Pointers[i] := FLast[i].Pointers[i];
+      FLast[i].Pointers[i] := position;
+    end;
+    Inc(FCount);
+    Result := true;
+  end;
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.Locate(const key: K; var element: T): boolean;
+var
+  x: TGpSkipListEl<T>;
+begin
+  Result := Locate(key, x);
+  if Result then
+    element := x.Element;
+end; { TGpSkipList<T,K>.Locate }
+
+function TGpSkipList<T, K>.Locate(const key: K; var element: TGpSkipListEl<T>): boolean;
+begin
+  Result := WalkDown(key, element);
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.Delete(const key: K): boolean;
+var
+  x: TGpSkipListEl<T>;
+  i: integer;
+begin
+  Result := false;
+  if WalkDown(key, x) then begin
+    for i := 1 to FTopLevel do begin
+      if FLast[i].Pointers[i] <> x then
+        break; //for i
+      FLast[i].Pointers[i] := x.Pointers[i];
+    end;
+    x.Free;
+    while (FTopLevel > 1) and (FHead.Pointers[FTopLevel] = FTail) do
+      Dec(FTopLevel);
+    Dec(FCount);
+    Result := true;
+  end;
+end; { TGpSkipList<T,K>.Delete }
+
+procedure TGpSkipList<T,K>.DeleteElement(const element: T);
+begin
+  Delete(GetKey(element));
+end; { TGpSkipList<T,K>.DeleteElement }
+
+function TGpSkipList<T,K>.IsEmpty: boolean;
+begin
+  Result := (FCount = 0);
+end; { TGpSkipList<T,K>.IsEmpty }
+
+function TGpSkipList<T,K>.GetEnumerator: TGpSkipListEnumerator<T>;
+begin
+  Result := TGpSkipListEnumerator<T>.Create(FHead, FTail);
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.GetKey(const el: T): K;
+begin
+  Result := FGetKey(el);
+end; { TGpSkipList<T,K> }
+
+procedure TGpSkipList<T, K>.Initialize;
+var
+  iPtr: integer;
+begin
+  FTail := TGpSkipListEl<T>.Create(FMaxLevels);
+  FHead := TGpSkipListEl<T>.Create(FMaxLevels);
+  for iPtr := 1 to FMaxLevels do
+    FHead.Pointers[iPtr] := FTail;
+  FTopLevel := 1;
+  FCount := 0;
+end; { TGpSkipList }
+
+function TGpSkipList<T, K>.Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>;
+begin
+  Result := el.Pointers[1];
+end; { TGpSkipList }
+
+function TGpSkipList<T,K>.RandomLevel: integer;
+begin
+  Result := 1;
+  while (Random < FLevelProb) and (Result < FMaxLevels) do
+    Inc(Result);
+end; { TGpSkipList<T,K>RandomLevel }
+
+procedure TGpSkipList<T, K>.RemoveElements;
+var
+  p: TGpSkipListEl<T>;
+  q: TGpSkipListEl<T>;
+begin
+  p := FHead;
+  while p <> FTail do begin
+    q := p;
+    p := p.Pointers[1];
+    q.Free;
+  end;
+  FHead := nil;
+  FreeAndNil(FTail);
+  FCount := 0;
+end; { TGpSkipList }
+
+function TGpSkipList<T, K>.Replace(position: TGpSkipListEl<T>; const element: T): T;
+begin
+  Result := position.Element;
+  position.Element := element;
+end; { TGpSkipList }
+
+{ TGpSkipList<T> }
+
+constructor TGpSkipList<T>.Create(comparer: TGpSkipListCompare<T>; levelProbability: real;
+  maxLevels: integer);
+begin
+  inherited Create;
+  FSkipList := TGpSkipList<T,T>.Create(CopyKeyExtractor, comparer, levelProbability,
+    maxLevels);
+end; { TGpSkipList<T>.Create }
+
+destructor TGpSkipList<T>.Destroy;
+begin
+  Clear;
+  FreeAndNil(FSkipList);
+  inherited;
+end; { TGpSkipList<T>.Destroy }
+
+function TGpSkipList<T>.GetEnumerator: TGpSkipListEnumerator<T>;
+begin
+  Result := FSkipList.GetEnumerator;
+end; { TGpSkipList<T>.GetEnumerator }
+
+procedure TGpSkipList<T>.Clear;
+begin
+  FSkipList.Clear;
+end; { TGpSkipList }
+
+function TGpSkipList<T>.Contains(const key: T): boolean;
+begin
+  Result := FSkipList.Contains(key);
+end; { TGpSkipList<T>.Contains }
+
+class function TGpSkipList<T>.CopyKeyExtractor(const el: T): T;
+begin
+  Result := el;
+end; { TGpSkipList<T>.CopyKeyExtractor }
+
+function TGpSkipList<T>.Count: integer;
+begin
+  Result := FSkipList.Count;
+end; { TGpSkipList }
+
+procedure TGpSkipList<T>.Delete(const element: T);
+begin
+  FSkipList.Delete(element);
+end; { TGpSkipList<T>.Delete }
+
+function TGpSkipList<T>.GetHead: TGpSkipListEl<T>;
+begin
+  Result := FSkipList.Head;
+end; { TGpSkipList }
+
+function TGpSkipList<T>.GetTail: TGpSkipListEl<T>;
+begin
+  Result := FSkipList.Tail;
+end; { TGpSkipList }
+
+function TGpSkipList<T>.Insert(const element: T): boolean;
+begin
+  Result := FSkipList.Insert(element);
+end; { TGpSkipList<T>.Insert }
+
+function TGpSkipList<T>.Insert(const element: T; var position: TGpSkipListEl<T>): boolean;
+begin
+  Result := FSkipList.Insert(element, position);
+end; { TGpSkipList }
+
+function TGpSkipList<T>.IsEmpty: boolean;
+begin
+  Result := FSkipList.IsEmpty;
+end; { TGpSkipList<T>.IsEmpty }
+
+function TGpSkipList<T>.Locate(const key: T; var element: T): boolean;
+begin
+  Result := FSkipList.Locate(key, element);
+end; { TGpSkipList }
+
+function TGpSkipList<T>.Locate(const key: T; var element: TGpSkipListEl<T>): boolean;
+begin
+  Result := FSkipList.Locate(key, element);
+end; { TGpSkipList }
+
+function TGpSkipList<T>.Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>;
+begin
+  Result := FSkipList.Next(el);
+end; { TGpSkipList }
+
+function TGpSkipList<T>.Replace(position: TGpSkipListEl<T>; const element: T): T;
+begin
+  Result := FSkipList.Replace(position, element);
+end; { TGpSkipList }
+
+{ TGpSkipObjectList<T> }
+
+constructor TGpSkipObjectList<T>.Create(comparer: TGpSkipListCompare<T>;
+  ownsObjects: boolean; levelProbability: real; maxLevels: integer);
+begin
+  inherited Create(comparer, levelProbability, maxLevels);
+  FOwnsObjects := ownsObjects;
+end; { TGpSkipObjectList }
+
+procedure TGpSkipObjectList<T>.Clear;
+var
+  obj: T;
+begin
+  if FOwnsObjects then
+    for obj in Self do
+      obj.Free;
+  inherited;
+end; { TGpSkipObjectList }
+
+procedure TGpSkipObjectList<T>.Delete(const element: T);
+begin
+  inherited;
+  if FOwnsObjects then
+    element.Free;
+end; { TGpSkipObjectList }
+
+{$ENDIF}
+{$ENDIF}
 
 end.
 
