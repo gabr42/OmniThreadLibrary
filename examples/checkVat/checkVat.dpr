@@ -1,6 +1,7 @@
 program checkVat;
 
 uses
+  FastMM4,
   Vcl.Forms,
   checkVat1 in 'checkVat1.pas' {frmCheckVat};
 

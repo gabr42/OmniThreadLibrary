@@ -56,6 +56,7 @@ begin
       procedure (const task: IOmniTaskControl)
       begin
         outVatInfo.Text := FRequest.Value.name_ + #13#10 + FRequest.Value.address;
+        FRequest.Value.Free;
         FRequest := nil;
         btnCheckVat.Enabled := true;
       end

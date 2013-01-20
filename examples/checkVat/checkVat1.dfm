@@ -56,6 +56,5 @@ object frmCheckVat: TfrmCheckVat
     Height = 153
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 3
-    ExplicitWidth = 290
   end
 end

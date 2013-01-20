@@ -11,6 +11,7 @@ Problems ([alex]):
   [tnx to Alex Egorov]
 - Prevent memory leak if (Queue|Stack).Initialize is called more than once
   (thx to [h.hasenack])
+- Fixed memory leaks in `forEach output` and `checkVat` examples (thx to [Steve Maughan]).
 
 3.02: 2012-10-03
 - New features:
