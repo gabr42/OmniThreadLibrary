@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2012-11-09
-   Version           : 1.33
+   Last modification : 2012-11-27
+   Version           : 1.34
 </pre>*)(*
    History:
+     1.34: 2012-11-27
+       - Implemented IGpStringBuilder and BuildString.
      1.33: 2012-11-09
        - Implemented RoundUpTo function.
      1.32a: 2012-09-25
@@ -367,6 +369,15 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
 {$ENDIF GpStuff_ValuesEnumerators}
 
+type
+  IGpStringBuilder = interface
+    function Add(const s: string): IGpStringBuilder; overload;
+    function Add(const s: string; const param: array of const): IGpStringBuilder; overload;
+    function AsString: string;
+  end; { IGpStringBuilder }
+
+function BuildString: IGpStringBuilder;
+
 implementation
 
 uses
@@ -479,6 +490,20 @@ type
     procedure Free;
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
+
+  TGpStringBuilder = class(TInterfacedObject, IGpStringBuilder)
+  strict private
+    FString: string;
+  public
+    function Add(const s: string): IGpStringBuilder; overload; inline;
+    function Add(const s: string; const param: array of const): IGpStringBuilder; overload;
+    function AsString: string; inline;
+  end; { TGpStringBuilder }
+
+function BuildString: IGpStringBuilder;
+begin
+  Result := TGpStringBuilder.Create;
+end; { BuildString }
 
 function AutoDestroyObject(obj: TObject): IGpAutoDestroyObject;
 begin
@@ -1135,6 +1160,25 @@ begin
 end; { EnumFiles }
 
 {$ENDIF GpStuff_ValuesEnumerators}
+
+{ TGpStringBuilder }
+
+function TGpStringBuilder.Add(const s: string): IGpStringBuilder;
+begin
+  FString := FString + s;
+  Result := Self;
+end; { TGpStringBuilder.Add }
+
+function TGpStringBuilder.Add(const s: string;
+  const param: array of const): IGpStringBuilder;
+begin
+  Result := Add(Format(s, param));
+end; { TGpStringBuilder.Add }
+
+function TGpStringBuilder.AsString: string;
+begin
+  Result := FString;
+end; { TGpStringBuilder.AsString }
 
 { TGpTraceable }
 

@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha
    Creation date     : 2002-10-09
-   Last modification : 2012-11-04
-   Version           : 1.71a
+   Last modification : 2012-12-12
+   Version           : 1.71b
 </pre>*)(*
    History:
+     1.71b: 2012-12-12
+       - Fixed parameter types in DSiClassWndProc.
      1.71a: 2012-11-04
        - TNonClientMetrics.cbSize is correctly initialized.
      1.71: 2012-10-19
@@ -1014,7 +1016,7 @@ type
   TDSiWindowsVersion = (wvUnknown, wvWin31, wvWin95, wvWin95OSR2, wvWin98,
     wvWin98SE, wvWinME, wvWin9x, wvWinNT3, wvWinNT4, wvWin2000, wvWinXP,
     wvWinNT, wvWinServer2003, wvWinVista, wvWinServer2008, wvWinServer2008OrVistaSP1,
-    wvWin7, wvWinServer2008R2, wvWin7OrServer2008R2);
+    wvWin7, wvWinServer2008R2, wvWin7OrServer2008R2, wvWin8);
 
   TDSiUIElement = (ueMenu, ueMessage, ueWindowCaption, ueStatus);
 
@@ -1024,7 +1026,8 @@ const
     'Windows 98 SE', 'Windows Me', 'Windows 9x', 'Windows NT 3.5',
     'Windows NT 4', 'Windows 2000', 'Windows XP', 'Windows NT', 'Windows Server 2003',
     'Windows Vista', 'Windows Server 2008', 'Windows Server 2008 or Windows Vista SP1',
-    'Windows 7', 'Windows Server 2008 R2', 'Windows 7 or Windows Server 2008 R2');
+    'Windows 7', 'Windows Server 2008 R2', 'Windows 7 or Windows Server 2008 R2',
+    'Windows 8');
 
   VER_SUITE_BACKOFFICE     = $00000004; // Microsoft BackOffice components are installed.
   VER_SUITE_BLADE          = $00000400; // Windows Server 2003, Web Edition is installed.
@@ -1047,6 +1050,7 @@ const
   VER_NT_WORKSTATION       = $0000001; // The operating system is Windows Vista, Windows XP Professional, Windows XP Home Edition, or Windows 2000 Professional.
 
 type
+  {$IFNDEF Unicode}
   _OSVERSIONINFOEXA = record
     dwOSVersionInfoSize: DWORD;
     dwMajorVersion: DWORD;
@@ -1086,6 +1090,7 @@ type
   {$EXTERNALSYM OSVERSIONINFOEXW}
   {$EXTERNALSYM OSVERSIONINFOEX}
   OSVERSIONINFOEX = OSVERSIONINFOEXA;
+  {$ENDIF}
 
   {$IFNDEF DSiNeedStartupInfo}
   _STARTUPINFOW = record
@@ -5074,7 +5079,7 @@ var
   {:Class message dispatcher for the DSiUtilWindow class. Fetches instance's WndProc from
     the window extra data and calls it.
   }
-  function DSiClassWndProc(Window: HWND; Message, WParam, LParam: longint): longint; stdcall;
+  function DSiClassWndProc(Window: HWND; Message: cardinal; aWParam, aLParam: longint): longint; stdcall;
   var
     instanceWndProc: TMethod;
     msg            : TMessage;
@@ -5089,14 +5094,14 @@ var
     if Assigned(TWndMethod(instanceWndProc)) then
     begin
       msg.msg := Message;
-      msg.wParam := WParam;
-      msg.lParam := LParam;
+      msg.wParam := {$IFDEF Unicode}WPARAM{$ENDIF}(aWParam);
+      msg.lParam := {$IFDEF Unicode}LPARAM{$ENDIF}(aLParam);
       msg.Result := 0;
       TWndMethod(instanceWndProc)(msg);
       Result := msg.Result
     end
     else
-      Result := DefWindowProc(Window, Message, WParam,LParam);
+      Result := DefWindowProc(Window, Message, {$IFDEF Unicode}WPARAM{$ENDIF}(aWParam), {$IFDEF Unicode}LPARAM{$ENDIF}(aLParam));
   end; { DSiClassWndProc }
 
   {:Thread-safe AllocateHwnd.
@@ -6111,7 +6116,9 @@ var
   begin { DSiGetTrueWindowsVersion }
     hKernel32 := GetModuleHandle('kernel32');
     Win32Check(hKernel32 <> 0);
-    if ExportsAPI(hKernel32, 'CreateRemoteThreadEx') then
+    if ExportsAPI(hKernel32, 'CopyFile2') then
+      Result := wvWin8
+    else if ExportsAPI(hKernel32, 'CreateRemoteThreadEx') then
       Result := wvWin7OrServer2008R2
     else if ExportsAPI(hKernel32, 'AddSecureMemoryCacheCallback') then
       Result := wvWinServer2008OrVistaSP1
@@ -6254,10 +6261,12 @@ var
             versionInfoEx.dwOSVersionInfoSize := SizeOf(versionInfoEx);
             GetVersionEx(versionInfoExFake);
             if versionInfoEx.wProductType = VER_NT_WORKSTATION then
-              if versionInfoEx.dwMinorVersion = 0 then
-                Result := wvWinVista
+              case versionInfoEx.dwMinorVersion of
+                0: Result := wvWinVista;
+                1: Result := wvWin7;
               else
-                Result := wvWin7
+                Result := wvWin8;
+              end
             else
               if versionInfoEx.dwMinorVersion = 0 then
                 Result := wvWinServer2008
