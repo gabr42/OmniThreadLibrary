@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2012, Primoz Gabrijelcic
+///Copyright (c) 2013, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-10-03
-///   Version           : 1.31k
+///   Last modification : 2013-01-30
+///   Version           : 1.32
 ///</para><para>
 ///   History:
+///     1.32: 2013-01-30
+///       - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
+///       - Fixed TOmniTaskGroup.TerminateAll.
 ///     1.31k: 2012-10-03
 ///       - Fixed message processing.
 ///     1.31j: 2012-10-01
@@ -422,6 +425,7 @@ type
     function  SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
     function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
+    procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
@@ -944,6 +948,7 @@ type
     function  SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
       TOmniMessageID): IOmniTaskControl; overload;
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
+    procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
@@ -1373,8 +1378,9 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      if terminateEvent <> 0 then
+      if terminateEvent <> 0 then begin
         SetEvent(terminateEvent);
+      end;
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
@@ -2955,6 +2961,14 @@ begin
     raise Exception.Create('UserData can only be indexed by integer or string.');
 end; { TOmniTaskControl.SetUserDataInt }
 
+procedure TOmniTaskControl.Stop;
+begin
+  if assigned(otcSharedInfo) then begin
+    otcSharedInfo.Terminating := true;
+    SetEvent(otcSharedInfo.TerminateEvent);
+  end;
+end; { TOmniTaskControl.Stop }
+
 function TOmniTaskControl.Terminate(maxWait_ms: cardinal): boolean;
 var
   msg: TOmniMessage;
@@ -2966,8 +2980,7 @@ begin
     Exit;
   end;
   otcExecutor.Terminating := true;
-  otcSharedInfo.Terminating := true;
-  SetEvent(otcSharedInfo.TerminateEvent);
+  Stop;
   Result := WaitFor(maxWait_ms);
   while Comm.Receive(msg) do
     ForwardTaskMessage(msg);
@@ -3287,7 +3300,7 @@ var
   iIntf: integer;
 begin
   for iIntf := 0 to otgTaskList.Count - 1 do
-    (otgTaskList[iIntf] as IOmniTaskControl).Terminate(0);
+    (otgTaskList[iIntf] as IOmniTaskControl).Stop;
   Result := WaitForAll(maxWait_ms);
 end; { TOmniTaskGroup.TerminateAll }
 
