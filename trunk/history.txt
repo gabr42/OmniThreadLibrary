@@ -12,6 +12,8 @@ Problems ([alex]):
 - Prevent memory leak if (Queue|Stack).Initialize is called more than once
   (thx to [h.hasenack])
 - Fixed memory leaks in `forEach output` and `checkVat` examples (thx to [Steve Maughan]).
+- Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
+- Fixed TOmniTaskGroup.TerminateAll.
 
 3.02: 2012-10-03
 - New features:
