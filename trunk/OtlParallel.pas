@@ -37,7 +37,7 @@
 ///   History:
 ///     1.31: 2013-02-21
 ///       - Implemented IOmniPipeline.PipelineStage[] property returning Input/Ouput
-///         collections of a specific pipeline.
+///         collections of a specific stage.
 ///     1.30: 2012-10-03
 ///       - Added Async/Await abstraction.
 ///     1.29: 2012-08-12
