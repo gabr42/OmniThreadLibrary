@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2012, Primoz Gabrijelcic
+///Copyright (c) 2013, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,10 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2012-02-21
-///   Version           : 1.13
+///   Last modification : 2013-02-27
+///   Version           : 1.14
 ///</para><para>
 ///   History:
+///     1.14: 2013-02-27
+///       - Implemented TOmniLockManager<K> and IOmniLockManager<K>.
+///     1.13a: 2013-01-08
+///       - Locked<T>.Free must execute in locked context.
 ///     1.13: 2012-02-21
 ///       - Implemented Locked<T>.Locked.
 ///     1.12: 2011-12-16
@@ -104,11 +108,17 @@ interface
 uses
   SysUtils,
   SyncObjs,
+  Classes,
+  {$IFDEF OTL_Generics}
+  Generics.Defaults,
+  Generics.Collections,
+  {$ENDIF OTL_Generics}
   DSiWin32,
   {$IFDEF OTL_ERTTI}
   RTTI,
   {$ENDIF OTL_ERTTI}
-  GpStuff;
+  GpStuff,
+  GpLists;
 
 type
 {$IF CompilerVersion < 23} //pre-XE2
@@ -235,6 +245,49 @@ type
     procedure Free; inline;
     property Value: T read GetValue;
   end; { Locked<T> }
+
+  IOmniLockManagerAutoUnlock = interface
+    procedure Unlock;
+  end; { IOmniLockManagerAutoUnlock }
+
+  IOmniLockManager<K> = interface
+    function  Lock(const key: K; timeout_ms: cardinal): boolean;
+    function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
+    function  Unlock(const key: K): boolean;
+  end; { IOmniLockManager }
+
+  TOmniLockManager<K> = class(TInterfacedObject, IOmniLockManager<K>)
+  strict private type
+    TNotifyPair = class(TGpDoublyLinkedListObject)
+      Key   : K;
+      Notify: TDSiEventHandle;
+      constructor Create(const aKey: K; aNotify: TDSiEventHandle);
+    end;
+  strict private
+    FComparer  : IEqualityComparer<K>;
+    FLock      : TOmniCS;
+    FLockList  : TDictionary<K,integer>;
+    FNotifyList: TGpDoublyLinkedList;
+  strict private type
+    TAutoUnlock = class(TInterfacedObject, IOmniLockManagerAutoUnlock)
+    strict private
+      FUnlockProc: TProc;
+    public
+      constructor Create(unlockProc: TProc);
+      destructor  Destroy; override;
+      procedure Unlock;
+    end;
+  public
+    class function CreateInterface(capacity: integer = 0): IOmniLockManager<K>; overload;
+    class function CreateInterface(comparer: IEqualityComparer<K>; capacity: integer = 0):
+      IOmniLockManager<K>; overload;
+    constructor Create(capacity: integer = 0); overload;
+    constructor Create(const comparer: IEqualityComparer<K>; capacity: integer = 0); overload;
+    destructor  Destroy; override;
+    function  Lock(const key: K; timeout_ms: cardinal): boolean;
+    function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
+    function  Unlock(const key: K): boolean;
+  end; { TOmniLockManager<K> }
   {$ENDIF OTL_Generics}
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
@@ -294,7 +347,7 @@ type
 
   TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
   private
-    octEvent     : TDSiEventHandle;
+    octEvent      : TDSiEventHandle;
     octIsSignalled: boolean;
   protected
     function  GetHandle: THandle; inline;
@@ -875,9 +928,16 @@ end; { Locked }
 
 procedure Locked<T>.Free;
 begin
-  if (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
-    TObject(PPointer(@FValue)^).Free;
-  Clear;
+  if FInitialized then begin
+    Acquire;
+    try
+      if FInitialized then begin
+        if (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
+          TObject(PPointer(@FValue)^).Free;
+        Clear;
+      end;
+    finally Release; end;
+  end;
 end; { Locked<T>.Free }
 
 function Locked<T>.GetValue: T;
@@ -956,6 +1016,142 @@ procedure Locked<T>.Release;
 begin
   FLock.Release;
 end; { Locked<T>.Release }
+
+{ TOmniLockManager<K>.TNotifyPair<K> }
+
+constructor TOmniLockManager<K>.TNotifyPair.Create(const aKey: K; aNotify: TDSiEventHandle);
+begin
+  inherited Create;
+  Key := aKey;
+  Notify := aNotify;
+end; { TOmniLockManager<K>.TNotifyPair.Create }
+
+{ TOmniLockManager<K>.TAutoUnlock }
+
+constructor TOmniLockManager<K>.TAutoUnlock.Create(unlockProc: TProc);
+begin
+  inherited Create;
+  FUnlockProc := unlockProc;
+end; { TOmniLockManager<K>.TAutoUnlock.Create }
+
+destructor TOmniLockManager<K>.TAutoUnlock.Destroy;
+begin
+  Unlock;
+  inherited;
+end; { TOmniLockManager<K>.TAutoUnlock.Destroy }
+
+procedure TOmniLockManager<K>.TAutoUnlock.Unlock;
+begin
+  if assigned(FUnlockProc) then
+    FUnlockProc;
+  FUnlockProc := nil;
+end; { TOmniLockManager<K>.TAutoUnlock.Unlock }
+
+{ TOmniLockManager<K> }
+
+class function TOmniLockManager<K>.CreateInterface(comparer: IEqualityComparer<K>;
+  capacity: integer): IOmniLockManager<K>;
+begin
+  Result := TOmniLockManager<K>.Create(comparer, capacity);
+end; { TOmniLockManager<K>.CreateInterface }
+
+class function TOmniLockManager<K>.CreateInterface(capacity: integer):
+  IOmniLockManager<K>;
+begin
+  Result := TOmniLockManager<K>.Create(capacity);
+end; { TOmniLockManager<K>.CreateInterface }
+
+constructor TOmniLockManager<K>.Create(const comparer: IEqualityComparer<K>;
+  capacity: integer);
+begin
+  inherited Create;
+  FComparer := comparer;
+  if not assigned(FComparer) then
+    FComparer := TEqualityComparer<K>.Default;
+  FLockList := TDictionary<K,integer>.Create(capacity, FComparer);
+  FNotifyList := TGpDoublyLinkedList.Create;
+end; { TOmniLockManager }
+
+constructor TOmniLockManager<K>.Create(capacity: integer);
+begin
+  Create(nil, capacity);
+end; { TOmniLockManager }
+
+destructor TOmniLockManager<K>.Destroy;
+begin
+  FreeAndNil(FLockList);
+  FreeAndNil(FNotifyList);
+  inherited;
+end; { TOmniLockManager }
+
+function TOmniLockManager<K>.Lock(const key: K; timeout_ms: cardinal): boolean;
+var
+  notifyItem: TGpDoublyLinkedListObject;
+  startWait : int64;
+  waitEvent : TDSiEventHandle;
+  wait_ms   : integer;
+begin
+  Result := false;
+  waitEvent := 0;
+  startWait := DSiTimeGetTime64;
+
+  repeat
+    FLock.Acquire;
+    try
+      if not FLockList.ContainsKey(key) then begin
+        FLockList.Add(key, GetCurrentThreadID);
+        Result := true;
+        break; //repeat
+      end
+      else if waitEvent = 0 then begin
+        waitEvent := CreateEvent(nil, false, false, nil);
+        FNotifyList.InsertAtTail(TNotifyPair.Create(key, waitEvent));
+      end;
+    finally FLock.Release; end;
+    wait_ms := integer(timeout_ms) - integer(DSiTimeGetTime64 - startWait);
+  until ((timeout_ms <> INFINITE) and (wait_ms <= 0)) or
+        (WaitForSingleObject(waitEvent, cardinal(wait_ms)) = WAIT_TIMEOUT);
+
+  if waitEvent <> 0 then begin
+    FLock.Acquire;
+    try
+      for notifyItem in FNotifyList do
+        if TNotifyPair(notifyItem).Notify = waitEvent then begin
+          notifyItem.Free;
+          break; //for notifyItem
+        end;
+      DSiCloseHandleAndNull(waitEvent);
+    finally FLock.Release; end;
+  end;
+end; { TOmniLockManager<K>.Lock }
+
+function TOmniLockManager<K>.LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
+begin
+  if not Lock(key, timeout_ms) then
+    Result := nil
+  else
+    Result := TAutoUnlock.Create(
+      procedure
+      begin
+        Unlock(key);
+      end
+    );
+end; { TOmniLockManager<K>.Lock }
+
+function TOmniLockManager<K>.Unlock(const key: K): boolean;
+var
+  notifyItem: TGpDoublyLinkedListObject;
+begin
+  FLock.Acquire;
+  try
+    FLockList.Remove(key);
+    for notifyItem in FNotifyList do
+      if FComparer.Equals(TNotifyPair(notifyItem).Key, key) then begin
+        SetEvent(TNotifyPair(notifyItem).Notify);
+        break; //for notifyItem
+      end;
+  finally FLock.Release; end;
+end; { TOmniLockManager<K>.Unlock }
 
 {$ENDIF OTL_Generics}
 
