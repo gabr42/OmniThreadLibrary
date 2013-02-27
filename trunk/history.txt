@@ -15,6 +15,9 @@ Problems ([alex]):
 - Fixed memory leaks in `forEach output` and `checkVat` examples (thx to [Steve Maughan]).
 - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
 - Fixed TOmniTaskGroup.TerminateAll.
+///       - Implemented TOmniLockManager<K> and IOmniLockManager<K>.
+///     1.13a: 2013-01-08
+///       - Locked<T>.Free must execute in locked context.
 
 3.02: 2012-10-03
 - New features:
