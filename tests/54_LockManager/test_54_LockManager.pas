@@ -9,17 +9,27 @@ uses
 
 const
   CHighSlot = 10;
-  CTestDuration_sec = 5;
+  CTestDuration_sec = 10;
 
 type
   TfrmTestLockManager = class(TForm)
     ListBox1: TListBox;
     btnUnsafe: TButton;
-    Safe: TButton;
+    btnSafe: TButton;
+    btnMonitor: TButton;
+    btnReentrancy: TButton;
+    btnUnsafe1: TButton;
+    btnSafe1: TButton;
+    btnMonitor1: TButton;
+    procedure FormDestroy(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure btnMonitorClick(Sender: TObject);
+    procedure btnReentrancyClick(Sender: TObject);
     procedure btnUnsafeClick(Sender: TObject);
-    procedure SafeClick(Sender: TObject);
+    procedure btnSafeClick(Sender: TObject);
   private
     FValues: array [1..CHighSlot] of integer;
+    FLocks: array [1..CHighSlot] of TObject;
     procedure Prepare;
     procedure ShowValues(count: integer);
   public
@@ -33,9 +43,89 @@ implementation
 uses
   DSiWin32,
   GpStuff,
+  OtlCommon,
   OtlParallel;
 
 {$R *.dfm}
+
+procedure TfrmTestLockManager.FormCreate(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := Low(FLocks) to High(FLocks) do
+    FLocks[i] := TObject.Create;
+  btnUnsafe.Tag := Environment.Process.Affinity.Count;
+  btnSafe.Tag := Environment.Process.Affinity.Count;
+  btnMonitor.Tag := Environment.Process.Affinity.Count;
+end;
+
+procedure TfrmTestLockManager.FormDestroy(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := Low(FLocks) to High(FLocks) do
+    FLocks[i].Free;
+end;
+
+procedure TfrmTestLockManager.btnMonitorClick(Sender: TObject);
+var
+  cnt: TGp4AlignedInt;
+begin
+  Prepare;
+  cnt.Value := 0;
+  Parallel.ParallelTask.NumTasks((Sender as TButton).Tag).Execute(
+    procedure
+    var
+      slot: integer;
+      startTime: int64;
+    begin
+      startTime := DSiTimeGetTime64;
+      while not DSiHasElapsed64(startTime, CTestDuration_sec*1000) do begin
+        slot := Random(CHighSlot) + 1;
+        if System.TMonitor.Enter(FLocks[slot], CTestDuration_sec*1000) then try
+          FValues[slot] := FValues[slot] + 1;
+          DSiYield;
+          FValues[slot] := FValues[slot] - 1;
+        finally System.TMonitor.Exit(FLocks[slot]); end;
+        cnt.Increment;
+      end;
+    end);
+  ShowValues(cnt.Value);
+end;
+
+procedure TfrmTestLockManager.btnReentrancyClick(Sender: TObject);
+var
+  cnt        : TGp4AlignedInt;
+  lockManager: TOmniLockManager<integer>;
+begin
+  Prepare;
+  cnt.Value := 0;
+  lockManager := TOmniLockManager<integer>.Create(10);
+  try
+    Parallel.ParallelTask.Execute(
+      procedure
+      var
+        slot: integer;
+        startTime: int64;
+      begin
+        startTime := DSiTimeGetTime64;
+        while not DSiHasElapsed64(startTime, CTestDuration_sec*1000) do begin
+          slot := Random(CHighSlot) + 1;
+          if lockManager.Lock(slot, CTestDuration_sec*1000) then try
+            if not lockManager.Lock(slot, 0) then
+              raise Exception.Create('Not reentrant!')
+            else try
+              FValues[slot] := FValues[slot] + 1;
+              DSiYield;
+              FValues[slot] := FValues[slot] - 1;
+              cnt.Increment;
+            finally lockManager.Unlock(slot); end;
+          finally lockManager.Unlock(slot); end;
+        end;
+      end);
+  finally FreeAndNil(lockManager); end;
+  ShowValues(cnt.Value);
+end;
 
 procedure TfrmTestLockManager.btnUnsafeClick(Sender: TObject);
 var
@@ -43,7 +133,7 @@ var
 begin
   Prepare;
   cnt.Value := 0;
-  Parallel.ParallelTask.Execute(
+  Parallel.ParallelTask.NumTasks((Sender as TButton).Tag).Execute(
     procedure
     var
       slot: integer;
@@ -66,7 +156,7 @@ begin
   FillChar(FValues, SizeOf(FValues), 0);
 end;
 
-procedure TfrmTestLockManager.SafeClick(Sender: TObject);
+procedure TfrmTestLockManager.btnSafeClick(Sender: TObject);
 var
   cnt        : TGp4AlignedInt;
   lockManager: TOmniLockManager<integer>;
@@ -75,7 +165,7 @@ begin
   cnt.Value := 0;
   lockManager := TOmniLockManager<integer>.Create(10);
   try
-    Parallel.ParallelTask.Execute(
+    Parallel.ParallelTask.NumTasks((Sender as TButton).Tag).Execute(
       procedure
       var
         slot: integer;
@@ -101,7 +191,7 @@ var
   s   : string;
   slot: integer;
 begin
-  s := IntToStr(count) + ':';
+  s := Format('%d operations/sec', [count div CTestDuration_sec]) + ':';
   for slot in FValues do
     s := s + '/' + IntToStr(slot);
   ListBox1.Items.Add(s);
