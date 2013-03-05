@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2013-02-27
-///   Version           : 1.14
+///   Last modification : 2013-03-05
+///   Version           : 1.15
 ///</para><para>
 ///   History:
+///     1.15: 2013-03-05
+///       - TOmniLockManager<K> is reentrant.
 ///     1.14: 2013-02-27
 ///       - Implemented TOmniLockManager<K> and IOmniLockManager<K>.
 ///     1.13a: 2013-01-08
@@ -254,8 +256,9 @@ type
     function  Lock(const key: K; timeout_ms: cardinal): boolean;
     function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
     function  Unlock(const key: K): boolean;
-  end; { IOmniLockManager }
+  end; { IOmniLockManager<K> }
 
+  // TODO 1 -oPrimoz Gabrijelcic : speedup (spin?)
   TOmniLockManager<K> = class(TInterfacedObject, IOmniLockManager<K>)
   strict private type
     TNotifyPair = class(TGpDoublyLinkedListObject)
@@ -263,10 +266,15 @@ type
       Notify: TDSiEventHandle;
       constructor Create(const aKey: K; aNotify: TDSiEventHandle);
     end;
+    TLockValue = record
+      LockCount: integer;
+      ThreadID : cardinal;
+      constructor Create(aThreadID: cardinal; aLockCount: integer);
+    end;
   strict private
     FComparer  : IEqualityComparer<K>;
     FLock      : TOmniCS;
-    FLockList  : TDictionary<K,integer>;
+    FLockList  : TDictionary<K,TLockValue>;
     FNotifyList: TGpDoublyLinkedList;
   strict private type
     TAutoUnlock = class(TInterfacedObject, IOmniLockManagerAutoUnlock)
@@ -1047,6 +1055,14 @@ begin
   FUnlockProc := nil;
 end; { TOmniLockManager<K>.TAutoUnlock.Unlock }
 
+{ TOmniLockManager<K>.TLockValue }
+
+constructor TOmniLockManager<K>.TLockValue.Create(aThreadID: cardinal; aLockCount: integer);
+begin
+  ThreadID := aThreadID;
+  LockCount := aLockCount;
+end; { TOmniLockManager<K>.TLockValue }
+
 { TOmniLockManager<K> }
 
 class function TOmniLockManager<K>.CreateInterface(comparer: IEqualityComparer<K>;
@@ -1068,7 +1084,7 @@ begin
   FComparer := comparer;
   if not assigned(FComparer) then
     FComparer := TEqualityComparer<K>.Default;
-  FLockList := TDictionary<K,integer>.Create(capacity, FComparer);
+  FLockList := TDictionary<K,TLockValue>.Create(capacity, FComparer);
   FNotifyList := TGpDoublyLinkedList.Create;
 end; { TOmniLockManager }
 
@@ -1086,6 +1102,8 @@ end; { TOmniLockManager }
 
 function TOmniLockManager<K>.Lock(const key: K; timeout_ms: cardinal): boolean;
 var
+  lockData  : TLockValue;
+  lockThread: integer;
   notifyItem: TGpDoublyLinkedListObject;
   startWait : int64;
   waitEvent : TDSiEventHandle;
@@ -1098,8 +1116,16 @@ begin
   repeat
     FLock.Acquire;
     try
-      if not FLockList.ContainsKey(key) then begin
-        FLockList.Add(key, GetCurrentThreadID);
+      if not FLockList.TryGetValue(key, lockData) then begin
+        // Unlocked
+        FLockList.Add(key, TLockValue.Create(GetCurrentThreadID, 1));
+        Result := true;
+        break; //repeat
+      end
+      else if lockData.ThreadID = GetCurrentThreadID then begin
+        // Already locked by this thread, increase the lock count
+        Inc(lockData.LockCount);
+        FLockList.AddOrSetValue(key, lockData);
         Result := true;
         break; //repeat
       end
@@ -1136,20 +1162,31 @@ begin
         Unlock(key);
       end
     );
-end; { TOmniLockManager<K>.Lock }
+end; { TOmniLockManager<K>.LockUnlock }
 
 function TOmniLockManager<K>.Unlock(const key: K): boolean;
 var
+  lockData  : TLockValue;
   notifyItem: TGpDoublyLinkedListObject;
 begin
   FLock.Acquire;
   try
-    FLockList.Remove(key);
-    for notifyItem in FNotifyList do
-      if FComparer.Equals(TNotifyPair(notifyItem).Key, key) then begin
-        SetEvent(TNotifyPair(notifyItem).Notify);
-        break; //for notifyItem
-      end;
+    if not FLockList.TryGetValue(key, lockData) then
+      raise Exception.Create('TOmniLockManager<K>.Unlock: Key not locked');
+    if lockData.ThreadID <> GetCurrentThreadID then
+      raise Exception.Create('TOmniLockManager<K>.Unlock: Key was not locked by the current thread');
+    if lockData.LockCount > 1 then begin
+      Dec(lockData.LockCount);
+      FLockList.AddOrSetValue(key, lockData);
+    end
+    else begin
+      FLockList.Remove(key);
+      for notifyItem in FNotifyList do
+        if FComparer.Equals(TNotifyPair(notifyItem).Key, key) then begin
+          SetEvent(TNotifyPair(notifyItem).Notify);
+          break; //for notifyItem
+        end;
+    end;
   finally FLock.Release; end;
 end; { TOmniLockManager<K>.Unlock }
 
