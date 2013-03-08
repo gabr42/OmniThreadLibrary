@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2012, Primoz Gabrijelcic
+///Copyright (c) 2013, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-07-30
-///   Version           : 1.28
+///   Last modification : 2013-02-27
+///   Version           : 1.28a
 ///</para><para>
 ///   History:
+///     1.28a: 2013-02-27
+///       - Fixed TOmniValue._AddRef and _Release when 'nil' interface was stored in
+///         the TOmniValue.
 ///     1.28: 2012-07-30
 ///       - Implemented TOmniValue.IsRecord.
 ///     1.27: 2012-05-18
@@ -2038,13 +2041,13 @@ end; { TOmniValue.SetAsWideString }
 
 procedure TOmniValue._AddRef;
 begin
-  if IsInterfacedType then
+  if IsInterfacedType and assigned(ovIntf) then
     ovIntf._AddRef;
 end; { TOmniValue._AddRef }
 
 procedure TOmniValue._Release;
 begin
-  if IsInterfacedType then
+  if IsInterfacedType and assigned(ovIntf) then
     ovIntf._Release;
 end; { TOmniValue._Release }
 

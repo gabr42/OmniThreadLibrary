@@ -18,6 +18,8 @@ Problems ([alex]):
 ///       - Implemented TOmniLockManager<K> and IOmniLockManager<K>.
 ///     1.13a: 2013-01-08
 ///       - Locked<T>.Free must execute in locked context.
+- Fixed TOmniValue._AddRef and _Release when 'nil' interface was stored in
+///         the TOmniValue.
 
 3.02: 2012-10-03
 - New features:
