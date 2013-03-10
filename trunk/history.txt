@@ -20,6 +20,7 @@ Problems ([alex]):
 ///       - Locked<T>.Free must execute in locked context.
 - Fixed TOmniValue._AddRef and _Release when 'nil' interface was stored in
 ///         the TOmniValue.
+- ! ForEach destructor waits for all internal tasks to be stopped before the object is destroyed.
 
 3.02: 2012-10-03
 - New features:
