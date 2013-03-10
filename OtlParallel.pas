@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2013-02-21
-///   Version           : 1.31
+///   Last modification : 2013-03-10
+///   Version           : 1.31a
 ///</para><para>
 ///   History:
+///     1.31a: 2013-03-10
+///       - ForEach destructor waits for all internal tasks to be stopped before the
+///         object is destroyed.
 ///     1.31: 2013-02-21
 ///       - Implemented IOmniPipeline.PipelineStage[] property returning Input/Ouput
 ///         collections of a specific stage.
@@ -596,6 +599,7 @@ type
     oplAggregate          : TOmniValue;
     oplAggregator         : TOmniAggregatorDelegate;
     oplCancellationToken  : IOmniCancellationToken;
+    oplCountStopped       : IOmniResourceCount;
     oplDataManager        : TOmniDataManager;
     oplDelegateEnum       : TOmniDelegateEnumerator;
     oplIntoQueueIntf      : IOmniBlockingCollection;
@@ -1891,6 +1895,7 @@ end; { TOmniParallelLoopBase.Create }
 
 destructor TOmniParallelLoopBase.Destroy;
 begin
+  WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
@@ -2094,7 +2099,6 @@ end; { TOmniParallelLoopBase.InternalExecuteIntoOrdered }
 
 procedure TOmniParallelLoopBase.InternalExecuteTask(taskDelegate: TOmniTaskDelegate);
 var
-  countStopped : IOmniResourceCount;
   dmOptions    : TOmniDataManagerOptions;
   iTask        : integer;
   kv           : TGpKeyValue;
@@ -2117,7 +2121,7 @@ begin
   then
     taskDelegate(nil)
   else begin
-    countStopped := TOmniResourceCount.Create(numTasks + 1);
+    oplCountStopped := TOmniResourceCount.Create(numTasks + 1);
     lockAggregate := CreateOmniCriticalSection;
     for iTask := 1 to numTasks do begin
       task := CreateTask(
@@ -2126,13 +2130,13 @@ begin
           if assigned(oplOnTaskCreate) then
             oplOnTaskCreate(task);
           taskDelegate(task);
-          if countStopped.Allocate = 1 then begin
+          if oplCountStopped.Allocate = 1 then begin
             if ploNoWait in Options then begin
               if assigned(oplIntoQueueIntf) then
                 oplIntoQueueIntf.CompleteAdding;
               DoOnStop(task);
             end;
-            countStopped.Allocate;
+            oplCountStopped.Allocate;
           end;
         end,
         'Parallel.ForEach worker #' + IntToStr(iTask))
@@ -2146,7 +2150,7 @@ begin
       task.Schedule(GlobalParallelPool);
     end;
     if not (ploNoWait in Options) then begin
-      WaitForSingleObject(countStopped.Handle, INFINITE);
+      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
       if assigned(oplIntoQueueIntf) then
         oplIntoQueueIntf.CompleteAdding;
       DoOnStop(nil);
