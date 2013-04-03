@@ -2,7 +2,7 @@ object frmTestLockManager: TfrmTestLockManager
   Left = 0
   Top = 0
   Caption = 'Lock Manager test'
-  ClientHeight = 250
+  ClientHeight = 325
   ClientWidth = 527
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,12 +19,12 @@ object frmTestLockManager: TfrmTestLockManager
     Left = 89
     Top = 0
     Width = 438
-    Height = 250
+    Height = 325
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-    ExplicitHeight = 243
+    ExplicitHeight = 250
   end
   object btnUnsafe: TButton
     Left = 8
@@ -91,5 +91,23 @@ object frmTestLockManager: TfrmTestLockManager
     Caption = 'Monitor 1'
     TabOrder = 7
     OnClick = btnMonitorClick
+  end
+  object btnNoCollisions: TButton
+    Left = 8
+    Top = 264
+    Width = 75
+    Height = 25
+    Caption = 'No collisions'
+    TabOrder = 8
+    OnClick = btnNoCollisionsClick
+  end
+  object btnNoCollisionsMonitor: TButton
+    Left = 8
+    Top = 295
+    Width = 75
+    Height = 25
+    Caption = 'No coll. (Mon)'
+    TabOrder = 9
+    OnClick = btnNoCollisionsMonitorClick
   end
 end
