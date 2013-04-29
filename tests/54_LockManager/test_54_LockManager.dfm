@@ -24,7 +24,6 @@ object frmTestLockManager: TfrmTestLockManager
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 0
-    ExplicitHeight = 250
   end
   object btnUnsafe: TButton
     Left = 8

@@ -1,4 +1,4 @@
-Problems ([alex]):
+ Problems ([alex]):
  app_23: [Fatal Error] F2084 Internal Error: BC3472
  app_26_MultiEventMonitor.XE2: 'System Error. Code: 1816. Not enough quota is available to process this command'
  + TOmniMREW is automatically initialized to 0
@@ -21,6 +21,9 @@ Problems ([alex]):
 - Fixed TOmniValue._AddRef and _Release when 'nil' interface was stored in
 ///         the TOmniValue.
 - ! ForEach destructor waits for all internal tasks to be stopped before the object is destroyed.
++ Added TOmniValue.CastToXXX family of functions.
++ Added TOmniValue.TryCastToXXX family of functions.
+
 
 3.02: 2012-10-03
 - New features:

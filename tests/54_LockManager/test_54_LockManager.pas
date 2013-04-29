@@ -105,7 +105,7 @@ var
 begin
   Prepare;
   cnt.Value := 0;
-  lockManager := TOmniLockManager<integer>.Create(10);
+  lockManager := TOmniLockManager<integer>.Create(CHighSlot);
   try
     Parallel.ParallelTask.Execute(
       procedure
@@ -162,7 +162,7 @@ var
 begin
   Prepare;
   cnt.Value := 0;
-  lockManager := TOmniLockManager<integer>.Create(10);
+  lockManager := TOmniLockManager<integer>.Create(CHighSlot);
   try
     Parallel.ParallelTask.Execute(
       procedure
@@ -225,7 +225,7 @@ var
 begin
   Prepare;
   cnt.Value := 0;
-  lockManager := TOmniLockManager<integer>.Create(10);
+  lockManager := TOmniLockManager<integer>.Create(CHighSlot);
   try
     Parallel.ParallelTask.NumTasks((Sender as TButton).Tag).Execute(
       procedure
