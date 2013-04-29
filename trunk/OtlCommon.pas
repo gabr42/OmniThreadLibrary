@@ -37,10 +37,16 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-02-27
-///   Version           : 1.28a
+///   Last modification : 2013-04-29
+///   Version           : 1.30
 ///</para><para>
 ///   History:
+///     1.30: 2013-04-29
+///       - GetAsXXX family renamed to CastToXXX.
+///       - TryGetAsXXX familiy renamed to TryCastToXXX.
+///     1.29: 2013-04-26
+///       - Added TOmniValue.TryGetAsXXX family of functions.
+///       - Added TOmniValue.GetAsXXXDef family of functions.
 ///     1.28a: 2013-02-27
 ///       - Fixed TOmniValue._AddRef and _Release when 'nil' interface was stored in
 ///         the TOmniValue.
@@ -223,25 +229,25 @@ type
     ovType: (ovtNull,
              {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
              {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord);
+    function  CastToBoolean: boolean; inline;
+    function  CastToCardinal: cardinal; inline;
+    function  CastToDouble: Double;
+    function  CastToDateTime: TDateTime;
+    function  CastToException: Exception;
+    function  CastToExtended: Extended;
+    function  CastToInt64: int64; inline;
+    function  CastToInteger: integer; inline;
+    function  CastToInterface: IInterface; inline;
+    function  CastToObject: TObject; overload; inline;
+    function  CastToPointer: pointer;
+    function  CastToRecord: IOmniAutoDestroyObject; inline;
+    function  CastToString: string;
+    function  CastToVariant: Variant;
+    function  CastToWideString: WideString;
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
-    function  GetAsBoolean: boolean; inline;
-    function  GetAsCardinal: cardinal; inline;
-    function  GetAsDouble: Double;
-    function  GetAsDateTime: TDateTime;
-    function  GetAsException: Exception;
-    function  GetAsExtended: Extended;
-    function  GetAsInt64: int64; inline;
-    function  GetAsInteger: integer; inline;
-    function  GetAsInterface: IInterface; inline;
-    function  GetAsObject: TObject; inline;
-    function  GetAsPointer: pointer;
-    function  GetAsRecord: IOmniAutoDestroyObject; inline;
-    function  GetAsString: string;
-    function  GetAsVariant: Variant;
-    function  GetAsWideString: WideString;
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -273,6 +279,20 @@ type
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
     function  CastAsInt64: int64; inline;
+    function  CastToBooleanDef(defValue: boolean): boolean; inline;
+    function  CastToCardinalDef(defValue: cardinal): cardinal; inline;
+    function  CastToDoubleDef(defValue: Double): Double; inline;
+    function  CastToDateTimeDef(defValue: TDateTime): TDateTime; inline;
+    function  CastToExceptionDef(defValue: Exception): Exception; inline;
+    function  CastToExtendedDef(defValue: Extended): Extended; inline;
+    function  CastToInt64Def(defValue: int64): int64; inline;
+    function  CastToIntegerDef(defValue: integer): integer; inline;
+    function  CastToInterfaceDef(const defValue: IInterface): IInterface; inline;
+    function  CastToObjectDef(defValue: TObject): TObject; inline;
+    function  CastToPointerDef(defValue: pointer): pointer; inline;
+    function  CastToStringDef(defValue: string): string; inline;
+    function  CastToVariantDef(defValue: Variant): Variant; inline;
+    function  CastToWideStringDef(defValue: WideString): WideString; inline;
     procedure Clear; inline;
     function  IsArray: boolean; inline;
     function  IsBoolean: boolean; inline;
@@ -289,8 +309,22 @@ type
     function  IsVariant: boolean; inline;
     function  IsWideString: boolean; inline;
     class function Null: TOmniValue; static;
-    function RawData: PInt64; inline;
+    function  RawData: PInt64; inline;
     procedure RawZero; inline;
+    function  TryCastToBoolean(var value: boolean): boolean; inline;
+    function  TryCastToCardinal(var value: cardinal): boolean; inline;
+    function  TryCastToDouble(var value: Double): boolean;
+    function  TryCastToDateTime(var value: TDateTime): boolean;
+    function  TryCastToException(var value: Exception): boolean;
+    function  TryCastToExtended(var value: Extended): boolean;
+    function  TryCastToInt64(var value: int64): boolean; inline;
+    function  TryCastToInteger(var value: integer): boolean; inline;
+    function  TryCastToInterface(var value: IInterface): boolean; inline;
+    function  TryCastToObject(var value: TObject): boolean; inline;
+    function  TryCastToPointer(var value: pointer): boolean;
+    function  TryCastToString(var value: string): boolean;
+    function  TryCastToVariant(var value: Variant): boolean;
+    function  TryCastToWideString(var value: WideString): boolean;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
     class operator Implicit(const a: boolean): TOmniValue; inline;
@@ -324,26 +358,28 @@ type
     property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem; default;
     property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem; default;
     property AsArrayItem[const idx: TOmniValue]: TOmniValue read GetAsArrayItem; default;
-    property AsBoolean: boolean read GetAsBoolean write SetAsBoolean;
-    property AsCardinal: cardinal read GetAsCardinal write SetAsCardinal;
-    property AsDouble: Double read GetAsDouble write SetAsDouble;
-    property AsDateTime: TDateTime read GetAsDateTime write SetAsDateTime;
-    property AsException: Exception read GetAsException write SetAsException;
-    property AsExtended: Extended read GetAsExtended write SetAsExtended;
-    property AsInt64: int64 read GetAsInt64 write SetAsInt64;
-    property AsInteger: integer read GetAsInteger write SetAsInteger;
-    property AsInterface: IInterface read GetAsInterface write SetAsInterface;
-    property AsObject: TObject read GetAsObject write SetAsObject;
-    property AsPointer: pointer read GetAsPointer write SetAsPointer;
-    property AsString: string read GetAsString write SetAsString;
-    property AsVariant: Variant read GetAsVariant write SetAsVariant;
-    property AsWideString: WideString read GetAsWideString write SetAsWideString;
+    property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
+    property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
+    property AsDouble: Double read CastToDouble write SetAsDouble;
+    property AsDateTime: TDateTime read CastToDateTime write SetAsDateTime;
+    property AsException: Exception read CastToException write SetAsException;
+    property AsExtended: Extended read CastToExtended write SetAsExtended;
+    property AsInt64: int64 read CastToInt64 write SetAsInt64;
+    property AsInteger: integer read CastToInteger write SetAsInteger;
+    property AsInterface: IInterface read CastToInterface write SetAsInterface;
+    property AsObject: TObject read CastToObject write SetAsObject;
+    property AsPointer: pointer read CastToPointer write SetAsPointer;
+    property AsString: string read CastToString write SetAsString;
+    property AsVariant: Variant read CastToVariant write SetAsVariant;
+    property AsWideString: WideString read CastToWideString write SetAsWideString;
   {$IFDEF OTL_Generics}
   public
     function  AsRecord<T: record>: T;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastAs<T>: T;
+    function  ToObject<T: class>: T;
+    function  CastToObject<T: class>: T; overload;
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   private
@@ -1513,7 +1549,7 @@ end; { TOmniValue.CastAsInt64 }
 {$IFDEF OTL_Generics}
 function TOmniValue.AsRecord<T>: T;
 begin
-  Result := TOmniRecordWrapper<T>(GetAsRecord.Value).Value;
+  Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value;
 end; { TOmniValue.AsRecord }
 
 function TOmniValue.CastAs<T>: T;
@@ -1584,6 +1620,16 @@ class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
 begin
   Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
 end; { TOmniValue.FromRecord<T> }
+
+function TOmniValue.ToObject<T>: T;
+begin
+  Result := AsObject as T;
+end; { TOmniValue.ToObject<T> }
+
+function TOmniValue.CastToObject<T>: T;
+begin
+  Result := T(AsObject);
+end; { TOmniValue.CastToObject<T> }
 {$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
@@ -1627,133 +1673,155 @@ begin
   Result := TOmniValueContainer(ovData)[idx];
 end; { TOmniValue.GetAsArrayItem }
 
-function TOmniValue.GetAsBoolean: boolean;
+function TOmniValue.CastToBoolean: boolean;
 begin
-  if ovType <> ovtBoolean then
+  if not TryCastToBoolean(Result) then
     raise Exception.Create('TOmniValue cannot be converted to boolean');
-  Result := PByte(@ovData)^ <> 0;
-end; { TOmniValue.GetAsBoolean }
+end; { TOmniValue.CastToBoolean }
 
-function TOmniValue.GetAsCardinal: cardinal;
+function TOmniValue.CastToBooleanDef(defValue: boolean): boolean;
+begin
+  if not TryCastToBoolean(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToBooleanDef }
+
+function TOmniValue.CastToCardinal: cardinal;
 begin
   Result := AsInt64;
-end; { TOmniValue.GetAsCardinal }
+end; { TOmniValue.CastToCardinal }
 
-function TOmniValue.GetAsDouble: Double;
+function TOmniValue.CastToCardinalDef(defValue: cardinal): cardinal;
 begin
-  case ovType of
-    ovtInteger,
-    ovtNull:  Result := AsInt64;
-    ovtDouble,
-    ovtDateTime: Result := PDouble(@ovData)^;
-    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
-    else raise Exception.Create('TOmniValue cannot be converted to double');
-  end;
-end; { TOmniValue.GetAsDouble }
+  if not TryCastToCardinal(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToCardinalDef }
 
-function TOmniValue.GetAsDateTime: TDateTime;
+function TOmniValue.CastToDateTime: TDateTime;
 begin
-  case ovType of
-    ovtDouble,
-    ovtDateTime: Result := PDouble(@ovData)^;
-    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
-    ovtNull: Result := 0;
-    else raise Exception.Create('TOmniValue cannot be converted to TDateTime');
-  end;
-end; { TOmniValue.GetAsDateTime }
+  if not TryCastToDateTime(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to TDateTime');
+end; { TOmniValue.CastToDateTime }
 
-function TOmniValue.GetAsException: Exception;
+function TOmniValue.CastToDateTimeDef(defValue: TDateTime): TDateTime;
 begin
-  if IsException or
-     (IsObject and AsObject.InheritsFrom(Exception))
-  then
-    Result := Exception(ovData)
-  else if IsEmpty then
-    Result := nil
-  else
+  if not TryCastToDateTime(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToDateTimeDef }
+
+function TOmniValue.CastToDouble: Double;
+begin
+  if not TryCastToDouble(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to double');
+end; { TOmniValue.CastToDouble }
+
+function TOmniValue.CastToDoubleDef(defValue: Double): Double;
+begin
+  if not TryCastToDouble(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToDoubleDef }
+
+function TOmniValue.CastToException: Exception;
+begin
+  if not TryCastToException(Result) then
     raise Exception.Create('TOmniValue cannot be converted to exception');
-end; { TOmniValue.GetAsException }
+end; { TOmniValue.CastToException }
 
-function TOmniValue.GetAsExtended: Extended;
+function TOmniValue.CastToExceptionDef(defValue: Exception): Exception;
 begin
-  case ovType of
-    ovtInteger,
-    ovtNull:  Result := AsInt64;
-    ovtDouble,
-    ovtDateTime: Result := PDouble(@ovData)^;
-    ovtExtended: Result := (ovIntf as IOmniExtendedData).Value;
-    else raise Exception.Create('TOmniValue cannot be converted to extended');
-  end;
-end; { TOmniValue.GetAsExtended }
+  if not TryCastToException(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToExceptionDef }
 
-function TOmniValue.GetAsInt64: int64;
+function TOmniValue.CastToExtended: Extended;
 begin
-  case ovType of
-    ovtInteger: Result := ovData;
-    ovtNull: Result := 0;
-    ovtVariant: Result := integer(AsVariant);
-    else raise Exception.Create('TOmniValue cannot be converted to int64');
-  end;
-end; { TOmniValue.GetAsInt64 }
+  if not TryCastToExtended(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to extended');
+end; { TOmniValue.CastToExtended }
 
-function TOmniValue.GetAsInteger: integer;
+function TOmniValue.CastToExtendedDef(defValue: Extended): Extended;
+begin
+  if not TryCastToExtended(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToExtendedDef }
+
+function TOmniValue.CastToInt64: int64;
+begin
+  if not TryCastToInt64(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to int64');
+end; { TOmniValue.CastToInt64 }
+
+function TOmniValue.CastToInt64Def(defValue: int64): int64;
+begin
+  if not TryCastToInt64(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToInt64Def }
+
+function TOmniValue.CastToInteger: integer;
 begin
   Result := AsInt64;
-end; { TOmniValue.GetAsInteger }
+end; { TOmniValue.CastToInteger }
 
-function TOmniValue.GetAsInterface: IInterface;
+function TOmniValue.CastToIntegerDef(defValue: integer): integer;
 begin
-  case ovType of
-    ovtInterface: Result := ovIntf;
-    ovtNull: Result := nil;
-    else raise Exception.Create('TOmniValue cannot be converted to interface');
-  end;
-end; { TOmniValue.GetAsInterface }
+  if not TryCastToInteger(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToIntegerDef }
 
-function TOmniValue.GetAsObject: TObject;
+function TOmniValue.CastToInterface: IInterface;
 begin
-  case ovType of
-    ovtObject,
-    ovtException: Result := TObject(ovData);
-    ovtNull: Result := nil;
-    else raise Exception.Create('TOmniValue cannot be converted to object');
-  end;
-end; { TOmniValue.GetAsObject }
+  if not TryCastToInterface(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to interface');
+end; { TOmniValue.CastToInterface }
 
-function TOmniValue.GetAsPointer: pointer;
+function TOmniValue.CastToInterfaceDef(const defValue: IInterface): IInterface;
 begin
-  case ovType of
-    ovtPointer,
-    ovtObject,
-    ovtException: Result := pointer(ovData);
-    ovtNull: Result := nil;
-    else raise Exception.Create('TOmniValue cannot be converted to pointer');
-  end;
-end; { TOmniValue.GetAsPointer }
+  if not TryCastToInterface(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToInterfaceDef }
 
-function TOmniValue.GetAsRecord: IOmniAutoDestroyObject;
+function TOmniValue.CastToObject: TObject;
+begin
+  if not TryCastToObject(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to object');
+end; { TOmniValue.CastToObject }
+
+function TOmniValue.CastToObjectDef(defValue: TObject): TObject;
+begin
+  if not TryCastToObject(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToObjectDef }
+
+function TOmniValue.CastToPointer: pointer;
+begin
+  if not TryCastToPointer(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to pointer');
+end; { TOmniValue.CastToPointer }
+
+function TOmniValue.CastToPointerDef(defValue: pointer): pointer;
+begin
+  if not TryCastToPointer(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToPointerDef }
+
+function TOmniValue.CastToRecord: IOmniAutoDestroyObject;
 begin
   case ovType of
     ovtRecord: Result := IOmniAutoDestroyObject(ovIntf);
     else raise Exception.Create('TOmniValue cannot be converted to string');
   end;
-end; { TOmniValue.GetAsRecord }
+end; { TOmniValue.CastToRecord }
 
-function TOmniValue.GetAsString: string;
+function TOmniValue.CastToString: string;
 begin
-  case ovType of
-    ovtNull:       Result := '';
-    ovtBoolean:    Result := BoolToStr(AsBoolean, true);
-    ovtInteger:    Result := IntToStr(ovData);
-    ovtDouble,
-    ovtDateTime,
-    ovtExtended:   Result := FloatToStr(AsExtended);
-    ovtString:     Result := (ovIntf as IOmniStringData).Value;
-    ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
-    ovtVariant:    Result := string(AsVariant);
-    else raise Exception.Create('TOmniValue cannot be converted to string');
-  end;
-end; { TOmniValue.GetAsString }
+  if not TryCastToString(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to string');
+end; { TOmniValue.CastToString }
+
+function TOmniValue.CastToStringDef(defValue: string): string;
+begin
+  if not TryCastToString(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToStringDef }
 
 {$IFDEF OTL_ERTTI}
 function TOmniValue.GetAsTValue: TValue;
@@ -1786,23 +1854,29 @@ begin
 end; { TOmniValue.GetAsTValue }
 {$ENDIF OTL_ERRTI}
 
-function TOmniValue.GetAsVariant: Variant;
+function TOmniValue.CastToVariant: Variant;
 begin
-  case ovType of
-    ovtVariant: Result := (ovIntf as IOmniVariantData).Value;
-    ovtNull: Result := Variants.Null;
-    else raise Exception.Create('TOmniValue cannot be converted to variant');
-  end;
-end; { TOmniValue.GetAsVariant }
+  if not TryCastToVariant(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to variant');
+end; { TOmniValue.CastToVariant }
 
-function TOmniValue.GetAsWideString: WideString;
+function TOmniValue.CastToVariantDef(defValue: Variant): Variant;
 begin
-  case ovType of
-    ovtWideString: Result := (ovIntf as IOmniWideStringData).Value;
-    ovtVariant: Result := WideString(AsVariant);
-    else Result := GetAsString;
-  end;
-end; { TOmniValue.GetAsWideString }
+  if not TryCastToVariant(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToVariantDef }
+
+function TOmniValue.CastToWideString: WideString;
+begin
+  if not TryCastToWideString(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to WideString');
+end; { TOmniValue.CastToWideString }
+
+function TOmniValue.CastToWideStringDef(defValue: WideString): WideString;
+begin
+  if not TryCastToWideString(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToWideStringDef }
 
 function TOmniValue.IsArray: boolean;
 begin
@@ -1906,7 +1980,7 @@ begin
   if a = (a + 1) then begin
     ov := ov.GetAsArrayItem('');
     ov := ov.GetAsArrayItem(ov);
-    intf := ov.GetAsRecord;
+    intf := ov.CastToRecord;
     ov.SetAsRecord(intf);
   end;
 end; { TOmniValue._RemoveWarnings }
@@ -2038,6 +2112,172 @@ begin
   ovIntf := TOmniWideStringData.Create(value);
   ovType := ovtWideString;
 end; { TOmniValue.SetAsWideString }
+
+function TOmniValue.TryCastToBoolean(var value: boolean): boolean;
+begin
+  if ovType <> ovtBoolean then
+    Result := false
+  else begin
+    value := PByte(@ovData)^ <> 0;
+    Result := true;
+  end;
+end; { TOmniValue.TryCastToBoolean }
+
+function TOmniValue.TryCastToCardinal(var value: cardinal): boolean;
+var
+  val64: int64;
+begin
+  Result := TryCastToInt64(val64);
+  if Result then
+    value := val64;
+end; { TOmniValue.TryCastToCardinal }
+
+function TOmniValue.TryCastToDateTime(var value: TDateTime): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtDouble,
+    ovtDateTime: value := PDouble(@ovData)^;
+    ovtExtended: value := (ovIntf as IOmniExtendedData).Value;
+    ovtNull: value := 0;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToDateTime }
+
+function TOmniValue.TryCastToDouble(var value: Double): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInteger,
+    ovtNull:  value := AsInt64;
+    ovtDouble,
+    ovtDateTime: value := PDouble(@ovData)^;
+    ovtExtended: value := (ovIntf as IOmniExtendedData).Value;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToDouble }
+
+function TOmniValue.TryCastToException(var value: Exception): boolean;
+begin
+  Result := true;
+  if IsException or
+     (IsObject and AsObject.InheritsFrom(Exception))
+  then
+    value := Exception(ovData)
+  else if IsEmpty then
+    value := nil
+  else
+    Result := false;
+end; { TOmniValue.TryCastToException }
+
+function TOmniValue.TryCastToExtended(var value: Extended): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInteger,
+    ovtNull:  value := AsInt64;
+    ovtDouble,
+    ovtDateTime: value := PDouble(@ovData)^;
+    ovtExtended: value  := (ovIntf as IOmniExtendedData).Value;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToExtended }
+
+function TOmniValue.TryCastToInt64(var value: int64): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInteger: value := ovData;
+    ovtNull: value := 0;
+    ovtVariant: value := integer(AsVariant);
+    else Result := false;
+  end;
+end; { TOmniValue.TryGetAsInt64 }
+
+function TOmniValue.TryCastToInteger(var value: integer): boolean;
+var
+  val64: int64;
+begin
+  Result := TryCastToInt64(val64);
+  if Result then
+    value := val64;
+end; { TOmniValue.TryCastToInteger }
+
+function TOmniValue.TryCastToInterface(var value: IInterface): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInterface: value := ovIntf;
+    ovtNull: value := nil;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToInterface }
+
+function TOmniValue.TryCastToObject(var value: TObject): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtObject,
+    ovtException: value := TObject(ovData);
+    ovtNull: value := nil;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToObject }
+
+function TOmniValue.TryCastToPointer(var value: pointer): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtPointer,
+    ovtObject,
+    ovtException: value := pointer(ovData);
+    ovtNull: value := nil;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToPointer }
+
+function TOmniValue.TryCastToString(var value: string): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtNull:       value := '';
+    ovtBoolean:    value := BoolToStr(AsBoolean, true);
+    ovtInteger:    value := IntToStr(ovData);
+    ovtDouble,
+    ovtDateTime,
+    ovtExtended:   value := FloatToStr(AsExtended);
+    ovtString:     value := (ovIntf as IOmniStringData).Value;
+    ovtWideString: value := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant:    value := string(AsVariant);
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToString }
+
+function TOmniValue.TryCastToVariant(var value: Variant): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtVariant: value := (ovIntf as IOmniVariantData).Value;
+    ovtNull: value := Variants.Null;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToVariant }
+
+function TOmniValue.TryCastToWideString(var value: WideString): boolean;
+var
+  str: string;
+begin
+  Result := true;
+  case ovType of
+    ovtWideString: value := (ovIntf as IOmniWideStringData).Value;
+    ovtVariant: value := WideString(AsVariant);
+    else begin
+      Result := TryCastToString(str);
+      if Result then
+        value := str;
+    end;
+  end;
+end; { TOmniValue.TryCastToWideString }
 
 procedure TOmniValue._AddRef;
 begin

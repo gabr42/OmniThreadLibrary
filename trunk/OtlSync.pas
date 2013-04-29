@@ -258,7 +258,6 @@ type
     function  Unlock(const key: K): boolean;
   end; { IOmniLockManager<K> }
 
-  // TODO 1 -oPrimoz Gabrijelcic : speedup (spin?)
   TOmniLockManager<K> = class(TInterfacedObject, IOmniLockManager<K>)
   strict private type
     TNotifyPair = class(TGpDoublyLinkedListObject)
