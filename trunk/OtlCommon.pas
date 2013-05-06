@@ -37,10 +37,16 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-04-29
-///   Version           : 1.30
+///   Last modification : 2013-05-06
+///   Version           : 1.31
 ///</para><para>
 ///   History:
+///     1.31: 2013-05-06
+///       - AnsiString type is supported in TOmniValue.
+///       - Implemented FromArray<T> and ToArray<T>.
+///       - CastAs<T> renamed to CastTo<T>.
+///       - AsRecord<T> renamed to ToRecord<T>.
+///       - CastFrom<T> and CastTo<T> work for byte- and word-sized integer types.
 ///     1.30: 2013-04-29
 ///       - GetAsXXX family renamed to CastToXXX.
 ///       - TryGetAsXXX familiy renamed to TryCastToXXX.
@@ -228,7 +234,8 @@ type
     ovIntf: IInterface;
     ovType: (ovtNull,
              {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
-             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord);
+             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString);
+    function  CastToAnsiString: AnsiString; inline;
     function  CastToBoolean: boolean; inline;
     function  CastToCardinal: cardinal; inline;
     function  CastToDouble: Double;
@@ -248,6 +255,8 @@ type
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    procedure SetAsAnsiString(const value: AnsiString);
+    procedure SetAsArray(value: TOmniValueContainer); inline;
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -278,7 +287,7 @@ type
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
-    function  CastAsInt64: int64; inline;
+    function  CastToAnsiStringDef(const defValue: AnsiString): AnsiString; inline;
     function  CastToBooleanDef(defValue: boolean): boolean; inline;
     function  CastToCardinalDef(defValue: cardinal): cardinal; inline;
     function  CastToDoubleDef(defValue: Double): Double; inline;
@@ -290,10 +299,11 @@ type
     function  CastToInterfaceDef(const defValue: IInterface): IInterface; inline;
     function  CastToObjectDef(defValue: TObject): TObject; inline;
     function  CastToPointerDef(defValue: pointer): pointer; inline;
-    function  CastToStringDef(defValue: string): string; inline;
+    function  CastToStringDef(const defValue: string): string; inline;
     function  CastToVariantDef(defValue: Variant): Variant; inline;
     function  CastToWideStringDef(defValue: WideString): WideString; inline;
     procedure Clear; inline;
+    function  IsAnsiString: boolean; inline;
     function  IsArray: boolean; inline;
     function  IsBoolean: boolean; inline;
     function  IsEmpty: boolean; inline;
@@ -311,6 +321,7 @@ type
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
+    function  TryCastToAnsiString(var value: AnsiString): boolean;
     function  TryCastToBoolean(var value: boolean): boolean; inline;
     function  TryCastToCardinal(var value: cardinal): boolean; inline;
     function  TryCastToDouble(var value: Double): boolean;
@@ -327,6 +338,7 @@ type
     function  TryCastToWideString(var value: WideString): boolean;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
+    class operator Implicit(const a: AnsiString): TOmniValue; inline;
     class operator Implicit(const a: boolean): TOmniValue; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue; inline;
@@ -337,6 +349,7 @@ type
     class operator Implicit(const a: IInterface): TOmniValue; //don't inline, something is broken in codegen (XE)
     class operator Implicit(const a: TObject): TOmniValue; inline;
     class operator Implicit(const a: Exception): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): AnsiString; inline;
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
@@ -358,6 +371,7 @@ type
     property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem; default;
     property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem; default;
     property AsArrayItem[const idx: TOmniValue]: TOmniValue read GetAsArrayItem; default;
+    property AsAnsiString: AnsiString read CastToAnsiString write SetAsAnsiString;
     property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
     property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
     property AsDouble: Double read CastToDouble write SetAsDouble;
@@ -374,10 +388,12 @@ type
     property AsWideString: WideString read CastToWideString write SetAsWideString;
   {$IFDEF OTL_Generics}
   public
-    function  AsRecord<T: record>: T;
-    class function FromRecord<T: record>(const value: T): TOmniValue; static;
     class function CastFrom<T>(const value: T): TOmniValue; static;
-    function  CastAs<T>: T;
+    function  CastTo<T>: T;
+    class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
+    class function FromRecord<T: record>(const value: T): TOmniValue; static;
+    function  ToArray<T>: TArray<T>;
+    function  ToRecord<T: record>: T;
     function  ToObject<T: class>: T;
     function  CastToObject<T: class>: T; overload;
   {$ENDIF OTL_Generics}
@@ -711,6 +727,22 @@ uses
   OtlCommon.Utils;
 
 type
+  IOmniAnsiStringData = interface ['{DBF5674C-AEFF-4CBD-AEC5-95F7A2FC80FF}']
+    function  GetValue: AnsiString;
+    procedure SetValue(const value: AnsiString);
+    property Value: AnsiString read GetValue write SetValue;
+  end; { IOmniStringData }
+
+  TOmniAnsiStringData = class(TInterfacedObject, IOmniAnsiStringData)
+  strict private
+    osdValue: AnsiString;
+  public
+    constructor Create(const value: AnsiString);
+    function  GetValue: AnsiString;
+    procedure SetValue(const value: AnsiString);
+    property Value: AnsiString read GetValue write SetValue;
+  end; { TOmniAnsiStringData }
+
   IOmniStringData = interface ['{21E52E56-390C-4066-B9FC-83862FFBCBF3}']
     function  GetValue: string;
     procedure SetValue(const value: string);
@@ -1459,7 +1491,7 @@ begin
         vtString:        ovc.Add(string(VString^));
         vtPointer:       ovc.Add(VPointer);
         vtPChar:         ovc.Add(string(StrPas(VPChar)));
-        vtAnsiString:    ovc.Add(string(VAnsiString));
+        vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
         vtObject:        ovc.Add(VObject);
@@ -1474,9 +1506,7 @@ begin
       end; //case
     end; //with
   end; //for i
-  ovType := ovtArray;
-  ovIntf := AutoDestroyObject(ovc);
-  ovData := int64(ovc);
+  SetAsArray(ovc);
 end; { TOmniValue.Create }
 
 constructor TOmniValue.CreateNamed(const values: array of const;
@@ -1514,7 +1544,7 @@ begin
           vtString:        ovc.Add(string(VString^), name);
           vtPointer:       ovc.Add(VPointer, name);
           vtPChar:         ovc.Add(string(StrPas(VPChar)), name);
-          vtAnsiString:    ovc.Add(string(VAnsiString), name);
+          vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
           vtVariant:       ovc.Add(VVariant^, name);
           vtObject:        ovc.Add(VObject, name);
@@ -1529,30 +1559,27 @@ begin
         end; //case
     end; //with
   end; //for i
-  ovType := ovtArray;
-  ovIntf := AutoDestroyObject(ovc);
-  ovData := int64(ovc);
+  SetAsArray(ovc);
 end; { TOmniValue.CreateNamed }
 
-function TOmniValue.CastAsInt64: int64;
-begin
-  case ovType of
-    ovtInterface, ovtExtended, ovtString, ovtWideString, ovtDouble:
-      raise Exception.Create('TOmniValue cannot be cast to Int64');
-    ovtVariant:
-      Result := AsVariant;
-    else
-      Result := ovData;
-  end;
-end; { TOmniValue.CastAsInt64 }
-
 {$IFDEF OTL_Generics}
-function TOmniValue.AsRecord<T>: T;
+function TOmniValue.ToArray<T>: TArray<T>;
+var
+  iItem: integer;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  SetLength(Result, TOmniValueContainer(ovData).Count);
+  for iItem := 0 to TOmniValueContainer(ovData).Count - 1 do
+    Result[iItem] := TOmniValueContainer(ovData)[iItem].CastTo<T>;
+end; { TOmniValue.ToArray }
+
+function TOmniValue.ToRecord<T>: T;
 begin
   Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value;
-end; { TOmniValue.AsRecord }
+end; { TOmniValue.ToRecord }
 
-function TOmniValue.CastAs<T>: T;
+function TOmniValue.CastTo<T>: T;
 var
   ds      : integer;
   maxValue: uint64;
@@ -1561,7 +1588,12 @@ begin
   ds := 0;
   ti := System.TypeInfo(T);
   if assigned(ti) then
-    ds := TOmniValue_DataSize[ti^.Kind];
+    if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
+      ds := 1
+    else if (ti = System.TypeInfo(word)) or (ti = System.TypeInfo(smallint)) then
+      ds := 2
+    else
+      ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
     {$IFDEF OTL_ERTTI}
     Result := AsTValue.AsType<T>
@@ -1576,7 +1608,7 @@ begin
     end;
     Move(ovData, Result, ds);
   end;
-end; { TOmniValue.CastAs }
+end; { TOmniValue.CastTo }
 
 class function TOmniValue.CastFrom<T>(const value: T): TOmniValue;
 var
@@ -1586,8 +1618,14 @@ var
 begin
   ds := 0;
   ti := System.TypeInfo(T);
-  if assigned(ti) then
-    ds := TOmniValue_DataSize[ti^.Kind];
+  if assigned(ti) then begin
+    if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
+      ds := 1
+    else if (ti = System.TypeInfo(word)) or (ti = System.TypeInfo(smallint)) then
+      ds := 2
+    else
+      ds := TOmniValue_DataSize[ti^.Kind];
+  end;
   if ds = 0 then // complicated stuff
     {$IFDEF OTL_ERTTI}
     Result.AsTValue := TValue.From<T>(value)
@@ -1615,6 +1653,17 @@ begin
     end;
   end;
 end; { TOmniValue.CastFrom }
+
+class function TOmniValue.FromArray<T>(const values: TArray<T>): TOmniValue;
+var
+  ovc  : TOmniValueContainer;
+  value: T;
+begin
+  ovc := TOmniValueContainer.Create;
+  for value in values do
+    ovc.Add(TOmniValue.CastFrom<T>(value));
+  Result.SetAsArray(ovc);
+end; { TOmniValue.FromArray }
 
 class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
 begin
@@ -1672,6 +1721,18 @@ begin
     raise Exception.Create('TOmniValue does not contain an array');
   Result := TOmniValueContainer(ovData)[idx];
 end; { TOmniValue.GetAsArrayItem }
+
+function TOmniValue.CastToAnsiString: AnsiString;
+begin
+  if not TryCastToAnsiString(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to AnsiString');
+end; { TOmniValue.CastToAnsiString }
+
+function TOmniValue.CastToAnsiStringDef(const defValue: AnsiString): AnsiString;
+begin
+  if not TryCastToAnsiString(Result) then
+    Result := defValue;
+end; { TOmniValue.CastToAnsiStringDef }
 
 function TOmniValue.CastToBoolean: boolean;
 begin
@@ -1817,7 +1878,7 @@ begin
     raise Exception.Create('TOmniValue cannot be converted to string');
 end; { TOmniValue.CastToString }
 
-function TOmniValue.CastToStringDef(defValue: string): string;
+function TOmniValue.CastToStringDef(const defValue: string): string;
 begin
   if not TryCastToString(Result) then
     Result := defValue;
@@ -1836,6 +1897,8 @@ begin
     ovtDouble,
     ovtExtended:
       Result := AsExtended;
+    ovtAnsiString:
+      Result := string(AsAnsiString);
     ovtString:
       Result := AsString;
     ovtObject:
@@ -1877,6 +1940,11 @@ begin
   if not TryCastToWideString(Result) then
     Result := defValue;
 end; { TOmniValue.CastToWideStringDef }
+
+function TOmniValue.IsAnsiString: boolean;
+begin
+  Result := (ovType = ovtAnsiString);
+end; { TOmniValue.IsAnsiString }
 
 function TOmniValue.IsArray: boolean;
 begin
@@ -1920,7 +1988,7 @@ end; { TOmniValue.IsInterface }
 
 function TOmniValue.IsInterfacedType: boolean;
 begin
-  Result := ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord];
+  Result := ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString];
 end; { TOmniValue.IsInterfacedType }
 
 function TOmniValue.IsObject: boolean;
@@ -1984,6 +2052,19 @@ begin
     ov.SetAsRecord(intf);
   end;
 end; { TOmniValue._RemoveWarnings }
+
+procedure TOmniValue.SetAsAnsiString(const value: AnsiString);
+begin
+  ovIntf := TOmniAnsiStringData.Create(value);
+  ovType := ovtAnsiString;
+end; { TOmniValue.SetAsAnsiString }
+
+procedure TOmniValue.SetAsArray(value: TOmniValueContainer);
+begin
+  ovType := ovtArray;
+  ovIntf := AutoDestroyObject(value);
+  ovData := int64(value);
+end; { TOmniValue.SetAsArray }
 
 procedure TOmniValue.SetAsBoolean(const value: boolean);
 begin
@@ -2112,6 +2193,24 @@ begin
   ovIntf := TOmniWideStringData.Create(value);
   ovType := ovtWideString;
 end; { TOmniValue.SetAsWideString }
+
+function TOmniValue.TryCastToAnsiString(var value: AnsiString): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtNull:       value := '';
+    ovtBoolean:    value := AnsiString(BoolToStr(AsBoolean, true));
+    ovtInteger:    value := AnsiString(IntToStr(ovData));
+    ovtDouble,
+    ovtDateTime,
+    ovtExtended:   value := AnsiString(FloatToStr(AsExtended));
+    ovtAnsiString: value := (ovIntf as IOmniAnsiStringData).Value;
+    ovtString:     value := AnsiString((ovIntf as IOmniStringData).Value);
+    ovtWideString: value := AnsiString((ovIntf as IOmniWideStringData).Value);
+    ovtVariant:    value := AnsiString(AsVariant);
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToAnsiString }
 
 function TOmniValue.TryCastToBoolean(var value: boolean): boolean;
 begin
@@ -2246,6 +2345,7 @@ begin
     ovtDouble,
     ovtDateTime,
     ovtExtended:   value := FloatToStr(AsExtended);
+    ovtAnsiString: value := string((ovIntf as IOmniAnsiStringData).Value);
     ovtString:     value := (ovIntf as IOmniStringData).Value;
     ovtWideString: value := (ovIntf as IOmniWideStringData).Value;
     ovtVariant:    value := string(AsVariant);
@@ -2309,6 +2409,11 @@ begin
   Result := (a.AsString = s);
 end; { TOmniValue.Equal }
 
+class operator TOmniValue.Implicit(const a: AnsiString): TOmniValue;
+begin
+  Result.AsAnsiString := a;
+end; { TOmniValue.Implicit }
+
 class operator TOmniValue.Implicit(const a: boolean): TOmniValue;
 begin
   Result.AsBoolean := a;
@@ -2359,6 +2464,11 @@ end; { TOmniValue.Implicit }
 class operator TOmniValue.Implicit(const a: Exception): TOmniValue;
 begin
   Result.AsException := a;
+end; { TOmniValue.Implicit }
+
+class operator TOmniValue.Implicit(const a: TOmniValue): AnsiString;
+begin
+  Result := a.AsAnsiString;
 end; { TOmniValue.Implicit }
 
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
@@ -2519,6 +2629,24 @@ procedure TOmniStringData.SetValue(const value: string);
 begin
   osdValue := value;
 end; { TOmniStringData.SetValue }
+
+{ TOmniAnsiStringData }
+
+constructor TOmniAnsiStringData.Create(const value: AnsiString);
+begin
+  inherited Create;
+  osdValue := value;
+end; { TOmniAnsiStringData.Create }
+
+function TOmniAnsiStringData.GetValue: AnsiString;
+begin
+  Result := osdValue;
+end; { TOmniAnsiStringData.GetValue }
+
+procedure TOmniAnsiStringData.SetValue(const value: AnsiString);
+begin
+  osdValue := value;
+end; { TOmniAnsiStringData.SetValue }
 
 { TOmniWideStringData }
 
