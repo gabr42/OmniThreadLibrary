@@ -23,7 +23,11 @@
 - ! ForEach destructor waits for all internal tasks to be stopped before the object is destroyed.
 + Added TOmniValue.CastToXXX family of functions.
 + Added TOmniValue.TryCastToXXX family of functions.
-
+///       - AnsiString type is supported in TOmniValue.
+///       - Implemented FromArray<T> and ToArray<T>.
+///       - CastAs<T> renamed to CastTo<T>. [BREAKING]
+///       - AsRecord<T> renamed to ToRecord<T>. [BREAKING]
+///       - CastFrom<T> and CastTo<T> work for byte- and word-sized integer types.
 
 3.02: 2012-10-03
 - New features:
