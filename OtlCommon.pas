@@ -400,6 +400,8 @@ type
   {$IFDEF OTL_ERTTI}
   private
     function  GetAsTValue: TValue;
+    function  GetArrayFromTValue(const value: TValue): TOmniValueContainer;
+    function  GetTValueFromArray(const a: TOmniValueContainer): TValue;
     procedure SetAsTValue(const value: TValue);
   public
     class operator Implicit(const a: TValue): TOmniValue; inline;
@@ -1885,6 +1887,59 @@ begin
 end; { TOmniValue.CastToStringDef }
 
 {$IFDEF OTL_ERTTI}
+function TOmniValue.GetArrayFromTValue(const value: TValue): TOmniValueContainer;
+var
+  ov: TOmniValue;
+  idxItem: Integer;
+begin
+  Result := TOmniValueContainer.Create;
+  for idxItem := 0 to value.GetArrayLength-1 do
+  begin
+    ov.AsTValue := value.GetArrayElement(idxItem);
+    Result.Add(ov);
+  end;
+end;
+
+function TOmniValue.GetTValueFromArray(const a: TOmniValueContainer): TValue;
+var
+  vItem: TValue;
+  arrItems: TArray<TValue>;
+  idxItem: Integer;
+  typInfo: PTypeInfo;
+begin
+  if a.Count = 0 then
+    Exit(TValue.Empty);
+
+  SetLength(arrItems, a.Count);
+  for idxItem := 0 to a.Count-1 do
+  begin
+    vItem := a[idxItem].AsTValue;
+    arrItems[idxItem] := vItem;
+  end;
+
+  case a[0].ovType of
+    ovtBoolean: typInfo := TypeInfo(TArray<Boolean>);
+    ovtInteger: typInfo := TypeInfo(TArray<Integer>);
+    ovtDouble: typInfo := TypeInfo(TArray<Double>);
+    ovtObject: typInfo := TypeInfo(TArray<TObject>);
+    ovtPointer: typInfo := TypeInfo(TArray<Pointer>);
+    ovtDateTime: typInfo := TypeInfo(TArray<TDateTime>);
+    ovtException: typInfo := TypeInfo(TArray<Exception>);
+    ovtExtended: typInfo := TypeInfo(TArray<Extended>);
+    ovtString: typInfo := TypeInfo(TArray<string>);
+    ovtInterface: typInfo := TypeInfo(TArray<IInterface>);
+    ovtVariant: typInfo := TypeInfo(TArray<Variant>);
+    ovtWideString: typInfo := TypeInfo(TArray<WideString>);
+//    ovtArray: typInfo := TypeInfo(TArray<Boolean>);
+//    ovtRecord: typInfo := TypeInfo(TArray<Boolean>);
+    ovtAnsiString: typInfo := TypeInfo(TArray<AnsiString>);
+  else
+    typInfo := TypeInfo(TArray<Pointer>);
+  end;
+
+  Result := TValue.FromArray(typInfo, arrItems);
+end;
+
 function TOmniValue.GetAsTValue: TValue;
 begin
   case ovType of
@@ -1913,6 +1968,8 @@ begin
       Result := AsWideString;
     ovtPointer:
       Result := AsPointer;
+    ovtArray:
+      Result := GetTValueFromArray(AsArray);
   end;
 end; { TOmniValue.GetAsTValue }
 {$ENDIF OTL_ERRTI}
@@ -2175,6 +2232,9 @@ begin
       Assert(SizeOf(pointer) <= SizeOf(int64));
       AsPointer := pointer(value.GetReferenceToRawData^);
     end;
+    tkArray,
+    tkDynArray:
+      SetAsArray(GetArrayFromTValue(value));
     else
       raise Exception.CreateFmt('TValue of type %d cannot be converted to TOmniValue',
         [GetEnumName(TypeInfo(TTypeKind), Ord(value.Kind))]);

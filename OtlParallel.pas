@@ -2464,7 +2464,7 @@ begin
   Result := InternalExecuteAggregate(
     procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
     begin
-      loopBody(value.CastAs<T>, result);
+      loopBody(value.CastTo<T>, result);
     end
   );
 end; { TOmniParallelLoop<T>.ExecuteAggregate }
@@ -2475,7 +2475,7 @@ begin
   Result := InternalExecuteAggregate(
     procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
     begin
-      loopBody(task, value.CastAs<T>, result);
+      loopBody(task, value.CastTo<T>, result);
     end
   );
 end; { TOmniParallelLoop<T>.ExecuteAggregate }
@@ -2485,7 +2485,7 @@ begin
   InternalExecute(
     procedure (const value: TOmniValue)
     begin
-      loopBody(value.CastAs<T>);
+      loopBody(value.CastTo<T>);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -2495,7 +2495,7 @@ begin
   InternalExecute(
     procedure (const task: IOmniTask; const value: TOmniValue)
     begin
-      loopBody(task, value.CastAs<T>);
+      loopBody(task, value.CastTo<T>);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -2505,7 +2505,7 @@ begin
   InternalExecuteInto(
     procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
     begin
-      loopBody(value.CastAs<T>, result);
+      loopBody(value.CastTo<T>, result);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -2515,7 +2515,7 @@ begin
   InternalExecuteInto(
     procedure (const task: IOmniTask; const value: TOmniValue; var result: TOmniValue)
     begin
-      loopBody(task, value.CastAs<T>, result);
+      loopBody(task, value.CastTo<T>, result);
     end
   );
 end; { TOmniParallelLoop<T>.Execute }
@@ -2525,7 +2525,7 @@ begin
   InternalExecute(
     procedure (const value: TOmniValue; var taskState: TOmniValue)
     begin
-      loopBody(value.CastAs<T>, taskState);
+      loopBody(value.CastTo<T>, taskState);
     end
   );
 end; { TOmniParallelLoop }
