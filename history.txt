@@ -2,7 +2,8 @@
  app_23: [Fatal Error] F2084 Internal Error: BC3472
  app_26_MultiEventMonitor.XE2: 'System Error. Code: 1816. Not enough quota is available to process this command'
  + TOmniMREW is automatically initialized to 0
-
++ XE4 projects
+! fixed race condition in task termination which resulted in overwritten memory and access violations
 - Implemented IOmniPipeline.PipelineStage[] property returning Input/Ouput collections of a specific stage.
 - Fixed XE2/XE3 package compilation
 - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
