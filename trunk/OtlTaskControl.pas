@@ -38,9 +38,11 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2013-01-30
-///   Version           : 1.32
+///   Version           : 1.32a
 ///</para><para>
 ///   History:
+///     1.32a: 2013-05-26
+///       - Fixed a problem in task destruction sequence.
 ///     1.32: 2013-01-30
 ///       - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
 ///       - Fixed TOmniTaskGroup.TerminateAll.
@@ -1326,6 +1328,7 @@ end; { TOmniTask.GetUniqueID }
 procedure TOmniTask.InternalExecute(calledFromTerminate: boolean);
 var
   chainTo       : IOmniTaskControl;
+  sync          : TSynchroObject;
   taskException : Exception;
   terminateEvent: TDSiEventHandle;
 begin
@@ -1367,10 +1370,12 @@ begin
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
         otSharedInfo_ref.MonitorLock.Acquire;
         try
+          sync := otSharedInfo_ref.MonitorLock.SyncObj;
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
               integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-        finally otSharedInfo_ref.MonitorLock.Release; end;
+          otSharedInfo_ref := nil;
+        finally sync.Release; end;
       end;
     finally
       //Task controller could die any time now. Make sure we're not using shared
@@ -1378,9 +1383,8 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      if terminateEvent <> 0 then begin
+      if terminateEvent <> 0 then
         SetEvent(terminateEvent);
-      end;
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
@@ -2409,26 +2413,34 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying !
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
   DestroyMonitor;
-  if assigned(otcThread) then begin
-    Terminate;
-    FreeAndNil(otcThread);
+  if assigned(otcSharedInfo) then // TOmniTask.InternalExecute could still own the shared info
+    otcSharedInfo.MonitorLock.Acquire;
+  try
+    if assigned(otcThread) then begin
+      Terminate;
+      FreeAndNil(otcThread);
+    end;
+    if otcDestroyLock then begin
+      otcSharedInfo.Lock.Free;
+      otcSharedInfo.Lock := nil;
+    end;
+    FreeAndNil(otcExecutor);
+    otcSharedInfo.CommChannel := nil;
+    if otcSharedInfo.TerminateEvent <> 0 then begin
+      CloseHandle(otcSharedInfo.TerminateEvent);
+      otcSharedInfo.TerminateEvent := 0;
+    end;
+    if otcSharedInfo.TerminatedEvent <> 0 then begin
+      CloseHandle(otcSharedInfo.TerminatedEvent);
+      otcSharedInfo.TerminatedEvent := 0;
+    end;
+    FreeAndNil(otcParameters);
+  finally
+    if assigned(otcSharedInfo) then begin
+      otcSharedInfo.MonitorLock.Release;
+      FreeAndNil(otcSharedInfo);
+    end;
   end;
-  if otcDestroyLock then begin
-    otcSharedInfo.Lock.Free;
-    otcSharedInfo.Lock := nil;
-  end;
-  FreeAndNil(otcExecutor);
-  otcSharedInfo.CommChannel := nil;
-  if otcSharedInfo.TerminateEvent <> 0 then begin
-    CloseHandle(otcSharedInfo.TerminateEvent);
-    otcSharedInfo.TerminateEvent := 0;
-  end;
-  if otcSharedInfo.TerminatedEvent <> 0 then begin
-    CloseHandle(otcSharedInfo.TerminatedEvent);
-    otcSharedInfo.TerminatedEvent := 0;
-  end;
-  FreeAndNil(otcParameters);
-  FreeAndNil(otcSharedInfo);
   FreeAndNil(otcUserData);
   FreeAndNil(otcTerminateTokens);
   FreeAndNil(otcOnMessageList);
