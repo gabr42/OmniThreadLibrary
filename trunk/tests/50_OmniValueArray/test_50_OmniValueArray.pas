@@ -83,7 +83,7 @@ begin
       MSG_RECORD:
         begin
           {$IFDEF OTL_Generics}
-          rec := msgData.AsRecord<TTestRecord>;
+          rec := msgData.ToRecord<TTestRecord>;
           task.Comm.Send(MSG_RESULT, 'Received record with values: ' +
             Format('%d, %s, %d, %d', [rec.TestInt, rec.TestStr,
               rec.TestObj.Value.AsInteger, rec.TestIntf.Value]));
