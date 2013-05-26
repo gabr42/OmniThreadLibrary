@@ -1,11 +1,11 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{857dd6ad-bb1f-404e-9bcd-7634a9450ce9}</ProjectGuid>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <DCC_DependencyCheckOutputName>app_17_MsgWait.exe</DCC_DependencyCheckOutputName>
         <MainSource>app_17_MsgWait.dpr</MainSource>
-        <ProjectVersion>14.3</ProjectVersion>
+        <ProjectVersion>14.4</ProjectVersion>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Base>True</Base>
         <AppType>Application</AppType>
@@ -87,7 +87,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <RcCompile Include="..\..\res\MainIcon.rc">
-            <Form>..\..\res\MainIcon.res</Form>
+            <Form>MainIcon.res</Form>
         </RcCompile>
         <DCCReference Include="test_17_MsgWait.pas">
             <Form>frmTestMsgWait</Form>

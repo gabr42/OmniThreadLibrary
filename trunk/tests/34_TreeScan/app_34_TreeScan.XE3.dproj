@@ -1,11 +1,11 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{f44a99d0-e906-45dd-aa0e-e3529584ff1a}</ProjectGuid>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <DCC_DependencyCheckOutputName>app_34_TreeScan.exe</DCC_DependencyCheckOutputName>
         <MainSource>app_34_TreeScan.dpr</MainSource>
-        <ProjectVersion>14.3</ProjectVersion>
+        <ProjectVersion>14.4</ProjectVersion>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Base>True</Base>
         <AppType>Application</AppType>
@@ -120,7 +120,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <RcCompile Include="..\..\res\MainIcon.rc">
-            <Form>..\..\res\MainIcon.res</Form>
+            <Form>MainIcon.res</Form>
         </RcCompile>
         <DCCReference Include="test_34_TreeScan.pas">
             <Form>frmTreeScanDemo</Form>
