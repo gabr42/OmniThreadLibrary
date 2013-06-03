@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-01-30
-///   Version           : 1.32a
+///   Last modification : 2013-06-03
+///   Version           : 1.32b
 ///</para><para>
 ///   History:
+///     1.32b: 2013-06-03
+///       - Fixed task destruction deadlock introduced in 1.32a.
 ///     1.32a: 2013-05-26
 ///       - Fixed a problem in task destruction sequence.
 ///     1.32: 2013-01-30
@@ -1368,6 +1370,7 @@ begin
         terminateEvent := otSharedInfo_ref.TerminatedEvent;
         otSharedInfo_ref.Stopped := true;
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
+        sync := nil; // to remove the warning in the 'finally' clause below
         otSharedInfo_ref.MonitorLock.Acquire;
         try
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
@@ -2413,13 +2416,13 @@ begin
   // TODO 1 -oPrimoz Gabrijelcic : ! if we are being scheduled, the thread pool must be notified that we are dying !
   _AddRef; // Ugly ugly hack to prevent destructor being called twice when internal event monitor is in use
   DestroyMonitor;
+  if assigned(otcThread) then begin
+    Terminate;
+    FreeAndNil(otcThread);
+  end;
   if assigned(otcSharedInfo) then // TOmniTask.InternalExecute could still own the shared info
     otcSharedInfo.MonitorLock.Acquire;
   try
-    if assigned(otcThread) then begin
-      Terminate;
-      FreeAndNil(otcThread);
-    end;
     if otcDestroyLock then begin
       otcSharedInfo.Lock.Free;
       otcSharedInfo.Lock := nil;

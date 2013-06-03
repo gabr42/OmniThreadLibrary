@@ -1895,7 +1895,8 @@ end; { TOmniParallelLoopBase.Create }
 
 destructor TOmniParallelLoopBase.Destroy;
 begin
-  WaitForSingleObject(oplCountStopped.Handle, INFINITE);
+  if assigned(oplCountStopped) then
+    WaitForSingleObject(oplCountStopped.Handle, INFINITE);
   if oplManagedProvider then
     FreeAndNil(oplSourceProvider);
   FreeAndNil(oplDelegateEnum);
