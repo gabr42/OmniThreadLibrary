@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2012, Primoz Gabrijelcic
+Copyright (c) 2013, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2012-12-07
-   Version           : 1.64
+   Last modification : 2013-03-11
+   Version           : 1.65
 </pre>*)(*
    History:
+     1.65: 2013-03-11
+       - Implemented TGpSkipList<T>.Remove.
      1.64: 2012-12-07
        - TGpSkipList implements Head, Tail, Next and various overloads working with
          TGpSkipListEl<T>.
@@ -2224,6 +2226,7 @@ type
     function  IsEmpty: boolean; inline;
     function  Locate(const key: T; var element: T): boolean; overload; inline;
     function  Locate(const key: T; var element: TGpSkipListEl<T>): boolean; overload; inline;
+    procedure Remove(const element: T); virtual;
     function  Replace(position: TGpSkipListEl<T>; const element: T): T; virtual;
     function Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>; inline;
     property Head: TGpSkipListEl<T> read GetHead;
@@ -7254,6 +7257,11 @@ end; { TGpSkipList }
 function TGpSkipList<T>.Next(el: TGpSkipListEl<T>): TGpSkipListEl<T>;
 begin
   Result := FSkipList.Next(el);
+end; { TGpSkipList }
+
+procedure TGpSkipList<T>.Remove(const element: T);
+begin
+  FSkipList.Delete(element);
 end; { TGpSkipList }
 
 function TGpSkipList<T>.Replace(position: TGpSkipListEl<T>; const element: T): T;

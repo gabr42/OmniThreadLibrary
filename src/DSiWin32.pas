@@ -1,16 +1,24 @@
-(*:Collection of Win32 wrappers and helper functions.
+(*:Collection of Win32/Win64 wrappers and helper functions.
    @desc <pre>
    Free for personal and commercial use. No rights reserved.
 
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
-                       Christian Wimmer, Tommi Prami, Miha
+                       Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2012-12-12
-   Version           : 1.71b
+   Last modification : 2013-06-03
+   Version           : 1.72a
 </pre>*)(*
    History:
+     1.72a: 2013-06-03
+       - [Tommaso Ercole] DSiAllocateHWnd accepts 'style' and 'parentWindow' parameter
+         which are by default set to (WS_EX_TOOLWINDOW OR WS_EX_NOACTIVATE) and
+         HWND_MESSAGE, respectively. These are suggested values for message-only windows
+         (http://msdn.microsoft.com/en-us/library/windows/desktop/ms632680(v=vs.85).aspx).
+         Previously, these values were WS_EX_TOOLWINDOW and 0, respectively.
+     1.72: 2013-02-07
+       - Added function DSiIsCodeSigned.
      1.71b: 2012-12-12
        - Fixed parameter types in DSiClassWndProc.
      1.71a: 2012-11-04
@@ -953,7 +961,9 @@ type
   TDSiExitWindows = (ewLogOff, ewForcedLogOff, ewPowerOff, ewForcedPowerOff, ewReboot,
     ewForcedReboot, ewShutdown, ewForcedShutdown);
                    
-  function  DSiAllocateHWnd(wndProcMethod: TWndMethod): HWND;
+  function  DSiAllocateHWnd(wndProcMethod: TWndMethod;
+    style: cardinal = WS_EX_TOOLWINDOW OR WS_EX_NOACTIVATE;
+    parentWindow: HWND = HWND_MESSAGE): HWND;
   procedure DSiDeallocateHWnd(wnd: HWND);
   function  DSiDisableStandby: boolean;
   procedure DSiDisableX(hwnd: THandle);
@@ -1163,6 +1173,61 @@ type
   PSystemLogicalProcessorInformation = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
   TSystemLogicalProcessorInformationArr = array of TSystemLogicalProcessorInformation;
 
+// Imagehlp.dll
+const
+  CERT_SECTION_TYPE_ANY = $FF;      // Any Certificate type
+
+// Crypt32.dll
+const
+  CERT_NAME_SIMPLE_DISPLAY_TYPE = 4;
+  PKCS_7_ASN_ENCODING = $00010000;
+  X509_ASN_ENCODING = $00000001;
+
+type
+  PCCERT_CONTEXT = type Pointer;
+  HCRYPTPROV_LEGACY = type Pointer;
+  PFN_CRYPT_GET_SIGNER_CERTIFICATE = type Pointer;
+
+  CRYPT_VERIFY_MESSAGE_PARA = record
+    cbSize: DWORD;
+    dwMsgAndCertEncodingType: DWORD;
+    hCryptProv: HCRYPTPROV_LEGACY;
+    pfnGetSignerCertificate: PFN_CRYPT_GET_SIGNER_CERTIFICATE;
+    pvGetArg: Pointer;
+  end;
+
+// WinTrust.dll
+const
+  WINTRUST_ACTION_GENERIC_VERIFY_V2: TGUID = '{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}';
+  WTD_CHOICE_FILE = 1;
+  WTD_REVOKE_NONE = 0;
+  WTD_UI_NONE = 2;
+
+type
+  PWinTrustFileInfo = ^TWinTrustFileInfo;
+  TWinTrustFileInfo = record
+    cbStruct: DWORD;                    // = sizeof(WINTRUST_FILE_INFO)
+    pcwszFilePath: PWideChar;           // required, file name to be verified
+    hFile: THandle;                     // optional, open handle to pcwszFilePath
+    pgKnownSubject: PGUID;              // optional: fill if the subject type is known
+  end;
+
+  PWinTrustData = ^TWinTrustData;
+  TWinTrustData = record
+    cbStruct: DWORD;
+    pPolicyCallbackData: Pointer;
+    pSIPClientData: Pointer;
+    dwUIChoice: DWORD;
+    fdwRevocationChecks: DWORD;
+    dwUnionChoice: DWORD;
+    pFile: PWinTrustFileInfo;
+    dwStateAction: DWORD;
+    hWVTStateData: THandle;
+    pwszURLReference: PWideChar;
+    dwProvFlags: DWORD;
+    dwUIContext: DWORD;
+  end;
+
   function  DSiGetAppCompatFlags(const exeName: string): string;
   function  DSiGetBootType: TDSiBootType;
   function  DSiGetCompanyName: string;
@@ -1190,6 +1255,7 @@ type
   function  DSiInitFontToSystemDefault(aFont: TFont; aElement: TDSiUIElement): boolean;
   function  DSiIsAdmin: boolean;
   function  DSiIsAdminLoggedOn: boolean;
+  function  DSiIsCodeSigned(const exeFileName: string; var certName: AnsiString): boolean;
   function  DSiIsDiskInDrive(disk: char): boolean;
   function  DSiIsWinNT: boolean;
   function  DSiIsWow64: boolean;
@@ -1390,6 +1456,11 @@ type
     buffer: pointer; size: word): integer; stdcall;
   function  DSi9xNetShareDel(serverName: PChar; netName: PChar;
     reserved: word): integer; stdcall;
+  function  DSiCertCreateCertificateContext(dwCertEncodingType: DWORD;
+    pbCertEncoded: PBYTE; cbCertEncoded: DWORD): PCCERT_CONTEXT; stdcall;
+  function  DSiCertFreeCertificateContext(pCertContext: PCCERT_CONTEXT): BOOL; stdcall;
+  function  DSiCertGetNameStringA(pCertContext: PCCERT_CONTEXT; dwType: DWORD; dwFlags: DWORD;
+    pvTypePara: Pointer; pszNameString: PAnsiChar; cchNameString: DWORD): DWORD; stdcall;
   function  DSiCloseServiceHandle(hSCObject: SC_HANDLE): BOOL; stdcall;
   function  DSiCreateProcessAsUser(hToken: THandle;
     lpApplicationName, lpCommandLine: PChar; lpProcessAttributes,
@@ -1403,6 +1474,9 @@ type
     const lpStartupInfo: TStartupInfoW; var lpProcessInformation: TProcessInformation): BOOL;
   function  DSiCreateEnvironmentBlock(var lpEnvironment: pointer; hToken: THandle;
     bInherit: BOOL): BOOL;
+  function  DSiCryptVerifyMessageSignature(const pVerifyPara: CRYPT_VERIFY_MESSAGE_PARA;
+    dwSignerIndex: DWORD; pbSignedBlob: PByte; cbSignedBlob: DWORD; pbDecoded: PBYTE;
+    pcbDecoded: PDWORD; ppSignerCert: PCCERT_CONTEXT): BOOL; stdcall; //external 'Crypt32.dll';
   function  DSiDestroyEnvironmentBlock(lpEnvironment: pointer): BOOL;
   function  DSiDwmEnableComposition(uCompositionAction: UINT): HRESULT; stdcall;
   function  DSiDwmIsCompositionEnabled(var pfEnabled: BOOL): HRESULT; stdcall;
@@ -1422,6 +1496,12 @@ type
   function  DSiGetUserProfileDirectoryW(hToken: THandle; lpProfileDir: PWideChar;
     var lpcchSize: DWORD): BOOL; stdcall;
   function  DSiGlobalMemoryStatusEx(memStatus: PMemoryStatusEx): boolean; stdcall;
+  function  DSiImageEnumerateCertificates(FileHandle: THandle; TypeFilter: WORD;
+    out CertificateCount: DWORD; Indices: PDWORD; IndexCount: Integer): BOOL; stdcall;
+  function  DSiImageGetCertificateData(FileHandle: THandle; CertificateIndex: Integer;
+    Certificate: PWinCertificate; var RequiredLength: DWORD): BOOL; stdcall;
+  function  DSiImageGetCertificateHeader(FileHandle: THandle; CertificateIndex: Integer;
+    var CertificateHeader: TWinCertificate): BOOL; stdcall;
   function  DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   function  DSiIsWow64Process(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
   function  DSiLogonUser(lpszUsername, lpszDomain, lpszPassword: PChar;
@@ -1441,6 +1521,8 @@ type
     disableWakeEvent: BOOL = false): BOOL; stdcall;
   function  DSiSHEmptyRecycleBin(Wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
+  function  DSiWinVerifyTrust(hwnd: HWND; const ActionID: TGUID;
+    ActionData: Pointer): Longint; stdcall;
   function  DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
   function  DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
 
@@ -1526,6 +1608,11 @@ type
     buffer: pointer; size: word): integer; stdcall;
   T9xNetShareDel = function(serverName: PChar; netName: PChar;
     reserved: word): integer; stdcall;
+  TCertCreateCertificateContext = function(dwCertEncodingType: DWORD;
+    pbCertEncoded: PBYTE; cbCertEncoded: DWORD): PCCERT_CONTEXT; stdcall;
+  TCertFreeCertificateContext = function(pCertContext: PCCERT_CONTEXT): BOOL; stdcall;
+  TCertGetNameStringA = function(pCertContext: PCCERT_CONTEXT; dwType: DWORD; dwFlags: DWORD;
+    pvTypePara: Pointer; pszNameString: PAnsiChar; cchNameString: DWORD): DWORD; stdcall;
   TCloseServiceHandle = function(hSCObject: SC_HANDLE): BOOL; stdcall;
   TCreateProcessAsUser = function(hToken: THandle;
     lpApplicationName: PChar; lpCommandLine: PChar; lpProcessAttributes,
@@ -1538,9 +1625,12 @@ type
     dwCreationFlags: DWORD; lpEnvironment: pointer; lpCurrentDirectory: PWideChar;
     const lpStartupInfo: TStartupInfoW;
     var lpProcessInformation: TProcessInformation): BOOL; stdcall;
-  TCreateEnvironmentBlock = function (var lpEnvironment: pointer; hToken: THandle;
+  TCreateEnvironmentBlock = function(var lpEnvironment: pointer; hToken: THandle;
     bInherit: BOOL): BOOL; stdcall;
-  TDestroyEnvironmentBlock = function (lpEnvironment: pointer): BOOL; stdcall;
+  TCryptVerifyMessageSignature = function(const pVerifyPara: CRYPT_VERIFY_MESSAGE_PARA;
+    dwSignerIndex: DWORD; pbSignedBlob: PByte; cbSignedBlob: DWORD; pbDecoded: PBYTE;
+    pcbDecoded: PDWORD; ppSignerCert: PCCERT_CONTEXT): BOOL; stdcall;
+  TDestroyEnvironmentBlock = function(lpEnvironment: pointer): BOOL; stdcall;
   TDwmEnableComposition = function(uCompositionAction: UINT): HRESULT; stdcall;
   TDwmIsCompositionEnabled = function(var pfEnabled: BOOL): HRESULT; stdcall;
   TEnumProcessModules = function(hProcess: THandle; lphModule: PModule; cb: DWORD;
@@ -1557,9 +1647,15 @@ type
   TGetProcessMemoryInfo = function(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
   TGetTickCount64 = function: int64; stdcall;
-  TGetUserProfileDirectoryW = function (hToken: THandle; lpProfileDir: PWideChar;
+  TGetUserProfileDirectoryW = function(hToken: THandle; lpProfileDir: PWideChar;
     var lpcchSize: DWORD): BOOL; stdcall;
   TGlobalMemoryStatusEx = function(memStatus: PMemoryStatusEx): boolean; stdcall;
+  TImageEnumerateCertificates = function(FileHandle: THandle; TypeFilter: WORD;
+    out CertificateCount: DWORD; Indices: PDWORD; IndexCount: Integer): BOOL; stdcall;
+  TImageGetCertificateData = function(FileHandle: THandle; CertificateIndex: Integer;
+    Certificate: PWinCertificate; var RequiredLength: DWORD): BOOL; stdcall;
+  TImageGetCertificateHeader = function(FileHandle: THandle; CertificateIndex: Integer;
+    var CertificateHeader: TWinCertificate): BOOL; stdcall;
   TImpersonateLoggedOnUser = function(hToken: THandle): BOOL; stdcall;
   TIsWow64Process = function(hProcess: THandle; var wow64Process: BOOL): BOOL; stdcall;
   TLogonUser = function(lpszUsername, lpszDomain, lpszPassword: LPCSTR;
@@ -1578,16 +1674,22 @@ type
   TSetSuspendState = function(hibernate, forceCritical, disableWakeEvent: BOOL): BOOL; stdcall;
   TSHEmptyRecycleBin = function(wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
+  TWinVerifyTrust = function(hwnd: HWND; const ActionID: TGUID;
+    ActionData: Pointer): Longint; stdcall;
   TWow64DisableWow64FsRedirection = function(var oldStatus: pointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = function(const oldStatus: pointer): BOOL; stdcall;
 
 const
   G9xNetShareAdd: T9xNetShareAdd = nil;
   G9xNetShareDel: T9xNetShareDel = nil;
+  GCertCreateCertificateContext: TCertCreateCertificateContext = nil;
+  GCertFreeCertificateContext: TCertFreeCertificateContext = nil;
+  GCertGetNameStringA: TCertGetNameStringA = nil;
   GCloseServiceHandle: TCloseServiceHandle = nil;
   GCreateProcessAsUser: TCreateProcessAsUser = nil;
   GCreateProcessWithLogonW: TCreateProcessWithLogonW = nil;
   GCreateEnvironmentBlock: TCreateEnvironmentBlock = nil;
+  GCryptVerifyMessageSignature: TCryptVerifyMessageSignature = nil;
   GDestroyEnvironmentBlock: TDestroyEnvironmentBlock = nil;
   GDwmEnableComposition: TDwmEnableComposition = nil;
   GDwmIsCompositionEnabled: TDwmIsCompositionEnabled = nil;
@@ -1600,6 +1702,9 @@ const
   GGetTickCount64: TGetTickCount64 = nil;
   GGetUserProfileDirectoryW: TGetUserProfileDirectoryW = nil;
   GGlobalMemoryStatusEx: TGlobalMemoryStatusEx = nil;
+  GImageEnumerateCertificates: TImageEnumerateCertificates = nil;
+  GImageGetCertificateData: TImageGetCertificateData = nil;
+  GImageGetCertificateHeader: TImageGetCertificateHeader = nil;
   GImpersonateLoggedOnUser: TImpersonateLoggedOnUser = nil;
   GIsWow64Process: TIsWow64Process = nil;
   GLogonUser: TLogonUser = nil;
@@ -1612,6 +1717,7 @@ const
   GSetDllDirectory: TSetDllDirectory = nil;
   GSetSuspendState: TSetSuspendState = nil;
   GSHEmptyRecycleBin: TSHEmptyRecycleBin = nil;
+  GWinVerifyTrust: TWinVerifyTrust = nil;
   GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
   GWow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection = nil;
 
@@ -5109,7 +5215,7 @@ var
                    TIcsWndHandler.AllocateHWnd from ICS v6 (http://www.overbyte.be)]
     @since   2007-05-30
   }
-  function DSiAllocateHWnd(wndProcMethod: TWndMethod): HWND;
+  function DSiAllocateHWnd(wndProcMethod: TWndMethod; style: cardinal; parentWindow: HWND): HWND;
   var
     alreadyRegistered: boolean;
     tempClass        : TWndClass;
@@ -5131,8 +5237,8 @@ var
           raise Exception.CreateFmt('Unable to register DSiWin32 hidden window class. %s',
             [SysErrorMessage(GetLastError)]);
       end;
-      Result := CreateWindowEx(WS_EX_TOOLWINDOW, CDSiHiddenWindowName, '', WS_POPUP,
-        0, 0, 0, 0, 0, 0, HInstance, nil);
+      Result := CreateWindowEx(style, CDSiHiddenWindowName, '', WS_POPUP,
+        0, 0, 0, 0, parentWindow, 0, HInstance, nil);
       if Result = 0 then
         raise Exception.CreateFmt('Unable to create DSiWin32 hidden window. %s',
                 [SysErrorMessage(GetLastError)]);
@@ -6370,6 +6476,84 @@ var
     end;
   end; { DSiIsAdminLoggedOn }
 
+  {:Checks whether the code is signed and returns that value as a function result.
+    On the NT platform also returns the name of the signing certificate in the `certName`
+    parameter.
+    Based on the code by [Craig Peterson] published on the StackOverflow:
+    http://stackoverflow.com/questions/5993877/checking-digital-signature-programmatically-from-delphi
+    @author  Craig Peterson, gabr
+  }
+  function DSiIsCodeSigned(const exeFileName: string; var certName: AnsiString): boolean;
+  var
+    cert        : PWinCertificate;
+    certContext : PCCERT_CONTEXT;
+    certCount   : DWORD;
+    certNameLen : DWORD;
+    fileInfo    : TWinTrustFileInfo;
+    hExe        : HMODULE;
+    trustData   : TWinTrustData;
+    verifyParams: CRYPT_VERIFY_MESSAGE_PARA;
+  begin
+    certName := '';
+    // Verify that the exe is signed and the checksum matches.
+    FillChar(fileInfo, SizeOf(fileInfo), 0);
+    fileInfo.cbStruct := sizeof(fileInfo);
+    fileInfo.pcwszFilePath := PWideChar(WideString(exeFileName));
+    FillChar(trustData, SizeOf(trustData), 0);
+    trustData.cbStruct := sizeof(trustData);
+    trustData.dwUIChoice := WTD_UI_NONE;
+    trustData.fdwRevocationChecks := WTD_REVOKE_NONE;
+    trustData.dwUnionChoice := WTD_CHOICE_FILE;
+    trustData.pFile := @fileInfo;
+    Result := DSiWinVerifyTrust(INVALID_HANDLE_VALUE, WINTRUST_ACTION_GENERIC_VERIFY_V2,
+      @trustData) = ERROR_SUCCESS;
+    if Result and DSiIsWinNT then begin
+      // Verify that the exe was signed by our private key
+      hExe := CreateFile(PChar(exeFileName), GENERIC_READ, FILE_SHARE_READ,
+        nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL or FILE_FLAG_RANDOM_ACCESS, 0);
+      if hExe = INVALID_HANDLE_VALUE then
+        Exit;
+      try
+        // There should only be one certificate associated with the exe
+        if (not DSiImageEnumerateCertificates(hExe, CERT_SECTION_TYPE_ANY, certCount, nil, 0)) or
+           (certCount <> 1)
+        then
+          Exit;
+        // Read the certificate header so we can get the size needed for the full cert
+        GetMem(cert, SizeOf(TWinCertificate) + 3); // ImageGetCertificateHeader writes an DWORD at bCertificate for some reason
+        try
+          cert.dwLength := 0;
+          cert.wRevision := WIN_CERT_REVISION_1_0;
+          if not DSiImageGetCertificateHeader(hExe, 0, cert^) then
+            Exit;
+          // Read the full certificate
+          ReallocMem(cert, SizeOf(TWinCertificate) + cert.dwLength);
+          if not DSiImageGetCertificateData(hExe, 0, cert, cert.dwLength) then
+            Exit;
+          // Get the certificate context.  CryptVerifyMessageSignature has the
+          // side effect of creating a context for the signing certificate.
+          FillChar(verifyParams, SizeOf(verifyParams), 0);
+          verifyParams.cbSize := SizeOf(verifyParams);
+          verifyParams.dwMsgAndCertEncodingType := X509_ASN_ENCODING or PKCS_7_ASN_ENCODING;
+          if not DSiCryptVerifyMessageSignature(verifyParams, 0, @cert.bCertificate,
+             cert.dwLength, nil, nil, @certContext) then
+            Exit;
+          try
+            // Extract and compare the certificate's subject names.  Don't
+            // compare the entire certificate or the public key as those will
+            // change when the certificate is renewed.
+            certNameLen := DSiCertGetNameStringA(certContext,
+              CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nil, nil, 0);
+            SetLength(CertName, certNameLen - 1);
+            DSiCertGetNameStringA(certContext, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0,
+              nil, PAnsiChar(CertName), certNameLen);
+          finally DSiCertFreeCertificateContext(certContext); end;
+        finally FreeMem(cert); end;
+      finally CloseHandle(hExe); end;
+      Result := True;
+    end;
+  end; { DSiIsCodeSigned }
+
   {:Checks if disk is inserted in the specified drive.
     @author  Odisej
     @since   2003-10-09
@@ -7560,7 +7744,46 @@ var
     else
       Result := ERROR_NOT_SUPPORTED;
   end; { DSi9xNetShareDel }
-  
+
+  function DSiCertCreateCertificateContext(dwCertEncodingType: DWORD;
+    pbCertEncoded: PBYTE; cbCertEncoded: DWORD): PCCERT_CONTEXT; stdcall; //external 'Crypt32.dll';
+  begin
+    if not assigned(GCertCreateCertificateContext) then
+      GCertCreateCertificateContext := DSiGetProcAddress('crypt32.dll', 'CertCreateCertificateContext');
+    if assigned(GCertCreateCertificateContext) then
+      Result := GCertCreateCertificateContext(dwCertEncodingType, pbCertEncoded, cbCertEncoded)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := nil;
+    end;
+  end; { DSiCertCreateCertificateContext }
+
+  function DSiCertFreeCertificateContext(pCertContext: PCCERT_CONTEXT): BOOL; stdcall; //external 'Crypt32.dll';
+  begin
+    if not assigned(GCertFreeCertificateContext) then
+      GCertFreeCertificateContext := DSiGetProcAddress('crypt32.dll', 'CertFreeCertificateContext');
+    if assigned(GCertFreeCertificateContext) then
+      Result := GCertFreeCertificateContext(pCertContext)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiCertFreeCertificateContext }
+
+  function DSiCertGetNameStringA(pCertContext: PCCERT_CONTEXT; dwType: DWORD; dwFlags: DWORD;
+    pvTypePara: Pointer; pszNameString: PAnsiChar; cchNameString: DWORD): DWORD; stdcall;
+  begin
+    if not assigned(GCertGetNameStringA) then
+      GCertGetNameStringA := DSiGetProcAddress('crypt32.dll', 'CertGetNameStringA');
+    if assigned(GCertGetNameStringA) then
+      Result := GCertGetNameStringA(pCertContext, dwType, dwFlags, pvTypePara,
+        pszNameString, cchNameString)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := 0;
+    end;
+  end; { DSiCertGetNameStringA }
+
   function DSiCloseServiceHandle(hSCObject: SC_HANDLE): BOOL;
   begin
     if not assigned(GCloseServiceHandle) then
@@ -7644,6 +7867,21 @@ var
       Result := false;
     end;
   end; { DSiCreateEnvironmentBlock }
+
+  function DSiCryptVerifyMessageSignature(const pVerifyPara: CRYPT_VERIFY_MESSAGE_PARA;
+    dwSignerIndex: DWORD; pbSignedBlob: PByte; cbSignedBlob: DWORD; pbDecoded: PBYTE;
+    pcbDecoded: PDWORD; ppSignerCert: PCCERT_CONTEXT): BOOL; stdcall;
+  begin
+    if not assigned(GCryptVerifyMessageSignature) then
+      GCryptVerifyMessageSignature := DSiGetProcAddress('crypt32.dll', 'CryptVerifyMessageSignature');
+    if assigned(GCryptVerifyMessageSignature) then
+      Result := GCryptVerifyMessageSignature(pVerifypara, dwSignerIndex, pbSignedBlob,
+        cbSignedBlob, pbDecoded, pcbDecoded, ppSignerCert)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiCryptVerifyMessageSignature }
 
   function DSiDestroyEnvironmentBlock(lpEnvironment: pointer): BOOL;
   begin
@@ -7783,6 +8021,46 @@ var
       Result := false;
     end;
   end; { DSiGlobalMemoryStatusEx }
+
+  function DSiImageEnumerateCertificates(FileHandle: THandle; TypeFilter: WORD;
+    out CertificateCount: DWORD; Indices: PDWORD; IndexCount: Integer): BOOL; stdcall;
+  begin
+    if not assigned(GImageEnumerateCertificates) then
+      GImageEnumerateCertificates := DSiGetProcAddress('imagehlp.dll', 'ImageEnumerateCertificates');
+    if assigned(GImageEnumerateCertificates) then
+      Result := GImageEnumerateCertificates(FileHandle, TypeFilter, CertificateCount,
+        Indices, IndexCount)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiImageEnumerateCertificates }
+
+  function DSiImageGetCertificateData(FileHandle: THandle; CertificateIndex: Integer;
+    Certificate: PWinCertificate; var RequiredLength: DWORD): BOOL; stdcall;
+  begin
+    if not assigned(GImageGetCertificateData) then
+      GImageGetCertificateData := DSiGetProcAddress('imagehlp.dll', 'ImageGetCertificateData');
+    if assigned(GImageGetCertificateData) then
+      Result := GImageGetCertificateData(FileHandle, CertificateIndex, Certificate, RequiredLength)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiImageGetCertificateData }
+
+  function DSiImageGetCertificateHeader(FileHandle: THandle; CertificateIndex: Integer;
+    var CertificateHeader: TWinCertificate): BOOL; stdcall;
+  begin
+    if not assigned(GImageGetCertificateHeader) then
+      GImageGetCertificateHeader := DSiGetProcAddress('imagehlp.dll', 'ImageGetCertificateHeader');
+    if assigned(GImageGetCertificateHeader) then
+      Result := GImageGetCertificateHeader(FileHandle, CertificateIndex, CertificateHeader)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiImageGetCertificateHeader }
 
   function DSiImpersonateLoggedOnUser(hToken: THandle): BOOL; stdcall;
   begin
@@ -7929,6 +8207,17 @@ var
     else
       Result := S_FALSE;
   end; { DSiSHEmptyRecycleBin }
+
+  function DSiWinVerifyTrust(hwnd: HWND; const ActionID: TGUID;
+    ActionData: Pointer): Longint; stdcall;
+  begin
+    if not assigned(GWinVerifyTrust) then
+      GWinVerifyTrust := DSiGetProcAddress('wintrust.dll', 'WinVerifyTrust');
+    if assigned(GWinVerifyTrust) then
+      Result := GWinVerifyTrust(hwnd, ActionID, ActionData)
+    else
+      Result := TRUST_E_ACTION_UNKNOWN;
+  end; { DSiWinVerifyTrust }
 
   function DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
   begin

@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2012 Primoz Gabrijelcic
+   (c) 2013 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2012-11-27
-   Version           : 1.34
+   Last modification : 2013-04-04
+   Version           : 1.35
 </pre>*)(*
    History:
+     1.35: 2013-04-04
+       - Added EnumList overload.
      1.34: 2012-11-27
        - Implemented IGpStringBuilder and BuildString.
      1.33: 2012-11-09
@@ -116,6 +118,7 @@ interface
 
 uses
   Windows,
+  SysUtils,
   Classes,
   Contnrs,
   DSiWin32;
@@ -129,6 +132,9 @@ uses
     {$DEFINE GpStuff_AlignedInt}
     {$DEFINE GpStuff_ValuesEnumerators}
     {$DEFINE GpStuff_Helpers}
+  {$IFEND}
+  {$IF CompilerVersion >= 20} //D2009+
+    {$DEFINE GpStuff_Anonymous}
   {$IFEND}
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
@@ -233,6 +239,11 @@ type
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
 
+  {$IFDEF GpStuff_Anonymous}
+  IGpAutoExecute = interface ['{A6B38DDB-25F0-4789-BFC4-25787722CBAE}']
+  end; { IGpAutoExecute }
+  {$ENDIF GpStuff_Anonymous}
+
   ///	<summary>Preallocated, growable caching memory buffer for one specific memory size.</summary>
   TGpMemoryBuffer = class
   {$IFDEF USE_STRICT} strict {$ENDIF} private
@@ -299,6 +310,10 @@ function  FormatDataSize(value: int64): string;
 
 function  AutoDestroyObject(obj: TObject): IGpAutoDestroyObject;
 
+{$IFDEF GpStuff_Anonymous}
+function  AutoExecute(proc: TProc): IGpAutoExecute;
+{$ENDIF GpStuff_Anonymous}
+
 ///<summary>Stops execution if the program is running in the debugger.</summary>
 procedure DebugBreak(triggerBreak: boolean = true);
 
@@ -362,7 +377,9 @@ function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorF
 function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
 function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
 function EnumList(const aList: string; delim: char; const quoteChar: string = '';
-  stripQuotes: boolean = true): IGpStringValueEnumeratorFactory;
+  stripQuotes: boolean = true): IGpStringValueEnumeratorFactory; overload;
+function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
+  stripQuotes: boolean = true): IGpStringValueEnumeratorFactory; overload;
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0): IGpStringValueEnumeratorFactory;
 
@@ -382,9 +399,8 @@ implementation
 
 uses
 {$IFDEF ConditionalExpressions}
-  Variants,
+  Variants;
 {$ENDIF ConditionalExpressions}
-  SysUtils;
 
 {$IFDEF ConditionalExpressions}
 {$IF CompilerVersion <= 20} //D2009 or older
@@ -480,7 +496,7 @@ type
   {$ENDIF}
 
   TGpAutoDestroyObject = class(TInterfacedObject, IGpAutoDestroyObject)
-  {$IFDEF USE_STRICT}  strict {$ENDIF}  private
+  {$IFDEF USE_STRICT}strict {$ENDIF}  private
     FObject: TObject;
   protected
     function GetObj: TObject;
@@ -490,6 +506,17 @@ type
     procedure Free;
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
+
+  {$IFDEF GpStuff_Anonymous}
+  TGpAutoExecute = class(TInterfacedObject, IGpAutoExecute)
+  strict private
+    FProc: TProc;
+  public
+    constructor Create(proc: TProc);
+    destructor  Destroy; override;
+    procedure Run;
+  end; { TGpAutoExecute }
+  {$ENDIF GpStuff_Anonymous}
 
   TGpStringBuilder = class(TInterfacedObject, IGpStringBuilder)
   strict private
@@ -510,9 +537,16 @@ begin
   Result := TGpAutoDestroyObject.Create(obj);
 end; { AutoDestroyObject }
 
+{$IFDEF GpStuff_Anonymous}
+function AutoExecute(proc: TProc): IGpAutoExecute;
+begin
+  Result := TGpAutoExecute.Create(proc);
+end; { AutoExecute }
+{$ENDIF GpStuff_Anonymous}
+
 //copied from GpString unit
 procedure GetDelimiters(const list: string; delim: char; const quoteChar: string;
-  addTerminators: boolean; var delimiters: TDelimiters);
+  addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk  : boolean;
   i    : integer;
@@ -540,6 +574,47 @@ begin
       skip := not skip
     else if not skip then begin
       if list[i] = delim then begin
+        delimiters[idx] := i;
+        Inc(idx);
+      end;
+    end;
+  end; //for
+  if addTerminators then begin
+    delimiters[idx] := Length(list)+1;
+    Inc(idx);
+  end;
+  SetLength(delimiters,idx);
+end; { GetDelimiters }
+
+procedure GetDelimiters(const list: string; delim: TSysCharSet; const quoteChar: string;
+  addTerminators: boolean; var delimiters: TDelimiters); overload;
+var
+  chk  : boolean;
+  i    : integer;
+  idx  : integer;
+  quote: char;
+  skip : boolean;
+begin
+  SetLength(delimiters, Length(list)+2); // leave place for terminators
+  idx := 0;
+  if addTerminators then begin
+    delimiters[idx] := 0;
+    Inc(idx);
+  end;
+  skip := false;
+  if quoteChar = '' then begin
+    chk := false;
+    quote := #0; //to keep compiler happy
+  end
+  else begin
+    chk   := true;
+    quote := quoteChar[1];
+  end;
+  for i := 1 to Length(list) do begin
+    if chk and (list[i] = quote) then
+      skip := not skip
+    else if not skip then begin
+      if AnsiChar(list[i]) in delim then begin
         delimiters[idx] := i;
         Inc(idx);
       end;
@@ -1149,6 +1224,36 @@ begin
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
 
+function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string;
+  stripQuotes: boolean): IGpStringValueEnumeratorFactory;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+  sl        : TStringList;
+begin
+  sl := TStringList.Create;
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        sl.Add(Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3))
+      else
+        sl.Add(Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1));
+    end;
+  end;
+  Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumList }
+
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
   enumSubfolders: boolean; maxEnumDepth: integer): IGpStringValueEnumeratorFactory;
 var
@@ -1326,6 +1431,29 @@ function TGpAutoDestroyObject.GetObj: TObject;
 begin
   Result := FObject;
 end; { TGpAutoDestroyObject.GetObj }
+
+{ TGpAutoExecute }
+
+{$IFDEF GpStuff_Anonymous}
+constructor TGpAutoExecute.Create(proc: TProc);
+begin
+  inherited Create;
+  FProc := proc;
+end; { TGpAutoExecute.Create }
+
+destructor TGpAutoExecute.Destroy;
+begin
+  Run;
+  inherited;
+end; { TGpAutoExecute.Destroy }
+
+procedure TGpAutoExecute.Run;
+begin
+  if assigned(FProc) then
+    FProc;
+  FProc := nil;
+end; { TGpAutoExecute.Run }
+{$ENDIF GpStuff_Anonymous}
 
 { TGpMemoryBuffer }
 
