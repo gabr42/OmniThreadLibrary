@@ -46,6 +46,12 @@ uses
   RTTI,
   SuperObject;
 
+type
+  TOtlSuperRttiContext = class(TSuperRttiContext)
+  public
+    constructor Create; override;
+  end;
+
 function OmniValToSO(ctx: TSuperRttiContext; var value: TValue; const index: ISuperObject): ISuperObject;
 function SOToOmniVal(ctx: TSuperRttiContext; const obj: ISuperObject; var Value: TValue): Boolean;
 
@@ -107,6 +113,15 @@ begin
     stMethod: Result := False;
   end;
   Value := TValue.From<TOmniValue>(ov);
+end;
+
+{ TOtlSuperRttiContext }
+
+constructor TOtlSuperRttiContext.Create;
+begin
+  inherited;
+  SerialToJson.AddOrSetValue(TypeInfo(TOmniValue), OmniValToSO);
+  SerialFromJson.AddOrSetValue(TypeInfo(TOmniValue), SOToOmniVal);
 end;
 
 end.
