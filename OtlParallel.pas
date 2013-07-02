@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2013-03-10
-///   Version           : 1.31a
+///   Last modification : 2013-07-02
+///   Version           : 1.31b
 ///</para><para>
 ///   History:
+///     1.31b: 2013-07-02
+///       - Simple pipline stage handles exceptions in the executor function.
 ///     1.31a: 2013-03-10
 ///       - ForEach destructor waits for all internal tasks to be stopped before the
 ///         object is destroyed.
@@ -2844,6 +2846,7 @@ end; { TOmniPipelineStage.Execute }
 procedure TOmniPipelineStage.ExecuteSimpleStage(const task: IOmniTask; const stage:
   TPipelineSimpleStageDelegate; const input, output: IOmniBlockingCollection);
 var
+  exc     : Exception;
   inValue : TOmniValue;
   outValue: TOmniValue;
 begin
@@ -2851,7 +2854,17 @@ begin
   for inValue in input do begin
     if task.CancellationToken.IsSignalled then
       Exit;
-    stage(inValue, outValue);
+    try
+      stage(inValue, outValue);
+    except
+      exc := AcquireExceptionObject;
+      if not output.TryAdd(exc) then begin
+        // output collection is completed - pipeline is shutting down
+        exc.Free;
+        break; //for inValue
+      end;
+      outValue.Clear;
+    end;
     if not outValue.IsEmpty then begin
       if not output.TryAdd(outValue) then
         // output collection is completed - pipeline is shutting down
