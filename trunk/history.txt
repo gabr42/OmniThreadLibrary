@@ -16,6 +16,7 @@ Problems ([alex]):
 - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
 - Fixed TOmniTaskGroup.TerminateAll.
 + added OtlSuperObject [Lee_Nover]
+! Simple pipline stage handles exceptions in the executor function.
 
 3.02: 2012-10-03
 - New features:
