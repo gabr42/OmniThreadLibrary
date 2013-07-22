@@ -17,6 +17,7 @@ Problems ([alex]):
 - Fixed TOmniTaskGroup.TerminateAll.
 + added OtlSuperObject [Lee_Nover]
 ! Simple pipline stage handles exceptions in the executor function.
+! compiles when 'Typed @ operator' is enabled (tnx to [arioch])
 
 3.02: 2012-10-03
 - New features:
