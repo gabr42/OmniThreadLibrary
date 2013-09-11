@@ -338,7 +338,9 @@ type
     function  TryCastToWideString(var value: WideString): boolean;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
+    {$IFDEF Unicode}
     class operator Implicit(const a: AnsiString): TOmniValue; inline;
+    {$ENDIF}
     class operator Implicit(const a: boolean): TOmniValue; inline;
     class operator Implicit(const a: Double): TOmniValue; inline;
     class operator Implicit(const a: Extended): TOmniValue; inline;
@@ -349,7 +351,9 @@ type
     class operator Implicit(const a: IInterface): TOmniValue; //don't inline, something is broken in codegen (XE)
     class operator Implicit(const a: TObject): TOmniValue; inline;
     class operator Implicit(const a: Exception): TOmniValue; inline;
+    {$IFDEF Unicode}
     class operator Implicit(const a: TOmniValue): AnsiString; inline;
+    {$ENDIF}
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
@@ -2469,10 +2473,12 @@ begin
   Result := (a.AsString = s);
 end; { TOmniValue.Equal }
 
+{$IFDEF Unicode}
 class operator TOmniValue.Implicit(const a: AnsiString): TOmniValue;
 begin
   Result.AsAnsiString := a;
 end; { TOmniValue.Implicit }
+{$ENDIF}
 
 class operator TOmniValue.Implicit(const a: boolean): TOmniValue;
 begin
@@ -2526,10 +2532,12 @@ begin
   Result.AsException := a;
 end; { TOmniValue.Implicit }
 
+{$IFDEF Unicode}
 class operator TOmniValue.Implicit(const a: TOmniValue): AnsiString;
 begin
   Result := a.AsAnsiString;
 end; { TOmniValue.Implicit }
+{$ENDIF}
 
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
