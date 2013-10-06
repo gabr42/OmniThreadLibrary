@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2013-06-03
-   Version           : 1.72a
+   Last modification : 2013-10-06
+   Version           : 1.72b
 </pre>*)(*
    History:
+     1.72b: 2013-10-06
+       - Fixed enumeration routines to not return folders that don't match the mask.
      1.72a: 2013-06-03
        - [Tommaso Ercole] DSiAllocateHWnd accepts 'style' and 'parentWindow' parameter
          which are by default set to (WS_EX_TOOLWINDOW OR WS_EX_NOACTIVATE) and
@@ -453,6 +455,7 @@ uses
   System.UITypes,
   {$ENDIF}
   {$IFDEF DSiScopedUnitNames}System.SysUtils{$ELSE}SysUtils{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}System.IOUtils,{$ENDIF}
   {$IFDEF DSiScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
   {$IFDEF DSiScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
@@ -2888,13 +2891,17 @@ const
                 if stopEnum then
                   Exit;
               end;
-              if assigned(fileList) then
-                if storeFullPath then
-                  fileList.Add(folder + S.Name + '\')
-                else
-                  fileList.Add(S.Name + '\');
-              if assigned(fileObjectList) then
-                fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
+              {$IFDEF DSiScopedUnitNames}
+              if (fileMask = '') or TPath.MatchesPattern(S.Name, fileMask, false) then begin
+              {$ENDIF DSiScopedUnitNames}
+                if assigned(fileList) then
+                  if storeFullPath then
+                    fileList.Add(folder + S.Name + '\')
+                  else
+                    fileList.Add(S.Name + '\');
+                if assigned(fileObjectList) then
+                  fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
+              {$IFDEF DSiScopedUnitNames}end;{$ENDIF}
               _DSiEnumFilesEx(folder+S.Name+'\', fileMask, attr, enumSubfolders,
                 enumCallback, totalFiles, stopEnum, fileList, fileObjectList,
                 storeFullPath, currentDepth + 1, maxDepth);
@@ -4268,6 +4275,8 @@ const
           if totalBytesRead = SizeReadBuffer then
             raise Exception.Create('DSiExecuteAndCapture: Buffer full!');
         until (appRunning <> WAIT_TIMEOUT) or (DSiTimeGetTime64 > endTime_ms);
+        if DSiTimeGetTime64 > endTime_ms then
+          SetLastError(ERROR_TIMEOUT);
         if partialLine <> '' then begin
           runningTimeLeft_sec := 0;
           onNewLine(partialLine, runningTimeLeft_sec);
