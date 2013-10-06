@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2013-04-04
-   Version           : 1.35
+   Last modification : 2013-09-24
+   Version           : 1.36
 </pre>*)(*
    History:
+     1.36: 2013-09-24
+       - Added SplitURL function.
      1.35: 2013-04-04
        - Added EnumList overload.
      1.34: 2012-11-27
@@ -138,6 +140,9 @@ uses
   {$IFEND}
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
+  {$IFEND}
+  {$IF CompilerVersion >= 22} //XE
+    {$DEFINE GpStuff_RegEx}
   {$IFEND}
 {$ENDIF}
 
@@ -386,6 +391,11 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
 {$ENDIF GpStuff_ValuesEnumerators}
 
+{$IFDEF GpStuff_RegEx}
+function ParseURL(const url: string; var proto, host: string; var port: integer;
+  var path: string): boolean;
+{$ENDIF GpStuff_RegEx}
+
 type
   IGpStringBuilder = interface
     function Add(const s: string): IGpStringBuilder; overload;
@@ -398,6 +408,9 @@ function BuildString: IGpStringBuilder;
 implementation
 
 uses
+{$IFDEF GpStuff_RegEx}
+  RegularExpressions{$IFDEF ConditionalExpressions},{$ELSE};{$ENDIF}
+{$ENDIF GpStuff_RegEx}
 {$IFDEF ConditionalExpressions}
   Variants;
 {$ENDIF ConditionalExpressions}
@@ -1265,6 +1278,45 @@ begin
 end; { EnumFiles }
 
 {$ENDIF GpStuff_ValuesEnumerators}
+
+{$IFDEF GpStuff_RegEx}
+function ParseURL(const url: string; var proto, host: string; var port: integer;
+  var path: string): boolean;
+const
+  CShortURLRegEx = '(?:(http|https)://|)([\d.a-z-]+)(?::(\d{1,5}+))?';
+  CURLRegEx = CShortURLRegEx + '(?:/([!$''()*+,._a-z-]++){0,9}(?:/[!$''()*+,._a-z-]*)?(?:\?[!$&''()*+,.=_a-z-]*)?)';
+var
+  match: TMatch;
+begin
+  proto := ''; host := ''; port := 80; path := '';
+  match := TRegEx.Match(url, CURLRegEx, [roIgnoreCase]);
+  Result := match.Success;
+  if Result then begin
+    if match.Groups.Count > 1 then
+      proto := match.Groups[1].Value;
+    if match.Groups.Count > 2then
+      host := match.Groups[2].Value;
+    if match.Groups.Count > 3 then
+      port := StrToIntDef(match.Groups[3].Value, 80);
+    if match.Groups.Count > 4 then
+      path := match.Groups[4].Value;
+  end
+  else begin // try the short url without a path
+    match := TRegEx.Match(url, CShortURLRegEx, [roIgnoreCase]);
+    Result := match.Success;
+    if Result then begin
+      if match.Groups.Count > 1 then
+        proto := match.Groups[1].Value;
+      if match.Groups.Count > 2then
+        host := match.Groups[2].Value;
+      if match.Groups.Count > 3 then
+        port := StrToIntDef(match.Groups[3].Value, 80);
+    end;
+  end;
+  if proto = '' then
+    proto := 'http';
+end; { ParseURL }
+{$ENDIF}
 
 { TGpStringBuilder }
 
