@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2013-10-06
-   Version           : 1.72b
+   Last modification : 2013-10-07
+   Version           : 1.72c
 </pre>*)(*
    History:
+     1.72c: 2013-10-07
+       - Compiles with D2009 again.
      1.72b: 2013-10-06
        - Fixed enumeration routines to not return folders that don't match the mask.
      1.72a: 2013-06-03
@@ -6402,7 +6404,15 @@ var
     PLF: PLogFont;
   begin
     Result := false;
-    NCM.cbSize := {$IFDEF Unicode}TNonClientMetrics.SizeOf{$ELSE}SizeOf(TNonClientMetrics){$ENDIF};
+    NCM.cbSize := {$IFDEF Unicode}
+      {$IF CompilerVersion = 20} //D2009
+        SizeOf(TNonClientMetrics)
+      {$ELSE}
+        TNonClientMetrics.SizeOf
+      {$IFEND}
+    {$ELSE}
+      SizeOf(TNonClientMetrics)
+    {$ENDIF};
     if SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, @NCM, 0) then begin
       case aElement of
         ueMenu:          PLF := @NCM.lfMenuFont;

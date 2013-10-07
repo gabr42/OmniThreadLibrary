@@ -62,6 +62,10 @@
   {$DEFINE OTL_HasInterlockedCompareExchangePointer}
 {$IFEND}
 
+{$IF CompilerVersion <= 21} //D2010
+  {$DEFINE OTL_LimitedGenerics}
+{$IFEND}
+
 {$IF CompilerVersion >= 21} //D2010
   {$DEFINE OTL_ERTTI}
   {$DEFINE OTL_DeprecatedResume}
