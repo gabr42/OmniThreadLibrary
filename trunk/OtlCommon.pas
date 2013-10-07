@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-05-06
-///   Version           : 1.31
+///   Last modification : 2013-10-07
+///   Version           : 1.31a
 ///</para><para>
 ///   History:
+///     1.31a: 2013-10-07
+///       - Compiles with D2009 and D2010 again.
 ///     1.31: 2013-05-06
 ///       - AnsiString type is supported in TOmniValue.
 ///       - Implemented FromArray<T> and ToArray<T>.
@@ -394,12 +396,16 @@ type
   public
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastTo<T>: T;
-    class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
-    function  ToArray<T>: TArray<T>;
     function  ToRecord<T: record>: T;
-    function  ToObject<T: class>: T;
+    {$IFDEF OTL_HasArrayOfT}
+    class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
+    function  ToArray<T>: TArray<T>;
+    {$ENDIF OTL_HasArrayOfT}
+    {$IFNDEF OTL_LimitedGenerics}
     function  CastToObject<T: class>: T; overload;
+    function  ToObject<T: class>: T;
+    {$ENDIF OTL_LimitedGenerics}
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   private
@@ -1569,6 +1575,7 @@ begin
 end; { TOmniValue.CreateNamed }
 
 {$IFDEF OTL_Generics}
+{$IFDEF OTL_HasArrayOfT}
 function TOmniValue.ToArray<T>: TArray<T>;
 var
   iItem: integer;
@@ -1579,6 +1586,7 @@ begin
   for iItem := 0 to TOmniValueContainer(ovData).Count - 1 do
     Result[iItem] := TOmniValueContainer(ovData)[iItem].CastTo<T>;
 end; { TOmniValue.ToArray }
+{$ENDIF OTL_HasArrayOfT}
 
 function TOmniValue.ToRecord<T>: T;
 begin
@@ -1660,6 +1668,7 @@ begin
   end;
 end; { TOmniValue.CastFrom }
 
+{$IFDEF OTL_HasArrayOfT}
 class function TOmniValue.FromArray<T>(const values: TArray<T>): TOmniValue;
 var
   ovc  : TOmniValueContainer;
@@ -1670,12 +1679,14 @@ begin
     ovc.Add(TOmniValue.CastFrom<T>(value));
   Result.SetAsArray(ovc);
 end; { TOmniValue.FromArray }
+{$ENDIF OTL_HasArrayOfT}
 
 class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
 begin
   Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
 end; { TOmniValue.FromRecord<T> }
 
+{$IFNDEF OTL_LimitedGenerics}
 function TOmniValue.ToObject<T>: T;
 begin
   Result := AsObject as T;
@@ -1685,6 +1696,7 @@ function TOmniValue.CastToObject<T>: T;
 begin
   Result := T(AsObject);
 end; { TOmniValue.CastToObject<T> }
+{$ENDIF OTL_LimitedGenerics}
 {$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
