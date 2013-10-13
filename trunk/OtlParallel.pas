@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2013-07-02
-///   Version           : 1.31b
+///   Last modification : 2013-10-13
+///   Version           : 1.32
 ///</para><para>
 ///   History:
+///     1.32: 2013-10-13
+///       - Removed optimization which caused ForEach to behave differently on
+///         uniprocessor computers.
 ///     1.31b: 2013-07-02
 ///       - Simple pipline stage handles exceptions in the executor function.
 ///     1.31a: 2013-03-10
@@ -2119,45 +2122,39 @@ begin
   else if (ploNoWait in Options) and (numTasks > 1) and (not oplNumTasksManual) then
     Dec(numTasks);
   oplDataManager := CreateDataManager(oplSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
-  if ((numTasks = 1) or (Environment.Thread.Affinity.Count = 1)) and
-     (not ((ploNoWait in Options) or assigned(oplOnTaskCreate) or assigned(oplOnTaskControlCreate)))
-  then
-    taskDelegate(nil)
-  else begin
-    oplCountStopped := TOmniResourceCount.Create(numTasks + 1);
-    lockAggregate := CreateOmniCriticalSection;
-    for iTask := 1 to numTasks do begin
-      task := CreateTask(
-        procedure (const task: IOmniTask)
-        begin
-          if assigned(oplOnTaskCreate) then
-            oplOnTaskCreate(task);
-          taskDelegate(task);
-          if oplCountStopped.Allocate = 1 then begin
-            if ploNoWait in Options then begin
-              if assigned(oplIntoQueueIntf) then
-                oplIntoQueueIntf.CompleteAdding;
-              DoOnStop(task);
-            end;
-            oplCountStopped.Allocate;
+  oplCountStopped := TOmniResourceCount.Create(numTasks + 1);
+  lockAggregate := CreateOmniCriticalSection;
+  for iTask := 1 to numTasks do begin
+    task := CreateTask(
+      procedure (const task: IOmniTask)
+      begin
+        if assigned(oplOnTaskCreate) then
+          oplOnTaskCreate(task);
+        taskDelegate(task);
+        if oplCountStopped.Allocate = 1 then begin
+          if ploNoWait in Options then begin
+            if assigned(oplIntoQueueIntf) then
+              oplIntoQueueIntf.CompleteAdding;
+            DoOnStop(task);
           end;
-        end,
-        'Parallel.ForEach worker #' + IntToStr(iTask))
-        .WithLock(lockAggregate)
-        .Unobserved;
-      ApplyConfig(oplTaskConfig, task);
-      for kv in oplOnMessageList.WalkKV do
-        task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
-      if assigned(oplOnTaskControlCreate) then
-        oplOnTaskControlCreate(task);
-      task.Schedule(GlobalParallelPool);
-    end;
-    if not (ploNoWait in Options) then begin
-      WaitForSingleObject(oplCountStopped.Handle, INFINITE);
-      if assigned(oplIntoQueueIntf) then
-        oplIntoQueueIntf.CompleteAdding;
-      DoOnStop(nil);
-    end;
+          oplCountStopped.Allocate;
+        end;
+      end,
+      'Parallel.ForEach worker #' + IntToStr(iTask))
+      .WithLock(lockAggregate)
+      .Unobserved;
+    ApplyConfig(oplTaskConfig, task);
+    for kv in oplOnMessageList.WalkKV do
+      task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
+    if assigned(oplOnTaskControlCreate) then
+      oplOnTaskControlCreate(task);
+    task.Schedule(GlobalParallelPool);
+  end;
+  if not (ploNoWait in Options) then begin
+    WaitForSingleObject(oplCountStopped.Handle, INFINITE);
+    if assigned(oplIntoQueueIntf) then
+      oplIntoQueueIntf.CompleteAdding;
+    DoOnStop(nil);
   end;
 end; { TOmniParallelLoopBase.InternalExecuteTask }
 
