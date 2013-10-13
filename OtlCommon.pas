@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-10-07
-///   Version           : 1.31a
+///   Last modification : 2013-10-13
+///   Version           : 1.32
 ///</para><para>
 ///   History:
+///     1.32: 2013-10-13
+///       - ToObject<T> is working in D2010 again (thx to [Tomasso Ercole]).
 ///     1.31a: 2013-10-07
 ///       - Compiles with D2009 and D2010 again.
 ///     1.31: 2013-05-06
@@ -402,10 +404,10 @@ type
     class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     function  ToArray<T>: TArray<T>;
     {$ENDIF OTL_HasArrayOfT}
-    {$IFNDEF OTL_LimitedGenerics}
+    {$IF CompilerVersion > 20}
     function  CastToObject<T: class>: T; overload;
     function  ToObject<T: class>: T;
-    {$ENDIF OTL_LimitedGenerics}
+    {$IFEND}
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   private
@@ -1686,17 +1688,23 @@ begin
   Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
 end; { TOmniValue.FromRecord<T> }
 
-{$IFNDEF OTL_LimitedGenerics}
+{$IF CompilerVersion > 20}
 function TOmniValue.ToObject<T>: T;
 begin
+  {$IF CompilerVersion <= 21}
+  Result := T(AsObject as TClass(T));
+  {$ELSE}
   Result := AsObject as T;
+  {$IFEND}
 end; { TOmniValue.ToObject<T> }
+{$IFEND}
 
+{$IF CompilerVersion > 20}
 function TOmniValue.CastToObject<T>: T;
 begin
   Result := T(AsObject);
-end; { TOmniValue.CastToObject<T> }
-{$ENDIF OTL_LimitedGenerics}
+ end; { TOmniValue.CastToObject<T> }
+{$IFEND}
 {$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
