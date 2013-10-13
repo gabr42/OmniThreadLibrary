@@ -18,6 +18,7 @@ Problems ([alex]):
 + added OtlSuperObject [Lee_Nover]
 ! Simple pipline stage handles exceptions in the executor function.
 ! compiles when 'Typed @ operator' is enabled (tnx to [arioch])
+- Compiles with XE5 (tnx to [Uwe Raabe])
 
 3.02: 2012-10-03
 - New features:
