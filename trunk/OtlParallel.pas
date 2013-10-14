@@ -38,7 +38,7 @@
 ///     1.33: 2013-10-14
 ///       - Different thread pool can be specified for all operations via the new
 ///         TaskConfig.ThreadPool function.
-///       - Included stability fixes by [Tomasso Ercole].
+///       - Included stability fixes by [Tommaso Ercole].
 ///     1.32: 2013-10-13
 ///       - Removed optimization which caused ForEach to behave differently on
 ///         uniprocessor computers.

@@ -23,7 +23,7 @@ Problems ([alex]):
 ///         uniprocessor computers.
 ///       - Different thread pool can be specified for all operations via the new
 ///         TaskConfig.ThreadPool function.
-///       - Included stability fixes by [Tomasso Ercole].
+///       - Included stability fixes by [Tommaso Ercole].
 
 3.02: 2012-10-03
 - New features:
