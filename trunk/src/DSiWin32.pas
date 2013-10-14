@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2013-10-07
-   Version           : 1.72c
+   Last modification : 2013-10-13
+   Version           : 1.72d
 </pre>*)(*
    History:
+     1.72d: 2013-10-14
+       - Removed compiler warnings in XE5.
      1.72c: 2013-10-07
        - Compiles with D2009 again.
      1.72b: 2013-10-06
@@ -436,8 +438,10 @@ interface
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
 {$IFDEF ConditionalExpressions}
-  {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}
+  {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}{$UNDEF UseAnsiStrings}
+  {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
+  {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$IFEND}
   {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
@@ -463,7 +467,9 @@ uses
   {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
   {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
-  {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF};
+  {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF}
+  {$IFDEF DSiUseAnsiStrings}, System.AnsiStrings{$ENDIF}
+  ;
 
 const
   // pretty wrappers
@@ -1729,6 +1735,11 @@ const
 {$IFOPT R+} {$DEFINE RestoreR} {$ELSE} {$UNDEF RestoreR} {$ENDIF}
 
 { Helpers }
+
+  function StrPasA(const Str: PAnsiChar): AnsiString;
+  begin
+    Result := {$IFDEF DSiUseAnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(Str);
+  end;
 
   procedure CreateProcessWatchdog(task: TBackgroundTask);
   begin
@@ -4194,7 +4205,7 @@ const
       // called made sure that buffer is zero terminated
       OemToCharA(buffer, lineBuffer);
       {$IFDEF Unicode}
-      partialLine := partialLine + UnicodeString(StrPas(lineBuffer));
+      partialLine := partialLine + UnicodeString(StrPasA(lineBuffer));
       {$ELSE}
       partialLine := partialLine + StrPas(lineBuffer);
       {$ENDIF Unicode}
@@ -4285,7 +4296,7 @@ const
         end;
         OemToCharA(buffer, buffer);
         {$IFDEF Unicode}
-        output.Text := UnicodeString(StrPas(Buffer));
+        output.Text := UnicodeString(StrPasA(Buffer));
         {$ELSE}
         output.Text := StrPas(buffer);
         {$ENDIF Unicode}

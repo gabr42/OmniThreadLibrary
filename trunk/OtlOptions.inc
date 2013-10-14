@@ -56,6 +56,11 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 
+{$IF CompilerVersion >= 26} //DXE5
+  {$LEGACYIFEND ON}
+  {$DEFINE OTL_StrPasInAnsiStrings}
+{$IFEND}
+
 {$IF CompilerVersion >= 20} //D2009
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}

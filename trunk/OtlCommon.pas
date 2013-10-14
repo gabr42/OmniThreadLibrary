@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-10-13
-///   Version           : 1.32
+///   Last modification : 2013-10-14
+///   Version           : 1.32a
 ///</para><para>
 ///   History:
+///     1.32a: 2013-10-14
+///       - Removed XE5 compilation warnings.
 ///     1.32: 2013-10-13
 ///       - ToObject<T> is working in D2010 again (thx to [Tomasso Ercole]).
 ///     1.31a: 2013-10-07
@@ -737,6 +739,7 @@ var
 implementation
 
 uses
+  {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
   GpStringHash, 
   OtlCommon.Utils;
 
@@ -1010,7 +1013,16 @@ begin
   Result := TObject({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(v));
 end; { VarToObj }
 
+{ globals }
+
+function StrPasA(const Str: PAnsiChar): AnsiString;
+begin
+  Result := {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(Str);
+end; { StrPasA }
+
 {$IFDEF OTL_Generics}
+{ TOmniRecordWrapper }
+
 constructor TOmniRecordWrapper<T>.Create(const value: T);
 begin
   inherited Create;
@@ -1504,7 +1516,7 @@ begin
         vtExtended:      ovc.Add(VExtended^);
         vtString:        ovc.Add(string(VString^));
         vtPointer:       ovc.Add(VPointer);
-        vtPChar:         ovc.Add(string(StrPas(VPChar)));
+        vtPChar:         ovc.Add(string(StrPasA(VPChar)));
         vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
@@ -1539,7 +1551,7 @@ begin
         case VType of
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
-          vtPChar:         name := string(StrPas(VPChar));
+          vtPChar:         name := string(StrPasA(VPChar));
           vtAnsiString:    name := string(VAnsiString);
           vtVariant:       name := string(VVariant^);
           vtWideString:    name := WideString(VWideString);
@@ -1557,7 +1569,7 @@ begin
           vtExtended:      ovc.Add(VExtended^, name);
           vtString:        ovc.Add(string(VString^), name);
           vtPointer:       ovc.Add(VPointer, name);
-          vtPChar:         ovc.Add(string(StrPas(VPChar)), name);
+          vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
           vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
           vtVariant:       ovc.Add(VVariant^, name);
