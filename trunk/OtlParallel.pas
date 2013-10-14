@@ -31,10 +31,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2013-10-13
-///   Version           : 1.32
+///   Last modification : 2013-10-14
+///   Version           : 1.33
 ///</para><para>
 ///   History:
+///     1.33: 2013-10-14
+///       - Different thread pool can be specified for all operations via the new
+///         TaskConfig.ThreadPool function.
+///       - Included stability fixes by [Tomasso Ercole].
 ///     1.32: 2013-10-13
 ///       - Removed optimization which caused ForEach to behave differently on
 ///         uniprocessor computers.
@@ -294,6 +298,7 @@ type
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
+    function  ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload;
@@ -796,12 +801,12 @@ type
     function  FatalException: Exception;
     function  IsCancelled: boolean;
     function  IsExceptional: boolean;
+    function  NoWait: IOmniParallelJoin;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
     function  OnStop(const stopCode: TProc): IOmniParallelJoin;
     function  Task(const task: TProc): IOmniParallelJoin; overload;
     function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
-    function  NoWait: IOmniParallelJoin;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelJoin }
 
@@ -978,6 +983,7 @@ type
 
   // helpers
     class function CompleteQueue(const queue: IOmniBlockingCollection): TProc;
+    class function GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
   end; { Parallel }
 
   IOmniAwait = interface
@@ -1165,6 +1171,7 @@ type
 
   IOmniTaskConfigInternal = interface ['{8678C3A4-7825-4E7C-8FEF-4DD6CD3D3E29}']
     procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
+    function  GetThreadPool: IOmniThreadPool;
   end; { IOmniTaskConfigInternal }
 
   TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig, IOmniTaskConfigInternal)
@@ -1175,6 +1182,7 @@ type
     otcOnMessageEventHandler   : TOmniTaskMessageEvent;
     otcOnMessageList           : TGpIntegerObjectList;
     otcOnTerminated            : TOmniTaskConfigTerminated;
+    otcThreadPool              : IOmniThreadPool;
     otcWithCounterCounter      : IOmniCounter;
     otcWithLockAutoDestroy     : boolean;
     otcWithLockOmniLock        : IOmniCriticalSection;
@@ -1193,11 +1201,13 @@ type
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
+    function  ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
     function  WithLock(const lock: IOmniCriticalSection): IOmniTaskConfig; overload; inline;
   public //IOmniTaskConfigInternal
     procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
+    function  GetThreadPool: IOmniThreadPool; inline;
   end; { TOmniTaskConfig }
 
 const
@@ -1527,7 +1537,7 @@ begin
       ).SetParameter('NumWorker', iProc);
     ApplyConfig(opjTaskConfig, taskControl);
     (opjJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
-    taskControl.Schedule(GlobalParallelPool);
+    taskControl.Schedule(Parallel.GetPool(opjTaskConfig));
   end;
   if not opjNoWait then begin
     WaitFor(INFINITE);
@@ -1649,7 +1659,8 @@ begin
     end
   );
   ApplyConfig(taskConfig, omniTask);
-  omniTask.Schedule(GlobalParallelPool);
+  omniTask.Unobserved;
+  omniTask.Schedule(GetPool(taskConfig));
 end; { Parallel.Async }
 
 class function Parallel.BackgroundWorker: IOmniBackgroundWorker;
@@ -1781,6 +1792,15 @@ class function Parallel.Future<T>(action: TOmniFutureDelegateEx<T>; taskConfig: 
 begin
   Result := TOmniFuture<T>.CreateEx(action, taskConfig);
 end; { Parallel.Future<T> }
+
+class function Parallel.GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
+begin
+  Result := nil;
+  if assigned(taskConfig) then
+    Result := (taskConfig as IOmniTaskConfigInternal).GetThreadPool;
+  if not assigned(Result) then
+    Result := GlobalParallelPool;
+end; { Parallel.GetPool }
 
 class function Parallel.Join(const task1, task2: TProc): IOmniParallelJoin;
 begin
@@ -2141,14 +2161,14 @@ begin
         end;
       end,
       'Parallel.ForEach worker #' + IntToStr(iTask))
-      .WithLock(lockAggregate)
-      .Unobserved;
+      .WithLock(lockAggregate);
     ApplyConfig(oplTaskConfig, task);
+    task.Unobserved;
     for kv in oplOnMessageList.WalkKV do
       task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
     if assigned(oplOnTaskControlCreate) then
       oplOnTaskControlCreate(task);
-    task.Schedule(GlobalParallelPool);
+    task.Schedule(Parallel.GetPool(oplTaskConfig));
   end;
   if not (ploNoWait in Options) then begin
     WaitForSingleObject(oplCountStopped.Handle, INFINITE);
@@ -2740,7 +2760,7 @@ procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTas
 begin
   ofTask := CreateTask(action, 'TOmniFuture action');
   ApplyConfig(taskConfig, ofTask);
-  ofTask.Schedule(GlobalParallelPool);
+  ofTask.Schedule(Parallel.GetPool(taskConfig));
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.FatalException: Exception;
@@ -3112,7 +3132,6 @@ begin
           end,
           stageName
         )
-        .Unobserved
         .CancelWith(opCancelWith)
         .SetParameter('From', inQueue)
         .SetParameter('Stage', opStages[iStage])
@@ -3121,7 +3140,8 @@ begin
         .SetParameter('TotalStopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith);
       ApplyConfig((opStages[iStage] as IOmniPipelineStageEx).TaskConfig, task);
-      task.Schedule(GlobalParallelPool);
+      task.Unobserved;
+      task.Schedule(Parallel.GetPool((opStages[iStage] as IOmniPipelineStageEx).TaskConfig));
     end; //for iTask
   end; //for iStage
   opOutput.ReraiseExceptions(not opHandleExceptions);
@@ -3842,6 +3862,11 @@ begin
   otcOnTerminated.Clear;
 end; { TOmniTaskConfig.GetTerminated }
 
+function TOmniTaskConfig.GetThreadPool: IOmniThreadPool;
+begin
+  Result := otcThreadPool;
+end; { TOmniTaskConfig.GetThreadPool }
+
 function TOmniTaskConfig.MonitorWith(const monitor: IOmniTaskControlMonitor):
   IOmniTaskConfig;
 begin
@@ -3889,6 +3914,12 @@ begin
   otcOnTerminated.Simple := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
+
+function TOmniTaskConfig.ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
+begin
+  otcThreadPool := threadPool;
+  Result := Self;
+end; { TOmniTaskConfig.ThreadPool }
 
 function TOmniTaskConfig.WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
 begin
