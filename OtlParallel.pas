@@ -982,6 +982,11 @@ type
     class function TaskConfig: IOmniTaskConfig;
 
   // helpers
+    {$REGION 'Documentation'}
+    ///	<summary>Applies task configuration to a task. TaskConfig may be nil - in this case
+    ///	nothing is done.</summary>
+    {$ENDREGION}
+    class procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
     class function CompleteQueue(const queue: IOmniBlockingCollection): TProc;
     class function GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
   end; { Parallel }
@@ -998,13 +1003,6 @@ type
   ///	compiler error.</summary>
   {$ENDREGION}
   procedure AddToBC(const queue: IOmniBlockingCollection; value: IInterface);
-
-  {$REGION 'Documentation'}
-  ///	<summary>Applies task configuration to a task. TaskConfig may be nil - in this case
-  ///	nothing is done. Must be public or the code below wouldn't compile due to the
-  ///	limitations of the compiler.</summary>
-  {$ENDREGION}
-  procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
 
   ///	<returns>Global pool used for all OtlParallel constructs.</returns>
   function GlobalParallelPool: IOmniThreadPool;
@@ -1340,12 +1338,6 @@ begin
   queue.Add(value);
 end; { AddToBC }
 
-procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
-begin
-  if assigned(taskConfig) then
-    taskConfig.Apply(task);
-end; { ApplyConfig }
-
 function Async(proc: TProc): IOmniAwait;
 begin
   Result := TOmniAwait.Create(proc);
@@ -1535,7 +1527,7 @@ begin
         end,
         Format('Join worker #%d', [iProc + 1])
       ).SetParameter('NumWorker', iProc);
-    ApplyConfig(opjTaskConfig, taskControl);
+    Parallel.ApplyConfig(opjTaskConfig, taskControl);
     (opjJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
     taskControl.Schedule(Parallel.GetPool(opjTaskConfig));
   end;
@@ -1658,7 +1650,7 @@ begin
         raise exc;
     end
   );
-  ApplyConfig(taskConfig, omniTask);
+  Parallel.ApplyConfig(taskConfig, omniTask);
   omniTask.Unobserved;
   omniTask.Schedule(GetPool(taskConfig));
 end; { Parallel.Async }
@@ -1667,6 +1659,12 @@ class function Parallel.BackgroundWorker: IOmniBackgroundWorker;
 begin
   Result := TOmniBackgroundWorker.Create;
 end; { Parallel.BackgroundWorker }
+
+procedure Parallel.ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
+begin
+  if assigned(taskConfig) then
+    taskConfig.Apply(task);
+end; { Parallel.ApplyConfig }
 
 class function Parallel.CompleteQueue(const queue: IOmniBlockingCollection): TProc;
 begin
@@ -2162,7 +2160,7 @@ begin
       end,
       'Parallel.ForEach worker #' + IntToStr(iTask))
       .WithLock(lockAggregate);
-    ApplyConfig(oplTaskConfig, task);
+    Parallel.ApplyConfig(oplTaskConfig, task);
     task.Unobserved;
     for kv in oplOnMessageList.WalkKV do
       task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
@@ -2759,7 +2757,7 @@ end; { TOmniFuture }
 procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTaskConfig);
 begin
   ofTask := CreateTask(action, 'TOmniFuture action');
-  ApplyConfig(taskConfig, ofTask);
+  Parallel.ApplyConfig(taskConfig, ofTask);
   ofTask.Schedule(Parallel.GetPool(taskConfig));
 end; { TOmniFuture<T>.Execute }
 
@@ -3139,7 +3137,7 @@ begin
         .SetParameter('Stopped', countStopped)
         .SetParameter('TotalStopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith);
-      ApplyConfig((opStages[iStage] as IOmniPipelineStageEx).TaskConfig, task);
+      Parallel.ApplyConfig((opStages[iStage] as IOmniPipelineStageEx).TaskConfig, task);
       task.Unobserved;
       task.Schedule(Parallel.GetPool((opStages[iStage] as IOmniPipelineStageEx).TaskConfig));
     end; //for iTask
