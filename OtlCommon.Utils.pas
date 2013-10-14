@@ -50,7 +50,6 @@
 unit OtlCommon.Utils;
 
 {$DEBUGINFO OFF}
-{$TYPEDADDRESS OFF}
 
 interface
 

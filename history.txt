@@ -16,11 +16,14 @@ Problems ([alex]):
 - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
 - Fixed TOmniTaskGroup.TerminateAll.
 + added OtlSuperObject [Lee_Nover]
-! Simple pipline stage handles exceptions in the executor function.
+! Simple pipeline stage handles exceptions in the executor function.
 ! compiles when 'Typed @ operator' is enabled (tnx to [arioch])
 - Compiles with XE5 (tnx to [Uwe Raabe])
 ///       - Removed optimization which caused ForEach to behave differently on
 ///         uniprocessor computers.
+///       - Different thread pool can be specified for all operations via the new
+///         TaskConfig.ThreadPool function.
+///       - Included stability fixes by [Tomasso Ercole].
 
 3.02: 2012-10-03
 - New features:
