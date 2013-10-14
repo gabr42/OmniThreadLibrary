@@ -1,0 +1,99 @@
+OmniThreadLibrary 3.0 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-3.0) 
+or as a ZIP archive
+(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-3.0.zip).
+UML diagrams for this release are available (thanks to Rich Shealer) 
+as a ZIP archive
+(http://code.google.com/p/omnithreadlibrary/downloads/detail?name=OmniThreadLibrary-UML-3.0.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with 
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+and XE2 on the Win32 and Win64 platforms. Currently, there are no plans to 
+support older Delphi compilers and .NET. XE2 support is limited to Windows
+targets.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 2.2
+===========================
+
+- New features:
+  - Support for 64-bit platform. Great thanks to [GJ] for doing most of
+    the work!
+  - Implemented background worker abstraction,
+    Parallel.BackgroundWorker.
+  - Implemented Atomic<T> class for lock-free initialization of
+    interfaces and objects.
+  - Implemented Locked<T> class for locking intialization of practically 
+    anything.
+    http://www.thedelphigeek.com/2011/11/atomic-interface-initialization.html
+    http://www.thedelphigeek.com/2011/11/per-object-locking.html
+    http://www.thedelphigeek.com/2011/12/on-optimistic-and-pessimistic.html
+    http://www.thedelphigeek.com/2011/12/creating-object-from-unconstrained.html
+  - TOmniValue.AsInteger, AsString and AsWideString now work if the
+    TOmniValue contains a Variant of the apropriate type.
+  - TOmniValue can store arrays, hashes and records. Variant arrays are
+    no longer used. IsArray tests it TOmniValue contains an array and
+    AsArray returns this internal container. Default indexed property 
+    still accesses individual elements in this container. See demo 
+    50_OmniValueArray for an example.
+    http://www.thedelphigeek.com/2011/11/tomnivalue-handles-arrays-hashes-and.html
+  - Added a class which can wrap any record - TOmniRecordWrapper<T>.
+  - Added an interface which can wrap any object and destroy it when the 
+    interface goes out of scope - IOmniAutoDestroyObject.
+
+- Bug fixes:
+  - Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks 
+    not to be destroyed until the program was terminated. Great thanks 
+    to [Zarko] for providing a reproducible test case.
+  - Fixed race condition between TOmniTask.Execute and 
+    TOmniTask.Terminate.
+  - Under some circumstances ProcessMessage failed to rebuild handle
+    array before waiting which could cause 'invalid handle' error.
+  - Fixed wrong order in teardown sequence in TOmniTask.Execute which 
+    could cause access violation crash. Great thanks to [Anton Alisov] 
+    for providing a reproducible test case.
+  - Fixed invalid "A call to an OS function failed" error in 
+    DispatchEvent.
+  - TOmniMessageQueue.Enqueue leaked if queue was full and value 
+    contained reference counted value (found by [meishier]).
+  - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks 
+    was off by 1 (found by [meishier]).
+
+- New demos:
+  - 49_FramedWorkers: Multiple frames communication with each own worker 
+    task.
+  - 50_OmniValueArray: Wrapping arrays, hashes and records in 
+    TOmniValue.
+  - 51_PipelineStressTest: Stress test by [Anton Alisov].
+  - 52_BackgrondWorker: Demo for the new Parallel.BackgroundWorker 
+    abstraction.
+    
+-- 
+Primoz
+[http://thedelphigeek.com]
