@@ -126,8 +126,14 @@ uses
   DSiWin32;
 
 {$IFDEF ConditionalExpressions}
-  {$IF (CompilerVersion >= 17)}
+  {$IF CompilerVersion >= 25} //DXE4+
+    {$LEGACYIFEND ON}
+  {$IFEND}
+  {$IF CompilerVersion >= 17} //D2005+
     {$DEFINE USE_STRICT}
+  {$IFEND}
+  {$IF CompilerVersion >= 26} //DXE5+
+    {$DEFINE GpStuff_AnsiStrings}
   {$IFEND}
   {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
@@ -408,6 +414,9 @@ function BuildString: IGpStringBuilder;
 implementation
 
 uses
+{$IFDEF GpStuff_AnsiStrings}
+  System.AnsiStrings,
+{$ENDIF}
 {$IFDEF GpStuff_RegEx}
   RegularExpressions{$IFDEF ConditionalExpressions},{$ELSE};{$ENDIF}
 {$ENDIF GpStuff_RegEx}
@@ -763,7 +772,7 @@ begin
         vtExtended:   Result[i] := VExtended^;
         vtString:     Result[i] := VString^;
         vtPointer:    Result[i] := integer(VPointer);
-        vtPChar:      Result[i] := StrPas(VPChar);
+        vtPChar:      Result[i] := {$IFDEF GpStuff_AnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(VPChar);
         vtAnsiString: Result[i] := string(VAnsiString);
         vtCurrency:   Result[i] := VCurrency^;
         vtVariant:    Result[i] := VVariant^;
