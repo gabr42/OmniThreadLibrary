@@ -1660,7 +1660,7 @@ begin
   Result := TOmniBackgroundWorker.Create;
 end; { Parallel.BackgroundWorker }
 
-procedure Parallel.ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
+class procedure Parallel.ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
 begin
   if assigned(taskConfig) then
     taskConfig.Apply(task);
