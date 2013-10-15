@@ -1,0 +1,108 @@
+mniThreadLibrary 2.0 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-2.0) 
+or as a ZIP archive
+(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-2.0.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with 
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, and 
+XE on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 1.05a
+===========================
+
+- New high-level primitives (unit OtlParallel):
+  - Improved parallel for (Parallel.ForEach).
+    http://www.thedelphigeek.com/2010/06/omnithreadlibrary-20-sneak-preview-1.html
+  - Futures (Parallel.Future<T>).
+    http://www.thedelphigeek.com/2010/06/future-of-delphi.html
+  - Pipelines (Parallel.Pipeline).
+    http://www.thedelphigeek.com/2010/11/multistage-processes-with.html
+    
+- Added support for multiple simultaneous timers. SetTimer takes additional 
+  'timerID' parameter. The old SetTimer assumes timerID = 0.
+  
+- IOmniTask/IOmniTaskControl:
+  - ParamByName has been removed, use .Param[name: string].
+  - Param returns TOmniValueContainter.
+  
+- IOmniTaskControl.OnMessage also accepts an object (message dispatcher).
+
+- TOmniValueContainer:
+  - IndexOfName renamed to TOmniValueContainer.IndexOf.
+  - New methods in TOmniValueContainer class: ByName, Count, Exists. 
+    New properties: Items[integer], Items[string] and Items[TOmniValue].
+    
+- TOmniValue:
+  - Fixed memory leak when sending String, WideString, Variant and Extended values 
+    over the communication channel and when queueing them into TOmni[Base]Queue.
+  - Implemented _AddRef, _Release, _ReleaseAndClear.
+  - TOmniValue can be cast as Int64.
+  - Implemented conversions to/from TValue (Delphi 2010 and newer).
+  - Implemented constructor.
+  - [scarre] Added TDateTime support.
+  
+- New classes and interfaces:
+  - TOmniMessageQueueTee
+  - IOmniCommDispatchingObserver
+  - TOmniCounter, auto-initialized wrapper around the IOmniCounter
+  - TOmniMessageID record, used internally to implement timers.
+  
+- TOmniThreadPool: ThreadDataFactory can now accept either a function or a method
+  (but can be used only as a method - SetThreadDataFactory).
+  
+- TOmniEventMonitor: Message retrieving loop destroys interface immediately, 
+  not when the next message is received.
+  
+- TOmniTaskFunction renamed to TOmniTaskDelegate.
+
+- Added function CreateResourceCount(initialCount): IOmniResourceCount.
+
+- Renamed IOmniCancellationToken.IsSignaled -> IsSignalled.
+
+- .dproj tests renamed to .2007.dproj.
+
+- Added Delphi XE project files.
+
+- Bugs fixed:
+  - Thread pool was immediately closing unused threads if MaxExecuting was 
+    set to -1.
+  - Ugly bugs in TOmniBlockingCollection removed.
+  
+- New demos:
+  38_OrderedFor: Ordered parallel for loops.
+  39_Future: Futures.
+  40_Mandelbrot: Parallel graphics demo (very simple).
+  41_Pipeline: Pipelines.
+  42_MessageQueue: Stress tests for TOmniMessageQueue.
+  
+-- 
+Primoz
+[http://thedelphigeek.com]

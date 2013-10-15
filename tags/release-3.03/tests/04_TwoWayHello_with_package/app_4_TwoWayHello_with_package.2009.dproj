@@ -1,0 +1,185 @@
+	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
+			<MainSource>app_4_TwoWayHello_with_package.dpr</MainSource>
+			<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+			<Platform Condition=" '$(Platform)' == '' ">Win32</Platform>
+			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<DCC_DependencyCheckOutputName>app_4_TwoWayHello_with_package.exe</DCC_DependencyCheckOutputName>
+			<ProjectVersion>12.0</ProjectVersion>
+			<Config Condition="'$(Config)'==''">Debug</Config>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
+			<Cfg_1>true</Cfg_1>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
+			<Cfg_2>true</Cfg_2>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_DcuOutput>..\..\lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DependencyCheckOutputName>app_4_TwoWayHello_with_package.exe</DCC_DependencyCheckOutputName>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<Version>7.0</Version>
+			<DCC_DebugInformation>False</DCC_DebugInformation>
+			<DCC_WriteableConstants>True</DCC_WriteableConstants>
+			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
+			<DCC_Optimize>False</DCC_Optimize>
+			<DCC_RangeChecking>True</DCC_RangeChecking>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<Version>7.0</Version>
+			<DCC_WriteableConstants>True</DCC_WriteableConstants>
+			<DCC_Optimize>False</DCC_Optimize>
+			<DCC_RangeChecking>True</DCC_RangeChecking>
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
+			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
+			<DCC_MapFile>3</DCC_MapFile>
+			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
+			<DCC_DcuOutput>..\..\lib\2009\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_UnitSearchPath>..\..;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+		</PropertyGroup>
+		<ItemGroup>
+			<DelphiCompile Include="app_4_TwoWayHello_with_package.dpr">
+				<MainSource>MainSource</MainSource>
+			</DelphiCompile>
+			<RcCompile Include="..\..\res\MainIcon.rc">
+				<ContainerId>RC</ContainerId>
+				<Form>..\..\res\MainIcon.res</Form>
+			</RcCompile>
+			<DCCReference Include="test_4_TwoWayHello_with_package.pas">
+				<Form>frmTestTwoWayHello</Form>
+			</DCCReference>
+			<DCCReference Include="..\..\OtlCommon.pas"/>
+			<DCCReference Include="..\..\OtlTask.pas"/>
+			<DCCReference Include="..\..\OtlThreadPool.pas"/>
+			<DCCReference Include="..\..\OtlComm.pas"/>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Debug">
+				<Key>Cfg_2</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Release">
+				<Key>Cfg_1</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+		</ItemGroup>
+		<Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
+		<ProjectExtensions>
+			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Delphi.Personality>
+					<Parameters>
+						<Parameters Name="UseLauncher">False</Parameters>
+						<Parameters Name="LoadAllSymbols">True</Parameters>
+						<Parameters Name="LoadUnspecifiedSymbols">False</Parameters>
+					</Parameters>
+					<VersionInfo>
+						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
+						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
+						<VersionInfo Name="MinorVer">0</VersionInfo>
+						<VersionInfo Name="Release">0</VersionInfo>
+						<VersionInfo Name="Build">0</VersionInfo>
+						<VersionInfo Name="Debug">False</VersionInfo>
+						<VersionInfo Name="PreRelease">False</VersionInfo>
+						<VersionInfo Name="Special">False</VersionInfo>
+						<VersionInfo Name="Private">False</VersionInfo>
+						<VersionInfo Name="DLL">False</VersionInfo>
+						<VersionInfo Name="Locale">1060</VersionInfo>
+						<VersionInfo Name="CodePage">1250</VersionInfo>
+					</VersionInfo>
+					<VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
+						<VersionInfoKeys Name="FileDescription"/>
+						<VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="InternalName"/>
+						<VersionInfoKeys Name="LegalCopyright"/>
+						<VersionInfoKeys Name="LegalTrademarks"/>
+						<VersionInfoKeys Name="OriginalFilename"/>
+						<VersionInfoKeys Name="ProductName"/>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="Comments"/>
+					</VersionInfoKeys>
+					<Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxGDIPlusD10.bpl">ExpressGDI+ Library by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\cxLibraryD10.bpl">Express Cross Platform Library by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxThemeD10.bpl">Express XP Theme Manager by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JclVcl100.bpl">JEDI Code Library VCL package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\Jcl100.bpl">JEDI Code Library RTL package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvStdCtrlsD10R.bpl">JVCL Standard Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvCoreD10R.bpl">JVCL Core Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvSystemD10R.bpl">JVCL System Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxComnD10.bpl">ExpressCommonLibrary by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxBarD10.bpl">ExpressBars by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\B305_r100.bpl">TurboPower Abbrevia 3.05 Run-time package - RTL100</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxBarDBNavD10.bpl">ExpressBars DBNavigator by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxBarExtDBItemsD10.bpl">ExpressBars extended DB items by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxDockingD10.bpl">ExpressDocking Library by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxRibbonD10.bpl">ExpressBars Ribbon controls by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxsbD10.bpl">ExpressSideBar by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvAppFrmD10R.bpl">JVCL Application and Form Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvCtrlsD10R.bpl">JVCL Visual Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvBandsD10R.bpl">JVCL Band Objects Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvDBD10R.bpl">JVCL Database Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvDlgsD10R.bpl">JVCL Dialog Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvCustomD10R.bpl">JVCL Custom Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvBDED10R.bpl">JVCL BDE Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvCmpD10R.bpl">JVCL Non-Visual Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvCryptD10R.bpl">JVCL Encryption and Compression Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvDockingD10R.bpl">JVCL Docking Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvDotNetCtrlsD10R.bpl">JVCL DotNet Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvEDID10R.bpl">JVCL EDI Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvGlobusD10R.bpl">JVCL Globus Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvHMID10R.bpl">JVCL HMI Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvInterpreterD10R.bpl">JVCL Interpreter Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvJansD10R.bpl">JVCL Jans Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvManagedThreadsD10R.bpl">JVCL Managed Threads Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvMMD10R.bpl">JVCL Multimedia and Image Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvNetD10R.bpl">JVCL Network Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvPageCompsD10R.bpl">JVCL Page Style Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvPrintPreviewD10R.bpl">JVCL Print Preview Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvRuntimeDesignD10R.bpl">JVCL Runtime Design Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvTimeFrameworkD10R.bpl">JVCL Time Framework Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvUIBD10R.bpl">JVCL Unified Interbase Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvValidatorsD10R.bpl">JVCL Validators and Error Provider Components Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvWizardD10R.bpl">JVCL Wizard Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\JvXPCtrlsD10R.bpl">JVCL XP Controls Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\vclSvComV6D10.bpl">SvCom run-time package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\TntUnicodeVcl_R100.bpl">Tnt Unicode Controls - Runtime</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\VirtualTreesD10.bpl">Virtual Treeview runtime package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDS)\bin\dcloffice2k100.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDS)\bin\dclofficexp100.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxmdsD10.bpl">ExpressMemData by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\dxBarExtItemsD10.bpl">ExpressBars extended items by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\A406_D100.bpl">TurboPower Async Professional 4.06 Designtime Package - VCL100</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\A406_R100.bpl">TurboPower Async Professional 4.06 Runtime Package - VCL90</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\kbmMemD2006Des.bpl">kbmMemTable designtime package for Delphi 2006 Win32</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\kbmMemD2006Run.bpl">kbmMemTable runtime package for Delphi 2006 Win32</Excluded_Packages>
+						<Excluded_Packages Name="C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\MCDB100D10.bpl">Magic CD Burner for Delphi 2006</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files\SiComponents\TsiLang\Units\Packages\TSiLang_Delphi2007.bpl">TsiLang Components Suite (VCL Edition)</Excluded_Packages>
+					</Excluded_Packages>
+					<Source>
+						<Source Name="MainSource">app_4_TwoWayHello_with_package.dpr</Source>
+					</Source>
+				</Delphi.Personality>
+				<ModelSupport>False</ModelSupport>
+			</BorlandProject>
+			<ProjectFileVersion>12</ProjectFileVersion>
+		</ProjectExtensions>
+	</Project>

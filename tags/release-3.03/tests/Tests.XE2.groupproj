@@ -1,0 +1,684 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{263A93E4-28F7-4DC6-B99D-3D03967ED9C6}</ProjectGuid>
+		</PropertyGroup>
+		<ItemGroup>
+			<Projects Include="00_Beep\app_0_Beep.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="01_HelloWorld\app_1_HelloWorld.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="02_TwoWayHello\app_2_TwoWayHello.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="03_HelloWorld_with_package\app_3_HelloWorld_with_package.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="07_InitTest\app_7_InitTest.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="08_RegisterComm\app_8_RegisterComm.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="09_Communications\app_9_Communications.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="10_Containers\app_10_Containers.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="11_ThreadPool\app_11_ThreadPool.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="12_Lock\app_12_Lock.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="13_Exceptions\app_13_Exceptions.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="14_TerminateWhen\app_14_TerminateWhen.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="15_TaskGroup\app_15_TaskGroup.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="16_ChainTo\app_16_ChainTo.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="17_MsgWait\app_17_MsgWait.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="18_StringMsgDispatch\app_18_StringMsgDispatch.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="19_StringMsgBenchmark\app_19_StringMsgBenchmark.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="20_QuickSort\app_20_QuickSort.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="21_Anonymous_methods\app_21_Anonymous_methods.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="22_TerminationTest\app_22_TerminationTest.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="23_BackgroundFileSearch\app_23_BackgroundFileSearch.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="24_ConnectionPool\app_24_ConnectionPool.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="25_WaitableComm\app_25_WaitableComm.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="26_MultiEventMonitor\app_26_MultiEventMonitor.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="27_RecursiveTree\app_27_RecursiveTree.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="28_Hooks\app_28_Hooks.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="31_WaitableObjects\app_31_WaitableObjects.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="32_Queue\app_32_Queue.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="33_BlockingCollection\app_33_BlockingCollection.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="34_TreeScan\app_34_TreeScan.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="35_ParallelFor\app_35_ParallelFor.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="36_ParallelAggregate\app_36_ParallelAggregate.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="37_ParallelJoin\app_37_ParallelJoin.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="38_OrderedFor\app_38_OrderedFor.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="39_Futures\app_39_Futures.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="40_Mandelbrot\app_40_Mandelbrot.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="41_Pipeline\app_41_Pipeline.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="42_MessageQueue\app_42_MessageQueue.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="43_InvokeAnonymous\app_43_InvokeAnonymous.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="44_Fork-Join QuickSort\app_44_ForkJoinQuickSort.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="45_Fork-Join max\app_45_ForkJoinMax.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="46_Async\app_46_Async.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="47_TaskConfig\app_47_TaskConfig.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="48_OtlParallelExceptions\app_48_OtlParallelExceptions.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="49_FramedWorkers\app_49_FramedWorkers.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="50_OmniValueArray\app_50_OmniValueArray.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="51_PipelineStressTest\app_51_PipelineStressTest.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="52_BackgroundWorker\app_52_BackgroundWorker.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="53_AsyncAwait\app_53_AsyncAwait.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+			<Projects Include="54_LockManager\app_54_LockManager.XE2.dproj">
+				<Dependencies/>
+			</Projects>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Default.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Default.Personality/>
+			</BorlandProject>
+		</ProjectExtensions>
+		<Target Name="app_0_Beep_XE2">
+			<MSBuild Projects="00_Beep\app_0_Beep.XE2.dproj"/>
+		</Target>
+		<Target Name="app_0_Beep_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="00_Beep\app_0_Beep.XE2.dproj"/>
+		</Target>
+		<Target Name="app_0_Beep_XE2:Make">
+			<MSBuild Targets="Make" Projects="00_Beep\app_0_Beep.XE2.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_XE2">
+			<MSBuild Projects="01_HelloWorld\app_1_HelloWorld.XE2.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="01_HelloWorld\app_1_HelloWorld.XE2.dproj"/>
+		</Target>
+		<Target Name="app_1_HelloWorld_XE2:Make">
+			<MSBuild Targets="Make" Projects="01_HelloWorld\app_1_HelloWorld.XE2.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_XE2">
+			<MSBuild Projects="02_TwoWayHello\app_2_TwoWayHello.XE2.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="02_TwoWayHello\app_2_TwoWayHello.XE2.dproj"/>
+		</Target>
+		<Target Name="app_2_TwoWayHello_XE2:Make">
+			<MSBuild Targets="Make" Projects="02_TwoWayHello\app_2_TwoWayHello.XE2.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_XE2">
+			<MSBuild Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_3_HelloWorld_with_package_XE2:Make">
+			<MSBuild Targets="Make" Projects="03_HelloWorld_with_package\app_3_HelloWorld_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_XE2">
+			<MSBuild Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_4_TwoWayHello_with_package_XE2:Make">
+			<MSBuild Targets="Make" Projects="04_TwoWayHello_with_package\app_4_TwoWayHello_with_package.XE2.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_XE2">
+			<MSBuild Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.XE2.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.XE2.dproj"/>
+		</Target>
+		<Target Name="app_5_TwoWayHello_without_loop_XE2:Make">
+			<MSBuild Targets="Make" Projects="05_TwoWayHello_without_loop\app_5_TwoWayHello_without_loop.XE2.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_XE2">
+			<MSBuild Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_6_TwoWayHello_with_object_worker_XE2:Make">
+			<MSBuild Targets="Make" Projects="06_TwoWayHello_with_object_worker\app_6_TwoWayHello_with_object_worker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_XE2">
+			<MSBuild Projects="07_InitTest\app_7_InitTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="07_InitTest\app_7_InitTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_7_InitTest_XE2:Make">
+			<MSBuild Targets="Make" Projects="07_InitTest\app_7_InitTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_XE2">
+			<MSBuild Projects="08_RegisterComm\app_8_RegisterComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="08_RegisterComm\app_8_RegisterComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_8_RegisterComm_XE2:Make">
+			<MSBuild Targets="Make" Projects="08_RegisterComm\app_8_RegisterComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_XE2">
+			<MSBuild Projects="09_Communications\app_9_Communications.XE2.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="09_Communications\app_9_Communications.XE2.dproj"/>
+		</Target>
+		<Target Name="app_9_Communications_XE2:Make">
+			<MSBuild Targets="Make" Projects="09_Communications\app_9_Communications.XE2.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_XE2">
+			<MSBuild Projects="10_Containers\app_10_Containers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="10_Containers\app_10_Containers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_10_Containers_XE2:Make">
+			<MSBuild Targets="Make" Projects="10_Containers\app_10_Containers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_XE2">
+			<MSBuild Projects="11_ThreadPool\app_11_ThreadPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="11_ThreadPool\app_11_ThreadPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_11_ThreadPool_XE2:Make">
+			<MSBuild Targets="Make" Projects="11_ThreadPool\app_11_ThreadPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_XE2">
+			<MSBuild Projects="12_Lock\app_12_Lock.XE2.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="12_Lock\app_12_Lock.XE2.dproj"/>
+		</Target>
+		<Target Name="app_12_Lock_XE2:Make">
+			<MSBuild Targets="Make" Projects="12_Lock\app_12_Lock.XE2.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_XE2">
+			<MSBuild Projects="13_Exceptions\app_13_Exceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="13_Exceptions\app_13_Exceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_13_Exceptions_XE2:Make">
+			<MSBuild Targets="Make" Projects="13_Exceptions\app_13_Exceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_XE2">
+			<MSBuild Projects="14_TerminateWhen\app_14_TerminateWhen.XE2.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="14_TerminateWhen\app_14_TerminateWhen.XE2.dproj"/>
+		</Target>
+		<Target Name="app_14_TerminateWhen_XE2:Make">
+			<MSBuild Targets="Make" Projects="14_TerminateWhen\app_14_TerminateWhen.XE2.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_XE2">
+			<MSBuild Projects="15_TaskGroup\app_15_TaskGroup.XE2.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="15_TaskGroup\app_15_TaskGroup.XE2.dproj"/>
+		</Target>
+		<Target Name="app_15_TaskGroup_XE2:Make">
+			<MSBuild Targets="Make" Projects="15_TaskGroup\app_15_TaskGroup.XE2.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_XE2">
+			<MSBuild Projects="16_ChainTo\app_16_ChainTo.XE2.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="16_ChainTo\app_16_ChainTo.XE2.dproj"/>
+		</Target>
+		<Target Name="app_16_ChainTo_XE2:Make">
+			<MSBuild Targets="Make" Projects="16_ChainTo\app_16_ChainTo.XE2.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_XE2">
+			<MSBuild Projects="17_MsgWait\app_17_MsgWait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="17_MsgWait\app_17_MsgWait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_17_MsgWait_XE2:Make">
+			<MSBuild Targets="Make" Projects="17_MsgWait\app_17_MsgWait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_XE2">
+			<MSBuild Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_18_StringMsgDispatch_XE2:Make">
+			<MSBuild Targets="Make" Projects="18_StringMsgDispatch\app_18_StringMsgDispatch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_XE2">
+			<MSBuild Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.XE2.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.XE2.dproj"/>
+		</Target>
+		<Target Name="app_19_StringMsgBenchmark_XE2:Make">
+			<MSBuild Targets="Make" Projects="19_StringMsgBenchmark\app_19_StringMsgBenchmark.XE2.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_XE2">
+			<MSBuild Projects="20_QuickSort\app_20_QuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="20_QuickSort\app_20_QuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_20_QuickSort_XE2:Make">
+			<MSBuild Targets="Make" Projects="20_QuickSort\app_20_QuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_XE2">
+			<MSBuild Projects="21_Anonymous_methods\app_21_Anonymous_methods.XE2.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="21_Anonymous_methods\app_21_Anonymous_methods.XE2.dproj"/>
+		</Target>
+		<Target Name="app_21_Anonymous_methods_XE2:Make">
+			<MSBuild Targets="Make" Projects="21_Anonymous_methods\app_21_Anonymous_methods.XE2.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_XE2">
+			<MSBuild Projects="22_TerminationTest\app_22_TerminationTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="22_TerminationTest\app_22_TerminationTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_22_TerminationTest_XE2:Make">
+			<MSBuild Targets="Make" Projects="22_TerminationTest\app_22_TerminationTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_XE2">
+			<MSBuild Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_23_BackgroundFileSearch_XE2:Make">
+			<MSBuild Targets="Make" Projects="23_BackgroundFileSearch\app_23_BackgroundFileSearch.XE2.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_XE2">
+			<MSBuild Projects="24_ConnectionPool\app_24_ConnectionPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="24_ConnectionPool\app_24_ConnectionPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_24_ConnectionPool_XE2:Make">
+			<MSBuild Targets="Make" Projects="24_ConnectionPool\app_24_ConnectionPool.XE2.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_XE2">
+			<MSBuild Projects="25_WaitableComm\app_25_WaitableComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="25_WaitableComm\app_25_WaitableComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_25_WaitableComm_XE2:Make">
+			<MSBuild Targets="Make" Projects="25_WaitableComm\app_25_WaitableComm.XE2.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_XE2">
+			<MSBuild Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_26_MultiEventMonitor_XE2:Make">
+			<MSBuild Targets="Make" Projects="26_MultiEventMonitor\app_26_MultiEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_XE2">
+			<MSBuild Projects="27_RecursiveTree\app_27_RecursiveTree.XE2.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="27_RecursiveTree\app_27_RecursiveTree.XE2.dproj"/>
+		</Target>
+		<Target Name="app_27_RecursiveTree_XE2:Make">
+			<MSBuild Targets="Make" Projects="27_RecursiveTree\app_27_RecursiveTree.XE2.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_XE2">
+			<MSBuild Projects="28_Hooks\app_28_Hooks.XE2.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="28_Hooks\app_28_Hooks.XE2.dproj"/>
+		</Target>
+		<Target Name="app_28_Hooks_XE2:Make">
+			<MSBuild Targets="Make" Projects="28_Hooks\app_28_Hooks.XE2.dproj"/>
+		</Target>
+		<Target Name="app_29_ImplicitEventMonitor_XE2">
+			<MSBuild Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_29_ImplicitEventMonitor_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_29_ImplicitEventMonitor_XE2:Make">
+			<MSBuild Targets="Make" Projects="29_ImplicitEventMonitor\app_29_ImplicitEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_XE2">
+			<MSBuild Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_30_AnonymousEventMonitor_XE2:Make">
+			<MSBuild Targets="Make" Projects="30_AnonymousEventMonitor\app_30_AnonymousEventMonitor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_31_WaitableObjects_XE2">
+			<MSBuild Projects="31_WaitableObjects\app_31_WaitableObjects.XE2.dproj"/>
+		</Target>
+		<Target Name="app_31_WaitableObjects_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="31_WaitableObjects\app_31_WaitableObjects.XE2.dproj"/>
+		</Target>
+		<Target Name="app_31_WaitableObjects_XE2:Make">
+			<MSBuild Targets="Make" Projects="31_WaitableObjects\app_31_WaitableObjects.XE2.dproj"/>
+		</Target>
+		<Target Name="app_32_Queue_XE2">
+			<MSBuild Projects="32_Queue\app_32_Queue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_32_Queue_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="32_Queue\app_32_Queue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_32_Queue_XE2:Make">
+			<MSBuild Targets="Make" Projects="32_Queue\app_32_Queue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_33_BlockingCollection_XE2">
+			<MSBuild Projects="33_BlockingCollection\app_33_BlockingCollection.XE2.dproj"/>
+		</Target>
+		<Target Name="app_33_BlockingCollection_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="33_BlockingCollection\app_33_BlockingCollection.XE2.dproj"/>
+		</Target>
+		<Target Name="app_33_BlockingCollection_XE2:Make">
+			<MSBuild Targets="Make" Projects="33_BlockingCollection\app_33_BlockingCollection.XE2.dproj"/>
+		</Target>
+		<Target Name="app_34_TreeScan_XE2">
+			<MSBuild Projects="34_TreeScan\app_34_TreeScan.XE2.dproj"/>
+		</Target>
+		<Target Name="app_34_TreeScan_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="34_TreeScan\app_34_TreeScan.XE2.dproj"/>
+		</Target>
+		<Target Name="app_34_TreeScan_XE2:Make">
+			<MSBuild Targets="Make" Projects="34_TreeScan\app_34_TreeScan.XE2.dproj"/>
+		</Target>
+		<Target Name="app_35_ParallelFor_XE2">
+			<MSBuild Projects="35_ParallelFor\app_35_ParallelFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_35_ParallelFor_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="35_ParallelFor\app_35_ParallelFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_35_ParallelFor_XE2:Make">
+			<MSBuild Targets="Make" Projects="35_ParallelFor\app_35_ParallelFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_36_ParallelAggregate_XE2">
+			<MSBuild Projects="36_ParallelAggregate\app_36_ParallelAggregate.XE2.dproj"/>
+		</Target>
+		<Target Name="app_36_ParallelAggregate_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="36_ParallelAggregate\app_36_ParallelAggregate.XE2.dproj"/>
+		</Target>
+		<Target Name="app_36_ParallelAggregate_XE2:Make">
+			<MSBuild Targets="Make" Projects="36_ParallelAggregate\app_36_ParallelAggregate.XE2.dproj"/>
+		</Target>
+		<Target Name="app_37_ParallelJoin_XE2">
+			<MSBuild Projects="37_ParallelJoin\app_37_ParallelJoin.XE2.dproj"/>
+		</Target>
+		<Target Name="app_37_ParallelJoin_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="37_ParallelJoin\app_37_ParallelJoin.XE2.dproj"/>
+		</Target>
+		<Target Name="app_37_ParallelJoin_XE2:Make">
+			<MSBuild Targets="Make" Projects="37_ParallelJoin\app_37_ParallelJoin.XE2.dproj"/>
+		</Target>
+		<Target Name="app_38_OrderedFor_XE2">
+			<MSBuild Projects="38_OrderedFor\app_38_OrderedFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_38_OrderedFor_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="38_OrderedFor\app_38_OrderedFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_38_OrderedFor_XE2:Make">
+			<MSBuild Targets="Make" Projects="38_OrderedFor\app_38_OrderedFor.XE2.dproj"/>
+		</Target>
+		<Target Name="app_39_Futures_XE2">
+			<MSBuild Projects="39_Futures\app_39_Futures.XE2.dproj"/>
+		</Target>
+		<Target Name="app_39_Futures_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="39_Futures\app_39_Futures.XE2.dproj"/>
+		</Target>
+		<Target Name="app_39_Futures_XE2:Make">
+			<MSBuild Targets="Make" Projects="39_Futures\app_39_Futures.XE2.dproj"/>
+		</Target>
+		<Target Name="app_40_Mandelbrot_XE2">
+			<MSBuild Projects="40_Mandelbrot\app_40_Mandelbrot.XE2.dproj"/>
+		</Target>
+		<Target Name="app_40_Mandelbrot_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="40_Mandelbrot\app_40_Mandelbrot.XE2.dproj"/>
+		</Target>
+		<Target Name="app_40_Mandelbrot_XE2:Make">
+			<MSBuild Targets="Make" Projects="40_Mandelbrot\app_40_Mandelbrot.XE2.dproj"/>
+		</Target>
+		<Target Name="app_41_Pipeline_XE2">
+			<MSBuild Projects="41_Pipeline\app_41_Pipeline.XE2.dproj"/>
+		</Target>
+		<Target Name="app_41_Pipeline_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="41_Pipeline\app_41_Pipeline.XE2.dproj"/>
+		</Target>
+		<Target Name="app_41_Pipeline_XE2:Make">
+			<MSBuild Targets="Make" Projects="41_Pipeline\app_41_Pipeline.XE2.dproj"/>
+		</Target>
+		<Target Name="app_42_MessageQueue_XE2">
+			<MSBuild Projects="42_MessageQueue\app_42_MessageQueue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_42_MessageQueue_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="42_MessageQueue\app_42_MessageQueue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_42_MessageQueue_XE2:Make">
+			<MSBuild Targets="Make" Projects="42_MessageQueue\app_42_MessageQueue.XE2.dproj"/>
+		</Target>
+		<Target Name="app_43_InvokeAnonymous_XE2">
+			<MSBuild Projects="43_InvokeAnonymous\app_43_InvokeAnonymous.XE2.dproj"/>
+		</Target>
+		<Target Name="app_43_InvokeAnonymous_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="43_InvokeAnonymous\app_43_InvokeAnonymous.XE2.dproj"/>
+		</Target>
+		<Target Name="app_43_InvokeAnonymous_XE2:Make">
+			<MSBuild Targets="Make" Projects="43_InvokeAnonymous\app_43_InvokeAnonymous.XE2.dproj"/>
+		</Target>
+		<Target Name="app_44_ForkJoinQuickSort_XE2">
+			<MSBuild Projects="44_Fork-Join QuickSort\app_44_ForkJoinQuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_44_ForkJoinQuickSort_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="44_Fork-Join QuickSort\app_44_ForkJoinQuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_44_ForkJoinQuickSort_XE2:Make">
+			<MSBuild Targets="Make" Projects="44_Fork-Join QuickSort\app_44_ForkJoinQuickSort.XE2.dproj"/>
+		</Target>
+		<Target Name="app_45_ForkJoinMax_XE2">
+			<MSBuild Projects="45_Fork-Join max\app_45_ForkJoinMax.XE2.dproj"/>
+		</Target>
+		<Target Name="app_45_ForkJoinMax_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="45_Fork-Join max\app_45_ForkJoinMax.XE2.dproj"/>
+		</Target>
+		<Target Name="app_45_ForkJoinMax_XE2:Make">
+			<MSBuild Targets="Make" Projects="45_Fork-Join max\app_45_ForkJoinMax.XE2.dproj"/>
+		</Target>
+		<Target Name="app_46_Async_XE2">
+			<MSBuild Projects="46_Async\app_46_Async.XE2.dproj"/>
+		</Target>
+		<Target Name="app_46_Async_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="46_Async\app_46_Async.XE2.dproj"/>
+		</Target>
+		<Target Name="app_46_Async_XE2:Make">
+			<MSBuild Targets="Make" Projects="46_Async\app_46_Async.XE2.dproj"/>
+		</Target>
+		<Target Name="app_47_TaskConfig_XE2">
+			<MSBuild Projects="47_TaskConfig\app_47_TaskConfig.XE2.dproj"/>
+		</Target>
+		<Target Name="app_47_TaskConfig_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="47_TaskConfig\app_47_TaskConfig.XE2.dproj"/>
+		</Target>
+		<Target Name="app_47_TaskConfig_XE2:Make">
+			<MSBuild Targets="Make" Projects="47_TaskConfig\app_47_TaskConfig.XE2.dproj"/>
+		</Target>
+		<Target Name="app_48_OtlParallelExceptions_XE2">
+			<MSBuild Projects="48_OtlParallelExceptions\app_48_OtlParallelExceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_48_OtlParallelExceptions_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="48_OtlParallelExceptions\app_48_OtlParallelExceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_48_OtlParallelExceptions_XE2:Make">
+			<MSBuild Targets="Make" Projects="48_OtlParallelExceptions\app_48_OtlParallelExceptions.XE2.dproj"/>
+		</Target>
+		<Target Name="app_49_FramedWorkers_XE2">
+			<MSBuild Projects="49_FramedWorkers\app_49_FramedWorkers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_49_FramedWorkers_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="49_FramedWorkers\app_49_FramedWorkers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_49_FramedWorkers_XE2:Make">
+			<MSBuild Targets="Make" Projects="49_FramedWorkers\app_49_FramedWorkers.XE2.dproj"/>
+		</Target>
+		<Target Name="app_50_OmniValueArray_XE2">
+			<MSBuild Projects="50_OmniValueArray\app_50_OmniValueArray.XE2.dproj"/>
+		</Target>
+		<Target Name="app_50_OmniValueArray_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="50_OmniValueArray\app_50_OmniValueArray.XE2.dproj"/>
+		</Target>
+		<Target Name="app_50_OmniValueArray_XE2:Make">
+			<MSBuild Targets="Make" Projects="50_OmniValueArray\app_50_OmniValueArray.XE2.dproj"/>
+		</Target>
+		<Target Name="app_51_PipelineStressTest_XE2">
+			<MSBuild Projects="51_PipelineStressTest\app_51_PipelineStressTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_51_PipelineStressTest_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="51_PipelineStressTest\app_51_PipelineStressTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_51_PipelineStressTest_XE2:Make">
+			<MSBuild Targets="Make" Projects="51_PipelineStressTest\app_51_PipelineStressTest.XE2.dproj"/>
+		</Target>
+		<Target Name="app_52_BackgroundWorker_XE2">
+			<MSBuild Projects="52_BackgroundWorker\app_52_BackgroundWorker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_52_BackgroundWorker_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="52_BackgroundWorker\app_52_BackgroundWorker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_52_BackgroundWorker_XE2:Make">
+			<MSBuild Targets="Make" Projects="52_BackgroundWorker\app_52_BackgroundWorker.XE2.dproj"/>
+		</Target>
+		<Target Name="app_53_AsyncAwait_XE2">
+			<MSBuild Projects="53_AsyncAwait\app_53_AsyncAwait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_53_AsyncAwait_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="53_AsyncAwait\app_53_AsyncAwait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_53_AsyncAwait_XE2:Make">
+			<MSBuild Targets="Make" Projects="53_AsyncAwait\app_53_AsyncAwait.XE2.dproj"/>
+		</Target>
+		<Target Name="app_54_LockManager_XE2">
+			<MSBuild Projects="54_LockManager\app_54_LockManager.XE2.dproj"/>
+		</Target>
+		<Target Name="app_54_LockManager_XE2:Clean">
+			<MSBuild Targets="Clean" Projects="54_LockManager\app_54_LockManager.XE2.dproj"/>
+		</Target>
+		<Target Name="app_54_LockManager_XE2:Make">
+			<MSBuild Targets="Make" Projects="54_LockManager\app_54_LockManager.XE2.dproj"/>
+		</Target>
+		<Target Name="Build">
+			<CallTarget Targets="app_0_Beep_XE2;app_1_HelloWorld_XE2;app_2_TwoWayHello_XE2;app_3_HelloWorld_with_package_XE2;app_4_TwoWayHello_with_package_XE2;app_5_TwoWayHello_without_loop_XE2;app_6_TwoWayHello_with_object_worker_XE2;app_7_InitTest_XE2;app_8_RegisterComm_XE2;app_9_Communications_XE2;app_10_Containers_XE2;app_11_ThreadPool_XE2;app_12_Lock_XE2;app_13_Exceptions_XE2;app_14_TerminateWhen_XE2;app_15_TaskGroup_XE2;app_16_ChainTo_XE2;app_17_MsgWait_XE2;app_18_StringMsgDispatch_XE2;app_19_StringMsgBenchmark_XE2;app_20_QuickSort_XE2;app_21_Anonymous_methods_XE2;app_22_TerminationTest_XE2;app_23_BackgroundFileSearch_XE2;app_24_ConnectionPool_XE2;app_25_WaitableComm_XE2;app_26_MultiEventMonitor_XE2;app_27_RecursiveTree_XE2;app_28_Hooks_XE2;app_29_ImplicitEventMonitor_XE2;app_30_AnonymousEventMonitor_XE2;app_31_WaitableObjects_XE2;app_32_Queue_XE2;app_33_BlockingCollection_XE2;app_34_TreeScan_XE2;app_35_ParallelFor_XE2;app_36_ParallelAggregate_XE2;app_37_ParallelJoin_XE2;app_38_OrderedFor_XE2;app_39_Futures_XE2;app_40_Mandelbrot_XE2;app_41_Pipeline_XE2;app_42_MessageQueue_XE2;app_43_InvokeAnonymous_XE2;app_44_ForkJoinQuickSort_XE2;app_45_ForkJoinMax_XE2;app_46_Async_XE2;app_47_TaskConfig_XE2;app_48_OtlParallelExceptions_XE2;app_49_FramedWorkers_XE2;app_50_OmniValueArray_XE2;app_51_PipelineStressTest_XE2;app_52_BackgroundWorker_XE2;app_53_AsyncAwait_XE2;app_54_LockManager_XE2"/>
+		</Target>
+		<Target Name="Clean">
+			<CallTarget Targets="app_0_Beep_XE2:Clean;app_1_HelloWorld_XE2:Clean;app_2_TwoWayHello_XE2:Clean;app_3_HelloWorld_with_package_XE2:Clean;app_4_TwoWayHello_with_package_XE2:Clean;app_5_TwoWayHello_without_loop_XE2:Clean;app_6_TwoWayHello_with_object_worker_XE2:Clean;app_7_InitTest_XE2:Clean;app_8_RegisterComm_XE2:Clean;app_9_Communications_XE2:Clean;app_10_Containers_XE2:Clean;app_11_ThreadPool_XE2:Clean;app_12_Lock_XE2:Clean;app_13_Exceptions_XE2:Clean;app_14_TerminateWhen_XE2:Clean;app_15_TaskGroup_XE2:Clean;app_16_ChainTo_XE2:Clean;app_17_MsgWait_XE2:Clean;app_18_StringMsgDispatch_XE2:Clean;app_19_StringMsgBenchmark_XE2:Clean;app_20_QuickSort_XE2:Clean;app_21_Anonymous_methods_XE2:Clean;app_22_TerminationTest_XE2:Clean;app_23_BackgroundFileSearch_XE2:Clean;app_24_ConnectionPool_XE2:Clean;app_25_WaitableComm_XE2:Clean;app_26_MultiEventMonitor_XE2:Clean;app_27_RecursiveTree_XE2:Clean;app_28_Hooks_XE2:Clean;app_29_ImplicitEventMonitor_XE2:Clean;app_30_AnonymousEventMonitor_XE2:Clean;app_31_WaitableObjects_XE2:Clean;app_32_Queue_XE2:Clean;app_33_BlockingCollection_XE2:Clean;app_34_TreeScan_XE2:Clean;app_35_ParallelFor_XE2:Clean;app_36_ParallelAggregate_XE2:Clean;app_37_ParallelJoin_XE2:Clean;app_38_OrderedFor_XE2:Clean;app_39_Futures_XE2:Clean;app_40_Mandelbrot_XE2:Clean;app_41_Pipeline_XE2:Clean;app_42_MessageQueue_XE2:Clean;app_43_InvokeAnonymous_XE2:Clean;app_44_ForkJoinQuickSort_XE2:Clean;app_45_ForkJoinMax_XE2:Clean;app_46_Async_XE2:Clean;app_47_TaskConfig_XE2:Clean;app_48_OtlParallelExceptions_XE2:Clean;app_49_FramedWorkers_XE2:Clean;app_50_OmniValueArray_XE2:Clean;app_51_PipelineStressTest_XE2:Clean;app_52_BackgroundWorker_XE2:Clean;app_53_AsyncAwait_XE2:Clean;app_54_LockManager_XE2:Clean"/>
+		</Target>
+		<Target Name="Make">
+			<CallTarget Targets="app_0_Beep_XE2:Make;app_1_HelloWorld_XE2:Make;app_2_TwoWayHello_XE2:Make;app_3_HelloWorld_with_package_XE2:Make;app_4_TwoWayHello_with_package_XE2:Make;app_5_TwoWayHello_without_loop_XE2:Make;app_6_TwoWayHello_with_object_worker_XE2:Make;app_7_InitTest_XE2:Make;app_8_RegisterComm_XE2:Make;app_9_Communications_XE2:Make;app_10_Containers_XE2:Make;app_11_ThreadPool_XE2:Make;app_12_Lock_XE2:Make;app_13_Exceptions_XE2:Make;app_14_TerminateWhen_XE2:Make;app_15_TaskGroup_XE2:Make;app_16_ChainTo_XE2:Make;app_17_MsgWait_XE2:Make;app_18_StringMsgDispatch_XE2:Make;app_19_StringMsgBenchmark_XE2:Make;app_20_QuickSort_XE2:Make;app_21_Anonymous_methods_XE2:Make;app_22_TerminationTest_XE2:Make;app_23_BackgroundFileSearch_XE2:Make;app_24_ConnectionPool_XE2:Make;app_25_WaitableComm_XE2:Make;app_26_MultiEventMonitor_XE2:Make;app_27_RecursiveTree_XE2:Make;app_28_Hooks_XE2:Make;app_29_ImplicitEventMonitor_XE2:Make;app_30_AnonymousEventMonitor_XE2:Make;app_31_WaitableObjects_XE2:Make;app_32_Queue_XE2:Make;app_33_BlockingCollection_XE2:Make;app_34_TreeScan_XE2:Make;app_35_ParallelFor_XE2:Make;app_36_ParallelAggregate_XE2:Make;app_37_ParallelJoin_XE2:Make;app_38_OrderedFor_XE2:Make;app_39_Futures_XE2:Make;app_40_Mandelbrot_XE2:Make;app_41_Pipeline_XE2:Make;app_42_MessageQueue_XE2:Make;app_43_InvokeAnonymous_XE2:Make;app_44_ForkJoinQuickSort_XE2:Make;app_45_ForkJoinMax_XE2:Make;app_46_Async_XE2:Make;app_47_TaskConfig_XE2:Make;app_48_OtlParallelExceptions_XE2:Make;app_49_FramedWorkers_XE2:Make;app_50_OmniValueArray_XE2:Make;app_51_PipelineStressTest_XE2:Make;app_52_BackgroundWorker_XE2:Make;app_53_AsyncAwait_XE2:Make;app_54_LockManager_XE2:Make"/>
+		</Target>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
+	</Project>
