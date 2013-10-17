@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-10-14
-///   Version           : 1.32a
+///   Last modification : 2013-10-17
+///   Version           : 1.32b
 ///</para><para>
 ///   History:
+///     1.32b: 2013-10-17
+///       - Fixed exception format string in TOmniValue.SetAsTValue.
 ///     1.32a: 2013-10-14
 ///       - Removed XE5 compilation warnings.
 ///     1.32: 2013-10-13
@@ -2272,7 +2274,7 @@ begin
     tkDynArray:
       SetAsArray(GetArrayFromTValue(value));
     else
-      raise Exception.CreateFmt('TValue of type %d cannot be converted to TOmniValue',
+      raise Exception.CreateFmt('TValue of type %s cannot be converted to TOmniValue',
         [GetEnumName(TypeInfo(TTypeKind), Ord(value.Kind))]);
   end;
 end; { TOmniValue.SetAsTValue }

@@ -1,3 +1,6 @@
+- Bug fixes:
+  - Fixed exception format string in TOmniValue.SetAsTValue [tnx to ring.nic].
+
 3.03: 2013-10-14
 - New features:
   - Support for XE4 and XE5 (tnx to [Uwe Raabe]).
