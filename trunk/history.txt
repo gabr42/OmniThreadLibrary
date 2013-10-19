@@ -1,5 +1,6 @@
 - Bug fixes:
   - Fixed exception format string in TOmniValue.SetAsTValue [tnx to ring.nic].
+  - Fixed deadlock when an empty list was provided to ForEach [tnx to ring.nic].
 
 3.03: 2013-10-14
 - New features:

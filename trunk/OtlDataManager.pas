@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010, Primoz Gabrijelcic
+///Copyright (c) 2013, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,12 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2010-12-10
-///   Version           : 1.0
+///   Last modification : 2013-10-19
+///   Version           : 1.0a
 ///</para><para>
 ///   History:
+///     1.0a: 2013-10-19
+///       - Don't crash if the source is empty.
 ///     1.0: 2010-12-10
-//        - Created.
+///       - Created.
 ///</para></remarks>
 
 unit OtlDataManager;
@@ -538,7 +540,7 @@ var
   intPackage: TOmniIntegerDataPackage absolute package;
 begin
   {$IFDEF Debug}Assert(package is TOmniIntegerDataPackage);{$ENDIF}
-  {$IFDEF Debug}Assert(dataCount > 0);{$ENDIF}
+  {$IFDEF Debug}Assert(dataCount >= 0);{$ENDIF}
   if irpCount.Value <= 0 then
     Result := false
   else begin
