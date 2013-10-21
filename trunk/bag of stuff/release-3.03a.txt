@@ -1,7 +1,7 @@
 OmniThreadLibrary 3.03a has just been released. It is available via
 SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-3.03a)
 or as a ZIP archive
-(http://omnithreadlibrary.googlecode.com/files/OmniThreadLibrary-3.03a.zip).
+(https://code.google.com/p/omnithreadlibrary/downloads/detail?name=OmniThreadLibrary-3.03a.zip&can=2&q=).
 
 What is OmniThreadLibrary?
 ==========================
