@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{08349b3f-ad41-463e-a694-18a653188d38}</ProjectGuid>
+    <MainSource>app_0_Beep.dpr</MainSource>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+    <DCC_DependencyCheckOutputName>app_0_Beep.exe</DCC_DependencyCheckOutputName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_DebugInformation>False</DCC_DebugInformation>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
+    <DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
+    <DCC_Optimize>False</DCC_Optimize>
+    <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    <DCC_Define>RELEASE</DCC_Define>
+    <DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
+    <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
+    <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
+    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm</DCC_IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
+    <DCC_Optimize>False</DCC_Optimize>
+    <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_Define>DEBUG;FullDebugMode</DCC_Define>
+    <DCC_SYMBOL_DEPRECATED>False</DCC_SYMBOL_DEPRECATED>
+    <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
+    <DCC_MapFile>3</DCC_MapFile>
+    <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
+    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
+    <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
+    <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Delphi.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+<BorlandProject><Delphi.Personality><Parameters><Parameters Name="UseLauncher">False</Parameters><Parameters Name="LoadAllSymbols">True</Parameters><Parameters Name="LoadUnspecifiedSymbols">False</Parameters></Parameters><VersionInfo><VersionInfo Name="IncludeVerInfo">False</VersionInfo><VersionInfo Name="AutoIncBuild">False</VersionInfo><VersionInfo Name="MajorVer">1</VersionInfo><VersionInfo Name="MinorVer">0</VersionInfo><VersionInfo Name="Release">0</VersionInfo><VersionInfo Name="Build">0</VersionInfo><VersionInfo Name="Debug">False</VersionInfo><VersionInfo Name="PreRelease">False</VersionInfo><VersionInfo Name="Special">False</VersionInfo><VersionInfo Name="Private">False</VersionInfo><VersionInfo Name="DLL">False</VersionInfo><VersionInfo Name="Locale">1060</VersionInfo><VersionInfo Name="CodePage">1250</VersionInfo></VersionInfo><VersionInfoKeys><VersionInfoKeys Name="CompanyName"></VersionInfoKeys><VersionInfoKeys Name="FileDescription"></VersionInfoKeys><VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys><VersionInfoKeys Name="InternalName"></VersionInfoKeys><VersionInfoKeys Name="LegalCopyright"></VersionInfoKeys><VersionInfoKeys Name="LegalTrademarks"></VersionInfoKeys><VersionInfoKeys Name="OriginalFilename"></VersionInfoKeys><VersionInfoKeys Name="ProductName"></VersionInfoKeys><VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys><VersionInfoKeys Name="Comments"></VersionInfoKeys></VersionInfoKeys><Source><Source Name="MainSource">app_0_Beep.dpr</Source></Source></Delphi.Personality><ModelSupport>False</ModelSupport></BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
+  <ItemGroup>
+    <DelphiCompile Include="app_0_Beep.dpr">
+      <MainSource>MainSource</MainSource>
+    </DelphiCompile>
+    <RcCompile Include="..\..\res\MainIcon.rc">
+      <Form>..\..\res\MainIcon.res</Form>
+    </RcCompile>
+    <DCCReference Include="..\..\OtlComm.pas" />
+    <DCCReference Include="..\..\OtlCommon.pas" />
+    <DCCReference Include="..\..\OtlTask.pas" />
+    <DCCReference Include="..\..\OtlThreadPool.pas" />
+    <DCCReference Include="..\..\src\DSiWin32.pas" />
+    <DCCReference Include="..\..\src\GpLists.pas" />
+    <DCCReference Include="..\..\src\GpStuff.pas" />
+    <DCCReference Include="..\..\src\HVStringBuilder.pas" />
+    <DCCReference Include="..\..\src\HVStringData.pas" />
+    <DCCReference Include="..\..\src\SpinLock.pas" />
+    <DCCReference Include="test_0_Beep.pas">
+      <Form>frmTestSimple</Form>
+    </DCCReference>
+  </ItemGroup>
+</Project>
