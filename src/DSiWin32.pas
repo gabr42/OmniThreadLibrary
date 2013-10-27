@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2013-10-13
-   Version           : 1.72d
+   Last modification : 2013-10-27
+   Version           : 1.72e
 </pre>*)(*
    History:
+     1.72e: 2013-10-27
+       - Fixed invalid control flow in DSiFileExtensionIs.
      1.72d: 2013-10-14
        - Removed compiler warnings in XE5.
      1.72c: 2013-10-07
@@ -3065,8 +3067,10 @@ const
       testExt := extension[iExt];
       if (Length(testExt) = 0) or (testExt[1] <> '.') then begin
         if SameText(fExtNoDot, testExt) then
-          Exit
-        else if SameText(fExtDot, testExt) then
+          Exit;
+      end
+      else begin
+        if SameText(fExtDot, testExt) then
           Exit;
       end;
     end;
