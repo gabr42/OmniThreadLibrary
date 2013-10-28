@@ -293,6 +293,8 @@ interface
   {$IFEND}
 {$ENDIF}
 
+{$M-}
+
 uses
   Windows,
   SysUtils,
