@@ -1,3 +1,6 @@
+- Swapped content of 'Schedule Observed'/'Schedule Unobserved' methods in 
+  the 11_ThreadPool test (tnx to [semele]).
+
 3.03a: 2013-10-21
 - Bug fixes:
   - Fixed exception format string in TOmniValue.SetAsTValue (tnx to [Nick Ring]).
