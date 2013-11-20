@@ -195,10 +195,9 @@ procedure TfrmTestOtlThreadPool.btnScheduleObservedClick(Sender: TObject);
 begin
   if assigned(FThreadPool) then
     FThreadPool.CancelAll;
-  FThreadPool := CreateThreadPool('Test thread pool')
-    .MonitorWith(OmniTED);
-  CreateTask(THelloWorker.Create(Handle), 'unobserved task')
-    .Unobserved
+  FThreadPool := CreateThreadPool('Test thread pool');
+  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'observed task')
+    .OnTerminated(ReleaseObservableTask)
     .Schedule(FThreadPool);
 end;
 
@@ -206,9 +205,10 @@ procedure TfrmTestOtlThreadPool.btnScheduleUnobservedClick(Sender: TObject);
 begin
   if assigned(FThreadPool) then
     FThreadPool.CancelAll;
-  FThreadPool := CreateThreadPool('Test thread pool');
-  FObservableTask := CreateTask(THelloWorker.Create(Handle), 'observed task')
-    .OnTerminated(ReleaseObservableTask)
+  FThreadPool := CreateThreadPool('Test thread pool')
+    .MonitorWith(OmniTED);
+  CreateTask(THelloWorker.Create(Handle), 'unobserved task')
+    .Unobserved
     .Schedule(FThreadPool);
 end;
 
