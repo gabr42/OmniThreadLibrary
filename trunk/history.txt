@@ -1,5 +1,10 @@
-- Swapped content of 'Schedule Observed'/'Schedule Unobserved' methods in 
-  the 11_ThreadPool test (tnx to [semele]).
+3.03b:
+- New features:
+  - Added SetPriority function to the IOmniTaskConfig.
+- Bug fixes:
+  - Thread priority is set correctly (to 'normal') if it is not explicitly specified.
+  - Corrected swapped content of 'Schedule Observed'/'Schedule Unobserved' methods in 
+    the 11_ThreadPool test (tnx to [semele]).
 
 3.03a: 2013-10-21
 - Bug fixes:
