@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2013-10-14
-///   Version           : 1.33
+///   Last modification : 2014-01-08
+///   Version           : 1.34
 ///</para><para>
 ///   History:
+///     1.34: 2014-01-08
+///       - Added SetPriority function to the IOmniTaskConfig.
 ///     1.33: 2013-10-14
 ///       - Different thread pool can be specified for all operations via the new
 ///         TaskConfig.ThreadPool function.
@@ -298,6 +300,7 @@ type
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
+    function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskConfig;
     function  ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload;
@@ -1180,6 +1183,7 @@ type
     otcOnMessageEventHandler   : TOmniTaskMessageEvent;
     otcOnMessageList           : TGpIntegerObjectList;
     otcOnTerminated            : TOmniTaskConfigTerminated;
+    otcPriority                : TOTLThreadPriority;
     otcThreadPool              : IOmniThreadPool;
     otcWithCounterCounter      : IOmniCounter;
     otcWithLockAutoDestroy     : boolean;
@@ -1199,6 +1203,7 @@ type
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskConfig; overload; inline;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskConfig; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskConfig; overload;
+    function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskConfig;
     function  ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
     function  WithCounter(const counter: IOmniCounter): IOmniTaskConfig; inline;
     function  WithLock(const lock: TSynchroObject; autoDestroyLock: boolean = true): IOmniTaskConfig; overload; inline;
@@ -3806,6 +3811,7 @@ constructor TOmniTaskConfig.Create;
 begin
   inherited Create;
   otcOnMessageList := TGpIntegerObjectList.Create(true);
+  otcPriority := TOTLThreadPriority.tpNormal;
 end; { TOmniTaskConfig.Create }
 
 destructor TOmniTaskConfig.Destroy;
@@ -3840,6 +3846,7 @@ begin
     task.WithLock(otcWithLockOmniLock);
   if assigned(otcWithLockSyncLock) then
     task.WithLock(otcWithLockSyncLock, otcWithLockAutoDestroy);
+  task.SetPriority(otcPriority);
 end; { TOmniTaskConfig.Apply }
 
 function TOmniTaskConfig.OnMessage(eventDispatcher: TObject): IOmniTaskConfig;
@@ -3912,6 +3919,12 @@ begin
   otcOnTerminated.Simple := eventHandler;
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
+
+function TOmniTaskConfig.SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskConfig;
+begin
+  otcPriority := threadPriority;
+  Result := Self;
+end; { TOmniTaskConfig.SetPriority }
 
 function TOmniTaskConfig.ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
 begin
