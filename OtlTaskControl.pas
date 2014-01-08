@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-06-03
-///   Version           : 1.32b
+///   Last modification : 2014-01-08
+///   Version           : 1.32c
 ///</para><para>
 ///   History:
+///     1.32c: 2014-01-08
+///       - Thread priority is set correctly (to 'normal') if it is not explicitly specified.
 ///     1.32b: 2013-06-03
 ///       - Fixed task destruction deadlock introduced in 1.32a.
 ///     1.32a: 2013-05-26
@@ -2119,6 +2121,7 @@ begin
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
+  otePriority := tpNormal;
 end; { TOmniTaskExecutor.Initialize }
 
 procedure TOmniTaskExecutor.InsertTimer(wakeUpTime_ms: int64; timerInfo: TOmniTaskTimerInfo);
