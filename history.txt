@@ -1,4 +1,4 @@
-3.03b:
+3.03b: 2014-01-09
 - New features:
   - Added SetPriority function to the IOmniTaskConfig.
   - Added indexed writers ([number] and [name]) to both TOmniValue and 
