@@ -6,10 +6,16 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2013-09-24
-   Version           : 1.36
+   Last modification : 2014-01-06
+   Version           : 1.38
 </pre>*)(*
    History:
+     1.38: 2014-01-06
+       - Implemented TGpInterfacedPersistent.
+       - IGpBuffer reimplemented using TMemoryStream.
+       - Implemented IGpBuffer.Add.
+     1.37: 2013-12-24
+       - Added IGpBuffer.
      1.36: 2013-09-24
        - Added SplitURL function.
      1.35: 2013-04-04
@@ -211,6 +217,22 @@ type
 {$ENDIF GpStuff_AlignedInt}
 
 type
+  ///	<summary>
+  ///	  TPersistent descanding implementing IInterface.
+  ///	</summary>
+  TGpInterfacedPersistent = class(TPersistent, IInterface)
+  protected
+    FRefCount: Integer;
+    function  QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function  _AddRef: Integer; stdcall;
+    function  _Release: Integer; stdcall;
+  public
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+    class function NewInstance: TObject; override;
+    property RefCount: Integer read FRefCount;
+  end; { TGpInterfacedPersistent }
+
   IGpTraceable = interface(IInterface)
     ['{EA2316AC-B5FA-45EA-86E0-9016CD51C336}']
     function  GetLogReferences: boolean; stdcall;
@@ -269,6 +291,46 @@ type
     procedure Release(buf: pointer); overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end; { TGpMemoryBuffer }
 
+  IGpBuffer = interface
+    function  GetAsAnsiString: AnsiString;
+    function  GetSize: integer;
+    procedure SetAsAnsiString(const value: AnsiString);
+    function  GetValue: pointer;
+  //
+    procedure Add(b: byte); overload;
+    procedure Add(ch: AnsiChar); overload;
+    procedure Allocate(size: integer);
+    procedure Assign(data: pointer; size: integer);
+    procedure Clear;
+    function  IsEmpty: boolean;
+    property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property Size: integer read GetSize;
+    property Value: pointer read GetValue;
+  end; { IGpBuffer }
+
+  TGpBuffer = class(TInterfacedObject, IGpBuffer)
+  strict private
+    FData: TMemoryStream;
+  strict protected
+    function  GetAsAnsiString: AnsiString; inline;
+    function  GetSize: integer; inline;
+    function  GetValue: pointer; inline;
+    procedure SetAsAnsiString(const value: AnsiString);
+  public
+    constructor Create; overload;
+    constructor Create(data: pointer; size: integer); overload;
+    destructor  Destroy; override;
+    procedure Add(b: byte); overload; inline;
+    procedure Add(ch: AnsiChar); overload; inline;
+    procedure Allocate(size: integer); inline;
+    procedure Assign(data: pointer; size: integer); inline;
+    procedure Clear; inline;
+    function  IsEmpty: boolean; inline;
+    property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property Size: integer read GetSize;
+    property Value: pointer read GetValue;
+  end; { TGpBuffer }
+
   PMethod = ^TMethod;
 
 function  Asgn(var output: boolean; const value: boolean): boolean; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -286,6 +348,7 @@ function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$
 function  IFF(condit: boolean; iftrue, iffalse: real): real; overload;        {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: pointer): pointer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  IFF(condit: boolean; iftrue, iffalse: TDateTime): TDateTime; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$IFDEF Unicode}
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -728,6 +791,14 @@ begin
 end; { IFF }
 
 function IFF(condit: boolean; iftrue, iffalse: pointer): pointer;
+begin
+  if condit then
+    Result := iftrue
+  else
+    Result := iffalse;
+end; { IFF }
+
+function IFF(condit: boolean; iftrue, iffalse: TDateTime): TDateTime;
 begin
   if condit then
     Result := iftrue
@@ -1577,5 +1648,121 @@ begin
   PPointer(buf)^ := FList;
   FList := buf;
 end; { TGpMemoryBuffer.Release }
+
+{ TGpBuffer }
+
+constructor TGpBuffer.Create;
+begin
+  inherited Create;
+  FData := TMemoryStream.Create;
+end; { TGpBuffer.Create }
+
+constructor TGpBuffer.Create(data: pointer; size: integer);
+begin
+  Create;
+  Assign(data, size);
+end; { TGpBuffer.Create }
+
+destructor TGpBuffer.Destroy;
+begin
+  FreeAndNil(FData);
+end; { TGpBuffer.Destroy }
+
+procedure TGpBuffer.Add(b: byte);
+begin
+  FData.Write(b, 1);
+end; { TGpBuffer.Add }
+
+procedure TGpBuffer.Add(ch: AnsiChar);
+begin
+  Add(byte(ch));
+end; { TGpBuffer.Add }
+
+procedure TGpBuffer.Allocate(size: integer);
+begin
+  Assert(size >= 0);
+  FData.Size := size;
+end; { TGpBuffer.Allocate }
+
+procedure TGpBuffer.Assign(data: pointer; size: integer);
+begin
+  Allocate(size);
+  if size > 0 then
+    Move(data^, Value^, size);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Clear;
+begin
+  Allocate(0);
+end; { TGpBuffer.Clear }
+
+function TGpBuffer.GetAsAnsiString: AnsiString;
+begin
+  SetLength(Result, Size);
+  if Size > 0 then
+    Move(Value^, Result[1], Size);
+end; { TGpBuffer.GetAsAnsiString }
+
+function TGpBuffer.GetSize: integer;
+begin
+  Result := FData.Size;
+end; { TGpBuffer.GetSize }
+
+function TGpBuffer.GetValue: pointer;
+begin
+  Result := FData.Memory;
+end; { TGpBuffer.GetValue }
+
+function TGpBuffer.IsEmpty: boolean;
+begin
+  Result := (Size = 0);
+end; { TGpBuffer.IsEmpty }
+
+procedure TGpBuffer.SetAsAnsiString(const value: AnsiString);
+begin
+  if value = '' then
+    Clear
+  else
+    Assign(@value[1], Length(value));
+end; { TGpBuffer.SetAsAnsiString }
+
+{ TGpInterfacedPersistent }
+
+procedure TGpInterfacedPersistent.AfterConstruction;
+begin
+  InterlockedDecrement(FRefCount);
+end; { TGpInterfacedPersistent.AfterConstruction }
+
+procedure TGpInterfacedPersistent.BeforeDestruction;
+begin
+  if RefCount <> 0 then
+    raise Exception.Create('TGpInterfacedPersistent: RefCount <> 0');
+end; { TGpInterfacedPersistent.BeforeDestruction }
+
+class function TGpInterfacedPersistent.NewInstance: TObject;
+begin
+  Result := inherited NewInstance;
+  TGpInterfacedPersistent(Result).FRefCount := 1;
+end; { TGpInterfacedPersistent.NewInstance }
+
+function TGpInterfacedPersistent.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+  if GetInterface(IID, Obj) then
+    Result := 0
+  else
+    Result := E_NOINTERFACE;
+end; { TGpInterfacedPersistent.QueryInterface }
+
+function TGpInterfacedPersistent._AddRef: integer;
+begin
+  Result := InterlockedIncrement(FRefCount);
+end; { TGpInterfacedPersistent._AddRef }
+
+function TGpInterfacedPersistent._Release: integer;
+begin
+  Result := InterlockedDecrement(FRefCount);
+  if Result = 0 then
+    Destroy;
+end; { TGpInterfacedPersistent._Release }
 
 end.
