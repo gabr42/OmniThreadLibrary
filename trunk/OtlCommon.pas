@@ -262,9 +262,12 @@ type
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
-    function  GetAsArrayItem(const idx: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    function  GetAsArrayItem(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsAnsiString(const value: AnsiString);
     procedure SetAsArray(value: TOmniValueContainer); inline;
+    procedure SetAsArrayItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    procedure SetAsArrayItem(const name: string; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    procedure SetAsArrayItem(const param, value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -380,9 +383,9 @@ type
     class operator Implicit(const a: TOmniValue): TDateTime; inline;
     {$ENDIF OTL_TOmniValueImplicitDateTime}
     property AsArray: TOmniValueContainer read GetAsArray;
-    property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem; default;
-    property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem; default;
-    property AsArrayItem[const idx: TOmniValue]: TOmniValue read GetAsArrayItem; default;
+    property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    property AsArrayItem[const param: TOmniValue]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
     property AsAnsiString: AnsiString read CastToAnsiString write SetAsAnsiString;
     property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
     property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
@@ -501,10 +504,14 @@ type
     ovcNames    : array of string;
     ovcValues   : array of TOmniValue;
   strict protected
+    function  AddParam(const paramName: string): integer;
     procedure Clear;
     function  GetItem(paramIdx: integer): TOmniValue; overload;
     function  GetItem(const paramName: string): TOmniValue; overload;
     function  GetItem(const param: TOmniValue): TOmniValue; overload;
+    procedure SetItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    procedure SetItem(const name: string; const value: TOmniValue); overload;
+    procedure SetItem(const param, value: TOmniValue); overload;
     procedure Grow(requiredIdx: integer = -1);
   public
     constructor Create;
@@ -518,9 +525,9 @@ type
     procedure Insert(paramIdx: integer; const value: TOmniValue);
     function  IsLocked: boolean; inline;
     procedure Lock; inline;
-    property Item[paramIdx: integer]: TOmniValue read GetItem; default;
-    property Item[const paramName: string]: TOmniValue read GetItem; default;
-    property Item[const param: TOmniValue]: TOmniValue read GetItem; default;
+    property Item[paramIdx: integer]: TOmniValue read GetItem write SetItem; default;
+    property Item[const paramName: string]: TOmniValue read GetItem write SetItem; default;
+    property Item[const param: TOmniValue]: TOmniValue read GetItem write SetItem; default;
   end; { TOmniValueContainer }
 
   //:Thread-safe counter
@@ -1078,21 +1085,22 @@ end; { TOmniValueContainer.Create }
 procedure TOmniValueContainer.Add(const paramValue: TOmniValue; paramName: string);
 var
   idxParam: integer;
-  newParam: boolean;
 begin
   if not ovcCanModify then
     raise Exception.Create('TOmniValueContainer: Locked');
-  newParam := (paramName = '') or (Asgn(idxParam, IndexOf(paramName)) < 0);
-  if newParam then begin
-    idxParam := ovcCount;
-    Inc(ovcCount);
-  end;
-  if idxParam > High(ovcValues) then
-    Grow;
-  if newParam then
-    ovcNames[idxParam] := paramName;
+  if (paramName = '') or (Asgn(idxParam, IndexOf(paramName)) < 0) then
+    idxParam := AddParam(paramName);
   ovcValues[idxParam] := paramValue;
 end; { TOmniValueContainer.Add }
+
+function TOmniValueContainer.AddParam(const paramName: string): integer;
+begin
+  Result := ovcCount;
+  Inc(ovcCount);
+  if Result > High(ovcValues) then
+    Grow;
+  ovcNames[Result] := paramName;
+end; { TOmniValueContainer.AddParam }
 
 procedure TOmniValueContainer.Assign(const parameters: array of TOmniValue);
 var
@@ -1218,6 +1226,35 @@ procedure TOmniValueContainer.Lock;
 begin
   ovcCanModify := false;
 end; { TOmniValueContainer.Lock }
+
+procedure TOmniValueContainer.SetItem(idx: integer; const value: TOmniValue);
+begin
+  if IsLocked then
+    raise Exception.Create('TOmniValueContainer.SetItem: Container is locked');
+  Insert(idx, value);
+end; { TOmniValueContainer.SetItem }
+
+procedure TOmniValueContainer.SetItem(const name: string; const value: TOmniValue);
+var
+  idx: integer;
+begin
+  if IsLocked then
+    raise Exception.Create('TOmniValueContainer.SetItem: Container is locked');
+  idx := IndexOf(name);
+  if idx < 0 then
+    idx := AddParam(name);
+  SetItem(idx, value);
+end; { TOmniValueContainer.SetItem }
+
+procedure TOmniValueContainer.SetItem(const param, value: TOmniValue);
+begin
+  if param.IsInteger then
+    SetItem(param.AsInteger, value)
+  else if param.IsString then
+    SetItem(param.AsString, value)
+  else
+    raise Exception.Create('TOmniValueContainer.SetItem: Container can only be indexed by integer or string.');
+end; { TOmniValueContainer.SetItem }
 
 { TOmniCounter }
 
@@ -1748,11 +1785,11 @@ begin
   Result := TOmniValueContainer(ovData)[name];
 end; { TOmniValue.GetAsArrayItem }
 
-function TOmniValue.GetAsArrayItem(const idx: TOmniValue): TOmniValue;
+function TOmniValue.GetAsArrayItem(const param: TOmniValue): TOmniValue;
 begin
   if not IsArray then
     raise Exception.Create('TOmniValue does not contain an array');
-  Result := TOmniValueContainer(ovData)[idx];
+  Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItem }
 
 function TOmniValue.GetAsArrayItem(idx: integer): TOmniValue;
@@ -2143,6 +2180,8 @@ begin
   if a = (a + 1) then begin
     ov := ov.GetAsArrayItem('');
     ov := ov.GetAsArrayItem(ov);
+    ov.SetAsArrayItem('', 0);
+    ov.SetAsArrayItem(ov, 0);
     intf := ov.CastToRecord;
     ov.SetAsRecord(intf);
   end;
@@ -2160,6 +2199,35 @@ begin
   ovIntf := AutoDestroyObject(value);
   ovData := int64(value);
 end; { TOmniValue.SetAsArray }
+
+procedure TOmniValue.SetAsArrayItem(idx: integer; const value: TOmniValue);
+begin
+  if IsEmpty then
+    SetAsArray(TOmniValueContainer.Create);
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  TOmniValueContainer(ovData)[idx] := value;
+end; { TOmniValue.SetAsArrayItem }
+
+procedure TOmniValue.SetAsArrayItem(const name: string; const value: TOmniValue);
+begin
+  if IsEmpty then
+    SetAsArray(TOmniValueContainer.Create);
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  TOmniValueContainer(ovData)[name] := value;
+end; { TOmniValue.SetAsArrayItem }
+
+procedure TOmniValue.SetAsArrayItem(const param, value: TOmniValue);
+begin
+  if IsEmpty then
+    SetAsArray(TOmniValueContainer.Create);
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  TOmniValueContainer(ovData)[param] := value;
+end; { TOmniValue.SetAsArrayItem }
+
+{ TOmniValue.SetAsArrayItem }
 
 procedure TOmniValue.SetAsBoolean(const value: boolean);
 begin

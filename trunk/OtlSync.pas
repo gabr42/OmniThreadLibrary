@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2013, Primoz Gabrijelcic
+///Copyright (c) 2014, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2013-03-05
-///   Version           : 1.15
+///   Last modification : 2014-01-09
+///   Version           : 1.16
 ///</para><para>
 ///   History:
+///     1.16: 2014-01-09
+///       - Locked<T>.Free can be called if Locked<T> owns its Value.
 ///     1.15: 2013-03-05
 ///       - TOmniLockManager<K> is reentrant.
 ///     1.14: 2013-02-27
@@ -226,7 +228,6 @@ type
   strict private
     FInitialized: boolean;
     FLifecycle  : IInterface;
-    FLockCount  : integer;
     FOwnsObject : boolean;
     procedure Clear; inline;
     function  GetValue: T; inline;
@@ -907,7 +908,7 @@ begin
   if ownsObject and (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
     FLifecycle := AutoDestroyObject(TObject(PPointer(@value)^));
   FInitialized := true;
-  FLockCount := 0;
+  FLock.Initialize;
 end; { Locked<T>.Create }
 
 class operator Locked<T>.Implicit(const value: Locked<T>): T;
@@ -938,7 +939,9 @@ begin
   if FInitialized then begin
     Acquire;
     try
-      if FInitialized then begin
+      if assigned(FLifecycle) then
+        Clear
+      else if FInitialized then begin
         if (PTypeInfo(TypeInfo(T))^.Kind = tkClass) then
           TObject(PPointer(@FValue)^).Free;
         Clear;
