@@ -1,0 +1,60 @@
+OmniThreadLibrary 3.03b has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-3.03b)
+or as a ZIP archive
+(https://code.google.com/p/omnithreadlibrary/downloads/detail?name=OmniThreadLibrary-3.03b.zip).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, and XE5 on the Win32 and Win64 platforms. Currently, 
+there are no plans to support older Delphi compilers and .NET. XE2+ 
+support is limited to Windows targets. Firemonkey is currently not 
+supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://www.glagolite.si/delphi/
+Documentation wiki: http://otl.17slon.com/book/
+Documentation book: http://http://leanpub.com/omnithreadlibrary
+
+Changes since version 3.03a
+===========================
+
+- New features:
+  - Added SetPriority function to the IOmniTaskConfig.
+  - Added indexed writers ([number] and [name]) to both TOmniValue and 
+    TOmniValueContainer.
+
+- Bug fixes:
+  - Thread priority is set correctly (to 'normal') if it is not
+    explicitly specified.
+  - Corrected swapped content of 'Schedule Observed'/'Schedule
+    Unobserved' methods in the 11_ThreadPool test (tnx to [semele]).
+  - Locked<T>.Free can be called if Locked<T> owns its Value.
+
+--
+Primoz
+[http://thedelphigeek.com]
