@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2013, Primoz Gabrijelcic
+///Copyright (c) 2014, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2013-10-17
-///   Version           : 1.32b
+///   Last modification : 2014-01-10
+///   Version           : 1.33
 ///</para><para>
 ///   History:
+///     1.33: 2014-01-10
+///       - TOmniValue can 'own' a TObject (object gets destroyed when a TOmniValue goes
+///         out of scope). Supporting properties: IsOwnedObject, AsOwnedObject,
+///         OwnsObject.
 ///     1.32b: 2013-10-17
 ///       - Fixed exception format string in TOmniValue.SetAsTValue.
 ///     1.32a: 2013-10-14
@@ -242,7 +246,7 @@ type
     ovIntf: IInterface;
     ovType: (ovtNull,
              {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
-             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString);
+             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString, ovtOwnedObject);
     function  CastToAnsiString: AnsiString; inline;
     function  CastToBoolean: boolean; inline;
     function  CastToCardinal: cardinal; inline;
@@ -278,11 +282,13 @@ type
     procedure SetAsInteger(const value: integer); inline;
     procedure SetAsInterface(const value: IInterface); //don't inline, something is broken in codegen (XE)
     procedure SetAsObject(const value: TObject); inline;
+    procedure SetAsOwnedObject(const value: TObject); inline;
     procedure SetAsPointer(const value: pointer); inline;
     procedure SetAsRecord(const intf: IOmniAutoDestroyObject); inline;
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
     procedure SetAsWideString(const value: WideString);
+    procedure SetOwnsObject(const value: boolean);
   private
     {$REGION 'Documentation'}
     ///  <summary>Most of the code in this method never executes. It is just here so that
@@ -324,6 +330,7 @@ type
     function  IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
     function  IsObject: boolean; inline;
+    function  IsOwnedObject: boolean; inline;
     function  IsPointer: boolean; inline;
     function  IsRecord: boolean; inline;
     function  IsString: boolean; inline;
@@ -397,10 +404,12 @@ type
     property AsInteger: integer read CastToInteger write SetAsInteger;
     property AsInterface: IInterface read CastToInterface write SetAsInterface;
     property AsObject: TObject read CastToObject write SetAsObject;
+    property AsOwnedObject: TObject read CastToObject write SetAsOwnedObject;
     property AsPointer: pointer read CastToPointer write SetAsPointer;
     property AsString: string read CastToString write SetAsString;
     property AsVariant: Variant read CastToVariant write SetAsVariant;
     property AsWideString: WideString read CastToWideString write SetAsWideString;
+    property OwnsObject: boolean read IsOwnedObject write SetOwnsObject;
   {$IFDEF OTL_Generics}
   public
     class function CastFrom<T>(const value: T): TOmniValue; static;
@@ -2033,6 +2042,8 @@ begin
       Result := AsString;
     ovtObject:
       Result := AsObject;
+    ovtOwnedObject:
+      Result := AsOwnedObject;
     ovtException:
       Result := AsException;
     ovtInterface:
@@ -2127,6 +2138,11 @@ function TOmniValue.IsObject: boolean;
 begin
   Result := (ovType = ovtObject);
 end; { TOmniValue.IsObject }
+
+function TOmniValue.IsOwnedObject: boolean;
+begin
+  Result := (ovType = ovtOwnedObject);
+end; { TOmniValue.IsOwnedObject }
 
 function TOmniValue.IsPointer: boolean;
 begin
@@ -2293,6 +2309,13 @@ begin
   ovType := ovtObject;
 end; { TOmniValue.SetAsObject }
 
+procedure TOmniValue.SetAsOwnedObject(const value: TObject);
+begin
+  ovType := ovtOwnedObject;
+  ovIntf := AutoDestroyObject(value);
+  ovData := int64(value);
+end; { TOmniValue.SetAsOwnedObject }
+
 procedure TOmniValue.SetAsPointer(const value: pointer);
 begin
   ClearIntf;
@@ -2360,6 +2383,23 @@ begin
   ovType := ovtWideString;
 end; { TOmniValue.SetAsWideString }
 
+procedure TOmniValue.SetOwnsObject(const value: boolean);
+var
+  obj: TObject;
+begin
+  if value then begin
+    if not IsObject then
+      raise Exception.Create('TOmniValue does not contain an object');
+    SetAsOwnedObject(TObject(ovData));
+  end
+  else begin
+    if not IsOwnedObject then
+      raise Exception.Create('TOmniValue does not contain an owned object');
+    obj := (ovIntf as IGpAutoDestroyObject).Detach;
+    SetAsObject(obj);
+  end;
+end; { TOmniValue.SetOwnsObject }
+
 function TOmniValue.TryCastToAnsiString(var value: AnsiString): boolean;
 begin
   Result := true;
@@ -2404,7 +2444,7 @@ begin
     ovtDouble,
     ovtDateTime: value := PDouble(@ovData)^;
     ovtExtended: value := (ovIntf as IOmniExtendedData).Value;
-    ovtNull: value := 0;
+    ovtNull:     value := 0;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToDateTime }
@@ -2414,7 +2454,7 @@ begin
   Result := true;
   case ovType of
     ovtInteger,
-    ovtNull:  value := AsInt64;
+    ovtNull:     value := AsInt64;
     ovtDouble,
     ovtDateTime: value := PDouble(@ovData)^;
     ovtExtended: value := (ovIntf as IOmniExtendedData).Value;
@@ -2440,7 +2480,7 @@ begin
   Result := true;
   case ovType of
     ovtInteger,
-    ovtNull:  value := AsInt64;
+    ovtNull:     value := AsInt64;
     ovtDouble,
     ovtDateTime: value := PDouble(@ovData)^;
     ovtExtended: value  := (ovIntf as IOmniExtendedData).Value;
@@ -2453,7 +2493,7 @@ begin
   Result := true;
   case ovType of
     ovtInteger: value := ovData;
-    ovtNull: value := 0;
+    ovtNull:    value := 0;
     ovtVariant: value := integer(AsVariant);
     else Result := false;
   end;
@@ -2473,7 +2513,7 @@ begin
   Result := true;
   case ovType of
     ovtInterface: value := ovIntf;
-    ovtNull: value := nil;
+    ovtNull:      value := nil;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToInterface }
@@ -2483,8 +2523,9 @@ begin
   Result := true;
   case ovType of
     ovtObject,
-    ovtException: value := TObject(ovData);
-    ovtNull: value := nil;
+    ovtException:   value := TObject(ovData);
+    ovtOwnedObject: value := (ovIntf as IGpAutoDestroyObject).Obj;
+    ovtNull:        value := nil;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToObject }
@@ -2495,8 +2536,9 @@ begin
   case ovType of
     ovtPointer,
     ovtObject,
-    ovtException: value := pointer(ovData);
-    ovtNull: value := nil;
+    ovtException:   value := pointer(ovData);
+    ovtOwnedObject: value := pointer((ovIntf as IGpAutoDestroyObject).Obj);
+    ovtNull:        value := nil;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToPointer }
@@ -2524,7 +2566,7 @@ begin
   Result := true;
   case ovType of
     ovtVariant: value := (ovIntf as IOmniVariantData).Value;
-    ovtNull: value := Variants.Null;
+    ovtNull:    value := Variants.Null;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToVariant }
@@ -2536,7 +2578,7 @@ begin
   Result := true;
   case ovType of
     ovtWideString: value := (ovIntf as IOmniWideStringData).Value;
-    ovtVariant: value := WideString(AsVariant);
+    ovtVariant:    value := WideString(AsVariant);
     else begin
       Result := TryCastToString(str);
       if Result then
