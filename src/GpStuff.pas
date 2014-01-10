@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2013 Primoz Gabrijelcic
+   (c) 2014 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2014-01-06
-   Version           : 1.38
+   Last modification : 2014-01-10
+   Version           : 1.39
 </pre>*)(*
    History:
+     1.39: 2014-01-10
+       - Implemented IGpAutoDestroyObject.Detach.
      1.38: 2014-01-06
        - Implemented TGpInterfacedPersistent.
        - IGpBuffer reimplemented using TMemoryStream.
@@ -268,6 +270,7 @@ type
   IGpAutoDestroyObject = interface ['{17A1E78B-69EF-42EE-A64B-DA4EA81A2C2C}']
     function  GetObj: TObject;
   //
+    function  Detach: TObject;
     procedure Free;
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
@@ -588,6 +591,7 @@ type
   public
     constructor Create(obj: TObject);
     destructor  Destroy; override;
+    function Detach: TObject;
     procedure Free;
     property Obj: TObject read GetObj;
   end; { IGpAutoDestroyObject }
@@ -1553,6 +1557,12 @@ begin
   Free;
   inherited;
 end; { TGpAutoDestroyObject.Destroy }
+
+function TGpAutoDestroyObject.Detach: TObject;
+begin
+  Result := FObject;
+  FObject := nil;
+end; { TGpAutoDestroyObject.Detach }
 
 procedure TGpAutoDestroyObject.Free;
 begin
