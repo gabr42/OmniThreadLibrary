@@ -1,3 +1,6 @@
+- New features:
+  - Implemented TOmniMREW.TryEnterReadLock and TryEnterWriteLock.
+
 3.03b: 2014-01-09
 - New features:
   - Added SetPriority function to the IOmniTaskConfig.

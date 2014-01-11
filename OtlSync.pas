@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2014-01-09
-///   Version           : 1.16
+///   Last modification : 2014-01-11
+///   Version           : 1.17
 ///</para><para>
 ///   History:
+///     1.17: 2014-01-11
+///       - Implemented TOmniMREW.TryEnterReadLock and TryEnterWriteLock.
 ///     1.16: 2014-01-09
 ///       - Locked<T>.Free can be called if Locked<T> owns its Value.
 ///     1.15: 2013-03-05
@@ -171,6 +173,8 @@ type
     procedure EnterWriteLock; inline;
     procedure ExitReadLock; inline;
     procedure ExitWriteLock; inline;
+    function  TryEnterReadLock: boolean; inline;
+    function  TryEnterWriteLock: boolean; inline;
   end; { TOmniMREW }
 
   IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
@@ -753,6 +757,28 @@ procedure TOmniMREW.ExitWriteLock;
 begin
   NativeInt(omrewReference) := 0;
 end; { TOmniMREW.ExitWriteLock }
+
+function TOmniMREW.TryEnterReadLock: boolean;
+var
+  currentReference: NativeInt;
+begin
+  //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
+  currentReference := NativeInt(omrewReference) AND NOT 1;
+  Result := CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
+end; { TOmniMREW.TryEnterReadLock }
+
+function TOmniMREW.TryEnterWriteLock: boolean;
+var
+  currentReference: NativeInt;
+begin
+  //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
+  currentReference := NativeInt(omrewReference) AND NOT 1;
+  Result := CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
+  if Result then
+    //Now wait on all readers
+    repeat
+    until NativeInt(omrewReference) = 1;
+end; { TOmniMREW.TryEnterWriteLock }
 
 { TOmniResourceCount }
 
