@@ -1,5 +1,8 @@
 - New features:
   - Implemented TOmniMREW.TryEnterReadLock and TryEnterWriteLock.
+-Bug fixes:
+  - OmniThreadLibraryDesigntimeXE5.dpk was depending on OmniThreadLibraryRuntimeXE4.
+    [tnx to Davide Angeli]
 
 3.03b: 2014-01-09
 - New features:
