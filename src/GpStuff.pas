@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2014-01-10
-   Version           : 1.39
+   Last modification : 2014-01-15
+   Version           : 1.40
 </pre>*)(*
    History:
+     1.40: 2014-01-15
+       - TGpBuffer can be initialized from a stream.
      1.39: 2014-01-10
        - Implemented IGpAutoDestroyObject.Detach.
      1.38: 2014-01-06
@@ -322,6 +324,7 @@ type
   public
     constructor Create; overload;
     constructor Create(data: pointer; size: integer); overload;
+    constructor Create(stream: TStream); overload;
     destructor  Destroy; override;
     procedure Add(b: byte); overload; inline;
     procedure Add(ch: AnsiChar); overload; inline;
@@ -1671,6 +1674,13 @@ constructor TGpBuffer.Create(data: pointer; size: integer);
 begin
   Create;
   Assign(data, size);
+end; { TGpBuffer.Create }
+
+constructor TGpBuffer.Create(stream: TStream);
+begin
+  Create;
+  if stream.Size > 0 then
+    FData.CopyFrom(stream, 0);
 end; { TGpBuffer.Create }
 
 destructor TGpBuffer.Destroy;
