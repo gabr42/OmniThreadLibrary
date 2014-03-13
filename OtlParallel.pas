@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2013 Primoz Gabrijelcic
+///Copyright (c) 2014 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2014-01-08
-///   Version           : 1.34
+///   Last modification : 2014-03-13
+///   Version           : 1.34a
 ///</para><para>
 ///   History:
+///     1.34a: 2014-03-13
+///       - Fixed race condition in IOmniPipeline termination code.
 ///     1.34: 2014-01-08
 ///       - Added SetPriority function to the IOmniTaskConfig.
 ///     1.33: 2013-10-14
@@ -1108,6 +1110,7 @@ type
     opOnStop          : TOmniTaskStopDelegate;
     opOutput          : IOmniBlockingCollection;
     opOutQueues       : TInterfaceList;
+    opShutDownComplete: TDSiEventHandle;
     opStages          : TInterfaceList;
     opThrottle        : integer;
     opThrottleLow     : integer;
@@ -2973,12 +2976,14 @@ begin
   opCancelWith := CreateOmniCancellationToken;
   opInput := TOmniBlockingCollection.Create;
   opOutput := TOmniBlockingCollection.Create;
+  opShutDownComplete := CreateEvent(nil, true, false, nil);
 end; { TOmniPipeline.Create }
 
 destructor TOmniPipeline.Destroy;
 begin
   FreeAndNil(opOutQueues);
   FreeAndNil(opStages);
+  DSiCloseHandleAndNull(opShutDownComplete);
   inherited Destroy;
 end; { TOmniPipeline.Destroy }
 
@@ -3130,7 +3135,10 @@ begin
               end;
             finally
               if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+              begin
                 DoOnStop(task);
+                SetEvent(Task.Param['ShutDownComplete']);
+              end;
             end;
           end,
           stageName
@@ -3141,7 +3149,8 @@ begin
         .SetParameter('Output', outQueue)
         .SetParameter('Stopped', countStopped)
         .SetParameter('TotalStopped', opCountStopped)
-        .SetParameter('Cancelled', opCancelWith);
+        .SetParameter('Cancelled', opCancelWith)
+        .SetParameter('ShutDownComplete', opShutDownComplete);
       Parallel.ApplyConfig((opStages[iStage] as IOmniPipelineStageEx).TaskConfig, task);
       task.Unobserved;
       task.Schedule(Parallel.GetPool((opStages[iStage] as IOmniPipelineStageEx).TaskConfig));
@@ -3241,7 +3250,9 @@ end; { TOmniPipeline.Throttle }
 function TOmniPipeline.WaitFor(timeout_ms: cardinal): boolean;
 begin
   Assert(assigned(opCountStopped));
-  Result := (WaitForSingleObject(opCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0);
+  Assert(opShutDownComplete <> 0);
+
+  Result := (WaitForSingleObject(opShutDownComplete, timeout_ms) = WAIT_OBJECT_0);
 end; { TOmniPipeline.WaitFor }
 
 { TOmniCompute<T> }
