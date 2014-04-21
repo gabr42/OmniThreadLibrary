@@ -6,10 +6,14 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2014-01-15
-   Version           : 1.40
+   Last modification : 2014-04-21
+   Version           : 1.42
 </pre>*)(*
    History:
+     1.42: 2014-04-21
+       - Added parameter ignoreDottedFolders to EnumFiles.
+     1.41: 2014-03-19
+       - Added default property ByteVal[] to IGpBuffer.
      1.40: 2014-01-15
        - TGpBuffer can be initialized from a stream.
      1.39: 2014-01-10
@@ -298,8 +302,10 @@ type
 
   IGpBuffer = interface
     function  GetAsAnsiString: AnsiString;
+    function  GetByteVal(idx: integer): byte;
     function  GetSize: integer;
     procedure SetAsAnsiString(const value: AnsiString);
+    procedure SetByteVal(idx: integer; const value: byte);
     function  GetValue: pointer;
   //
     procedure Add(b: byte); overload;
@@ -309,6 +315,7 @@ type
     procedure Clear;
     function  IsEmpty: boolean;
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize;
     property Value: pointer read GetValue;
   end; { IGpBuffer }
@@ -318,9 +325,11 @@ type
     FData: TMemoryStream;
   strict protected
     function  GetAsAnsiString: AnsiString; inline;
+    function  GetByteVal(idx: integer): byte; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
     procedure SetAsAnsiString(const value: AnsiString);
+    procedure SetByteVal(idx: integer; const value: byte); inline;
   public
     constructor Create; overload;
     constructor Create(data: pointer; size: integer); overload;
@@ -333,6 +342,7 @@ type
     procedure Clear; inline;
     function  IsEmpty: boolean; inline;
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize;
     property Value: pointer read GetValue;
   end; { TGpBuffer }
@@ -461,7 +471,8 @@ function EnumList(const aList: string; delim: char; const quoteChar: string = ''
 function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true): IGpStringValueEnumeratorFactory; overload;
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
-  enumSubfolders: boolean = false; maxEnumDepth: integer = 0): IGpStringValueEnumeratorFactory;
+  enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
+  ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
 
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
 {$ENDIF GpStuff_ValuesEnumerators}
@@ -1355,12 +1366,12 @@ begin
 end; { EnumList }
 
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
-  enumSubfolders: boolean; maxEnumDepth: integer): IGpStringValueEnumeratorFactory;
+  enumSubfolders: boolean; maxEnumDepth: integer; ignoreDottedFolders: boolean): IGpStringValueEnumeratorFactory;
 var
   sl: TStringList;
 begin
   sl := TStringList.Create;
-  DSiEnumFilesToSL(fileMask, attr, sl, returnFullPath, enumSubfolders, maxEnumDepth);
+  DSiEnumFilesToSL(fileMask, attr, sl, returnFullPath, enumSubfolders, maxEnumDepth, ignoreDottedFolders);
   Result := TGpStringValueEnumeratorFactory.Create(sl);
 end; { EnumFiles }
 
@@ -1723,6 +1734,12 @@ begin
     Move(Value^, Result[1], Size);
 end; { TGpBuffer.GetAsAnsiString }
 
+function TGpBuffer.GetByteVal(idx: integer): byte;
+begin
+  Assert((idx >= 0) and (idx < Size));
+  Result := PByte(Value)[idx];
+end; { TGpBuffer.GetByteVal }
+
 function TGpBuffer.GetSize: integer;
 begin
   Result := FData.Size;
@@ -1745,6 +1762,12 @@ begin
   else
     Assign(@value[1], Length(value));
 end; { TGpBuffer.SetAsAnsiString }
+
+procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
+begin
+  Assert((idx >= 0) and (idx < Size));
+  PByte(Value)[idx] := value;
+end; { TGpBuffer.SetByteVal }
 
 { TGpInterfacedPersistent }
 
