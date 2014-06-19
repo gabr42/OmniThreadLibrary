@@ -1,4 +1,4 @@
-(*:Collection of Win32/Win64 wrappers and helper functions.
+﻿(*:Collection of Win32/Win64 wrappers and helper functions.
    @desc <pre>
    Free for personal and commercial use. No rights reserved.
 
@@ -7,10 +7,16 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2014-04-21
-   Version           : 1.73
+   Last modification : 2014-06-02
+   Version           : 1.75
 </pre>*)(*
    History:
+     1.75: 2014-06-02
+       - Defined LCID constants.
+     1.74: 2014-05-12
+       - Defined CSIDL_PERSONAL constant.
+       - DSiGetFolderLocation uses SHGetFolderLocation instead of deprecated
+         SHGetSpecialFolderPath.
      1.73: 2014-04-21
        - DSiEnumFiles family has new parameter - ignoreDottedFolders. When True (default
          is False), folders that start in a dot (for example, .UnitTests) will be skipped
@@ -518,6 +524,7 @@ const
   CSIDL_MYMUSIC                 = $000D; //The file system directory that serves as a common repository for music files.
   CSIDL_MYPICTURES              = $0027; //v5.0; My Pictures, new for Win2K
   CSIDL_MYVIDEO                 = $000E; //v6.0; The file system directory that serves as a common repository for video files.
+  CSIDL_PERSONAL                = $0005; //v6.0; Equal to CSIDL_MYDOCUMENTS; previous; The file system directory used to physically store a user's common repository of documents.
   CSIDL_PHOTOALBUMS             = $0045; //Vista; The virtual folder used to store photo albums.
   CSIDL_PLAYLISTS               = $003F; //Vista; The virtual folder used to store play albums.
   CSIDL_PRINTHOOD               = $001B; //The file system directory that contains the link objects that can exist in the Printers virtual folder.
@@ -595,6 +602,246 @@ const
   DOMAIN_ALIAS_RID_GUESTS: DWORD = $00000222;
   DOMAIN_ALIAS_RID_POWER_: DWORD = $00000223;
   SE_GROUP_ENABLED = $00000004;
+
+  //LCID values, http://msdn.microsoft.com/nb-no/goglobal/bb964664.aspx
+  LCID_Afrikaans_SouthAfrica         = $0436;
+  LCID_Albanian_Albania              = $041c;
+  LCID_Alsatian                      = $0484;
+  LCID_Amharic_Ethiopia              = $045e;
+  LCID_Arabic_SaudiArabia            = $0401;
+  LCID_Arabic_Algeria                = $1401;
+  LCID_Arabic_Bahrain                = $3c01;
+  LCID_Arabic_Egypt                  = $0c01;
+  LCID_Arabic_Iraq                   = $0801;
+  LCID_Arabic_Jordan                 = $2c01;
+  LCID_Arabic_Kuwait                 = $3401;
+  LCID_Arabic_Lebanon                = $3001;
+  LCID_Arabic_Libya                  = $1001;
+  LCID_Arabic_Morocco                = $1801;
+  LCID_Arabic_Oman                   = $2001;
+  LCID_Arabic_Qatar                  = $4001;
+  LCID_Arabic_Syria                  = $2801;
+  LCID_Arabic_Tunisia                = $1c01;
+  LCID_Arabic_UAE                    = $3801;
+  LCID_Arabic_Yemen                  = $2401;
+  LCID_Armenian_Armenia              = $042b;
+  LCID_Assamese                      = $044d;
+  LCID_Azeri_Cyrillic                = $082c;
+  LCID_Azeri_Latin                   = $042c;
+  LCID_Bashkir                       = $046d;
+  LCID_Basque                        = $042d;
+  LCID_Belarusian                    = $0423;
+  LCID_Bengali_India                 = $0445;
+  LCID_Bengali_Bangladesh            = $0845;
+  LCID_Bosnian_BosniaHerzegovina     = $141A;
+  LCID_Breton                        = $047e;
+  LCID_Bulgarian                     = $0402;
+  LCID_Burmese                       = $0455;
+  LCID_Catalan                       = $0403;
+  LCID_Cherokee_UnitedStates         = $045c;
+  LCID_Chinese_PRC                   = $0804;
+  LCID_Chinese_Singapore             = $1004;
+  LCID_Chinese_Taiwan                = $0404;
+  LCID_Chinese_HongKongSAR           = $0c04;
+  LCID_Chinese_MacaoSAR              = $1404;
+  LCID_Corsican                      = $0483;
+  LCID_Croatian                      = $041a;
+  LCID_Croatian_BosniaHerzegovina    = $101a;
+  LCID_Czech                         = $0405;
+  LCID_Danish                        = $0406;
+  LCID_Dari                          = $048c;
+  LCID_Divehi                        = $0465;
+  LCID_Dutch_Netherlands             = $0413;
+  LCID_Dutch_Belgium                 = $0813;
+  LCID_Edo                           = $0466;
+  LCID_English_UnitedStates          = $0409;
+  LCID_English_UnitedKingdom         = $0809;
+  LCID_English_Australia             = $0c09;
+  LCID_English_Belize                = $2809;
+  LCID_English_Canada                = $1009;
+  LCID_English_Caribbean             = $2409;
+  LCID_English_HongKongSAR           = $3c09;
+  LCID_English_India                 = $4009;
+  LCID_English_Indonesia             = $3809;
+  LCID_English_Ireland               = $1809;
+  LCID_English_Jamaica               = $2009;
+  LCID_English_Malaysia              = $4409;
+  LCID_English_NewZealand            = $1409;
+  LCID_English_Philippines           = $3409;
+  LCID_English_Singapore             = $4809;
+  LCID_English_SouthAfrica           = $1c09;
+  LCID_English_Trinidad              = $2c09;
+  LCID_English_Zimbabwe              = $3009;
+  LCID_Estonian                      = $0425;
+  LCID_Faroese                       = $0438;
+  LCID_Farsi                         = $0429;
+  LCID_Filipino                      = $0464;
+  LCID_Finnish                       = $040b;
+  LCID_French_France                 = $040c;
+  LCID_French_Belgium                = $080c;
+  LCID_French_Cameroon               = $2c0c;
+  LCID_French_Canada                 = $0c0c;
+  LCID_French_DRCongo                = $240c;
+  LCID_French_CotedIvoire            = $300c;
+  LCID_French_Haiti                  = $3c0c;
+  LCID_French_Luxembourg             = $140c;
+  LCID_French_Mali                   = $340c;
+  LCID_French_Monaco                 = $180c;
+  LCID_French_Morocco                = $380c;
+  LCID_French_NorthAfrica            = $e40c;
+  LCID_French_Reunion                = $200c;
+  LCID_French_Senegal                = $280c;
+  LCID_French_Switzerland            = $100c;
+  LCID_French_WestIndies             = $1c0c;
+  LCID_Frisian_Netherlands           = $0462;
+  LCID_Fulfulde_Nigeria              = $0467;
+  LCID_FYRO_Macedonian               = $042f;
+  LCID_Galician                      = $0456;
+  LCID_Georgian                      = $0437;
+  LCID_German_Germany                = $0407;
+  LCID_German_Austria                = $0c07;
+  LCID_German_Liechtenstein          = $1407;
+  LCID_German_Luxembourg             = $1007;
+  LCID_German_Switzerland            = $0807;
+  LCID_Greek                         = $0408;
+  LCID_Greenlandic                   = $046f;
+  LCID_Guarani_Paraguay              = $0474;
+  LCID_Gujarati                      = $0447;
+  LCID_Hausa_Nigeria                 = $0468;
+  LCID_Hawaiian_UnitedStates         = $0475;
+  LCID_Hebrew                        = $040d;
+  LCID_Hindi                         = $0439;
+  LCID_Hungarian                     = $040e;
+  LCID_Ibibio_Nigeria                = $0469;
+  LCID_Icelandic                     = $040f;
+  LCID_Igbo_Nigeria                  = $0470;
+  LCID_Indonesian                    = $0421;
+  LCID_Inuktitut                     = $045d;
+  LCID_Irish                         = $083c;
+  LCID_Italian_Italy                 = $0410;
+  LCID_Italian_Switzerland           = $0810;
+  LCID_Japanese                      = $0411;
+  LCID_Kiche                         = $0486;
+  LCID_Kannada                       = $044b;
+  LCID_Kanuri_Nigeria                = $0471;
+  LCID_Kashmiri                      = $0860;
+  LCID_Kashmiri_Arabic               = $0460;
+  LCID_Kazakh                        = $043f;
+  LCID_Khmer                         = $0453;
+  LCID_Kinyarwanda                   = $0487;
+  LCID_Konkani                       = $0457;
+  LCID_Korean                        = $0412;
+  LCID_Kyrgyz_Cyrillic               = $0440;
+  LCID_Lao                           = $0454;
+  LCID_Latin                         = $0476;
+  LCID_Latvian                       = $0426;
+  LCID_Lithuanian                    = $0427;
+  LCID_Luxembourgish                 = $046e;
+  LCID_Malay_Malaysia                = $043e;
+  LCID_Malay_BruneiDarussalam        = $083e;
+  LCID_Malayalam                     = $044c;
+  LCID_Maltese                       = $043a;
+  LCID_Manipuri                      = $0458;
+  LCID_Maori_NewZealand              = $0481;
+  LCID_Mapudungun                    = $0471;
+  LCID_Marathi                       = $044e;
+  LCID_Mohawk                        = $047c;
+  LCID_Mongolian_Cyrillic            = $0450;
+  LCID_Mongolian_Mongolian           = $0850;
+  LCID_Nepali                        = $0461;
+  LCID_Nepali_India                  = $0861;
+  LCID_Norwegian_Bokmal              = $0414;
+  LCID_Norwegian_Nynorsk             = $0814;
+  LCID_Occitan                       = $0482;
+  LCID_Oriya                         = $0448;
+  LCID_Oromo                         = $0472;
+  LCID_Papiamentu                    = $0479;
+  LCID_Pashto                        = $0463;
+  LCID_Polish                        = $0415;
+  LCID_Portuguese_Brazil             = $0416;
+  LCID_Portuguese_Portugal           = $0816;
+  LCID_Punjabi                       = $0446;
+  LCID_Punjabi_Pakistan              = $0846;
+  LCID_Quecha_Bolivia                = $046B;
+  LCID_Quecha_Ecuador                = $086B;
+  LCID_Quecha_Peru                   = $0C6B;
+  LCID_RhaetoRomanic                 = $0417;
+  LCID_Romanian                      = $0418;
+  LCID_Romanian_Moldava              = $0818;
+  LCID_Russian                       = $0419;
+  LCID_Russian_Moldava               = $0819;
+  LCID_Sami_Lappish                  = $043b;
+  LCID_Sanskrit                      = $044f;
+  LCID_Scottish_Gaelic               = $043c;
+  LCID_Sepedi                        = $046c;
+  LCID_Serbian_Cyrillic              = $0c1a;
+  LCID_Serbian_Latin                 = $081a;
+  LCID_Sindhi_India                  = $0459;
+  LCID_Sindhi_Pakistan               = $0859;
+  LCID_Sinhalese_SriLanka            = $045b;
+  LCID_Slovak                        = $041b;
+  LCID_Slovenian                     = $0424;
+  LCID_Somali                        = $0477;
+  LCID_Sorbian                       = $042e;
+  LCID_Spanish_Spain_ModernSort      = $0c0a;
+  LCID_Spanish_Spain_TraditionalSort = $040a;
+  LCID_Spanish_Argentina             = $2c0a;
+  LCID_Spanish_Bolivia               = $400a;
+  LCID_Spanish_Chile                 = $340a;
+  LCID_Spanish_Colombia              = $240a;
+  LCID_Spanish_CostaRica             = $140a;
+  LCID_Spanish_DominicanRepublic     = $1c0a;
+  LCID_Spanish_Ecuador               = $300a;
+  LCID_Spanish_ElSalvador            = $440a;
+  LCID_Spanish_Guatemala             = $100a;
+  LCID_Spanish_Honduras              = $480a;
+  LCID_Spanish_LatinAmerica          = $580a;
+  LCID_Spanish_Mexico                = $080a;
+  LCID_Spanish_Nicaragua             = $4c0a;
+  LCID_Spanish_Panama                = $180a;
+  LCID_Spanish_Paraguay              = $3c0a;
+  LCID_Spanish_Peru                  = $280a;
+  LCID_Spanish_PuertoRico            = $500a;
+  LCID_Spanish_UnitedStates          = $540a;
+  LCID_Spanish_Uruguay               = $380a;
+  LCID_Spanish_Venezuela             = $200a;
+  LCID_Sutu                          = $0430;
+  LCID_Swahili                       = $0441;
+  LCID_Swedish                       = $041d;
+  LCID_Swedish_Finland               = $081d;
+  LCID_Syriac                        = $045a;
+  LCID_Tajik                         = $0428;
+  LCID_Tamazight_Arabic              = $045f;
+  LCID_Tamazight_Latin               = $085f;
+  LCID_Tamil                         = $0449;
+  LCID_Tatar                         = $0444;
+  LCID_Telugu                        = $044a;
+  LCID_Thai                          = $041e;
+  LCID_Tibetan_Bhutan                = $0851;
+  LCID_Tibetan_PRC                   = $0451;
+  LCID_Tigrigna_Eritrea              = $0873;
+  LCID_Tigrigna_Ethiopia             = $0473;
+  LCID_Tsonga                        = $0431;
+  LCID_Tswana                        = $0432;
+  LCID_Turkish                       = $041f;
+  LCID_Turkmen                       = $0442;
+  LCID_Uighur_China                  = $0480;
+  LCID_Ukrainian                     = $0422;
+  LCID_Urdu                          = $0420;
+  LCID_Urdu_India                    = $0820;
+  LCID_Uzbek_Cyrillic                = $0843;
+  LCID_Uzbek_Latin                   = $0443;
+  LCID_Venda                         = $0433;
+  LCID_Vietnamese                    = $042a;
+  LCID_Welsh                         = $0452;
+  LCID_Wolof                         = $0488;
+  LCID_Xhosa                         = $0434;
+  LCID_Yakut                         = $0485;
+  LCID_Yi                            = $0478;
+  LCID_Yiddish                       = $043d;
+  LCID_Yoruba                        = $046a;
+  LCID_Zulu                          = $0435;
+  LCID_HID                           = $04ff;
 
 type
   {$IFDEF DSiNeedULONGEtc}
@@ -6136,7 +6383,7 @@ var
   begin
     GetMem(path, MAX_PATH * SizeOf(char));
     try
-      if Succeeded(SHGetSpecialFolderLocation(0, CSIDL, pPIDL)) then begin
+      if Succeeded(SHGetFolderLocation(0, CSIDL, 0, 0, pPIDL)) then begin
         SHGetPathFromIDList(pPIDL, path);
         DSiFreePidl(pPIDL);
       end
