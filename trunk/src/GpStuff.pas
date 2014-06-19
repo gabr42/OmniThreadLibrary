@@ -6,10 +6,14 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2014-04-21
-   Version           : 1.42
+   Last modification : 2014-05-19
+   Version           : 1.44
 </pre>*)(*
    History:
+     1.44: 2014-05-19
+       - Implemented IGpBuffer.AsStream.
+     1.43: 2014-05-16
+       - Implemented IGpBuffer.AsString.
      1.42: 2014-04-21
        - Added parameter ignoreDottedFolders to EnumFiles.
      1.41: 2014-03-19
@@ -302,9 +306,12 @@ type
 
   IGpBuffer = interface
     function  GetAsAnsiString: AnsiString;
+    function  GetAsStream: TStream;
+    function  GetAsString: string;
     function  GetByteVal(idx: integer): byte;
     function  GetSize: integer;
     procedure SetAsAnsiString(const value: AnsiString);
+    procedure SetAsString(const value: string);
     procedure SetByteVal(idx: integer; const value: byte);
     function  GetValue: pointer;
   //
@@ -315,6 +322,8 @@ type
     procedure Clear;
     function  IsEmpty: boolean;
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property AsStream: TStream read GetAsStream;
+    property AsString: string read GetAsString write SetAsString;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize;
     property Value: pointer read GetValue;
@@ -323,12 +332,15 @@ type
   TGpBuffer = class(TInterfacedObject, IGpBuffer)
   strict private
     FData: TMemoryStream;
-  strict protected
+  protected
     function  GetAsAnsiString: AnsiString; inline;
+    function  GetAsStream: TStream; inline;
+    function  GetAsString: string; inline;
     function  GetByteVal(idx: integer): byte; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
-    procedure SetAsAnsiString(const value: AnsiString);
+    procedure SetAsAnsiString(const value: AnsiString); inline;
+    procedure SetAsString(const value: string); inline;
     procedure SetByteVal(idx: integer; const value: byte); inline;
   public
     constructor Create; overload;
@@ -342,6 +354,8 @@ type
     procedure Clear; inline;
     function  IsEmpty: boolean; inline;
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+    property AsStream: TStream read GetAsStream;
+    property AsString: string read GetAsString write SetAsString;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize;
     property Value: pointer read GetValue;
@@ -1734,6 +1748,18 @@ begin
     Move(Value^, Result[1], Size);
 end; { TGpBuffer.GetAsAnsiString }
 
+function TGpBuffer.GetAsStream: TStream;
+begin
+  Result := FData;
+end; { TGpBuffer.GetAsStream }
+
+function TGpBuffer.GetAsString: string;
+begin
+  SetLength(Result, Size div SizeOf(char));
+  if Size > 0 then
+    Move(Value^, Result[1], Size);
+end; { TGpBuffer.GetAsString }
+
 function TGpBuffer.GetByteVal(idx: integer): byte;
 begin
   Assert((idx >= 0) and (idx < Size));
@@ -1762,6 +1788,14 @@ begin
   else
     Assign(@value[1], Length(value));
 end; { TGpBuffer.SetAsAnsiString }
+
+procedure TGpBuffer.SetAsString(const value: string);
+begin
+  if value = '' then
+    Clear
+  else
+    Assign(@value[1], Length(value) * SizeOf(char));
+end; { TGpBuffer.SetAsString }
 
 procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
 begin
