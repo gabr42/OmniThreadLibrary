@@ -31,10 +31,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2014-03-13
-///   Version           : 1.34a
+///   Last modification : 2014-07-03
+///   Version           : 1.35
 ///</para><para>
 ///   History:
+///     1.35: 2014-07-03
+///       - Added overloaded Execute methods to IOmniParallelInitializedLoop and
+///         IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
+///         to the executor.
 ///     1.34a: 2014-03-13
 ///       - Fixed race condition in IOmniPipeline termination code.
 ///     1.34: 2014-01-08
@@ -322,6 +326,8 @@ type
 
   TOmniIteratorStateDelegate = reference to procedure(const value: TOmniValue; var taskState: TOmniValue);
   TOmniIteratorStateDelegate<T> = reference to procedure(const value: T; var taskState: TOmniValue);
+  TOmniIteratorStateTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue; var taskState: TOmniValue);
+  TOmniIteratorStateTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T; var taskState: TOmniValue);
 
   TOmniIteratorIntoDelegate = reference to procedure(const value: TOmniValue; var result: TOmniValue);
   TOmniIteratorIntoDelegate<T> = reference to procedure(const value: T; var result: TOmniValue);
@@ -344,12 +350,14 @@ type
 
   IOmniParallelInitializedLoop = interface
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop;
-    procedure Execute(loopBody: TOmniIteratorStateDelegate);
+    procedure Execute(loopBody: TOmniIteratorStateDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorStateTaskDelegate); overload;
   end; { IOmniParallelInitializedLoop }
 
   IOmniParallelInitializedLoop<T> = interface
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate): IOmniParallelInitializedLoop<T>;
-    procedure Execute(loopBody: TOmniIteratorStateDelegate<T>);
+    procedure Execute(loopBody: TOmniIteratorStateDelegate<T>); overload;
+    procedure Execute(loopBody: TOmniIteratorStateTaskDelegate<T>); overload;
   end; { IOmniParallelInitializedLoop }
 
   IOmniParallelIntoLoop = interface
@@ -635,6 +643,7 @@ type
     procedure InternalExecute(loopBody: TOmniIteratorDelegate); overload;
     procedure InternalExecute(loopBody: TOmniIteratorTaskDelegate); overload;
     procedure InternalExecute(loopBody: TOmniIteratorStateDelegate); overload;
+    procedure InternalExecute(loopBody: TOmniIteratorStateTaskDelegate); overload;
     function  InternalExecuteAggregate(loopBody: TOmniIteratorIntoDelegate): TOmniValue; overload;
     function  InternalExecuteAggregate(loopBody: TOmniIteratorIntoTaskDelegate): TOmniValue; overload;
     procedure InternalExecuteInto(loopBody: TOmniIteratorIntoDelegate); overload;
@@ -682,6 +691,7 @@ type
     procedure Execute(loopBody: TOmniIteratorIntoDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorStateDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorStateTaskDelegate); overload;
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate):
       IOmniParallelInitializedLoop;
     function  Initialize(taskInitializer: TOmniTaskInitializerDelegate):
@@ -723,6 +733,7 @@ type
     procedure Execute(loopBody: TOmniIteratorIntoDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorStateDelegate<T>); overload;
+    procedure Execute(loopBody: TOmniIteratorStateTaskDelegate<T>); overload;
     function  Finalize(taskFinalizer: TOmniTaskFinalizerDelegate):
       IOmniParallelInitializedLoop<T>;
     function  Initialize(taskInitializer: TOmniTaskInitializerDelegate):
@@ -1977,6 +1988,16 @@ end; { TOmniParallelLoopBase.InternalExecute }
 
 procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorStateDelegate);
 begin
+  InternalExecute(
+    procedure (const task: IOmniTask; const value: TOmniValue; var taskState: TOmniValue)
+    begin
+      loopBody(value, taskState);
+    end
+  );
+end; { TOmniParallelLoopBase.InternalExecute }
+
+procedure TOmniParallelLoopBase.InternalExecute(loopBody: TOmniIteratorStateTaskDelegate);
+begin
   InternalExecuteTask(
     procedure (const task: IOmniTask)
     var
@@ -1989,7 +2010,7 @@ begin
         localQueue := oplDataManager.CreateLocalQueue;
         try
           while (not Stopped) and localQueue.GetNext(value) do
-            loopBody(value, taskState);
+            loopBody(task, value, taskState);
         finally FreeAndNil(localQueue); end;
       finally oplTaskFinalizer(taskState); end;
     end
@@ -2344,6 +2365,11 @@ begin
   InternalExecute(loopBody);
 end; { TOmniParallelLoop.Execute }
 
+procedure TOmniParallelLoop.Execute(loopBody: TOmniIteratorStateTaskDelegate);
+begin
+  InternalExecute(loopBody);
+end; { TOmniParallelLoop.Execute }
+
 function TOmniParallelLoop.Finalize(taskFinalizer: TOmniTaskFinalizerDelegate):
   IOmniParallelInitializedLoop;
 begin
@@ -2555,6 +2581,16 @@ begin
     end
   );
 end; { TOmniParallelLoop }
+
+procedure TOmniParallelLoop<T>.Execute(loopBody: TOmniIteratorStateTaskDelegate<T>);
+begin
+  InternalExecute(
+    procedure (const task: IOmniTask; const value: TOmniValue; var taskState: TOmniValue)
+    begin
+      loopBody(task, value.CastTo<T>, taskState);
+    end
+  );
+end; { TOmniParallelLoop<T>.Execute }
 
 function TOmniParallelLoop<T>.Finalize(taskFinalizer: TOmniTaskFinalizerDelegate):
   IOmniParallelInitializedLoop<T>;
