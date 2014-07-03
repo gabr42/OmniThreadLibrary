@@ -1,3 +1,7 @@
+- New features:
+  - Added overloaded Execute methods to IOmniParallelInitializedLoop and
+    IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
+    to the executor.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
 
