@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2014-06-02
-   Version           : 1.75
+   Last modification : 2014-07-24
+   Version           : 1.76
 </pre>*)(*
    History:
+     1.76: 2014-07-24
+       - Defined DSiRegisterUserFileAssoc and DSiUnregisterUserFileAssoc.
      1.75: 2014-06-02
        - Defined LCID constants.
      1.74: 2014-05-12
@@ -1025,6 +1027,10 @@ type
     root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean; overload;
   function DSiWriteRegistry(const registryKey, name: string; value: Variant;
     root: HKEY = HKEY_CURRENT_USER; access: longword = KEY_SET_VALUE): boolean; overload;
+
+  procedure DSiRegisterUserFileAssoc(const extension, progID, description, defaultIcon,
+    openCommand: string);
+  procedure DSiUnregisterUserFileAssoc(const progID: string);
 
 { Files }
 
@@ -2772,7 +2778,7 @@ const
   {:Writes 64-bit integer into the registry.
     @author  gabr
     @since   2002-11-25
-  }        
+  }
   function DSiWriteRegistry(const registryKey, name: string; value: int64;
     root: HKEY; access: longword): boolean; 
   begin
@@ -2806,6 +2812,37 @@ const
       finally {TDSiRegistry.}Free; end;
     except end;
   end; { DSiWriteRegistry }
+
+  {:Writes per-user file association info to the registry.
+    See: http://stackoverflow.com/questions/6285791/how-to-associate-a-delphi-program-with-a-file-type-but-only-for-the-current-use
+     and http://msdn.microsoft.com/en-us/library/windows/desktop/hh127451(v=vs.85).aspx
+    @author  gabr
+    @since   2014-07-24
+  }
+  procedure DSiRegisterUserFileAssoc(const extension, progID, description, defaultIcon,
+    openCommand: string);
+  var
+    sExt: string;
+  begin
+    if Copy(extension, 1, 1) <> '.' then
+      sExt := '.' + extension
+    else
+      sExt := extension;
+    DSiWriteRegistry('\Software\Classes\'+progID, '', description);
+    DSiWriteRegistry('\Software\Classes\'+progID+'\DefaultIcon', '', defaultIcon);
+    DSiWriteRegistry('\Software\Classes\'+progID+'\shell\open\command', '', openCommand);
+    DSiWriteRegistry('\Software\Classes\'+sExt, '', progID);
+  end; { DSiRegisterUserFileAssoc }
+
+  {:Removes per-user file association info from the registry.
+    See DSiRegisterUserFileASsoc.
+    @author  gabr
+    @since   2014-07-24
+  }
+  procedure DSiUnregisterUserFileAssoc(const progID: string);
+  begin
+    DSiKillRegistry('\Software\Classes\' + progID, HKEY_CURRENT_USER);
+  end; { DSiUnregisterUserFileAssoc }
 
 { Files }
 

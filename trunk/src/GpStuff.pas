@@ -62,11 +62,7 @@
      1.24: 2010-12-14
        - Implemented function DebugBreak.
      1.23: 2010-09-21
-       - Implemented function DisableHandler. Usage:
-           with DisableHandler(@@cbDisableInterface.OnClick) do begin
-             cbDisableInterface.Checked := newValue;
-             Restore;
-           end;
+       - Implemented function DisableHandler. 
      1.22: 2010-07-09
        - Added IFF overload with AnsiString parameters (Unicode Delphi only).
      1.21: 2010-04-13
@@ -391,7 +387,6 @@ function  ReverseDWord(dw: DWORD): DWORD;
 ///<summary>Reverses byte order in a 2-byte number.</summary>
 function  ReverseWord(w: word): word;
 
-{$IFNDEF CPUX64}
 ///<summary>Locates specified value in a buffer.</summary>
 ///<returns>Offset of found value (0..dataLen-1) or -1 if value was not found.</returns>
 ///<since>2007-02-22</since>
@@ -401,7 +396,6 @@ function  TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; asse
 ///<returns>Offset of first differing value (0..dataLen-1) or -1 if buffer contains only specified values.</returns>
 ///<since>2007-02-22</since>
 function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
-{$ENDIF ~CPUX64}
 
 ///<summary>Converts open variant array to COM variant array.<para>
 ///  Written by Thomas Schubbauer and published in borland.public.delphi.objectpascal on
@@ -488,6 +482,11 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
 
+///Usage:
+///  with DisableHandler(@@cbDisableInterface.OnClick) do begin
+///    cbDisableInterface.Checked := newValue;
+///    Restore;
+///  end;
 function DisableHandler(const handler: PMethod): IGpDisableHandler;
 {$ENDIF GpStuff_ValuesEnumerators}
 
@@ -934,7 +933,6 @@ asm
    xchg   al, ah
 end; { ReverseWord }
 
-{$IFNDEF CPUX64}
 function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
 asm
 {$IFDEF WIN64}
@@ -967,9 +965,11 @@ function TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assem
 asm
 {$IFDEF WIN64}
       PUSH  rDI
-      MOV   rDI,rDX
+      mov   al, value
+      MOV   rDI, data
+      xor   rcx, rcx
       mov   ecx, dataLen
-      REPE  SCASB
+      REPNE SCASB
       MOV   rAX, -1
       JE    @@1
       MOV   rAX,rDI
@@ -988,7 +988,7 @@ asm
 @@1:  POP   EDI
 {$ENDIF WIN64}
 end; { TableFindNE }
-{$ENDIF ~CPUX64}
+
 
 {$IFDEF GpStuff_AlignedInt}
 
