@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2013, Primoz Gabrijelcic
+///Copyright (c) 2014, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,9 +38,12 @@
 ///
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2014-01-08
-///   Version           : 1.32c
+///   Version           : 1.33
 ///</para><para>
 ///   History:
+///     1.33: 2014-09-07
+///       - Implemented Run overloads that internally call Invoke to start
+///         thread worker.
 ///     1.32c: 2014-01-08
 ///       - Thread priority is set correctly (to 'normal') if it is not explicitly specified.
 ///     1.32b: 2013-06-03
@@ -419,7 +422,17 @@ type
     {$ENDIF OTL_Anonymous}
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
-    function  Run: IOmniTaskControl;
+    function  Run: IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer): IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
+    function  Run(const msgName: string): IOmniTaskControl; overload;
+    function  Run(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
+    function  Run(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload;
+    {$IFDEF OTL_Anonymous}
+    function  Run(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl; overload;
+    function  Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
+    {$ENDIF OTL_Anonymous}
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
@@ -940,7 +953,17 @@ type
     function  OnMessage(msgID: word; eventHandler: TOmniMessageExec): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  RemoveMonitor: IOmniTaskControl;
-    function  Run: IOmniTaskControl;
+    function  Run: IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer): IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
+    function  Run(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl; overload;
+    function  Run(const msgName: string): IOmniTaskControl; overload;
+    function  Run(const msgName: string; msgData: array of const): IOmniTaskControl; overload;
+    function  Run(const msgName: string; msgData: TOmniValue): IOmniTaskControl; overload;
+    {$IFDEF OTL_Anonymous}
+    function  Run(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl; overload;
+    function  Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
+    {$ENDIF OTL_Anonymous}
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
       IOmniTaskControl;
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
@@ -2856,6 +2879,56 @@ begin
   {$ENDIF OTL_DeprecatedResume}
   Result := Self;
 end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgMethod: pointer): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgMethod);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgMethod: pointer; msgData: array of const): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgMethod, msgData);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgMethod: pointer; msgData: TOmniValue): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgMethod, msgData);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgName: string): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgName);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgName: string; msgData: array of const): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgName, msgData);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(const msgName: string; msgData: TOmniValue): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(msgName, msgData);
+end; { TOmniTaskControl.Run }
+
+{$IFDEF OTL_Anonymous}
+function TOmniTaskControl.Run(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(remoteFunc);
+end; { TOmniTaskControl.Run }
+
+function TOmniTaskControl.Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl;
+begin
+  Result := Run;
+  Result.Invoke(remoteFunc);
+end; { TOmniTaskControl.Run }
+{$ENDIF OTL_Anonymous}
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
