@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-01-10
-///   Version           : 1.33
+///   Last modification : 2014-01-13
+///   Version           : 1.34
 ///</para><para>
 ///   History:
+///     1.34: 2014-01-13
+///       - Implemented TOmniValue.HasArrayItem.
 ///     1.33: 2014-01-10
 ///       - TOmniValue can 'own' a TObject (object gets destroyed when a TOmniValue goes
 ///         out of scope). Supporting properties: IsOwnedObject, AsOwnedObject,
@@ -292,8 +294,8 @@ type
   private
     {$REGION 'Documentation'}
     ///  <summary>Most of the code in this method never executes. It is just here so that
-    ///  stupid "Private symbol 'GetAsArrayItem' declared but never used" compilation hint
-    /// is not shown.</summary>
+    ///  stupid compilation hints such as "Private symbol 'GetAsArrayItem' declared but
+    ///  never used" are not shown.</summary>
     {$ENDREGION}
     class procedure _RemoveWarnings; inline; static;
     procedure ClearIntf; inline;
@@ -320,6 +322,9 @@ type
     function  CastToVariantDef(defValue: Variant): Variant; inline;
     function  CastToWideStringDef(defValue: WideString): WideString; inline;
     procedure Clear; inline;
+    function  HasArrayItem(idx: integer): boolean; overload; inline;
+    function  HasArrayItem(const name: string): boolean; overload; inline;
+    function  HasArrayItem(const param: TOmniValue): boolean; overload; inline;
     function  IsAnsiString: boolean; inline;
     function  IsArray: boolean; inline;
     function  IsBoolean: boolean; inline;
@@ -1800,6 +1805,30 @@ begin
     raise Exception.Create('TOmniValue does not contain an array');
   Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItem }
+
+function TOmniValue.HasArrayItem(idx: integer): boolean;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := (idx >= 0) and (idx < TOmniValueContainer(ovData).Count);
+end; { TOmniValue.HasArrayItem }
+
+function TOmniValue.HasArrayItem(const name: string): boolean;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := (TOmniValueContainer(ovData).IndexOf(name) >= 0);
+end; { TOmniValue.HasArrayItem }
+
+function TOmniValue.HasArrayItem(const param: TOmniValue): boolean;
+begin
+  if param.IsInteger then
+    Result := HasArrayItem(param.AsInteger)
+  else if param.IsString then
+    Result := HasArrayItem(param.AsString)
+  else
+    raise Exception.Create('TOmniValue does not contain an array');
+end; { TOmniValue.HasArrayItem }
 
 function TOmniValue.GetAsArrayItem(idx: integer): TOmniValue;
 begin
