@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-01-08
-///   Version           : 1.33
+///   Last modification : 2014-09-23
+///   Version           : 1.33a
 ///</para><para>
 ///   History:
+///     1.33a: 2014-09-23
+///       - Fixed TOmniTaskControl.SetParameters.
 ///     1.33: 2014-09-07
 ///       - Implemented Run overloads that internally call Invoke to start
 ///         thread worker.
@@ -2996,7 +2998,7 @@ end; { TOmniTaskControl.SetParameter }
 
 function TOmniTaskControl.SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
 begin
-  otcParameters.Assign(parameters);
+  otcParameters.AssignNamed(parameters);
   Result := Self;
 end; { TOmniTaskControl.SetParameters }
 

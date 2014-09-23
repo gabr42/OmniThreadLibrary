@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-01-13
-///   Version           : 1.34
+///   Last modification : 2014-09-23
+///   Version           : 1.35
 ///</para><para>
 ///   History:
+///     1.35: 2014-09-23
+///       - Implemented TOmniValueContainer.AssignNamed.
 ///     1.34: 2014-01-13
 ///       - Implemented TOmniValue.HasArrayItem.
 ///     1.33: 2014-01-10
@@ -531,6 +533,7 @@ type
     constructor Create;
     procedure Add(const paramValue: TOmniValue; paramName: string = '');
     procedure Assign(const parameters: array of TOmniValue);
+    procedure AssignNamed(const parameters: array of TOmniValue);
     function  ByName(const paramName: string): TOmniValue; overload;
     function  ByName(const paramName: string; const defValue: TOmniValue): TOmniValue; overload;
     function  Count: integer;
@@ -1127,6 +1130,24 @@ begin
   for value in parameters do
     Add(value);
 end; { TOmniValueContainer.Assign }
+
+procedure TOmniValueContainer.AssignNamed(const parameters: array of TOmniValue);
+var
+  i: integer;
+begin
+  if not ovcCanModify then
+    raise Exception.Create('TOmniValueContainer.AssignNamed: Already locked');
+  if Odd(Length(parameters)) then
+    raise Exception.Create('TOmniValueContainer.AssignNamed: Not a proper number of parameters');
+  Clear;
+  Grow(Length(parameters) div 2 - 1);
+
+  i := Low(parameters);
+  while i < High(parameters) do begin
+    Add(parameters[i+1], parameters[i]);
+    Inc(i, 2);
+  end;
+end; { TOmniValueContainer.AssignNamed }
 
 function TOmniValueContainer.ByName(const paramName: string): TOmniValue;
 begin

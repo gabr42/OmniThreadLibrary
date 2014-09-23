@@ -2,8 +2,13 @@
   - Added overloaded Execute methods to IOmniParallelInitializedLoop and
     IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
     to the executor.
+  - Implemented Run overloads that internally call Invoke to start
+    thread worker.
+  - Implemented TOmniValue.HasArrayItem.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
+  - Creating parameters with the array overload
+    (IOmniTaskControl.SetParameters(['From', 0, 'To', 99])) was not working.
 
 3.03a: 2013-10-21
 - Bug fixes:
