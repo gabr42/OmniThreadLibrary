@@ -376,9 +376,9 @@ type
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop;
     function  AggregateSum: IOmniParallelAggregatorLoop;
+    function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     procedure Execute(loopBody: TOmniIteratorDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorTaskDelegate); overload;
-    function  CancelWith(const token: IOmniCancellationToken): IOmniParallelLoop;
     function  Initialize(taskInitializer: TOmniTaskInitializerDelegate): IOmniParallelInitializedLoop;
     function  Into(const queue: IOmniBlockingCollection): IOmniParallelIntoLoop; overload;
     function  NoWait: IOmniParallelLoop;
@@ -415,6 +415,26 @@ type
     function  PreserveOrder: IOmniParallelLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
+
+  TOmniIteratorSimpleDelegate = reference to procedure(value: integer);
+  TOmniIteratorSimpleTaskDelegate = reference to procedure(taskIndex, value: integer);
+  TOmniSimpleTaskInitializerSimpleDelegate = reference to procedure(taskIndex: integer);
+  TOmniSimpleTaskInitializerDelegate = reference to procedure(taskIndex, fromIndex, toIndex: integer);
+  TOmniSimpleTaskFinalizerDelegate = reference to procedure(taskIndex: integer);
+
+  IOmniParallelSimpleLoop = interface
+    function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
+    function  NoWait: IOmniParallelSimpleLoop;
+    function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
+    function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop; overload;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
+    procedure Execute(loopBody: TOmniIteratorSimpleDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorSimpleTaskDelegate); overload;
+    function  Initialize(taskInitializer: TOmniSimpleTaskInitializerSimpleDelegate): IOmniParallelSimpleLoop; overload;
+    function  Initialize(taskInitializer: TOmniSimpleTaskInitializerDelegate): IOmniParallelSimpleLoop; overload;
+    function  Finalize(taskInitializer: TOmniSimpleTaskFinalizerDelegate): IOmniParallelSimpleLoop;
+  end; { IOmniParallelSimpleLoop }
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
   TEnumeratorDelegate<T> = reference to function(var next: T): boolean;
@@ -752,6 +772,26 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
 
+  TOmniParallelSimpleLoop = class(TInterfacedObject, IOmniParallelSimpleLoop)
+  strict private
+    FFirst: integer;
+    FLast : integer;
+    FStep : integer;
+  public
+    constructor Create(first, last: integer; step: integer = 1);
+    function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
+    function  NoWait: IOmniParallelSimpleLoop;
+    function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
+    function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop; overload;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
+    procedure Execute(loopBody: TOmniIteratorSimpleDelegate); overload;
+    procedure Execute(loopBody: TOmniIteratorSimpleTaskDelegate); overload;
+    function  Initialize(taskInitializer: TOmniSimpleTaskInitializerSimpleDelegate): IOmniParallelSimpleLoop; overload;
+    function  Initialize(taskInitializer: TOmniSimpleTaskInitializerDelegate): IOmniParallelSimpleLoop; overload;
+    function  Finalize(taskInitializer: TOmniSimpleTaskFinalizerDelegate): IOmniParallelSimpleLoop;
+  end; { IOmniParallelSimpleLoop }
+
   EJoinException = class(Exception)
   strict private
     jeExceptions: TGpIntegerObjectList;
@@ -930,6 +970,11 @@ type
   {$ENDREGION}
   Parallel = class
   public
+  // For
+    /// <summary>Creates fast parallel loop without support for work stealing which
+    /// only enumerates integer ranges.</summary>
+    class function  &For(first, last: integer; step: integer = 1): IOmniParallelSimpleLoop;
+
   // ForEach
     ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
     ///	example IOmniBlockingCollection).</summary>
@@ -1633,12 +1678,10 @@ end; { TOmniParallelJoin.WaitFor }
 
 { Parallel }
 
-class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
-  IOmniParallelLoop;
+class function Parallel.&For(first, last: integer; step: integer = 1): IOmniParallelSimpleLoop;
 begin
-  // Assumes that enumerator's TryTake method is threadsafe!
-  Result := Parallel.ForEach(enumerable.GetEnumerator);
-end; { Parallel.ForEach }
+  Result := TOmniParallelSimpleLoop.Create(first, last, step);
+end; { Parallel.&For }
 
 class procedure Parallel.Async(task: TProc; taskConfig: IOmniTaskConfig);
 begin
@@ -1693,6 +1736,13 @@ begin
       queue.CompleteAdding;
     end;
 end; { Parallel.CompleteQueue }
+
+class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
+  IOmniParallelLoop;
+begin
+  // Assumes that enumerator's TryTake method is threadsafe!
+  Result := Parallel.ForEach(enumerable.GetEnumerator);
+end; { Parallel.ForEach }
 
 class function Parallel.ForEach(first, last: integer; step: integer = 1):
   IOmniParallelLoop<integer>;
@@ -2721,6 +2771,81 @@ function TOmniDelegateEnumerator<T>.MoveNext: boolean;
 begin
   Result := odeDelegate(odeValue);
 end; { TOmniDelegateEnumerator }
+
+{ TOmniParallelSimpleLoop }
+
+function TOmniParallelSimpleLoop.CancelWith(
+  const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.CancelWith }
+
+procedure TOmniParallelSimpleLoop.Execute(loopBody: TOmniIteratorSimpleDelegate);
+begin
+
+end; { TOmniParallelSimpleLoop.Execute }
+
+constructor TOmniParallelSimpleLoop.Create(first, last, step: integer);
+begin
+  FFirst := first;
+  FLast := last;
+  FStep := step;
+end;
+
+procedure TOmniParallelSimpleLoop.Execute(loopBody: TOmniIteratorSimpleTaskDelegate);
+begin
+
+end; { TOmniParallelSimpleLoop.Execute }
+
+function TOmniParallelSimpleLoop.Finalize(
+  taskInitializer: TOmniSimpleTaskFinalizerDelegate): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.Finalize }
+
+function TOmniParallelSimpleLoop.Initialize(
+  taskInitializer: TOmniSimpleTaskInitializerSimpleDelegate): IOmniParallelSimpleLoop;
+begin
+  Result := Initialize(
+    procedure (taskIndex, fromIndex, toIndex: integer)
+    begin
+      taskInitializer(taskIndex)
+    end
+  );
+end; { TOmniParallelSimpleLoop.Initialize }
+
+function TOmniParallelSimpleLoop.Initialize(
+  taskInitializer: TOmniSimpleTaskInitializerDelegate): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.Initialize }
+
+function TOmniParallelSimpleLoop.NoWait: IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.NoWait }
+
+function TOmniParallelSimpleLoop.NumTasks(taskCount: integer): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.NumTasks }
+
+function TOmniParallelSimpleLoop.OnStop(
+  stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.OnStop }
+
+function TOmniParallelSimpleLoop.OnStop(stopCode: TProc): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.OnStop }
+
+function TOmniParallelSimpleLoop.TaskConfig(
+  const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
+begin
+  Result := Self;
+end; { TOmniParallelSimpleLoop.TaskConfig }
 
 { TOmniFuture<T> }
 
