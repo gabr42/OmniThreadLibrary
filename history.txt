@@ -5,6 +5,7 @@
   - Implemented Run overloads that internally call Invoke to start
     thread worker.
   - Implemented TOmniValue.HasArrayItem.
+  - Implemented simple and fast Parallel.&For which supports only integer ranges.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload
