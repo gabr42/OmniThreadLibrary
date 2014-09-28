@@ -26,7 +26,8 @@ uses
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
-  TestValue in 'TestValue.pas';
+  TestValue in 'TestValue.pas',
+  TestOtlParallel in 'TestOtlParallel.pas';
 
 {$R *.RES}
 
