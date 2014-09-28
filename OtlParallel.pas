@@ -801,7 +801,7 @@ type
     FTaskConfig         : IOmniTaskConfig;
   strict protected
     function  CreateForTask(taskIndex: integer; const taskDelegate: TTaskDelegate): IOmniTaskControl;
-    procedure CreatePartitions(numTasks: integer);
+    procedure CreatePartitions(var numTasks: integer);
     procedure InternalExecute(const taskDelegate: TTaskDelegate);
   public
     constructor Create(first, last: integer; step: integer = 1);
@@ -2845,7 +2845,7 @@ begin
     'Parallel.For worker #' + IntToStr(taskIndex));
 end; { TOmniParallelSimpleLoop.CreateForTask }
 
-procedure TOmniParallelSimpleLoop.CreatePartitions(numTasks: integer);
+procedure TOmniParallelSimpleLoop.CreatePartitions(var numTasks: integer);
 var
   first    : integer;
   i        : integer;
@@ -2855,13 +2855,16 @@ begin
   SetLength(FPartition, numTasks);
   numSteps := (FLast - FFirst + FStep) div FStep;
   first := FFirst;
-  for i := 0 to numTasks - 1 do begin
-    thisSteps := numSteps div (numTasks - i);
+  for i := numTasks - 1 downto 0 do begin
+    thisSteps := numSteps div (i + 1);
     FPartition[i].LowBound := first;
     FPartition[i].HighBound := first + (thisSteps - 1) * FStep;
     first := FPartition[i].HighBound + FStep;
     numSteps := numSteps - thisSteps;
   end;
+  for i := 0 to numTasks - 1 do
+    if FPartition[i].HighBound = -1 then
+      Dec(numTasks);
 end; { TOmniParallelSimpleLoop.CreatePartitions }
 
 procedure TOmniParallelSimpleLoop.Execute(loopBody: TOmniIteratorSimpleSimpleDelegate);
