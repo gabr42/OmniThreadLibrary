@@ -9,15 +9,20 @@ type
   // Test methods for class IOmniBlockingCollection
   TestParallelFor = class(TTestCase)
   protected
-  testData: array of integer;
+    FTestData: array of integer;
     procedure TestRange(iFrom, iTo, iStep: integer);
+    procedure InternalTestStepZero;
   published
-    procedure TestFor1;
-    procedure TestFor2;
-    procedure TestFor3;
-    procedure TestFor4;
-    procedure TestFor5;
-    procedure TestFor6;
+    procedure TestIncreasingStep;
+    procedure TestIncreasingEndEqStep;
+    procedure TestIncreasingLargeDataStep;
+    procedure TestDecreasingStep;
+    procedure TestDecreasingStartEqStep;
+    procedure TestDecreasingLargeDataStep;
+    procedure TestIncreasingStartEqStep;
+    procedure TestDecreasingEndEqStep;
+    procedure TestNoExecution;
+    procedure TestStepZero;
   end;
 
 implementation
@@ -28,15 +33,15 @@ uses
 
 { TestParallelFor }
 
-procedure TestParallelFor.TestFor1;
+procedure TestParallelFor.TestIncreasingStep;
 var
   i: Integer;
 begin
-  for i := 1 to 10 do
+  for i := 1 to 11 do
     TestRange(1, 10, i);
 end;
 
-procedure TestParallelFor.TestFor2;
+procedure TestParallelFor.TestIncreasingEndEqStep;
 var
   i: Integer;
 begin
@@ -44,23 +49,23 @@ begin
     TestRange(1, i, i);
 end;
 
-procedure TestParallelFor.TestFor3;
+procedure TestParallelFor.TestIncreasingLargeDataStep;
 var
   i: Integer;
 begin
   for i := 1 to 10 do
-    TestRange(1, 1000000, i);
+    TestRange(1, 100000, i);
 end;
 
-procedure TestParallelFor.TestFor4;
+procedure TestParallelFor.TestDecreasingStep;
 var
   i: Integer;
 begin
-  for i := 1 to 10 do
+  for i := 1 to 11 do
     TestRange(10, 1, -i);
 end;
 
-procedure TestParallelFor.TestFor5;
+procedure TestParallelFor.TestDecreasingStartEqStep;
 var
   i: Integer;
 begin
@@ -68,12 +73,46 @@ begin
     TestRange(i, 1, -i);
 end;
 
-procedure TestParallelFor.TestFor6;
+procedure TestParallelFor.TestDecreasingLargeDataStep;
 var
   i: Integer;
 begin
   for i := 1 to 10 do
-    TestRange(1000000, 1, -i);
+    TestRange(100000, 1, -i);
+end;
+
+procedure TestParallelFor.TestIncreasingStartEqStep;
+var
+  i: Integer;
+begin
+  for i := 1 to 10 do
+    TestRange(i, 10, i);
+end;
+
+
+procedure TestParallelFor.InternalTestStepZero;
+begin
+  TestRange(1, 10, 0);
+end;
+
+procedure TestParallelFor.TestDecreasingEndEqStep;
+var
+  i: Integer;
+begin
+  for i := 1 to 10 do
+    TestRange(10, i, -i);
+end;
+
+procedure TestParallelFor.TestNoExecution;
+var
+  i,j: Integer;
+begin
+  for i := 1 to 10 do
+    for j := 1 to 3 do
+      TestRange(i, 0, j);
+  for i := 1 to 10 do
+    for j := 1 to 3 do
+      TestRange(0, i, -j);
 end;
 
 procedure TestParallelFor.TestRange(iFrom, iTo, iStep: integer);
@@ -81,35 +120,54 @@ var
   iMax: integer;
   iMin: integer;
   i: Integer;
+
+  procedure CheckAllEmpty;
+  var
+    i: integer;
+  begin
+    for i := Low(FTestData) to High(FTestData) do
+      CheckEquals(-1, FTestData[i]);
+  end;
+
 begin
   Status(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep]));
+  OutputDebugString(PChar(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep])));
   iMin := Min(iFrom, iTo);
   iMax := Max(iFrom, iTo);
-  SetLength(testData, iMax - iMin + 1);
-  FillChar(testData[0], (iMax - iMin + 1) * SizeOf(testData[0]), $FF);
+  SetLength(FTestData, iMax - iMin + 1);
+  FillChar(FTestData[0], (iMax - iMin + 1) * SizeOf(FTestData[0]), $FF);
 
   Parallel.For(iFrom, iTo, iStep).Execute(
     procedure (idx: integer)
     begin
-      testData[idx-iMin] := idx;
+      FTestData[idx-iMin] := idx;
     end);
 
-  if iFrom < iTo then begin
-    for i := iFrom to iTo do begin
+  if iStep > 0 then begin
+    if iFrom > iTo then
+      CheckAllEmpty
+    else for i := iFrom to iTo do begin
       if ((i-iFrom) mod iStep) = 0 then
-        CheckEquals(i, testData[i-iMin], Format('at index %d', [i]))
+        CheckEquals(i, FTestData[i-iMin], Format('at index %d', [i]))
       else
-        CheckEquals(-1, testData[i-iMin], Format('at index %d', [i]));
+        CheckEquals(-1, FTestData[i-iMin], Format('at index %d', [i]));
     end;
   end
   else begin
-    for i := iFrom downto iTo do begin
+    if iFrom < iTo then
+      CheckAllEmpty
+    else for i := iFrom downto iTo do begin
       if ((i-iFrom) mod iStep) = 0 then
-        CheckEquals(i, testData[i-iMin], Format('at index %d', [i]))
+        CheckEquals(i, FTestData[i-iMin], Format('at index %d', [i]))
       else
-        CheckEquals(-1, testData[i-iMin], Format('at index %d', [i]));
+        CheckEquals(-1, FTestData[i-iMin], Format('at index %d', [i]));
     end;
   end;
+end;
+
+procedure TestParallelFor.TestStepZero;
+begin
+  CheckException(InternalTestStepZero, Exception);
 end;
 
 initialization
