@@ -33,6 +33,5 @@ object frmForVsForEach: TfrmForVsForEach
     Anchors = [akLeft, akTop, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 1
-    ExplicitTop = 64
   end
 end
