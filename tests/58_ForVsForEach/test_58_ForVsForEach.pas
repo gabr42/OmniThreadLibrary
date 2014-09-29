@@ -23,7 +23,7 @@ implementation
 
 uses
   DSiWin32,
-  {$IF CompilerVersion >= 28}System.Threading,{$ENDIF}
+  {$IF CompilerVersion >= 28}System.Threading,{$IFEND}
   OtlParallel;
 
 {$R *.dfm}
@@ -73,7 +73,7 @@ begin
         end);
     end
   );
-  {$ENDIF}
+  {$IFEND}
 end;
 
 procedure TfrmForVsForEach.Time(const name: string; proc: TProc);
