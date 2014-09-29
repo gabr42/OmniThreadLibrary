@@ -2811,6 +2811,8 @@ end; { TOmniParallelSimpleLoop.CancelWith }
 
 constructor TOmniParallelSimpleLoop.Create(first, last, step: integer);
 begin
+  if step = 0 then
+    raise Exception.Create('TOmniParallelSimpleLoop.Create: step must not be 0');
   FFirst := first;
   FLast := last;
   FStep := step;
@@ -2855,16 +2857,19 @@ begin
   SetLength(FPartition, numTasks);
   numSteps := (FLast - FFirst + FStep) div FStep;
   first := FFirst;
-  for i := numTasks - 1 downto 0 do begin
+  i := numTasks - 1;
+  while i >= 0 do begin
     thisSteps := numSteps div (i + 1);
-    FPartition[i].LowBound := first;
-    FPartition[i].HighBound := first + (thisSteps - 1) * FStep;
-    first := FPartition[i].HighBound + FStep;
-    numSteps := numSteps - thisSteps;
+    if thisSteps = 0 then
+      Dec(numTasks)
+    else begin
+      FPartition[i].LowBound := first;
+      FPartition[i].HighBound := first + (thisSteps - 1) * FStep;
+      first := FPartition[i].HighBound + FStep;
+      numSteps := numSteps - thisSteps;
+    end;
+    Dec(i);
   end;
-  for i := 0 to numTasks - 1 do
-    if FPartition[i].HighBound = -1 then
-      Dec(numTasks);
 end; { TOmniParallelSimpleLoop.CreatePartitions }
 
 procedure TOmniParallelSimpleLoop.Execute(loopBody: TOmniIteratorSimpleSimpleDelegate);
@@ -2879,10 +2884,16 @@ begin
       first := FPartition[taskIndex].LowBound;
       last := FPartition[taskIndex].HighBound;
       step := FStep;
-      while first <= last do begin
-        loopBody(first);
-        Inc(first, step);
-      end;
+      if step > 0 then
+        while first <= last do begin
+          loopBody(first);
+          Inc(first, step);
+        end
+      else
+        while first >= last do begin
+          loopBody(first);
+          Inc(first, step);
+        end
     end);
 end; { TOmniParallelSimpleLoop.Execute }
 
@@ -2983,7 +2994,10 @@ begin
     task.Schedule(Parallel.GetPool(FTaskConfig));
   end;
   if not FNoWait then begin
-    WaitForSingleObject(FCountStopped.Handle, INFINITE);
+    if numTasks = 0 then
+      FCountStopped.Allocate //all done
+    else
+      WaitForSingleObject(FCountStopped.Handle, INFINITE);
     if assigned(FOnStop) then
       FOnStop(nil);
   end;
