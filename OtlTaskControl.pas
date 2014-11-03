@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-09-23
-///   Version           : 1.33a
+///   Last modification : 2014-11-03
+///   Version           : 1.34
 ///</para><para>
 ///   History:
+///     1.34: 2014-11-03
+///       - TOmniTaskGroup can now own more than 60 tasks.
 ///     1.33a: 2014-09-23
 ///       - Fixed TOmniTaskControl.SetParameters.
 ///     1.33: 2014-09-07
@@ -3403,14 +3405,15 @@ begin
   Result := Self;
 end; { TOmniTaskGroup.UnregisterAllCommFrom }
 
-function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal = INFINITE): boolean;
+function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal): boolean;
 var
   iIntf      : integer;
-  waitHandles: array [0..63] of THandle;
+  waitHandles: array of THandle;
 begin
+  SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
     waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent;
-  Result := WaitForMultipleObjects(otgTaskList.Count, @waitHandles, true, maxWait_ms) = WAIT_OBJECT_0;
+  Result := WaitForAllObjects(waitHandles, maxWait_ms);
 end; { TOmniTaskGroup.WaitForAll }
 
 { TOmniTaskControlEventMonitor }
