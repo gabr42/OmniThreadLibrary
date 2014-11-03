@@ -1,7 +1,7 @@
-object frmForEachSlice: TfrmForEachSlice
+object frmParallelForDemo: TfrmParallelForDemo
   Left = 0
   Top = 0
-  Caption = 'ForEach.Slice demo'
+  Caption = 'Parallel.For demo'
   ClientHeight = 394
   ClientWidth = 656
   Color = clBtnFace
@@ -14,8 +14,8 @@ object frmForEachSlice: TfrmForEachSlice
   PixelsPerInch = 96
   TextHeight = 13
   object btnStart: TButton
-    Left = 16
-    Top = 16
+    Left = 8
+    Top = 8
     Width = 75
     Height = 25
     Caption = 'Start'
