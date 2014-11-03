@@ -8,7 +8,7 @@ uses
   OtlParallel, OtlCommon;
 
 type
-  TfrmForEachSlice = class(TForm)
+  TfrmParallelForDemo = class(TForm)
     btnStart: TButton;
     lbLog: TListBox;
     procedure btnStartClick(Sender: TObject);
@@ -19,7 +19,7 @@ type
   end;
 
 var
-  frmForEachSlice: TfrmForEachSlice;
+  frmParallelForDemo: TfrmParallelForDemo;
 
 implementation
 
@@ -28,7 +28,7 @@ implementation
 type
   TBucket = array [0..9] of integer;
 
-procedure TfrmForEachSlice.btnStartClick(Sender: TObject);
+procedure TfrmParallelForDemo.btnStartClick(Sender: TObject);
 var
   testData: array of integer;
   i: integer;
@@ -83,7 +83,7 @@ begin
   Log(Format('Tested %d numbers, which is %s', [total, s]));
 end;
 
-procedure TfrmForEachSlice.Log(const msg: string);
+procedure TfrmParallelForDemo.Log(const msg: string);
 begin
   lbLog.ItemIndex := lbLog.Items.Add(msg);
   lbLog.Update;
