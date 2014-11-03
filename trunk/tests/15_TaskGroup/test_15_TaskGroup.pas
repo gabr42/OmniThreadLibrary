@@ -41,7 +41,7 @@ uses
 
 const
   MSG_INITIALIZING = 1;
-  CNumTasks = 80;
+  CNumTasks = 10;
 
 type
   TMyWorker = class(TOmniWorker)
@@ -65,6 +65,7 @@ end;
 procedure TfrmTestTaskGroup.btnStopTasksClick(Sender: TObject);
 begin
   if assigned(FTaskGroup) then begin
+    Assert(not FTaskGroup.WaitForAll(1000)); //test
     FTaskGroup.TerminateAll;
     FTaskGroup := nil;
     Log('All stopped');
