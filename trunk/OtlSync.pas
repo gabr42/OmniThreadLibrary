@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2014-01-11
-///   Version           : 1.17
+///   Last modification : 2014-11-03
+///   Version           : 1.18
 ///</para><para>
 ///   History:
+///     1.18: 2014-11-03
+///       - Implemented WaitForAllObjects.
 ///     1.17: 2014-01-11
 ///       - Implemented TOmniMREW.TryEnterReadLock and TryEnterWriteLock.
 ///     1.16: 2014-01-09
@@ -180,7 +182,7 @@ type
   IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
     function  GetHandle: THandle;
     //
-    function  Allocate: cardinal; 
+    function  Allocate: cardinal;
     function  Release: cardinal;
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
@@ -329,6 +331,9 @@ procedure Move64(newData: pointer; newReference: cardinal; var Destination); ove
 procedure Move128(var Source, Destination);
 procedure MoveDPtr(var Source, Destination); overload;
 procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); overload;
+
+//Waits on >60 handles
+function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
 
 function GetThreadId: NativeInt;
 function GetCPUTimeStamp: int64;
@@ -616,6 +621,76 @@ procedure MFence; assembler;
 asm
   mfence
 end; { MFence }
+
+type
+  TWaitForAll = class
+  strict private
+    FResourceCount: Locked<IOmniResourceCount>;
+  strict protected
+    function GetHandle: THandle;
+  public
+    constructor Create(handleCount: integer);
+    procedure Awaited;
+    property Handle: THandle read GetHandle;
+  end; { TWaitForAll }
+
+constructor TWaitForAll.Create(handleCount: integer);
+begin
+  inherited Create;
+  FResourceCount := CreateResourceCount(handleCount);
+end; { TWaitForAll.Create }
+
+procedure TWaitForAll.Awaited;
+begin
+  FResourceCount.Locked(
+    procedure (const rc: IOmniResourceCount)
+    begin
+      rc.Allocate;
+    end);
+end; { TWaitForAll.Awaited }
+
+function TWaitForAll.GetHandle: THandle;
+var
+  handle: THandle;
+begin
+  FResourceCount.Locked(
+    procedure (const rc: IOmniResourceCount)
+    begin
+      handle := rc.Handle;
+    end);
+  Result := handle;
+end; { TWaitForAll.GetHandle }
+
+procedure WaitForAllCallback(Context: Pointer; TimerOrWaitFired: Boolean) stdcall;
+begin
+  TWaitForAll(Context).Awaited;
+end; { WaitForAllCallback }
+
+function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal):
+  boolean;
+var
+  handle       : THandle;
+  iWait        : integer;
+  newWaitObject: THandle;
+  waiter       : TWaitForAll;
+  waitHandles  : TGpInt64List;
+begin
+  waitHandles := TGpInt64List.Create;
+  try
+    waiter := TWaitForAll.Create(Length(handles));
+    try
+      for handle in handles do begin
+        Win32Check(RegisterWaitForSingleObject(newWaitObject, handle, WaitForAllCallback,
+                                               pointer(waiter), INFINITE,
+                                               WT_EXECUTEONLYONCE OR WT_EXECUTEINPERSISTENTTHREAD));
+        waitHandles.Add(newWaitObject);
+      end;
+      Result := WaitForSingleObject(waiter.Handle, timeout_ms) <> WAIT_TIMEOUT;
+      for iWait := 0 to waitHandles.Count - 1 do
+        UnregisterWait(THandle(waitHandles[iWait]));
+    finally FreeAndNil(waiter); end;
+  finally FreeAndNil(waitHandles); end;
+end; { WaitForAllObjects }
 
 { TOmniCS }
 

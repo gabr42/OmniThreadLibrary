@@ -41,6 +41,7 @@ uses
 
 const
   MSG_INITIALIZING = 1;
+  CNumTasks = 80;
 
 type
   TMyWorker = class(TOmniWorker)
@@ -55,7 +56,7 @@ var
   i: integer;
 begin
   FTaskGroup := CreateTaskGroup;
-  for i := 1 to 10 do 
+  for i := 1 to CNumTasks do
     CreateTask(TMyWorker.Create()).MonitorWith(OmniTED).Join(FTaskGroup);
   Log('Starting all tasks');
   FTaskGroup.RunAll;
