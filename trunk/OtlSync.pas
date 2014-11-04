@@ -190,7 +190,9 @@ type
 
   ///<summary>Kind of an inverse semaphore. Gets signalled when count drops to 0.
   ///   Allocate decrements the count (and blocks if initial count is 0), Release
-  ///   increments the count.</summary>
+  ///   increments the count.
+  ///   Threadsafe.
+  ///</summary>
   ///<since>2009-12-30</since>
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
   strict private
@@ -307,7 +309,7 @@ type
   //Waits on >60 handles
   TWaitForAll = class
   strict private
-    FResourceCount: Locked<IOmniResourceCount>;
+    FResourceCount: IOmniResourceCount;
     FWaitHandles  : TGpInt64List;
   strict protected
     procedure RegisterWaitHandles(const handles: array of THandle);
@@ -1296,11 +1298,7 @@ end; { TWaitForAll.Create }
 
 procedure TWaitForAll.Awaited;
 begin
-  FResourceCount.Locked(
-    procedure (const rc: IOmniResourceCount)
-    begin
-      rc.Allocate;
-    end);
+  FResourceCount.Allocate;
 end; { TWaitForAll.Awaited }
 
 destructor TWaitForAll.Destroy;
@@ -1345,16 +1343,8 @@ begin
 end; { TWaitForAll.UnregisterWaitHandles }
 
 function TWaitForAll.Wait(timeout_ms: cardinal): boolean;
-var
-  handle: THandle;
 begin
-  FResourceCount.Locked(
-    procedure (const rc: IOmniResourceCount)
-    begin
-      handle := rc.Handle;
-    end);
-
-  Result := WaitForSingleObject(handle, timeout_ms) <> WAIT_TIMEOUT;
+  Result := WaitForSingleObject(FResourceCount.Handle, timeout_ms) <> WAIT_TIMEOUT;
 end; { TWaitForAll.Wait }
 
 { TWaitForAny }
