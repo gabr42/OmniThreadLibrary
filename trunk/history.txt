@@ -6,6 +6,8 @@
     thread worker.
   - Implemented TOmniValue.HasArrayItem.
   - Implemented simple and fast Parallel.&For which supports only integer ranges.
+  - Implemented TWaitFor which supports waiting any/all and is not 
+    limited to 63 objects.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload
