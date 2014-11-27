@@ -34,10 +34,10 @@ type
     inpNumCPU       : TSpinEdit;
     lblNumCPU       : TLabel;
     lbLog           : TListBox;
-    OtlMonitor      : TOmniEventMonitor;
     rgCollectionType: TRadioGroup;
     cbTestFinalized: TCheckBox;
     btnRaiseExceptions: TButton;
+    OtlMonitor: TOmniEventMonitor;
     procedure FormCreate(Sender: TObject);
     procedure btn1to7Click(Sender: TObject);
     procedure btn7to1Click(Sender: TObject);
