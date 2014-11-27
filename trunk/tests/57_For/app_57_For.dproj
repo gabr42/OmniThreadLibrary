@@ -71,6 +71,9 @@
 			<DCC_RemoteDebug>true</DCC_RemoteDebug>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+			<DCC_UnitSearchPath>..\..;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<VerInfo_Locale>1033</VerInfo_Locale>
 			<DCC_RemoteDebug>false</DCC_RemoteDebug>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
@@ -134,6 +137,24 @@
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
+					<Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\AsyncPro_DXE2.bpl">TurboPower Async Professional 5.01 Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxGDIPlusRS16.bpl">ExpressGDI+ Library by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxBarDBNavRS16.bpl">ExpressBars DBNavigator by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\OverbyteIcsDXe2Design.bpl">Overbyte ICS Design-Time Package for Delphi XE2</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclVersionControlExpert160.bpl">JCL Integration of version control systems in the IDE</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k160.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp160.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclIPIndyImpl160.bpl">IP Abstraction Indy Implementation Design Time</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclDebugExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclDebugExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclProjectAnalysisExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclProjectAnalysisExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclFavoriteFoldersExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclFavoriteFoldersExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclRepositoryExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclRepositoryExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclSIMDViewExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclSIMDViewExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclStackTraceViewerExpert160.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclStackTraceViewerExpert160.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\OmniThreadLibraryDesigntimeXE2.bpl">OmniThreadLibrary designtime</Excluded_Packages>
+					</Excluded_Packages>
 				</Delphi.Personality>
 				<Deployment>
 					<DeployFile LocalName="Win32\Debug\app_57_ForEachSlice.exe" Configuration="Debug" Class="ProjectOutput">
