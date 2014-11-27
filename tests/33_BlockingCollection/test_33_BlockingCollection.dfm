@@ -174,4 +174,8 @@ object frmTestOmniBlockingCollection: TfrmTestOmniBlockingCollection
     TabOrder = 14
     OnClick = btnRaiseExceptionsClick
   end
+  object OtlMonitor: TOmniEventMonitor
+    Left = 312
+    Top = 256
+  end
 end
