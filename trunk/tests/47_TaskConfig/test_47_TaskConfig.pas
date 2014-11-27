@@ -99,7 +99,11 @@ begin
   FParallel := Parallel.ForEach(1, 17)
     .TaskConfig(Parallel.TaskConfig.OnMessage(Self))
     .NoWait
-    .OnStop(procedure begin FParallel := nil; end);
+    .OnStop(
+      procedure (const task: IOmniTask)
+      begin
+        task.Invoke(procedure begin FParallel := nil; end);
+      end);
   FParallel
     .Execute(
       procedure (const task: IOmniTask; const value: integer)
@@ -168,6 +172,7 @@ begin
       procedure
       begin
         lbLog.ItemIndex := lbLog.Items.Add('FUTURE: ' + IntToStr(FFuture.Value));
+        btnFuture.Enabled := true;
         FFuture := nil;
       end
     )
