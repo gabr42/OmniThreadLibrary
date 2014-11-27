@@ -1,7 +1,7 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
 			<ProjectGuid>{E0BC1D31-F3B9-4822-A6BF-E584C18B3053}</ProjectGuid>
-			<ProjectVersion>13.4</ProjectVersion>
+			<ProjectVersion>16.0</ProjectVersion>
 			<FrameworkType>VCL</FrameworkType>
 			<MainSource>app_59_TWaitFor.dpr</MainSource>
 			<Base>True</Base>
@@ -40,6 +40,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<SanitizedProjectName>app_59_TWaitFor</SanitizedProjectName>
 			<DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
 			<Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
 			<DCC_UsePackage>fmx;DBXInterBaseDriver;DataSnapClient;DataSnapCommon;DataSnapServer;DataSnapProviderClient;DbxCommonDriver;dbxcds;DBXOracleDriver;CustomIPTransport;JvCore;dsnap;fmxase;inetdbxpress;bindcompfmx;IcsCommonDXE2Run;rtl;dbrtl;DbxClientDriver;bindcomp;inetdb;xmlrtl;ibxpress;DBXMySQLDriver;bindengine;soaprtl;DBXInformixDriver;DBXFirebirdDriver;inet;fmxobj;DBXSybaseASADriver;fmxdae;kbmMemRunDXE2Std;dbexpress;DataSnapIndy10ServerTransport;$(DCC_UsePackage)</DCC_UsePackage>
@@ -65,13 +66,16 @@
 			<DCC_RemoteDebug>true</DCC_RemoteDebug>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+			<DCC_UnitSearchPath>..\..;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<VerInfo_Locale>1033</VerInfo_Locale>
 			<DCC_RemoteDebug>false</DCC_RemoteDebug>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-			<DCC_DebugInformation>false</DCC_DebugInformation>
+			<DCC_DebugInformation>0</DCC_DebugInformation>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="$(MainSource)">
@@ -129,13 +133,9 @@
 						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\AsyncPro_DXE2.bpl">TurboPower Async Professional 5.01 Runtime Package</Excluded_Packages>
 						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxGDIPlusRS16.bpl">ExpressGDI+ Library by Developer Express Inc.</Excluded_Packages>
 						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxBarDBNavRS16.bpl">ExpressBars DBNavigator by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\OverbyteIcsDXe2Design.bpl">Overbyte ICS Design-Time Package for Delphi XE2</Excluded_Packages>
 						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl not found</Excluded_Packages>
 						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\JclVersionControlExpert160.bpl">JCL Integration of version control systems in the IDE</Excluded_Packages>
-						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl not found</Excluded_Packages>
-						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl not found</Excluded_Packages>
-						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl not found</Excluded_Packages>
-						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl not found</Excluded_Packages>
-						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl not found</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k160.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclofficexp160.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 						<Excluded_Packages Name="$(BDSBIN)\dclIPIndyImpl160.bpl">IP Abstraction Indy Implementation Design Time</Excluded_Packages>
