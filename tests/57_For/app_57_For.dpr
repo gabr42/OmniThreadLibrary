@@ -9,6 +9,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmForEachSlice, frmForEachSlice);
+  Application.CreateForm(TfrmParallelForDemo, frmParallelForDemo);
   Application.Run;
 end.
