@@ -1327,7 +1327,7 @@ end; { TWaitFor.Create }
 constructor TWaitFor.Create;
 begin
   inherited;
-  FWaitMode := wmForceRWFS; // temporarily, for testing
+  FWaitMode := wmSmart;
   FWaitHandles := TGpInt64ObjectList.Create;
 end; { TWaitFor.Create }
 
