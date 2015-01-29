@@ -1,3 +1,5 @@
+TODO: TOmniBlockingCollection.ToArray(<T>)
+
 - New features:
   - Added overloaded Execute methods to IOmniParallelInitializedLoop and
     IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
@@ -8,10 +10,19 @@
   - Implemented simple and fast Parallel.&For which supports only integer ranges.
   - Implemented TWaitFor which supports waiting any/all and is not 
     limited to 63 objects.
+  - IOmniTaskControl can wait on any number of comm handles and wait objects.
+    That enables support for >60 tasks in the OtlThreadPool.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload
     (IOmniTaskControl.SetParameters(['From', 0, 'To', 99])) was not working.
+  - Fixed problems in demos 33_BlockingCollection and 47_TaskConfig.
+- New demos:
+  - 55_ForEachProgress
+  - 56_RunInvoke
+  - 57_For
+  - 58_ForVsForEach
+  - 59_TWaitFor
 
 3.03a: 2013-10-21
 - Bug fixes:

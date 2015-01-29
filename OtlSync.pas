@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2014-11-04
-///   Version           : 1.19
+///   Last modification : 2014-16-11
+///   Version           : 1.18
 ///</para><para>
 ///   History:
+///     1.18: 2014-16-11
+///       - Finalized TWaitFor implementation.
 ///     1.19: 2014-11-04
 ///       - TWaitForAll renamed to TWaitFor.
 ///       - TWaitFor.Wait renamed to TWaitFor.WaitAll.
@@ -195,9 +197,7 @@ type
 
   ///<summary>Kind of an inverse semaphore. Gets signalled when count drops to 0.
   ///   Allocate decrements the count (and blocks if initial count is 0), Release
-  ///   increments the count.
-  ///   Threadsafe.
-  ///</summary>
+  ///   increments the count.</summary>
   ///<since>2009-12-30</since>
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
   strict private
@@ -345,7 +345,6 @@ type
     FResourceCount   : IOmniResourceCount;
     FSignal          : TDSiEventHandle;
     FSignalledHandles: THandles;
-    FWaitAll         : boolean;
     FWaitHandles     : TGpInt64ObjectList;
   strict protected
     function  MapToResult(winResult: cardinal): TWaitResult;
@@ -683,8 +682,7 @@ asm
   mfence
 end; { MFence }
 
-function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal):
-  boolean;
+function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
 var
   waiter: TWaitFor;
 begin
@@ -1317,12 +1315,12 @@ constructor TWaitFor.Create(const handles: array of THandle);
 begin
   Create;
   SetHandles(handles);
-  FSignal := CreateEvent(nil, false, false, nil);
 end; { TWaitFor.Create }
 
 constructor TWaitFor.Create;
 begin
   inherited;
+  FSignal := CreateEvent(nil, false, false, nil);
   FWaitHandles := TGpInt64ObjectList.Create;
 end; { TWaitFor.Create }
 
@@ -1354,7 +1352,7 @@ var
   winResult: cardinal;
 begin
   FIdxSignalled := -1;
-  RegisterWaitHandles(0);
+  RegisterWaitHandles(WT_EXECUTEONLYONCE);
   try
     winResult := MsgWaitForMultipleObjectsEx(1, FSignal, timeout_ms, wakeMask, flags);
   finally UnregisterWaitHandles; end;
@@ -1401,7 +1399,6 @@ procedure TWaitFor.SetHandles(const handles: array of THandle);
 var
   iHandle: integer;
 begin
-  UnregisterWaitHandles;
   SetLength(FHandles, Length(handles));
   for iHandle := Low(handles) to High(handles) do
     FHandles[iHandle] := handles[iHandle];
@@ -1414,7 +1411,7 @@ var
   waiter        : TWaiter;
 begin
   for i := 0 to FWaitHandles.Count - 1 do
-    UnregisterWait(THandle(FWaitHandles[i]));
+    UnregisterWaitEx(THandle(FWaitHandles[i]), INVALID_HANDLE_VALUE);
 
   countSignalled := 0;
   for i := 0 to FWaitHandles.Count - 1 do begin
@@ -1454,7 +1451,7 @@ var
   winResult: cardinal;
 begin
   FIdxSignalled := -1;
-  RegisterWaitHandles(0);
+  RegisterWaitHandles(WT_EXECUTEONLYONCE);
   try
     winResult := WaitForMultipleObjectsEx(1, @FSignal, false, timeout_ms, alertable);
   finally UnregisterWaitHandles; end;
