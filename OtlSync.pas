@@ -38,12 +38,10 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2014-16-11
-///   Version           : 1.18
+///   Last modification : 2014-11-04
+///   Version           : 1.19
 ///</para><para>
 ///   History:
-///     1.18: 2014-16-11
-///       - Finalized TWaitFor implementation.
 ///     1.19: 2014-11-04
 ///       - TWaitForAll renamed to TWaitFor.
 ///       - TWaitFor.Wait renamed to TWaitFor.WaitAll.
@@ -197,7 +195,9 @@ type
 
   ///<summary>Kind of an inverse semaphore. Gets signalled when count drops to 0.
   ///   Allocate decrements the count (and blocks if initial count is 0), Release
-  ///   increments the count.</summary>
+  ///   increments the count.
+  ///   Threadsafe.
+  ///</summary>
   ///<since>2009-12-30</since>
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
   strict private
@@ -315,6 +315,8 @@ type
   ///  Don't use it to wait on mutexes!
   ///  http://joeduffyblog.com/2007/05/13/registerwaitforsingleobject-and-mutexes-dont-mix/
   TWaitFor = class
+  private type
+    TWaitMode = (wmSmart, wmForceWFM, wmForceRWFS);
   protected type //must be visible from the callback
     TWaiter = class
     strict private
@@ -345,8 +347,11 @@ type
     FResourceCount   : IOmniResourceCount;
     FSignal          : TDSiEventHandle;
     FSignalledHandles: THandles;
+    FWaitAll         : boolean;
     FWaitHandles     : TGpInt64ObjectList;
+    FWaitMode        : TWaitMode; // for testing
   strict protected
+    function  MapToHandle(winResult: cardinal): cardinal;
     function  MapToResult(winResult: cardinal): TWaitResult;
     procedure RegisterWaitHandles(extraFlags: cardinal);
     procedure UnregisterWaitHandles;
@@ -682,7 +687,8 @@ asm
   mfence
 end; { MFence }
 
-function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
+function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal):
+  boolean;
 var
   waiter: TWaitFor;
 begin
@@ -1315,18 +1321,18 @@ constructor TWaitFor.Create(const handles: array of THandle);
 begin
   Create;
   SetHandles(handles);
+  FSignal := CreateEvent(nil, false, false, nil);
 end; { TWaitFor.Create }
 
 constructor TWaitFor.Create;
 begin
   inherited;
-  FSignal := CreateEvent(nil, false, false, nil);
+  FWaitMode := wmForceRWFS; // temporarily, for testing
   FWaitHandles := TGpInt64ObjectList.Create;
 end; { TWaitFor.Create }
 
 destructor TWaitFor.Destroy;
 begin
-  UnregisterWaitHandles;
   FreeAndNil(FWaitHandles);
   DSiCloseHandleAndNull(FSignal);
   inherited;
@@ -1351,11 +1357,15 @@ function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitResult
 var
   winResult: cardinal;
 begin
-  FIdxSignalled := -1;
-  RegisterWaitHandles(WT_EXECUTEONLYONCE);
-  try
-    winResult := MsgWaitForMultipleObjectsEx(1, FSignal, timeout_ms, wakeMask, flags);
-  finally UnregisterWaitHandles; end;
+  if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
+    winResult := MapToHandle(MsgWaitForMultipleObjectsEx(Length(FHandles), FHandles[0], timeout_ms, wakeMask, flags))
+  else begin
+    FIdxSignalled := -1;
+    RegisterWaitHandles(0);
+    try
+      winResult := MsgWaitForMultipleObjectsEx(1, FSignal, timeout_ms, wakeMask, flags);
+    finally UnregisterWaitHandles; end;
+  end;
   Result := MapToResult(winResult);
 end; { TWaitFor.MsgWaitAny }
 
@@ -1364,6 +1374,16 @@ begin
   if not TimerOrWaitFired then
     TWaitFor.TWaiter(Context).Awaited;
 end; { WaitForCallback }
+
+function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
+begin
+  Result := winResult;
+  if (winResult >= WAIT_OBJECT_0) and (winResult < (WAIT_OBJECT_0 + Length(FHandles))) then begin
+    SetLength(FSignalledHandles, 1);
+    FSignalledHandles[0].Index := winResult - WAIT_OBJECT_0;
+    Result := WAIT_OBJECT_0;
+  end;
+end; { TWaitFor.MapToHandle }
 
 function TWaitFor.MapToResult(winResult: cardinal): TWaitResult;
 begin
@@ -1411,7 +1431,7 @@ var
   waiter        : TWaiter;
 begin
   for i := 0 to FWaitHandles.Count - 1 do
-    UnregisterWaitEx(THandle(FWaitHandles[i]), INVALID_HANDLE_VALUE);
+    UnregisterWait(THandle(FWaitHandles[i]));
 
   countSignalled := 0;
   for i := 0 to FWaitHandles.Count - 1 do begin
@@ -1436,25 +1456,33 @@ function TWaitFor.WaitAll(timeout_ms: cardinal): TWaitResult;
 var
   winResult: cardinal;
 begin
-  FResourceCount := CreateResourceCount(Length(FHandles));
-  try
-    RegisterWaitHandles(WT_EXECUTEONLYONCE);
+  if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
+    winResult := MapToHandle(WaitForMultipleObjects(Length(FHandles), @(FHandles[0]), true, timeout_ms))
+  else begin
+    FResourceCount := CreateResourceCount(Length(FHandles));
     try
-      winResult := WaitForSingleObject(FResourceCount.Handle, timeout_ms);
-    finally UnregisterWaitHandles; end;
-    Result := MapToResult(winResult);
-  finally FResourceCount := nil; end;
+      RegisterWaitHandles(WT_EXECUTEONLYONCE);
+      try
+        winResult := WaitForSingleObject(FResourceCount.Handle, timeout_ms);
+      finally UnregisterWaitHandles; end;
+    finally FResourceCount := nil; end;
+  end;
+  Result := MapToResult(winResult);
 end; { TWaitFor.WaitAll }
 
 function TWaitFor.WaitAny(timeout_ms: cardinal; alertable: boolean): TWaitResult;
 var
   winResult: cardinal;
 begin
-  FIdxSignalled := -1;
-  RegisterWaitHandles(WT_EXECUTEONLYONCE);
-  try
-    winResult := WaitForMultipleObjectsEx(1, @FSignal, false, timeout_ms, alertable);
-  finally UnregisterWaitHandles; end;
+  if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
+    winResult := MapToHandle(WaitForMultipleObjectsEx(Length(FHandles), @(FHandles[0]), false, timeout_ms, alertable))
+  else begin
+    FIdxSignalled := -1;
+    RegisterWaitHandles(0);
+    try
+      winResult := WaitForMultipleObjectsEx(1, @FSignal, false, timeout_ms, alertable);
+    finally UnregisterWaitHandles; end;
+  end;
   Result := MapToResult(winResult);
 end; { TWaitFor.WaitAny }
 
