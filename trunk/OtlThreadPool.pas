@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2014, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover 
 /// 
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-01-31
-///   Version           : 2.09a
+///   Last modification : 2014-11-16
+///   Version           : 2.10
 /// </para><para>
 ///   History:
+///     2.10: 2014-11-16
+///       - Removed limitation on max 60 concurrent tasks (faciliated by changes in
+///         OtlTaskControl).
 ///     2.09a: 2012-01-31
 ///       - More accurate CountQueued.
 ///     2.09: 2011-11-08
@@ -116,9 +119,6 @@ uses
 const
   CDefaultIdleWorkerThreadTimeout_sec = 10;
   CDefaultWaitOnTerminate_sec = 30;
-
-  CMaxConcurrentWorkers = 60; // enforced by the TOmniWorker limitations 
-  // this is not configurable - don't increment it and expect the code to magically work! 
 
 type
   IOmniThreadPool = interface;
@@ -634,7 +634,10 @@ begin
           end; // case
         end; // if Comm.ReceiveWait
       end; // while Comm.ReceiveWait()
-    finally Comm.Send(MSG_THREAD_DESTROYING, threadID); end;
+    finally
+//OutputDebugString(PChar(Format('send DESTROYING', [])));
+      Comm.Send(MSG_THREAD_DESTROYING, threadID);
+    end;
   finally SendThreadNotifications(tntDestroy, 'OtlThreadPool worker'); end;
   {$IFDEF LogThreadPool}Log('<<<Execute thread %s', [Description]);{$ENDIF LogThreadPool}
 end; { TOTPWorkerThread.Execute }
@@ -1184,12 +1187,6 @@ begin
       {$ENDIF LogThreadPool}
     end
     else begin
-      if (owRunningWorkers.Count + owIdleWorkers.Count + owStoppingWorkers.Count)
-         >= CMaxConcurrentWorkers
-      then
-        raise Exception.CreateFmt(
-          'TOTPWorker.ScheduleNext: Cannot start more than %d threads ' +
-            'due to the implementation limitations', [CMaxConcurrentWorkers]);
       worker := TOTPWorkerThread.Create(owThreadDataFactory);
       worker.Start;
       task.RegisterComm(worker.OwnerCommEndpoint);
@@ -1421,10 +1418,6 @@ end; { TOmniThreadPool.SetIdleWorkerThreadTimeout_sec }
 
 procedure TOmniThreadPool.SetMaxExecuting(value: integer);
 begin
-  if value > CMaxConcurrentWorkers then
-    raise Exception.CreateFmt('TOmniThreadPool.SetMaxExecuting: ' +
-        'MaxExecuting cannot be larger than %d due to the implementation limitations',
-      [CMaxConcurrentWorkers]);
   WorkerObj.MaxExecuting.Value := value;
   otpWorkerTask.Invoke(@TOTPWorker.CheckIdleQueue);
 end; { TOmniThreadPool.SetMaxExecuting }
