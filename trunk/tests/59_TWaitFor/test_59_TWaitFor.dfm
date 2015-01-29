@@ -11,12 +11,18 @@ object frmTestTWaitFor: TfrmTestTWaitFor
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
-  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
+  object lblNumHandles: TLabel
+    Left = 16
+    Top = 13
+    Width = 65
+    Height = 13
+    Caption = 'Num handles:'
+  end
   object btnWaitForAll: TButton
     Left = 16
-    Top = 16
+    Top = 64
     Width = 129
     Height = 25
     Caption = 'Wait for all handles'
@@ -24,9 +30,9 @@ object frmTestTWaitFor: TfrmTestTWaitFor
     OnClick = btnWaitForAllClick
   end
   object lbLog: TListBox
-    Left = 168
+    Left = 160
     Top = 0
-    Width = 645
+    Width = 653
     Height = 392
     Align = alRight
     Anchors = [akLeft, akTop, akRight, akBottom]
@@ -35,11 +41,21 @@ object frmTestTWaitFor: TfrmTestTWaitFor
   end
   object btnWaitForAny: TButton
     Left = 16
-    Top = 47
+    Top = 95
     Width = 129
     Height = 25
     Caption = 'Wait for any handle'
     TabOrder = 2
     OnClick = btnWaitForAnyClick
+  end
+  object inpNumHandles: TSpinEdit
+    Left = 16
+    Top = 32
+    Width = 129
+    Height = 22
+    MaxValue = 0
+    MinValue = 0
+    TabOrder = 3
+    Value = 130
   end
 end

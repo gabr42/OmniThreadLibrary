@@ -1,4 +1,5 @@
 TODO: TOmniBlockingCollection.ToArray(<T>)
+TODO: Map(TArray<T1>, TArray<T2>, TFunc<const T1, var T2, boolean>); { parallel map }
 
 - New features:
   - Added overloaded Execute methods to IOmniParallelInitializedLoop and

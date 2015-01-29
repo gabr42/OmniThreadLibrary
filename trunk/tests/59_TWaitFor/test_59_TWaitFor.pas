@@ -5,19 +5,20 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  OtlSync;
+  OtlSync, Vcl.Samples.Spin;
 
 type
   TfrmTestTWaitFor = class(TForm)
     btnWaitForAll: TButton;
-    lbLog: TListBox;
+    lbLog        : TListBox;
     btnWaitForAny: TButton;
-    procedure FormCreate(Sender: TObject);
+    lblNumHandles: TLabel;
+    inpNumHandles: TSpinEdit;
     procedure btnWaitForAllClick(Sender: TObject);
     procedure btnWaitForAnyClick(Sender: TObject);
   private
     FHandles: array of THandle;
-    FWaiter: TWaitFor;
+    FWaiter : TWaitFor;
     procedure CheckSignalled(low, high: integer; expected: boolean); overload;
     procedure CheckSignalled(idx: integer; expected: boolean); overload;
     procedure CreateEvents(manualReset: boolean);
@@ -40,14 +41,6 @@ uses
   OtlParallel;
 
 {$R *.dfm}
-
-const
-  CNumHandles = 130;
-
-procedure TfrmTestTWaitFor.FormCreate(Sender: TObject);
-begin
-  Log(Format('Testing with %d handles', [CNumHandles]));
-end;
 
 procedure TfrmTestTWaitFor.btnWaitForAllClick(Sender: TObject);
 var
@@ -183,7 +176,9 @@ procedure TfrmTestTWaitFor.CreateEvents(manualReset: boolean);
 var
   i: integer;
 begin
-  SetLength(FHandles, CNumHandles);
+  Log(Format('Testing with %d handles', [inpNumHandles.Value]));
+  Log('');
+  SetLength(FHandles, inpNumHandles.Value);
   for i := Low(FHandles) to High(FHandles) do
     FHandles[i] := CreateEvent(nil, manualReset, false, nil);
   FWaiter := TWaitFor.Create(FHandles);
