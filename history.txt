@@ -1,15 +1,16 @@
 TODO: TOmniBlockingCollection.ToArray(<T>)
-TODO: Map(TArray<T1>, TArray<T2>, TFunc<const T1, var T2, boolean>); { parallel map }
+TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
 
 - New features:
+  - Implemented simple and fast Parallel.&For which supports only integer ranges.
+  - Implemented Parallel.Map.
   - Added overloaded Execute methods to IOmniParallelInitializedLoop and
     IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
     to the executor.
   - Implemented Run overloads that internally call Invoke to start
     thread worker.
   - Implemented TOmniValue.HasArrayItem.
-  - Implemented simple and fast Parallel.&For which supports only integer ranges.
-  - Implemented TWaitFor which supports waiting any/all and is not 
+  - Implemented TWaitFor which supports waiting any/all and is not
     limited to 63 objects.
   - IOmniTaskControl can wait on any number of comm handles and wait objects.
     That enables support for >60 tasks in the OtlThreadPool.
@@ -24,6 +25,7 @@ TODO: Map(TArray<T1>, TArray<T2>, TFunc<const T1, var T2, boolean>); { parallel 
   - 57_For
   - 58_ForVsForEach
   - 59_TWaitFor
+  - 60_Map
 
 3.03a: 2013-10-21
 - Bug fixes:
