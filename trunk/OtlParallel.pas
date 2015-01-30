@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2014 Primoz Gabrijelcic
+///Copyright (c) 2015 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2014-09-27
-///   Version           : 1.36
+///   Last modification : 2015-01-30
+///   Version           : 1.37
 ///</para><para>
 ///   History:
+///     1.37: 2015-01-30
+///       - Implemented Parallel.Map.
+///       - Task finalizers in Parallel.For were not called.
+///       - Implemented Parallel.For.WaitFor.
 ///     1.36: 2014-09-27
 ///       - Implemented simple and fast Parallel.&For which supports only integer ranges.
 ///     1.35: 2014-07-03
@@ -440,6 +444,7 @@ type
     function  Initialize(taskInitializer: TOmniSimpleTaskInitializerTaskDelegate): IOmniParallelSimpleLoop; overload;
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerDelegate): IOmniParallelSimpleLoop; overload;
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop; overload;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
@@ -819,6 +824,7 @@ type
     function  Initialize(taskInitializer: TOmniSimpleTaskInitializerTaskDelegate): IOmniParallelSimpleLoop; overload;
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerDelegate): IOmniParallelSimpleLoop; overload;
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop; overload;
+    function WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
   EJoinException = class(Exception)
@@ -992,6 +998,50 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniBackgroundWorker }
 
+  TMapProc<T1,T2> = reference to function(const source: T1; var target: T2): boolean;
+
+  IOmniParallelMapper<T1,T2> = interface
+    function  Execute(mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
+    function  NoWait: IOmniParallelMapper<T1,T2>;
+    function  NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
+    function  OnStop(stopCode: TProc): IOmniParallelMapper<T1,T2>; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelMapper<T1,T2>; overload;
+    function  Result: TArray<T2>;
+    function  Source(const data: TArray<T1>; makeCopy: boolean = false): IOmniParallelMapper<T1,T2>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
+  end; { IOmniParallelMapper<T1,T2> }
+
+  TTest<T> = reference to function: TArray<T>;
+
+  TOmniParallelMapper<T1,T2> = class(TInterfacedObject, IOmniParallelMapper<T1,T2>)
+  strict private type
+    TTargetBounds = record Low, High: integer; end;
+  strict private
+    FNoWait    : boolean;
+    FNumTasks  : integer;
+    FOnStop    : TOmniTaskStopDelegate;
+    FSource    : TArray<T1>;
+    FTarget    : TArray<T2>;
+    FTargetData: TArray<TTargetBounds>;
+    FTaskConfig: IOmniTaskConfig;
+    FWorker    : IOmniParallelSimpleLoop;
+  strict protected
+    procedure CompressTarget;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Execute(mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
+    function  NoWait: IOmniParallelMapper<T1,T2>;
+    function  NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
+    function  OnStop(stopCode: TProc): IOmniParallelMapper<T1,T2>; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelMapper<T1,T2>; overload;
+    function  Result: TArray<T2>;
+    function  Source(const data: TArray<T1>; makeCopy: boolean = false): IOmniParallelMapper<T1,T2>;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
+  end; { TOmniParallelMapper<T1,T2> }
+
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
   ///	features in the OmniThreadLibrary. Most features are implemented as factories while
@@ -1067,6 +1117,11 @@ type
 
   // BackgroundWorker
     class function BackgroundWorker: IOmniBackgroundWorker;
+
+  // Map
+    class function Map<T1,T2>: IOmniParallelMapper<T1,T2>; overload;
+    class function Map<T1,T2>(const source: TArray<T1>;
+      mapper: TMapProc<T1,T2>): TArray<T2>; overload;
 
   // task configuration
     class function TaskConfig: IOmniTaskConfig;
@@ -1930,6 +1985,22 @@ class function Parallel.Join: IOmniParallelJoin;
 begin
   Result := TOmniParallelJoin.Create;
 end; { Parallel.Join }
+
+class function Parallel.Map<T1, T2>(const source: TArray<T1>; mapper: TMapProc<T1,T2>):
+  TArray<T2>;
+var
+  map: IOmniParallelMapper<T1,T2>;
+begin
+  map := Parallel.Map<T1,T2>.Source(source);
+  map.Execute(mapper);
+  map.WaitFor(INFINITE);
+  Result := map.Result;
+end; { Parallel.Map }
+
+class function Parallel.Map<T1,T2>: IOmniParallelMapper<T1,T2>;
+begin
+  Result := TOmniParallelMapper<T1,T2>.Create;
+end; { Parallel.Map }
 
 class function Parallel.ParallelTask: IOmniParallelTask;
 begin
@@ -2837,6 +2908,8 @@ begin
       if assigned(FInitializerDelegate) then
         FInitializerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
       taskDelegate(task, taskIndex);
+      if assigned(FFinalizerDelegate) then
+        FFinalizerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
       if FCountStopped.Allocate = 1 then begin
         if FNoWait then
           if assigned(FOnStop) then
@@ -2854,6 +2927,8 @@ var
   numSteps : integer;
   thisSteps: integer;
 begin
+  //TOmniParallelMapper<T1,T2>.Execute assumes that partitions are created such that
+  //FPartition[i].LowBound = FPartition[i-1].HighBound + 1
   SetLength(FPartition, numTasks);
   numSteps := (FLast - FFirst + FStep) div FStep;
   first := FFirst;
@@ -3038,6 +3113,11 @@ begin
   FTaskConfig := config;
   Result := Self;
 end; { TOmniParallelSimpleLoop.TaskConfig }
+
+function TOmniParallelSimpleLoop.WaitFor(maxWait_ms: cardinal): boolean;
+begin
+  Result := WaitForSingleObject(FCountStopped.Handle, maxWait_ms) = WAIT_OBJECT_0;
+end; { TOmniParallelSimpleLoop.WaitFor }
 
 { TOmniFuture<T> }
 
@@ -4350,6 +4430,155 @@ begin
     proc;
   end));
 end; { TOmniAwait.Await }
+
+{ TOmniParallelMapper<T1,T2> }
+
+constructor TOmniParallelMapper<T1,T2>.Create;
+begin
+  inherited Create;
+  FNumTasks := Environment.Process.Affinity.Count;
+end; { TOmniParallelMapper<T1,T2> }
+
+destructor TOmniParallelMapper<T1,T2>.Destroy;
+begin
+  WaitFor(INFINITE);
+  inherited;
+end; { TOmniParallelMapper<T1,T2> }
+
+procedure TOmniParallelMapper<T1, T2>.CompressTarget;
+var
+  firstEmpty: integer;
+  i         : integer;
+  j         : integer;
+begin
+  firstEmpty := FTargetData[High(FTargetData)].High + 1;
+  for i := High(FTargetData)-1 downto Low(FTargetData) do begin
+    if FTargetData[i].Low = firstEmpty then
+      firstEmpty := FTargetData[i].High + 1
+    else begin
+      for j := FTargetData[i].Low to FTargetData[i].High do begin
+        FTarget[firstEmpty] := FTarget[j];
+        Inc(firstEmpty);
+      end;
+    end;
+  end;
+  SetLength(FTarget, firstEmpty);
+end; { TOmniParallelMapper }
+
+function TOmniParallelMapper<T1,T2>.Execute(
+  mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
+var
+  dest: T2;
+  el  : T1;
+  i   : integer;
+begin
+  if FNumTasks < 1 then
+    FNumTasks := 1;
+
+  SetLength(FTarget, Length(FSource));
+  SetLength(FTargetData, FNumTasks);
+  // Parallel.For may reduce number of tasks so make sure unused tasks will be correctly initialized
+  for i := Low(FTargetData) to High(FTargetData) do
+    FTargetData[i].High := Low(FSource) - 1;
+
+  FWorker := Parallel.For(Low(FSource), High(FSource))
+    .NumTasks(FNumTasks)
+    .Initialize(
+      procedure(taskIndex, fromIndex, toIndex: integer)
+      begin
+        FTargetData[taskIndex].Low := fromIndex;
+        FTargetData[taskIndex].High := FTargetData[taskIndex].Low - 1;
+      end)
+    .OnStop(
+      procedure (const task: IOmniTask)
+      begin
+        CompressTarget;
+        if assigned(FOnStop) then
+          FOnStop(task);
+      end);
+
+  if assigned(FTaskConfig) then
+    FWorker.TaskConfig(FTaskConfig);
+  if FNoWait then
+    FWorker.NoWait;
+
+  FWorker.Execute(
+    procedure (taskIndex, value: integer)
+    var
+      data: T2;
+      high: integer;
+    begin
+      if mapper(FSource[value], data) then begin
+        high := FTargetData[taskIndex].High + 1;
+        FTargetData[taskIndex].High := high;
+        FTarget[high] := data;
+      end;
+    end);
+
+  Result := Self;
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1, T2>.NoWait: IOmniParallelMapper<T1,T2>;
+begin
+  FNoWait := true;
+  Result := Self;
+end; { TOmniParallelMapper }
+
+function TOmniParallelMapper<T1,T2>.NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
+begin
+  FNumTasks := numTasks;
+  Result := Self;
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1,T2>.OnStop(stopCode: TProc): IOmniParallelMapper<T1,T2>;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      stopCode();
+    end);
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1,T2>.OnStop(stopCode: TOmniTaskStopDelegate):
+  IOmniParallelMapper<T1,T2>;
+begin
+  FOnStop := stopCode;
+  Result := Self;
+end; { TOmniParallelMapper<T1,T2 }
+
+function TOmniParallelMapper<T1,T2>.Result: TArray<T2>;
+begin
+  Result := FTarget;
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1, T2>.Source(const data: TArray<T1>;
+  makeCopy: boolean): IOmniParallelMapper<T1,T2>;
+var
+  i: integer;
+begin
+  if not makeCopy then
+    FSource := data
+  else begin
+    SetLength(FSource, Length(data));
+    for i := Low(data) to High(data) do
+      FSource[i] := data[i];
+  end;
+  Result := Self;
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1,T2>.TaskConfig(
+  const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
+begin
+  FTaskConfig := config;
+  Result := Self;
+end; { TOmniParallelMapper<T1,T2> }
+
+function TOmniParallelMapper<T1,T2>.WaitFor(maxWait_ms: cardinal): boolean;
+begin
+  Result := true;
+  if assigned(FWorker) then
+    Result := FWorker.WaitFor(maxWait_ms);
+end; { TOmniParallelMapper<T1,T2> }
 
 end.
 
