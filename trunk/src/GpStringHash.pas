@@ -145,9 +145,9 @@ type
   protected
     function  FindBucket(const key: string): cardinal;
     function  GetHashItem(idxHashItem: cardinal): PGpHashItem;     {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
-    function  GetItems(const key: string): int64;              {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    function  GetItems(const key: string): int64;                  {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     procedure Grow;
-    procedure SetItems(const key: string; const value: int64); {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
+    procedure SetItems(const key: string; const value: int64);     {$IFDEF GpStringHash_Inline}inline;{$ENDIF GpStringHash_Inline}
     property  HashItems[idxItem: cardinal]: PGpHashItem read GetHashItem;
   public
     constructor Create; overload;
