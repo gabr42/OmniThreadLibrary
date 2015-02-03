@@ -7,10 +7,24 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2014-07-24
-   Version           : 1.76
+   Last modification : 2015-01-05
+   Version           : 1.79c
 </pre>*)(*
    History:
+     1.79c: 2015-01-05
+       - attribute is no longer checked in _DSiEnumFilesEx and returns all from FindFirst/Next
+     1.79b: 2014-12-08
+       - Fixed attribute checking in _DSiEnumFilesEx.
+     1.79a: 2014-11-11
+       - DSiFileSize opens file with FILE_SHARE_READ OR FILE_SHARE_WRITE OR FILE_SHARE_DELETE.
+     1.79: 2014-10-15
+       - Creation flags can be passed to DSiExecute and DSiExecuteAndCapture.
+     1.78: 2014-10-09
+       - Added allowRoot parameter to DSiDeleteTree (default False).
+       - Added safety checks to DSiDeleteTree.
+     1.77: 2014-10-06
+       - Added another DSiExecute overload which returns TProcessInformation with active
+         process and thread handles (caller should CloseHandle them).
      1.76: 2014-07-24
        - Defined DSiRegisterUserFileAssoc and DSiUnregisterUserFileAssoc.
      1.75: 2014-06-02
@@ -476,6 +490,7 @@ uses
   {$ENDIF}
   {$IFDEF DSiScopedUnitNames}System.SysUtils{$ELSE}SysUtils{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.IOUtils,{$ENDIF}
+  {$IFDEF DSiScopedUnitNames}System.StrUtils,{$ENDIF}
   {$IFDEF DSiScopedUnitNames}Winapi.ShellAPI{$ELSE}ShellAPI{$ENDIF},
   {$IFDEF DSiScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
@@ -1088,7 +1103,7 @@ type
   function  DSiCreateTempFolder: string;
   procedure DSiDeleteFiles(const folder, fileMask: string);
   function  DSiDeleteOnReboot(const fileName: string): boolean;
-  procedure DSiDeleteTree(const folder: string; removeSubdirsOnly: boolean);
+  procedure DSiDeleteTree(const folder: string; removeSubdirsOnly: boolean; allowRoot: boolean = false);
   function  DSiDeleteWithBatch(const fileName: string; rmDir: boolean = false): boolean;
   function  DSiDirectoryExistsW(const directory: WideString): boolean;
   function  DSiDisableWow64FsRedirection(var oldStatus: pointer): boolean;
@@ -1155,10 +1170,15 @@ type
   function  DSiEnablePrivilege(const privilegeName: string): boolean;
   function  DSiExecute(const commandLine: string;
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
-    wait: boolean = false): cardinal;
+    wait: boolean = false;
+    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal; overload;
+  function  DSiExecute(const commandLine: string; var processInfo: TProcessInformation;
+    visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
+    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal; overload;
   function  DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
-    var exitCode: longword; waitTimeout_sec: integer = 15; onNewLine: TDSiOnNewLineCallback
-    = nil): cardinal;
+    var exitCode: longword; waitTimeout_sec: integer = 15;
+    onNewLine: TDSiOnNewLineCallback = nil;
+    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
     var winErrorCode: cardinal; const domain: string = '.';
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
@@ -3006,7 +3026,7 @@ const
   end; { DSiDeleteOnReboot }
 
   {gp}
-  procedure DSiDeleteTree(const folder: string; removeSubdirsOnly: boolean);
+  procedure DSiDeleteTree(const folder: string; removeSubdirsOnly, allowRoot: boolean);
 
     procedure DeleteTree(const folder: string; depth: integer; delete0: boolean);
     var
@@ -3026,8 +3046,71 @@ const
       if (depth > 0) or delete0 then
         DSiRemoveFolder(folder);
     end; { DeleteTree }
+
+    // Check that the code is not doing something extremely stupid
+    procedure Validate(folder: string);
+    var
+      fullPath : string;
+      p        : integer;
+      pathOnly : string;
+      pathRoot : string;
+      sysRoot  : string;
+      winFolder: string;
+    begin
+      folder := Trim(folder);
+
+      if folder = '' then
+        raise Exception.Create('DSiDeleteTree: Path is empty');
+
+      if TPath.GetExtendedPrefix(folder) <> TPathPrefixType.pptNoPrefix then
+        raise Exception.Create('DSiDeleteTree: Path starts with extended prefix');
+
+      // split to drive/server + folder
+      if TPath.IsUNCRooted(folder) then begin
+        p := PosEx(TPath.DirectorySeparatorChar, folder, 3);
+        if p = 0 then begin
+          pathRoot := folder;
+          folder := folder + TPath.DirectorySeparatorChar;
+        end
+        else
+          pathRoot := Copy(folder, 1, p-1);
+      end
+      else begin
+        pathRoot := TPath.GetPathRoot(folder);
+        if EndsText(TPath.DirectorySeparatorChar, pathRoot) then
+          Delete(pathRoot, Length(pathRoot), 1);
+      end;
+      pathOnly := folder;
+      Delete(pathOnly, 1, Length(pathRoot));
+      pathOnly := Trim(pathOnly);
+
+      if not StartsText(TPath.DirectorySeparatorChar, pathOnly) then
+        raise Exception.Create('DSiDeleteTree: Path is not in absolute format');
+
+      winFolder := ExcludeTrailingPathDelimiter(DSiGetWindowsFolder);
+      sysRoot := TPath.GetPathRoot(winFolder);
+      if EndsText(TPath.DirectorySeparatorChar, sysRoot) then
+        Delete(sysRoot, Length(sysRoot), 1);
+
+      if (pathOnly = '') or (pathOnly = TPath.DirectorySeparatorChar) then begin // root only
+        if SameText(sysRoot, pathRoot) then
+          raise Exception.Create('DSiDeleteTree: System root path')
+        else if not allowRoot then
+          raise Exception.Create('DSiDeleteTree: Root path');
+        Exit;
+      end;
+
+      fullPath := TPath.GetFullPath(folder);
+
+      if StartsText(DSiGetTempPath, fullPath) then
+        Exit; // OK if TEMP is inside Windows folder (old system)
+
+      if StartsText(winFolder, fullPath) then
+        raise Exception.Create('DSiDeleteTree: System path');
+    end; { Validate }
     
   begin { DSiDeleteTree }
+    Validate(folder);
     DeleteTree(folder, 0, not removeSubdirsOnly);
   end; { DSiDeleteTree }
 
@@ -3223,7 +3306,8 @@ const
     err := FindFirst(folder+fileMask, attr, S);
     if err = 0 then try
       repeat
-        if (S.Attr AND attr) = attr then begin
+        // don't filter anything
+        //if (S.Attr AND attr <> 0) or (S.Attr AND attr = attr) then begin
           if assigned(enumCallback) then
             enumCallback(folder, S, false, stopEnum);
           if assigned(fileList) then
@@ -3234,7 +3318,7 @@ const
           if assigned(fileObjectList) then
             fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
           Inc(totalFiles);
-        end;
+        //end;
         err := FindNext(S);
       until (err <> 0) or stopEnum;
     finally FindClose(S); end;
@@ -3384,7 +3468,9 @@ const
   var
     fHandle: DWORD;
   begin
-    fHandle := CreateFile(PChar(fileName), 0, 0, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    fHandle := CreateFile(PChar(fileName), 0,
+      FILE_SHARE_READ OR FILE_SHARE_WRITE OR FILE_SHARE_DELETE, nil, OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL, 0);
     if fHandle = INVALID_HANDLE_VALUE then
       Result := -1
     else try
@@ -4235,9 +4321,24 @@ const
     @since   2002-11-25
   }
   function DSiExecute(const commandLine: string; visibility: integer;
-    const workDir: string; wait: boolean): cardinal;
+    const workDir: string; wait: boolean; creationFlags: DWORD): cardinal;
   var
     processInfo: TProcessInformation;
+  begin
+    Result := DSiExecute(commandLine, processInfo, visibility, workDir);
+    if Result = 0 then begin
+      if wait then begin
+        WaitForSingleObject(processInfo.hProcess, INFINITE);
+        GetExitCodeProcess(processInfo.hProcess, Result);
+      end;
+      CloseHandle(processInfo.hProcess);
+      CloseHandle(processInfo.hThread);
+    end;
+  end; { DSiExecute }
+
+  function DSiExecute(const commandLine: string; var processInfo: TProcessInformation;
+    visibility: integer; const workDir: string; creationFlags: DWORD): cardinal;
+  var
     startupInfo: TStartupInfo;
     tmpCmdLine : string;
     useWorkDir : string;
@@ -4253,22 +4354,12 @@ const
     tmpCmdLine := commandLine;
     {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
     if not CreateProcess(nil, PChar(tmpCmdLine), nil, nil, false,
-             CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil,
-             PChar(useWorkDir), startupInfo, processInfo)
+             creationFlags, nil, PChar(useWorkDir), startupInfo, processInfo)
     then
       Result := MaxInt
-    else begin
-      if wait then begin
-        WaitForSingleObject(processInfo.hProcess, INFINITE);
-        GetExitCodeProcess(processInfo.hProcess, Result);
-      end
-      else
-        Result := 0;
-      CloseHandle(processInfo.hProcess);
-      CloseHandle(processInfo.hThread);
-    end;
+    else
+      Result := 0;
   end; { DSiExecute }
-
 
   {:Simplified DSiExecuteAsUser.
     @author  gabr
@@ -4487,7 +4578,8 @@ const
     @since   2003-05-24
   }
   function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
-    var exitCode: longword; waitTimeout_sec: integer; onNewLine: TDSiOnNewLineCallback): cardinal;
+    var exitCode: longword; waitTimeout_sec: integer; onNewLine: TDSiOnNewLineCallback;
+    creationFlags: DWORD): cardinal;
   var
     endTime_ms         : int64;
     lineBuffer         : PAnsiChar;
@@ -4568,8 +4660,7 @@ const
       appW := app;
       {$IFDEF Unicode}UniqueString(appW);{$ENDIF Unicode}
       if CreateProcess(nil, PChar(appW), @security, @security, true,
-           CREATE_NO_WINDOW or NORMAL_PRIORITY_CLASS, nil, PChar(useWorkDir), start,
-           processInfo) then
+           creationFlags, nil, PChar(useWorkDir), start, processInfo) then
       begin
         SetLastError(0); // [Mitja] found a situation where CreateProcess succeeded but the last error was 126
         Result := processInfo.hProcess;

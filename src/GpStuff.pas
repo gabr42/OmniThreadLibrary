@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2014-05-19
-   Version           : 1.44
+   Last modification : 2015-01-22
+   Version           : 1.45
 </pre>*)(*
    History:
+     1.45: 2015-01-22
+       - Added Ternary<T> record for generic IFF operations.
      1.44: 2014-05-19
        - Implemented IGpBuffer.AsStream.
      1.43: 2014-05-16
@@ -157,6 +159,7 @@ uses
   {$IFEND}
   {$IF CompilerVersion >= 20} //D2009+
     {$DEFINE GpStuff_Anonymous}
+    {$DEFINE GpStuff_Generics}
   {$IFEND}
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
@@ -379,6 +382,12 @@ function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$
 {$IFDEF Unicode}
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
+{$IFDEF GpStuff_Generics}
+type
+  Ternary<T> = record
+    class function IFF(condit: boolean; iftrue, iffalse: T): T; static;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+  end;
+{$ENDIF GpStuff_Generics}
 
 function  OffsetPtr(ptr: pointer; offset: integer): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
@@ -925,17 +934,24 @@ end; { DebugBreak }
 
 function ReverseDWord(dw: cardinal): cardinal;
 asm
+  {$IFDEF CPUX64}
+  mov rax, rcx
+  {$ENDIF}
   bswap eax
 end; { ReverseDWord }
 
 function ReverseWord(w: word): word;
 asm
+   {$IFDEF CPUX64}
+   mov rax, rcx
+   {$ENDIF}
    xchg   al, ah
 end; { ReverseWord }
 
 function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
 asm
 {$IFDEF WIN64}
+// value - RCX, data - RDX, dataLen - R8
       PUSH  rDI
       mov   al, value
       MOV   rDI, data
@@ -1841,5 +1857,15 @@ begin
   if Result = 0 then
     Destroy;
 end; { TGpInterfacedPersistent._Release }
+
+{$IFDEF GpStuff_Generics}
+class function Ternary<T>.IFF(condit: boolean; iftrue, iffalse: T): T;
+begin
+  if condit then
+    Result := iftrue
+  else
+    Result := iffalse;
+end;
+{$ENDIF GpStuff_Generics}
 
 end.

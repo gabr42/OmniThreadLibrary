@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2013, Primoz Gabrijelcic
+Copyright (c) 2014, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2013-03-11
-   Version           : 1.65
+   Last modification : 2014-10-13
+   Version           : 1.66
 </pre>*)(*
    History:
+     1.66: 2014-10-13
+       - Implemented TGpDoublyLinkedList.EnumerateAs<T>.
      1.65: 2013-03-11
        - Implemented TGpSkipList<T>.Remove.
      1.64: 2012-12-07
@@ -1945,6 +1947,27 @@ type
     function  MoveNext: boolean;                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
     property Current: TGpDoublyLinkedListObject read GetCurrent;
   end; { TGpDoublyLinkedListEnumerator }
+
+  {$IFDEF Unicode}
+  TGpDoublyLinkedListEnumerator<T:TGpDoublyLinkedListObject> = class
+  private
+    dlleEnumerator: TGpDoublyLinkedListEnumerator;
+  public
+    constructor Create(dlList: TGpDoublyLinkedList);
+    destructor  Destroy; override;
+    function  GetCurrent: T;
+    function  MoveNext: boolean;
+    property Current: T read GetCurrent;
+  end; { TGpDoublyLinkedListEnumerator<T> }
+
+  TGpDoublyLinkedListEnumeratorFactory<T:TGpDoublyLinkedListObject> = class
+  private
+    dllefList: TGpDoublyLinkedList;
+  public
+    constructor Create(dlList: TGpDoublyLinkedList);
+    function  GetEnumerator: TGpDoublyLinkedListEnumerator<T>;
+  end; { TGpDoublyLinkedListEnumeratorFactory<T> }
+  {$ENDIF Unicode}
   {$ENDIF GpLists_Enumerators}
 
   IGpDoublyLinkedList = interface ['{586756F9-3EB6-4965-B796-5074DE52215A}']
@@ -1994,7 +2017,11 @@ type
     function  Count: integer;                               {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure FreeAll;
     {$IFDEF GpLists_Enumerators}
-    function  GetEnumerator: TGpDoublyLinkedListEnumerator; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  GetEnumerator: TGpDoublyLinkedListEnumerator; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    {$IFDEF Unicode}
+    function EnumerateAs<T: TGpDoublyLinkedListObject>:
+      TGpDoublyLinkedListEnumeratorFactory<T>; overload;
+    {$ENDIF}
     {$ENDIF GpLists_Enumerators}
     function  Head: TGpDoublyLinkedListObject;
     procedure InsertAfter(existingObject: TGpDoublyLinkedListObject;
@@ -6477,6 +6504,42 @@ begin
   Result := assigned(dlleElement);
 end; { TGpDoublyLinkedListEnumerator.MoveNext }
 
+{$IFDEF Unicode}
+constructor TGpDoublyLinkedListEnumerator<T>.Create(dlList: TGpDoublyLinkedList);
+begin
+  inherited Create;
+  dlleEnumerator := TGpDoublyLinkedListEnumerator.Create(dlList);
+end; { TGpDoublyLinkedListEnumerator<T>.Create }
+
+destructor TGpDoublyLinkedListEnumerator<T>.Destroy;
+begin
+  FreeAndNil(dlleEnumerator);
+  inherited;
+end; { TGpDoublyLinkedListEnumerator<T>.Destroy }
+
+function TGpDoublyLinkedListEnumerator<T>.GetCurrent: T;
+begin
+  Result := T(dlleEnumerator.GetCurrent);
+end; { TGpDoublyLinkedListEnumerator<T>.GetCurrent }
+
+function TGpDoublyLinkedListEnumerator<T>.MoveNext: boolean;
+begin
+  Result := dlleEnumerator.MoveNext;
+end; { TGpDoublyLinkedListEnumerator<T>.MoveNext }
+
+constructor TGpDoublyLinkedListEnumeratorFactory<T>.Create(dlList: TGpDoublyLinkedList);
+begin
+  inherited Create;
+  dllefList := dlList;
+end; { TGpDoublyLinkedListEnumeratorFactory<T>.Create }
+
+function TGpDoublyLinkedListEnumeratorFactory<T>.GetEnumerator:
+  TGpDoublyLinkedListEnumerator<T>;
+begin
+  Result := TGpDoublyLinkedListEnumerator<T>.Create(dllefList);
+end; { TGpDoublyLinkedListEnumeratorFactory<T>.GetEnumerator }
+{$ENDIF Unicode}
+
 {$ENDIF GpLists_Enumerators}
 
 { TGpDoublyLinkedList }
@@ -6513,6 +6576,15 @@ class function TGpDoublyLinkedList.CreateInterface(multithreaded: boolean):
 begin
   Result := TGpDoublyLinkedList.Create(multithreaded);
 end; { TGpDoublyLinkedList.CreateInterface }
+
+{$IFDEF GpLists_Enumerators}
+{$IFDEF Unicode}
+function TGpDoublyLinkedList.EnumerateAs<T>: TGpDoublyLinkedListEnumeratorFactory<T>;
+begin
+  Result := TGpDoublyLinkedListEnumeratorFactory<T>.Create(Self);
+end; { TGpDoublyLinkedList.EnumerateAs<T> }
+{$ENDIF}
+{$ENDIF}
 
 {:Destroy all elements of the list.
   @since   2005-06-02
