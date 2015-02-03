@@ -1,4 +1,3 @@
-TODO: TOmniBlockingCollection.ToArray(<T>)
 TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
 
 - New features:
@@ -13,7 +12,8 @@ TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
   - Implemented TWaitFor which supports waiting any/all and is not
     limited to 63 objects.
   - IOmniTaskControl can wait on any number of comm handles and wait objects.
-    That enables support for >60 tasks in the OtlThreadPool.
+    That enables support for >60 tasks in the OtlThreadPool. 
+  - Implemented TOmniBlockingCollection.ToArray<T>.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload

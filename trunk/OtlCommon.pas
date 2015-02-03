@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2014, Primoz Gabrijelcic
+///Copyright (c) 2015, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,14 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-09-23
-///   Version           : 1.35
+///   Last modification : 2015-02-03
+///   Version           : 1.36
 ///</para><para>
 ///   History:
+///     1.36: 2015-02-03
+///       - Type of TOmniValue data is now an external type - TOmniValueDataType. That
+///         way causes less internal errors in the compiler.
+///       - Added TOmniValue.DataType property.
 ///     1.35: 2014-09-23
 ///       - Implemented TOmniValueContainer.AssignNamed.
 ///     1.34: 2014-01-13
@@ -244,13 +248,16 @@ type
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
 
+
+  TOmniValueDataType = (ovtNull,
+           {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
+           {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString, ovtOwnedObject);
+
   TOmniValue = packed record // 13 bytes in 32-bit, 17 bytes in 64-bits
   private
     ovData: int64;
     ovIntf: IInterface;
-    ovType: (ovtNull,
-             {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
-             {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtWideString, ovtArray, ovtRecord, ovtAnsiString, ovtOwnedObject);
+    ovType: TOmniValueDataType;
     function  CastToAnsiString: AnsiString; inline;
     function  CastToBoolean: boolean; inline;
     function  CastToCardinal: cardinal; inline;
@@ -301,7 +308,6 @@ type
     {$ENDREGION}
     class procedure _RemoveWarnings; inline; static;
     procedure ClearIntf; inline;
-    function  IsInterfacedType: boolean; inline;
   public
     constructor Create(const values: array of const);
     constructor CreateNamed(const values: array of const; const cppDupConWorkaround: boolean = false);
@@ -336,6 +342,7 @@ type
     function  IsDateTime: boolean; inline;
     function  IsInteger: boolean; inline;
     function  IsInterface: boolean; inline;
+    function  IsInterfacedType: boolean; inline;
     function  IsObject: boolean; inline;
     function  IsOwnedObject: boolean; inline;
     function  IsPointer: boolean; inline;
@@ -416,6 +423,7 @@ type
     property AsString: string read CastToString write SetAsString;
     property AsVariant: Variant read CastToVariant write SetAsVariant;
     property AsWideString: WideString read CastToWideString write SetAsWideString;
+    property DataType: TOmniValueDataType read ovType;
     property OwnsObject: boolean read IsOwnedObject write SetOwnsObject;
   {$IFDEF OTL_Generics}
   public
@@ -757,10 +765,7 @@ type
 
 var
   OtlUID: TGp8AlignedInt64;
-
-  {$IFDEF OTL_Generics} // must not be local due to compiler restrictions
   TOmniValue_DataSize: array [TTypeKind] of integer;
-  {$ENDIF OTL_Generics}
 
 implementation
 

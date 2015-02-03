@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011 Primoz Gabrijelcic
+///Copyright (c) 2015 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2011-11-11
-///   Version           : 1.06
+///   Last modification : 2015-02-03
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2015-02-03
+///       - Implemented class functions TOmniBlockingCollection.ToArray<T>,
+///         TOmniBlockingCollection.ToArrayRec<T>, and
+///         TOmniBlockingCollection.ToArrayIntf<T>.
 ///     1.06: 2011-11-11
 ///       - Implemented IOmniBlockingCollection.ContainerSubject which gives access
 ///         to the ContainerSubject property of the underlying TOmniQueue.
@@ -170,6 +174,15 @@ type
     {$ENDREGION}
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
+    {$IFDEF OTL_Generics}
+    {$IFDEF OTL_HasArrayOfT}
+    class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
+    class function ToArrayIntf<T: IInterface>(coll: IOmniBlockingCollection): TArray<T>;
+    {$IFDEF OTL_ERTTI}
+    class function ToArrayRec<T: record>(coll: IOmniBlockingCollection): TArray<T>;
+    {$ENDIF OTL_ERTTI}
+    {$ENDIF OTL_HasArrayOfT}
+    {$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator; inline;
@@ -200,7 +213,8 @@ type
 implementation
 
 uses
-  Classes;
+  Classes,
+  TypInfo;
 
 {$IFDEF CPUX64}
 procedure AsmPause;
@@ -328,6 +342,115 @@ function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
 begin
   Result := TryTake(value, INFINITE);
 end; { TOmniBlockingCollection.Take }
+
+{$IFDEF OTL_Generics}
+{$IFDEF OTL_HasArrayOfT}
+function Clamp(value: integer): integer; inline;
+const
+  CMinIncrement = 1024;
+  CMaxIncrement = 65536;
+begin
+  if value < CMinIncrement then
+    Result := CMinIncrement
+  else if value > CMaxIncrement then
+    Result := CMaxIncrement
+  else
+    Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
+end; { Clamp }
+
+class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
+  TArray<T>;
+var
+  ds      : integer;
+  lenArr  : integer;
+  maxValue: uint64;
+  numEl   : integer;
+  ti      : PTypeInfo;
+  value   : TOmniValue;
+begin
+  ds := 0;
+  ti := System.TypeInfo(T);
+  if assigned(ti) then
+    if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
+      ds := 1
+    else if (ti = System.TypeInfo(word)) or (ti = System.TypeInfo(smallint)) then
+      ds := 2
+    else
+      ds := TOmniValue_DataSize[ti^.Kind];
+  {$IFNDEF OTL_ERTTI}
+  if ds = 0 then // complicated stuff
+    raise Exception.Create('Only casting to simple types is supported in Delphi 2009');
+  {$ENDIF OTL_ERTTI}
+
+  maxValue := High(uint64);
+  if ds > 0 then
+    maxValue := uint64($FF) SHL ((ds-1) * 8);
+
+  lenArr := Clamp(0);
+  SetLength(Result, lenArr);
+  numEl := 0;
+  for value in coll do begin
+    if numEl >= lenArr then begin
+      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
+      SetLength(Result, lenArr);
+    end;
+    if ds = 0 then
+      Result[numEl] := value.AsTValue.AsType<T>
+    else begin
+      if value.RawData^ > maxValue then
+        raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [value.RawData^, ti^.Name]);
+      Move(value.RawData^, Result[numEl], ds);
+    end;
+    Inc(numEl);
+  end;
+  SetLength(Result, numEl);
+end; { TOmniBlockingCollection.ToArray<T> }
+
+class function TOmniBlockingCollection.ToArrayIntf<T>(coll: IOmniBlockingCollection):
+  TArray<T>;
+var
+  lenArr: integer;
+  numEl : integer;
+  value : TOmniValue;
+begin
+  lenArr := Clamp(0);
+  SetLength(Result, lenArr);
+  numEl := 0;
+  for value in coll do begin
+    if numEl >= lenArr then begin
+      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
+      SetLength(Result, lenArr);
+    end;
+    Result[numEl] := T(value.AsInterface);
+    Inc(numEl);
+  end;
+  SetLength(Result, numEl);
+end; { TOmniBlockingCollection.ToArrayIntf<T> }
+
+{$IFDEF OTL_ERTTI}
+class function TOmniBlockingCollection.ToArrayRec<T>(coll: IOmniBlockingCollection):
+  TArray<T>;
+var
+  lenArr: integer;
+  numEl : integer;
+  value : TOmniValue;
+begin
+  lenArr := Clamp(0);
+  SetLength(Result, lenArr);
+  numEl := 0;
+  for value in coll do begin
+    if numEl >= lenArr then begin
+      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
+      SetLength(Result, lenArr);
+    end;
+    Result[numEl] := value.ToRecord<T>;
+    Inc(numEl);
+  end;
+  SetLength(Result, numEl);
+end; { TOmniBlockingCollection.ToArrayRec<T> }
+{$ENDIF OTL_ERTTI}
+{$ENDIF OTL_HasArrayOfT}
+{$ENDIF OTL_Generics}
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 var
