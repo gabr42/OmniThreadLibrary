@@ -149,7 +149,7 @@ begin
   coll.CompleteAdding;
 
   time := DSiTimeGetTime64;
-  arr := TOmniBlockingCollection.ToArrayIntf<ITestIntf>(coll);
+  arr := TOmniBlockingCollection.ToArray<ITestIntf>(coll);
   time := DSiElapsedTime64(time);
 
   Assert(Length(arr) = CTestSize);
