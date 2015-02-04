@@ -1,5 +1,4 @@
 TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
-TODO: NumTasks(negative_number)
 
 - New features:
   - Implemented simple and fast Parallel.&For which supports only integer ranges.
@@ -15,6 +14,11 @@ TODO: NumTasks(negative_number)
   - IOmniTaskControl can wait on any number of comm handles and wait objects.
     That enables support for >60 tasks in the OtlThreadPool. 
   - Implemented TOmniBlockingCollection.ToArray<T>.
+  - NumTasks parameter (OtlParallel) can be negative. In that case, specified 
+    number of cores will be reserved for other purposes and all other will 
+    be used for processing.
+    Example: If NumTasks(-2) is used when process has access to 8 cores,
+    6 of them (8 - 2) will be used to run the task.  
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload

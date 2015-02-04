@@ -31,10 +31,15 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-01-30
-///   Version           : 1.37
+///   Last modification : 2015-02-04
+///   Version           : 1.38
 ///</para><para>
 ///   History:
+///     1.38: 2015-02-04
+///       - NumTasks parameter can be negative. In that case, specified number of cores
+///         will be reserved for other purposes and all other will be used for processing.
+///         Example: If NumTasks(-2) is used when process has access to 8 cores,
+///         6 of them (8 - 2) will be used to run the task.
 ///     1.37: 2015-01-30
 ///       - Implemented Parallel.Map.
 ///       - Task finalizers in Parallel.For were not called.
@@ -1715,7 +1720,11 @@ end; { TOmniParallelJoin.NoWait }
 
 function TOmniParallelJoin.NumTasks(numTasks: integer): IOmniParallelJoin;
 begin
-  FNumTasks := numTasks;
+  Assert(numTasks <> 0);
+  if numTasks > 0 then
+    FNumTasks := numTasks
+  else
+    FNumTasks := Environment.Process.Affinity.Count + numTasks;
   Result := Self;
 end; { TOmniParallelJoin.NumTasks }
 
@@ -2395,8 +2404,11 @@ end; { TOmniParallelLoopBase.SetIntoQueue }
 
 procedure TOmniParallelLoopBase.SetNumTasks(taskCount: integer);
 begin
-  Assert(taskCount > 0);
-  FNumTasks := taskCount;
+  Assert(taskCount <> 0);
+  if taskCount > 0 then
+    FNumTasks := taskCount
+  else
+    FNumTasks := Environment.Process.Affinity.Count + taskCount;
   FNumTasksManual := true;
 end; { TOmniParallelLoopBase.SetNumTasks }
 
@@ -2548,7 +2560,6 @@ end; { TOmniParallelLoop.NoWait }
 
 function TOmniParallelLoop.NumTasks(taskCount: integer): IOmniParallelLoop;
 begin
-  Assert(taskCount > 0);
   SetNumTasks(taskCount);
   Result := Self;
 end; { TOmniParallelLoop.taskCount }
@@ -3086,7 +3097,11 @@ end; { TOmniParallelSimpleLoop.NoWait }
 
 function TOmniParallelSimpleLoop.NumTasks(taskCount: integer): IOmniParallelSimpleLoop;
 begin
-  FNumTasks := taskCount;
+  Assert(taskCount <> 0);
+  if taskCount > 0 then
+    FNumTasks := taskCount
+  else
+    FNumTasks := Environment.Process.Affinity.Count + taskCount;
   FNumTasksManual := true;
   Result := Self;
 end; { TOmniParallelSimpleLoop.NumTasks }
@@ -3255,8 +3270,8 @@ end; { TOmniFuture }
 
 { TOmniPipelineStage }
 
-constructor TOmniPipelineStage.Create(stage: TPipelineSimpleStageDelegate; taskConfig:
-  IOmniTaskConfig);
+constructor TOmniPipelineStage.Create(stage: TPipelineSimpleStageDelegate;
+  taskConfig: IOmniTaskConfig);
 begin
   inherited Create;
   opsSimpleStage := stage;
@@ -3377,7 +3392,11 @@ end; { TOmniPipelineStage.SetHandleExceptions }
 
 procedure TOmniPipelineStage.SetNumTasks(const value: integer);
 begin
-  opsNumTasks := value;
+  Assert(value <> 0);
+  if value > 0 then
+    opsNumTasks := value
+  else
+    opsNumTasks := Environment.Process.Affinity.Count + value;
 end; { TOmniPipelineStage.SetNumTasks }
 
 procedure TOmniPipelineStage.SetThrottle(const value: integer);
@@ -3486,6 +3505,10 @@ function TOmniPipeline.NumTasks(numTasks: integer): IOmniPipeline;
 var
   iStage: integer;
 begin
+  Assert(numTasks <> 0);
+  if numTasks < 0 then
+    numTasks := Environment.Process.Affinity.Count + numTasks;
+
   if opStages.Count = 0 then
     opNumTasks := numTasks
   else for iStage := opCheckpoint to opStages.Count - 1 do
@@ -3781,7 +3804,11 @@ end; { TOmniForkJoin<T>.Create }
 
 function TOmniForkJoin<T>.NumTasks(numTasks: integer): IOmniForkJoin<T>;
 begin
-  FNumTasks := numTasks;
+  Assert(numTasks <> 0);
+  if numTasks > 0 then
+    FNumTasks := numTasks
+  else
+    FNumTasks := Environment.Process.Affinity.Count + numTasks;
   Result := Self;
 end; { TOmniForkJoin<T>.NumTasks }
 
@@ -3835,6 +3862,9 @@ end; { TOmniForkJoin.Compute }
 
 function TOmniForkJoin.NumTasks(numTasks: integer): IOmniForkJoin;
 begin
+  Assert(numTasks <> 0);
+  if numTasks < 0 then
+    numTasks := Environment.Process.Affinity.Count + numTasks;
   FForkJoin.NumTasks(numTasks);
   Result := self;
 end; { TOmniForkJoin.NumTasks }
@@ -3897,6 +3927,9 @@ end; { TOmniParallelTask.NoWait }
 
 function TOmniParallelTask.NumTasks(numTasks: integer): IOmniParallelTask;
 begin
+  Assert(numTasks <> 0);
+  if numTasks < 0 then
+    numTasks := Environment.Process.Affinity.Count + numTasks;
   optJoin.NumTasks(numTasks);
   optNumTasks := numTasks;
   Result := Self;
@@ -4172,7 +4205,11 @@ end; { TOmniBackgroundWorker.Initialize }
 
 function TOmniBackgroundWorker.NumTasks(numTasks: integer): IOmniBackgroundWorker;
 begin
-  FNumTasks := numTasks;
+  Assert(numTasks <> 0);
+  if numTasks > 0 then
+    FNumTasks := numTasks
+  else
+    FNumTasks := Environment.Process.Affinity.Count + numTasks;
   Result := Self;
 end; { TOmniBackgroundWorker.NumTasks }
 
@@ -4472,9 +4509,6 @@ var
   el  : T1;
   i   : integer;
 begin
-  if FNumTasks < 1 then
-    FNumTasks := 1;
-
   SetLength(FTarget, Length(FSource));
   SetLength(FTargetData, FNumTasks);
   // Parallel.For may reduce number of tasks so make sure unused tasks will be correctly initialized
@@ -4526,7 +4560,11 @@ end; { TOmniParallelMapper }
 
 function TOmniParallelMapper<T1,T2>.NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
 begin
-  FNumTasks := numTasks;
+  Assert(numTasks <> 0);
+  if numTasks > 0 then
+    FNumTasks := numTasks
+  else
+    FNumTasks := Environment.Process.Affinity.Count + numTasks;
   Result := Self;
 end; { TOmniParallelMapper<T1,T2> }
 
