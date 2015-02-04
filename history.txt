@@ -1,4 +1,5 @@
 TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
+TODO: NumTasks(negative_number)
 
 - New features:
   - Implemented simple and fast Parallel.&For which supports only integer ranges.

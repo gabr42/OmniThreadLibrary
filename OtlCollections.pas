@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2009-12-27
-///   Last modification : 2015-02-03
-///   Version           : 1.07
+///   Last modification : 2015-02-04
+///   Version           : 1.07a
 ///</para><para>
 ///   History:
+///     1.07a: 2015-02-04
+///       - ToArrayIntf<T> functionality moved to ToArray<T>.
 ///     1.07: 2015-02-03
 ///       - Implemented class functions TOmniBlockingCollection.ToArray<T>,
 ///         TOmniBlockingCollection.ToArrayRec<T>, and
@@ -177,7 +179,6 @@ type
     {$IFDEF OTL_Generics}
     {$IFDEF OTL_HasArrayOfT}
     class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
-    class function ToArrayIntf<T: IInterface>(coll: IOmniBlockingCollection): TArray<T>;
     {$IFDEF OTL_ERTTI}
     class function ToArrayRec<T: record>(coll: IOmniBlockingCollection): TArray<T>;
     {$ENDIF OTL_ERTTI}
@@ -209,6 +210,8 @@ type
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
     property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
+
+  PInterface = ^IInterface;
 
 implementation
 
@@ -394,8 +397,12 @@ begin
       lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
       SetLength(Result, lenArr);
     end;
-    if ds = 0 then
-      Result[numEl] := value.AsTValue.AsType<T>
+    if ds = 0 then begin
+      if value.IsInterface then
+        PInterface(@Result[numEl])^ := value.AsInterface
+      else
+        Result[numEl] := value.AsTValue.AsType<T>;
+    end
     else begin
       if value.RawData^ > maxValue then
         raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [value.RawData^, ti^.Name]);
@@ -405,27 +412,6 @@ begin
   end;
   SetLength(Result, numEl);
 end; { TOmniBlockingCollection.ToArray<T> }
-
-class function TOmniBlockingCollection.ToArrayIntf<T>(coll: IOmniBlockingCollection):
-  TArray<T>;
-var
-  lenArr: integer;
-  numEl : integer;
-  value : TOmniValue;
-begin
-  lenArr := Clamp(0);
-  SetLength(Result, lenArr);
-  numEl := 0;
-  for value in coll do begin
-    if numEl >= lenArr then begin
-      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
-      SetLength(Result, lenArr);
-    end;
-    Result[numEl] := T(value.AsInterface);
-    Inc(numEl);
-  end;
-  SetLength(Result, numEl);
-end; { TOmniBlockingCollection.ToArrayIntf<T> }
 
 {$IFDEF OTL_ERTTI}
 class function TOmniBlockingCollection.ToArrayRec<T>(coll: IOmniBlockingCollection):
