@@ -376,10 +376,6 @@ begin
       ds := 2
     else
       ds := TOmniValue_DataSize[ti^.Kind];
-  {$IFNDEF OTL_ERTTI}
-  if ds = 0 then // complicated stuff
-    raise Exception.Create('Only casting to simple types is supported in Delphi 2009');
-  {$ENDIF OTL_ERTTI}
 
   maxValue := High(uint64);
   if ds > 0 then
