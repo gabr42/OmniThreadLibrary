@@ -430,7 +430,7 @@ type
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastTo<T>: T;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
-    function  ToRecord<T: record>: T;
+    function  ToRecord<T>: T;
     {$IFDEF OTL_HasArrayOfT}
     class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     function  ToArray<T>: TArray<T>;
@@ -737,7 +737,7 @@ type
   end; { TOmniMessageID }
 
 {$IFDEF OTL_Generics}
-  TOmniRecordWrapper<T: record> = class
+  TOmniRecordWrapper<T> = class
   strict private
     FValue: T;
   public

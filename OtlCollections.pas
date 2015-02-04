@@ -35,7 +35,7 @@
 ///</para><para>
 ///   History:
 ///     1.07a: 2015-02-04
-///       - ToArrayIntf<T> functionality moved to ToArray<T>.
+///       - ToArrayIntf<T> and TArrayRec<T> functionality moved to ToArray<T>.
 ///     1.07: 2015-02-03
 ///       - Implemented class functions TOmniBlockingCollection.ToArray<T>,
 ///         TOmniBlockingCollection.ToArrayRec<T>, and
@@ -176,14 +176,9 @@ type
     {$ENDREGION}
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
-    {$IFDEF OTL_Generics}
-    {$IFDEF OTL_HasArrayOfT}
+    {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
     class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
-    {$IFDEF OTL_ERTTI}
-    class function ToArrayRec<T: record>(coll: IOmniBlockingCollection): TArray<T>;
-    {$ENDIF OTL_ERTTI}
-    {$ENDIF OTL_HasArrayOfT}
-    {$ENDIF OTL_Generics}
+    {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator; inline;
@@ -348,6 +343,7 @@ end; { TOmniBlockingCollection.Take }
 
 {$IFDEF OTL_Generics}
 {$IFDEF OTL_HasArrayOfT}
+{$IFDEF OTL_ERTTI}
 function Clamp(value: integer): integer; inline;
 const
   CMinIncrement = 1024;
@@ -398,10 +394,11 @@ begin
       SetLength(Result, lenArr);
     end;
     if ds = 0 then begin
-      if value.IsInterface then
-        PInterface(@Result[numEl])^ := value.AsInterface
-      else
-        Result[numEl] := value.AsTValue.AsType<T>;
+      case value.DataType of
+        ovtInterface: PInterface(@Result[numEl])^ := value.AsInterface;
+        ovtRecord:    Result[numEl] := value.ToRecord<T>;
+        else          Result[numEl] := value.AsTValue.AsType<T>;
+      end;
     end
     else begin
       if value.RawData^ > maxValue then
@@ -412,28 +409,6 @@ begin
   end;
   SetLength(Result, numEl);
 end; { TOmniBlockingCollection.ToArray<T> }
-
-{$IFDEF OTL_ERTTI}
-class function TOmniBlockingCollection.ToArrayRec<T>(coll: IOmniBlockingCollection):
-  TArray<T>;
-var
-  lenArr: integer;
-  numEl : integer;
-  value : TOmniValue;
-begin
-  lenArr := Clamp(0);
-  SetLength(Result, lenArr);
-  numEl := 0;
-  for value in coll do begin
-    if numEl >= lenArr then begin
-      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
-      SetLength(Result, lenArr);
-    end;
-    Result[numEl] := value.ToRecord<T>;
-    Inc(numEl);
-  end;
-  SetLength(Result, numEl);
-end; { TOmniBlockingCollection.ToArrayRec<T> }
 {$ENDIF OTL_ERTTI}
 {$ENDIF OTL_HasArrayOfT}
 {$ENDIF OTL_Generics}
