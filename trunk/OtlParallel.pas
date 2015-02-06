@@ -1005,6 +1005,8 @@ type
 
   TMapProc<T1,T2> = reference to function(const source: T1; var target: T2): boolean;
 
+  {$IFDEF OTL_HasArrayOfT}
+  {$IFNDEF OTL_LimitedGenerics}
   IOmniParallelMapper<T1,T2> = interface
     function  Execute(mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
     function  NoWait: IOmniParallelMapper<T1,T2>;
@@ -1046,6 +1048,8 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { TOmniParallelMapper<T1,T2> }
+  {$ENDIF ~OTL_LimitedGenerics}
+  {$ENDIF OTL_HasArrayOfT}
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -1124,9 +1128,13 @@ type
     class function BackgroundWorker: IOmniBackgroundWorker;
 
   // Map
+    {$IFDEF OTL_HasArrayOfT}
+    {$IFNDEF OTL_LimitedGenerics}
     class function Map<T1,T2>: IOmniParallelMapper<T1,T2>; overload;
     class function Map<T1,T2>(const source: TArray<T1>;
       mapper: TMapProc<T1,T2>): TArray<T2>; overload;
+    {$ENDIF ~OTL_LimitedGenerics}
+    {$ENDIF OTL_HasArrayOfT}
 
   // task configuration
     class function TaskConfig: IOmniTaskConfig;
@@ -1995,6 +2003,8 @@ begin
   Result := TOmniParallelJoin.Create;
 end; { Parallel.Join }
 
+{$IFDEF OTL_HasArrayOfT}
+{$IFNDEF OTL_LimitedGenerics}
 class function Parallel.Map<T1, T2>(const source: TArray<T1>; mapper: TMapProc<T1,T2>):
   TArray<T2>;
 var
@@ -2010,6 +2020,8 @@ class function Parallel.Map<T1,T2>: IOmniParallelMapper<T1,T2>;
 begin
   Result := TOmniParallelMapper<T1,T2>.Create;
 end; { Parallel.Map }
+{$ENDIF ~OTL_LimitedGenerics}
+{$ENDIF OTL_HasArrayOfT}
 
 class function Parallel.ParallelTask: IOmniParallelTask;
 begin
@@ -4468,6 +4480,9 @@ begin
   end));
 end; { TOmniAwait.Await }
 
+{$IFDEF OTL_HasArrayOfT}
+{$IFNDEF OTL_LimitedGenerics}
+
 { TOmniParallelMapper<T1,T2> }
 
 constructor TOmniParallelMapper<T1,T2>.Create;
@@ -4617,6 +4632,8 @@ begin
   if assigned(FWorker) then
     Result := FWorker.WaitFor(maxWait_ms);
 end; { TOmniParallelMapper<T1,T2> }
+{$ENDIF ~OTL_LimitedGenerics}
+{$ENDIF OTL_HasArrayOfT}
 
 end.
 

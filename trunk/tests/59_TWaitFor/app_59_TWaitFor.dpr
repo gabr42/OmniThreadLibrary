@@ -1,7 +1,7 @@
 program app_59_TWaitFor;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_59_TWaitFor in 'test_59_TWaitFor.pas' {frmTestTWaitFor};
 
 {$R *.res}

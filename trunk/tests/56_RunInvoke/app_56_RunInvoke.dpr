@@ -1,7 +1,7 @@
 program app_56_RunInvoke;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_56_RunInvoke in 'test_56_RunInvoke.pas' {frmRunInvokeTester};
 
 {$R *.res}

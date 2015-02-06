@@ -3,8 +3,8 @@ unit test_56_RunInvoke;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, StdCtrls,
 
   OtlTaskControl,
   OtlComm;
@@ -22,7 +22,7 @@ type
   private
     FWorker: IOmniTaskControl;
     procedure LogMessage(const task: IOmniTaskControl; const msg: TOmniMessage);
-    procedure TaskTerminated;
+    procedure TaskTerminated(const task: IOmniTaskControl);
   public
   end;
 
@@ -82,7 +82,7 @@ begin
   LBLog.ItemIndex := LBLog.Items.Add(FormatDateTime('hh:nn:ss ', Now) + msg.MsgData.AsString);
 end;
 
-procedure TfrmRunInvokeTester.TaskTerminated;
+procedure TfrmRunInvokeTester.TaskTerminated(const task: IOmniTaskControl);
 begin
   FWorker := nil;
   BtnLongWay.Enabled := true;

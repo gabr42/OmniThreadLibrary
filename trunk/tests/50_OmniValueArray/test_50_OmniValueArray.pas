@@ -58,8 +58,12 @@ var
   i      : integer;
   msgData: TOmniValue;
   msgID  : word;
-  rec    : TTestRecord;
+  ov     : TOmniValue;
   s      : string;
+{$IFDEF OTL_Generics}
+var
+  rec    : TTestRecord;
+{$ENDIF OTL_Generics}
 begin
   while DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, INFINITE) = WAIT_OBJECT_1 do
   begin
@@ -68,11 +72,13 @@ begin
       MSG_ARRAY:
         begin
           s := '';
-          for i := 0 to msgData.AsArray.Count - 1 do
-            if msgData[i].IsInterface then
-              s := s + IntToStr((msgData[i].AsInterface as IOmniCounter).Value) + ' '
+          for i := 0 to msgData.AsArray.Count - 1 do begin
+            ov := msgData[i]; //workaround for stupid D2007 compiler
+            if ov.IsInterface then
+              s := s + IntToStr((ov.AsInterface as IOmniCounter).Value) + ' '
             else
-              s := s + IntToStr(msgData[i]) + ' ';
+              s := s + IntToStr(ov) + ' ';
+          end;
           task.Comm.Send(MSG_RESULT, 'Received array with values: ' + s);
         end;
       MSG_HASH:
@@ -112,8 +118,10 @@ begin
 end;
 
 procedure TfrmOmniValueArray.btnSendRecordClick(Sender: TObject);
+{$IFDEF OTL_Generics}
 var
   rec: TTestRecord;
+{$ENDIF OTL_Generics}
 begin
   {$IFDEF OTL_Generics}
   rec.TestInt := 42;

@@ -1,7 +1,7 @@
 program app_54_LockManager;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_54_LockManager in 'test_54_LockManager.pas' {frmTestLockManager};
 
 {$R *.res}

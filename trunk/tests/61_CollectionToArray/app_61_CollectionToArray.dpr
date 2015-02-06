@@ -1,7 +1,7 @@
 program app_61_CollectionToArray;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_61_CollectionToArray in 'test_61_CollectionToArray.pas' {frmTestCollectionToArray};
 
 {$R *.res}

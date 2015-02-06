@@ -1,7 +1,7 @@
 program app_57_For;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_57_For in 'test_57_For.pas' {frmForEachSlice};
 
 {$R *.res}
