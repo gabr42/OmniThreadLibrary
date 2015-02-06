@@ -277,12 +277,20 @@ type
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload 
     function  GetAsArrayItem(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    //GetAsArrayItemOV is used in D2007 instead
+    {$IFEND}
+    function  GetAsArrayItemOV(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsAnsiString(const value: AnsiString);
     procedure SetAsArray(value: TOmniValueContainer); inline;
     procedure SetAsArrayItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsArrayItem(const name: string; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     procedure SetAsArrayItem(const param, value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    //SetAsArrayItemOV is used in D2007 instead
+    {$IFEND}
+    procedure SetAsArrayItemOV(const param, value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -406,7 +414,10 @@ type
     property AsArray: TOmniValueContainer read GetAsArray;
     property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
     property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     property AsArrayItem[const param: TOmniValue]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    {$IFEND}
+    property AsArrayItemOV[const param: TOmniValue]: TOmniValue read GetAsArrayItemOV write SetAsArrayItemOV; 
     property AsAnsiString: AnsiString read CastToAnsiString write SetAsAnsiString;
     property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
     property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
@@ -1825,12 +1836,21 @@ begin
   Result := TOmniValueContainer(ovData)[name];
 end; { TOmniValue.GetAsArrayItem }
 
+{$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
 function TOmniValue.GetAsArrayItem(const param: TOmniValue): TOmniValue;
 begin
   if not IsArray then
     raise Exception.Create('TOmniValue does not contain an array');
   Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItem }
+{$IFEND}
+
+function TOmniValue.GetAsArrayItemOV(const param: TOmniValue): TOmniValue;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData)[param];
+end; { TOmniValue.GetAsArrayItemOV }
 
 function TOmniValue.HasArrayItem(idx: integer): boolean;
 begin
@@ -2250,9 +2270,9 @@ begin
   a := 0;
   if a = (a + 1) then begin
     ov := ov.GetAsArrayItem('');
-    ov := ov.GetAsArrayItem(ov);
+    ov := ov.GetAsArrayItemOV(ov);
     ov.SetAsArrayItem('', 0);
-    ov.SetAsArrayItem(ov, 0);
+    ov.SetAsArrayItemOV(ov, 0);
     intf := ov.CastToRecord;
     ov.SetAsRecord(intf);
   end;
@@ -2289,6 +2309,7 @@ begin
   TOmniValueContainer(ovData)[name] := value;
 end; { TOmniValue.SetAsArrayItem }
 
+{$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
 procedure TOmniValue.SetAsArrayItem(const param, value: TOmniValue);
 begin
   if IsEmpty then
@@ -2297,6 +2318,16 @@ begin
     raise Exception.Create('TOmniValue does not contain an array');
   TOmniValueContainer(ovData)[param] := value;
 end; { TOmniValue.SetAsArrayItem }
+{$IFEND}
+
+procedure TOmniValue.SetAsArrayItemOV(const param, value: TOmniValue);
+begin
+  if IsEmpty then
+    SetAsArray(TOmniValueContainer.Create);
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  TOmniValueContainer(ovData)[param] := value;
+end; { TOmniValue.SetAsArrayItemOV }
 
 { TOmniValue.SetAsArrayItem }
 

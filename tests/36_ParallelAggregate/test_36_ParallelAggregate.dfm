@@ -80,7 +80,7 @@ object frmParallelAggregateDemo: TfrmParallelAggregateDemo
     MaxValue = 0
     MinValue = 1
     TabOrder = 2
-    Value = 0
+    Value = 1
   end
   object inpMaxPrime: TSpinEdit
     Left = 136

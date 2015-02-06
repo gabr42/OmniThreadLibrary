@@ -1,7 +1,7 @@
 program app_58_ForVsForEach;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_58_ForVsForEach in 'test_58_ForVsForEach.pas' {frmForVsForEach};
 
 {$R *.res}

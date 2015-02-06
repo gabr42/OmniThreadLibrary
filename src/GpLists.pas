@@ -1949,6 +1949,7 @@ type
   end; { TGpDoublyLinkedListEnumerator }
 
   {$IFDEF Unicode}
+  {$IFNDEF GpLists_LimitedGenerics}
   TGpDoublyLinkedListEnumerator<T:TGpDoublyLinkedListObject> = class
   private
     dlleEnumerator: TGpDoublyLinkedListEnumerator;
@@ -1967,6 +1968,7 @@ type
     constructor Create(dlList: TGpDoublyLinkedList);
     function  GetEnumerator: TGpDoublyLinkedListEnumerator<T>;
   end; { TGpDoublyLinkedListEnumeratorFactory<T> }
+  {$ENDIF ~GpLists_LimitedGenerics}
   {$ENDIF Unicode}
   {$ENDIF GpLists_Enumerators}
 
@@ -2019,9 +2021,11 @@ type
     {$IFDEF GpLists_Enumerators}
     function  GetEnumerator: TGpDoublyLinkedListEnumerator; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$IFDEF Unicode}
+    {$IFNDEF GpLists_LimitedGenerics}
     function EnumerateAs<T: TGpDoublyLinkedListObject>:
       TGpDoublyLinkedListEnumeratorFactory<T>; overload;
-    {$ENDIF}
+    {$ENDIF ~GpLists_LimitedGenerics}
+    {$ENDIF Unicode}
     {$ENDIF GpLists_Enumerators}
     function  Head: TGpDoublyLinkedListObject;
     procedure InsertAfter(existingObject: TGpDoublyLinkedListObject;
@@ -6505,6 +6509,7 @@ begin
 end; { TGpDoublyLinkedListEnumerator.MoveNext }
 
 {$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
 constructor TGpDoublyLinkedListEnumerator<T>.Create(dlList: TGpDoublyLinkedList);
 begin
   inherited Create;
@@ -6538,6 +6543,7 @@ function TGpDoublyLinkedListEnumeratorFactory<T>.GetEnumerator:
 begin
   Result := TGpDoublyLinkedListEnumerator<T>.Create(dllefList);
 end; { TGpDoublyLinkedListEnumeratorFactory<T>.GetEnumerator }
+{$ENDIF ~GpLists_LimitedGenerics}
 {$ENDIF Unicode}
 
 {$ENDIF GpLists_Enumerators}
@@ -6579,10 +6585,12 @@ end; { TGpDoublyLinkedList.CreateInterface }
 
 {$IFDEF GpLists_Enumerators}
 {$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
 function TGpDoublyLinkedList.EnumerateAs<T>: TGpDoublyLinkedListEnumeratorFactory<T>;
 begin
   Result := TGpDoublyLinkedListEnumeratorFactory<T>.Create(Self);
 end; { TGpDoublyLinkedList.EnumerateAs<T> }
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 

@@ -3,9 +3,9 @@ unit test_59_TWaitFor;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  OtlSync, Vcl.Samples.Spin;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, StdCtrls, Spin,
+  OtlCommon, OtlSync, OtlTask, OtlTaskControl;
 
 type
   TfrmTestTWaitFor = class(TForm)
@@ -18,12 +18,15 @@ type
     procedure btnWaitForAnyClick(Sender: TObject);
   private
     FHandles: array of THandle;
+    FTask   : IOmniTaskControl;
     FWaiter : TWaitFor;
     procedure CheckSignalled(low, high: integer; expected: boolean); overload;
     procedure CheckSignalled(idx: integer; expected: boolean); overload;
     procedure CreateEvents(manualReset: boolean);
     procedure DestroyEvents;
     procedure Log(const msg: string);
+    procedure SetHandles(const task: IOmniTask); //asynch
+    procedure SignalEvent(const task: IOmniTask); //asynch
     procedure SignalEventAsync(timeout_ms: cardinal; idx: integer);
     procedure VerifyAwaited(const awaited: array of integer);
     procedure WaitForAll(timeout_ms: cardinal; expectedResult: TWaitFor.TWaitResult;
@@ -36,9 +39,6 @@ var
   frmTestTWaitFor: TfrmTestTWaitFor;
 
 implementation
-
-uses
-  OtlParallel;
 
 {$R *.dfm}
 
@@ -110,16 +110,7 @@ begin
   CreateEvents(false);
 
   Log('Signalling events in background, waiting in foreground');
-  Parallel.Async(
-    procedure
-    var
-      i: integer;
-    begin
-      for i := Low(FHandles) to High(FHandles) do begin
-        SetEvent(FHandles[i]);
-        Sleep(3);
-      end;
-    end);
+  FTask := CreateTask(SetHandles, 'SetHandles').Run;
 
   SetLength(awaited, Length(FHandles));
   FillChar(awaited[0], Length(awaited) * SizeOf(awaited[0]), 0);
@@ -131,7 +122,7 @@ begin
         begin
           if Length(FWaiter.Signalled) > maxAwaited then
             maxAwaited := Length(FWaiter.Signalled);
-          for info in FWaiter.Signalled do
+          for info in FWaiter.Signalled do 
             Inc(awaited[info.Index]);
         end;
       waTimeout:
@@ -147,6 +138,9 @@ begin
   DestroyEvents;
 
   Log('All done');
+  
+  FTask.Terminate;
+  FTask := nil;
 end;
 
 procedure TfrmTestTWaitFor.CheckSignalled(low, high: integer; expected: boolean);
@@ -203,13 +197,32 @@ begin
   lbLog.Update;
 end;
 
+procedure TfrmTestTWaitFor.SetHandles(const task: IOmniTask);
+var
+  i: integer;
+begin
+  for i := Low(FHandles) to High(FHandles) do begin
+    SetEvent(FHandles[i]);
+    Sleep(3);
+  end;
+end;
+
+procedure TfrmTestTWaitFor.SignalEvent(const task: IOmniTask);
+var
+  ov: TOmniValue;
+begin
+  Sleep(task.Param[0]);
+  ov := task.Param[1];
+  SetEvent(FHandles[ov.AsInteger]);
+end;
+
 procedure TfrmTestTWaitFor.SignalEventAsync(timeout_ms: cardinal; idx: integer);
 begin
-  Parallel.Async(
-    procedure begin
-      Sleep(timeout_ms);
-      SetEvent(FHandles[idx]);
-    end);
+  CreateTask(SignalEvent, 'SignalEvent')
+    .SetParameter(timeout_ms)
+    .SetParameter(idx)
+    .Unobserved
+    .Run;
 end;
 
 procedure TfrmTestTWaitFor.VerifyAwaited(const awaited: array of integer);

@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-01-22
-   Version           : 1.45
+   Last modification : 2015-02-06
+   Version           : 1.45a
 </pre>*)(*
    History:
+     1.45a: 2015-02-06
+       - Compiles with D2007.
      1.45: 2015-01-22
        - Added Ternary<T> record for generic IFF operations.
      1.44: 2014-05-19
@@ -1779,7 +1781,7 @@ end; { TGpBuffer.GetAsString }
 function TGpBuffer.GetByteVal(idx: integer): byte;
 begin
   Assert((idx >= 0) and (idx < Size));
-  Result := PByte(Value)[idx];
+  Result := PByte(NativeUInt(Value) + idx)^;
 end; { TGpBuffer.GetByteVal }
 
 function TGpBuffer.GetSize: integer;
@@ -1816,7 +1818,7 @@ end; { TGpBuffer.SetAsString }
 procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
 begin
   Assert((idx >= 0) and (idx < Size));
-  PByte(Value)[idx] := value;
+  PByte(NativeUInt(Value) + idx)^ := value;
 end; { TGpBuffer.SetByteVal }
 
 { TGpInterfacedPersistent }

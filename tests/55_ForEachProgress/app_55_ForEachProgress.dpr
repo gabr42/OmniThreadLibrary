@@ -1,7 +1,7 @@
 program app_55_ForEachProgress;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_55_ForEachProgress in 'test_55_ForEachProgress.pas' {frmForEachWithProgressBar};
 
 {$R *.res}

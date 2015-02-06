@@ -105,7 +105,7 @@ begin
   if workItem.IsExceptional then
     ShowMessage('Failed to retrieve data. ' + workItem.FatalException.Message)
   else begin
-    FDataSet := workItem.Result.ToObject<TClientDataSet>;
+    FDataSet := workItem.Result.AsObject as TClientDataSet;
     DataSource1.DataSet := FDataSet;
   end;
 end;
