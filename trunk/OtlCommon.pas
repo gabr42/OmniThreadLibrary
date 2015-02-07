@@ -277,7 +277,7 @@ type
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
-    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload 
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     function  GetAsArrayItem(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     //GetAsArrayItemOV is used in D2007 instead
     {$IFEND}
@@ -2275,6 +2275,10 @@ begin
     ov.SetAsArrayItemOV(ov, 0);
     intf := ov.CastToRecord;
     ov.SetAsRecord(intf);
+    {$IF CompilerVersion >= 19}
+    ov := ov.GetAsArrayItem(ov);
+    ov.SetAsArrayItem(ov, 0);
+    {$IFEND}
   end;
 end; { TOmniValue._RemoveWarnings }
 

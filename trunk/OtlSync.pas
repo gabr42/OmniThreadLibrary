@@ -347,7 +347,6 @@ type
     FResourceCount   : IOmniResourceCount;
     FSignal          : TDSiEventHandle;
     FSignalledHandles: THandles;
-    FWaitAll         : boolean;
     FWaitHandles     : TGpInt64ObjectList;
     FWaitMode        : TWaitMode; // for testing
   strict protected
@@ -1401,7 +1400,9 @@ end; { WaitForCallback }
 function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
 begin
   Result := winResult;
-  if (winResult >= WAIT_OBJECT_0) and (winResult < (WAIT_OBJECT_0 + Length(FHandles))) then begin
+  if {(winResult >= WAIT_OBJECT_0) and }
+     (winResult < (WAIT_OBJECT_0 + cardinal(Length(FHandles)))) then
+  begin
     SetLength(FSignalledHandles, 1);
     FSignalledHandles[0].Index := winResult - WAIT_OBJECT_0;
     Result := WAIT_OBJECT_0;

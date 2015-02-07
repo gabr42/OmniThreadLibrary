@@ -1,7 +1,7 @@
 program app_60_Map;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_60_Map in 'test_60_Map.pas' {frmTestParallelMap};
 
 {$R *.res}
