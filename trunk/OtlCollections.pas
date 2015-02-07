@@ -208,6 +208,11 @@ type
 
   PInterface = ^IInterface;
 
+{$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
+  //compiler requires it to be public
+  function Clamp(value: integer): integer;
+{$ENDIF}{$ENDIF}{$ENDIF}
+
 implementation
 
 uses
