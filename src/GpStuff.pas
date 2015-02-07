@@ -1781,7 +1781,7 @@ end; { TGpBuffer.GetAsString }
 function TGpBuffer.GetByteVal(idx: integer): byte;
 begin
   Assert((idx >= 0) and (idx < Size));
-  Result := PByte(NativeUInt(Value) + idx)^;
+  Result := PByte(NativeUInt(Value) + NativeUInt(idx))^;
 end; { TGpBuffer.GetByteVal }
 
 function TGpBuffer.GetSize: integer;
@@ -1818,7 +1818,7 @@ end; { TGpBuffer.SetAsString }
 procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
 begin
   Assert((idx >= 0) and (idx < Size));
-  PByte(NativeUInt(Value) + idx)^ := value;
+  PByte(NativeUInt(Value) + NativeUInt(idx))^ := value;
 end; { TGpBuffer.SetByteVal }
 
 { TGpInterfacedPersistent }

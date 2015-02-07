@@ -3052,6 +3052,7 @@ const
 
     // Check that the code is not doing something extremely stupid
     procedure Validate(folder: string);
+    {$IFDEF DSiHasTPath}
     var
       fullPath : string;
       p        : integer;
@@ -3059,6 +3060,7 @@ const
       pathRoot : string;
       sysRoot  : string;
       winFolder: string;
+    {$ENDIF}
     begin
       folder := Trim(folder);
 
