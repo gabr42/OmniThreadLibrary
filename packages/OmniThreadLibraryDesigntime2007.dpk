@@ -1,4 +1,4 @@
-package OmniThreadLibraryDesigntime;
+package OmniThreadLibraryDesigntime2007;
 
 {$R *.res}
 {$ALIGN 8}
@@ -30,7 +30,7 @@ requires
   rtl,
   vcl,
   vclx,
-  OmniThreadLibraryRuntime;
+  OmniThreadLibraryRuntime2007;
 
 contains
   OtlRegister in '..\OtlRegister.pas';

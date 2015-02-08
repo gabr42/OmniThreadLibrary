@@ -1,0 +1,44 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{36c4368c-5c36-4ea5-beb7-0bbc10ba4bf7}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Projects Include="OmniThreadLibraryDesigntime2007.dproj" />
+    <Projects Include="OmniThreadLibraryRuntime2007.dproj" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Default.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+<BorlandProject xmlns=""><Default.Personality></Default.Personality></BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Target Name="OmniThreadLibraryRuntime2007">
+    <MSBuild Projects="OmniThreadLibraryRuntime2007.dproj" Targets="" />
+  </Target>
+  <Target Name="OmniThreadLibraryRuntime2007:Clean">
+    <MSBuild Projects="OmniThreadLibraryRuntime2007.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="OmniThreadLibraryRuntime2007:Make">
+    <MSBuild Projects="OmniThreadLibraryRuntime2007.dproj" Targets="Make" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime2007">
+    <MSBuild Projects="OmniThreadLibraryDesigntime2007.dproj" Targets="" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime2007:Clean">
+    <MSBuild Projects="OmniThreadLibraryDesigntime2007.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="OmniThreadLibraryDesigntime2007:Make">
+    <MSBuild Projects="OmniThreadLibraryDesigntime2007.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Build">
+    <CallTarget Targets="OmniThreadLibraryRuntime2007;OmniThreadLibraryDesigntime2007" />
+  </Target>
+  <Target Name="Clean">
+    <CallTarget Targets="OmniThreadLibraryRuntime2007:Clean;OmniThreadLibraryDesigntime2007:Clean" />
+  </Target>
+  <Target Name="Make">
+    <CallTarget Targets="OmniThreadLibraryRuntime2007:Make;OmniThreadLibraryDesigntime2007:Make" />
+  </Target>
+  <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
+</Project>
