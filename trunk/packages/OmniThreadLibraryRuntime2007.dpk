@@ -1,4 +1,4 @@
-package OmniThreadLibraryRuntime;
+package OmniThreadLibraryRuntime2007;
 
 {$R *.res}
 {$ALIGN 8}
