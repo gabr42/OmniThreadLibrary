@@ -21,7 +21,6 @@
   if %c%.==1. (
     for %%b in (*.dpr) do (
       if %%~xb==.dpr (  
-rem        dcc32 /b /u..\..;..\..\src;..\..\fastmm /i..\.. %%b >nul 2>nul
         dcc32 /b /u..\..;..\..\src;..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml %%b >nul 2>nul
         if errorlevel 1 (
           echo %2: *** ERROR *** 
