@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-02-03
-///   Version           : 1.36
+///   Last modification : 2015-02-09
+///   Version           : 1.37
 ///</para><para>
 ///   History:
+///     1.37: 2015-02-09
+///       - Added writer for TOmniExecutable.Delegate.
 ///     1.36: 2015-02-03
 ///       - Type of TOmniValue data is now an external type - TOmniValueDataType. That
 ///         way causes less internal errors in the compiler.
@@ -688,6 +690,7 @@ type
   strict private
     {$IFDEF OTL_Anonymous}
     oeDelegate: TProc;
+    procedure SetAnonDelegate(const value: TProc); inline;
     function  GetDelegate: TProc; inline;
     {$ENDIF OTL_Anonymous}
   strict private
@@ -721,7 +724,7 @@ type
     class operator Implicit(const a: TOmniExecutable): TProc; inline;
     class operator Implicit(const a: TProc): TOmniExecutable; inline;
     procedure SetDelegate(const source);
-    property Delegate: TProc read GetDelegate;
+    property Delegate: TProc read GetDelegate write SetAnonDelegate;
     {$ENDIF OTL_Anonymous}
   end; { TOmniExecutable }
 
@@ -3325,6 +3328,12 @@ begin
   CheckKind(oekDelegate);
   Result := oeDelegate;
 end; { TOmniExecutable.GetDelegate }
+
+procedure TOmniExecutable.SetAnonDelegate(const value: TProc);
+begin
+  oeDelegate := value;
+  oeKind := oekDelegate;
+end; { TOmniExecutable.SetAnonDelegate }
 
 procedure TOmniExecutable.SetDelegate(const source);
 begin
