@@ -674,6 +674,8 @@ type
     property TimerID: integer read ottiTimerID write ottiTimerID;
   end; { TOmniTaskTimerInfo }
 
+  TOmniTaskControl = class;
+
   TOmniTaskExecutor = class
   strict private type
     TOmniMessageInfo = record
@@ -708,11 +710,12 @@ type
     oteMethodHash        : TGpStringObjectHash;
     oteMsgInfo           : TOmniMessageInfo;
     oteOptions           : TOmniTaskControlOptions;
+    oteOwner_ref         : TOmniTaskControl;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : TGpInt64List;
     oteTerminating       : boolean;
-    oteTimers            : TGpInt64ObjectList; 
+    oteTimers            : TGpInt64ObjectList;
     oteWakeMask          : DWORD;
     oteWaitHandlesGen    : int64;
     oteWaitObjectList    : TOmniWaitObjectList;
@@ -760,11 +763,11 @@ type
     function  TimeUntilNextTimer_ms: cardinal; virtual;
     function  WaitForEvent(msgInfo: TOmniMessageInfo; timeout_ms: cardinal): cardinal; virtual;
   public
-    constructor Create(const workerIntf: IOmniWorker); overload;
-    constructor Create(method: TOmniTaskMethod); overload;
-    constructor Create(proc: TOmniTaskProcedure); overload;
+    constructor Create(owner_ref: TOmniTaskControl; const workerIntf: IOmniWorker); overload;
+    constructor Create(owner_ref: TOmniTaskControl; method: TOmniTaskMethod); overload;
+    constructor Create(owner_ref: TOmniTaskControl; proc: TOmniTaskProcedure); overload;
     {$IFDEF OTL_Anonymous}
-    constructor Create(func: TOmniTaskDelegate); overload;
+    constructor Create(owner_ref: TOmniTaskControl; func: TOmniTaskDelegate); overload;
     {$ENDIF OTL_Anonymous}
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
@@ -860,12 +863,19 @@ type
     property Task: IOmniTask read otTask;
   end; { TOmniThread }
 
+  TOmniTaskControlInternalDebugFlag = (dfLogDispatch);
+  TOmniTaskControlInternalDebugFlags = set of TOmniTaskControlInternalDebugFlag;
+
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
+    function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
     function  GetTerminatedEvent: THandle;
+    procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
   //
     function  FilterMessage(const msg: TOmniMessage): boolean;
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
+    property DebugFlags: TOmniTaskControlInternalDebugFlags read GetDebugFlags
+      write SetDebugFlags;
     property TerminatedEvent: THandle read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
@@ -875,6 +885,7 @@ type
     otcOnTerminatedSimple  : TOmniOnTerminatedFunctionSimple;
   {$ENDIF OTL_Anonymous}
   strict private
+    otcDebugFlags          : TOmniTaskControlInternalDebugFlags;
     otcDelayedTerminate    : boolean;
     otcDestroyLock         : boolean;
     otcEventMonitor        : TObject{TOmniEventMonitor};
@@ -896,7 +907,9 @@ type
     function  CreateTask: IOmniTask;
     procedure DestroyMonitor;
     procedure EnsureCommChannel; inline;
+    function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
     procedure Initialize(const taskName: string);
+    procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
   protected
     function  FilterMessage(const msg: TOmniMessage): boolean;
     procedure ForwardTaskMessage(const msg: TOmniMessage);
@@ -926,6 +939,9 @@ type
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl; overload;
     function  OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
+  public //not really for public consumption
+    property DebugFlags: TOmniTaskControlInternalDebugFlags read GetDebugFlags write
+      SetDebugFlags;
   public
     constructor Create(const worker: IOmniWorker; const taskName: string); overload;
     constructor Create(worker: TOmniTaskMethod; const taskName: string); overload;
@@ -1594,31 +1610,35 @@ end; { TOmniTaskExecutor.TOmniMessageInfo.AsString }
 
 { TOmniTaskExecutor }
 
-constructor TOmniTaskExecutor.Create(const workerIntf: IOmniWorker);
+constructor TOmniTaskExecutor.Create(owner_ref: TOmniTaskControl; const workerIntf: IOmniWorker);
 begin
+  oteOwner_ref := owner_ref;
   oteExecutorType := etWorker;
   oteWorkerIntf := workerIntf;
   workerIntf.SetExecutor(Self);
   Initialize;
 end; { TOmniTaskExecutor.Create }
 
-constructor TOmniTaskExecutor.Create(method: TOmniTaskMethod);
+constructor TOmniTaskExecutor.Create(owner_ref: TOmniTaskControl; method: TOmniTaskMethod);
 begin
+  oteOwner_ref := owner_ref;
   oteExecutorType := etMethod;
   oteMethod := method;
   Initialize;
 end; { TOmniTaskExecutor.Create }
 
-constructor TOmniTaskExecutor.Create(proc: TOmniTaskProcedure);
+constructor TOmniTaskExecutor.Create(owner_ref: TOmniTaskControl; proc: TOmniTaskProcedure);
 begin
+  oteOwner_ref := owner_ref;
   oteExecutorType := etProcedure;
   oteProc := proc;
   Initialize;
 end; { TOmniTaskExecutor.Create }
 
 {$IFDEF OTL_Anonymous}
-constructor TOmniTaskExecutor.Create(func: TOmniTaskDelegate);
+constructor TOmniTaskExecutor.Create(owner_ref: TOmniTaskControl; func: TOmniTaskDelegate);
 begin
+  oteOwner_ref := owner_ref;
   oteExecutorType := etFunction;
   oteFunc := func;
   Initialize;
@@ -2179,6 +2199,11 @@ begin
     MessageLoopPayload;
 end; { TOmniTaskExecutor.MainMessageLoop }
 
+procedure TOmniTaskExecutor.MessageLoopPayload;
+begin
+  //placeholder that can be overridden
+end; { TOmniTaskExecutor.MessageLoopPayload }
+
 procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
 var
   awaited       : cardinal;
@@ -2202,20 +2227,17 @@ begin
   until false;
 end; { TOmniTaskExecutor.ProcessMessages }
 
-procedure TOmniTaskExecutor.MessageLoopPayload;
-begin
-  //placeholder that can be overridden
-end; { TOmniTaskExecutor.MessageLoopPayload }
-
 procedure TOmniTaskExecutor.ProcessThreadMessages;
 var
   msg: TMsg;
 begin
   while PeekMessage(Msg, 0, 0, 0, PM_REMOVE) and (Msg.Message <> WM_QUIT) do begin
     TranslateMessage(Msg);
+//if msg.Message <> 1026 then
+//OutputDebugString(PChar(Format('Msg: %d', [Msg.Message])));
     DispatchMessage(Msg);
   end;
-end; { TOmniTaskControl.ProcessThreadMessages }
+end; { TOmniTaskExecutor.ProcessThreadMessages }
 
 procedure TOmniTaskExecutor.RaiseInvalidSignature(const methodName: string);
 begin
@@ -2416,26 +2438,26 @@ end; { TOmniTaskExecutor.WaitForEvent }
 
 constructor TOmniTaskControl.Create(const worker: IOmniWorker; const taskName: string);
 begin
-  otcExecutor := TOmniTaskExecutor.Create(worker);
+  otcExecutor := TOmniTaskExecutor.Create(Self, worker);
   Initialize(taskName);
 end; { TOmniTaskControl.Create }
 
 constructor TOmniTaskControl.Create(worker: TOmniTaskMethod; const taskName: string);
 begin
-  otcExecutor := TOmniTaskExecutor.Create(worker);
+  otcExecutor := TOmniTaskExecutor.Create(Self, worker);
   Initialize(taskName);
 end; { TOmniTaskControl.Create }
 
 constructor TOmniTaskControl.Create(worker: TOmniTaskProcedure; const taskName: string);
 begin
-  otcExecutor := TOmniTaskExecutor.Create(worker);
+  otcExecutor := TOmniTaskExecutor.Create(Self, worker);
   Initialize(taskName);
 end; { TOmniTaskControl.Create }
 
 {$IFDEF OTL_Anonymous}
 constructor TOmniTaskControl.Create(worker: TOmniTaskDelegate; const taskName: string);
 begin
-  otcExecutor := TOmniTaskExecutor.Create(worker);
+  otcExecutor := TOmniTaskExecutor.Create(Self, worker);
   Initialize(taskName);
 end; { TOmniTaskControl.Create }
 {$ENDIF OTL_Anonymous}
@@ -2630,6 +2652,11 @@ begin
   EnsureCommChannel;
   Result := otcSharedInfo.CommChannel.Endpoint1;
 end; { TOmniTaskControl.GetComm }
+
+function TOmniTaskControl.GetDebugFlags: TOmniTaskControlInternalDebugFlags;
+begin
+  Result := otcDebugFlags;
+end; { TOmniTaskControl.GetDebugFlags }
 
 function TOmniTaskControl.GetExitCode: integer;
 begin
@@ -2963,6 +2990,11 @@ begin
   (otcOwningPool as IOmniThreadPoolScheduler).Schedule(CreateTask);
   Result := Self;
 end; { TOmniTaskControl.Schedule }
+
+procedure TOmniTaskControl.SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
+begin
+  otcDebugFlags := value;
+end; { TOmniTaskControl.SetDebugFlags }
 
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
