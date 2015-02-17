@@ -1,5 +1,3 @@
-TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
-
 - New features:
   - Implemented simple and fast Parallel.&For which supports only integer ranges.
   - Implemented Parallel.Map.
@@ -19,6 +17,8 @@ TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
     be used for processing.
     Example: If NumTasks(-2) is used when process has access to 8 cores,
     6 of them (8 - 2) will be used to run the task.  
+  - Removed project groups.
+  - Tested with 2007-XE7.
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload
@@ -31,6 +31,7 @@ TODO: TOmniParallelSimpleLoop.CancelWith is not implemented
   - 58_ForVsForEach
   - 59_TWaitFor
   - 60_Map
+  - 61_CollectionToArray
 
 3.03a: 2013-10-21
 - Bug fixes:
