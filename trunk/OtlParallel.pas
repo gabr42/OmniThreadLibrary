@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-02-04
-///   Version           : 1.38
+///   Last modification : 2015-02-17
+///   Version           : 1.39
 ///</para><para>
 ///   History:
+///     1.39: 2015-02-17
+///       - Corrected Parallel.For execution for negative steps.
+///       - Implemented Parallel.For.CancelWith.
 ///     1.38: 2015-02-04
 ///       - NumTasks parameter can be negative. In that case, specified number of cores
 ///         will be reserved for other purposes and all other will be used for processing.
@@ -796,6 +799,7 @@ type
     end;
     TTaskDelegate = reference to procedure (const task: IOmniTask; taskIndex: integer);
   strict private
+    FCancelWith         : IOmniCancellationToken;
     FCountStopped       : IOmniResourceCount;
     FFinalizerDelegate  : TOmniSimpleTaskFinalizerTaskDelegate;
     FFirst              : integer;
@@ -2897,12 +2901,6 @@ end; { TOmniDelegateEnumerator }
 
 { TOmniParallelSimpleLoop }
 
-function TOmniParallelSimpleLoop.CancelWith(
-  const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
-begin
-  Result := Self;
-end; { TOmniParallelSimpleLoop.CancelWith }
-
 constructor TOmniParallelSimpleLoop.Create(first, last, step: integer);
 begin
   if step = 0 then
@@ -2921,6 +2919,13 @@ begin
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
   inherited;
 end; { TOmniParallelSimpleLoop.Destroy }
+
+function TOmniParallelSimpleLoop.CancelWith(
+  const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
+begin
+  FCancelWith := token;
+  Result := Self;
+end; { TOmniParallelSimpleLoop.CancelWith }
 
 function TOmniParallelSimpleLoop.CreateForTask(taskIndex: integer;
   const taskDelegate: TTaskDelegate): IOmniTaskControl;
@@ -2982,16 +2987,30 @@ begin
       first := FPartition[taskIndex].LowBound;
       last := FPartition[taskIndex].HighBound;
       step := FStep;
-      if step > 0 then
-        while first <= last do begin
-          loopBody(first);
-          Inc(first, step);
-        end
-      else
-        while first >= last do begin
-          loopBody(first);
-          Inc(first, step);
-        end
+      if step > 0 then begin
+        if assigned(FCancelWith) then
+          while (first <= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(first);
+            Inc(first, step);
+          end
+        else
+          while first <= last do begin
+            loopBody(first);
+            Inc(first, step);
+          end
+      end
+      else begin
+        if assigned(FCancelWith) then
+          while (first >= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(first);
+            Inc(first, step);
+          end
+        else
+          while first >= last do begin
+            loopBody(first);
+            Inc(first, step);
+          end
+      end;
     end);
 end; { TOmniParallelSimpleLoop.Execute }
 
@@ -3007,9 +3026,29 @@ begin
       first := FPartition[taskIndex].LowBound;
       last := FPartition[taskIndex].HighBound;
       step := FStep;
-      while first <= last do begin
-        loopBody(taskIndex, first);
-        Inc(first, step);
+      if step > 0 then begin
+        if assigned(FCancelWith) then
+          while (first <= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(taskIndex, first);
+            Inc(first, step);
+          end
+        else
+          while first <= last do begin
+            loopBody(taskIndex, first);
+            Inc(first, step);
+          end
+      end
+      else begin
+        if assigned(FCancelWith) then
+          while (first >= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(taskIndex, first);
+            Inc(first, step);
+          end
+        else
+          while first >= last do begin
+            loopBody(taskIndex, first);
+            Inc(first, step);
+          end
       end;
     end);
 end; { TOmniParallelSimpleLoop.Execute }
@@ -3026,9 +3065,29 @@ begin
       first := FPartition[taskIndex].LowBound;
       last := FPartition[taskIndex].HighBound;
       step := FStep;
-      while first <= last do begin
-        loopBody(task, taskIndex, first);
-        Inc(first, step);
+      if step > 0 then begin
+        if assigned(FCancelWith) then
+          while (first <= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(task, taskIndex, first);
+            Inc(first, step);
+          end
+        else
+          while first <= last do begin
+            loopBody(task, taskIndex, first);
+            Inc(first, step);
+          end
+      end
+      else begin
+        if assigned(FCancelWith) then
+          while (first >= last) and (not FCancelWith.IsSignalled) do begin
+            loopBody(task, taskIndex, first);
+            Inc(first, step);
+          end
+        else
+          while first >= last do begin
+            loopBody(task, taskIndex, first);
+            Inc(first, step);
+          end
       end;
     end);
 end; { TOmniParallelSimpleLoop.Execute }
