@@ -1,15 +1,18 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2014 Primoz Gabrijelcic
+   (c) 2015 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-02-06
-   Version           : 1.45a
+   Last modification : 2015-02-16
+   Version           : 1.46
 </pre>*)(*
    History:
+     1.46: 2015-02-16
+       - Implemented RoundDownTo function.
+       - RoundUpTo marked as inline.
      1.45a: 2015-02-06
        - Compiles with D2007.
      1.45: 2015-01-22
@@ -384,10 +387,11 @@ function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$
 {$IFDEF Unicode}
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
+
 {$IFDEF GpStuff_Generics}
 type
   Ternary<T> = record
-    class function IFF(condit: boolean; iftrue, iffalse: T): T; static;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+    class function IFF(condit: boolean; iftrue, iffalse: T): T; static;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end;
 {$ENDIF GpStuff_Generics}
 
@@ -431,11 +435,14 @@ procedure DontOptimize(var data);
 function FletcherChecksum(const buffer; size: integer): word;
 
 {$IFDEF GpStuff_NativeInt}
-function RoundUpTo(value: NativeInt; granularity: integer): NativeInt; overload;
+function RoundDownTo(value: NativeInt; granularity: integer): NativeInt; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function RoundUpTo(value: NativeInt; granularity: integer): NativeInt; overload;   {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ELSE}
-function RoundUpTo(value: integer; granularity: integer): integer; overload;
+function RoundDownTo(value: integer; granularity: integer): integer; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function RoundUpTo(value: integer; granularity: integer): integer; overload;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF GpStuff_NativeInt}
-function RoundUpTo(value: pointer; granularity: integer): pointer; overload;
+function RoundDownTo(value: pointer; granularity: integer): pointer; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function RoundUpTo(value: pointer; granularity: integer): pointer; overload;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -1554,20 +1561,37 @@ begin
 end; { FletcherChecksum }
 
 {$IFDEF GpStuff_NativeInt}
-function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+function RoundDownTo(value: NativeInt; granularity: integer): NativeInt;
 {$ELSE}
-function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+function RoundDownTo(value: integer; granularity: integer): integer;
 {$ENDIF GpStuff_NativeInt}
 begin
-  Result := (((value - 1) div granularity) + 1) * granularity;
-end;
+  Result := (value div granularity) * granularity;
+end; { RoundDownTo }
+
+function RoundDownTo(value: pointer; granularity: integer): pointer;
+begin
+  Result := pointer((NativeInt(value) div granularity) * granularity);
+end; { RoundDownTo }
+
+{$IFDEF GpStuff_NativeInt}
+function RoundUpTo(value: NativeInt; granularity: integer): NativeInt;
+{$ELSE}
+function RoundUpTo(value: integer; granularity: integer): integer;
+{$ENDIF GpStuff_NativeInt}
+begin
+  if value = 0 then
+    Result := 0
+  else
+    Result := (((value - 1) div granularity) + 1) * granularity;
+end; { RoundUpTo }
 
 function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
   Result := pointer((((NativeInt(value) - 1) div granularity) + 1) * granularity);
-end;
+end; { RoundUpTo }
 
-{$IFDEF   GpStuff_ValuesEnumerators}
+{$IFDEF GpStuff_ValuesEnumerators}
 constructor TGpDisableHandler.Create(const handler: PMethod);
 const
   CNilMethod: TMethod = (Code: nil; Data: nil);
