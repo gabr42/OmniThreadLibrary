@@ -907,15 +907,14 @@ type
     function  CreateTask: IOmniTask;
     procedure DestroyMonitor;
     procedure EnsureCommChannel; inline;
-    function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
     procedure Initialize(const taskName: string);
-    procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
   protected
     function  FilterMessage(const msg: TOmniMessage): boolean;
     procedure ForwardTaskMessage(const msg: TOmniMessage);
     procedure ForwardTaskTerminated;
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint; inline;
+    function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string; inline;
     function  GetFatalException: Exception;
@@ -928,6 +927,7 @@ type
     function  GetTerminateEvent: THandle;
     function  GetUniqueID: int64; inline;
     function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
+    procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     function  SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskControl;
     procedure SetUserDataVal(const idxData: TOmniValue; const value: TOmniValue);
