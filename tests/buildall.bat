@@ -9,6 +9,7 @@
     popd
   )
 
+  echo All done %DATE%_%TIME%
   goto exit
 
 :compile_one
