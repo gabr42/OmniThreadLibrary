@@ -246,7 +246,6 @@ end;
 
 procedure TfrmTestOtlThreadPool.FormCreate(Sender: TObject);
 begin
-  Environment.Process.Affinity.Count := 1;
   GlobalOmniThreadPool.MonitorWith(OmniTED);
   GlobalOmniThreadPool.MaxExecuting := 2;
   GlobalOmniThreadPool.MaxQueued := 3;
