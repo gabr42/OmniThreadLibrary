@@ -1,2 +1,2 @@
-"C:\Program Files\7-Zip\7z.EXE" a -r OmniThreadLibrary.zip *.pas *.dproj *.dpk *.res *.dfm *.dpr *.dcr *.groupproj *.inc *.ico *.rc *.png
+"C:\Program Files\7-Zip\7z.EXE" a -r OmniThreadLibrary.zip *.pas *.dproj *.dpk *.res *.dfm *.dpr *.dcr *.groupproj *.inc *.ico *.rc *.png *.txt
 "C:\Program Files\7-Zip\7z.EXE" a -r OmniThreadLibrary.zip -x*.dcu fastmm\*.*
