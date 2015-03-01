@@ -30,7 +30,7 @@ Where can I get more information?
 =================================
 
 Home page: http://www.omnithreadlibrary.com/
-Web discussion forum: http://otl.17slon.com/forum/
+Google+ Community: https://plus.google.com/communities/112307748950248514961
 Downloads: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=sharing#list
 Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
 SVN checkout instructions: http://code.google.com/p/omnithreadlibrary/source/checkout
