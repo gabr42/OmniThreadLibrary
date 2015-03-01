@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{88241587-fdfe-4f8e-b2a3-8044d45a3d91}</ProjectGuid>
+    <MainSource>OmniThreadLibraryRuntime2007.dpk</MainSource>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+    <DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documents\RAD Studio\5.0\Bpl\OmniThreadLibraryRuntime2007.bpl</DCC_DependencyCheckOutputName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_DebugInformation>False</DCC_DebugInformation>
+    <DCC_WriteableConstants>True</DCC_WriteableConstants>
+    <DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
+    <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    <DCC_Define>RELEASE</DCC_Define>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <Version>7.0</Version>
+    <DCC_RangeChecking>True</DCC_RangeChecking>
+    <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
+    <DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Delphi.Personality</Borland.Personality>
+    <Borland.ProjectType>Package</Borland.ProjectType>
+    <BorlandProject>
+<BorlandProject><Delphi.Personality><Parameters><Parameters Name="UseLauncher">False</Parameters><Parameters Name="LoadAllSymbols">True</Parameters><Parameters Name="LoadUnspecifiedSymbols">False</Parameters></Parameters><Package_Options><Package_Options Name="ImplicitBuild">True</Package_Options><Package_Options Name="DesigntimeOnly">False</Package_Options><Package_Options Name="RuntimeOnly">True</Package_Options><Package_Options Name="PackageDescription">OmniThreadLibrary runtime</Package_Options></Package_Options><VersionInfo><VersionInfo Name="IncludeVerInfo">True</VersionInfo><VersionInfo Name="AutoIncBuild">False</VersionInfo><VersionInfo Name="MajorVer">1</VersionInfo><VersionInfo Name="MinorVer">0</VersionInfo><VersionInfo Name="Release">0</VersionInfo><VersionInfo Name="Build">0</VersionInfo><VersionInfo Name="Debug">False</VersionInfo><VersionInfo Name="PreRelease">False</VersionInfo><VersionInfo Name="Special">False</VersionInfo><VersionInfo Name="Private">False</VersionInfo><VersionInfo Name="DLL">True</VersionInfo><VersionInfo Name="Locale">1060</VersionInfo><VersionInfo Name="CodePage">1250</VersionInfo></VersionInfo><VersionInfoKeys><VersionInfoKeys Name="CompanyName">Delphi-Si</VersionInfoKeys><VersionInfoKeys Name="FileDescription">Omni Thread Library Runtime</VersionInfoKeys><VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys><VersionInfoKeys Name="InternalName">OTL RT</VersionInfoKeys><VersionInfoKeys Name="LegalCopyright">Copylight ?©2008 Delphi-Si</VersionInfoKeys><VersionInfoKeys Name="LegalTrademarks"></VersionInfoKeys><VersionInfoKeys Name="OriginalFilename">OmniThreadLibraryRuntime</VersionInfoKeys><VersionInfoKeys Name="ProductName">Omni Thread Library</VersionInfoKeys><VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys><VersionInfoKeys Name="Comments"></VersionInfoKeys></VersionInfoKeys><Source><Source Name="MainSource">OmniThreadLibraryRuntime2007.dpk</Source></Source></Delphi.Personality></BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Import Project="$(MSBuildBinPath)\Borland.Delphi.Targets" />
+  <ItemGroup>
+    <DelphiCompile Include="OmniThreadLibraryRuntime2007.dpk">
+      <MainSource>MainSource</MainSource>
+    </DelphiCompile>
+    <DCCReference Include="..\OtlCollections.pas" />
+    <DCCReference Include="..\OtlComm.pas" />
+    <DCCReference Include="..\OtlCommBufferTest.pas" />
+    <DCCReference Include="..\OtlCommon.pas" />
+    <DCCReference Include="..\OtlCommon.Utils.pas" />
+    <DCCReference Include="..\OtlContainerObserver.pas" />
+    <DCCReference Include="..\OtlContainers.pas" />
+    <DCCReference Include="..\OtlEventMonitor.pas" />
+    <DCCReference Include="..\OtlHooks.pas" />
+    <DCCReference Include="..\OtlSync.pas" />
+    <DCCReference Include="..\OtlTask.pas" />
+    <DCCReference Include="..\OtlTaskControl.pas" />
+    <DCCReference Include="..\OtlThreadPool.pas" />
+    <DCCReference Include="..\src\DetailedRTTI.pas" />
+    <DCCReference Include="..\src\DSiWin32.pas" />
+    <DCCReference Include="..\src\GpLists.pas" />
+    <DCCReference Include="..\src\GpStringHash.pas" />
+    <DCCReference Include="..\src\GpStuff.pas" />
+    <DCCReference Include="..\src\HVStringBuilder.pas" />
+    <DCCReference Include="..\src\HVStringData.pas" />
+    <DCCReference Include="rtl.dcp" />
+    <DCCReference Include="vcl.dcp" />
+    <DCCReference Include="vclx.dcp" />
+  </ItemGroup>
+</Project>

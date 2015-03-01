@@ -1,0 +1,86 @@
+OmniThreadLibrary 3.04 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-3.04)
+or as a ZIP archive
+(https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=sharing#list).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, and XE6 onn the Win32 and Win64 platforms. 
+Currently, there are no plans to support older Delphi compilers and .NET. 
+XE2+ support is limited to Windows targets. Firemonkey is currently not 
+supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=sharing#list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions: http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation wiki: http://otl.17slon.com/book/
+Documentation book: http://leanpub.com/omnithreadlibrary
+
+Changes since version 3.04
+===========================
+
+- New features:
+  - Implemented simple and fast Parallel.&For which supports only integer ranges.
+  - Implemented Parallel.Map.
+  - Added overloaded Execute methods to IOmniParallelInitializedLoop and
+    IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
+    to the executor.
+  - Implemented Run overloads that internally call Invoke to start
+    thread worker.
+  - Implemented TOmniValue.HasArrayItem.
+  - Implemented TWaitFor which supports waiting any/all and is not
+    limited to 63 objects.
+  - IOmniTaskControl can wait on any number of comm handles and wait objects.
+    That enables support for >60 tasks in the OtlThreadPool. 
+  - Implemented TOmniBlockingCollection.ToArray<T>.
+  - NumTasks parameter (OtlParallel) can be negative. In that case, specified 
+    number of cores will be reserved for other purposes and all other will 
+    be used for processing.
+    Example: If NumTasks(-2) is used when process has access to 8 cores,
+    6 of them (8 - 2) will be used to run the task.  
+  - Removed project groups.
+  - Tested with 2007-XE7.
+
+- Bug fixes:
+  - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
+  - Creating parameters with the array overload
+    (IOmniTaskControl.SetParameters(['From', 0, 'To', 99])) was not working.
+  - Fixed problems in demos 33_BlockingCollection and 47_TaskConfig.
+
+- New demos:
+  - 55_ForEachProgress: Demonstrates progress bar updating from a ForEach loop.
+  - 56_RunInvoke: Simplified 'run & invoke' low-level API.
+  - 57_For: Simple and fast parallel for.
+  - 58_ForVsForEach: Speed comparison between Parallel.ForEach, Parallel.For, 
+    and TParallel.For (XE7+).
+  - 59_TWaitFor: Demo for the new TWaitFor class.
+  - 60_Map: Demonstrates the new Parallel.Map abstraction.
+  - 61_CollectionToArray: Demonstrates the new TOmniBlockingCollection.ToArray<T>
+    method.
+
+--
+Primoz
+[http://thedelphigeek.com]

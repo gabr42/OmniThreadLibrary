@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{F7C3A2BC-CAF8-4D3B-99B0-0BE877944466}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OmniThreadLibraryRuntimeXE6.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibraryDesigntimeXE6.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OmniThreadLibraryRuntimeXE6">
+        <MSBuild Projects="OmniThreadLibraryRuntimeXE6.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntimeXE6:Clean">
+        <MSBuild Projects="OmniThreadLibraryRuntimeXE6.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntimeXE6:Make">
+        <MSBuild Projects="OmniThreadLibraryRuntimeXE6.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntimeXE6">
+        <MSBuild Projects="OmniThreadLibraryDesigntimeXE6.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntimeXE6:Clean">
+        <MSBuild Projects="OmniThreadLibraryDesigntimeXE6.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntimeXE6:Make">
+        <MSBuild Projects="OmniThreadLibraryDesigntimeXE6.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE6;OmniThreadLibraryDesigntimeXE6"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE6:Clean;OmniThreadLibraryDesigntimeXE6:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE6:Make;OmniThreadLibraryDesigntimeXE6:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

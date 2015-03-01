@@ -1,0 +1,76 @@
+OmniThreadLibrary 1.04 has just been released. It is available via
+SVN (http://omnithreadlibrary.googlecode.com/svn/tags/release-1.04) or
+as a ZIP archive (http://code.google.com/p/omnithreadlibrary/downloads/list).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course  are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, and 2010 
+on the Win32 platform. Currently, there are no plans to support older
+Delphi compilers and .NET.
+
+Where can I get more imformation?
+=================================
+
+Home page: http://otl.17slon.com/
+Web discussion forum: http://otl.17slon.com/forum/
+Downloads: http://code.google.com/p/omnithreadlibrary/downloads/list
+Issue tracker: http://code.google.com/p/omnithreadlibrary/issues/list
+SVN checkout instructions:
+http://code.google.com/p/omnithreadlibrary/source/checkout
+Author's blog: http://thedelphigeek.com
+Author's home page: http://gp.17slon.com
+
+Changes since version 1.03
+==========================
+
+*** COMPATIBILITY ISSUES ***
+  *** Changed semantics in comm event notifications! When you get the
+      'new message' event, read all messages from the queue in a loop!
+  *** Message is passed to the TOmniEventMonitor.OnTaskMessage handler.
+      There's no need to read from Comm queue in the handler.
+  *** Exceptions in tasks are now visible by default. To hide them, use
+      IOmniTaskControl.SilentExceptions. Test 13_Exceptions was improved 
+      to demonstrate this behaviour.
+      
+- Works with Delphi 2010.
+- Default communication queue size reduced to 1000 messages.
+- Support for 'wait and send' in IOmniCommunicationEndpoint.SendWait.
+- Communication subsystem implements observer pattern.
+- WideStrings can be send over the communication channel.
+- New event TOmniEventMonitor.OnTaskUndeliveredMessage is called after the
+  task is terminated for all messages still waiting in the message queue.
+- Implemented automatic event monitor with methods
+  IOmniTaskControl.OnMessage and OnTerminated. Both support 
+  'procedure of object' and 'reference to procedure' parameters.
+- Implemented IOmniTaskControl.Unobserved behaviour modifier.
+- New unit OtlSync contains (old) TOmniCS and IOmniCriticalSection together
+  with (new) TOmniMREW - very simple and extremely fast 
+  multi-reader-exclusive-writer - and atomic CompareAndSwap functions.
+- New unit OtlHooks contains API that can be used by external libraries to
+  hook into OTL thread creation/destruction process and into exception chain.
+- All known bugs fixed.
+- New demos:
+  - 25_WaitableComm: Demo for ReceiveWait and SendWait.
+  - 26_MultiEventMonitor: How to run multiple event monitors in parallel.
+  - 27_RecursiveTree: Parallel tree processing.
+  - 28_Hooks: Demo for the new hook system.
+  - 29_ImplicitEventMonitor: Demo for OnMessage and OnTerminated, named
+    method approach.
+  - 30_AnonymousEventMonitor: Demo for OnMessage and OnTerminated, anonymous
+    method approach.
+
+-- 
+Primoz
+[http://thedelphigeek.com]
