@@ -1,3 +1,4 @@
+3.04: 2015-03-01
 - New features:
   - Implemented simple and fast Parallel.&For which supports only integer ranges.
   - Implemented Parallel.Map.
@@ -25,13 +26,15 @@
     (IOmniTaskControl.SetParameters(['From', 0, 'To', 99])) was not working.
   - Fixed problems in demos 33_BlockingCollection and 47_TaskConfig.
 - New demos:
-  - 55_ForEachProgress
-  - 56_RunInvoke
-  - 57_For
-  - 58_ForVsForEach
-  - 59_TWaitFor
-  - 60_Map
-  - 61_CollectionToArray
+  - 55_ForEachProgress: Demonstrates progress bar updating from a ForEach loop.
+  - 56_RunInvoke: Simplified 'run & invoke' low-level API.
+  - 57_For: Simple and fast parallel for.
+  - 58_ForVsForEach: Speed comparison between Parallel.ForEach, Parallel.For, 
+    and TParallel.For (XE7+).
+  - 59_TWaitFor: Demo for the new TWaitFor class.
+  - 60_Map: Demonstrates the new Parallel.Map abstraction.
+  - 61_CollectionToArray: Demonstrates the new TOmniBlockingCollection.ToArray<T>
+    method.
 
 3.03a: 2013-10-21
 - Bug fixes:
