@@ -3,6 +3,16 @@
 
   if %1.==. goto usage
 
+  dcc64 >nul 2>nul
+  if errorlevel 1 goto no64
+  
+  set hasdcc64=1
+  goto compile
+  
+:no64
+  set hasdcc64=0
+  
+:compile
   for /d %%a in (*) do (
     pushd %%a
     call :compile_one %1 %%a
@@ -24,9 +34,17 @@
       if %%~xb==.dpr (  
         dcc32 /b /u..\..;..\..\src;..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml %%b >nul 2>nul
         if errorlevel 1 (
-          echo %2: *** ERROR *** 
+          echo %2[32]: *** ERROR *** 
         ) else (
-          echo %2: OK
+          echo %2[32]: OK
+        )
+        if %hasdcc64%==1 (
+          dcc64 /b /u..\..;..\..\src;..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml %%b >nul 2>nul
+          if errorlevel 1 (
+            echo %2[64]: *** ERROR *** 
+          ) else (
+            echo %2[64]: OK
+          )
         )
       )
     )
