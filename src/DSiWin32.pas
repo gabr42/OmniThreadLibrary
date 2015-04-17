@@ -7,10 +7,15 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2015-01-06
-   Version           : 1.79d
+   Last modification : 2015-04-17
+   Version           : 1.81
 </pre>*)(*
    History:
+     1.81: 2015-04-17
+       - Fixed DSiClassWndProc parameter types for Win64.
+       - DSiClassWndProc catches exceptions in instance's WndProc.
+     1.80: 2015-03-06
+       - Added function DSiGetFocusedWindow.
      1.79d: 2015-01-06
        - Compiles with D2007 and D2009 again.
      1.79c: 2015-01-05
@@ -1268,6 +1273,7 @@ type
   function  DSiForceForegroundWindow(hwnd: THandle;
     restoreFirst: boolean = true): boolean;
   function  DSiGetClassName(hwnd: THandle): string;
+  function  DSiGetFocusedWindow: THandle;
   function  DSiGetProcessWindow(targetProcessID: cardinal): HWND;
   function  DSiGetWindowText(hwnd: THandle): string;
   procedure DSiProcessMessages(hwnd: THandle; waitForWMQuit: boolean = false);
@@ -5607,7 +5613,9 @@ var
   {:Class message dispatcher for the DSiUtilWindow class. Fetches instance's WndProc from
     the window extra data and calls it.
   }
-  function DSiClassWndProc(Window: HWND; Message: cardinal; aWParam, aLParam: longint): longint; stdcall;
+  function DSiClassWndProc(Window: HWND; Message: cardinal;
+    aWParam: {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
+    aLParam: {$IFDEF Unicode}LPARAM{$ELSE}longint{$ENDIF}): longint; stdcall;
   var
     instanceWndProc: TMethod;
     msg            : TMessage;
@@ -5622,11 +5630,16 @@ var
     if Assigned(TWndMethod(instanceWndProc)) then
     begin
       msg.msg := Message;
-      msg.wParam := {$IFDEF Unicode}WPARAM{$ENDIF}(aWParam);
-      msg.lParam := {$IFDEF Unicode}LPARAM{$ENDIF}(aLParam);
+      msg.wParam := aWParam;
+      msg.lParam := aLParam;
       msg.Result := 0;
-      TWndMethod(instanceWndProc)(msg);
-      Result := msg.Result
+      try
+        TWndMethod(instanceWndProc)(msg);
+      except
+        if Assigned(ApplicationHandleException) then
+          ApplicationHandleException(nil);
+      end;
+      Result := msg.Result;
     end
     else
       Result := DefWindowProc(Window, Message, {$IFDEF Unicode}WPARAM{$ENDIF}(aWParam), {$IFDEF Unicode}LPARAM{$ENDIF}(aLParam));
@@ -5863,6 +5876,25 @@ const
     else
       Result := '';
   end; { DSiGetClassName }
+
+  {Lee_Nover}
+  function DSiGetFocusedWindow: THandle;
+  var
+    PId: DWORD;
+    TId: DWORD;
+    Wnd: THandle;
+  begin
+    Result := GetFocus;
+    if Result = 0 then begin
+      Wnd := GetForegroundWindow;
+      if Wnd <> 0 then begin
+        TId := GetWindowThreadProcessId(Wnd, PId);
+        if AttachThreadInput(GetCurrentThreadId, TId, True) then try
+          Result := GetFocus;
+        finally AttachThreadInput(GetCurrentThreadId, TId, False); end;
+      end;
+    end;
+  end; { DSiGetFocusedWindow }
 
 type
   TProcWndInfo = record

@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2014, Primoz Gabrijelcic
+///Copyright (c) 2015, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2014-11-04
-///   Version           : 1.19
+///   Last modification : 2015-04-17
+///   Version           : 1.20
 ///</para><para>
 ///   History:
+///     1.20: 2015-04-17
+///       - TOmniCS.GetLockCount won't crash if Initialize was not called yet.
 ///     1.19: 2014-11-04
 ///       - TWaitForAll renamed to TWaitFor.
 ///       - TWaitFor.Wait renamed to TWaitFor.WaitAll.
@@ -730,7 +732,9 @@ end; { TOmniCS.Acquire }
 
 function TOmniCS.GetLockCount: integer;
 begin
-  Result := ocsSync.LockCount;
+  Result := 0;
+  if Assigned(ocsSync) then
+    Result := ocsSync.LockCount;
 end; { TOmniCS.GetLockCount }
 
 function TOmniCS.GetSyncObj: TSynchroObject;

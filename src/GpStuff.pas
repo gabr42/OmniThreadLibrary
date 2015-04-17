@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-02-16
-   Version           : 1.46
+   Last modification : 2015-04-03
+   Version           : 1.47
 </pre>*)(*
    History:
+     1.47: 2015-04-03
+       - Implemented SplitList function.
      1.46: 2015-02-16
        - Implemented RoundDownTo function.
        - RoundUpTo marked as inline.
@@ -499,6 +501,11 @@ function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: stri
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
+
+function SplitList(const aList: string; delim: char; const quoteChar: string = '';
+  stripQuotes: boolean = true): TArray<string>; overload;
+function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
+  stripQuotes: boolean = true): TArray<string>; overload;
 
 ///Usage:
 ///  with DisableHandler(@@cbDisableInterface.OnClick) do begin
@@ -1403,6 +1410,62 @@ begin
   end;
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
+
+function SplitList(const aList: string; delim: char; const quoteChar: string = '';
+  stripQuotes: boolean = true): TArray<string>;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+begin
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    SetLength(Result, High(delimiters) - Low(delimiters));
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+      else
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+    end;
+  end;
+end; { SplitList }
+
+function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
+  stripQuotes: boolean = true): TArray<string>;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+begin
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    SetLength(Result, High(delimiters) - Low(delimiters));
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+      else
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+    end;
+  end;
+end; { SplitList }
 
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
   enumSubfolders: boolean; maxEnumDepth: integer; ignoreDottedFolders: boolean): IGpStringValueEnumeratorFactory;

@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-02-09
-///   Version           : 1.37
+///   Last modification : 2015-04-17
+///   Version           : 1.37a
 ///</para><para>
 ///   History:
+///     1.37a: 2015-04-17
+///       - Added vtWideChar and vtPWideChar handling to TOmniValue.Create and .CreateNamed.
 ///     1.37: 2015-02-09
 ///       - Added writer for TOmniExecutable.Delegate.
 ///     1.36: 2015-02-03
@@ -1606,11 +1608,13 @@ begin
         vtInteger:       ovc.Add(VInteger);
         vtBoolean:       ovc.Add(VBoolean);
         vtChar:          ovc.Add(string(VChar));
+        vtWideChar:      ovc.Add(string(VWideChar));
         vtExtended:      ovc.Add(VExtended^);
+        vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
         vtString:        ovc.Add(string(VString^));
         vtPointer:       ovc.Add(VPointer);
         vtPChar:         ovc.Add(string(StrPasA(VPChar)));
-        vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
+        vtPWideChar:     ovc.Add(string(StrPas(VPWideChar)));
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
         vtObject:        ovc.Add(VObject);
@@ -1642,10 +1646,12 @@ begin
     with values[i] do begin
       if not Odd(i) then
         case VType of
-          vtChar:          name := string(VChar);
-          vtString:        name := string(VString^);
-          vtPChar:         name := string(StrPasA(VPChar));
           vtAnsiString:    name := string(VAnsiString);
+          vtString:        name := string(VString^);
+          vtChar:          name := string(VChar);
+          vtWideChar:      name := string(VWideChar);
+          vtPChar:         name := string(StrPasA(VPChar));
+          vtPWideChar:     name := string(StrPas(VPWideChar));
           vtVariant:       name := string(VVariant^);
           vtWideString:    name := WideString(VWideString);
           {$IFDEF UNICODE}
@@ -1659,11 +1665,13 @@ begin
           vtInteger:       ovc.Add(VInteger, name);
           vtBoolean:       ovc.Add(VBoolean, name);
           vtChar:          ovc.Add(string(VChar), name);
+          vtWideChar:      ovc.Add(VWideChar, name);
           vtExtended:      ovc.Add(VExtended^, name);
+          vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtString:        ovc.Add(string(VString^), name);
           vtPointer:       ovc.Add(VPointer, name);
           vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
-          vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
+          vtPWideChar:     ovc.Add(string(StrPas(VPWideChar)), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
           vtVariant:       ovc.Add(VVariant^, name);
           vtObject:        ovc.Add(VObject, name);
@@ -2032,7 +2040,7 @@ function TOmniValue.CastToRecord: IOmniAutoDestroyObject;
 begin
   case ovType of
     ovtRecord: Result := IOmniAutoDestroyObject(ovIntf);
-    else raise Exception.Create('TOmniValue cannot be converted to string');
+    else raise Exception.Create('TOmniValue cannot be converted to record');
   end;
 end; { TOmniValue.CastToRecord }
 
