@@ -16,6 +16,8 @@ Support is provided through the [Google+ community](https://plus.google.com/comm
 
 ### Where can I get more information?
 
+Snapshot of the latest release (3.04) can be downloaded [here](https://docs.google.com/uc?id=0BwqVlLNTK4OxRmJBUjkwVHAyMms&export=download).
+
 There's a book (work in progress): [Parallel Programming with OmniThreadLibrary](https://leanpub.com/omnithreadlibrary).
 
 Some recorder webinars are available: http://www.omnithreadlibrary.com/webinars.htm
