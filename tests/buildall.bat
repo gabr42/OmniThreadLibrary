@@ -64,3 +64,4 @@
 
 :exit
   set c=
+  set hasdcc64=
