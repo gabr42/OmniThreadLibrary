@@ -23,7 +23,6 @@ uses
   SmokeTest in 'SmokeTest.pas',
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
-  OtlCollections in '..\OtlCollections.pas',
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',

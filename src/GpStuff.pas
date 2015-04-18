@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-04-03
-   Version           : 1.47
+   Last modification : 2015-04-10
+   Version           : 1.48
 </pre>*)(*
    History:
+     1.48: 2015-04-10
+       - Implemented AddToList function.
      1.47: 2015-04-03
        - Implemented SplitList function.
      1.46: 2015-02-16
@@ -170,6 +172,7 @@ uses
   {$IFEND}
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
+    {$DEFINE GpStuff_TArrayOfT}
   {$IFEND}
   {$IF CompilerVersion >= 22} //XE
     {$DEFINE GpStuff_RegEx}
@@ -502,10 +505,14 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
 
+{$IFDEF GpStuff_TArrayOfT}
 function SplitList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
 function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
+{$ENDIF GpStuff_TArrayOfT}
+
+function AddToList(const aList, delim, newElement: string): string;
 
 ///Usage:
 ///  with DisableHandler(@@cbDisableInterface.OnClick) do begin
@@ -1411,6 +1418,7 @@ begin
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
 
+{$IFDEF GpStuff_TArrayOfT}
 function SplitList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
 var
@@ -1466,6 +1474,15 @@ begin
     end;
   end;
 end; { SplitList }
+{$ENDIF GpStuff_TArrayOfT}
+
+function AddToList(const aList, delim, newElement: string): string;
+begin
+  Result := aList;
+  if Result <> '' then
+    Result := Result + delim;
+  Result := Result + newElement;
+end; { AddToList }
 
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
   enumSubfolders: boolean; maxEnumDepth: integer; ignoreDottedFolders: boolean): IGpStringValueEnumeratorFactory;

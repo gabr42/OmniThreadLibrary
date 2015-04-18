@@ -1,11 +1,17 @@
 @echo off
   if %1.==. goto usage
 
+echo.
+echo Unit tests
+echo.
   pushd unittests
   call buildandrun
   if errorlevel 1 goto exit
   popd
 
+echo.
+echo Tests
+echo.
   pushd tests
   call buildall %1
   popd

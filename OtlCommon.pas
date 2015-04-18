@@ -1067,6 +1067,15 @@ begin
   Result := {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(Str);
 end; { StrPasA }
 
+function StrPasW(const Str: PWideChar): string;
+begin
+  {$IFDEF Unicode}
+  Result := StrPas(Str);
+  {$ELSE}
+  Result := WideCharToString(Str);
+  {$ENDIF}
+end; { StrPasW }
+
 {$IFDEF OTL_Generics}
 { TOmniRecordWrapper }
 
@@ -1614,7 +1623,7 @@ begin
         vtString:        ovc.Add(string(VString^));
         vtPointer:       ovc.Add(VPointer);
         vtPChar:         ovc.Add(string(StrPasA(VPChar)));
-        vtPWideChar:     ovc.Add(string(StrPas(VPWideChar)));
+        vtPWideChar:     ovc.Add(StrPasW(VPWideChar));
         vtCurrency:      ovc.Add(VCurrency^);
         vtVariant:       ovc.Add(VVariant^);
         vtObject:        ovc.Add(VObject);
@@ -1651,7 +1660,7 @@ begin
           vtChar:          name := string(VChar);
           vtWideChar:      name := string(VWideChar);
           vtPChar:         name := string(StrPasA(VPChar));
-          vtPWideChar:     name := string(StrPas(VPWideChar));
+          vtPWideChar:     name := string(StrPasW(VPWideChar));
           vtVariant:       name := string(VVariant^);
           vtWideString:    name := WideString(VWideString);
           {$IFDEF UNICODE}
@@ -1671,7 +1680,7 @@ begin
           vtString:        ovc.Add(string(VString^), name);
           vtPointer:       ovc.Add(VPointer, name);
           vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
-          vtPWideChar:     ovc.Add(string(StrPas(VPWideChar)), name);
+          vtPWideChar:     ovc.Add(StrPasW(VPWideChar), name);
           vtCurrency:      ovc.Add(VCurrency^, name);
           vtVariant:       ovc.Add(VVariant^, name);
           vtObject:        ovc.Add(VObject, name);
