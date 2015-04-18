@@ -8,7 +8,7 @@ Clone the repository with Git or checkout the repository with SVN: https://githu
 
 Download the latest release (3.04): https://docs.google.com/uc?id=0BwqVlLNTK4OxRmJBUjkwVHAyMms&export=download
 
-Download an older release: https://drive.google.com/open?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&authuser=0
+Download an older release: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list
 
 ### How do I use OmniThreadLibrary?
 
