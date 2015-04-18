@@ -7,7 +7,7 @@
 			<AppType>Application</AppType>
 			<FrameworkType>VCL</FrameworkType>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-			<MainSource>GUIRunner.dpr</MainSource>
+			<MainSource>TestRunner.dpr</MainSource>
 			<Platform Condition="'$(Platform)'==''">Win32</Platform>
 			<TargetedPlatforms>3</TargetedPlatforms>
 		</PropertyGroup>
@@ -70,7 +70,7 @@
 			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_UnitSearchPath>..\FastMM;..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_Define>FullDebugMode;DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_Define>xFullDebugMode;DEBUG;$(DCC_Define)</DCC_Define>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 		</PropertyGroup>
@@ -88,6 +88,7 @@
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<DCCReference Include="SmokeTest.pas"/>
 			<DCCReference Include="TestBlockingCollection1.pas"/>
 			<DCCReference Include="TestOtlDataManager1.pas"/>
 			<DCCReference Include="..\OtlCollections.pas"/>
@@ -143,13 +144,62 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\bcboffice2k210.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\bcbofficexp210.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k210.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dclofficexp210.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\AsyncPro_DXE2.bpl">TurboPower Async Professional 5.01 Runtime Package</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxGDIPlusRS16.bpl">ExpressGDI+ Library by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\dxBarDBNavRS16.bpl">ExpressBars DBNavigator by Developer Express Inc.</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl">File C:\Users\Public\Documents\RAD Studio\9.0\Bpl\B305vdXE2.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k160.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp160.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclIPIndyImpl160.bpl">IP Abstraction Indy Implementation Design Time</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlackRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlackRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlueprintRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlueprintRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlueRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinBlueRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinCaramelRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinCaramelRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinCoffeeRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinCoffeeRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDarkRoomRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDarkRoomRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDarkSideRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDarkSideRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDevExpressDarkStyleRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDevExpressDarkStyleRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDevExpressStyleRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinDevExpressStyleRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinFoggyRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinFoggyRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinGlassOceansRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinGlassOceansRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinHighContrastRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinHighContrastRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkiniMaginaryRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkiniMaginaryRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLilianRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLilianRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLiquidSkyRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLiquidSkyRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLondonLiquidSkyRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinLondonLiquidSkyRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinMcSkinRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinMcSkinRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinMoneyTwinsRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinMoneyTwinsRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007BlackRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007BlackRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007BlueRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007BlueRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007GreenRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007GreenRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007PinkRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007PinkRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007SilverRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2007SilverRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010BlackRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010BlackRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010BlueRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010BlueRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010SilverRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinOffice2010SilverRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinPumpkinRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinPumpkinRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSevenClassicRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSevenClassicRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSevenRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSevenRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSharpPlusRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSharpPlusRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSharpRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSharpRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSilverRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSilverRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSpringTimeRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSpringTimeRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinStardustRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinStardustRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSummer2008RS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinSummer2008RS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinTheAsphaltWorldRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinTheAsphaltWorldRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinValentineRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinValentineRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinVS2010RS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinVS2010RS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinWhiteprintRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinWhiteprintRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinXmas2008BlueRS16.bpl">File C:\Program Files (x86)\DevExpress VCL\Library\RS16\dxSkinXmas2008BlueRS16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\OmniThreadLibraryDesigntimeXE2.bpl">OmniThreadLibrary designtime</Excluded_Packages>
 					</Excluded_Packages>
 					<Source>
-						<Source Name="MainSource">GUIRunner.dpr</Source>
+						<Source Name="MainSource">TestRunner.dpr</Source>
 					</Source>
 				</Delphi.Personality>
 				<Platforms>

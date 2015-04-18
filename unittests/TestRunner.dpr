@@ -1,4 +1,4 @@
-program GUIRunner;
+program TestRunner;
 {
 
   Delphi DUnit Test Project
@@ -20,6 +20,7 @@ uses
   TestFramework,
   GUITestRunner,
   TextTestRunner,
+  SmokeTest in 'SmokeTest.pas',
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
   OtlCollections in '..\OtlCollections.pas',
