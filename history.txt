@@ -2,8 +2,10 @@
   - DSiWin32
     - Fixed DSiClassWndProc parameter types for Win64.
     - DSiClassWndProc catches exceptions in instance's WndProc.
+    - Fixed Affinity functions to work with up to 64 cores in 64-bit mode.
   - Added vtWideChar and vtPWideChar handling to TOmniValue.Create and .CreateNamed.
   - TOmniCS.GetLockCount won't crash if Initialize was not called yet.
+  - Fixed Affinity functions in Environment to work with up to 64 cores in 64-bit mode.
 
 3.04: 2015-03-01
 - New features:

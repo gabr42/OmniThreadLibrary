@@ -7,10 +7,13 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2015-04-17
-   Version           : 1.81
+   Last modification : 2015-04-24
+   Version           : 1.82
 </pre>*)(*
    History:
+     1.82: 2015-04-24
+       - Affinity functions support up to 64 cores in 64-bit mode
+         (previously they were limited to 32 cores).
      1.81: 2015-04-17
        - Fixed DSiClassWndProc parameter types for Win64.
        - DSiClassWndProc catches exceptions in instance's WndProc.
@@ -617,8 +620,9 @@ const
   DSiWinVerKeys: array [boolean] of string = (DSiWinVerKey9x, DSiWinVerKeyNT);
 
   // CPU IDs for the Affinity familiy of functions
-  DSiCPUIDs = '0123456789ABCDEFGHIJKLMNOPQRSTUV';
+  DSiCPUIDs = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$';
 
+const
   // security constants needed in DSiIsAdmin
   SECURITY_NT_AUTHORITY: TSIDIdentifierAuthority = (Value: (0, 0, 0, 0, 0, 5));
   SECURITY_BUILTIN_DOMAIN_RID = $00000020;
@@ -1172,7 +1176,7 @@ type
 
   function  DSiAddAceToDesktop(desktop: HDESK; sid: PSID): boolean;
   function  DSiAddAceToWindowStation(station: HWINSTA; sid: PSID): boolean;
-  function  DSiAffinityMaskToString(affinityMask: DWORD): string;
+  function  DSiAffinityMaskToString(affinityMask: DSiNativeUInt): string;
   function  DSiGetCurrentProcessHandle: THandle;
   function  DSiGetCurrentThreadHandle: THandle;
   function  DSiEnablePrivilege(const privilegeName: string): boolean;
@@ -1197,7 +1201,7 @@ type
     const workDir: string = ''; wait: boolean = false;
     startInfo: PStartupInfo = nil): cardinal; overload;
   function  DSiGetProcessAffinity: string;
-  function  DSiGetProcessAffinityMask: DWORD;
+  function  DSiGetProcessAffinityMask: DSiNativeUInt;
   function  DSiGetProcessID(const processName: string; var processID: DWORD): boolean;
   function  DSiGetProcessMemory(var memoryCounters: TProcessMemoryCounters): boolean;
     overload;
@@ -1213,9 +1217,9 @@ type
   function  DSiGetProcessTimes(process: THandle; var creationTime, exitTime: TDateTime;
     var userTime, kernelTime: int64): boolean; overload;
   function  DSiGetSystemAffinity: string;
-  function  DSiGetSystemAffinityMask: DWORD;
+  function  DSiGetSystemAffinityMask: DSiNativeUInt;
   function  DSiGetThreadAffinity: string;
-  function  DSiGetThreadAffinityMask: DWORD;
+  function  DSiGetThreadAffinityMask: DSiNativeUInt;
   function  DSiGetThreadTime: int64; overload;
   function  DSiGetThreadTime(thread: THandle): int64; overload;
   function  DSiGetThreadTimes(var creationTime: TDateTime; var userTime,
@@ -1240,14 +1244,14 @@ type
     priority: DWORD): boolean;
   function  DSiSetThreadAffinity(affinity: string): string;
   procedure DSiStopImpersonatingUser;
-  function  DSiStringToAffinityMask(affinity: string): DWORD;
+  function  DSiStringToAffinityMask(affinity: string): DSiNativeUInt;
   function  DSiTerminateProcessById(processID: DWORD; closeWindowsFirst: boolean = true;
     maxWait_sec: integer = 10): boolean;
   procedure DSiTrimWorkingSet;
   function  DSiValidateProcessAffinity(affinity: string): string;
-  function  DSiValidateProcessAffinityMask(affinityMask: DWORD): DWORD;
+  function  DSiValidateProcessAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
   function  DSiValidateThreadAffinity(affinity: string): string;
-  function  DSiValidateThreadAffinityMask(affinityMask: DWORD): DWORD;
+  function  DSiValidateThreadAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
   procedure DSiYield;
 
 { Memory }
@@ -4261,16 +4265,16 @@ const
     end;
   end; { DSiAddAceToWindowStation }
 
-  {:Convert affinity mask into a string representation (0..9, A..V).
+  {:Convert affinity mask into a string representation (0..9, A..Z, a..z, @, $).
     @author  gabr
     @since   2003-11-14
   }        
-  function DSiAffinityMaskToString(affinityMask: DWORD): string;
+  function DSiAffinityMaskToString(affinityMask: DSiNativeUInt): string;
   var
     idxID: integer;
   begin
     Result := '';
-    for idxID := 1 to 32 do begin
+    for idxID := 1 to Length(DSiCPUIDs) do begin
       if Odd(affinityMask) then
         Result := Result + DSiCPUIDs[idxID];
       affinityMask := affinityMask SHR 1;
@@ -4734,17 +4738,14 @@ const
     @author  gabr
     @since   2003-11-14
   }        
-  function DSiGetProcessAffinityMask: DWORD;
+  function DSiGetProcessAffinityMask: DSiNativeUInt;
   var
-    processAffinityMask: DSiNativeUInt;
     systemAffinityMask : DSiNativeUInt;
   begin
     if not DSiIsWinNT then
       Result := 1
-    else begin
-      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, systemAffinityMask);
-      Result := processAffinityMask;
-    end;
+    else
+      GetProcessAffinityMask(GetCurrentProcess, Result, systemAffinityMask);
   end; { DSiGetProcessAffinityMask }
 
   {:Returns memory counters for the current process.
@@ -4955,17 +4956,14 @@ const
     @author  gabr
     @since   2003-11-14
   }
-  function DSiGetSystemAffinityMask: DWORD;
+  function DSiGetSystemAffinityMask: DSiNativeUInt;
   var
     processAffinityMask: DSiNativeUInt;
-    systemAffinityMask : DSiNativeUInt;
   begin
     if not DSiIsWinNT then
       Result := 1
-    else begin
-      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, systemAffinityMask);
-      Result := systemAffinityMask;
-    end;
+    else
+      GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, Result);
   end; { TDSiRegistry.DSiGetSystemAffinityMask }
   
   {:Retrieves affinity mask of the current thread as a list of CPU IDs (0..9,
@@ -4985,7 +4983,7 @@ const
     @author  gabr
     @since   2003-11-14
   }
-  function DSiGetThreadAffinityMask: DWORD;
+  function DSiGetThreadAffinityMask: DSiNativeUInt;
   var
     processAffinityMask: DSiNativeUInt;
     systemAffinityMask : DSiNativeUInt;
@@ -5450,12 +5448,12 @@ const
     @author  gabr
     @since   2003-11-14
   }        
-  function DSiStringToAffinityMask(affinity: string): DWORD;
+  function DSiStringToAffinityMask(affinity: string): DSiNativeUInt;
   var
     idxID: integer;
   begin
     Result := 0;
-    for idxID := 32 downto 1 do begin
+    for idxID := Length(DSiCPUIDs) downto 1 do begin
       Result := Result SHL 1;
       if Pos(DSiCPUIDs[idxID], affinity) > 0 then
         Result := Result OR 1;
@@ -5523,7 +5521,7 @@ const
     @author  gabr
     @since   2003-11-14
   }
-  function DSiValidateProcessAffinityMask(affinityMask: DWORD): DWORD;
+  function DSiValidateProcessAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
   begin
     Result := DSiGetSystemAffinityMask AND affinityMask;
   end; { TDSiRegistry.DSiValidateProcessAffinityMask }
@@ -5539,7 +5537,7 @@ const
                 DSiStringToAffinityMask(affinity)));
   end; { DSiValidateThreadAffinityMask }
 
-  function DSiValidateThreadAffinityMask(affinityMask: DWORD): DWORD;
+  function DSiValidateThreadAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
   begin
     Result := DSiGetProcessAffinityMask AND affinityMask;
   end; { DSiValidateThreadAffinityMask }
@@ -8787,7 +8785,10 @@ begin
   GInterlockedCompareExchange64 := DSiGetProcAddress('kernel.dll', 'InterlockedCompareExchange64');
 end; { DynaLoadAPIs }
 
-initialization
+procedure InitializeGlobals;
+var
+  ch: char;
+begin
   InitializeCriticalSection(GDSiWndHandlerCritSect);
   GTerminateBackgroundTasks := CreateEvent(nil, false, false, nil);
   GDSiWndHandlerCount := 0;
@@ -8798,10 +8799,20 @@ initialization
   GCF_HTML := RegisterClipboardFormat('HTML Format');
   DynaLoadAPIs;
   timeBeginPeriod(1);
-finalization
+  Assert(Length(DSiCPUIDs) = 64);
+end; { InitializeGlobals }
+
+procedure CleanupGlobals;
+begin
   timeEndPeriod(1);
   DSiCloseHandleAndNull(GTerminateBackgroundTasks);
   DeleteCriticalSection(GDSiWndHandlerCritSect);
   DSiUnloadLibrary;
   FreeAndNil(_GLibraryList);
+end; { CleanupGlobals }
+
+initialization
+  InitializeGlobals;
+finalization
+  CleanupGlobals;
 end.

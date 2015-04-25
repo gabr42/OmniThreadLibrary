@@ -274,7 +274,6 @@ type
     gtTraceRef: boolean;
   protected
     function  GetLogReferences: boolean; stdcall;
-    function  GetRefCount: integer; stdcall;
     function  GetTraceReferences: boolean; stdcall;
     procedure SetLogReferences(const value: boolean); stdcall;
     procedure SetTraceReferences(const value: boolean); stdcall;
@@ -282,6 +281,7 @@ type
     destructor  Destroy; override;
     function  _AddRef: integer; stdcall;
     function  _Release: integer; stdcall;
+    function  GetRefCount: integer; stdcall;
     property LogReferences: boolean read GetLogReferences write SetLogReferences;
     property TraceReferences: boolean read GetTraceReferences write SetTraceReferences;
   end; { TGpTraceable }
