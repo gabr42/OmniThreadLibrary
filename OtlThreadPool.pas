@@ -1298,14 +1298,13 @@ begin
   inherited;
 end; { TOmniThreadPool.Destroy }
 
-/// <returns>True: Normal exit, False: Thread was killed.</returns> 
+/// <returns>True: Normal exit, False: Thread was killed.</returns>
+{$WARN NO_RETVAL OFF}
+// starting with XE, Delphi complains that result is not always assigned
 function TOmniThreadPool.Cancel(taskID: int64): boolean;
 var
   res: TOmniWaitableValue;
 begin
-  {$IF CompilerVersion >= 22} // starting with XE, Delphi complains that result is not always assigned if this line is removed
-  Result := false; // not really used
-  {$IFEND}
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);
@@ -1313,6 +1312,7 @@ begin
     Result := res.Value;
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.Cancel }
+{$WARN NO_RETVAL ON}
 
 procedure TOmniThreadPool.CancelAll;
 var
