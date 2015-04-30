@@ -38,6 +38,6 @@ requires
   OmniThreadLibrary;
 
 contains
-  OtlRegister in '..\..\src\OtlRegister.pas';
+  OtlRegister in '..\..\OtlRegister.pas';
 
 end.

@@ -290,10 +290,6 @@ uses
   GpStringHash;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   IOmniTaskControl = interface;
   TOmniSharedTaskInfo = class;
   
@@ -3500,9 +3496,9 @@ function TOmniSharedTaskInfo.GetCancellationToken: IOmniCancellationToken;
 var
   token: IOmniCancellationToken;
 begin
-  Assert(NativeInt(@ostiCancellationToken) mod SizeOf(pointer) = 0,
+  Assert(TrueNativeInt(@ostiCancellationToken) mod SizeOf(pointer) = 0,
     'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
-  Assert(NativeInt(@token) mod SizeOf(pointer) = 0,
+  Assert(TrueNativeInt(@token) mod SizeOf(pointer) = 0,
     'TOmniSharedTaskInfo.GetCancellationToken: ostiCancellationToken is not 4-aligned!');
   Assert(SizeOf(IOmniCancellationToken) = SizeOf(pointer));
 

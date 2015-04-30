@@ -121,26 +121,24 @@ unit OtlSync;
 interface
 
 uses
-  SysUtils,
-  SyncObjs,
-  Classes,
+  SysUtils, SyncObjs, Classes
   {$IFDEF OTL_Generics}
-  Generics.Defaults,
-  Generics.Collections,
+  , Generics.Defaults
+  , Generics.Collections
   {$ENDIF OTL_Generics}
-  DSiWin32,
   {$IFDEF OTL_ERTTI}
-  RTTI,
+  , RTTI
   {$ENDIF OTL_ERTTI}
-  GpStuff,
-  GpLists;
+{$IFDEF MSWINDOWS}
+  , DSiWin32
+  , GpStuff
+  , GpLists
+{$ELSE}
+  , OtlCommon
+{$ENDIF}
+  ;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-  PNativeInt = PInteger;
-{$IFEND}
-
    TFixedCriticalSection = class(TCriticalSection)
    strict protected
      FDummy: array [0..95] of byte;
@@ -201,21 +199,35 @@ type
   ///   Threadsafe.
   ///</summary>
   ///<since>2009-12-30</since>
-  TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
+  TOmniResourceCount = class( TInterfacedObject, IOmniResourceCount)
   strict private
-    orcAvailable   : TDSiEventHandle;
-    orcHandle      : TDSiEventHandle;
+    orcAvailable   : TEvent;
+    orcHandle      : TEvent;
     orcLock        : TOmniCS;
+{$IFDEF MSWINDOWS}
     orcNumResources: TGp4AlignedInt;
+{$ELSE}
+    orcNumResources: IOmniCounter;
+{$ENDIF}
+
   protected
+    function GetEvent: TEvent;
+{$IFDEF MSWINDOWS}
     function GetHandle: THandle;
+{$ENDIF}
+
   public
     constructor Create(initialCount: cardinal);
     destructor  Destroy; override;
     function  Allocate: cardinal; inline;
     function  Release: cardinal;
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
+
+    property Event: TEvent read GetEvent;
+
+{$IFDEF MSWINDOWS}
     property Handle: THandle read GetHandle;
+{$ENDIF}
   end; { TOmniResourceCount }
 
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
@@ -396,7 +408,7 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
-procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
+procedure NInterlockedExchangeAdd(var addend; value: TrueNativeInt);
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 function CAS16(const oldValue, newValue: word; var destination): boolean;
@@ -406,10 +418,10 @@ function CAS32(const oldValue: pointer; newValue: pointer; var destination): boo
 {$ENDIF ~CPUX64}
 function CAS64(const oldData, newData: int64; var destination): boolean; overload;
 
-function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload;
+function CAS(const oldValue, newValue: TrueNativeInt; var destination): boolean; overload;
 function CAS(const oldValue, newValue: pointer; var destination): boolean; overload;
-function CAS(const oldData: pointer; oldReference: NativeInt; newData: pointer;
-  newReference: NativeInt; var destination): boolean; overload;
+function CAS(const oldData: pointer; oldReference: TrueNativeInt; newData: pointer;
+  newReference: TrueNativeInt; var destination): boolean; overload;
 
 {$IFNDEF CPUX64}
 procedure Move64(var Source, Destination); overload;
@@ -418,13 +430,13 @@ procedure Move64(newData: pointer; newReference: cardinal; var Destination); ove
 
 procedure Move128(var Source, Destination);
 procedure MoveDPtr(var Source, Destination); overload;
-procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); overload;
+procedure MoveDPtr(newData: pointer; newReference: TrueNativeInt; var Destination); overload;
 
 ///<summary>Waits on any number of handles.</summary>
 ///<returns>True on success, False on timeout.</returns>
 function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
 
-function GetThreadId: NativeInt;
+function GetThreadId: TrueNativeInt;
 function GetCPUTimeStamp: int64;
 
 var
@@ -541,7 +553,7 @@ asm
   setz  al
 end; { CAS64 }
 
-function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload;
+function CAS(const oldValue, newValue: TrueNativeInt; var destination): boolean; overload;
 asm
 {$IFDEF CPUX64}
   mov   rax, oldValue
@@ -560,8 +572,8 @@ asm
 end; { CAS }
 
 //eighter 8-byte or 16-byte CAS, depending on the platform; destination must be propely aligned (8- or 16-byte)
-function CAS(const oldData: pointer; oldReference: NativeInt; newData: pointer;
-  newReference: NativeInt; var destination): boolean; overload;
+function CAS(const oldData: pointer; oldReference: TrueNativeInt; newData: pointer;
+  newReference: TrueNativeInt; var destination): boolean; overload;
 asm
 {$IFNDEF CPUX64}
   push  edi
@@ -625,7 +637,7 @@ asm
 end; { Move128 }
 
 //eighter 8-byte or 16-byte atomic Move, depending on the platform; destination must be propely aligned (8- or 16-byte)
-procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); overload;
+procedure MoveDPtr(newData: pointer; newReference: TrueNativeInt; var Destination); overload;
 asm
 {$IFNDEF CPUX64}
   movd  xmm0, eax
@@ -670,7 +682,7 @@ asm
 {$ENDIF CPUX64}
 end;
 
-function GetThreadId: NativeInt;
+function GetThreadId: TrueNativeInt;
 //result := GetCurrentThreadId;
 asm
 {$IFNDEF CPUX64}
@@ -691,7 +703,7 @@ asm
 {$ENDIF CPUX64}
 end; { GetCPUTimeStamp }
 
-procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
+procedure NInterlockedExchangeAdd(var addend; value: TrueNativeInt);
 asm
   lock  xadd [addend], value
 end; { NInterlockedExchangeAdd }
@@ -833,58 +845,58 @@ end; { TOmniCancellationToken.Signal }
 
 procedure TOmniMREW.EnterReadLock;
 var
-  currentReference: NativeInt;
+  currentReference: TrueNativeInt;
 begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
-    currentReference := NativeInt(omrewReference) AND NOT 1;
-  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
+    currentReference := TrueNativeInt(omrewReference) AND NOT 1;
+  until CAS(currentReference, currentReference + 2, TrueNativeInt(omrewReference));
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
 var
-  currentReference: NativeInt;
+  currentReference: TrueNativeInt;
 begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
-    currentReference := NativeInt(omrewReference) AND NOT 1;
-  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
+    currentReference := TrueNativeInt(omrewReference) AND NOT 1;
+  until CAS(currentReference, currentReference + 1, TrueNativeInt(omrewReference));
   //Now wait on all readers
   repeat
-  until NativeInt(omrewReference) = 1;
+  until TrueNativeInt(omrewReference) = 1;
 end; { TOmniMREW.EnterWriteLock }
 
 procedure TOmniMREW.ExitReadLock;
 begin
   //Decrease omrewReference
-  NInterlockedExchangeAdd(NativeInt(omrewReference), -2);
+  NInterlockedExchangeAdd(TrueNativeInt(omrewReference), -2);
 end; { TOmniMREW.ExitReadLock }
 
 procedure TOmniMREW.ExitWriteLock;
 begin
-  NativeInt(omrewReference) := 0;
+  TrueNativeInt(omrewReference) := 0;
 end; { TOmniMREW.ExitWriteLock }
 
 function TOmniMREW.TryEnterReadLock: boolean;
 var
-  currentReference: NativeInt;
+  currentReference: TrueNativeInt;
 begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
-  currentReference := NativeInt(omrewReference) AND NOT 1;
-  Result := CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
+  currentReference := TrueNativeInt(omrewReference) AND NOT 1;
+  Result := CAS(currentReference, currentReference + 2, TrueNativeInt(omrewReference));
 end; { TOmniMREW.TryEnterReadLock }
 
 function TOmniMREW.TryEnterWriteLock: boolean;
 var
-  currentReference: NativeInt;
+  currentReference: TrueNativeInt;
 begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
-  currentReference := NativeInt(omrewReference) AND NOT 1;
-  Result := CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
+  currentReference := TrueNativeInt(omrewReference) AND NOT 1;
+  Result := CAS(currentReference, currentReference + 1, TrueNativeInt(omrewReference));
   if Result then
     //Now wait on all readers
     repeat
-    until NativeInt(omrewReference) = 1;
+    until TrueNativeInt(omrewReference) = 1;
 end; { TOmniMREW.TryEnterWriteLock }
 
 { TOmniResourceCount }

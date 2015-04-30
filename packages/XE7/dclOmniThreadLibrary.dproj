@@ -95,7 +95,7 @@
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="vclx.dcp"/>
         <DCCReference Include="OmniThreadLibrary.dcp"/>
-        <DCCReference Include="..\..\src\OtlRegister.pas"/>
+        <DCCReference Include="..\..\OtlRegister.pas"/>
         <None Include="..\..\inc\OtlOptions.inc"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

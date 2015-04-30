@@ -1,4 +1,4 @@
-///<summary>Stuff common to the OmniThreadLibrary project.</summary>
+﻿///<summary>Stuff common to the OmniThreadLibrary project.</summary>
 ///<author>Primoz Gabrijelcic</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -236,6 +236,9 @@ uses
 {$IFNDEF MSWINDOWS}
   , Generics.Collections
 {$ENDIF}
+{$IFDEF POSIX}
+  , Posix.Pthread
+{$ENDIF}
 {$IFDEF OTL_ERTTI}
   , RTTI
 {$ENDIF OTL_ERTTI}
@@ -251,6 +254,15 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
+
+{$if CompilerVersion <= 18.5}
+  TrueNativeInt  = integer; // In D2007, NativeInt is incorrectly defined.
+  TrueNativeUInt = cardinal;
+{$else}
+  TrueNativeInt  = NativeInt;
+  TrueNativeUInt = NativeUInt;
+{$ifend}
+
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
@@ -388,7 +400,9 @@ type
     function  IsRecord: boolean; inline;
     function  IsString: boolean; inline;
     function  IsVariant: boolean; inline;
+{$IFDEF MSWINDOWS}
     function  IsWideString: boolean; inline;
+{$ENDIF}
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
@@ -718,11 +732,13 @@ type
   TOmniProcessMemoryCounters = TProcessMemoryCounters;
 {$ENDIF}
 
+{$IFDEF MSWINDOWS}
   TOmniProcessTimes = record
     CreationTime: TDateTime;
     UserTime    : int64;
     KernelTime  : int64;
   end; { TOmniProcessTimes }
+{$ENDIF}
 
   TOmniProcessPriorityClass = (pcIdle, pcBelowNormal, pcNormal, pcAboveNormal, pcHigh,
     pcRealtime);
@@ -733,14 +749,20 @@ type
     function  GetMemory: TOmniProcessMemoryCounters;
 {$ENDIF}
     function  GetPriorityClass: TOmniProcessPriorityClass;
+
+{$IFDEF MSWINDOWS}
     function  GetTimes: TOmniProcessTimes;
+{$ENDIF}
   //
     property Affinity: IOmniAffinity read GetAffinity;
 {$IFDEF MSWINDOWS}
     property Memory: TOmniProcessMemoryCounters read GetMemory;
 {$ENDIF}
     property PriorityClass: TOmniProcessPriorityClass read GetPriorityClass;
+
+{$IFDEF MSWINDOWS}
     property Times: TOmniProcessTimes read GetTimes;
+{$ENDIF}
   end; { IOmniProcessEnvironment }
 
   IOmniSystemEnvironment = interface ['{9BE1EFE3-4ABB-4C2F-B2A4-B014D0949FEC}']
@@ -751,10 +773,10 @@ type
 
   IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
     function  GetAffinity: IOmniAffinity;
-    function  GetID: cardinal;
+    function  GetID: TThreadId;
   //
     property Affinity: IOmniAffinity read GetAffinity;
-    property ID: cardinal read GetID;
+    property ID: TThreadId read GetID;
   end; { IOmniThreadEnvironment }
 
   IOmniEnvironment = interface ['{4F9594E2-8B88-483C-9616-85B50493406D}']
@@ -1090,7 +1112,9 @@ type
     function  GetMemory: TOmniProcessMemoryCounters;
 {$ENDIF}
     function  GetPriorityClass: TOmniProcessPriorityClass;
+{$IFDEF MSWINDOWS}
     function  GetTimes: TOmniProcessTimes;
+{$ENDIF}
   public
     constructor Create;
     property Affinity: IOmniAffinity read GetAffinity;
@@ -1098,7 +1122,9 @@ type
     property Memory: TOmniProcessMemoryCounters read GetMemory;
 {$ENDIF}
     property PriorityClass: TOmniProcessPriorityClass read GetPriorityClass;
+{$IFDEF MSWINDOWS}
     property Times: TOmniProcessTimes read GetTimes;
+{$ENDIF}
   end; { TOmniProcessEnvironment }
 
   TOmniSystemEnvironment = class(TInterfacedObject, IOmniSystemEnvironment)
@@ -1114,14 +1140,14 @@ type
   TOmniThreadEnvironment = class(TInterfacedObject, IOmniThreadEnvironment)
   strict private
     oteAffinity: IOmniAffinity;
-    oteThreadID: cardinal;
+    oteThreadID: TThreadID;
   protected
     function  GetAffinity: IOmniAffinity;
-    function  GetID: cardinal;
+    function  GetID: TThreadId;
   public
     constructor Create;
     property Affinity: IOmniAffinity read GetAffinity;
-    property ID: cardinal read GetID;
+    property ID: TThreadID read GetID;
   end; { TOmniThreadEnvironment }
 
   TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
@@ -1191,7 +1217,7 @@ end;
 
 function VarToObj(const v: Variant): TObject;
 begin
-  Result := TObject({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(v));
+  Result := TObject( TrueNativeUInt( v))
 end; { VarToObj }
 
 { globals }
@@ -1516,7 +1542,7 @@ procedure TOmniCounter.SetValue(const value: integer);
 begin
   Initialize;
   ocCounter.SetValue(value);
-end; { TOmniCounter.SetValue }
+end;
 
 function TOmniCounter.Take(count: integer): integer;
 begin
@@ -1534,6 +1560,17 @@ constructor TOmniCounterImpl.Create( initialValue: integer);
 begin
   Value := initialValue;
 end; { TOmniCounterImpl.Create }
+
+function TOmniCounterImpl.GetValue: integer;
+begin
+{$IFDEF MSWINDOWS}
+  Result := ocValue;
+{$ELSE}
+  result := TInterlocked.CompareExchange( ocValue, 0, 0)
+{$ENDIF}
+end;
+
+
 
 function TOmniCounterImpl.Decrement: integer;
 begin
@@ -1595,6 +1632,7 @@ begin
     begin
     // ocValue is marked as [Volatile]
     current := TInterlocked.CompareExchange( ocValue, 0, 0);
+  // TODO: On a non-windows platform, is it thread-safe to read an integer annotated with [Volatile]?
     if current <= 0 then break;
     newValue := current - Request;
     if newValue < 0 then
@@ -2182,7 +2220,7 @@ begin
   else if param.IsString then
     Result := HasArrayItem(param.AsString)
   else
-    raise Exception.Create('TOmniValue does not contain an array');
+    raise Exception.Create('TOmniValue contains neither an integer, string nor array');
 end; { TOmniValue.HasArrayItem }
 
 function TOmniValue.GetAsArrayItem(idx: integer): TOmniValue;
@@ -2342,7 +2380,7 @@ function TOmniValue.CastToRecord: IOmniAutoDestroyObject;
 begin
   case ovType of
     ovtRecord: Result := IOmniAutoDestroyObject(ovIntf);
-    else raise Exception.Create('TOmniValue cannot be converted to string');
+    else raise Exception.Create('TOmniValue cannot be converted to record');
   end;
 end; { TOmniValue.CastToRecord }
 
@@ -3378,14 +3416,21 @@ begin
   oaTarget := target;
 end; { TOmniAffinity.Create }
 
+
 function TOmniAffinity.GetAsString: string;
+var
+  i: integer;
 begin
-  TODO
+{$IFDEF MSWINDOWS}
   Result := DSiAffinityMaskToString(Mask);
+{$ELSE}
+  for i := 1 to System.CPUCount do
+    result := result + 'P'
+{$ENDIF}
 end; { TOmniAffinity.GetAsString }
 
 function TOmniAffinity.GetCount: integer;
-  TODO
+{$IFDEF MSWINDOWS}
 var
   affMask: DWORD;
 begin
@@ -3396,10 +3441,14 @@ begin
       Inc(Result);
     affMask := affMask SHR 1;
   end;
-end; { TOmniAffinity.GetCount }
+{$ELSE}
+begin
+  result := System.CPUCount
+{$ENDIF}
+end;
 
 function TOmniAffinity.GetCountPhysical: integer;
-  TODO
+{$IFDEF MSWINDOWS}
 var
   info: TSystemLogicalProcessorInformationArr;
   item: TSystemLogicalProcessorInformation;
@@ -3419,7 +3468,14 @@ begin
       end;
     end;
   end;
-end; { TOmniAffinity.GetCountPhysical }
+end;
+
+{$ELSE}
+begin
+  result := System.CPUCount
+end;
+{$ENDIF}
+
 
 {$IFDEF MSWINDOWS}
 function TOmniAffinity.GetMask: DWORD;
@@ -3438,8 +3494,8 @@ end;
 {$ENDIF}
 
 procedure TOmniAffinity.SetAsString(const value: string);
-  TODO
 begin
+{$IFDEF MSWINDOWS}
   case oaTarget of
     atSystem:
       raise Exception.Create('TOmniAffinity.SetMask: Cannot modify system affinity mask.');
@@ -3448,16 +3504,19 @@ begin
     atThread:
       DSiSetThreadAffinity(value);
   end;
-end; { TOmniAffinity.SetAsString }
+{$ENDIF}
+end;
 
 procedure TOmniAffinity.SetCount(const value: integer);
-  TODO
+{$IFDEF MSWINDOWS}
 var
   affMask: string;
   numCore: integer;
   pCore  : integer;
   sysMask: string;
+{$ENDIF}
 begin
+{$IFDEF MSWINDOWS}
   sysMask := DSiGetSystemAffinity;
   affMask := '';
   numCore := value;
@@ -3468,7 +3527,8 @@ begin
     Dec(numCore);
   end;
   AsString := affMask;
-end; { TOmniAffinity.SetCount }
+{$ENDIF}
+end;
 
 {$IFDEF MSWINDOWS}
 procedure TOmniAffinity.SetMask(const value: DWORD);
@@ -3490,18 +3550,21 @@ begin
   Result := opeAffinity;
 end; { TOmniProcessEnvironment.GetAffinity }
 
+{$IFDEF MSWINDOWS}
 function TOmniProcessEnvironment.GetMemory: TOmniProcessMemoryCounters;
-  TODO
 begin
   if not DSiGetProcessMemory(Result) then
     FillChar(Result, SizeOf(Result), 0);
-end; { TOmniProcessEnvironment.GetMemory }
+end;
+{$ENDIF}
 
 function TOmniProcessEnvironment.GetPriorityClass: TOmniProcessPriorityClass;
-  TODO
+{$IFDEF MSWINDOWS}
 var
   priority: DWORD;
+{$ENDIF}
 begin
+{$IFDEF MSWINDOWS}
   priority := Windows.GetPriorityClass(GetCurrentProcess);
   if priority = $8000 then
     Result := pcAboveNormal
@@ -3515,14 +3578,18 @@ begin
     Result := pcRealtime
   else
     Result := pcNormal;
-end; { TOmniProcessEnvironment.GetPriorityClass }
+{$ELSE}
+  result := pcNormal
+{$ENDIF}
+end;
 
+{$IFDEF MSWINDOWS}
 function TOmniProcessEnvironment.GetTimes: TOmniProcessTimes;
-  TODO
 begin
   if not DSiGetProcessTimes(Result.CreationTime, Result.UserTime, Result.KernelTime) then
     FillChar(Result, SizeOf(Result), 0);
 end; { TOmniProcessEnvironment.GetTimes }
+{$ENDIF}
 
 { TOmniSystemEnvironment }
 
@@ -3549,7 +3616,7 @@ begin
   Result := oteAffinity;
 end; { TOmniThreadEnvironment.GetAffinity }
 
-function TOmniThreadEnvironment.GetID: cardinal;
+function TOmniThreadEnvironment.GetID: TThreadID;
 begin
   Result := oteThreadID;
 end; { TOmniThreadEnvironment.GetID }
@@ -3767,8 +3834,7 @@ begin
 end; { TOmniMessageID.Implicit }
 
 initialization
-  TODO: Fix definition of NativeUInt
-  Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj
+  Assert(SizeOf(TObject) = SizeOf( TrueNativeUInt)); //in VarToObj
   GEnvironment := TOmniEnvironment.Create;
   {$IFDEF OTL_Generics}
   FillChar(TOmniValue_DataSize, SizeOf(TOmniValue_DataSize), 0);
