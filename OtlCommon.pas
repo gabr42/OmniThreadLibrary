@@ -218,6 +218,7 @@
 unit OtlCommon;
 
 {$I OtlOptions.inc}
+// $ALIGN 8 is included in the .inc file.
 {$WARN SYMBOL_PLATFORM OFF}
 
 interface
@@ -1566,7 +1567,9 @@ begin
 {$IFDEF MSWINDOWS}
   Result := ocValue;
 {$ELSE}
-  result := TInterlocked.CompareExchange( ocValue, 0, 0)
+  Result := ocValue
+  // TInterlocked.CompareExchange( ocValue, 0, 0) is not necessary because we
+  //  have set $ALIGN 8
 {$ENDIF}
 end;
 
@@ -1631,8 +1634,9 @@ begin
   while Request > 0 do
     begin
     // ocValue is marked as [Volatile]
-    current := TInterlocked.CompareExchange( ocValue, 0, 0);
-  // TODO: On a non-windows platform, is it thread-safe to read an integer annotated with [Volatile]?
+    current := ocValue;
+    // TInterlocked.CompareExchange( ocValue, 0, 0) is not necessary because we
+    //  have set $ALIGN 8.
     if current <= 0 then break;
     newValue := current - Request;
     if newValue < 0 then
