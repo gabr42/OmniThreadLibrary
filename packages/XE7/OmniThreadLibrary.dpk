@@ -1,0 +1,60 @@
+package OmniThreadLibrary;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Omni Thread Library - runtime package'}
+{$LIBSUFFIX '_XE7'}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vclx,
+  vcl;
+
+contains
+  GpLists in '..\..\external libraries\GpDelphiUnits\GpLists.pas',
+  GpStuff in '..\..\external libraries\GpDelphiUnits\GpStuff.pas',
+  GpStringHash in '..\..\external libraries\GpDelphiUnits\GpStringHash.pas',
+  DetailedRTTI in '..\..\external libraries\David-Glassborow\DetailedRTTI.pas',
+  OtlCommon in '..\..\OtlCommon.pas',
+  OtlContainers in '..\..\OtlContainers.pas',
+  OtlComm in '..\..\OtlComm.pas',
+  OtlTask in '..\..\OtlTask.pas',
+  OtlTaskControl in '..\..\OtlTaskControl.pas',
+  OtlThreadPool in '..\..\OtlThreadPool.pas',
+  OtlEventMonitor in '..\..\OtlEventMonitor.pas',
+  DSiWin32 in '..\..\external libraries\DSi-Win-Wrappers\DSiWin32.pas',
+  OtlContainerObserver in '..\..\OtlContainerObserver.pas',
+  OtlSync in '..\..\OtlSync.pas',
+  OtlHooks in '..\..\OtlHooks.pas',
+  OtlCollections in '..\..\OtlCollections.pas',
+  OtlDataManager in '..\..\OtlDataManager.pas',
+  OtlParallel in '..\..\OtlParallel.pas',
+  OtlCommon.Utils in '..\..\OtlCommon.Utils.pas',
+  OtlCommBufferTest in '..\..\OtlCommBufferTest.pas';
+
+end.

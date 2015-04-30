@@ -110,10 +110,6 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   {:Lock-free, multiple writer, multiple reader, bounded stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
@@ -139,7 +135,7 @@ type
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
     PData    : pointer;
-    Reference: NativeInt;
+    Reference: TrueNativeInt;
   end; { TReferencedPtr }
 
   TReferencedPtrBuffer = array [0..MaxInt shr 5] of TReferencedPtr;
@@ -169,8 +165,8 @@ type
     obsRecycleChainP: PReferencedPtr;
   class var
     class var obsIsInitialized: boolean;                //default is false
-    class var obsTaskPopLoops : NativeInt;
-    class var obsTaskPushLoops: NativeInt;
+    class var obsTaskPopLoops : TrueNativeInt;
+    class var obsTaskPushLoops: TrueNativeInt;
   strict protected
     procedure MeasureExecutionTimes;
     class function  PopLink(var chain: TReferencedPtr): POmniLinkedData; static;
@@ -214,8 +210,8 @@ type
     obqRecycleRingMem   : pointer;
   class var
     class var obqIsInitialized  : boolean;
-    class var obqTaskInsertLoops: NativeInt;             //default is false
-    class var obqTaskRemoveLoops: NativeInt;
+    class var obqTaskInsertLoops: TrueNativeInt;             //default is false
+    class var obqTaskRemoveLoops: TrueNativeInt;
   strict protected
     class procedure InsertLink(const data: pointer; const ringBuffer: POmniRingBuffer);
       static;
@@ -372,7 +368,7 @@ var
   nextElement       : POmniLinkedData;
   roundedElementSize: integer;
 begin
-  Assert(SizeOf(NativeInt) = SizeOf(pointer));
+  Assert(SizeOf(TrueNativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obsNumElements := numElements;
@@ -385,18 +381,18 @@ begin
   DSiFreeMemAndNil(obsDataBuffer);
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
   dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
-  if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
+  if TrueNativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
   obsPublicChainP := dataBuffer;
-  inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
+  inc(TrueNativeInt(dataBuffer), SizeOf(TReferencedPtr));
   obsRecycleChainP := dataBuffer;
-  inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
+  inc(TrueNativeInt(dataBuffer), SizeOf(TReferencedPtr));
   //Format buffer to recycleChain, init obsRecycleChain and obsPublicChain.
   //At the beginning, all elements are linked into the recycle chain.
   obsRecycleChainP^.PData := dataBuffer;
   currElement := obsRecycleChainP^.PData;
   for iElement := 0 to obsNumElements - 2 do begin
-    nextElement := POmniLinkedData(NativeInt(currElement) + bufferElementSize);
+    nextElement := POmniLinkedData(TrueNativeInt(currElement) + bufferElementSize);
     currElement.Next := nextElement;
     currElement := nextElement;
   end;
@@ -488,10 +484,10 @@ class function TOmniBaseBoundedStack.PopLink(var chain: TReferencedPtr): POmniLi
 //FILO buffer logic                         ^------ < chainHead
 //Advanced stack PopLink model with idle/busy status bit
 var
-  AtStartReference: NativeInt;
-  CurrentReference: NativeInt;
-  TaskCounter     : NativeInt;
-  ThreadReference : NativeInt;
+  AtStartReference: TrueNativeInt;
+  CurrentReference: TrueNativeInt;
+  TaskCounter     : TrueNativeInt;
+  ThreadReference : TrueNativeInt;
 label
   TryAgain;
 begin
@@ -535,7 +531,7 @@ class procedure TOmniBaseBoundedStack.PushLink(const link: POmniLinkedData; var 
 //Advanced stack PushLink model with idle/busy status bit
 var
   PMemData   : pointer;
-  TaskCounter: NativeInt;
+  TaskCounter: TrueNativeInt;
 begin
   with chain do begin
     for TaskCounter := 0 to obsTaskPushLoops do
@@ -651,7 +647,7 @@ var
   ringBufferSize    : cardinal;
   roundedElementSize: integer;
 begin
-  Assert(SizeOf(NativeInt) = SizeOf(pointer));
+  Assert(SizeOf(TrueNativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
   Assert(elementSize > 0);
   obqNumElements := numElements;
@@ -668,12 +664,12 @@ begin
   DSiFreeMemAndNil(obqPublicRingMem);
   obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
-  Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
+  Assert(TrueNativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   DSiFreeMemAndNil(obqRecycleRingMem);
   obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
-  Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
+  Assert(TrueNativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     Format('TOmniBaseContainer: obcRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   // set obqPublicRingBuffer head
   obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
@@ -687,7 +683,7 @@ begin
   obqRecycleRingBuffer.EndBuffer := @obqRecycleRingBuffer.Buffer[numElements];
   // format obqRecycleRingBuffer
   for n := 0 to numElements do
-    obqRecycleRingBuffer.Buffer[n].PData := pointer(NativeInt(dataBuffer) + NativeInt(n * roundedElementSize));
+    obqRecycleRingBuffer.Buffer[n].PData := pointer(TrueNativeInt(dataBuffer) + TrueNativeInt(n * roundedElementSize));
   MeasureExecutionTimes;
 end; { TOmniBaseBoundedQueue.Initialize }
 
@@ -696,12 +692,12 @@ class procedure TOmniBaseBoundedQueue.InsertLink(const data: pointer; const ring
 //FIFO buffer logic
 //Insert link to queue model with idle/busy status bit
 var
-  AtStartReference: NativeInt;
+  AtStartReference: TrueNativeInt;
   CurrentLastIn   : PReferencedPtr;
-  CurrentReference: NativeInt;
+  CurrentReference: TrueNativeInt;
   NewLastIn       : PReferencedPtr;
-  TaskCounter     : NativeInt;
-  ThreadReference : NativeInt;
+  TaskCounter     : TrueNativeInt;
+  ThreadReference : TrueNativeInt;
 label
   TryAgain;
 begin
@@ -726,8 +722,8 @@ TryAgain:
     then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
-    NewLastIn := pointer(NativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
-    if NativeInt(NewLastIn) > NativeInt(EndBuffer) then
+    NewLastIn := pointer(TrueNativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
+    if TrueNativeInt(NewLastIn) > TrueNativeInt(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
     if not CAS(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
@@ -744,10 +740,10 @@ function TOmniBaseBoundedQueue.IsFull: boolean;
 var
   NewLastIn: pointer;
 begin
-  NewLastIn := pointer(NativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
-  if NativeInt(NewLastIn) > NativeInt(obqPublicRingBuffer.EndBuffer) then
+  NewLastIn := pointer(TrueNativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
+  if TrueNativeInt(NewLastIn) > TrueNativeInt(obqPublicRingBuffer.EndBuffer) then
     NewLastIn := obqPublicRingBuffer.StartBuffer;
-  result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.LastIn.PData)) or
+  result := (TrueNativeInt(NewLastIn) = TrueNativeInt(obqPublicRingBuffer.LastIn.PData)) or
     (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
 end; { TOmniBaseBoundedQueue.IsFull }
 
@@ -809,12 +805,12 @@ class function TOmniBaseBoundedQueue.RemoveLink(const ringBuffer: POmniRingBuffe
 //FIFO buffer logic
 //Remove link from queue model with idle/busy status bit
 var
-  AtStartReference      : NativeInt;
+  AtStartReference      : TrueNativeInt;
   CurrentFirstIn        : pointer;
-  CurrentReference      : NativeInt;
+  CurrentReference      : TrueNativeInt;
   NewFirstIn            : pointer;
-  Reference             : NativeInt;
-  TaskCounter           : NativeInt;
+  Reference             : TrueNativeInt;
+  TaskCounter           : TrueNativeInt;
 label
   TryAgain;
 begin
@@ -843,8 +839,8 @@ TryAgain:
     //Load Result
     Result := PReferencedPtr(FirstIn.PData).PData;
     //Calculate ringBuffer next FirstIn address
-    NewFirstIn := pointer(NativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
-    if NativeInt(NewFirstIn) > NativeInt(EndBuffer) then
+    NewFirstIn := pointer(TrueNativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
+    if TrueNativeInt(NewFirstIn) > TrueNativeInt(EndBuffer) then
       NewFirstIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
     if not CAS(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
@@ -1016,7 +1012,7 @@ end; { TOmniTaggedValue.CASTag }
 function TOmniTaggedPointer.CAS(oldSlot: POmniTaggedValue; oldTag: TOmniQueueTag;
   newSlot: POmniTaggedValue; newTag: TOmniQueueTag): boolean;
 begin
-  Result := OtlSync.CAS(oldSlot, NativeInt(oldTag), newSlot, NativeInt(newTag), Self);
+  Result := OtlSync.CAS(oldSlot, TrueNativeInt(oldTag), newSlot, TrueNativeInt(newTag), Self);
 end; { TOmniTaggedPointer.CAS }
 
 procedure TOmniTaggedPointer.Move(newSlot: POmniTaggedValue; newTag: TOmniQueueTag);
@@ -1159,9 +1155,9 @@ begin
   if assigned(obcHeadPointer) then
     FreeMem(obcHeadPointer);
   obcHeadPointer := AllocMem(SizeOf(TOmniTaggedPointer));
-  Assert(NativeInt(obcTailPointer) mod (2*SizeOf(pointer)) = 0);
-  Assert(NativeInt(obcHeadPointer) mod (2*SizeOf(pointer)) = 0);
-  Assert(NativeInt(@obcCachedBlock) mod SizeOf(pointer) = 0);
+  Assert(TrueNativeInt(obcTailPointer) mod (2*SizeOf(pointer)) = 0);
+  Assert(TrueNativeInt(obcHeadPointer) mod (2*SizeOf(pointer)) = 0);
+  Assert(TrueNativeInt(@obcCachedBlock) mod SizeOf(pointer) = 0);
   obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
   {$IFDEF DEBUG_OMNI_QUEUE}
@@ -1416,7 +1412,7 @@ end; { TOmniQueue.TryDequeue }
 initialization
   Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
   Assert(SizeOf(TOmniTaggedPointer) = 2*SizeOf(pointer));
-  Assert(SizeOf(pointer) = SizeOf(NativeInt));
+  Assert(SizeOf(pointer) = SizeOf(TrueNativeInt));
   InitializeTimingInfo;
 end.
 

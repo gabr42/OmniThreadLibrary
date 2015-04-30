@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{F7C3A2BC-CAF8-4D3B-99B0-0BE877944466}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OmniThreadLibrary.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibraryAndroid.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="dclOmniThreadLibrary.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OmniThreadLibrary">
+        <MSBuild Projects="OmniThreadLibrary.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibrary:Clean">
+        <MSBuild Projects="OmniThreadLibrary.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibrary:Make">
+        <MSBuild Projects="OmniThreadLibrary.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibraryAndroid">
+        <MSBuild Projects="OmniThreadLibraryAndroid.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryAndroid:Clean">
+        <MSBuild Projects="OmniThreadLibraryAndroid.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryAndroid:Make">
+        <MSBuild Projects="OmniThreadLibraryAndroid.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="dclOmniThreadLibrary">
+        <MSBuild Projects="dclOmniThreadLibrary.dproj"/>
+    </Target>
+    <Target Name="dclOmniThreadLibrary:Clean">
+        <MSBuild Projects="dclOmniThreadLibrary.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="dclOmniThreadLibrary:Make">
+        <MSBuild Projects="dclOmniThreadLibrary.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OmniThreadLibrary;OmniThreadLibraryAndroid;dclOmniThreadLibrary"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OmniThreadLibrary:Clean;OmniThreadLibraryAndroid:Clean;dclOmniThreadLibrary:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OmniThreadLibrary:Make;OmniThreadLibraryAndroid:Make;dclOmniThreadLibrary:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

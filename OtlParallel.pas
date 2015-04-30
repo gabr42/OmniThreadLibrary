@@ -1181,10 +1181,6 @@ uses
   OtlContainerObserver;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   IOmniPipelineStageEx = interface ['{C34393C7-E9EE-4CE7-895F-EECA553F4E54}']
     function  GetHandleExceptions: boolean;
     function  GetNumTasks: integer;
@@ -3370,17 +3366,17 @@ procedure TOmniPipelineStage.Execute(const inQueue, outQueue: IOmniBlockingColle
   const task: IOmniTask);
 begin
   // D2009 doesn't like TProc casts so we're casting to NativeInt
-  Assert(SizeOf(TProc) = SizeOf(NativeInt));
+  Assert(SizeOf(TProc) = SizeOf(TrueNativeInt));
   opsInput := inQueue;
   opsOutput := outQueue;
-  if PInteger(@opsSimpleStage)^ <> NativeInt(nil) then
+  if PInteger(@opsSimpleStage)^ <> TrueNativeInt(nil) then
     ExecuteSimpleStage(task, opsSimpleStage, inQueue, outQueue)
-  else if PInteger(@opsStage)^ <> NativeInt(nil) then begin
-    Assert(PInteger(@opsStageEx)^ = NativeInt(nil));
+  else if PInteger(@opsStage)^ <> TrueNativeInt(nil) then begin
+    Assert(PInteger(@opsStageEx)^ = TrueNativeInt(nil));
     opsStage(inQueue, outQueue);
   end
   else begin
-    Assert(PInteger(@opsStageEx)^ <> NativeInt(nil));
+    Assert(PInteger(@opsStageEx)^ <> TrueNativeInt(nil));
     opsStageEx(inQueue, outQueue, task);
   end;
 end; { TOmniPipelineStage.Execute }
