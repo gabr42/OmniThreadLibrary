@@ -141,14 +141,22 @@
 
 unit GpStuff;
 
+{$I Gp.inc}
+
 interface
 
 uses
-  Windows,
   SysUtils,
-  Classes,
-  Contnrs,
-  DSiWin32;
+  Classes
+{$IFDEF MSWINDOWS}
+  , Windows
+  , Contnrs
+  , DSiWin32
+{$ELSE}
+  , Generics.Collections
+  , System.SyncObjs
+{$ENDIF}
+  ;
 
 {$IFDEF ConditionalExpressions}
   {$IF CompilerVersion >= 25} //DXE4+
@@ -187,9 +195,16 @@ type
   TGp4AlignedInt = record
   strict private
     aiData: int64;
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      FAddr: PInteger;
+    {$ENDIF}
     function  GetValue: integer; inline;
     procedure SetValue(value: integer); inline;
+
   public
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      procedure Initiate;
+    {$ENDIF}
     function  Add(value: integer): integer; inline;
     function  Addr: PInteger; inline;
     function  CAS(oldValue, newValue: integer): boolean;
@@ -217,9 +232,15 @@ type
     aiData: packed record
       DataLo, DataHi: int64;
     end;
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      FAddr: PInt64;
+    {$ENDIF}
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      procedure Initiate;
+    {$ENDIF}
     function  Add(value: int64): int64; inline;
     function  Addr: PInt64; inline;
     function  CAS(oldValue, newValue: int64): boolean;
@@ -231,6 +252,10 @@ type
     property Value: int64 read GetValue write SetValue;
   end; { TGp8AlignedInt64 }
 
+{$IFNDEF MSWINDOWS}
+  TObjectList = class( TObjectList<TObject>) end;
+{$ENDIF}
+
   TGpObjectListHelper = class helper for TObjectList
   public
     function  CardCount: cardinal;
@@ -238,6 +263,7 @@ type
 {$ENDIF GpStuff_AlignedInt}
 
 type
+  {$IFDEF MSWINDOWS}
   ///	<summary>
   ///	  TPersistent descanding implementing IInterface.
   ///	</summary>
@@ -253,6 +279,7 @@ type
     class function NewInstance: TObject; override;
     property RefCount: Integer read FRefCount;
   end; { TGpInterfacedPersistent }
+  {$ENDIF}
 
   IGpTraceable = interface(IInterface)
     ['{EA2316AC-B5FA-45EA-86E0-9016CD51C336}']
@@ -314,23 +341,31 @@ type
   end; { TGpMemoryBuffer }
 
   IGpBuffer = interface
+{$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString;
+{$ENDIF}
     function  GetAsStream: TStream;
     function  GetAsString: string;
     function  GetByteVal(idx: integer): byte;
     function  GetSize: integer;
+{$IFDEF MSWINDOWS}
     procedure SetAsAnsiString(const value: AnsiString);
+{$ENDIF}
     procedure SetAsString(const value: string);
     procedure SetByteVal(idx: integer; const value: byte);
     function  GetValue: pointer;
   //
     procedure Add(b: byte); overload;
+{$IFDEF MSWINDOWS}
     procedure Add(ch: AnsiChar); overload;
+{$ENDIF}
     procedure Allocate(size: integer);
     procedure Assign(data: pointer; size: integer);
     procedure Clear;
     function  IsEmpty: boolean;
+{$IFDEF MSWINDOWS}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+{$ENDIF}
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
@@ -342,13 +377,17 @@ type
   strict private
     FData: TMemoryStream;
   protected
+{$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString; inline;
+{$ENDIF}
     function  GetAsStream: TStream; inline;
     function  GetAsString: string; inline;
     function  GetByteVal(idx: integer): byte; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
+{$IFDEF MSWINDOWS}
     procedure SetAsAnsiString(const value: AnsiString); inline;
+{$ENDIF}
     procedure SetAsString(const value: string); inline;
     procedure SetByteVal(idx: integer; const value: byte); inline;
   public
@@ -357,12 +396,16 @@ type
     constructor Create(stream: TStream); overload;
     destructor  Destroy; override;
     procedure Add(b: byte); overload; inline;
+{$IFDEF MSWINDOWS}
     procedure Add(ch: AnsiChar); overload; inline;
+{$ENDIF}
     procedure Allocate(size: integer); inline;
     procedure Assign(data: pointer; size: integer); inline;
     procedure Clear; inline;
     function  IsEmpty: boolean; inline;
+{$IFDEF MSWINDOWS}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
+{$ENDIF}
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
@@ -377,10 +420,12 @@ function  Asgn(var output: string; const value: string): string; overload;    {$
 function  Asgn(var output: integer; const value: integer): integer; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn(var output: real; const value: real): real; overload;          {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  Asgn64(var output: int64; const value: int64): int64; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$IFDEF MSWINDOWS}
 {$IFDEF Unicode}
 function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
 function  Asgn(var output: WideString; const value: WideString): WideString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$ENDIF}
 
 function  IFF(condit: boolean; iftrue, iffalse: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -389,9 +434,11 @@ function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$
 function  IFF(condit: boolean; iftrue, iffalse: pointer): pointer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: TDateTime): TDateTime; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+{$IFDEF MSWINDOWS}
 {$IFDEF Unicode}
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
+{$ENDIF}
 
 {$IFDEF GpStuff_Generics}
 type
@@ -402,11 +449,14 @@ type
 
 function  OffsetPtr(ptr: pointer; offset: integer): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
+{$IFDEF MSWINDOWS}
 ///<summary>Reverses byte order in a 4-byte number.</summary>
 function  ReverseDWord(dw: DWORD): DWORD;
 ///<summary>Reverses byte order in a 2-byte number.</summary>
 function  ReverseWord(w: word): word;
+{$ENDIF}
 
+{$IFDEF MSWINDOWS}
 ///<summary>Locates specified value in a buffer.</summary>
 ///<returns>Offset of found value (0..dataLen-1) or -1 if value was not found.</returns>
 ///<since>2007-02-22</since>
@@ -416,6 +466,7 @@ function  TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; asse
 ///<returns>Offset of first differing value (0..dataLen-1) or -1 if buffer contains only specified values.</returns>
 ///<since>2007-02-22</since>
 function  TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
+{$ENDIF}
 
 ///<summary>Converts open variant array to COM variant array.<para>
 ///  Written by Thomas Schubbauer and published in borland.public.delphi.objectpascal on
@@ -439,6 +490,18 @@ procedure DontOptimize(var data);
 
 function FletcherChecksum(const buffer; size: integer): word;
 
+{$IFDEF ConditionalExpressions}
+{$IF CompilerVersion <= 20} //D2009 or older
+type
+  NativeInt  = integer;   // In D2007, NativeInt is incorrectly defined.
+  NativeUInt = cardinal;
+{$IFEND}
+{$ELSE}
+type
+  NativeInt  = integer;
+  NativeUInt = cardinal;
+{$ENDIF}
+
 {$IFDEF GpStuff_NativeInt}
 function RoundDownTo(value: NativeInt; granularity: integer): NativeInt; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function RoundUpTo(value: NativeInt; granularity: integer): NativeInt; overload;   {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -451,7 +514,7 @@ function RoundUpTo(value: pointer; granularity: integer): pointer; overload;    
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
-  IGpIntegerValueEnumerator = interface 
+  IGpIntegerValueEnumerator = interface
     function  GetCurrent: integer;
     function  MoveNext: boolean;
     property Current: integer read GetCurrent;
@@ -499,17 +562,28 @@ function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFa
 function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
 function EnumList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): IGpStringValueEnumeratorFactory; overload;
-function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
-  stripQuotes: boolean = true): IGpStringValueEnumeratorFactory; overload;
+function EnumList( const aList: string;
+                    {$IFDEF MSWINDOWS} delim: TSysCharSet;
+                    {$ELSE}      const delim: string;
+                    {$ENDIF}
+                   const quoteChar: string = ''; stripQuotes: boolean = true)
+                     : IGpStringValueEnumeratorFactory; overload;
+
+{$IFDEF MSWINDOWS}
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
+{$ENDIF}
 
 {$IFDEF GpStuff_TArrayOfT}
 function SplitList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
-function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
-  stripQuotes: boolean = true): TArray<string>; overload;
+function SplitList(const aList: string;
+                    {$IFDEF MSWINDOWS} delim: TSysCharSet;
+                    {$ELSE}      const delim: string;
+                    {$ENDIF}
+                    const quoteChar: string = ''; stripQuotes: boolean = true)
+                    : TArray<string>; overload;
 {$ENDIF GpStuff_TArrayOfT}
 
 function AddToList(const aList, delim, newElement: string): string;
@@ -539,8 +613,10 @@ function BuildString: IGpStringBuilder;
 implementation
 
 uses
-{$IFDEF GpStuff_AnsiStrings}
-  System.AnsiStrings,
+{$IFDEF MSWINDOWS}
+  {$IFDEF GpStuff_AnsiStrings}
+    System.AnsiStrings,
+  {$ENDIF}
 {$ENDIF}
 {$IFDEF GpStuff_RegEx}
   RegularExpressions{$IFDEF ConditionalExpressions},{$ELSE};{$ENDIF}
@@ -548,18 +624,6 @@ uses
 {$IFDEF ConditionalExpressions}
   Variants;
 {$ENDIF ConditionalExpressions}
-
-{$IFDEF ConditionalExpressions}
-{$IF CompilerVersion <= 20} //D2009 or older
-type
-  NativeInt  = integer;
-  NativeUInt = cardinal;
-{$IFEND}
-{$ELSE}
-type
-  NativeInt  = integer;
-  NativeUInt = cardinal;
-{$ENDIF}
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -715,14 +779,14 @@ begin
   end
   else begin
     chk   := true;
-    quote := quoteChar[1];
+    quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}];
   end;
-  for i := 1 to Length(list) do begin
+  for i := {$IFDEF XE3_OR_ABOVE}Low( list){$ELSE}1{$ENDIF} to {$IFDEF XE3_OR_ABOVE}High( list){$ELSE}Length(list){$ENDIF} do begin
     if chk and (list[i] = quote) then
       skip := not skip
     else if not skip then begin
       if list[i] = delim then begin
-        delimiters[idx] := i;
+        delimiters[idx] := i - {$IFDEF XE3_OR_ABOVE}Low( list){$ELSE}1{$ENDIF} + 1;  // Ensure delimiters members are 1 based
         Inc(idx);
       end;
     end;
@@ -734,7 +798,11 @@ begin
   SetLength(delimiters,idx);
 end; { GetDelimiters }
 
-procedure GetDelimiters(const list: string; delim: TSysCharSet; const quoteChar: string;
+procedure GetDelimiters(const list: string;
+  {$IFDEF MSWINDOWS} delim: TSysCharSet;
+  {$ELSE}      const delim: string;
+  {$ENDIF}
+  const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk  : boolean;
@@ -756,14 +824,18 @@ begin
   end
   else begin
     chk   := true;
-    quote := quoteChar[1];
+    quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}];
   end;
-  for i := 1 to Length(list) do begin
+  for i := {$IFDEF XE3_OR_ABOVE}Low( list){$ELSE}1{$ENDIF} to {$IFDEF XE3_OR_ABOVE}High( list){$ELSE}Length(list){$ENDIF} do begin
     if chk and (list[i] = quote) then
       skip := not skip
     else if not skip then begin
-      if AnsiChar(list[i]) in delim then begin
-        delimiters[idx] := i;
+      {$IFDEF MSWINDOWS}
+        if AnsiChar(list[i]) in delim then begin
+      {$ELSE}
+        if delim.Contains( list[i]) then begin
+      {$ENDIF}
+        delimiters[idx] := i - {$IFDEF XE3_OR_ABOVE}Low( list){$ELSE}1{$ENDIF} + 1;  // Ensure delimiters members are 1 based
         Inc(idx);
       end;
     end;
@@ -789,19 +861,21 @@ begin
   Result := output;
 end; { Asgn }
 
-{$IFDEF Unicode}
-function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString;
-begin
-  output := value;
-  Result := output;
-end; { Asgn }
-{$ENDIF Unicode}
+{$IFDEF MSWINDOWS}
+  {$IFDEF Unicode}
+  function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString;
+  begin
+    output := value;
+    Result := output;
+  end; { Asgn }
+  {$ENDIF Unicode}
 
-function  Asgn(var output: WideString; const value: WideString): WideString;
-begin
-  output := value;
-  Result := output;
-end; { Asgn }
+  function  Asgn(var output: WideString; const value: WideString): WideString;
+  begin
+    output := value;
+    Result := output;
+  end; { Asgn }
+{$ENDIF}
 
 function Asgn(var output: real; const value: real): real; overload;
 begin
@@ -877,15 +951,17 @@ begin
     Result := iffalse;
 end; { IFF64 }
 
-{$IFDEF Unicode}
-function IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString;
-begin
-  if condit then
-    Result := iftrue
-  else
-    Result := iffalse;
-end; { IFF }
-{$ENDIF Unicode}
+{$IFDEF MSWINDOWS}
+  {$IFDEF Unicode}
+  function IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString;
+  begin
+    if condit then
+      Result := iftrue
+    else
+      Result := iffalse;
+  end; { IFF }
+  {$ENDIF Unicode}
+{$ENDIF}
 
 function OffsetPtr(ptr: pointer; offset: integer): pointer;
 begin
@@ -902,17 +978,38 @@ begin
       case VType of
         vtInteger:    Result[i] := VInteger;
         vtBoolean:    Result[i] := VBoolean;
+
+{$IFNDEF NEXTGEN}
         vtChar:       Result[i] := VChar;
+{$ENDIF}
+
         vtExtended:   Result[i] := VExtended^;
+
+{$IFNDEF NEXTGEN}
         vtString:     Result[i] := VString^;
+{$ENDIF}
+
         vtPointer:    Result[i] := integer(VPointer);
+
+{$IFDEF MSWINDOWS}
+  {$IFNDEF NEXTGEN}
         vtPChar:      Result[i] := {$IFDEF GpStuff_AnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(VPChar);
+  {$ENDIF}
+{$ENDIF}
+
+{$IFNDEF NEXTGEN}
         vtAnsiString: Result[i] := string(VAnsiString);
+{$ENDIF}
+
         vtCurrency:   Result[i] := VCurrency^;
         vtVariant:    Result[i] := VVariant^;
         vtObject:     Result[i] := integer(VObject);
         vtInterface:  Result[i] := integer(VInterface);
+
+{$IFDEF MSWINDOWS}
         vtWideString: Result[i] := WideString(VWideString);
+{$ENDIF}
+
         vtInt64:      Result[i] := VInt64^;
         {$IFDEF UNICODE}
         vtUnicodeString:
@@ -945,6 +1042,7 @@ end; { X64AsmBreak }
 
 procedure DebugBreak(triggerBreak: boolean = true);
 begin
+{$IFDEF MSWINDOWS}
   {$IFDEF DEBUG}
   if triggerBreak and (DebugHook <> 0) then
     {$IFDEF CPUX64}
@@ -953,134 +1051,213 @@ begin
     asm int 3 end;
     {$ENDIF ~CPUX64}
   {$ENDIF DEBUG}
+{$ENDIF}
 end; { DebugBreak }
 
-function ReverseDWord(dw: cardinal): cardinal;
-asm
-  {$IFDEF CPUX64}
-  mov rax, rcx
-  {$ENDIF}
-  bswap eax
-end; { ReverseDWord }
 
-function ReverseWord(w: word): word;
-asm
-   {$IFDEF CPUX64}
-   mov rax, rcx
-   {$ENDIF}
-   xchg   al, ah
-end; { ReverseWord }
+{$IFDEF MSWINDOWS}
+  function ReverseDWord(dw: cardinal): cardinal;
+  asm
+    {$IFDEF CPUX64}
+    mov rax, rcx
+    {$ENDIF}
+    bswap eax
+  end; { ReverseDWord }
 
-function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
-asm
-{$IFDEF WIN64}
-// value - RCX, data - RDX, dataLen - R8
-      PUSH  rDI
-      mov   al, value
-      MOV   rDI, data
-      xor   rcx, rcx
-      mov   ecx, dataLen
-      REPNE SCASB
-      MOV   rAX, -1
-      JNE   @@1
-      MOV   rAX,rDI
-      SUB   rAX,rDX
-      DEC   rAX
-@@1:  POP   rDI
-{$ELSE WIN64}
-      PUSH  EDI
-      MOV   EDI,EDX
-      REPNE SCASB
-      MOV   EAX,$FFFFFFFF
-      JNE   @@1
-      MOV   EAX,EDI
-      SUB   EAX,EDX
-      DEC   EAX
-@@1:  POP   EDI
-{$ENDIF WIN64}
-end; { TableFindEQ }
+  function ReverseWord(w: word): word;
+  asm
+     {$IFDEF CPUX64}
+     mov rax, rcx
+     {$ENDIF}
+     xchg   al, ah
+  end; { ReverseWord }
 
-function TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
-asm
-{$IFDEF WIN64}
-      PUSH  rDI
-      mov   al, value
-      MOV   rDI, data
-      xor   rcx, rcx
-      mov   ecx, dataLen
-      REPNE SCASB
-      MOV   rAX, -1
-      JE    @@1
-      MOV   rAX,rDI
-      SUB   rAX,rDX
-      DEC   rAX
-@@1:  POP   rDI
-{$ELSE WIN64}
-      PUSH  EDI
-      MOV   EDI,EDX
-      REPE  SCASB
-      MOV   EAX,$FFFFFFFF
-      JE    @@1
-      MOV   EAX,EDI
-      SUB   EAX,EDX
-      DEC   EAX
-@@1:  POP   EDI
-{$ENDIF WIN64}
-end; { TableFindNE }
+  function TableFindEQ(value: byte; data: PChar; dataLen: integer): integer; assembler;
+  asm
+  {$IFDEF WIN64}
+  // value - RCX, data - RDX, dataLen - R8
+        PUSH  rDI
+        mov   al, value
+        MOV   rDI, data
+        xor   rcx, rcx
+        mov   ecx, dataLen
+        REPNE SCASB
+        MOV   rAX, -1
+        JNE   @@1
+        MOV   rAX,rDI
+        SUB   rAX,rDX
+        DEC   rAX
+  @@1:  POP   rDI
+  {$ELSE WIN64}
+        PUSH  EDI
+        MOV   EDI,EDX
+        REPNE SCASB
+        MOV   EAX,$FFFFFFFF
+        JNE   @@1
+        MOV   EAX,EDI
+        SUB   EAX,EDX
+        DEC   EAX
+  @@1:  POP   EDI
+  {$ENDIF WIN64}
+  end; { TableFindEQ }
+
+  function TableFindNE(value: byte; data: PChar; dataLen: integer): integer; assembler;
+  asm
+  {$IFDEF WIN64}
+        PUSH  rDI
+        mov   al, value
+        MOV   rDI, data
+        xor   rcx, rcx
+        mov   ecx, dataLen
+        REPNE SCASB
+        MOV   rAX, -1
+        JE    @@1
+        MOV   rAX,rDI
+        SUB   rAX,rDX
+        DEC   rAX
+  @@1:  POP   rDI
+  {$ELSE WIN64}
+        PUSH  EDI
+        MOV   EDI,EDX
+        REPE  SCASB
+        MOV   EAX,$FFFFFFFF
+        JE    @@1
+        MOV   EAX,EDI
+        SUB   EAX,EDX
+        DEC   EAX
+  @@1:  POP   EDI
+  {$ENDIF WIN64}
+  end; { TableFindNE }
+{$ENDIF}
 
 
 {$IFDEF GpStuff_AlignedInt}
 
-{ TGpAlignedInt }
+{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  procedure TGp4AlignedInt.Initiate;
+  begin
+    FAddr := PInteger((NativeInt(@aiData) + 3) AND NOT 3)
+  end;
+{$ENDIF}
 
 function TGp4AlignedInt.Add(value: integer): integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, value);
-end; { TGp4AlignedInt.Add }
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
+end;
 
 function TGp4AlignedInt.Addr: PInteger;
 begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  Result := FAddr;
+  {$ELSE}
   Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
+  {$ENDIF}
 end; { TGp4AlignedInt.Addr }
 
-function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;
+function TGp4AlignedInt.CAS( oldValue, newValue: integer): boolean;
 begin
-  Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue; 
-end; { TGp4AlignedInt.CAS }
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.CompareExchange( FAddr^, newValue, OldValue) = oldValue
+    {$ELSE}
+    result := TInterlocked.CompareExchange( Addr^, newValue, OldValue) = oldValue
+    {$ENDIF}
+  {$ENDIF}
+end;
 
 function TGp4AlignedInt.Decrement: integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := InterlockedDecrement(Addr^);
-end; { TGp4AlignedInt.Decrement }
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Decrement( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Decrement( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end;
 
 function TGp4AlignedInt.Decrement(value: integer): integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp4AlignedInt.Decrement }
+
 
 function TGp4AlignedInt.GetValue: integer;
 begin
-  Result := Addr^;
-end; { TGp4AlignedInt.GetValue }
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    Result := FAddr^;
+  {$ELSE}
+    Result := Addr^;
+  {$ENDIF}
+end;
+
 
 function TGp4AlignedInt.Increment: integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := InterlockedIncrement(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Increment( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Increment( Addr^)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp4AlignedInt.Increment }
 
 function TGp4AlignedInt.Increment(value: integer): integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp4AlignedInt.Increment }
 
 procedure TGp4AlignedInt.SetValue(value: integer);
 begin
-  Addr^ := value;
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    FAddr^ := value;
+  {$ELSE}
+    Addr^ := value;
+  {$ENDIF}
 end; { TGp4AlignedInt.SetValue }
 
 function TGp4AlignedInt.Subtract(value: integer): integer;
 begin
+  {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, -value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp4AlignedInt.Subtract }
 
 class operator TGp4AlignedInt.Add(const ai: TGp4AlignedInt; i: integer): cardinal;
@@ -1140,57 +1317,132 @@ begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TGp4AlignedInt.Subtract }
 
-{ TGp8AlignedInt64 }
+
+{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  procedure TGp8AlignedInt64.Initiate;
+  begin
+    Assert(SizeOf(pointer) = SizeOf(NativeInt));
+    FAddr := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  end;
+{$ENDIF}
 
 function TGp8AlignedInt64.Add(value: int64): int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.Add }
 
 function TGp8AlignedInt64.Addr: PInt64;
 begin
-  Assert(SizeOf(pointer) = SizeOf(NativeInt));
-  Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := FAddr
+  {$ELSE}
+    Assert(SizeOf(pointer) = SizeOf(NativeInt));
+    Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  {$ENDIF}
 end; { TGp8AlignedInt64.Addr }
 
 function TGp8AlignedInt64.CAS(oldValue, newValue: int64): boolean;
 begin
+  {$IFDEF MSWINDOWS}
   Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.CompareExchange( FAddr^, newValue, OldValue) = oldValue
+    {$ELSE}
+    result := TInterlocked.CompareExchange( Addr^, newValue, OldValue) = oldValue
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.CAS }
 
 function TGp8AlignedInt64.Decrement: int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := DSiInterlockedDecrement64(Addr^);
-end; { TGp8AlignedInt64.Decrement }
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Decrement( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Decrement( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end;
 
 function TGp8AlignedInt64.Decrement(value: int64): int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.Decrement }
 
 function TGp8AlignedInt64.GetValue: int64;
 begin
-  Result := Addr^;
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    Result := FAddr^;
+  {$ELSE}
+    Result := Addr^;
+  {$ENDIF}
 end; { TGp8AlignedInt64.GetValue }
 
 function TGp8AlignedInt64.Increment: int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := DSiInterlockedIncrement64(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.Increment }
 
 function TGp8AlignedInt64.Increment(value: int64): int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.Increment }
 
 procedure TGp8AlignedInt64.SetValue(value: int64);
 begin
-  Addr^ := value;
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    FAddr^ := value;
+  {$ELSE}
+    Addr^ := value;
+  {$ENDIF}
 end; { TGp8AlignedInt64.SetValue }
 
 function TGp8AlignedInt64.Subtract(value: int64): int64;
 begin
+  {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, -value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
 end; { TGp8AlignedInt64.Subtract }
 
 {$ENDIF GpStuff_AlignedInt}
@@ -1369,7 +1621,7 @@ begin
   sl := TStringList.Create;
   if aList <> '' then begin
     if stripQuotes and (quoteChar <> '') then
-      quote := quoteChar[1]
+      quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}]
     else begin
       stripQuotes := false;
       quote := #0; //to keep compiler happy;
@@ -1377,19 +1629,39 @@ begin
     GetDelimiters(aList, delim, quoteChar, true, delimiters);
     for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
       if stripQuotes and
-         (aList[delimiters[iDelim  ] + 1] = quote) and
-         (aList[delimiters[iDelim+1] - 1] = quote)
+         (aList[delimiters[iDelim  ] + 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote) and
+         (aList[delimiters[iDelim+1] - 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote)
       then
-        sl.Add(Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3))
+        sl.Add(
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ENDIF}
+          )
       else
-        sl.Add(Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1));
+        sl.Add(
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim], delimiters[iDelim+1] - delimiters[iDelim] - 1)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1))
+          {$ENDIF}
+          )
     end;
   end;
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
 
-function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string;
-  stripQuotes: boolean): IGpStringValueEnumeratorFactory;
+function EnumList( const aList: string;
+                    {$IFDEF MSWINDOWS} delim: TSysCharSet;
+                    {$ELSE}      const delim: string;
+                    {$ENDIF}
+                   const quoteChar: string = ''; stripQuotes: boolean = true)
+                   : IGpStringValueEnumeratorFactory;
 var
   delimiters: TDelimiters;
   iDelim    : integer;
@@ -1399,7 +1671,7 @@ begin
   sl := TStringList.Create;
   if aList <> '' then begin
     if stripQuotes and (quoteChar <> '') then
-      quote := quoteChar[1]
+      quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}]
     else begin
       stripQuotes := false;
       quote := #0; //to keep compiler happy;
@@ -1407,12 +1679,28 @@ begin
     GetDelimiters(aList, delim, quoteChar, true, delimiters);
     for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
       if stripQuotes and
-         (aList[delimiters[iDelim  ] + 1] = quote) and
-         (aList[delimiters[iDelim+1] - 1] = quote)
+         (aList[delimiters[iDelim  ] + 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote) and
+         (aList[delimiters[iDelim+1] - 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote)
       then
-        sl.Add(Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3))
+        sl.Add(
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ENDIF}
+          )
       else
-        sl.Add(Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1));
+        sl.Add(
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim], delimiters[iDelim+1] - delimiters[iDelim] - 1)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1))
+          {$ENDIF}
+          )
     end;
   end;
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
@@ -1428,7 +1716,7 @@ var
 begin
   if aList <> '' then begin
     if stripQuotes and (quoteChar <> '') then
-      quote := quoteChar[1]
+      quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}]
     else begin
       stripQuotes := false;
       quote := #0; //to keep compiler happy;
@@ -1437,18 +1725,35 @@ begin
     SetLength(Result, High(delimiters) - Low(delimiters));
     for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
       if stripQuotes and
-         (aList[delimiters[iDelim  ] + 1] = quote) and
-         (aList[delimiters[iDelim+1] - 1] = quote)
+         (aList[delimiters[iDelim  ] + 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote) and
+         (aList[delimiters[iDelim+1] - 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote)
       then
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+        Result[iDelim-Low(delimiters)] :=
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ENDIF}
       else
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+        Result[iDelim-Low(delimiters)] :=
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim], delimiters[iDelim+1] - delimiters[iDelim] - 1)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1))
+          {$ENDIF}
     end;
   end;
 end; { SplitList }
 
-function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
-  stripQuotes: boolean = true): TArray<string>;
+function SplitList( const aList: string;
+                    {$IFDEF MSWINDOWS} delim: TSysCharSet;
+                    {$ELSE}      const delim: string;
+                    {$ENDIF}
+                    const quoteChar: string = ''; stripQuotes: boolean = true): TArray<string>;
 var
   delimiters: TDelimiters;
   iDelim    : integer;
@@ -1456,7 +1761,7 @@ var
 begin
   if aList <> '' then begin
     if stripQuotes and (quoteChar <> '') then
-      quote := quoteChar[1]
+      quote := quoteChar[ {$IFDEF XE3_OR_ABOVE}Low( quoteChar){$ELSE}1{$ENDIF}]
     else begin
       stripQuotes := false;
       quote := #0; //to keep compiler happy;
@@ -1465,12 +1770,26 @@ begin
     SetLength(Result, High(delimiters) - Low(delimiters));
     for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
       if stripQuotes and
-         (aList[delimiters[iDelim  ] + 1] = quote) and
-         (aList[delimiters[iDelim+1] - 1] = quote)
-      then
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+         (aList[delimiters[iDelim  ] + 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote) and
+         (aList[delimiters[iDelim+1] - 1 - 1 + {$IFDEF XE3_OR_ABOVE}Low( aList){$ELSE}1{$ENDIF}] = quote)
+      then  // ***
+        Result[iDelim-Low(delimiters)] :=
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+          {$ENDIF}
       else
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+        Result[iDelim-Low(delimiters)] :=
+          {$IFDEF XE3_OR_ABOVE}
+            // 0-based
+            aList.Substring( delimiters[iDelim], delimiters[iDelim+1] - delimiters[iDelim] - 1)
+          {$ELSE}
+            // 1-based
+            Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1))
+          {$ENDIF}
     end;
   end;
 end; { SplitList }
@@ -1484,15 +1803,17 @@ begin
   Result := Result + newElement;
 end; { AddToList }
 
-function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
-  enumSubfolders: boolean; maxEnumDepth: integer; ignoreDottedFolders: boolean): IGpStringValueEnumeratorFactory;
-var
-  sl: TStringList;
-begin
-  sl := TStringList.Create;
-  DSiEnumFilesToSL(fileMask, attr, sl, returnFullPath, enumSubfolders, maxEnumDepth, ignoreDottedFolders);
-  Result := TGpStringValueEnumeratorFactory.Create(sl);
-end; { EnumFiles }
+{$IFDEF MSWINDOWS}
+  function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean;
+    enumSubfolders: boolean; maxEnumDepth: integer; ignoreDottedFolders: boolean): IGpStringValueEnumeratorFactory;
+  var
+    sl: TStringList;
+  begin
+    sl := TStringList.Create;
+    DSiEnumFilesToSL(fileMask, attr, sl, returnFullPath, enumSubfolders, maxEnumDepth, ignoreDottedFolders);
+    Result := TGpStringValueEnumeratorFactory.Create(sl);
+  end; { EnumFiles }
+{$ENDIF}
 
 {$ENDIF GpStuff_ValuesEnumerators}
 
@@ -1558,8 +1879,10 @@ end; { TGpStringBuilder.AsString }
 
 destructor TGpTraceable.Destroy;
 begin
-  if gtLogRef then
-    OutputDebugString(PChar(Format('TGpTraceable.Destroy: [%s]', [ClassName])));
+  {$IFDEF MSWINDOWS}
+    if gtLogRef then
+      OutputDebugString(PChar(Format('TGpTraceable.Destroy: [%s]', [ClassName])));
+  {$ENDIF}
   DebugBreak(gtTraceRef);
   inherited;
 end; { TGpTraceable.Destroy }
@@ -1592,8 +1915,10 @@ end; { TGpTraceable.SetTraceReferences }
 function TGpTraceable._AddRef: integer;
 begin
   Result := inherited _AddRef;
+  {$IFDEF MSWINDOWS}
   if gtLogRef then
     OutputDebugString(PChar(Format('TGpTraceable._AddRef: [%s] %d', [ClassName, Result])));
+  {$ENDIF}
   DebugBreak(gtTraceRef);
 end; { TGpTraceable._AddRef }
 
@@ -1601,8 +1926,10 @@ function TGpTraceable._Release: integer;
 begin
   DebugBreak(gtTraceRef);
   Result := inherited _Release;
+  {$IFDEF MSWINDOWS}
   if gtLogRef then
     OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [ClassName, Result])));
+  {$ENDIF}
 end; { TGpTraceable._Release }
 
 {$IFDEF GpStuff_ValuesEnumerators}
@@ -1840,10 +2167,12 @@ begin
   FData.Write(b, 1);
 end; { TGpBuffer.Add }
 
-procedure TGpBuffer.Add(ch: AnsiChar);
-begin
-  Add(byte(ch));
-end; { TGpBuffer.Add }
+{$IFDEF MSWINDOWS}
+  procedure TGpBuffer.Add(ch: AnsiChar);
+  begin
+    Add(byte(ch));
+  end; { TGpBuffer.Add }
+{$ENDIF}
 
 procedure TGpBuffer.Allocate(size: integer);
 begin
@@ -1863,12 +2192,14 @@ begin
   Allocate(0);
 end; { TGpBuffer.Clear }
 
+{$IFDEF MSWINDOWS}
 function TGpBuffer.GetAsAnsiString: AnsiString;
 begin
   SetLength(Result, Size);
   if Size > 0 then
-    Move(Value^, Result[1], Size);
+    Move(Value^, Result[ {$IFDEF XE3_OR_ABOVE}Low( result){$ELSE}1{$ENDIF}], Size);
 end; { TGpBuffer.GetAsAnsiString }
+{$ENDIF}
 
 function TGpBuffer.GetAsStream: TStream;
 begin
@@ -1879,7 +2210,7 @@ function TGpBuffer.GetAsString: string;
 begin
   SetLength(Result, Size div SizeOf(char));
   if Size > 0 then
-    Move(Value^, Result[1], Size);
+    Move(Value^, Result[ {$IFDEF XE3_OR_ABOVE}Low( result){$ELSE}1{$ENDIF}], Size);
 end; { TGpBuffer.GetAsString }
 
 function TGpBuffer.GetByteVal(idx: integer): byte;
@@ -1903,20 +2234,22 @@ begin
   Result := (Size = 0);
 end; { TGpBuffer.IsEmpty }
 
+{$IFDEF MSWINDOWS}
 procedure TGpBuffer.SetAsAnsiString(const value: AnsiString);
 begin
   if value = '' then
     Clear
   else
-    Assign(@value[1], Length(value));
+    Assign(@value[ {$IFDEF XE3_OR_ABOVE}Low( value){$ELSE}1{$ENDIF}], Length(value));
 end; { TGpBuffer.SetAsAnsiString }
+{$ENDIF}
 
 procedure TGpBuffer.SetAsString(const value: string);
 begin
   if value = '' then
     Clear
   else
-    Assign(@value[1], Length(value) * SizeOf(char));
+    Assign(@value[ {$IFDEF XE3_OR_ABOVE}Low( value){$ELSE}1{$ENDIF}], Length(value) * SizeOf(char));
 end; { TGpBuffer.SetAsString }
 
 procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
@@ -1927,6 +2260,7 @@ end; { TGpBuffer.SetByteVal }
 
 { TGpInterfacedPersistent }
 
+{$IFDEF MSWINDOWS}
 procedure TGpInterfacedPersistent.AfterConstruction;
 begin
   InterlockedDecrement(FRefCount);
@@ -1963,6 +2297,7 @@ begin
   if Result = 0 then
     Destroy;
 end; { TGpInterfacedPersistent._Release }
+{$ENDIF}
 
 {$IFDEF GpStuff_Generics}
 class function Ternary<T>.IFF(condit: boolean; iftrue, iffalse: T): T;
