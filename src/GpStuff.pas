@@ -203,7 +203,7 @@ type
 
   public
     {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-      procedure Initiate;
+      procedure Initialize;
     {$ENDIF}
     function  Add(value: integer): integer; inline;
     function  Addr: PInteger; inline;
@@ -239,7 +239,7 @@ type
     procedure SetValue(value: int64); inline;
   public
     {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-      procedure Initiate;
+      procedure Initialize;
     {$ENDIF}
     function  Add(value: int64): int64; inline;
     function  Addr: PInt64; inline;
@@ -1134,7 +1134,7 @@ end; { DebugBreak }
 {$IFDEF GpStuff_AlignedInt}
 
 {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-  procedure TGp4AlignedInt.Initiate;
+  procedure TGp4AlignedInt.Initialize;
   begin
     FAddr := PInteger((NativeInt(@aiData) + 3) AND NOT 3)
   end;
@@ -1319,7 +1319,7 @@ end; { TGp4AlignedInt.Subtract }
 
 
 {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-  procedure TGp8AlignedInt64.Initiate;
+  procedure TGp8AlignedInt64.Initialize;
   begin
     Assert(SizeOf(pointer) = SizeOf(NativeInt));
     FAddr := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
@@ -1403,9 +1403,9 @@ begin
   Result := DSiInterlockedIncrement64(Addr^);
   {$ELSE}
     {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    result := TInterlocked.Add( FAddr^, value)
+    result := TInterlocked.Increment( FAddr^)
     {$ELSE}
-    result := TInterlocked.Add( Addr^, value)
+    result := TInterlocked.Increment( Addr^)
     {$ENDIF}
   {$ENDIF}
 end; { TGp8AlignedInt64.Increment }
