@@ -100,6 +100,14 @@
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
+{$IFDEF ConditionalExpressions}
+  {$IF CompilerVersion >= 17} //D2005+
+    {$DEFINE USE_STRICT}
+  {$IFEND}
+  {$IF CompilerVersion >= 18} //D2006+
+    {$DEFINE OmniAlignedInt}
+  {$IFEND}
+{$ENDIF}
 
 // -----------------------------------------------------------------------------
 // --------------- CONFIGURATION BLOCK -----------------------------------------
@@ -128,20 +136,21 @@
 //                               |  testing. Use at your own risk. If it works  |
 //                               |  it is likely to confer an advantage of      |
 //                               |  slightly superior performance.              |
+//  OTL_CACHE_SLACKSPACE_OFFSETS | If undefined, the TGp4AlignedInt and similar | OFF (undefined).
+//                               |  slack-space containers recalculate the slack|
+//                               |  space offset on each value access. If set,  |
+//                               |  the offset calculation is cached, which     |
+//                               |  should give a slightly superior performance.|
+//
 //
 // ACTUATION:
 
      {.$DEFINE OTL_RELY_ON_ALIGN}
-
-// INHERITED CONFIGURATION BLOCK
-
-     {$INCLUDE src\Gp.inc}  // Defines OTL_CACHE_SLACKSPACE_OFFSETS
-
+     {.$DEFINE OTL_CACHE_SLACKSPACE_OFFSETS}
 
 // -----------------------------------------------------------------------------
 // --------------- END OF CONFIGURATION BLOCK ----------------------------------
 // -----------------------------------------------------------------------------
-
 
 
 
@@ -155,5 +164,11 @@
     {$IFDEF OTL_RELY_ON_ALIGN}
       {$DEFINE OTL_USE_ALIGN}
     {$ENDIF}
+  {$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+  {$IF CompilerVersion >= 24}
+    {$DEFINE XE3_OR_ABOVE}
   {$IFEND}
 {$ENDIF}

@@ -228,9 +228,6 @@ uses
   , Variants
   , TypInfo
   , SyncObjs
-{$IFNDEF OTL_USE_ALIGN}
-  , GpStuff
-{$ENDIF}
 {$IFDEF MSWINDOWS}
   , Windows
   , DSiWin32
@@ -257,7 +254,6 @@ const
 
 type
 
-{$IFDEF OTL_USE_ALIGN}
   {$IFDEF ConditionalExpressions}
     {$IF CompilerVersion <= 20} //D2009 or older
     type
@@ -269,7 +265,6 @@ type
     NativeInt  = integer;
     NativeUInt = cardinal;
   {$ENDIF}
-{$ENDIF}
 
 
 
@@ -890,6 +885,78 @@ type
     property Value: TObject read GetValue;
   end; { IOmniAutoDestroyObject }
 
+{$IFDEF OmniAlignedInt}
+type
+  TOmniAlignedInt32 = record
+  strict private
+    aiData: int64;
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      FAddr: PInteger;
+    {$ENDIF}
+    function  GetValue: integer; inline;
+    procedure SetValue(value: integer); inline;
+
+  public
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      procedure Initialize;
+    {$ENDIF}
+    function  Add(value: integer): integer; inline;
+    function  Addr: PInteger; inline;
+    function  CAS(oldValue, newValue: integer): boolean;
+    function  Decrement: integer; overload; inline;
+    function  Decrement(value: integer): integer; overload; inline;
+    function  Increment: integer; overload; inline;
+    function  Increment(value: integer): integer; overload; inline;
+    function  Subtract(value: integer): integer; inline;
+    class operator Add(const ai: TOmniAlignedInt32; i: integer): cardinal; inline;
+    class operator Equal(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator Implicit(const ai: TOmniAlignedInt32): integer; inline;
+    class operator Implicit(const ai: TOmniAlignedInt32): cardinal; inline;
+    class operator Implicit(const ai: TOmniAlignedInt32): PInteger; inline;
+    class operator LessThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator Subtract(ai: TOmniAlignedInt32; i: integer): cardinal; inline;
+    property Value: integer read GetValue write SetValue;
+  end; { TOmniAlignedInt32 }
+
+  TOmniAlignedInt64 = record
+  strict private
+    aiData: packed record
+      DataLo, DataHi: int64;
+    end;
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      FAddr: PInt64;
+    {$ENDIF}
+    function  GetValue: int64; inline;
+    procedure SetValue(value: int64); inline;
+  public
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+      procedure Initialize;
+    {$ENDIF}
+    function  Add(value: int64): int64; inline;
+    function  Addr: PInt64; inline;
+    function  CAS(oldValue, newValue: int64): boolean;
+    function  Decrement: int64; overload; inline;
+    function  Decrement(value: int64): int64; overload; inline;
+    function  Increment: int64; overload; inline;
+    function  Increment(value: int64): int64; overload; inline;
+    function  Subtract(value: int64): int64; inline;
+    property Value: int64 read GetValue write SetValue;
+  end; { TOmniAlignedInt64 }
+
+{$IFNDEF MSWINDOWS}
+  TObjectList = class( TObjectList<TObject>) end;
+{$ENDIF}
+
+  TGpObjectListHelper = class helper for TObjectList
+  public
+    function  CardCount: cardinal;
+  end; { TGpObjectListHelper }
+{$ENDIF OmniAlignedInt}
+
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   function  CreateWaitableValue: IOmniWaitableValue;
@@ -904,7 +971,7 @@ var
 {$IFDEF OTL_USE_ALIGN}
   [Volatile] OtlUID: int64 = 0;
 {$ELSE}
-  OtlUID: TGp8AlignedInt64;
+  OtlUID: TOmniAlignedInt64;
 {$ENDIF}
 
   TOmniValue_DataSize: array [TTypeKind] of integer;
@@ -1008,7 +1075,7 @@ type
 {$IFDEF OTL_USE_ALIGN}
     [Volatile] FValue: integer;
 {$ELSE}
-    ocValue: TGp4AlignedInt;
+    ocValue: TOmniAlignedInt32;
 {$ENDIF}
   protected
     function  GetValue: integer; inline;
@@ -1024,7 +1091,7 @@ type
 
 {$IFDEF MSWINDOWS}
   {$IFNDEF OTL_USE_ALIGN}
-    PGp4AlignedInt = ^TGp4AlignedInt;
+    PGp4AlignedInt = ^TOmniAlignedInt32;
   {$ENDIF}
 
   PPHashItem = ^PHashItem;
@@ -3866,6 +3933,329 @@ end; { TOmniMessageID.Implicit }
     result := OtlUID.Increment
   end;
 {$ENDIF}
+
+{$IFDEF OmniAlignedInt}
+
+{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  procedure TOmniAlignedInt32.Initialize;
+  begin
+    FAddr := PInteger((NativeInt(@aiData) + 3) AND NOT 3)
+  end;
+{$ENDIF}
+
+function TOmniAlignedInt32.Add(value: integer): integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedExchangeAdd(Addr^, value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TOmniAlignedInt32.Addr: PInteger;
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  Result := FAddr;
+  {$ELSE}
+  Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
+  {$ENDIF}
+end; { TOmniAlignedInt32.Addr }
+
+function TOmniAlignedInt32.CAS( oldValue, newValue: integer): boolean;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.CompareExchange( FAddr^, newValue, OldValue) = oldValue
+    {$ELSE}
+    result := TInterlocked.CompareExchange( Addr^, newValue, OldValue) = oldValue
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TOmniAlignedInt32.Decrement: integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedDecrement(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Decrement( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Decrement( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TOmniAlignedInt32.Decrement(value: integer): integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := Subtract(value) - value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt32.Decrement }
+
+
+function TOmniAlignedInt32.GetValue: integer;
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    Result := FAddr^;
+  {$ELSE}
+    Result := Addr^;
+  {$ENDIF}
+end;
+
+
+function TOmniAlignedInt32.Increment: integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedIncrement(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Increment( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Increment( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt32.Increment }
+
+function TOmniAlignedInt32.Increment(value: integer): integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := Add(value) + value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt32.Increment }
+
+procedure TOmniAlignedInt32.SetValue(value: integer);
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    FAddr^ := value;
+  {$ELSE}
+    Addr^ := value;
+  {$ENDIF}
+end; { TOmniAlignedInt32.SetValue }
+
+function TOmniAlignedInt32.Subtract(value: integer): integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedExchangeAdd(Addr^, -value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt32.Subtract }
+
+class operator TOmniAlignedInt32.Add(const ai: TOmniAlignedInt32; i: integer): cardinal;
+begin
+  Result := cardinal(int64(ai.Value) + i);
+end; { TOmniAlignedInt32.Add }
+
+class operator TOmniAlignedInt32.Equal(const ai: TOmniAlignedInt32; i: integer): boolean;
+begin
+  Result := (ai.Value = i);
+end; { TOmniAlignedInt32.Equal }
+
+class operator TOmniAlignedInt32.GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean;
+begin
+  Result := (ai.Value > i);
+end; { TOmniAlignedInt32.GreaterThan }
+
+class operator TOmniAlignedInt32.GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer):
+  boolean;
+begin
+  Result := (ai.Value >= i);
+end; { TOmniAlignedInt32.GreaterThanOrEqual }
+
+class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): PInteger;
+begin
+  Result := ai.Addr;
+end; { TOmniAlignedInt32.Implicit }
+
+class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): cardinal;
+begin
+  Result := ai.Value;
+end; { TOmniAlignedInt32.Implicit }
+
+class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): integer;
+begin
+  Result := integer(ai.Value);
+end; { TOmniAlignedInt32.Implicit }
+
+class operator TOmniAlignedInt32.LessThan(const ai: TOmniAlignedInt32; i: integer): boolean;
+begin
+  Result := (ai.Value < i);
+end; { TOmniAlignedInt32.LessThan }
+
+class operator TOmniAlignedInt32.LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer):
+  boolean;
+begin
+  Result := (ai.Value <= i);
+end; { TOmniAlignedInt32.LessThanOrEqual }
+
+class operator TOmniAlignedInt32.NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean;
+begin
+  Result := (ai.Value <> i);
+end; { TOmniAlignedInt32.NotEqual }
+
+class operator TOmniAlignedInt32.Subtract(ai: TOmniAlignedInt32; i: integer): cardinal;
+begin
+  Result := cardinal(int64(ai.Value) - i);
+end; { TOmniAlignedInt32.Subtract }
+
+
+{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+  procedure TOmniAlignedInt64.Initialize;
+  begin
+    Assert(SizeOf(pointer) = SizeOf(NativeInt));
+    FAddr := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  end;
+{$ENDIF}
+
+function TOmniAlignedInt64.Add(value: int64): int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedExchangeAdd64(Addr^, value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.Add }
+
+function TOmniAlignedInt64.Addr: PInt64;
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := FAddr
+  {$ELSE}
+    Assert(SizeOf(pointer) = SizeOf(NativeInt));
+    Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  {$ENDIF}
+end; { TOmniAlignedInt64.Addr }
+
+function TOmniAlignedInt64.CAS(oldValue, newValue: int64): boolean;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.CompareExchange( FAddr^, newValue, OldValue) = oldValue
+    {$ELSE}
+    result := TInterlocked.CompareExchange( Addr^, newValue, OldValue) = oldValue
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.CAS }
+
+function TOmniAlignedInt64.Decrement: int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedDecrement64(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Decrement( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Decrement( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TOmniAlignedInt64.Decrement(value: int64): int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := Subtract(value) - value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.Decrement }
+
+function TOmniAlignedInt64.GetValue: int64;
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    Result := FAddr^;
+  {$ELSE}
+    Result := Addr^;
+  {$ENDIF}
+end; { TOmniAlignedInt64.GetValue }
+
+function TOmniAlignedInt64.Increment: int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedIncrement64(Addr^);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Increment( FAddr^)
+    {$ELSE}
+    result := TInterlocked.Increment( Addr^)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.Increment }
+
+function TOmniAlignedInt64.Increment(value: int64): int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := Add(value) + value;
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.Increment }
+
+procedure TOmniAlignedInt64.SetValue(value: int64);
+begin
+  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    FAddr^ := value;
+  {$ELSE}
+    Addr^ := value;
+  {$ENDIF}
+end; { TOmniAlignedInt64.SetValue }
+
+function TOmniAlignedInt64.Subtract(value: int64): int64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
+  {$ELSE}
+    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
+    result := TInterlocked.Add( FAddr^, -value)
+    {$ELSE}
+    result := TInterlocked.Add( Addr^, -value)
+    {$ENDIF}
+  {$ENDIF}
+end; { TOmniAlignedInt64.Subtract }
+
+{$ENDIF OmniAlignedInt}
+
+{$IFDEF OmniAlignedInt}
+function TGpObjectListHelper.CardCount: cardinal;
+begin
+  Result := cardinal(Count);
+end; { TGpObjectListHelper.CardCount }
+{$ENDIF OmniAlignedInt}
 
 initialization
   Assert(SizeOf(TObject) = SizeOf( NativeUInt)); //in VarToObj
