@@ -107,7 +107,7 @@
 // INSTRUCTIONS:
 //   You can control parameters to your build process either by editing this file,
 //  or by leaving all the configuration block conditionals undefined in this file
-//  and controling them instead in the project options. The latter approach is
+//  and controlling them instead in the project options. The latter approach is
 //  better if you want config-specific settings.
 //  If controlling via this file: To turn a parameter ON, change or ensure the
 //  respective directive from
@@ -124,15 +124,16 @@
 //                               |  structure, such as TGp4AlignedInt. This     |
 //                               |  conditional only has effect for non-windows |
 //                               |  platforms and only for compilers XE7+.      |
-//                               |  This is an experiemental setting with less  |
+//                               |  This is an experimental setting with less  |
 //                               |  testing. Use at your own risk. If it works  |
 //                               |  it is likely to confer an advantage of      |
 //                               |  slightly superior performance.              |
-//  OTL_CACHE_SLACKSPACE_OFFSETS | If undefined, the TGp4AlignedInt and similiar| OFF (undefined).
+//  OTL_CACHE_SLACKSPACE_OFFSETS | If undefined, the TGp4AlignedInt and similar | OFF (undefined).
 //                               |  slack-space containers recalculate the slack|
 //                               |  space offset on each value access. If set,  |
 //                               |  the offset calculation is cached, which     |
-//                               |  should give a slighly superior performance. |
+//                               |  should give a slightly superior performance.|
+//
 //
 // ACTUATION:
 
@@ -147,15 +148,19 @@
 
 
 
-
 // Post configuration block. Do not change. This section is for computed
 //  conditionals that are a function of paremeters in the configuration block.
-
-{$UNDEFINE OTL_USE_ALIGN}
-{$IFNDEF WINDOWS}
+{$UNDEF OTL_USE_ALIGN}
+{$IFNDEF MSWINDOWS}
   {$IF CompilerVersion >= 28} // XE7+
     {$IFDEF OTL_RELY_ON_ALIGN}
       {$DEFINE OTL_USE_ALIGN}
-    {$IFEND}
+    {$ENDIF}
   {$IFEND}
-{$IFEND}
+{$ENDIF}
+
+{$IFDEF CONDITIONALEXPRESSIONS}
+  {$IF CompilerVersion >= 24}
+    {$DEFINE XE3_OR_ABOVE}
+  {$IFEND}
+{$ENDIF}
