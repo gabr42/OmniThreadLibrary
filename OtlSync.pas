@@ -369,29 +369,6 @@ type
     property Signalled: THandles read FSignalledHandles;
   end; { TWaitForAll }
 
-{$IFDEF OTL_NeedsWindowsAPIs}
-  TWaitOrTimerCallback = procedure (Context: Pointer; Success: Boolean) stdcall;
-  BOOL = LongBool;
-  ULONG = Cardinal;
-
-const
-  WT_EXECUTEONLYONCE           = ULONG($00000008);
-  WT_EXECUTEINPERSISTENTTHREAD = ULONG($00000080);
-
-function RegisterWaitForSingleObject(out phNewWaitObject: THandle; hObject: THandle;
-  CallBack: TWaitOrTimerCallback; Context: Pointer; dwMilliseconds: ULONG;
-  dwFlags: ULONG): BOOL; stdcall;
-  external 'kernel32.dll' name 'RegisterWaitForSingleObject';
-function RegisterWaitForSingleObjectEx(hObject: THandle;
-  CallBack: TWaitOrTimerCallback; Context: Pointer; dwMilliseconds: ULONG;
-  dwFlags: ULONG): THandle; stdcall;
-  external 'kernel32.dll' name 'RegisterWaitForSingleObjectEx';
-function UnregisterWait(WaitHandle: THandle): BOOL; stdcall;
-  external 'kernel32.dll' name 'UnregisterWait';
-function UnregisterWaitEx(WaitHandle: THandle; CompletionEvent: THandle): BOOL; stdcall;
-  external 'kernel32.dll' name 'UnregisterWaitEx';
-{$ENDIF OTL_NeedsWindowsAPIs}  
-
 function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;

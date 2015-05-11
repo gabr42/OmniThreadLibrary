@@ -61,8 +61,8 @@
 
 {$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
 
-{$IF CompilerVersion < 19} //D2007
-  {$DEFINE OTL_NeedsWindowsAPIs}
+{$IF CompilerVersion < 20}
+{$MESSAGE ERROR 'Delphi 2009 or newer is required'}
 {$IFEND}
 
 {$IF CompilerVersion >= 20} //D2009
