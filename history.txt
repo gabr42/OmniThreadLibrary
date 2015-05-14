@@ -1,4 +1,8 @@
-  
+3.04a: 2015-05-14
+- New features:
+  - Added XE8 packages and projects.
+  - Tested with XE8.
+- Bug fixes:  
   - DSiWin32
     - Fixed DSiClassWndProc parameter types for Win64.
     - DSiClassWndProc catches exceptions in instance's WndProc.
