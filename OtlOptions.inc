@@ -128,17 +128,11 @@
 //                               |  testing. Use at your own risk. If it works  |
 //                               |  it is likely to confer an advantage of      |
 //                               |  slightly superior performance.              |
-//  OTL_CACHE_SLACKSPACE_OFFSETS | If undefined, the TGp4AlignedInt and similar | OFF (undefined).
-//                               |  slack-space containers recalculate the slack|
-//                               |  space offset on each value access. If set,  |
-//                               |  the offset calculation is cached, which     |
-//                               |  should give a slightly superior performance.|
 //
 //
 // ACTUATION:
 
      {.$DEFINE OTL_RELY_ON_ALIGN}
-     {.$DEFINE OTL_CACHE_SLACKSPACE_OFFSETS}
 
 // -----------------------------------------------------------------------------
 // --------------- END OF CONFIGURATION BLOCK ----------------------------------

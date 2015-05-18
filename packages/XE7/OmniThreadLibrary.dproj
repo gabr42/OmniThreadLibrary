@@ -107,12 +107,8 @@
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="..\..\src\GpLists.pas"/>
-        <DCCReference Include="..\..\src\GpStuff.pas"/>
-        <DCCReference Include="..\..\src\GpStringHash.pas"/>
-        <DCCReference Include="..\..\src\DetailedRTTI.pas"/>
         <DCCReference Include="..\..\OtlCommon.pas"/>
         <DCCReference Include="..\..\OtlContainers.pas"/>
-        <DCCReference Include="..\..\OtlComm.pas"/>
         <DCCReference Include="..\..\OtlTask.pas"/>
         <DCCReference Include="..\..\OtlTaskControl.pas"/>
         <DCCReference Include="..\..\OtlThreadPool.pas"/>
