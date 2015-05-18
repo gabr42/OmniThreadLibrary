@@ -500,95 +500,6 @@ type
     property Current: TOmniValue read GetCurrent;
   end; { TOmniValueEnumerator }
 
-  IOmniEventObserver = interface;
-
-  /// <remarks>
-  ///   IOmniEvent is a wrapper around a TEvent object.
-  ///   It can co-operate with condition variables through the use of an
-  ///   attached IOmniEventObserver. IOmniEvent objects can be enrolled
-  ///   in TWaitFor objects on non-windows platforms.
-  /// </remarks>
-  IOmniEvent = interface ['{F3C39432-3030-4258-A09D-0E64E3FFA72C}']
-    function  AsSyncro: TSynchroObject;
-    function  AsNativeEvent: TEvent;
-    {$IFDEF MSWINDOWS}
-    function  Handle: THandle;
-    {$ENDIF}
-    procedure Signal;
-    procedure Reset;
-
-    /// <remarks>
-    ///  If this event is attached to IOmniEventObserver,
-    //    such as TWaitFor (acting as a condition variable)
-    ///   a thread must not invoke WaitFor() directly on this event, but
-    ///   rather through the containing TWaitFor, or as otherwise defined by
-    //    the attached observer.
-    /// </remarks>
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult;
-
-    /// <remarks>
-    ///  IsSignaled() is only valid when all the Signal()/ Reset()
-    ///   invocations are done whilst attached to an IOmniEventObserver.
-    ///   Otherwise this returned value must not be relied upon.
-    /// </remarks>
-    function  IsSignaled: boolean;
-    procedure Attach(const Observer: IOmniEventObserver);
-  end; { IOmniEvent }
-
-  IOmniEventObserver = interface ['{2722DC65-BCF0-4002-9DDC-2E87D66FAEEA}']
-    procedure EnterGate;
-    procedure LeaveGate;
-    procedure EnlistEvent(const Addend: IOmniEvent);
-    procedure DelistEvent(const Subtractend: IOmniEvent);
-    procedure BeforeSignal(const Signaler: IOmniEvent; var Data: TObject);
-    procedure AfterSignal(const Signaler: IOmniEvent; const Data: TObject);
-  end; { IOmniEventObserver }
-
-  /// <remarks>
-  ///  IOmniEventEx is an internal interface, which is only meant to be
-  ///   called by condition variables which have enlisted this event.
-  ///   When a thread waits on a condition variable, and then condition
-  ///   variable is computed to be in the signaled state, due to the
-  ///   signaling of this member event, then the condition variable will
-  ///   use this interface to propagate the due consumption of the orginating signal.
-  /// </remarks>
-  IOmniEventEx = interface(IOmniEvent) ['{EB79BABA-8885-4450-8259-7AE2090441C1}']
-    procedure ConsumeSignalFromConditionVariable;
-  end; { IOmniEventEx }
-
-  TOmniEvent = class(TInterfacedObject, IOmniEvent, IOmniEventEx)
-  private type
-    TOmniEventSynchroObject = class(TSynchroObject)
-    private
-      FOwner: TOmniEvent;
-      constructor Create(const AOwner: TOmniEvent);
-    public
-      procedure Acquire; override;
-      procedure Release; override;
-      function  WaitFor(timeout: LongWord = INFINITE): TWaitResult; overload; override;
-    end; { TOmniEventSynchroObject }
-  private
-    FEvent      : TEvent;
-    FIsSignaled : boolean;
-    FManualReset: boolean;
-    FObserver   : IOmniEventObserver;
-    FSyncho     : TOmniEventSynchroObject;
-  public
-    function  AsSyncro: TSynchroObject;
-    function  AsNativeEvent: TEvent;
-    {$IFDEF MSWINDOWS}
-    function  Handle: THandle;
-    {$ENDIF}
-    procedure Signal;
-    procedure Reset;
-    function  WaitFor(timeout: LongWord = INFINITE): TWaitResult; overload; virtual;
-    function  IsSignaled: boolean;
-    procedure Attach(const observer: IOmniEventObserver);
-    procedure ConsumeSignalFromConditionVariable;
-    constructor Create(AManualReset, InitialState: boolean);
-    destructor Destroy; override;
-  end; { TOmniEvent }
-
   IOmniWaitableValue = interface ['{46EB21E0-B5E8-47DA-8E34-E4DE04C4D8D9}']
   {$IFDEF MSWINDOWS}
     function  GetHandle: THandle;
@@ -864,16 +775,12 @@ type
   TOmniAlignedInt32 = record
   strict private
     aiData: int64;
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
     FAddr: PInteger;
-    {$ENDIF}
     function  GetValue: integer; inline;
     procedure SetValue(value: integer); inline;
 
   public
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
     procedure Initialize;
-    {$ENDIF}
     function  Add(value: integer): integer; inline;
     function  Addr: PInteger; inline;
     function  CAS(oldValue, newValue: integer): boolean;
@@ -901,15 +808,11 @@ type
     aiData: packed record
       DataLo, DataHi: int64;
     end;
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-      FAddr: PInt64;
-    {$ENDIF}
+    FAddr: PInt64;
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-      procedure Initialize;
-    {$ENDIF}
+    procedure Initialize;
     function  Add(value: int64): int64; inline;
     function  Addr: PInt64; inline;
     function  CAS(oldValue, newValue: int64): boolean;
@@ -1128,7 +1031,7 @@ type
   TOmniThreadEnvironment = class(TInterfacedObject, IOmniThreadEnvironment)
   strict private
     oteAffinity: IOmniAffinity;
-    oteThreadID: cardinal;
+    oteThreadID:  TThreadID;
   protected
     function  GetAffinity: IOmniAffinity;
     function  GetID: TThreadID;
@@ -1571,9 +1474,7 @@ begin
 {$IFDEF OTL_USE_ALIGN}
   FValue := initialValue;
 {$ELSE}
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    ocValue.Initialize;
-  {$ENDIF}
+  ocValue.Initialize;
   ocValue.Value := initialValue;
 {$ENDIF}
 end; { TOmniCounterImpl.Create }
@@ -2951,10 +2852,12 @@ begin
   Result := a.AsString;
 end; { TOmniValue.Implicit }
 
+{$IFDEF MSWINDOWS}
 class operator TOmniValue.Implicit(const a: WideString): TOmniValue;
 begin
   Result.AsWideString := a;
 end; { TOmniValue.Implicit }
+{$ENDIF}
 
 class operator TOmniValue.Implicit(const a: Variant): TOmniValue;
 begin
@@ -3063,6 +2966,7 @@ end; { TOmniStringData.SetValue }
 
 { TOmniAnsiStringData }
 
+{$IFDEF MSWINDOWS}
 constructor TOmniAnsiStringData.Create(const value: AnsiString);
 begin
   inherited Create;
@@ -3096,6 +3000,7 @@ procedure TOmniWideStringData.SetValue(const value: WideString);
 begin
   osdValue := value;
 end; { TOmniWideStringData.SetValue }
+{$ENDIF}
 
 { TOmniVariantData }
 
@@ -3344,7 +3249,7 @@ begin
   Result := oteAffinity;
 end; { TOmniThreadEnvironment.GetAffinity }
 
-function TOmniThreadEnvironment.GetID: cardinal;
+function TOmniThreadEnvironment.GetID: TThreadId;
 begin
   Result := oteThreadID;
 end; { TOmniThreadEnvironment.GetID }
@@ -3570,33 +3475,23 @@ begin
   {$ENDIF}
 end; { NextOid }
 
-{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
 procedure TOmniAlignedInt32.Initialize;
 begin
   FAddr := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
 end; { TOmniAlignedInt32.Initialize }
-{$ENDIF}
 
 function TOmniAlignedInt32.Add(value: integer): integer;
 begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, value);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Add }
 
 function TOmniAlignedInt32.Addr: PInteger;
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-  Result := FAddr;
-  {$ELSE}
-  Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
-  {$ENDIF}
+  Result := FAddr
 end; { TOmniAlignedInt32.Addr }
 
 function TOmniAlignedInt32.CAS(oldValue, newValue: integer): boolean;
@@ -3604,11 +3499,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
-    {$ELSE}
-    Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
-    {$ENDIF}
+  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt32.CAS }
 
@@ -3617,11 +3508,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedDecrement(Addr^);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Decrement(FAddr^);
-    {$ELSE}
-    Result := TInterlocked.Decrement(Addr^);
-    {$ENDIF}
+  Result := TInterlocked.Decrement(FAddr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
@@ -3630,21 +3517,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, -value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, -value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.GetValue: integer;
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := FAddr^;
-  {$ELSE}
-    Result := Addr^;
-  {$ENDIF}
+  Result := FAddr^;
 end; { TOmniAlignedInt32.GetValue }
 
 function TOmniAlignedInt32.Increment: integer;
@@ -3652,11 +3531,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedIncrement(Addr^);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Increment(FAddr^);
-    {$ELSE}
-    Result := TInterlocked.Increment(Addr^);
-    {$ENDIF}
+  Result := TInterlocked.Increment(FAddr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
@@ -3665,21 +3540,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
 procedure TOmniAlignedInt32.SetValue(value: integer);
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    FAddr^ := value;
-  {$ELSE}
-    Addr^ := value;
-  {$ENDIF}
+  FAddr^ := value;
 end; { TOmniAlignedInt32.SetValue }
 
 function TOmniAlignedInt32.Subtract(value: integer): integer;
@@ -3687,11 +3554,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, -value);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, -value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, -value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Subtract }
 
@@ -3752,35 +3615,24 @@ begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TOmniAlignedInt32.Subtract }
 
-{$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
 procedure TOmniAlignedInt64.Initialize;
 begin
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   FAddr := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
 end; { TOmniAlignedInt64.Initialize }
-{$ENDIF}
 
 function TOmniAlignedInt64.Add(value: int64): int64;
 begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, value);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Add }
 
 function TOmniAlignedInt64.Addr: PInt64;
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := FAddr;
-  {$ELSE}
-    Assert(SizeOf(pointer) = SizeOf(NativeInt));
-    Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
-  {$ENDIF}
+  Result := FAddr;
 end; { TOmniAlignedInt64.Addr }
 
 function TOmniAlignedInt64.CAS(oldValue, newValue: int64): boolean;
@@ -3788,11 +3640,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
-    {$ELSE}
-    Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
-    {$ENDIF}
+  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt64.CAS }
 
@@ -3801,11 +3649,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedDecrement64(Addr^);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Decrement( FAddr^)
-    {$ELSE}
-    Result := TInterlocked.Decrement( Addr^)
-    {$ENDIF}
+  Result := TInterlocked.Decrement( FAddr^)
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
@@ -3814,21 +3658,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, -value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, -value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := FAddr^;
-  {$ELSE}
-    Result := Addr^;
-  {$ENDIF}
+  Result := FAddr^;
 end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
@@ -3836,11 +3672,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedIncrement64(Addr^);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Increment(FAddr^);
-    {$ELSE}
-    Result := TInterlocked.Increment(Addr^);
-    {$ENDIF}
+  Result := TInterlocked.Increment(FAddr^);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
@@ -3849,21 +3681,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
-  {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    FAddr^ := value;
-  {$ELSE}
-    Addr^ := value;
-  {$ENDIF}
+  FAddr^ := value;
 end; { TOmniAlignedInt64.SetValue }
 
 function TOmniAlignedInt64.Subtract(value: int64): int64;
@@ -3871,149 +3695,10 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, -value);
   {$ELSE}
-    {$IFDEF OTL_CACHE_SLACKSPACE_OFFSETS}
-    Result := TInterlocked.Add(FAddr^, -value);
-    {$ELSE}
-    Result := TInterlocked.Add(Addr^, -value);
-    {$ENDIF}
+  Result := TInterlocked.Add(FAddr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
 
-constructor TOmniEvent.Create(AManualReset, InitialState: boolean);
-begin
-  FSyncho      := TOmniEventSynchroObject.Create( Self);
-  FIsSignaled  := InitialState;
-  FObserver    := nil;
-  FManualReset := AManualReset;
-  FEvent       := TEvent.Create(nil, FManualReset, FIsSignaled, '', false)
-end; { TOmniEvent.Create }
-
-destructor TOmniEvent.Destroy;
-begin
-  // No need to detach. Because we are a reference counted object,
-  //  any attached observers at this point, will have already de-reference us,
-  //  almost by definition.
-  FObserver := nil;
-  inherited;
-  FSyncho.Free;
-  FEvent.Free
-end; { TOmniEvent.Destroy }
-
-function TOmniEvent.AsNativeEvent: TEvent;
-begin
-  Result := FEvent;
-end; { TOmniEvent.AsNativeEvent }
-
-function TOmniEvent.AsSyncro: TSynchroObject;
-begin
-  Result := FSyncho;
-end; { TOmniEvent.AsSyncro }
-
-procedure TOmniEvent.Attach(const Observer: IOmniEventObserver);
-var
-  old: IOmniEventObserver;
-begin
-  if FObserver = Observer then
-    Exit;
-  old := FObserver;
-  FObserver := nil;
-  if assigned(old) then begin
-    old.EnterGate;
-    try
-      old.DelistEvent(Self);
-    finally old.LeaveGate end
-    end;
-  FObserver := Observer;
-  if assigned(FObserver) then begin
-    FObserver.EnterGate;
-    try
-      FObserver.EnlistEvent(Self);
-    finally FObserver.LeaveGate; end
-  end;
-end; { TOmniEvent.Attach }
-
-procedure TOmniEvent.ConsumeSignalFromConditionVariable;
-var
-  Res: TWaitResult;
-begin
-  Assert(assigned(FObserver));
-  Res := FEvent.WaitFor(0);
-  Assert(Res = wrSignaled);
-  if not FManualReset then
-    FIsSignaled := false
-end; { TOmniEvent.ConsumeSignalFromConditionVariable }
-
-{$IFDEF MSWINDOWS}
-function TOmniEvent.Handle: THandle;
-begin
-  Result := FEvent.Handle;
-end; { TOmniEvent.Handle }
-{$ENDIF MSWINDOWS}
-
-function TOmniEvent.IsSignaled: boolean;
-begin
-  Result := FIsSignaled
-end; { TOmniEvent.IsSignaled }
-
-procedure TOmniEvent.Reset;
-begin
-  if assigned(FObserver) then
-    FObserver.EnterGate;
-  try
-    FEvent.ResetEvent;
-    FIsSignaled := false
-  finally
-    if assigned(FObserver) then
-      FObserver.LeaveGate
-    end;
-end; { TOmniEvent.Reset }
-
-procedure TOmniEvent.Signal;
-var
-  datum: TObject;
-begin
-  if assigned(FObserver) then begin
-    FObserver.EnterGate;
-    try
-      FObserver.BeforeSignal(Self, datum);
-      FEvent.SetEvent;
-      FIsSignaled := true;
-      FObserver.AfterSignal(Self, datum);
-    finally FObserver.LeaveGate; end;
-  end
-  else begin
-    FEvent.SetEvent;
-    FIsSignaled := true
-  end
-end; { TOmniEvent.Signal }
-
-function TOmniEvent.WaitFor(timeout: LongWord = INFINITE): TWaitResult;
-begin
-  Assert(not assigned(FObserver));
-  Result := FEvent.WaitFor(timeout);
-  if not FManualReset then
-    FIsSignaled := false
-end; { TOmniEvent.WaitFor }
-
-constructor TOmniEvent.TOmniEventSynchroObject.Create(const AOwner: TOmniEvent);
-begin
-  FOwner := AOwner;
-end; { TOmniEventSynchroObject.Create }
-
-procedure TOmniEvent.TOmniEventSynchroObject.Acquire;
-begin
-  FOwner.WaitFor(INFINITE);
-end; { TOmniEventSynchroObject.Acquire }
-
-procedure TOmniEvent.TOmniEventSynchroObject.Release;
-begin
-  FOwner.Signal;
-end; { TOmniEventSynchroObject.Release }
-
-function TOmniEvent.TOmniEventSynchroObject.WaitFor(timeout: LongWord): TWaitResult;
-begin
-  Result := FOwner.WaitFor(timeOut);
-end; { TOmniEventSynchroObject.WaitFor }
 
 initialization
   Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj

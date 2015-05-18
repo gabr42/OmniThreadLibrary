@@ -35,12 +35,8 @@ requires
 
 contains
   GpLists in '..\..\src\GpLists.pas',
-  GpStuff in '..\..\src\GpStuff.pas',
-  GpStringHash in '..\..\src\GpStringHash.pas',
-  DetailedRTTI in '..\..\src\DetailedRTTI.pas',
   OtlCommon in '..\..\OtlCommon.pas',
   OtlContainers in '..\..\OtlContainers.pas',
-  OtlComm in '..\..\OtlComm.pas',
   OtlTask in '..\..\OtlTask.pas',
   OtlTaskControl in '..\..\OtlTaskControl.pas',
   OtlThreadPool in '..\..\OtlThreadPool.pas',
