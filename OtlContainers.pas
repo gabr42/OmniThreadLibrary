@@ -99,10 +99,12 @@ interface
 
 uses
   Classes,
-  DSiWin32,
-  GpStuff,
   OtlCommon,
   OtlSync,
+{$IFDEF MSWINDOWS}
+  DSiWin32,
+  GpStuff,
+{$ENDIF}
   OtlContainerObserver;
 
 const
@@ -110,10 +112,6 @@ const
   CAlmostFullLoadFactor  = 0.9; // When an element count raises above 90%, the container is considered 'almost full'.
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   {:Lock-free, multiple writer, multiple reader, bounded stack.
   }
   IOmniStack = interface ['{F4C57327-18A0-44D6-B95D-2D51A0EF32B4}']
@@ -138,7 +136,9 @@ type
 
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
+    [Volatile]
     PData    : pointer;
+    [Volatile]
     Reference: NativeInt;
   end; { TReferencedPtr }
 
@@ -191,7 +191,7 @@ type
   strict private
     osAlmostFullCount : integer;
     osContainerSubject: TOmniContainerSubject;
-    osInStackCount    : TGp4AlignedInt;
+    osInStackCount    : TOmniAlignedInt32;
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
@@ -237,7 +237,7 @@ type
   strict private
     oqAlmostFullCount : integer;
     oqContainerSubject: TOmniContainerSubject;
-    oqInQueueCount    : TGp4AlignedInt;
+    oqInQueueCount    : TOmniAlignedInt32;
     oqPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
@@ -326,9 +326,13 @@ type
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
-  SysUtils;
+  {$ENDIF}
+  SysUtils,
+  SyncObjs;
 
+{$IFDEF MSWINDOWS}
 {$IFDEF CPUX64}
 procedure AsmInt3;
 asm
@@ -342,6 +346,7 @@ asm
   pause;
 end; { AsmPause }
 {$ENDIF CPUX64}
+{$ENDIF}
 
 { TOmniBaseBoundedStack }
 
@@ -371,6 +376,7 @@ var
   iElement          : integer;
   nextElement       : POmniLinkedData;
   roundedElementSize: integer;
+  tmp               : pointer;
 begin
   Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
@@ -382,9 +388,13 @@ begin
   //calculate buffer element size, round up to next aligned value
   bufferElementSize := ((SizeOf(TOmniLinkedData) + roundedElementSize) + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   //calculate DataBuffer
-  DSiFreeMemAndNil(obsDataBuffer);
+  if assigned(obsDataBuffer) then begin
+    tmp := obsDataBuffer;
+    obsDataBuffer := nil;
+    FreeMem(tmp);
+  end;
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
-  dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
+  dataBuffer := pointer((((NativeInt(obsDataBuffer) - 1) div CASAlignment) + 1) * CASAlignment);
   if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
     raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
   obsPublicChainP := dataBuffer;
@@ -439,20 +449,24 @@ var
   end; { GetMinAndClear }
 
 var
+  {$IFDEF MSWINDOWS}
   affinity   : string;
+  {$ENDIF}
   currElement: POmniLinkedData;
   n          : integer;
 
 begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
   if not obsIsInitialized then begin
+    {$IFDEF MSWINDOWS}
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
     try
+    {$ENDIF}
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
       obsTaskPopLoops := 1;
       obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
-        DSiYield;
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := PopLink(obsRecycleChainP^);
@@ -467,7 +481,9 @@ begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
       //Calculate first 4 minimum average for InsertLink rutine
       obsTaskPushLoops := GetMinAndClear(1, 4) div 4;
       obsIsInitialized := true;
+    {$IFDEF MSWINDOWS}
     finally DSiSetThreadAffinity(affinity); end;
+    {$ENDIF}
   end;
 end;  { TOmniBaseBoundedStack.MeasureExecutionTimes }
 
@@ -484,6 +500,8 @@ begin
 end; { TOmniBaseBoundedStack.Pop }
 
 class function TOmniBaseBoundedStack.PopLink(var chain: TReferencedPtr): POmniLinkedData;
+// *** I need help with this! ***
+
 //nil << Link.Next << Link.Next << ... << Link.Next
 //FILO buffer logic                         ^------ < chainHead
 //Advanced stack PopLink model with idle/busy status bit
@@ -505,19 +523,37 @@ TryAgain:
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
     if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not CAS(CurrentReference, ThreadReference, Reference)
+       {$IFDEF MSWINDOWS}
+         not CAS(CurrentReference, ThreadReference, Reference)
+       {$ELSE}
+        (TInterlockedEx.CompareExchange( chain.Reference, ThreadReference, CurrentReference) <> CurrentReference)
+       {$ENDIF}
+
     then
       goto TryAgain;
     //Reference is set...
     result := PData;
     //Empty test
     if result = nil then
-      CAS(ThreadReference, 0, Reference)            //Clear Reference if task own reference
+      {$IFDEF MSWINDOWS}
+        CAS(ThreadReference, 0, Reference)            //Clear Reference if task own reference
+      {$ELSE}
+        TInterlockedEx.CompareExchange( chain.Reference, 0, ThreadReference)
+      {$ENDIF}
     else
+      {$IFDEF MSWINDOWS}
       if not CAS(result, ThreadReference, result.Next, 0, chain) then
+          goto TryAgain;
+      {$ELSE}
+      begin
+      Result := TInterlocked.CompareExchange( chain.PData, result.Next, pointer( ThreadReference));
+      if Result <> pointer( ThreadReference) then
         goto TryAgain;
+      end
+      {$ENDIF}
   end;
 end; { TOmniBaseBoundedStack.PopLink }
+
 
 function TOmniBaseBoundedStack.Push(const value): boolean;
 var
@@ -544,7 +580,11 @@ begin
     repeat
       PMemData := PData;
       link.Next := PMemData;
+    {$IFDEF MSWINDOWS}
     until CAS(PMemData, link, PData);
+    {$ELSE}
+    until TInterlocked.CompareExchange( PData, link, PMemData) = PMemData;
+    {$ENDIF}
   end;
 end; { TOmniBaseBoundedStack.PushLink }
 
@@ -553,6 +593,7 @@ end; { TOmniBaseBoundedStack.PushLink }
 constructor TOmniBoundedStack.Create(numElements, elementSize: integer; partlyEmptyLoadFactor,
   almostFullLoadFactor: real);
 begin
+  osInStackCount.Initialize;
   inherited Create;
   Initialize(numElements, elementSize);
   osContainerSubject := TOmniContainerSubject.Create;
@@ -650,6 +691,7 @@ var
   n                 : integer;
   ringBufferSize    : cardinal;
   roundedElementSize: integer;
+  tmp: pointer;
 begin
   Assert(SizeOf(NativeInt) = SizeOf(pointer));
   Assert(numElements > 0);
@@ -659,20 +701,32 @@ begin
   // calculate element size, round up to next aligned value
   roundedElementSize := (elementSize + SizeOf(pointer) - 1) AND NOT (SizeOf(pointer) - 1);
   // allocate obqDataBuffer
-  DSiFreeMemAndNil(obqDataBuffer);
+  if assigned(obqDataBuffer) then begin
+    tmp := obqDataBuffer;
+    obqDataBuffer := nil;
+    FreeMem(tmp);
+  end;
   GetMem(obqDataBuffer, roundedElementSize * numElements + roundedElementSize + CASAlignment);
-  dataBuffer := RoundUpTo(obqDataBuffer, CASAlignment);
+  dataBuffer := pointer((((NativeInt(obqDataBuffer) - 1) div CASAlignment) + 1) * CASAlignment);
   // allocate RingBuffers
   ringBufferSize := SizeOf(TReferencedPtr) * (numElements + 1) +
     SizeOf(TOmniRingBuffer) - SizeOf(TReferencedPtrBuffer);
-  DSiFreeMemAndNil(obqPublicRingMem);
+  if assigned(obqPublicRingMem) then begin
+    tmp := obqPublicRingMem;
+    obqPublicRingMem := nil;
+    FreeMem(tmp);
+  end;
   obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
-  obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
+  obqPublicRingBuffer := pointer((((NativeInt(obqPublicRingMem) - 1) div CASAlignment) + 1) * CASAlignment);
   Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
-  DSiFreeMemAndNil(obqRecycleRingMem);
+  if assigned(obqRecycleRingMem) then begin
+    tmp := obqRecycleRingMem;
+    obqRecycleRingMem := nil;
+    FreeMem(tmp);
+  end;
   obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
-  obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
+  obqRecycleRingBuffer := pointer((((NativeInt(obqRecycleRingMem) - 1) div CASAlignment) + 1) * CASAlignment);
   Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
     Format('TOmniBaseContainer: obcRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   // set obqPublicRingBuffer head
@@ -693,6 +747,8 @@ end; { TOmniBaseBoundedQueue.Initialize }
 
 class procedure TOmniBaseBoundedQueue.InsertLink(const data: pointer; const ringBuffer:
   POmniRingBuffer);
+// *** I need help with this! ***
+
 //FIFO buffer logic
 //Insert link to queue model with idle/busy status bit
 var
@@ -781,14 +837,16 @@ var
 
 begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
   if not obqIsInitialized then begin
+    {$IFDEF MSWINDOWS}
     affinity := DSiGetThreadAffinity;
     DSiSetThreadAffinity(affinity[1]);
     try
+    {$ENDIF}
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
-        DSiYield;
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := RemoveLink(obqRecycleRingBuffer);
@@ -801,11 +859,15 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
       obqTaskRemoveLoops := GetMinAndClear(0, 4) div 4;
       obqTaskInsertLoops := GetMinAndClear(1, 4) div 4;
       obqIsInitialized := true;
+    {$IFDEF MSWINDOWS}
     finally DSiSetThreadAffinity(affinity); end;
+    {$ENDIF}
   end;
 end; { TOmniBaseBoundedQueue.MeasureExecutionTimes }
 
 class function TOmniBaseBoundedQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
+// *** I need help with this! ***
+
 //FIFO buffer logic
 //Remove link from queue model with idle/busy status bit
 var
@@ -857,6 +919,7 @@ end; { TOmniBaseBoundedQueue.RemoveLink }
 constructor TOmniBoundedQueue.Create(numElements, elementSize: integer; partlyEmptyLoadFactor,
   almostFullLoadFactor: real);
 begin
+  oqInQueueCount.Initialize;
   inherited Create;
   oqContainerSubject := TOmniContainerSubject.Create;
   oqInQueueCount.Value := 0;
@@ -1122,7 +1185,7 @@ begin
     then
       break //repeat
     else // very temporary condition, retry quickly
-      {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+      YieldProcessor;
   until false;
   {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
   if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
@@ -1287,7 +1350,7 @@ begin
   if forceFree or obcMemStack.IsFull then
     FreeMem(firstSlot)
   else begin
-    ZeroMemory(firstSlot, obcBlockSize);
+    FillChar(firstSlot^, obcBlockSize, 0);
     PartitionMemory(firstSlot);
     if not obcMemStack.Push(firstSlot) then
       FreeMem(firstSlot);

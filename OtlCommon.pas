@@ -252,6 +252,11 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
+{$IF CompilerVersion < 23} //pre-XE2
+  NativeInt = integer;
+  PNativeInt = PInteger;
+{$IFEND}
+
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
@@ -828,6 +833,13 @@ type
   TObjectList = class(TObjectList<TObject>)
   end;
 {$ENDIF}
+
+  // TInterlockedHelper = class helper for TInterlocked doenst seem to be working.
+  TInterlockedEx = class
+  public
+    class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
+    class function Add(var Target: NativeInt; Increment: NativeInt): NativeInt; overload; static; inline;
+  end;
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
@@ -3698,6 +3710,25 @@ begin
   Result := TInterlocked.Add(FAddr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
+
+
+class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
+begin
+  {$IFDEF CPUX64}
+    Result := TInterlocked.CompareExchange(Int64  (Target), Int64  (Value), Int64  (Comparand));
+  {$ELSE}
+    Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
+  {$ENDIF}
+end;
+
+class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
+begin
+  {$IFDEF CPUX64}
+    Result := TInterlocked.Add(Int64  (Target), Int64  (Increment));
+  {$ELSE}
+    Result := TInterlocked.Add(Integer(Target), Integer(Increment));
+  {$ENDIF}
+end;
 
 
 initialization

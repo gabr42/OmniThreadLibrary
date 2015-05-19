@@ -61,7 +61,7 @@ interface
 uses
   Classes,
   OtlSync,
-  GpStuff;
+  OtlCommon;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -75,7 +75,7 @@ type
   ///<summary>Container observer. Class based for performance.</summary>
   TOmniContainerObserver = class
   strict private
-    coIsActivated: TGp4AlignedInt;
+    coIsActivated: TOmniAlignedInt32;
   public
     constructor Create;
     procedure Activate; inline;
@@ -84,6 +84,7 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
+  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
   public
     function  GetEvent: THandle; virtual; abstract;
@@ -96,6 +97,7 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); virtual; abstract;
     property Handle: THandle read GetHandle;
   end; { TOmniContainerWindowsMessageObserver }
+  {$ENDIF}
 
   TOmniContainerSubject = class
   strict private
@@ -113,22 +115,28 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
+  {$IFDEF MSWINDOWS}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
+  {$ENDIF}
 
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
-  SysUtils,
+  DSiWin32,
+  {$ENDIF}
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  DSiWin32,
-  OtlCommon;
+  SysUtils;
 
+
+
+{$IFDEF MSWINDOWS}
 type
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
   strict private
@@ -154,9 +162,11 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
+{$ENDIF}
 
 { exports }
 
+{$IFDEF MSWINDOWS}
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
   TOmniContainerWindowsEventObserver;
 begin
@@ -168,11 +178,13 @@ function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; 
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
+{$ENDIF}
 
 { TOmniContainerObserver }
 
 constructor TOmniContainerObserver.Create;
 begin
+  coIsActivated.Initialize;
   inherited;
   Activate;
 end; { TOmniContainerObserver.Create }
@@ -184,7 +196,7 @@ end; { TOmniContainerObserver.Activate }
 
 function TOmniContainerObserver.CanNotify: boolean;
 begin
-  Result := (InterlockedCompareExchange(PInteger(coIsActivated.Addr)^, 0, 1) = 1);
+  Result := coIsActivated.CAS( 1, 0)
 end; { TOmniContainerObserver.CanNotify }
 
 procedure TOmniContainerObserver.Deactivate;
@@ -192,13 +204,14 @@ begin
   coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
 
-{ TOmniContainerWindowsEventObserverImpl }
 
+{$IFDEF MSWINDOWS}
+{ TOmniContainerWindowsEventObserverImpl }
 constructor TOmniContainerWindowsEventObserverImpl.Create(externalEvent: THandle);
 begin
   if externalEvent <> 0 then begin
     cweoEvent := externalEvent;
-    cweoEventIsExternal := true;                               
+    cweoEventIsExternal := true;
   end
   else begin
     cweoEvent := Windows.CreateEvent(nil, false, false, nil);
@@ -251,6 +264,10 @@ procedure TOmniContainerWindowsMessageObserverImpl.Send(aMessage: cardinal;
 begin
   Win32Check(PostMessage(cwmoHandle, aMessage, wParam, lParam));
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
+{$ENDIF}  // MSWINDOWS
+
+
+
 
 { TOmniContainerSubject }
 
