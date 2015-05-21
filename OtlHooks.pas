@@ -48,7 +48,9 @@ unit OtlHooks;
 interface
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
+  {$ENDIF}
   SysUtils,
   Classes,
   OtlSync;
