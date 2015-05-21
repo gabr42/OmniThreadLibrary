@@ -72,13 +72,15 @@ unit OtlComm;
 interface
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
   Messages,
+  GpStuff,
+  DSiWin32,
+  {$ENDIF}
   SysUtils,
   Classes,
   SyncObjs,
-  GpStuff,
-  DSiWin32,
   OtlCommon,
   OtlSync,
   OtlContainerObserver,
@@ -104,7 +106,7 @@ type
   TOmniMessageQueue = class;
 
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
-    function  GetNewMessageEvent: THandle;
+    function  GetNewMessageEvent: IOmniEvent;
     function  GetOtherEndpoint: IOmniCommunicationEndpoint;
     function  GetReader: TOmniMessageQueue;
     function  GetWriter: TOmniMessageQueue;
@@ -119,7 +121,7 @@ type
     procedure Send(msgID: word; msgData: TOmniValue); overload;
     function  SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
     function  SendWait(msgID: word; msgData: TOmniValue; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
-    property NewMessageEvent: THandle read GetNewMessageEvent;
+    property NewMessageEvent: IOmniEvent read GetNewMessageEvent;
     property OtherEndpoint: IOmniCommunicationEndpoint read GetOtherEndpoint;
     property Reader: TOmniMessageQueue read GetReader;
     property Writer: TOmniMessageQueue read GetWriter;
@@ -135,54 +137,45 @@ type
   {:Fixed-size ring buffer of TOmniMessage data. Supports multiple simultaneous readers
     and writers.
   }
-  TOmniMessageQueue = class(TOmniBoundedQueue)
+  TOmniMessageQueue = class
   strict private
-    mqWinEventObserver: TOmniContainerWindowsEventObserver;
+    mqEventObserver: TOmniContainerEventObserver;
+   {$IFDEF MSWINDOWS}
     mqWinMsgObserver  : record
       Observer : TOmniContainerWindowsMessageObserver;
       Window   : THandle;
       OnMessage: TOmniMessageQueueMessageEvent;
     end;
+    {$ENDIF}
   strict protected
-    procedure AttachWinEventObserver;
+    procedure AttachEventObserver;
+    {$IFDEF MSWINDOWS}
     procedure SetOnMessage(const value: TOmniMessageQueueMessageEvent);
     procedure WndProc(var msg: TMessage);
+    {$ENDIF}
   public
+    FQueue: IOmniQueue;
+
     constructor Create(numMessages: integer; createEventObserver: boolean = true);
-      reintroduce;
     destructor  Destroy; override;
-    function  Dequeue: TOmniMessage; reintroduce;
-    function  Enqueue(const value: TOmniMessage): boolean; reintroduce;
+    function  Dequeue: TOmniMessage;
+    function  Enqueue(const value: TOmniMessage): boolean;
     procedure Empty;
-    function  GetNewMessageEvent: THandle;
-    function  TryDequeue(var msg: TOmniMessage): boolean; reintroduce;
-    property EventObserver: TOmniContainerWindowsEventObserver read mqWinEventObserver;
+    function  GetNewMessageEvent: IOmniEvent;
+    function  TryDequeue(var msg: TOmniMessage): boolean;
+    property EventObserver: TOmniContainerEventObserver read mqEventObserver;
+   {$IFDEF MSWINDOWS}
     property OnMessage: TOmniMessageQueueMessageEvent read mqWinMsgObserver.OnMessage write SetOnMessage;
+    {$ENDIF}
   end; { TOmniMessageQueue }
-
-  IOmniMessageQueueTee = interface ['{8A9526BF-71AA-4D78-BAE8-3490C3987327}']
-    procedure Attach(const queue: TOmniMessageQueue);
-    procedure Detach(const queue: TOmniMessageQueue);
-    function Enqueue(const value: TOmniMessage): boolean;
-  end;{ IOmniMessageQueueTee }
-
-  TOmniMessageQueueTee = class(TInterfacedObject, IOmniMessageQueueTee)
-  strict private
-    obqtQueueList: TList;
-    obqtQueueLock: TOmniCS;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Attach(const queue: TOmniMessageQueue);
-    procedure Detach(const queue: TOmniMessageQueue);
-    function Enqueue(const value: TOmniMessage): boolean;
-  end; { TOmniMessageQueueTee }
 
   IOmniCommDispatchingObserver = interface ['{3DCC4745-14E1-4AE2-B2B3-D4B9E36CF483}']
   end; { IOmniCommDispatchingObserver }
 
+  {$IFDEF MSWINDOWS}
   function CreateDispatchingObserver(queue: TOmniMessageQueue; dispatchTo: TObject):
     IOmniCommDispatchingObserver;
+  {$ENDIF}
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
     taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
@@ -190,15 +183,16 @@ type
 implementation
 
 uses
-  Variants,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  {$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}
+  {$IFDEF MSWINDOWS}{$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}{$ENDIF}
   OtlEventMonitor;
 
+{$IFDEF MSWINDOWS}
 const
   MSG_CLIENT_MESSAGE = WM_USER;
+{$ENDIF}
 
 type
   IOmniCommunicationEndpointInternal = interface ['{4F872DE9-6E9A-4881-B9EC-E2189DAC00F4}']
@@ -211,7 +205,7 @@ type
     IOmniCommunicationEndpointInternal)
   strict private
     ceOwner_ref              : TOmniTwoWayChannel;
-    cePartlyEmptyObserver    : TOmniContainerWindowsEventObserver;
+    cePartlyEmptyObserver    : TOmniContainerEventObserver;
     ceReader_ref             : TOmniMessageQueue;
     ceTaskTerminatedEvent_ref: THandle;
     ceWriter_ref             : TOmniMessageQueue;
@@ -219,13 +213,13 @@ type
     procedure RequirePartlyEmptyObserver;
   protected
     procedure DetachFromQueues;
-    function  GetNewMessageEvent: THandle;
+    function  GetNewMessageEvent: IOmniEvent;
     function  GetOtherEndpoint: IOmniCommunicationEndpoint;
     function  GetReader: TOmniMessageQueue;
     function  GetWriter: TOmniMessageQueue;
   public
     constructor Create(owner: TOmniTwoWayChannel; readQueue, writeQueue: TOmniMessageQueue;
-      taskTerminatedEvent_ref: THandle);
+      const taskTerminatedEvent_ref: IOmniEvent);
     destructor  Destroy; override;
     function  Receive(var msg: TOmniMessage): boolean; overload; inline;
     function  Receive(var msgID: word; var msgData: TOmniValue): boolean; overload; inline;
@@ -239,7 +233,7 @@ type
     function  SendWait(msgID: word; timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload; inline;
     function  SendWait(msgID: word; msgData: TOmniValue;
       timeout_ms: cardinal = CMaxSendWaitTime_ms): boolean; overload;
-    property NewMessageEvent: THandle read GetNewMessageEvent;
+    property NewMessageEvent: IOmniEvent read GetNewMessageEvent;
     property OtherEndpoint: IOmniCommunicationEndpoint read GetOtherEndpoint;
     property Reader: TOmniMessageQueue read GetReader;
     property Writer: TOmniMessageQueue read GetWriter;
@@ -263,6 +257,7 @@ type
     function Endpoint2: IOmniCommunicationEndpoint; inline;
   end; { TOmniTwoWayChannel }
 
+  {$IFDEF MSWINDOWS}
   TOmniCommDispatchingObserverImpl = class(TInterfacedObject, IOmniCommDispatchingObserver)
   strict private
     cdoDispatchTo : TObject;
@@ -275,14 +270,16 @@ type
     constructor Create(queue: TOmniMessageQueue; dispatchTo: TObject);
     destructor  Destroy; override;
   end; { TOmniCommDispatchingObserverImpl }
-
+  {$ENDIF}
 { exports }
 
+{$IFDEF MSWINDOWS}
 function CreateDispatchingObserver(queue: TOmniMessageQueue; dispatchTo: TObject):
   IOmniCommDispatchingObserver;
 begin
   Result := TOmniCommDispatchingObserverImpl.Create(queue, dispatchTo);
 end; { CreateDispatchingObserver }
+{$ENDIF}
 
 function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
   taskTerminatedEvent: THandle = 0): IOmniTwoWayChannel;
@@ -394,6 +391,7 @@ begin
   tmp.MsgData._Release;
 end; { TOmniMessageQueue.TryDequeue }
 
+{$IFDEF MSWINDOWS}
 procedure TOmniMessageQueue.WndProc(var msg: TMessage);
 var
   queueMsg: TOmniMessage;
@@ -402,6 +400,7 @@ begin
     while TryDequeue(queueMsg) do
       mqWinMsgObserver.OnMessage(Self, queueMsg);
 end; { TOmniMessageQueue.WndProc }
+{$ENDIF}
 
 { TOmniCommunicationEndpoint }
 
@@ -658,50 +657,9 @@ begin
     raise Exception.Create('TOmniTwoWayChannel.OtherEndpoint: Invalid endpoint!');
 end; { TOmniTwoWayChannel.OtherEndpoint }
 
-{ TOmniMessageQueueTee }
-
-constructor TOmniMessageQueueTee.Create;
-begin
-  inherited Create;
-  obqtQueueList := TList.Create;
-end; { TOmniMessageQueueTee.Create }
-
-destructor TOmniMessageQueueTee.Destroy;
-begin
-  FreeAndNil(obqtQueueList);
-  inherited;
-end; { TOmniMessageQueueTee.Destroy }
-
-procedure TOmniMessageQueueTee.Attach(const queue: TOmniMessageQueue);
-begin
-  obqtQueueLock.Acquire;
-  try
-    obqtQueueList.Add(queue);
-  finally obqtQueueLock.Release; end;
-end; { TOmniMessageQueueTee.Attach }
-
-procedure TOmniMessageQueueTee.Detach(const queue: TOmniMessageQueue);
-begin
-  obqtQueueLock.Acquire;
-  try
-    obqtQueueList.Remove(queue);
-  finally obqtQueueLock.Release; end;
-end; { TOmniMessageQueueTee.Detach }
-
-function TOmniMessageQueueTee.Enqueue(const value: TOmniMessage): boolean;
-var
-  pQueue: pointer;
-begin
-  Result := true;
-  obqtQueueLock.Acquire;
-  try
-    for pQueue in obqtQueueList do
-      Result := Result and TOmniMessageQueue(pQueue).Enqueue(value);
-  finally obqtQueueLock.Release; end;
-end; { TOmniMessageQueueTee.Enqueue }
-
 { TOmniCommDispatchingObserverImpl }
 
+{$IFDEF MSWINDOWS}
 constructor TOmniCommDispatchingObserverImpl.Create(queue: TOmniMessageQueue;
   dispatchTo: TObject);
 begin
@@ -738,6 +696,7 @@ begin
   else
     msg.Result := DefWindowProc(cdoDispatchWnd, msg.Msg, msg.WParam, msg.LParam);
 end; { TOmniCommDispatchingObserverImpl.WndProc }
+{$ENDIF}
 
 end.
 

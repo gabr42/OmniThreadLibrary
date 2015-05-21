@@ -73,7 +73,7 @@ type
   );
 
   ///<summary>Container observer. Class based for performance.</summary>
-  TOmniContainerObserver = class
+  TOmniContainerObserver = class abstract
   strict private
     coIsActivated: TOmniAlignedInt32;
   public
@@ -84,12 +84,12 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
-  {$IFDEF MSWINDOWS}
-  TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
+  TOmniContainerEventObserver = class(TOmniContainerObserver)
   public
-    function  GetEvent: THandle; virtual; abstract;
-  end; { TOmniContainerWindowsEventObserver }
+    function GetEvent: IOmniEvent; virtual; abstract;
+  end; { TOmniContainerEventObserver }
 
+  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsMessageObserver = class(TOmniContainerObserver)
   strict protected
     function  GetHandle: THandle; virtual; abstract;
@@ -115,9 +115,10 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
+  function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
+    TOmniContainerEventObserver;
+
   {$IFDEF MSWINDOWS}
-  function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
-    TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
   {$ENDIF}
@@ -136,19 +137,18 @@ uses
 
 
 
-{$IFDEF MSWINDOWS}
 type
-  TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
-  strict private
-    cweoEvent          : THandle;
-    cweoEventIsExternal: boolean;
-  public
-    constructor Create(externalEvent: THandle = 0);
-    destructor  Destroy; override;
-    function  GetEvent: THandle; override;
-    procedure Notify; override;
-  end; { TOmniContainerWindowsEventObserverImpl }
 
+  TOmniContainerEventObserverImpl = class(TOmniContainerEventObserver)
+  strict private
+    cweoEvent          : IOmniEvent;
+  public
+    constructor Create(const externalEvent: IOmniEvent);
+    function  GetEvent: IOmniEvent; override;
+    procedure Notify; override;
+  end; { TOmniContainerEventObserverImpl }
+
+{$IFDEF MSWINDOWS}
   TOmniContainerWindowsMessageObserverImpl = class(TOmniContainerWindowsMessageObserver)
   strict private
     cwmoHandle  : THandle;
@@ -166,13 +166,13 @@ type
 
 { exports }
 
-{$IFDEF MSWINDOWS}
-function CreateContainerWindowsEventObserver(externalEvent: THandle):
-  TOmniContainerWindowsEventObserver;
+function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
+  TOmniContainerEventObserver;
 begin
-  Result := TOmniContainerWindowsEventObserverImpl.Create(externalEvent);
+  Result := TOmniContainerEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
 
+{$IFDEF MSWINDOWS}
 function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
   lParam: integer): TOmniContainerWindowsMessageObserver;
 begin
@@ -205,38 +205,25 @@ begin
 end; { TOmniContainerObserver.Deactivate }
 
 
-{$IFDEF MSWINDOWS}
 { TOmniContainerWindowsEventObserverImpl }
-constructor TOmniContainerWindowsEventObserverImpl.Create(externalEvent: THandle);
+constructor TOmniContainerEventObserverImpl.Create(const externalEvent: IOmniEvent);
 begin
-  if externalEvent <> 0 then begin
-    cweoEvent := externalEvent;
-    cweoEventIsExternal := true;
-  end
-  else begin
-    cweoEvent := Windows.CreateEvent(nil, false, false, nil);
-    cweoEventIsExternal := false;
-  end;
+  cweoEvent := externalEvent;
+  if not assigned( cweoEvent) then
+    cweoEvent := CreateOmniEvent(False, False)
 end; { TOmniContainerWindowsEventObserverImpl.Create }
 
-destructor TOmniContainerWindowsEventObserverImpl.Destroy;
-begin
-  if not cweoEventIsExternal then
-    DSiCloseHandleAndNull(cweoEvent);
-  cweoEvent := 0;
-  inherited;
-end; { TOmniContainerWindowsEventObserverImpl.Destroy }
-
-function TOmniContainerWindowsEventObserverImpl.GetEvent: THandle;
+function TOmniContainerEventObserverImpl.GetEvent: IOmniEvent;
 begin
   Result := cweoEvent;
 end; { TOmniContainerWindowsEventObserverImpl.GetEvent }
 
-procedure TOmniContainerWindowsEventObserverImpl.Notify;
+procedure TOmniContainerEventObserverImpl.Notify;
 begin
-  Win32Check(SetEvent(GetEvent));
+  cweoEvent.SetEvent;
 end; { TOmniContainerWindowsEventObserverImpl.Notify }
 
+{$IFDEF MSWINDOWS}
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:

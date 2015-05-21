@@ -108,7 +108,9 @@ interface
 // TODO 5 -oPrimoz Gabrijelcic : Loggers should (maybe) send log info to the event monitor 
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
+  {$ENDIF}
   SysUtils,
   OtlCommon,
   OtlTask;
@@ -126,7 +128,9 @@ type
   IOmniThreadPoolMonitor = interface
     ['{09EFADE8-3F14-4184-87CA-131100EC57E4}']
     function  Detach(const task: IOmniThreadPool): IOmniThreadPool;
+    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniThreadPool): IOmniThreadPool;
+    {$ENDIF}
   end; { IOmniThreadPoolMonitor }
 
   TThreadPoolOperation = (tpoCreateThread, tpoDestroyThread, tpoKillThread,
@@ -153,7 +157,7 @@ type
   TOTPThreadDataFactoryMethod = function: IInterface of object;
 
   /// <summary>Worker thread lifetime reporting handler.</summary>
-  TOTPWorkerThreadEvent = procedure(Sender: TObject; threadID: DWORD) of object;
+  TOTPWorkerThreadEvent = procedure(Sender: TObject; threadID: TThreadId) of object;
 
   IOmniThreadPool = interface
     ['{1FA74554-1866-46DD-AC50-F0403E378682}']
@@ -208,10 +212,13 @@ function GlobalOmniThreadPool: IOmniThreadPool;
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
   Messages,
-  Classes,
   Contnrs,
-  Variants,
+  DSiWin32,
+  GpStuff,
+  {$ENDIF}
+  Classes,
   TypInfo,
 {$IFDEF OTL_HasSystemTypes}
   System.Types,
@@ -219,8 +226,6 @@ uses
 {$IFNDEF Unicode} // D2009+ provides own TStringBuilder class
   HVStringBuilder,
 {$ENDIF}
-  DSiWin32,
-  GpStuff,
   OtlHooks,
   OtlSync,
   OtlComm,
@@ -1284,7 +1289,7 @@ begin
   inherited Create;
   {$IFDEF LogThreadPool}Log('Creating thread pool %p [%s]', [pointer(Self), name]);{$ENDIF LogThreadPool}
   otpPoolName := name;
-  otpUniqueID := OtlUID.Increment;
+  otpUniqueID := NextOid;
   otpWorker := TOTPWorker.Create(name, otpUniqueID);
   otpWorkerTask := CreateTask
     (otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
