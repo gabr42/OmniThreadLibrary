@@ -226,19 +226,6 @@ type
   end; { TOmniResourceCount }
   {$ENDIF}
 
-  IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
-    {$IFDEF MSWINDOWS}
-    function  GetHandle: THandle;
-    {$ENDIF}
-  //
-    procedure Clear;
-    function  IsSignalled: boolean;
-    procedure Signal;
-    {$IFDEF MSWINDOWS}
-    property Handle: THandle read GetHandle;
-    {$ENDIF}
-  end; { IOmniCancellationToken }
-
   {$IFDEF OTL_Generics}
   Atomic<T> = class
     type TFactory = reference to function: T;
@@ -380,6 +367,22 @@ type
     function  BaseEvent: TEvent;
   end;
 
+  IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
+    {$IFDEF MSWINDOWS}
+    function  GetHandle: THandle;
+    {$ENDIF}
+  //
+    procedure Clear;
+    function  IsSignalled: boolean;
+    procedure Signal;
+    function  GetEvent: IOmniEvent;
+
+    {$IFDEF MSWINDOWS}
+    property Handle: THandle read GetHandle;
+    {$ENDIF}
+  end; { IOmniCancellationToken }
+
+
   {$IFDEF MSWINDOWS}
   /// <remarks>IOmniSyncro should also support ISupportsOSWaitForMultiple
   ///  if they support THandleObject.WaitForMultiple() </remarks>
@@ -515,9 +518,7 @@ function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
 function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
 
-{$IFDEF MSWINDOWS}
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
-{$ENDIF}
 
 {$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
@@ -714,6 +715,13 @@ begin
   Result := TOmniCancellationToken.Create;
 end; { CreateOmniCancellationToken }
 
+{$IFNDEF MSWINDOWS}
+function CreateResourceCount(initialCount: integer): IOmniResourceCount;
+begin
+  // TODO
+end; { CreateResourceCount }
+{$ENDIF}
+
 {$IFDEF MSWINDOWS}
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 begin
@@ -800,13 +808,29 @@ end; { CAS }
 function CAS(const oldData: pointer; oldReference: NativeInt; newData: pointer;
   newReference: NativeInt; var destination): boolean; overload;
 asm
+{     ->          EAX     oldData }
+{                 ESP+4   oldReference  }
+{                 ESP+8   newData  }
+{                 ESP+12  newReference  }
+{                 ESP+15  destination  }
+{     <-          EDX:EAX Result }
 {$IFNDEF CPUX64}
   push  edi
   push  ebx
   mov   ebx, newData
   mov   ecx, newReference
   mov   edi, destination
-  lock cmpxchg8b qword ptr [edi]
+{ EAX     oldData }
+{ ESP+4,EDX   oldReference  }
+{ EBX     newData  }
+{ ECX     newReference  }
+{ EDI     destination  }
+  lock cmpxchg8b qword ptr [edi]  // Compare EDX:EAX with m64. If equal, set ZF and load ECX:EBX into m64. Else, clear ZF and load m64 into EDX:EAX.
+     // Compare .
+     //  If oldReference,oldData = destination (8 byte) then
+     //     set result := True  and destination := newReference,newData
+     //    else
+     //     set result := False and newReference,newData := destination?
   pop   ebx
   pop   edi
 {$ELSE CPUX64}
@@ -816,7 +840,7 @@ asm
   mov   rbx, newData
   mov   rcx, newReference
   mov   r8, [destination + 8]   //+8 with respect to .noframe
-  lock cmpxchg16b [r8]
+  lock cmpxchg16b [r8]          // Compare RDX:RAX with m128. If equal, set ZF and load RCX:RBX into m128. Else, clear ZF and load m128 into RDX:RAX
   pop   rbx
 {$ENDIF CPUX64}
   setz  al
