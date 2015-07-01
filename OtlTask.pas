@@ -83,41 +83,34 @@ unit OtlTask;
 interface
 
 uses
-  Windows,
   SysUtils,
-  Variants,
   Classes,
   SyncObjs,
-  GpLists,
   OtlCommon,
   OtlSync,
-  OtlComm;
+  OtlComm,
+  Generics.Collections;
 
 type
-  IOmniTask = interface;
-
   TOmniWaitObjectMethod = procedure of object;
 
-  TOmniWaitObjectList = class
-  strict private
-    owolResponseHandlers: TGpTMethodList;
-    owolWaitObjects     : TGpInt64List;
-  strict protected
-    function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
-    function  GetWaitObjects(idxWaitObject: integer): THandle;
+  IOmniEventAndProc = interface(IOmniEvent) ['{2CA14FE0-4616-41CC-BDED-EEDE88BC6492}']
+    function BaseEvent: IOmniEvent;
+    function Proc: TOmniWaitObjectMethod;
+  end;
+
+  function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod):IOmniEventAndProc;
+
+type
+  TOmniSyncroArray = TArray<IOmniSyncro>;
+  TOmniEventProcList = class( TList<IOmniEventAndProc>)
   public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Add(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
-    function  Count: integer;
-    procedure Remove(waitObject: THandle);
-    property ResponseHandlers[idxHandler: integer]: TOmniWaitObjectMethod read
-      GetResponseHandlers;
-    property WaitObjects[idxWaitObject: integer]: THandle read GetWaitObjects;
-  end; { TOmniWaitObjectList }
+    function  AsSyncroArray: TOmniSyncroArray;
+    procedure RemoveBaseEvent(const Base: IOmniEvent);
+  end;
 
   {$IFDEF OTL_Anonymous}
-  TOmniTaskInvokeFunction = reference to procedure;
+  TOmniTaskInvokeFunction = TProc;
 //  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTaskControl);
   {$ENDIF OTL_Anonymous}
 
@@ -129,7 +122,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetParam: TOmniValueContainer;
-    function  GetTerminateEvent: THandle;
+    function  GetTerminateEvent: IOmniEvent;
     function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
   //
@@ -140,7 +133,7 @@ type
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
+    procedure RegisterWaitObject(const waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
@@ -151,7 +144,7 @@ type
     function  Terminated: boolean;
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure UnregisterWaitObject(waitObject: THandle);
+    procedure UnregisterWaitObject(const waitObject: IOmniEvent);
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -159,7 +152,7 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param: TOmniValueContainer read GetParam;
-    property TerminateEvent: THandle read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
+    property TerminateEvent: IOmniEvent read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
@@ -175,59 +168,26 @@ type
 
 implementation
 
-{ TOmniWaitObjectList }
 
-constructor TOmniWaitObjectList.Create;
+
+
+function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod):IOmniEventAndProc;
 begin
-  inherited Create;
-  owolWaitObjects := TGpInt64List.Create;
-  owolResponseHandlers := TGpTMethodList.Create;
-end; { TOmniWaitObjectList.Create }
+  // TODO
 
-destructor TOmniWaitObjectList.Destroy;
+end;
+
+
+function TOmniEventProcList.AsSyncroArray: TOmniSyncroArray;
 begin
-  FreeAndNil(owolResponseHandlers);
-  FreeAndNil(owolWaitObjects);
-  inherited Destroy;
-end; { TOmniWaitObjectList.Destroy }
+  // TODO
 
-procedure TOmniWaitObjectList.Add(waitObject: THandle;
-  responseHandler: TOmniWaitObjectMethod);
+end;
+
+procedure TOmniEventProcList.RemoveBaseEvent(const Base: IOmniEvent);
 begin
-  Remove(waitObject);
-  owolWaitObjects.Add(waitObject);
-  owolResponseHandlers.Add(TMethod(responseHandler));
-end; { TOmniWaitObjectList.Add }
+  // TODO
 
-function TOmniWaitObjectList.Count: integer;
-begin
-  Result := owolWaitObjects.Count;
-end; { TOmniWaitObjectList.Count }
+end;
 
-function TOmniWaitObjectList.GetResponseHandlers(idxHandler: integer):
-  TOmniWaitObjectMethod;
-begin
-  Result := TOmniWaitObjectMethod(owolResponseHandlers[idxHandler]);
-end; { TOmniWaitObjectList.GetResponseHandlers }
-
-function TOmniWaitObjectList.GetWaitObjects(idxWaitObject: integer): THandle;
-begin
-  Result := owolWaitObjects[idxWaitObject];
-end; { TOmniWaitObjectList.GetWaitObjects }
-
-procedure TOmniWaitObjectList.Remove(waitObject: THandle);
-var
-  idxWaitObject: integer;
-begin
-  idxWaitObject := owolWaitObjects.IndexOf(waitObject);
-  if idxWaitObject >= 0 then begin
-    owolWaitObjects.Delete(idxWaitObject);
-    owolResponseHandlers.Delete(idxWaitObject);
-  end;
-end; { TOmniWaitObjectList.Remove }
-
-{ TOmniTaskParam }
-
-initialization
-  Assert(SizeOf(THandle) <= SizeOf(int64));
 end.
