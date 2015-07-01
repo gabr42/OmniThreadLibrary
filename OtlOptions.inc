@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2015 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2012-09-23
-///   Version           : 1.04
+///   Last modification : 2015-07-01
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2015-07-01
+///       - Introduced OTL_TCountdownEventHasSpinCount.
+///     1.05: 2013-10-14
+///       - Introduced OTL_StrPasInAnsiStrings.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
@@ -45,8 +49,6 @@
 ///     1.0: 2010-07-01
 ///       - Released.
 ///</para></remarks>
-
-// See the Configuration block below to configure your build process.
 
 {$ALIGN 8}
 {$BOOLEVAL OFF}
@@ -61,8 +63,8 @@
 
 {$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
 
-{$IF CompilerVersion < 20}
-{$MESSAGE ERROR 'Delphi 2009 or newer is required'}
+{$IF CompilerVersion < 19} //D2007
+  {$DEFINE OTL_NeedsWindowsAPIs}
 {$IFEND}
 
 {$IF CompilerVersion >= 20} //D2009
@@ -94,67 +96,9 @@
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
+  {$DEFINE OTL_TCountdownEventHasSpinCount} //not sure yet but it definitely doesn't exist in XE2
 {$IFEND}
 
 {$IF CompilerVersion >= 26} //DXE5
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
-
-
-// -----------------------------------------------------------------------------
-// --------------- CONFIGURATION BLOCK -----------------------------------------
-// -----------------------------------------------------------------------------
-// INSTRUCTIONS:
-//   You can control parameters to your build process either by editing this file,
-//  or by leaving all the configuration block conditionals undefined in this file
-//  and controlling them instead in the project options. The latter approach is
-//  better if you want config-specific settings.
-//  If controlling via this file: To turn a parameter ON, change or ensure the
-//  respective directive from
-//   {.$DEFINE XXX} to {$DEFINE XXX}
-//  To turn the parameter OFF, change or ensure it is the other way around.
-//
-// PARAMETER DESCRIPTION TABLE:
-// Conditional                   | Significance                                 |  Default and recommended value
-// ..............................+..............................................+................................
-//  DEFINE OTL_RELY_ON_ALIGN     | If set, use an $ALIGN/[Volatile] structure   |  OFF (undefined).
-//                               |  for atomic integer reads and bus locking    |
-//                               |  operations such as Interlocked Compare and  |
-//                               |  Exchange. Otherwise use a slack space       |
-//                               |  structure, such as TGp4AlignedInt. This     |
-//                               |  conditional only has effect for non-windows |
-//                               |  platforms and only for compilers XE7+.      |
-//                               |  This is an experimental setting with less  |
-//                               |  testing. Use at your own risk. If it works  |
-//                               |  it is likely to confer an advantage of      |
-//                               |  slightly superior performance.              |
-//
-//
-// ACTUATION:
-
-     {.$DEFINE OTL_RELY_ON_ALIGN}
-
-// -----------------------------------------------------------------------------
-// --------------- END OF CONFIGURATION BLOCK ----------------------------------
-// -----------------------------------------------------------------------------
-
-
-
-
-
-// Post configuration block. Do not change. This section is for computed
-//  conditionals that are a function of paremeters in the configuration block.
-{$UNDEF OTL_USE_ALIGN}
-{$IFNDEF MSWINDOWS}
-  {$IF CompilerVersion >= 28} // XE7+
-    {$IFDEF OTL_RELY_ON_ALIGN}
-      {$DEFINE OTL_USE_ALIGN}
-    {$ENDIF}
-  {$IFEND}
-{$ENDIF}
-
-{$IFDEF CONDITIONALEXPRESSIONS}
-  {$IF CompilerVersion >= 24}
-    {$DEFINE XE3_OR_ABOVE}
-  {$IFEND}
-{$ENDIF}
