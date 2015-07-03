@@ -1,2 +1,5 @@
 /unittests/Debug
 /__history
+unittests/TestRunner.dproj.local
+*.dsk
+unittests/TestRunner.identcache
