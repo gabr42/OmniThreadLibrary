@@ -1,0 +1,5 @@
+*.local
+examples/TThread communication/TThreadComm.skincfg
+*.dcu
+*.identcache
+unittests/TestRunner.dsk
