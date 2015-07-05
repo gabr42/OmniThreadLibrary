@@ -29,12 +29,13 @@ var
 
 begin
   reader := CreateOmniAsyncFileStream(ParamStr(1), fmOpenRead)
+              .Config(CreateOmniAsyncStreamStrategy.Buffer(10240))
               .OnData(HandleRead)
               .OnError(ReportReadError)
               .OnDone(procedure begin reader := nil; writer := nil end);
   writer := CreateOmniAsyncFileStream(ParamStr(2), fmCreate)
               .OnError(procedure begin reader.Cancel; ReportWriteError; end);
   if reader.Open and writer.Open then
-    reader.Read(OTL_READ_ALL);
+    reader.Read;
 end.
 
