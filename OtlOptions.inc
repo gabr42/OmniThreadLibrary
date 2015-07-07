@@ -30,10 +30,14 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2012-09-23
-///   Version           : 1.04
+///   Last modification : 2015-07-01
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2015-07-01
+///       - Introduced OTL_TCountdownEventHasSpinCount.
+///     1.05: 2013-10-14
+///       - Introduced OTL_StrPasInAnsiStrings.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
@@ -61,8 +65,8 @@
 
 {$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
 
-{$IF CompilerVersion < 20}
-{$MESSAGE ERROR 'Delphi 2009 or newer is required'}
+{$IF CompilerVersion < 19} //D2007
+  {$DEFINE OTL_NeedsWindowsAPIs}
 {$IFEND}
 
 {$IF CompilerVersion >= 20} //D2009
@@ -94,6 +98,7 @@
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
+  {$DEFINE OTL_TCountdownEventHasSpinCount} //not sure yet but it definitely doesn't exist in XE2
 {$IFEND}
 
 {$IF CompilerVersion >= 26} //DXE5
