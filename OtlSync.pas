@@ -188,9 +188,12 @@ type
     function  TryEnterWriteLock: boolean; inline;
   end; { TOmniMREW }
 
+  IOmniSyncro = interface;
   IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
     {$IFDEF MSWINDOWS}
     function  GetHandle: THandle;
+    {$ELSE}
+    function  GetSyncro: IOmniSyncro;
     {$ENDIF}
     //
     function  Allocate: cardinal;
@@ -198,6 +201,8 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     {$IFDEF MSWINDOWS}
     property Handle: THandle read GetHandle;
+    {$ELSE}
+    property AsSyncro: IOmniSyncro read GetSyncro;
     {$ENDIF}
   end; { IOmniResourceCount }
 
@@ -224,6 +229,21 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
+  {$ENDIF}
+
+  {$IFNDEF MSWINDOWS}
+  // The non-windows solution
+  IOmniCountdownEvent = interface;
+  TNonWinOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
+  private
+    FCountdown: IOmniCountdownEvent;
+    function  Allocate: cardinal;
+    function  Release: cardinal;
+    function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
+    function  GetSyncro: IOmniSyncro;
+  public
+    constructor Create( initialCount: cardinal; SpinCount: Integer; const AShareLock: IOmniCriticalSection);
+  end;
   {$ENDIF}
 
   {$IFDEF OTL_Generics}
@@ -2408,6 +2428,37 @@ begin
         end
     end
 end;
+
+{$IFNDEF MSWINDOWS}
+constructor TNonWinOmniResourceCount.Create( initialCount: cardinal; SpinCount: Integer; const AShareLock: IOmniCriticalSection);
+begin
+  // TO BE DEVELOPED!
+
+end;
+
+function TNonWinOmniResourceCount.Allocate: cardinal;
+begin
+  // TO BE DEVELOPED!
+
+end;
+
+function TNonWinOmniResourceCount.Release: cardinal;
+begin
+  // TO BE DEVELOPED!
+
+end;
+
+function TNonWinOmniResourceCount.TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
+begin
+  // TO BE DEVELOPED!
+
+end;
+
+function TNonWinOmniResourceCount.GetSyncro: IOmniSyncro;
+begin
+  result := FCountdown
+end;
+{$ENDIF}
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
