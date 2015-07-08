@@ -3,3 +3,15 @@
 unittests/TestRunner.dproj.local
 *.dsk
 unittests/TestRunner.identcache
+/bag of stuff/async streams/__history
+/bag of stuff/async streams/Win32
+/bag of stuff/async streams/*.identcache
+/bag of stuff/async streams/*.dsk
+/bag of stuff/async streams/*.res
+/bag of stuff/async streams/*.local
+/bag of stuff/async streams/*.~dsk
+/examples/TThread communication/*.identcache
+/examples/TThread communication/*.dsk
+/examples/TThread communication/*.~dsk
+/examples/TThread communication/*.local
+/examples/TThread communication/*.skincfg
