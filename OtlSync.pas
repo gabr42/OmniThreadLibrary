@@ -367,7 +367,7 @@ type
     function  WaitAll(timeout_ms: cardinal): TWaitResult;
     function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitResult;
     property Signalled: THandles read FSignalledHandles;
-  end; { TWaitForAll }
+  end; { TWaitFor }
 
 {$IFDEF OTL_NeedsWindowsAPIs}
   TWaitOrTimerCallback = procedure (Context: Pointer; Success: Boolean) stdcall;
@@ -1341,7 +1341,7 @@ begin
   FOwner.Awaited_Asy(FIdxHandle);
 end; { TWaitFor.TWaiter.Awaited }
 
-{ TWaitForAll }
+{ TWaitFor }
 
 constructor TWaitFor.Create(const handles: array of THandle);
 begin
