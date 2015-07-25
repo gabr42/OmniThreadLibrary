@@ -373,6 +373,18 @@ type
     property Signalled: THandles read FSignalledHandles;
   end; { TWaitFor }
 
+  TOmniSingleThreadUseChecker = record
+  {$IFDEF MSWINDOWS}
+  {$IFDEF OTL_CheckThreadSafety}
+  private
+    FLock    : TOmniCS;
+    FThreadID: cardinal;
+  {$ENDIF OTL_CheckThreadSafety}
+  {$ENDIF MSWINDOWS}
+  public
+    procedure Check; inline;
+  end; { TOmniSingleThreadUseChecker }
+
 {$IFDEF OTL_NeedsWindowsAPIs}
   TWaitOrTimerCallback = procedure (Context: Pointer; Success: Boolean) stdcall;
   BOOL = LongBool;
