@@ -38,10 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2015-04-17
-///   Version           : 1.20
+///   Last modification : 2015-07-10
+///   Version           : 1.21
 ///</para><para>
 ///   History:
+///     1.21: 2015-07-10
+///       - Implemented TOmniSingleThreadUseChecker, a record which checks that the
+///         owner is only used from one thread. See OtlComm/TOmniCommunicationEndpoint
+///         for an example.
 ///     1.20: 2015-04-17
 ///       - TOmniCS.GetLockCount won't crash if Initialize was not called yet.
 ///     1.19: 2014-11-04
@@ -1513,6 +1517,25 @@ begin
   end;
   Result := MapToResult(winResult);
 end; { TWaitFor.WaitAny }
+
+procedure TOmniSingleThreadUseChecker.Check;
+{$IFDEF OTL_CheckThreadSafety}
+var
+  thID: cardinal;
+{$ENDIF OTL_CheckThreadSafety}
+begin
+  {$IFDEF OTL_CheckThreadSafety}
+  FLock.Acquire;
+  try
+    thID := cardinal(GetCurrentThreadID);
+    if (FThreadID <> 0) and (FThreadID <> thID) then
+      raise Exception.CreateFmt(
+        'Unsafe use: Current thread ID: %d, previous thread ID: %d',
+        [thID, FThreadID]);
+    FThreadID := thId;
+  finally FLock.Release; end;
+  {$ENDIF OTL_CheckThreadSafety}
+end; { TOmniSingleThreadUseChecker.Check }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;

@@ -1,3 +1,8 @@
+- Implemented TOmniSingleThreadUseChecker, a record which checks that the owner 
+  is only used from one thread. See OtlComm/TOmniCommunicationEndpoint for an example.
+- Reimplemented support for TWaitFor in the TOmniTaskControl which was removed
+  from the code in 3.04a by mistake.
+
 3.04a: 2015-05-14
 - New features:
   - Added XE8 packages and projects.
