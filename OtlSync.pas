@@ -313,7 +313,7 @@ type
     destructor  Destroy; override;
     function  Lock(const key: K; timeout_ms: cardinal): boolean;
     function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
-    function  Unlock(const key: K): boolean;
+    procedure Unlock(const key: K);
   end; { TOmniLockManager<K> }
   {$ENDIF OTL_Generics}
 
@@ -1315,7 +1315,7 @@ begin
     );
 end; { TOmniLockManager<K>.LockUnlock }
 
-function TOmniLockManager<K>.Unlock(const key: K): boolean;
+procedure TOmniLockManager<K>.Unlock(const key: K);
 var
   lockData  : TLockValue;
   notifyItem: TGpDoublyLinkedListObject;
