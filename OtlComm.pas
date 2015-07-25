@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-11-09
-///   Version           : 1.08a
+///   Last modification : 2015-07-10
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2015-07-10
+///       - TOmniCommunicationEndpoint will check for single-thread use if
+///         OTL_CheckThreadSafety is defined.
 ///     1.08a: 2011-11-09
 ///       - TOmniMessageQueue.Enqueue leaked if queue was full and value contained
 ///         reference counted value (found by [meishier]).
@@ -103,6 +106,8 @@ type
 
   TOmniMessageQueue = class;
 
+  {:Single producer/single consumer communication channel. No thread safety.
+  }
   IOmniCommunicationEndpoint = interface ['{910D329C-D049-48B9-B0C0-9434D2E57870}']
     function  GetNewMessageEvent: THandle;
     function  GetOtherEndpoint: IOmniCommunicationEndpoint;
@@ -214,6 +219,7 @@ type
     cePartlyEmptyObserver    : TOmniContainerWindowsEventObserver;
     ceReader_ref             : TOmniMessageQueue;
     ceTaskTerminatedEvent_ref: THandle;
+    ceThreadSafeUseCheck     : TOmniSingleThreadUseChecker;
     ceWriter_ref             : TOmniMessageQueue;
   strict protected
     procedure RequirePartlyEmptyObserver;
@@ -461,6 +467,7 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.Receive(var msg: TOmniMessage): boolean;
 begin
+  ceThreadSafeUseCheck.Check;
   Result := ceReader_ref.TryDequeue(msg);
 end; { TOmniCommunicationEndpoint.Receive }
 
@@ -510,6 +517,7 @@ end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }
 
 procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
 begin
+  ceThreadSafeUseCheck.Check;
   if not ceWriter_ref.Enqueue(msg) then
     raise Exception.Create('TOmniCommunicationEndpoint.Send: Queue is full');
 end;  { TOmniCommunicationEndpoint.Send }
@@ -523,6 +531,7 @@ var
   startTime: int64;
   waitTime : integer;
 begin
+  ceThreadSafeUseCheck.Check;
   msg.msgID := msgID;
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
