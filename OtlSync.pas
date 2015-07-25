@@ -275,7 +275,7 @@ type
   IOmniLockManager<K> = interface
     function  Lock(const key: K; timeout_ms: cardinal): boolean;
     function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
-    function  Unlock(const key: K): boolean;
+    procedure Unlock(const key: K);
   end; { IOmniLockManager<K> }
 
   TOmniLockManager<K> = class(TInterfacedObject, IOmniLockManager<K>)
