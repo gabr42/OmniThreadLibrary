@@ -375,14 +375,13 @@ type
 
   TOmniSingleThreadUseChecker = record
   {$IFDEF MSWINDOWS}
-  {$IFDEF OTL_CheckThreadSafety}
   private
     FLock    : TOmniCS;
     FThreadID: cardinal;
-  {$ENDIF OTL_CheckThreadSafety}
   {$ENDIF MSWINDOWS}
   public
     procedure Check; inline;
+    procedure DebugCheck; inline;
   end; { TOmniSingleThreadUseChecker }
 
 {$IFDEF OTL_NeedsWindowsAPIs}
@@ -1531,11 +1530,33 @@ begin
 end; { TWaitFor.WaitAny }
 
 procedure TOmniSingleThreadUseChecker.Check;
+{$IFDEF MSWINDOWS}
+var
+  thID: cardinal;
+{$ENDIF MSWINDOWS}
+begin
+  {$IFDEF MSWINDOWS}
+  FLock.Acquire;
+  try
+    thID := cardinal(GetCurrentThreadID);
+    if (FThreadID <> 0) and (FThreadID <> thID) then
+      raise Exception.CreateFmt(
+        'Unsafe use: Current thread ID: %d, previous thread ID: %d',
+        [thID, FThreadID]);
+    FThreadID := thId;
+  finally FLock.Release; end;
+  {$ENDIF MSWINDOWS}
+end; { TOmniSingleThreadUseChecker.Check }
+
+procedure TOmniSingleThreadUseChecker.DebugCheck;
+{$IFDEF MSWINDOWS}
 {$IFDEF OTL_CheckThreadSafety}
 var
   thID: cardinal;
 {$ENDIF OTL_CheckThreadSafety}
+{$ENDIF MSWINDOWS}
 begin
+  {$IFDEF MSWINDOWS}
   {$IFDEF OTL_CheckThreadSafety}
   FLock.Acquire;
   try
@@ -1547,7 +1568,8 @@ begin
     FThreadID := thId;
   finally FLock.Release; end;
   {$ENDIF OTL_CheckThreadSafety}
-end; { TOmniSingleThreadUseChecker.Check }
+  {$ENDIF MSWINDOWS}
+end; { TOmniSingleThreadUseChecker.DebugCheck }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
