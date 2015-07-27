@@ -1,7 +1,9 @@
 @echo off
 
+  if not %otl_ut_root%.==. goto makedir
   set otl_ut_root=c:\0
 
+:makedir
   mkdir %otl_ut_root% >nul 2>nul
   mkdir %otl_ut_root%\exe >nul 2>nul
   mkdir %otl_ut_root%\dcu >nul 2>nul
