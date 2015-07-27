@@ -1875,8 +1875,10 @@ begin
     // First test if any of Terminate events was signalled
     if (msgInfo.IdxFirstTerminate <> -1) then
       for info in msgInfo.Waiter.Signalled do
-        if ((info.Index >= msgInfo.IdxFirstTerminate) and (info.Index <= msgInfo.IdxLastTerminate)) then
-          Exit(false); //break out of the message loop
+        if ((info.Index >= msgInfo.IdxFirstTerminate) and (info.Index <= msgInfo.IdxLastTerminate)) then begin
+          Result := false; //break out of the message loop
+          Exit;
+        end;
 
     // Only then test other events
     for info in msgInfo.Waiter.Signalled do begin
