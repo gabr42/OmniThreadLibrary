@@ -482,13 +482,13 @@ end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.Receive(var msg: TOmniMessage): boolean;
 begin
-  ceThreadSafeUseCheck.Check;
   Result := ceReader_ref.TryDequeue(msg);
 end; { TOmniCommunicationEndpoint.Receive }
 
 function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
   cardinal): boolean;
 begin
+//  ceThreadSafeUseCheck.Check;
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = 0 then
@@ -532,7 +532,6 @@ end; { TOmniCommunicationEndpoint.RequirePartlyEmptyObserver }
 
 procedure TOmniCommunicationEndpoint.Send(const msg: TOmniMessage);
 begin
-  ceThreadSafeUseCheck.Check;
   if not ceWriter_ref.Enqueue(msg) then
     raise Exception.Create('TOmniCommunicationEndpoint.Send: Queue is full');
 end;  { TOmniCommunicationEndpoint.Send }
@@ -546,7 +545,7 @@ var
   startTime: int64;
   waitTime : integer;
 begin
-  ceThreadSafeUseCheck.Check;
+//  ceThreadSafeUseCheck.Check;
   msg.msgID := msgID;
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
