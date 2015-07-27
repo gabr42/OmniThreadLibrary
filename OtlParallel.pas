@@ -1023,8 +1023,6 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelMapper<T1,T2> }
 
-  TTest<T> = reference to function: TArray<T>;
-
   TOmniParallelMapper<T1,T2> = class(TInterfacedObject, IOmniParallelMapper<T1,T2>)
   strict private type
     TTargetBounds = record Low, High: integer; end;

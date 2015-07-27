@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2015, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,10 +31,13 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-07-10
-///   Version           : 1.09
+///   Last modification : 2015-07-27
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2015-07-27
+///       - TOmniCommunicationEndpoint implements IOmniCommunicationEndpointEx,
+///	        primarily designed for internal use.
 ///     1.09: 2015-07-10
 ///       - TOmniCommunicationEndpoint will check for single-thread use if
 ///         OTL_CheckThreadSafety is defined.
@@ -130,6 +133,10 @@ type
     property Writer: TOmniMessageQueue read GetWriter;
   end; { IOmniCommunicationEndpoint }
 
+  IOmniCommunicationEndpointEx = interface ['{735073AA-0F96-4992-AE8D-A8B741C63502}']
+    procedure AttachToThread;
+  end; { IOmniCommunicationEndpointEx }
+
   IOmniTwoWayChannel = interface ['{3ED1AB88-4209-4E01-AA79-A577AD719520}']
     function Endpoint1: IOmniCommunicationEndpoint;
     function Endpoint2: IOmniCommunicationEndpoint;
@@ -212,8 +219,10 @@ type
 
   TOmniTwoWayChannel = class;
 
-  TOmniCommunicationEndpoint = class(TInterfacedObject, IOmniCommunicationEndpoint,
-    IOmniCommunicationEndpointInternal)
+  TOmniCommunicationEndpoint = class(TInterfacedObject,
+                                     IOmniCommunicationEndpoint,
+                                     IOmniCommunicationEndpointEx,
+                                     IOmniCommunicationEndpointInternal)
   strict private
     ceOwner_ref              : TOmniTwoWayChannel;
     cePartlyEmptyObserver    : TOmniContainerWindowsEventObserver;
@@ -224,6 +233,7 @@ type
   strict protected
     procedure RequirePartlyEmptyObserver;
   protected
+    procedure AttachToThread;
     procedure DetachFromQueues;
     function  GetNewMessageEvent: THandle;
     function  GetOtherEndpoint: IOmniCommunicationEndpoint;
@@ -429,6 +439,11 @@ begin
     ceWriter_ref.ContainerSubject.Detach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
   FreeAndNil(cePartlyEmptyObserver);
 end; { TOmniCommunicationEndpoint.Destroy }
+
+procedure TOmniCommunicationEndpoint.AttachToThread;
+begin
+  ceThreadSafeUseCheck.AttachToCurrentThread;
+end; { TOmniCommunicationEndpoint.AttachToThread }
 
 procedure TOmniCommunicationEndpoint.DetachFromQueues;
 begin

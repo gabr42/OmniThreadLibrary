@@ -38,10 +38,14 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2015-07-10
-///   Version           : 1.21
+///   Last modification : 2015-07-27
+///   Version           : 1.22
 ///</para><para>
 ///   History:
+///     1.22: 2015-07-27
+///       - Implemented TOmniSingleThreadUseChecker.AttachToThread which forcibly
+///         attaches thread checker to the current thread even if it was used
+///         from another thread before.
 ///     1.21: 2015-07-10
 ///       - Implemented TOmniSingleThreadUseChecker, a record which checks that the
 ///         owner is only used from one thread. See OtlComm/TOmniCommunicationEndpoint
@@ -380,6 +384,7 @@ type
     FThreadID: cardinal;
   {$ENDIF MSWINDOWS}
   public
+    procedure AttachToCurrentThread; inline;
     procedure Check; inline;
     procedure DebugCheck; inline;
   end; { TOmniSingleThreadUseChecker }
@@ -1528,6 +1533,14 @@ begin
   end;
   Result := MapToResult(winResult);
 end; { TWaitFor.WaitAny }
+
+procedure TOmniSingleThreadUseChecker.AttachToCurrentThread;
+begin
+  FLock.Acquire;
+  try
+    FThreadID := cardinal(GetCurrentThreadID);
+  finally FLock.Release; end;
+end; { TOmniSingleThreadUseChecker.AttachToCurrentThread }
 
 procedure TOmniSingleThreadUseChecker.Check;
 {$IFDEF MSWINDOWS}

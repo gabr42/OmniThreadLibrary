@@ -59,6 +59,7 @@ type
   TOmniLogger = class
   strict private
     eventList: TOmniBaseQueue;
+    FStoreTimeOfDay: Boolean;
   public
     constructor Create;
     destructor  Destroy; override;
@@ -67,6 +68,7 @@ type
     procedure Log(const msg: string; const params: array of const); overload;
     procedure Log(const msg: string); overload;
     procedure SaveEventList(const fileName: string);
+    property StoreTimeOfDay: Boolean read FStoreTimeOfDay write FStoreTimeOfDay;
   end; { TOmniLogger }
 
 var
@@ -119,7 +121,9 @@ end; { TOmniLogger.Log }
 
 procedure TOmniLogger.Log(const msg: string);
 begin
-  eventList.Enqueue(Format('[%d] %d %s', [GetCurrentThreadID, DSiTimeGetTime64, msg]));
+  if StoreTimeOfDay then
+    eventList.Enqueue(Format('[%d] %s %s', [GetCurrentThreadID, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
+  else eventList.Enqueue(Format('[%d] %d %s', [GetCurrentThreadID, DSiTimeGetTime64, msg]));
 end; { TOmniLogger.Log }
 
 procedure TOmniLogger.SaveEventList(const fileName: string);
