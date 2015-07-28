@@ -295,7 +295,9 @@ uses
   {$ENDIF OTL_ERTTI}
   SyncObjs,
   Generics.Collections,
+  {$IFDEF MSWINDOWS}
   GpLists,
+  {$ENDIF}
   OtlCommon,
   OtlSync,
   OtlCollections,

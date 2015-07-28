@@ -162,8 +162,8 @@ type
     StartBuffer    : pointer;
     EndBuffer      : pointer;
     Buffer         : TReferencedPtrBuffer;
-    {$IFNDEF MSWINDOWS}
     Lock           : TSpinLock;
+    {$IFNDEF MSWINDOWS}
     procedure Init;
     {$ENDIF}
   end; { TOmniRingBuffer }
