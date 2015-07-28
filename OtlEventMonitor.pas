@@ -37,14 +37,10 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-07-27
-///   Version           : 1.08
+///   Last modification : 2012-10-02
+///   Version           : 1.07e
 ///</para><para>
 ///   History:
-///     1.08: 2015-07-27
-///       - Monitor reattaches thread's communication enpoint to self
-///         before cleaning up messages for a dead task to prevent
-///         thread checker from reporting an error.
 ///     1.07e: 2012-10-02
 ///       - TOmniEventMonitor is marked for 64-bit support.
 ///     1.07d: 2012-10-01
@@ -319,9 +315,6 @@ begin { TOmniEventMonitor.WndProc }
         if Assigned(emOnTaskMessage) then
           emOnTaskMessage(task, emCurrentMsg);
       endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
-      //We know that the task is not longer running so we can take over the task's
-      //receiving endpoint.
-      (endpoint as IOmniCommunicationEndpointEx).AttachToThread;
       while endpoint.Receive(emCurrentMsg) do
         if Assigned(emOnTaskUndeliveredMessage) then
           emOnTaskUndeliveredMessage(task, emCurrentMsg);

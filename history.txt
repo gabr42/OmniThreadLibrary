@@ -1,7 +1,9 @@
 - Implemented TOmniSingleThreadUseChecker, a record which checks that the owner 
-  is only used from one thread. See OtlComm/TOmniCommunicationEndpoint for an example.
+  is only used from one thread. 
 - Reimplemented support for TWaitFor in the TOmniTaskControl which was removed
   from the code in 3.04a by mistake.
+- TOmniCommunicationEndpoint.ReceiveWait and .SendWait are now fully thread-safe
+  and support multiple consumers (former) and multiple producers (latter).
 
 3.04a: 2015-05-14
 - New features:
