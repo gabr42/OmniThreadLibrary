@@ -134,11 +134,11 @@ uses
 {$IFDEF MSWINDOWS}
   DSiWin32,
   GpStuff,
+  GpLists,
 {$ENDIF}
 {$IFDEF POSIX}
   Posix.Pthread,
 {$ENDIF}
-  GpLists,
   System.Diagnostics,
   OtlCommon;
 

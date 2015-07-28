@@ -34,7 +34,6 @@ requires
   rtl;
 
 contains
-  GpLists in '..\..\src\GpLists.pas',
   OtlCommon in '..\..\OtlCommon.pas',
   OtlContainers in '..\..\OtlContainers.pas',
   OtlTask in '..\..\OtlTask.pas',
