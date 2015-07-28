@@ -3,3 +3,7 @@ examples/TThread communication/TThreadComm.skincfg
 *.dcu
 *.identcache
 unittests/TestRunner.dsk
+*.exe
+/bag of stuff/async streams/__history
+*.~dsk
+examples/TThread communication/TThreadComm.dsk

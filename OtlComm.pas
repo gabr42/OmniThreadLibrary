@@ -465,13 +465,12 @@ begin
   Result := ceReader_ref.TryDequeue(msg);
 end; { TOmniCommunicationEndpoint.Receive }
 
-function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms:
-  cardinal): boolean;
+function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_ms: cardinal): boolean;
 var
   insertObserver: TOmniContainerWindowsEventObserver;
   retry         : boolean;
   startTime     : int64;
-  waitTime      : integer;
+  waitTime      : int64;
 begin
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
@@ -486,10 +485,10 @@ begin
           retry := false;
           Result := ceReader_ref.TryDequeue(msg);
           while not Result do begin
-            waitTime := timeout_ms - DSiElapsedTime64(startTime);
+            waitTime := Int64(timeout_ms) - DSiElapsedTime64(startTime);
             if (waitTime >= 0) and
                (DSiWaitForTwoObjects(insertObserver.GetEvent, ceTaskTerminatedEvent_ref,
-                 false, waitTime) = WAIT_OBJECT_0)
+                 false, Cardinal(waitTime)) = WAIT_OBJECT_0)
             then begin
               Result := ceReader_ref.TryDequeue(msg);
               if (not Result) and (waitTime > 0) then
