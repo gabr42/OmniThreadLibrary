@@ -38,6 +38,7 @@ Author's blog: http://thedelphigeek.com
 Author's home page: http://primoz.gabrijelcic.org
 Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
 Changes since version 3.04a
 ===========================
