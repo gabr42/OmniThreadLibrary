@@ -1,5 +1,5 @@
 OmniThreadLibrary 3.04b has just been released. It is available via
-SVN (https://github.com/gabr42/OmniThreadLibrary/tags/release-3.04b)
+SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.04b)
 or as a ZIP archive
 (https://drive.google.com/file/d/0BwqVlLNTK4OxWkZELW1zZ3loUGM/view?usp=sharing).
 
