@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2012-10-02
-///   Version           : 1.07e
+///   Last modification : 2015-07-29
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2015-07-29
+///       - DSiTimeGetTime64 is used instead of GetTickCount to prevent wraparound problems.
 ///     1.07e: 2012-10-02
 ///       - TOmniEventMonitor is marked for 64-bit support.
 ///     1.07d: 2012-10-01
@@ -288,7 +290,7 @@ var
          assigned(emOnTaskMessage)
       then
         emOnTaskMessage(task, emCurrentMsg);
-      if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
+      if (DSiElapsedTime64(timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
         if rearmSelf then
           Win32Check(PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
         Result := false;
@@ -302,7 +304,7 @@ begin { TOmniEventMonitor.WndProc }
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
     if assigned(task) then begin
-      timeStart := GetTickCount;
+      timeStart := DSiTimeGetTime64;
       ProcessMessages;
     end;
     msg.Result := 0;
