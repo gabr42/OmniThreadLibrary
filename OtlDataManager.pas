@@ -898,7 +898,7 @@ begin
   for iBuffer := 1 to CNumBuffersInSet do begin
     obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output, cbsShareLock);
     {$IFDEF MSWINDOWS}
-    ? What has the original line?
+    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyHandle;
     {$ELSE}
     Events[ iBuffer - 1] := obsBuffers[iBuffer].EmptyEvent;
     {$ENDIF}
