@@ -229,9 +229,8 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
-  {$ENDIF}
 
-  {$IFNDEF MSWINDOWS}
+  {$ELSE}
   // The non-windows solution
   IOmniCountdownEvent = interface;
   TNonWinOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
@@ -540,6 +539,11 @@ function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const ASha
 function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
 
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
+{$IFNDEF MSWINDOWS}
+function CreateResourceCountEx(
+  initialCount: integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection): IOmniResourceCount;
+{$ENDIF}
+
 
 {$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
@@ -737,10 +741,17 @@ begin
 end; { CreateOmniCancellationToken }
 
 {$IFNDEF MSWINDOWS}
+
+function CreateResourceCountEx(
+  initialCount: integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection): IOmniResourceCount;
+begin
+  Result := TNonWinOmniResourceCount.Create( initialCount, SpinCount, AShareLock)
+end;
+
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 begin
-  // TODO
-end; { CreateResourceCount }
+  result := CreateResourceCountEx( initialCount, MaxInt, nil)
+end;
 {$ENDIF}
 
 {$IFDEF MSWINDOWS}
