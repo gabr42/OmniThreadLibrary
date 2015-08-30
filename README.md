@@ -12,9 +12,7 @@ Download an older release: https://drive.google.com/folderview?id=0BwqVlLNTK4OxV
 
 If you have Delphi XE8 or newer, you can install OmniThreadLibrary via GetIt.
 
-%% Delphinus-Support
-
-If you have Delphi XE or newer, you can install [Delphinus package manager](https://github.com/Memnarch/Delphinus/wiki/Installing-Delphinus) and install OmniThreadLibrary there.
+If you have Delphi XE or newer, you can install [Delphinus package manager](https://github.com/Memnarch/Delphinus/wiki/Installing-Delphinus) and install OmniThreadLibrary there. (DelphinusSupport)
 
 ### How do I use OmniThreadLibrary?
 
