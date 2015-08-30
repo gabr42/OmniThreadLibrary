@@ -1734,7 +1734,7 @@ begin
       ds := 2
     else
       ds := TOmniValue_DataSize[ti^.Kind];
-  if ds = 0 then // complicated stuff
+  if ds = 0 then begin // complicated stuff
     if ti.Kind = tkRecord then
       Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
     else
@@ -1743,6 +1743,7 @@ begin
       {$ELSE}
       raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
       {$ENDIF OTL_ERTTI}
+  end
   else begin // simple types
     if ds < 8 then begin
       maxValue := uint64($FF) SHL ((ds-1) * 8);
@@ -1769,7 +1770,7 @@ begin
     else
       ds := TOmniValue_DataSize[ti^.Kind];
   end;
-  if ds = 0 then // complicated stuff
+  if ds = 0 then begin // complicated stuff
     if ti^.Kind = tkRecord then
       Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)))
     else
@@ -1778,6 +1779,7 @@ begin
       {$ELSE}
       raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
       {$ENDIF OTL_ERTTI}
+  end
   else begin // simple types
     data := 0;
     Move(value, data, ds);
