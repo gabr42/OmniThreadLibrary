@@ -37,10 +37,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-04-17
-///   Version           : 1.37a
+///   Last modification : 2015-08-30
+///   Version           : 1.37b
 ///</para><para>
 ///   History:
+///     1.37b: 2015-08-30
+///       - Fixed record type handling in FromArray<T> and ToArray<T>.
 ///     1.37a: 2015-04-17
 ///       - Added vtWideChar and vtPWideChar handling to TOmniValue.Create and .CreateNamed.
 ///     1.37: 2015-02-09
@@ -1733,11 +1735,14 @@ begin
     else
       ds := TOmniValue_DataSize[ti^.Kind];
   if ds = 0 then // complicated stuff
-    {$IFDEF OTL_ERTTI}
-    Result := AsTValue.AsType<T>
-    {$ELSE}
-    raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
-    {$ENDIF OTL_ERTTI}
+    if ti.Kind = tkRecord then
+      Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
+    else
+      {$IFDEF OTL_ERTTI}
+      Result := AsTValue.AsType<T>
+      {$ELSE}
+      raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
+      {$ENDIF OTL_ERTTI}
   else begin // simple types
     if ds < 8 then begin
       maxValue := uint64($FF) SHL ((ds-1) * 8);
@@ -1765,11 +1770,14 @@ begin
       ds := TOmniValue_DataSize[ti^.Kind];
   end;
   if ds = 0 then // complicated stuff
-    {$IFDEF OTL_ERTTI}
-    Result.AsTValue := TValue.From<T>(value)
-    {$ELSE}
-    raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
-    {$ENDIF OTL_ERTTI}
+    if ti^.Kind = tkRecord then
+      Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)))
+    else
+      {$IFDEF OTL_ERTTI}
+      Result.AsTValue := TValue.From<T>(value)
+      {$ELSE}
+      raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
+      {$ENDIF OTL_ERTTI}
   else begin // simple types
     data := 0;
     Move(value, data, ds);

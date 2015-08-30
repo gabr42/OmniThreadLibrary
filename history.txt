@@ -1,3 +1,5 @@
+TODO: Fix the Environment code for Win64! 
+
 3.04b: 2015-07-29
 - New features:
   - Implemented TOmniSingleThreadUseChecker, a record which checks that the owner 
