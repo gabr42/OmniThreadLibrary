@@ -1,0 +1,11 @@
+{
+    "id": "{a43e7593-777a-4858-9ab6-085d845c0c55}",
+    "picture": "res\\delphinus.jpg",
+    "license_type": "BSD-3-Clause-Clear",
+    "license_file": "LICENSE.txt",
+    "platforms": "Win32;Win64",
+    "package_compiler_min": 19,
+    "package_compiler_max": 29,
+    "compiler_min": 19,
+    "compiler_max": 29
+}

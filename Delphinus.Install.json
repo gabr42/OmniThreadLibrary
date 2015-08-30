@@ -1,0 +1,62 @@
+{
+        "search_pathes": 
+    [
+        {
+            "pathes": ";src",
+            "platforms": "Win32;Win64"
+        }
+    ],
+    "browsing_pathes": 
+    [
+        {
+            "pathes": ";src",
+            "platforms": "Win32;Win64"
+        }
+    ],
+
+    "source_folders":
+    [
+        {
+            "folder": "",
+            "base": "",
+            "recursive": false,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "src",
+            "base": "",
+            "recursive": false,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "doc",
+            "base": "",
+            "recursive": false,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "examples",
+            "base": "",
+            "recursive": true,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "packages",
+            "base": "",
+            "recursive": false,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "tests",
+            "base": "",
+            "recursive": true,
+            "filter": "*;*.*"
+        },
+        {
+            "folder": "res",
+            "base": "",
+            "recursive": false,
+            "filter": "*;*.*"
+        }
+    ]
+}
