@@ -1,11 +1,12 @@
 {
-        "search_pathes": 
+    "search_pathes": 
     [
         {
             "pathes": ";src",
             "platforms": "Win32;Win64"
         }
     ],
+    
     "browsing_pathes": 
     [
         {
@@ -58,5 +59,41 @@
             "recursive": false,
             "filter": "*;*.*"
         }
-    ]
+    ],
+    
+    "projects":
+    [
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE.groupproj",
+            "compiler": 22
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE2.groupproj",
+            "compiler": 23
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE3.groupproj",
+            "compiler": 24
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE4.groupproj",
+            "compiler": 25
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE5.groupproj",
+            "compiler": 26
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE6.groupproj",
+            "compiler": 27
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE7.groupproj",
+            "compiler": 28
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackagesXE8.groupproj",
+            "compiler": 29
+        }
+    ]    
 }
