@@ -880,6 +880,7 @@ TryAgain:
     {$ELSE}
     TInterlockedEx.CompareExchange(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
     {$ENDIF}
+    {$Message Warn 'Help! - CAS()'}
     if (ThreadReference <> LastIn.Reference) or
       not CAS(ringBuffer^.Lock, CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
     then
@@ -889,6 +890,7 @@ TryAgain:
     if NativeInt(NewLastIn) > NativeInt(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
+    {$Message Warn 'Help! - CAS()'}
     if not CAS(ringBuffer^.Lock, CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
@@ -934,7 +936,9 @@ var
   end; { GetMinAndClear }
 
 var
-  affinity   : string;
+  {$IFDEF MSWINDOWS}
+    affinity : string;
+  {$ENDIF}
   currElement: pointer;
   n          : integer;
 
@@ -1020,6 +1024,7 @@ TryAgain:
     if NativeInt(NewFirstIn) > NativeInt(EndBuffer) then
       NewFirstIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
+    {$Message Warn 'Help! - CAS()'}
     if not CAS(ringBuffer^.Lock, CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
@@ -1676,7 +1681,7 @@ end;
 procedure TOmniValueQueue.CollectionNotifyEvent(Sender: TObject;
   const Item: TOmniValue; Action: TCollectionNotification);
 var
-  BeforeCount, AfterCount: integer;
+  AfterCount: integer;
 begin
   // This method occurs within the critical section.
   AfterCount := FInnerQueue.Count;
@@ -1725,11 +1730,14 @@ begin
   result := EnclosedResult
 end;
 
-procedure TOmniValueQueue.Enqueue(const value: TOmniValue);
+procedure TOmniValueQueue.Enqueue( const value: TOmniValue);
+var
+  LocalCopy: TOmniValue;
 begin
+  LocalCopy := value;
   DoWithCritSec( procedure()
     begin
-      FInnerQueue.Enqueue(Value)
+      FInnerQueue.Enqueue( LocalCopy)
     end)
 end;
 

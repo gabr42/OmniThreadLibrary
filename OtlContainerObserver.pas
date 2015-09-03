@@ -61,7 +61,12 @@ interface
 uses
   Classes,
   OtlSync,
-  OtlCommon;
+  OtlCommon
+  {$IFNDEF MSWINDOWS}
+  , Generics.Collections
+  , System.SyncObjs
+  {$ENDIF}
+  ;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -102,7 +107,11 @@ type
   TOmniContainerSubject = class
   strict private
     csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
+    {$IFDEF MSWINDOWS}
     csObserverLists: array [TOmniContainerObserverInterest] of TList;
+    {$ELSE}
+    csObserverLists: array [TOmniContainerObserverInterest] of TList<TOmniContainerObserver>;
+    {$ENDIF}
   public
     constructor Create;
     destructor  Destroy; override;
@@ -264,7 +273,11 @@ var
 begin
   inherited Create;
   for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
-    csObserverLists[interest] := TList.Create;
+    {$IFDEF MSWINDOWS}
+      csObserverLists[interest] := TList.Create;
+    {$ELSE}
+      csObserverLists[interest] := TList<TOmniContainerObserver>.Create
+    {$ENDIF}
 end; { TOmniContainerSubject.Create }
 
 destructor TOmniContainerSubject.Destroy;
@@ -300,7 +313,11 @@ end; { TOmniContainerSubject.Detach }
 procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  list     : TList;
+  {$IFDEF MSWINDOWS}
+    list     : TList;
+  {$ELSE}
+    list     : TList<TOmniContainerObserver>;
+  {$ENDIF}
 begin
   {$R-}
   csListLocks[interest].EnterReadLock;
@@ -316,7 +333,11 @@ end; { TOmniContainerSubject.Notify }
 procedure TOmniContainerSubject.NotifyOnce(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  list     : TList;
+  {$IFDEF MSWINDOWS}
+    list     : TList;
+  {$ELSE}
+    list     : TList<TOmniContainerObserver>;
+  {$ENDIF}
   observer : TOmniContainerObserver;
 begin
   {$R-}
@@ -324,8 +345,12 @@ begin
   try
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do begin
-      observer := TOmniContainerObserver(list[iObserver]);
-      if observer.CanNotify then begin 
+      {$IFDEF MSWINDOWS}
+        observer := TOmniContainerObserver(list[iObserver]);
+      {$ELSE}
+        observer := list[iObserver];
+      {$ENDIF}
+      if observer.CanNotify then begin
         observer.Notify;
         observer.Deactivate;
       end;
@@ -337,14 +362,22 @@ end; { TOmniContainerSubject.NotifyAndRemove }
 procedure TOmniContainerSubject.Rearm(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  list     : TList;
+  {$IFDEF MSWINDOWS}
+    list     : TList;
+  {$ELSE}
+    list     : TList<TOmniContainerObserver>;
+  {$ENDIF}
 begin
   {$R-}
   csListLocks[interest].EnterReadLock;
   try
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do
-      TOmniContainerObserver(list[iObserver]).Activate;
+      {$IFDEF MSWINDOWS}
+        TOmniContainerObserver(list[iObserver]).Activate;
+      {$ELSE}
+        list[iObserver].Activate;
+      {$ENDIF}
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}
 end; { TOmniContainerSubject.Rearm }

@@ -472,7 +472,7 @@ begin
         if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
           obcAddCountAndCompleted.Decrement; // Leave the Add temporarily so that CompleteAdding can succeed
           {$IFDEF MSWINDOWS}
-          awaited := DSiWaitForTwoObjects(obcCompletedSignal.Handle, obcNotOverflow, false, INFINITE);
+          awaited := DSiWaitForTwoObjects(obcCompletedSignal.Handle, obcNotOverflow.Handle, false, INFINITE);
           obcAddCountAndCompleted.Increment; // Re-enter Add; queue may be now in 'completed' state
           if (awaited = WAIT_OBJECT_0) or IsCompleted then begin
           {$ELSE}

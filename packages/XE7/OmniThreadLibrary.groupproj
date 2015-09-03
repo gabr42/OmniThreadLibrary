@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{3B8088F3-6BD5-43E8-8253-4266D50C44C6}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OmniThreadLibrary_Win.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibrary_NonWin.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OmniThreadLibrary_Win">
+        <MSBuild Projects="OmniThreadLibrary_Win.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibrary_Win:Clean">
+        <MSBuild Projects="OmniThreadLibrary_Win.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibrary_Win:Make">
+        <MSBuild Projects="OmniThreadLibrary_Win.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibrary_NonWin">
+        <MSBuild Projects="OmniThreadLibrary_NonWin.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibrary_NonWin:Clean">
+        <MSBuild Projects="OmniThreadLibrary_NonWin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibrary_NonWin:Make">
+        <MSBuild Projects="OmniThreadLibrary_NonWin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OmniThreadLibrary_Win;OmniThreadLibrary_NonWin"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OmniThreadLibrary_Win:Clean;OmniThreadLibrary_NonWin:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OmniThreadLibrary_Win:Make;OmniThreadLibrary_NonWin:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -711,6 +711,9 @@ type
       NumWaitHandles    : cardinal;
       WaitHandles       : TOmniSyncroArray; // An array of IOmniEvent
       WaitWakeAll       : boolean;
+      {$IFDEF MSWINDOWS}
+        WaitFlags       : DWORD;
+      {$ENDIF}
       function  AsString: string;
       function  GetSynchroIndex(WaitResult: TWaitResult; const Handle: IOmniSyncro): integer;
     end;
@@ -738,7 +741,11 @@ type
     oteTerminateHandles  : TOmniSyncroArray;
     oteTerminating       : boolean;
     oteTimers            : TOmniTaskTimerInfoList;
-    oteWakeAll           : boolean;
+    {$IFDEF MSWINDOWS}
+      oteWakeMask        : DWORD;
+    {$ELSE}
+      oteWakeAll         : boolean;
+    {$ENDIF}
     oteWaitHandlesGen    : int64;
     oteWaitObjectList    : TOmniEventProcList;
     oteWorkerInitialized : IOmniEvent;
@@ -1719,7 +1726,8 @@ procedure TOmniTaskExecutor.Asy_Execute(const task: IOmniTask);
 const
   {$IFDEF MSWINDOWS}
   CThreadPriorityNum: array [TOTLThreadPriority] of TThreadPriority = (
-    TThreadPriority.tpIdle, TThreadPriority.tpLowest, TThreadPriority.tpLower, TThreadPriority.tpNormal, TThreadPriority.tpHigher);
+    //   TOTLThreadPriority = (tpIdle                , tpLowest                , tpBelowNormal          , tpNormal                , tpAboveNormal           , tpHighest);
+                               TThreadPriority.tpIdle, TThreadPriority.tpLowest, TThreadPriority.tpLower, TThreadPriority.tpNormal, TThreadPriority.tpHigher, TThreadPriority.tpHighest);
   {$ENDIF}
 
   {$IFDEF POSIX}
@@ -1932,23 +1940,23 @@ begin
   awaitedIdx := msgInfo.GetSynchroIndex(WaitResult, awaited);
   if WaitResult = wrError then
     // do-nothing; it is possible that the handle was closed and unregistered but handle array was not rebuilt yet and WaitForEvent returned this error
-  else if (awaitedIdx >= msgInfo.IdxFirstMessage) and (awaitedIdx <= msgInfo.IdxLastMessage) then
+  else if (awaitedIdx >= integer( msgInfo.IdxFirstMessage)) and (awaitedIdx <= integer( msgInfo.IdxLastMessage)) then
     DispatchCommMessage(awaitedIdx, task, msgInfo)
-  else if (awaitedIdx >= msgInfo.IdxFirstWaitObject) and (awaitedIdx <= msgInfo.IdxLastWaitObject) then begin
+  else if (awaitedIdx >= integer( msgInfo.IdxFirstWaitObject)) and (awaitedIdx <= integer( msgInfo.IdxLastWaitObject)) then begin
     if assigned(oteWaitObjectList) then begin
       oteInternalLock.Acquire;
       try
-        responseHandler := oteWaitObjectList[awaitedIdx - msgInfo.IdxFirstWaitObject].Proc;
+        responseHandler := oteWaitObjectList[awaitedIdx - integer( msgInfo.IdxFirstWaitObject)].Proc;
       finally oteInternalLock.Release; end;
       responseHandler();
     end;
     TestForInternalRebuild(task, msgInfo);
   end // comm handles
-  else if awaitedIdx = msgInfo.IdxRebuildHandles then begin
+  else if awaitedIdx = integer( msgInfo.IdxRebuildHandles) then begin
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
   end
-  else if awaitedIdx = msgInfo.NumWaitHandles then //message
+  else if awaitedIdx = integer( msgInfo.NumWaitHandles) then //message
     // thread messages are always processed below
   else if WaitResult = wrIOCompletion then
     // do-nothing
@@ -1976,10 +1984,16 @@ begin
       end;
       oteWorkerInitOK := true;
     finally WorkerInitialized.SetEvent; end;
+
     if tcoMessageWait in Options then
-      oteMsgInfo.WaitWakeAll := WakeAll
+      {$IFDEF MSWINDOWS}
+        oteMsgInfo.WaitWakeAll := WakeMask = QS_ALLEVENTS
+      {$ELSE}
+        oteMsgInfo.WaitWakeAll := WakeAll
+      {$ENDIF}
     else
       oteMsgInfo.WaitWakeAll := False;
+
     {$IFDEF MSWINDOWS}
     if tcoAlertableWait in Options then
       oteMsgInfo.WaitFlags := MWMO_ALERTABLE
@@ -2402,7 +2416,7 @@ begin
     msgInfo.IdxLastTerminate := msgInfo.IdxFirstTerminate;
     for iHandle in oteTerminateHandles do begin
       Inc(msgInfo.IdxLastTerminate);
-      if msgInfo.IdxLastTerminate > Length(msgInfo.WaitHandles) then
+      if msgInfo.IdxLastTerminate > cardinal( Length( msgInfo.WaitHandles)) then
         raise Exception.CreateFmt('TOmniTaskExecutor: ' +
           'Cannot wait on more than %d handles', [Length(msgInfo.WaitHandles)]);
       msgInfo.WaitHandles[msgInfo.IdxLastTerminate] := iHandle;
@@ -2416,7 +2430,7 @@ begin
       for iIntf := 0 to oteCommList.Count - 1 do begin
         intf := oteCommList[iIntf];
         Inc(msgInfo.IdxLastMessage);
-        if msgInfo.IdxLastMessage > Length(msgInfo.WaitHandles) then
+        if msgInfo.IdxLastMessage > cardinal( Length(msgInfo.WaitHandles)) then
           raise Exception.CreateFmt('TOmniTaskExecutor: ' +
             'Cannot wait on more than %d handles', [Length(msgInfo.WaitHandles)]);
         msgInfo.WaitHandles[msgInfo.IdxLastMessage] := (intf as IOmniCommunicationEndpoint).NewMessageEvent;
@@ -2967,9 +2981,9 @@ function TOmniTaskControl.MsgWait({$IFDEF MSWINDOWS}wakeMask: DWORD {$ELSE}wakeA
 begin
   Options := Options + [tcoMessageWait];
   {$IFDEF MSWINDOWS}
-  otcExecutor.WakeAll := wakeMask = QS_ALLEVENTS;
+    otcExecutor.WakeMask := wakeMask; // QS_ALLEVENTS or 0;
   {$ELSE}
-  otcExecutor.WakeAll := wakeAll;
+    otcExecutor.WakeAll  := wakeAll;
   {$ENDIF}
   Result := Self;
 end; { TOmniTaskControl.MsgWait }
@@ -3629,7 +3643,6 @@ var
   MultiWaiter: TSynchroWaitFor;
   Signaller: IOmniSyncro;
   Syncs: array of IOmniSyncro;
-  TaskControl: IOmniTaskControl;
   Idx: integer;
 begin
   SetLength(Syncs,otgTaskList.Count);

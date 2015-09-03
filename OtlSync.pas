@@ -450,7 +450,7 @@ type
     FWaitMode        : TWaitMode; // for testing
   strict protected
     function  MapToHandle(winResult: cardinal): cardinal;
-    function  MapToResult(winResult: cardinal): TWaitForResult;
+    function  MapToResult(winResult: cardinal): TWaitFor.TWaitResult;
     procedure RegisterWaitHandles(extraFlags: cardinal);
     procedure UnregisterWaitHandles;
   protected //must be visible from the callback
@@ -459,10 +459,10 @@ type
     constructor Create; overload;
     constructor Create(const handles: array of THandle); overload;
     destructor  Destroy; override;
-    function  MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitForResult;
+    function  MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitResult;
     procedure SetHandles(const handles: array of THandle);
-    function  WaitAll(timeout_ms: cardinal): TWaitForResult;
-    function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitForResult;
+    function  WaitAll(timeout_ms: cardinal): TWaitFor.TWaitResult;
+    function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitFor.TWaitResult;
     property Signalled: THandles read FSignalledHandles;
   end; { TWaitForAll }
   {$ENDIF}
@@ -1034,7 +1034,7 @@ var
 begin
   waiter := TWaitFor.Create(handles);
   try
-    Result := (waiter.WaitAll(timeout_ms) = waAwaited);
+    Result := (waiter.WaitAll(timeout_ms) = TWaitFor.TWaitResult.waAwaited);
   finally FreeAndNil(waiter); end;
 end; { WaitForAllObjects }
 {$ENDIF}
@@ -1728,7 +1728,7 @@ begin
   finally FAwaitedLock.Release; end;
 end; { TWaitFor.Awaited_Asy }
 
-function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitForResult;
+function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitResult;
 var
   winResult: cardinal;
 begin
@@ -1762,7 +1762,7 @@ begin
   end;
 end; { TWaitFor.MapToHandle }
 
-function TWaitFor.MapToResult(winResult: cardinal): TWaitForResult;
+function TWaitFor.MapToResult(winResult: cardinal): TWaitFor.TWaitResult;
 begin
   if winResult = WAIT_OBJECT_0 then
     Result := waAwaited
@@ -1829,7 +1829,7 @@ begin
   FWaitHandles.Clear;
 end; { TWaitFor.UnregisterWaitHandles }
 
-function TWaitFor.WaitAll(timeout_ms: cardinal): TWaitForResult;
+function TWaitFor.WaitAll(timeout_ms: cardinal): TWaitFor.TWaitResult;
 var
   winResult: cardinal;
 begin
@@ -1847,7 +1847,7 @@ begin
   Result := MapToResult(winResult);
 end; { TWaitFor.WaitAll }
 
-function TWaitFor.WaitAny(timeout_ms: cardinal; alertable: boolean): TWaitForResult;
+function TWaitFor.WaitAny(timeout_ms: cardinal; alertable: boolean): TWaitFor.TWaitResult;
 var
   winResult: cardinal;
 begin
@@ -1912,8 +1912,9 @@ class function TOmniSyncroObject.NewInstance: TObject;
 var
   Inst: TOmniSyncroObject;
 begin
-  Inst := TOmniSyncroObject(inherited NewInstance);
-  Inst.FrefCount := 1
+  Inst := TOmniSyncroObject( inherited NewInstance);
+  Inst.FrefCount := 1;
+  result := Inst
 end;
 
 constructor TOmniSyncroObject.Create(ABase: TSynchroObject; OwnsIt: boolean; const AShareLock: IOmniCriticalSection);
@@ -2375,6 +2376,7 @@ var
   j: integer;
 {$ENDIF}
 begin
+  result := wrError;
   {$IFDEF MSWINDOWS}
   if FController.FCapableOfOSWaitForMultiple then
       begin
@@ -2443,25 +2445,32 @@ end;
 {$IFNDEF MSWINDOWS}
 constructor TNonWinOmniResourceCount.Create( initialCount: cardinal; SpinCount: Integer; const AShareLock: IOmniCriticalSection);
 begin
+  {$Message Warn 'TNonWinOmniResourceCount.Create() to be developed.'}
   // TO BE DEVELOPED!
 
 end;
 
 function TNonWinOmniResourceCount.Allocate: cardinal;
 begin
+  {$Message Warn 'TNonWinOmniResourceCount.Allocate() to be developed.'}
   // TO BE DEVELOPED!
+  result := 0
 
 end;
 
 function TNonWinOmniResourceCount.Release: cardinal;
 begin
+  {$Message Warn 'TNonWinOmniResourceCount.Release() to be developed.'}
   // TO BE DEVELOPED!
+  result := 0
 
 end;
 
 function TNonWinOmniResourceCount.TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
 begin
+  {$Message Warn 'TNonWinOmniResourceCount.TryAllocate() to be developed.'}
   // TO BE DEVELOPED!
+  result := False;
 
 end;
 

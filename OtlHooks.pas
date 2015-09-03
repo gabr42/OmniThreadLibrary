@@ -50,6 +50,9 @@ interface
 uses
   {$IFDEF MSWINDOWS}
   Windows,
+  {$ELSE}
+  OtlCommon,
+  System.SyncObjs,
   {$ENDIF}
   SysUtils,
   Classes,
@@ -83,8 +86,14 @@ procedure FilterException(var e: Exception);
 
 implementation
 
+
+
+{$IFNDEF MSWINDOWS}
+  uses Generics.Collections;
+{$ENDIF}
+
 type
-  TProcMethodList = class(TList)
+  TProcMethodList = class( {$IFDEF MSWINDOWS} TList {$ELSE} TList<pointer> {$ENDIF})
   strict private
     pmlLock: TOmniMREW;
   strict protected
