@@ -229,7 +229,6 @@ uses
   Variants,
   TypInfo,
   SyncObjs,
-  SysUtils,
 {$IFDEF MSWINDOWS}
   Windows,
   DSiWin32,
@@ -240,7 +239,10 @@ uses
 {$IFDEF OTL_ERTTI}
   RTTI,
 {$ENDIF OTL_ERTTI}
-  Generics.Collections;
+{$IFDEF OTL_Generics}
+  Generics.Collections,
+{$ENDIF OTL_Generics}
+  SysUtils;
 
 const
   // reserved exit statuses
@@ -293,11 +295,19 @@ type
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     function  GetAsArrayItem(const name: string): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     function  GetAsArrayItem(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    //GetAsArrayItemOV is used in D2007 instead
+    {$IFEND}
+    function  GetAsArrayItemOV(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsArray(value: TOmniValueContainer); inline;
     procedure SetAsArrayItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsArrayItem(const name: string; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     procedure SetAsArrayItem(const param, value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    //SetAsArrayItemOV is used in D2007 instead
+    {$IFEND}
+    procedure SetAsArrayItemOV(const param, value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsBoolean(const value: boolean); inline;
     procedure SetAsCardinal(const value: cardinal); inline;
     procedure SetAsDouble(value: Double); inline;
@@ -340,8 +350,6 @@ type
     procedure _AddRef; inline;
     procedure _Release; inline;
     procedure _ReleaseAndClear; inline;
-    class function CastFrom<T>(const value: T): TOmniValue; static;
-    function  CastTo<T>: T;
     function  CastToBooleanDef(defValue: boolean): boolean; inline;
     function  CastToCardinalDef(defValue: cardinal): cardinal; inline;
     function  CastToDoubleDef(defValue: Double): Double; inline;
@@ -356,7 +364,6 @@ type
     function  CastToStringDef(const defValue: string): string; inline;
     function  CastToVariantDef(defValue: Variant): Variant; inline;
     procedure Clear; inline;
-    class function FromRecord<T: record>(const value: T): TOmniValue; static;
     function  HasArrayItem(idx: integer): boolean; overload; inline;
     function  HasArrayItem(const name: string): boolean; overload; inline;
     function  HasArrayItem(const param: TOmniValue): boolean; overload; inline;
@@ -378,7 +385,6 @@ type
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
-    function  ToRecord<T>: T;
     function  TryCastToBoolean(var value: boolean): boolean; inline;
     function  TryCastToCardinal(var value: cardinal): boolean; inline;
     function  TryCastToDouble(var value: Double): boolean;
@@ -422,7 +428,10 @@ type
     property AsArray: TOmniValueContainer read GetAsArray;
     property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
     property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     property AsArrayItem[const param: TOmniValue]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
+    {$IFEND}
+    property AsArrayItemOV[const param: TOmniValue]: TOmniValue read GetAsArrayItemOV write SetAsArrayItemOV; 
     property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
     property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
     property AsDouble: Double read CastToDouble write SetAsDouble;
@@ -446,13 +455,20 @@ type
     function  IsWideString: boolean; inline;
     function  TryCastToAnsiString(var value: AnsiString): boolean;
     function  TryCastToWideString(var value: WideString): boolean;
+    {$IFDEF Unicode}
     class operator Implicit(const a: TOmniValue): AnsiString; inline;
-    class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: AnsiString): TOmniValue; inline;
+    {$ENDIF Unicode}
+    class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: WideString): TOmniValue; inline;
     property AsAnsiString: AnsiString read CastToAnsiString write SetAsAnsiString;
     property AsWideString: WideString read CastToWideString write SetAsWideString;
   {$ENDIF}
+  {$IFDEF OTL_Generics}
+    class function CastFrom<T>(const value: T): TOmniValue; static;
+    function  CastTo<T>: T;
+    class function FromRecord<T: record>(const value: T): TOmniValue; static;
+    function  ToRecord<T>: T;
   {$IFDEF OTL_HasArrayOfT}
     class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     function  ToArray<T>: TArray<T>;
@@ -461,6 +477,7 @@ type
     function  CastToObject<T: class>: T; overload;
     function  ToObject<T: class>: T;
   {$IFEND}
+  {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
     class operator Implicit(const a: TValue): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): TValue; inline;
@@ -608,13 +625,37 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
+{$IFDEF OTL_Generics}
   TOmniInterfaceDictionaryPair = TPair<int64, IInterface>;
+{$ELSE}
+  TOmniInterfaceDictionaryPair = class
+  strict private
+    idpKey  : int64;
+    idpValue: IInterface;
+  protected
+    procedure SetKeyValue(const key: int64; const value: IInterface);
+  public
+    property Key: int64 read idpKey;
+    property Value: IInterface read idpValue;
+  end; { TOmniInterfaceDictionaryPair }
+
+  IOmniInterfaceDictionaryEnumerator = interface
+    function  GetCurrent: TOmniInterfaceDictionaryPair;
+    function  MoveNext: boolean;
+    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
+  end; { IOmniInterfaceDictionaryEnumerator }
+{$ENDIF OTL_Generics}
 
   IOmniInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
+{$IFDEF OTL_Generics}
+    function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
+{$ELSE}
+    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
+{$ENDIF OTL_Generics}
+  //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer;
-    function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { IOmniInterfaceDictionary }
@@ -674,6 +715,10 @@ type
   //
     property Affinity: IOmniAffinity read GetAffinity;
   end; { IOmniSystemEnvironment }
+
+  {$IF CompilerVersion < 19}//D2007 //TODO
+  TThreadID = LongWord;
+  {$IFEND}
 
   IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
     function  GetAffinity: IOmniAffinity;
@@ -760,6 +805,7 @@ type
     property MessageType: TOmniMessageIDType read omidMessageType;
   end; { TOmniMessageID }
 
+{$IFDEF OTL_Generics}
   TOmniRecordWrapper<T> = class
   strict private
     FValue: T;
@@ -769,6 +815,7 @@ type
     procedure SetRecord(const value: T);
     property Value: T read GetRecord write SetRecord;
   end; { TOmniRecordWrapper<T> }
+{$ENDIF OTL_Generics}
 
   IOmniAutoDestroyObject = interface ['{37DE60D3-C53D-4D13-B87C-C70BDC76A530}']
     function GetValue: TObject;
@@ -972,16 +1019,58 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounterImpl }
 
+{$IFNDEF OTL_Generics}
+  PPHashItem = ^PHashItem;
+  PHashItem = ^THashItem;
+  THashItem = record
+    Next : PHashItem;
+    Key  : int64;
+    Value: IInterface;
+  end; { THashItem }
+
+  TBucketArray = array of PHashItem;
+  PBucketArray = ^TBucketArray;
+
+  TOmniInterfaceDictionaryEnumerator = class(TInterfacedObject, IOmniInterfaceDictionaryEnumerator)
+  strict private
+    ideBuckets  : PBucketArray;
+    ideBucketIdx: integer;
+    ideCurrent  : PHashItem;
+    ideItem     : PHashItem;
+    idePair     : TOmniInterfaceDictionaryPair;
+  public
+    constructor Create(buckets: PBucketArray);
+    destructor  Destroy; override;
+    function  GetCurrent: TOmniInterfaceDictionaryPair;
+    function  MoveNext: boolean;
+    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
+  end; { IOmniInterfaceDictionaryEnumerator }
+{$ENDIF ~OTL_Generics}
+
   TOmniInterfaceDictionary = class(TInterfacedObject, IOmniInterfaceDictionary)
+  {$IFDEF OTL_Generics}
   strict private
     FDictionary: TDictionary<int64, IInterface>;
+  {$ELSE}
+  strict private
+    idBuckets: TBucketArray;
+    idCount  : integer;
+  strict protected
+    function  Find(const key: int64): PPHashItem;
+    function  HashOf(const key: int64): integer; inline;
+    procedure Resize(size: Cardinal);
+  {$ENDIF OTL_Generics}
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer; inline;
+    {$IFDEF OTL_Generics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
+    {$ELSE}
+    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
+    {$ENDIF ~OTL_Generics}
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { TOmniInterfaceDictionary }
@@ -1072,7 +1161,7 @@ type
   TOmniAutoDestroyObject = class(TInterfacedObject, IOmniAutoDestroyObject)
   strict private
     FValue: TObject;
-  strict protected
+  protected
     function Detach: TObject;
   protected
     function  GetValue: TObject;
@@ -1148,7 +1237,7 @@ end;
 
 function VarToObj(const v: Variant): TObject;
 begin
-  Result := TObject(NativeUInt(v))
+  Result := TObject({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(v));
 end; { VarToObj }
 
 { globals }
@@ -1160,6 +1249,7 @@ begin
 end; { StrPasA }
 {$ENDIF}
 
+{$IFDEF OTL_Generics}
 { TOmniRecordWrapper }
 
 constructor TOmniRecordWrapper<T>.Create(const value: T);
@@ -1177,6 +1267,7 @@ procedure TOmniRecordWrapper<T>.SetRecord(const value: T);
 begin
   FValue := value;
 end; { TOmniRecordWrapper<T>.SetRecord }
+{$ENDIF OTL_Generics}
 
 { TOmniAutoDestroyObject }
 
@@ -1578,50 +1669,231 @@ begin
   Result := taken > 0
 end; { TOmniCounterImpl.Take }
 
+{$IFNDEF OTL_Generics}
+{ TOmniInterfaceDictionaryPair }
+
+procedure TOmniInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
+begin
+  idpKey := key;
+  idpValue := value;
+end; { TOmniInterfaceDictionaryPair.SetKeyValue }
+
+{ TOmniInterfaceDictionaryEnumerator }
+
+constructor TOmniInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
+begin
+  ideBuckets := buckets;
+  ideBucketIdx := Low(ideBuckets^);
+  ideItem := nil;
+  idePair := TOmniInterfaceDictionaryPair.Create;
+end; { TOmniInterfaceDictionaryEnumerator.Create }
+
+destructor TOmniInterfaceDictionaryEnumerator.Destroy;
+begin
+  FreeAndNil(idePair);
+  inherited Destroy;
+end; { TOmniInterfaceDictionaryEnumerator.Destroy }
+
+function TOmniInterfaceDictionaryEnumerator.GetCurrent: TOmniInterfaceDictionaryPair;
+begin
+  idePair.SetKeyValue(ideCurrent^.Key, ideCurrent^.Value);
+  Result := idePair;
+end; { TOmniInterfaceDictionaryEnumerator.GetCurrent }
+
+function TOmniInterfaceDictionaryEnumerator.MoveNext: boolean;
+begin
+  Result := false;
+  while not assigned(ideItem) do begin
+    Inc(ideBucketIdx);
+    if ideBucketIdx > High(ideBuckets^) then
+      Exit;
+    ideItem := ideBuckets^[ideBucketIdx];
+  end;
+  ideCurrent := ideItem;
+  ideItem := ideItem^.Next;
+  Result := true;
+end; { TOmniInterfaceDictionaryEnumerator.MoveNext }
+{$ENDIF ~OTL_Generics}
+
 { TOmniInterfaceDictionary }
 
 constructor TOmniInterfaceDictionary.Create;
 begin
   inherited Create;
+  {$IFDEF OTL_Generics}
   FDictionary := TDictionary<int64, IInterface>.Create(100);
+  {$ELSE}
+  Resize(1);
+  {$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.Create }
 
 destructor TOmniInterfaceDictionary.Destroy;
 begin
+  {$IFDEF OTL_Generics}
   FreeAndNil(FDictionary);
+  {$ELSE}
+  Clear;
+  {$ENDIF ~OTL_Generics}
   inherited;
 end; { TOmniInterfaceDictionary.Destroy }
 
 procedure TOmniInterfaceDictionary.Add(const key: int64; const value: IInterface);
+{$IFNDEF OTL_Generics}
+var
+  bucket: PHashItem;
+  hash  : integer;
+{$ENDIF ~OTL_Generics}
+
 begin
+{$IFDEF OTL_Generics}
   FDictionary.Add(key, value);
+{$ELSE}
+  hash := HashOf(key);
+  New(bucket);
+  bucket^.Key := key;
+  bucket^.Value := value;
+  bucket^.Next := idBuckets[hash];
+  idBuckets[hash] := bucket;
+  Inc(idCount);
+  if idCount > (1.5 * Length(idBuckets)) then
+    Resize(idCount * 2);
+{$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.Add }
 
 procedure TOmniInterfaceDictionary.Clear;
+{$IFNDEF OTL_Generics}
+var
+  bucket : PHashItem;
+  iBucket: integer;
+  next   : PHashItem;
+{$ENDIF ~OTL_Generics}
+
 begin
+{$IFDEF OTL_Generics}
   FDictionary.Clear;
+{$ELSE}
+  for iBucket := 0 to Length(idBuckets) - 1 do begin
+    bucket := idBuckets[iBucket];
+    while bucket <> nil do begin
+      next := bucket^.Next;
+      bucket^.Value := nil;
+      Dispose(bucket);
+      bucket := next;
+    end;
+    idBuckets[iBucket] := nil;
+  end;
+  idCount := 0;
+{$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.Clear }
 
 function TOmniInterfaceDictionary.Count: integer;
 begin
+  {$IFDEF OTL_Generics}
   Result := FDictionary.Count;;
+  {$ELSE}
+  Result := idCount;
+  {$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.Count }
 
-function TOmniInterfaceDictionary.GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
+{$IFNDEF OTL_Generics}
+function TOmniInterfaceDictionary.Find(const key: int64): PPHashItem;
+var
+  hash: integer;
 begin
+  hash := HashOf(key);
+  Result := @idBuckets[hash];
+  while Result^ <> nil do begin
+    if Result^.key = key then
+      Exit
+    else
+      Result := @Result^.Next;
+  end;
+end; { TOmniInterfaceDictionary.Find }
+{$ENDIF ~OTL_Generics}
+
+function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_Generics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_Generics};
+begin
+  {$IFDEF OTL_Generics}
   Result := FDictionary.GetEnumerator;
+  {$ELSE}
+  Result := TOmniInterfaceDictionaryEnumerator.Create(@idBuckets);
+  {$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.GetEnumerator }
 
-procedure TOmniInterfaceDictionary.Remove(const key: int64);
+{$IFNDEF OTL_Generics}
+function TOmniInterfaceDictionary.HashOf(const key: int64): integer;
 begin
+  Result := key mod Length(idBuckets);
+end; { TOmniInterfaceDictionary.HashOf }
+{$ENDIF ~OTL_Generics}
+
+procedure TOmniInterfaceDictionary.Remove(const key: int64);
+{$IFNDEF OTL_Generics}
+var
+  bucket    : PHashItem;
+  bucketHead: PPHashItem;
+{$ENDIF ~OTL_Generics}
+begin
+{$IFDEF OTL_Generics}
   if FDictionary.ContainsKey(key) then
     FDictionary.Remove(key);
+{$ELSE}
+  bucketHead := Find(key);
+  bucket := bucketHead^;
+  if assigned(bucket) then begin
+    bucketHead^ := bucket^.Next;
+    Dispose(bucket);
+    Dec(idCount);
+  end;
+{$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.Remove }
 
-function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
+{$IFNDEF OTL_Generics}
+procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
+var
+  bucket    : PHashItem;
+  iBucket   : integer;
+  next      : PHashItem;
+  oldBuckets: TBucketArray;
+  oldSize   : integer;
 begin
+  if Cardinal(Length(idBuckets)) >= size then
+    Exit;
+  oldSize := Count;
+  oldBuckets := idBuckets;
+  idBuckets := nil;
+  idCount := 0;
+  SetLength(idBuckets, GetGoodHashSize(size));
+  for iBucket := 0 to High(oldBuckets) do begin
+    bucket := oldBuckets[iBucket];
+    while assigned(bucket) do begin
+       Add(bucket.Key, bucket.Value);
+       bucket.Value := nil;
+       next := bucket.Next;
+       Dispose(bucket);
+       bucket := next;
+    end;
+  end;
+  Assert(oldSize = Count);
+end; { TOmniInterfaceDictionary.Resize }
+{$ENDIF ~OTL_Generics}
+
+function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
+{$IFNDEF OTL_Generics}
+var
+  bucketHead: PHashItem;
+{$ENDIF ~OTL_Generics}
+begin
+{$IFDEF OTL_Generics}
   if not FDictionary.TryGetValue(key, Result) then
     Result := nil;
+{$ELSE}
+  bucketHead := Find(key)^;
+  if bucketHead <> nil then
+    Result := bucketHead^.Value
+  else
+    Result := nil;
+{$ENDIF ~OTL_Generics}
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
@@ -1644,7 +1916,10 @@ begin
         vtObject:        ovc.Add(VObject);
         vtInterface:     ovc.Add(IInterface(VInterface));
         vtInt64:         ovc.Add(VInt64^);
+
+      {$IFDEF UNICODE}
         vtUnicodeString: ovc.Add(string(VUnicodeString));
+      {$ENDIF UNICODE}
       {$IFNDEF NEXTGEN}
         vtChar:          ovc.Add(string(VChar));
         vtString:        ovc.Add(string(VString^));
@@ -1677,7 +1952,9 @@ begin
       if not Odd(i) then
         case VType of
           vtVariant:       name := string(VVariant^);
+        {$IFDEF UNICODE}
           vtUnicodeString: name := string(VUnicodeString);
+        {$ENDIF UNICODE}
         {$IFNDEF NEXTGEN}
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
@@ -1701,7 +1978,9 @@ begin
           vtObject:        ovc.Add(VObject, name);
           vtInterface:     ovc.Add(IInterface(VInterface), name);
           vtInt64:         ovc.Add(VInt64^, name);
+        {$IFDEF UNICODE}
           vtUnicodeString: ovc.Add(string(VUnicodeString), name);
+        {$ENDIF UNICODE}
         {$IFNDEF NEXTGEN}
           vtChar:          ovc.Add(string(VChar), name);
           vtString:        ovc.Add(string(VString^), name);
@@ -1719,6 +1998,7 @@ begin
   SetAsArray(ovc);
 end; { TOmniValue.CreateNamed }
 
+{$IFDEF OTL_Generics}
 {$IFDEF OTL_HasArrayOfT}
 function TOmniValue.ToArray<T>: TArray<T>;
 var
@@ -1847,6 +2127,7 @@ begin
   Result := T(AsObject);
  end; { TOmniValue.CastToObject<T> }
 {$IFEND}
+{$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
 begin
@@ -1875,12 +2156,21 @@ begin
   Result := TOmniValueContainer(ovData)[name];
 end; { TOmniValue.GetAsArrayItem }
 
+{$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
 function TOmniValue.GetAsArrayItem(const param: TOmniValue): TOmniValue;
 begin
   if not IsArray then
     raise Exception.Create('TOmniValue does not contain an array');
   Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItem }
+{$IFEND}
+
+function TOmniValue.GetAsArrayItemOV(const param: TOmniValue): TOmniValue;
+begin
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  Result := TOmniValueContainer(ovData)[param];
+end; { TOmniValue.GetAsArrayItemOV }
 
 function TOmniValue.HasArrayItem(idx: integer): boolean;
 begin
@@ -2309,11 +2599,15 @@ begin
   a := 0;
   if a = (a + 1) then begin
     ov := ov.GetAsArrayItem('');
+    ov := ov.GetAsArrayItemOV(ov);
     ov.SetAsArrayItem('', 0);
+    ov.SetAsArrayItemOV(ov, 0);
     intf := ov.CastToRecord;
     ov.SetAsRecord(intf);
+    {$IF CompilerVersion >= 19}
     ov := ov.GetAsArrayItem(ov);
     ov.SetAsArrayItem(ov, 0);
+    {$IFEND}
   end;
 end; { TOmniValue._RemoveWarnings }
 
@@ -2350,6 +2644,7 @@ begin
   TOmniValueContainer(ovData)[name] := value;
 end; { TOmniValue.SetAsArrayItem }
 
+{$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
 procedure TOmniValue.SetAsArrayItem(const param, value: TOmniValue);
 begin
   if IsEmpty then
@@ -2358,6 +2653,16 @@ begin
     raise Exception.Create('TOmniValue does not contain an array');
   TOmniValueContainer(ovData)[param] := value;
 end; { TOmniValue.SetAsArrayItem }
+{$IFEND}
+
+procedure TOmniValue.SetAsArrayItemOV(const param, value: TOmniValue);
+begin
+  if IsEmpty then
+    SetAsArray(TOmniValueContainer.Create);
+  if not IsArray then
+    raise Exception.Create('TOmniValue does not contain an array');
+  TOmniValueContainer(ovData)[param] := value;
+end; { TOmniValue.SetAsArrayItemOV }
 
 { TOmniValue.SetAsArrayItem }
 
@@ -2742,10 +3047,12 @@ begin
 end; { TOmniValue.Equal }
 
 {$IFDEF MSWINDOWS}
+{$IFDEF UNICODE}
 class operator TOmniValue.Implicit(const a: AnsiString): TOmniValue;
 begin
   Result.AsAnsiString := a;
 end; { TOmniValue.Implicit }
+{$ENDIF UNICODE}
 {$ENDIF}
 
 class operator TOmniValue.Implicit(const a: boolean): TOmniValue;
@@ -2801,10 +3108,12 @@ begin
 end; { TOmniValue.Implicit }
 
 {$IFDEF MSWINDOWS}
+{$IFDEF UNICODE}
 class operator TOmniValue.Implicit(const a: TOmniValue): AnsiString;
 begin
   Result := a.AsAnsiString;
 end; { TOmniValue.Implicit }
+{$ENDIF UNICODE}
 
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
@@ -3717,7 +4026,11 @@ begin
   {$IFDEF CPUX64}
     Result := TInterlocked.CompareExchange(Int64  (Target), Int64  (Value), Int64  (Comparand));
   {$ELSE}
+    {$IF CompilerVersion < 19}//D2007
+    Result := InterlockedCompareExchange(Target, Value, Comparand);
+    {$ELSE}
     Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
+    {$IFEND}
   {$ENDIF}
 end;
 
@@ -3726,7 +4039,11 @@ begin
   {$IFDEF CPUX64}
     Result := TInterlocked.Add(Int64  (Target), Int64  (Increment));
   {$ELSE}
+    {$IF CompilerVersion < 19}//D2007
+    Result := InterlockedExchangeAdd(Target, Increment);
+    {$ELSE}
     Result := TInterlocked.Add(Integer(Target), Integer(Increment));
+    {$IFEND}
   {$ENDIF}
 end;
 
