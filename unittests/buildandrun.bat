@@ -1,7 +1,9 @@
 @echo off
 
+  if not %otl_ut_root%.==. goto makedir
   set otl_ut_root=c:\0
 
+:makedir
   mkdir %otl_ut_root% >nul 2>nul
   mkdir %otl_ut_root%\exe >nul 2>nul
   mkdir %otl_ut_root%\dcu >nul 2>nul
@@ -9,7 +11,7 @@
   mkdir %otl_ut_root%\dcu\Win64 >nul 2>nul
 
 echo Compiling 32-bit
-  dcc32 TestRunner -b -u..;..\src;..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc32 TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
 echo Running 32-bit
@@ -20,7 +22,7 @@ echo Running 32-bit
   if errorlevel 1 goto exit
 
 echo Compiling 64-bit  
-  dcc64 TestRunner -b -u..;..\src;..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc64 TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
   if not %PROCESSOR_ARCHITECTURE%==AMD64 goto on32bit

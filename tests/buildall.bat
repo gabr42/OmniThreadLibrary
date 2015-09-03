@@ -2,9 +2,11 @@
   Setlocal EnableDelayedExpansion
 
   if %1.==. goto usage
-  
+
+  if not %otl_ut_root%.==. goto makedir  
   set otl_ut_root=c:\0
 
+:makedir
   mkdir %otl_ut_root% >nul 2>nul
   mkdir %otl_ut_root%\exe >nul 2>nul
   mkdir %otl_ut_root%\dcu >nul 2>nul
@@ -42,7 +44,7 @@
     for %%b in (*.dpr) do (
       if %%~xb==.dpr (  
         if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
-        dcc32 /b /u..\..;..\..\src;..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml /n0%otl_ut_root%\dcu\win32 %%b >%otl_ut_root%\build.log 2>&1
+        dcc32 /b /u..\..;..\..\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 %%b >%otl_ut_root%\build.log 2>&1
         if errorlevel 1 (
           echo %2[32]: *** ERROR *** 
           type %otl_ut_root%\build.log
@@ -52,7 +54,7 @@
         )
         if %hasdcc64%==1 (
           if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
-          dcc64 /b /u..\..;..\..\src;..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml /n0%otl_ut_root%\dcu\win64 %%b >%otl_ut_root%\build.log 2>&1
+          dcc64 /b /u..\..;..\..\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 %%b >%otl_ut_root%\build.log 2>&1
           if errorlevel 1 (
             echo %2[64]: *** ERROR *** 
             type %otl_ut_root%\build.log

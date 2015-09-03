@@ -2,6 +2,11 @@
   if %1.==. goto usage
 
 echo.
+echo %1
+
+title OmniThreadLibrary %1
+
+echo.
 echo Unit tests
 echo.
   pushd unittests
