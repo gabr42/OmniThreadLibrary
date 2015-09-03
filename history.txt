@@ -1,6 +1,11 @@
 TODO: Fix the Environment code for Win64! 
 
-- Fixed 'record' type handling in TOmniValue.FromArray<T> and TOmniValue.ToArray<T>.
+- Bug fixes:
+  - Fixed 'record' type handling in TOmniValue.FromArray<T> and TOmniValue.ToArray<T>.
+  - Reimplemented support for > 60 worker tasks in the OtlThreadPool unit which 
+    was removed from the code in 3.04a by mistake.
+  - IOmniPipeline.PipelineStage[].Input and .Output are now always available
+    immediately after the IOmniPipeline.Run.    
 
 3.04b: 2015-07-29
 - New features:

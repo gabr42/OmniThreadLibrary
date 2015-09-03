@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-02-17
-///   Version           : 1.39
+///   Last modification : 2015-09-03
+///   Version           : 1.39a
 ///</para><para>
 ///   History:
+///     1.39a: 2015-09-03
+///       - IOmniPipeline.PipelineStage[].Input and .Output are now always available
+///         immediately after the IOmniPipeline.Run.
 ///     1.39: 2015-02-17
 ///       - Corrected Parallel.For execution for negative steps.
 ///       - Implemented Parallel.For.CancelWith.
@@ -1196,8 +1199,8 @@ type
     procedure SetThrottleLow(const value: integer);
     procedure SetThrottleLowSat(const value: integer);
   //
-    procedure Execute(const inQueue, outQueue: IOmniBlockingCollection;
-      const task: IOmniTask);
+    procedure Execute(const task: IOmniTask);
+    procedure SetQueues(const inQueue, outQueue: IOmniBlockingCollection);
     property HandleExceptions: boolean read GetHandleExceptions write SetHandleExceptions;
     property NumTasks: integer read GetNumTasks write SetNumTasks;
     property TaskConfig: IOmniTaskConfig read GetTaskConfig;
@@ -1244,8 +1247,8 @@ type
     property Input: IOmniBlockingCollection read GetInput;
     property Output: IOmniBlockingCollection read GetOutput;
   public // IOmniPipelineStageEx
-    procedure Execute(const inQueue, outQueue: IOmniBlockingCollection;
-      const task: IOmniTask);
+    procedure Execute(const task: IOmniTask);
+    procedure SetQueues(const inQueue, outQueue: IOmniBlockingCollection);
     property HandleExceptions: boolean read GetHandleExceptions write SetHandleExceptions;
     property NumTasks: integer read GetNumTasks write SetNumTasks;
     property TaskConfig: IOmniTaskConfig read GetTaskConfig;
@@ -3364,22 +3367,19 @@ begin
   opsTaskConfig := taskConfig;
 end; { TOmniPipelineStage.Create }
 
-procedure TOmniPipelineStage.Execute(const inQueue, outQueue: IOmniBlockingCollection;
-  const task: IOmniTask);
+procedure TOmniPipelineStage.Execute(const task: IOmniTask);
 begin
   // D2009 doesn't like TProc casts so we're casting to NativeInt
   Assert(SizeOf(TProc) = SizeOf(NativeInt));
-  opsInput := inQueue;
-  opsOutput := outQueue;
   if PInteger(@opsSimpleStage)^ <> NativeInt(nil) then
-    ExecuteSimpleStage(task, opsSimpleStage, inQueue, outQueue)
+    ExecuteSimpleStage(task, opsSimpleStage, opsInput, opsOutput)
   else if PInteger(@opsStage)^ <> NativeInt(nil) then begin
     Assert(PInteger(@opsStageEx)^ = NativeInt(nil));
-    opsStage(inQueue, outQueue);
+    opsStage(opsInput, opsOutput);
   end
   else begin
     Assert(PInteger(@opsStageEx)^ <> NativeInt(nil));
-    opsStageEx(inQueue, outQueue, task);
+    opsStageEx(opsInput, opsOutput, task);
   end;
 end; { TOmniPipelineStage.Execute }
 
@@ -3468,6 +3468,12 @@ begin
     opsNumTasks := Environment.Process.Affinity.Count + value;
 end; { TOmniPipelineStage.SetNumTasks }
 
+procedure TOmniPipelineStage.SetQueues(const inQueue, outQueue: IOmniBlockingCollection);
+begin
+  opsInput := inQueue;
+  opsOutput := outQueue;
+end; { TOmniPipelineStage.SetQueues }
+
 procedure TOmniPipelineStage.SetThrottle(const value: integer);
 begin
   opsThrottle := value;
@@ -3546,6 +3552,7 @@ end; { TOmniPipeline.GetInput }
 
 function TOmniPipeline.GetStage(idxStage: integer): IOmniPipelineStageEx;
 begin
+//OutputDebugString(PChar(Format('GET %d/%d: %p', [idxStage, opStages.Count, pointer(opStages[idxStage])])));
   Result := (opStages[idxStage] as IOmniPipelineStageEx);
 end; { TOmniPipeline.GetStage }
 
@@ -3635,6 +3642,7 @@ begin
       stageName := Format('Pipeline stage #%d', [iStage+1]);
       if PipeStage[iStage].NumTasks > 1 then
         stageName := Format('%s worker %d', [stageName, iTask]);
+      PipeStage[iStage].SetQueues(inQueue, outQueue);
       task := CreateTask(
           procedure (const task: IOmniTask)
           var
@@ -3644,11 +3652,9 @@ begin
           begin
             try
               try
-                inQueue := Task.Param['From'].AsInterface as IOmniBlockingCollection;
-                outQueue := Task.Param['Output'].AsInterface as IOmniBlockingCollection;
                 opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStageEx;
                 try
-                  opStage.Execute(inQueue, outQueue, Task);
+                  opStage.Execute(Task);
                 except
                   exc := AcquireExceptionObject;
                   if not outQueue.TryAdd(exc) then
@@ -3656,7 +3662,7 @@ begin
                 end;
               finally
                 if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
-                  outQueue.CompleteAdding;
+                  (opStage as IOmniPipelineStage).Output.CompleteAdding;
               end;
             finally
               if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
@@ -3669,9 +3675,7 @@ begin
           stageName
         )
         .CancelWith(opCancelWith)
-        .SetParameter('From', inQueue)
         .SetParameter('Stage', opStages[iStage])
-        .SetParameter('Output', outQueue)
         .SetParameter('Stopped', countStopped)
         .SetParameter('TotalStopped', opCountStopped)
         .SetParameter('Cancelled', opCancelWith)
