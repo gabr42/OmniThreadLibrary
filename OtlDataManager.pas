@@ -59,6 +59,7 @@ uses
 {$ELSE}
   Generics.Collections,
   Generics.Defaults,
+  System.SyncObjs,
 {$ENDIF}
   OtlCommon,
   OtlContainers,
@@ -297,7 +298,7 @@ type
     obsBuffers         : array [1..CNumBuffersInSet] of TOmniOutputBufferImpl;
     {$IFDEF MSWINDOWS}
     obsActiveIndex     : integer;
-    obsWaitHandles     : [1..CNumBuffersInSet] of THandle;
+    obsWaitHandles     : array[1..CNumBuffersInSet] of THandle;
     {$ELSE}
     cbsWaitEvents      : TWaitFor;
     {$ENDIF}
@@ -898,7 +899,7 @@ begin
   for iBuffer := 1 to CNumBuffersInSet do begin
     obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output, cbsShareLock);
     {$IFDEF MSWINDOWS}
-    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyHandle;
+    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyEvent.Handle;
     {$ELSE}
     Events[ iBuffer - 1] := obsBuffers[iBuffer].EmptyEvent;
     {$ENDIF}

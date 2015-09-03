@@ -233,6 +233,7 @@ uses
   OtlSync,
   OtlComm,
   OtlContainerObserver,
+  System.SyncObjs,
   OtlTaskControl,
   OtlEventMonitor;
 
@@ -347,7 +348,9 @@ type
     owRunningWorkers   : TOTPWokerThreadList;
     owStoppingWorkers  : TOTPWokerThreadList;
     owThreadDataFactory: TOTPThreadDataFactory;
-    owUniqueID         : int64;
+    {$IFDEF MSWINDOWS}
+      owUniqueID       : int64;
+    {$ENDIF}
     owWorkItemQueue    : TOTPWorkItemList;
   strict protected
     function  ActiveWorkItemDescriptions: string;

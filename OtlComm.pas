@@ -77,6 +77,8 @@ uses
   Messages,
   GpStuff,
   DSiWin32,
+  {$ELSE}
+  Generics.Collections,
   {$ENDIF}
   SysUtils,
   Classes,
@@ -175,7 +177,11 @@ type
 
   TOmniMessageQueueTee = class(TInterfacedObject, IOmniMessageQueueTee)
   strict private
-    obqtQueueList: TList;
+    {$IFDEF MSWINDOWS}
+      obqtQueueList: TList;
+    {$ELSE}
+      obqtQueueList: TList<TOmniMessageQueue>;
+    {$ENDIF}
     obqtQueueLock: TOmniCS;
   public
     constructor Create;
@@ -351,11 +357,7 @@ end; { TOmniMessageQueue.Destroy }
 procedure TOmniMessageQueue.AttachEventObserver;
 begin
   if not assigned(mqEventObserver) then begin
-    {$IFDEF MSWINDOWS}
-    mqEventObserver := CreateContainerWindowsEventObserver;
-    {$ELSE}
     mqEventObserver := CreateContainerEventObserver;
-    {$ENDIF}
     ContainerSubject.Attach(mqEventObserver, coiNotifyOnAllInserts);
   end;
   mqEventObserver.Activate;
@@ -525,8 +527,9 @@ begin
     Result := Receive(msg);
     if not Result then begin
       {$IFDEF MSWINDOWS}
-      if DSiWaitForTwoObjects(ceReader_ref.GetNewMessageEvent,
-           ceTaskTerminatedEvent_ref, false, timeout_ms) = WAIT_OBJECT_0 then
+      if DSiWaitForTwoObjects(
+           ceReader_ref.GetNewMessageEvent.Handle,
+           ceTaskTerminatedEvent_ref.Handle, false, timeout_ms) = WAIT_OBJECT_0 then
       {$ELSE}
       if (FReadWaiter.WaitAny(timeout_ms, Signaller) = wrSignaled) and (Signaller = FNewMessageEvent) then
       {$ENDIF}
@@ -554,11 +557,7 @@ end; { TOmniCommunicationEndpoint.ReceiveWait }
 procedure TOmniCommunicationEndpoint.RequirePartlyEmptyObserver;
 begin
   if not assigned(cePartlyEmptyObserver) then begin
-    {$IFDEF MSWINDOWS}
-    cePartlyEmptyObserver := CreateContainerWindowsEventObserver;
-    {$ELSE}
     cePartlyEmptyObserver := CreateContainerEventObserver;
-    {$ENDIF}
     OtherEndpoint.Reader.ContainerSubject.Attach(cePartlyEmptyObserver, coiNotifyOnPartlyEmpty);
   end
   else begin
@@ -606,7 +605,7 @@ begin
         {$IFDEF MSWINDOWS}
         waitTime := timeout_ms - DSiElapsedSince(GetTickCount, startTime);
         if (waitTime >= 0) and
-           (DSiWaitForTwoObjects(cePartlyEmptyObserver.GetEvent, ceTaskTerminatedEvent_ref,
+           (DSiWaitForTwoObjects( cePartlyEmptyObserver.GetEvent.Handle, ceTaskTerminatedEvent_ref.Handle,
              false, waitTime) = WAIT_OBJECT_0)
         {$ELSE}
         waitTime := timeout_ms - startTime.ElapsedMilliseconds;
@@ -738,7 +737,11 @@ end; { TOmniTwoWayChannel.OtherEndpoint }
 constructor TOmniMessageQueueTee.Create;
 begin
   inherited Create;
-  obqtQueueList := TList.Create;
+  {$IFDEF MSWINDOWS}
+    obqtQueueList := TList.Create;
+  {$ELSE}
+    obqtQueueList := TList<TOmniMessageQueue>.Create;
+  {$ENDIF}
 end; { TOmniMessageQueueTee.Create }
 
 destructor TOmniMessageQueueTee.Destroy;
@@ -765,13 +768,21 @@ end; { TOmniMessageQueueTee.Detach }
 
 function TOmniMessageQueueTee.Enqueue(const value: TOmniMessage): boolean;
 var
-  pQueue: pointer;
+  {$IFDEF MSWINDOWS}
+    pQueue: pointer;
+  {$ELSE}
+    pQueue: TOmniMessageQueue;
+  {$ENDIF}
 begin
   Result := true;
   obqtQueueLock.Acquire;
   try
     for pQueue in obqtQueueList do
-      Result := Result and TOmniMessageQueue(pQueue).Enqueue(value);
+      {$IFDEF MSWINDOWS}
+        Result := Result and TOmniMessageQueue(pQueue).Enqueue(value);
+      {$ELSE}
+        Result := Result and pQueue.Enqueue(value);
+      {$ENDIF}
   finally obqtQueueLock.Release; end;
 end; { TOmniMessageQueueTee.Enqueue }
 

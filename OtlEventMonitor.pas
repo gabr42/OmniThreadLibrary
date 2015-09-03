@@ -121,7 +121,7 @@ type
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
     {$IFDEF MSWINDOWS}
-    emMessageWindow           : THandle;
+      emMessageWindow         : THandle;
     {$ENDIF}
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
@@ -132,7 +132,9 @@ type
     emOnTaskMessage           : TOmniMonitorTaskMessageEvent;
     emOnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent;
     emOnTaskTerminated        : TOmniMonitorTaskEvent;
-    emCurrentMsg              : TOmniMessage;
+    {$IFDEF MSWINDOWS}
+      emCurrentMsg            : TOmniMessage;
+    {$ENDIF}
   {$IFDEF MSWINDOWS}
   strict protected
     procedure WndProc(var msg: TMessage);
@@ -231,7 +233,9 @@ end; { TOmniEventMonitor.Create }
 destructor TOmniEventMonitor.Destroy;
 var
   intfKV   : TOmniInterfaceDictionaryPair;
-  winHandle: THandle;
+  {$IFDEF MSWINDOWS}
+    winHandle: THandle;
+  {$ENDIF}
 begin
   for intfKV in emMonitoredTasks do
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;
