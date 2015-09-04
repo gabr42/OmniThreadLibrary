@@ -49,6 +49,14 @@ implementation
 uses
   SysUtils;
 
+{$IFNDEF ConditionalExpressions}
+type
+  NativeUInt = cardinal;
+{$ELSE}{$IF CompilerVersion < 23}
+type
+  NativeUInt = cardinal;
+{$IFEND}{$ENDIF}
+
 const
   SHORT_LEN = sizeof(ShortString) - 1;
 
@@ -69,13 +77,13 @@ begin
     exit;
   end;
 
-  headerEnd := Pointer(Integer(header) + header^.Len);
+  headerEnd := Pointer(NativeUInt(header) + header^.Len);
   // Get a pointer to the param info
-  Params := PParamInfo(Integer(header) + SizeOf(header^) - SHORT_LEN + SizeOf(TReturnInfo) + Length(header^.Name));
+  Params := PParamInfo(NativeUInt(header) + SizeOf(header^) - SHORT_LEN + SizeOf(TReturnInfo) + Length(header^.Name));
   // Loop over the parameters
   Param := Params;
   Result := '';
-  while Integer(Param) < Integer(headerEnd) do
+  while NativeUInt(Param) < NativeUInt(headerEnd) do
   begin
     Result := Result + Param.AsString + '; ';
     // Find next param
@@ -104,10 +112,10 @@ end;
 
 function TParamInfoHelper.NextParam: PParamInfo;
 begin
-  Result := PParamInfo(Integer(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
+  Result := PParamInfo(NativeUInt(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
   {$IF CompilerVersion >= 21}
   // Skip attribute data
-  Result := PParamInfo(cardinal(Result) + PWord(Result)^);
+  Result := PParamInfo(NativeUInt(Result) + PWord(Result)^);
   {$IFEND}
 end;
 
@@ -115,7 +123,7 @@ end;
 
 function TMethodInfoHeaderHelper.GetReturnInfo: PReturnInfo;
 begin
-  Result := PReturnInfo(Integer(@self) + SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Name));
+  Result := PReturnInfo(NativeUInt(@self) + SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Name));
 end;
 
 { TReturnInfoHelper }
@@ -147,17 +155,17 @@ var
   method: PMethodInfoHeader;
   i: Integer;
 begin
-    MethodInfo := PPointer(Integer(PPointer(self)^) + vmtMethodTable)^;
+    MethodInfo := PPointer(NativeUInt(PPointer(self)^) + vmtMethodTable)^;
     if MethodInfo <> nil then
     begin
       // Scan method and get string about each
       Count := PWord(MethodInfo)^;
-      Inc({$IFDEF CPUX64}NativeInt{$ELSE}integer{$ENDIF}(MethodInfo), 2);
+      Inc(NativeUInt(MethodInfo), 2);
       method := MethodInfo;
       for i := 0 to Count - 1 do
       begin
         Result := Result + DescriptionOfMethod(self, string(method.Name)) + sLineBreak;
-        Inc({$IFDEF CPUX64}NativeInt{$ELSE}Integer{$ENDIF}(method), PMethodInfoHeader(method)^.Len); // Get next method
+        Inc(NativeUInt(method), PMethodInfoHeader(method)^.Len); // Get next method
       end;
     end;
 end;
