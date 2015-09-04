@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2014, Primoz Gabrijelcic
+///Copyright (c) 2015, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,10 +37,15 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2014-11-16
-///   Version           : 1.35
+///   Last modification : 2015-08-28
+///   Version           : 1.36a
 ///</para><para>
 ///   History:
+///     1.36a: 2015-08-28
+///       - CheckTimers is no longer called from DispatchOmniMessage if that one was
+///         called from CheckTimers.
+///     1.36: 2015-08-27
+///       - TOmniWorker message hooks introduced.
 ///     1.35: 2014-11-16
 ///       - IOmniTaskControl can wait on any number of comm handles and wait objects.
 ///         That enables support for >60 tasks in the OtlThreadPool.
@@ -311,6 +316,11 @@ type
     function  GetTask: IOmniTask;
     procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
+  //message loop hooks; temporary solution, will be replaced with a better one
+    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult);
+    procedure BeforeWait(var timeout_ms: DWORD);
+    procedure MessageLoopPayload;
+    procedure ProcessThreadMessages;
   //
     procedure Cleanup;
     procedure DispatchMessage(var msg: TOmniMessage);
@@ -326,9 +336,14 @@ type
     owTask    : IOmniTask;
   strict protected
     procedure ProcessMessages;
+  protected //message loop hooks
+    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult); virtual;
+    procedure BeforeWait(var timeout_ms: DWORD); virtual;
+    procedure DispatchMessage(var msg: TOmniMessage); virtual;
+    procedure MessageLoopPayload; virtual;
+    procedure ProcessThreadMessages; virtual;
   protected
     procedure Cleanup; virtual;
-    procedure DispatchMessage(var msg: TOmniMessage); virtual;
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     function  Initialize: boolean; virtual;
@@ -761,7 +776,7 @@ type
   protected
     function  DispatchEvent(awaited: TWaitFor.TWaitResult; const task: IOmniTask; var msgInfo:
       TOmniMessageInfo): boolean; virtual;
-    procedure DispatchOmniMessage(msg: TOmniMessage);
+    procedure DispatchOmniMessage(msg: TOmniMessage; doCheckTimers: boolean); virtual;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessMessages(task: IOmniTask); virtual;
@@ -1537,6 +1552,16 @@ end; { TOmniTask.UnregisterWaitObject }
 
 { TOmniWorker }
 
+procedure TOmniWorker.AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult);
+begin
+  // do nothing
+end; { TOmniWorker.AfterWait }
+
+procedure TOmniWorker.BeforeWait(var timeout_ms: DWORD);
+begin
+  // do nothing
+end; { TOmniWorker.BeforeWait }
+
 procedure TOmniWorker.Cleanup;
 begin
   //do-nothing
@@ -1563,10 +1588,20 @@ begin
   Result := true;
 end; { TOmniWorker.Initialize }
 
+procedure TOmniWorker.MessageLoopPayload;
+begin
+  //do nothing
+end; { TOmniWorker.MessageLoopPayload }
+
 procedure TOmniWorker.ProcessMessages;
 begin
   (owExecutor as TOmniTaskExecutor).ProcessMessages(Task);
 end; { TOmniWorker.ProcessMessages }
+
+procedure TOmniWorker.ProcessThreadMessages;
+begin
+  // do nothing
+end; { TOmniWorker.ProcessThreadMessages }
 
 procedure TOmniWorker.SetExecutor(executor: TObject);
 begin
@@ -1809,7 +1844,7 @@ begin
       else
         raise Exception.Create('TOmniTaskExecutor.CallOmniTimer: Invalid message type');
     end;
-    DispatchOmniMessage(msg);
+    DispatchOmniMessage(msg, false);
   end
   else if assigned(WorkerIntf) then
     WorkerIntf.Timer;
@@ -1849,7 +1884,7 @@ begin
       finally oteInternalLock.Release; end;
     end;
     if gotMsg and assigned(WorkerIntf) then
-      DispatchOmniMessage(msg);
+      DispatchOmniMessage(msg, true);
   until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
 end; { TOmniTaskExecutor.DispatchCommMessage }
 
@@ -1900,6 +1935,8 @@ begin
         rebuildHandles := true
       else if info.Index = WAIT_OBJECT_0 + msgInfo.NumWaitHandles then //message
         // thread messages are always processed below
+        if assigned(WorkerIntf) then
+          WorkerIntf.ProcessThreadMessages;
       end;
     end;
 
@@ -1944,7 +1981,8 @@ begin
   end;
 end; { TOmniTaskExecutor.DispatchMessages }
 
-procedure TOmniTaskExecutor.DispatchOmniMessage(msg: TOmniMessage);
+procedure TOmniTaskExecutor.DispatchOmniMessage(msg: TOmniMessage;
+  doCheckTimers: boolean);
 {$IFDEF OTL_Anonymous}
 var
   func  : TOmniTaskControlInvokeFunction;
@@ -1959,7 +1997,8 @@ var
   msgData        : TOmniValue;
   obj            : TObject;
 begin
-  CheckTimers;
+  if doCheckTimers then
+    CheckTimers;
   if msg.MsgID = COtlReservedMsgID then begin
     Assert(assigned(WorkerIntf));
     GetMethodNameFromInternalMessage(msg, methodName, msgData {$IFDEF OTL_Anonymous},
@@ -1998,7 +2037,7 @@ begin
   end
   else
     WorkerIntf.DispatchMessage(msg);
-end; { TOmniTaskExecutor.DispatchMessage }
+end; { TOmniTaskExecutor.DispatchOmniMessage }
 
 procedure TOmniTaskExecutor.EmptyMessageQueues(const task: IOmniTask);
 var
@@ -2008,7 +2047,7 @@ var
 begin
   while task.Comm.Receive(msg) do
     if assigned(WorkerIntf) then
-      DispatchOmniMessage(msg);
+      DispatchOmniMessage(msg, false);
   if assigned(oteCommList) then begin
     oteInternalLock.Acquire;
     try
@@ -2016,7 +2055,7 @@ begin
         iComm := iIntf as IOmniCommunicationEndpoint;
         while iComm.Receive(msg) do begin
           if assigned(WorkerIntf) then begin
-            DispatchOmniMessage(msg);
+            DispatchOmniMessage(msg, false);
             if not assigned(oteCommList) then
               break; //while
           end;
@@ -2243,6 +2282,8 @@ end; { TOmniTaskExecutor.MainMessageLoop }
 procedure TOmniTaskExecutor.MessageLoopPayload;
 begin
   //placeholder that can be overridden
+  if assigned(WorkerIntf) then
+    WorkerIntf.MessageLoopPayload;
 end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
@@ -2277,8 +2318,6 @@ var
 begin
   while PeekMessage(Msg, 0, 0, 0, PM_REMOVE) and (Msg.Message <> WM_QUIT) do begin
     TranslateMessage(Msg);
-//if msg.Message <> 1026 then
-//OutputDebugString(PChar(Format('Msg: %d', [Msg.Message])));
     DispatchMessage(Msg);
   end;
 end; { TOmniTaskExecutor.ProcessThreadMessages }
@@ -2487,7 +2526,11 @@ end; { TOmniTaskExecutor.WaitForInit }
 function TOmniTaskExecutor.WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal):
   TWaitFor.TWaitResult;
 begin
+  if assigned(WorkerIntf) then
+    WorkerIntf.BeforeWait(timeout_ms);
   Result := msgInfo.Waiter.MsgWaitAny(timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
+  if assigned(WorkerIntf) then
+    WorkerIntf.AfterWait(msgInfo.Waiter, Result);
 end; { TOmniTaskExecutor.WaitForEvent }
 
 { TOmniTaskControl }
