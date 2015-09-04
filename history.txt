@@ -6,6 +6,13 @@ TODO: Fix the Environment code for Win64!
     was removed from the code in 3.04a by mistake.
   - IOmniPipeline.PipelineStage[].Input and .Output are now always available
     immediately after the IOmniPipeline.Run.    
+  - TOmniPipeline.Destroy calls TOmniPipeline.Cancel so a pipeline can be 
+    shut down if user forgets to call Input.CompleteAdding.
+  - When the code was waiting on less than 64 handles and timeout occurred, 
+    the TWaitFor.Signalled[] property was not always empty.
+  - TWaitFor was not working correctly with more than 64 handles if it was
+    create with the parameter-less constructor (that also broke IOmniThreadPool
+    for >64 concurrent threads).
 
 3.04b: 2015-07-29
 - New features:

@@ -31,10 +31,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-09-03
-///   Version           : 1.39a
+///   Last modification : 2015-09-04
+///   Version           : 1.40
 ///</para><para>
 ///   History:
+///     1.40: 2015-09-04
+///       - TOmniPipeline.Destroy calls TOmniPipeline.Cancel so a pipeline can be shut
+///         down if user forgets to call Input.CompleteAdding.
 ///     1.39a: 2015-09-03
 ///       - IOmniPipeline.PipelineStage[].Input and .Output are now always available
 ///         immediately after the IOmniPipeline.Run.
@@ -3508,6 +3511,7 @@ end; { TOmniPipeline.Create }
 
 destructor TOmniPipeline.Destroy;
 begin
+  Cancel;
   FreeAndNil(opOutQueues);
   FreeAndNil(opStages);
   DSiCloseHandleAndNull(opShutDownComplete);
@@ -3528,7 +3532,10 @@ procedure TOmniPipeline.Cancel;
 var
   outQueue: IInterface;
 begin
-  opCancelWith.Signal;
+  if assigned(opCancelWith) then
+    opCancelWith.Signal;
+  if assigned(opInput) then
+    opInput.CompleteAdding;
   for outQueue in opOutQueues do
     (outQueue as IOmniBlockingCollection).CompleteAdding;
 end; { TOmniPipeline.Cancel }
