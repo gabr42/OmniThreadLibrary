@@ -1,5 +1,8 @@
 TODO: Fix the Environment code for Win64! 
 
+- New features:
+  - Added Delphi 10 Seattle packages and projects.
+
 - Bug fixes:
   - Fixed 'record' type handling in TOmniValue.FromArray<T> and TOmniValue.ToArray<T>.
   - Reimplemented support for > 60 worker tasks in the OtlThreadPool unit which 
@@ -13,6 +16,7 @@ TODO: Fix the Environment code for Win64!
   - TWaitFor was not working correctly with more than 64 handles if it was
     create with the parameter-less constructor (that also broke IOmniThreadPool
     for >64 concurrent threads).
+  - Fixed pointer arithmetic in DetailedRTTI for 64-bit compilation.
 
 3.04b: 2015-07-29
 - New features:
