@@ -38,10 +38,15 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2015-07-27
-///   Version           : 1.22
+///   Last modification : 2015-09-04
+///   Version           : 1.22a
 ///</para><para>
 ///   History:
+///     1.22a: 2015-09-04
+///       - Fixed a bug in TWaitFor: When the code was waiting on less than 64 handles
+///         and timeout occurred, the Signalled[] property was not always empty.
+///       - Fixed: TWaitFor was not working correctly with more than 64 handles if
+///         it was created with the parameter-less constructor.
 ///     1.22: 2015-07-27
 ///       - Implemented TOmniSingleThreadUseChecker.AttachToThread which forcibly
 ///         attaches thread checker to the current thread even if it was used
@@ -350,6 +355,7 @@ type
       Index: integer;
     end;
     THandles = array of THandleInfo;
+    THandleArr = array of THandle;
   strict private
     FAwaitedLock     : TOmniCS;
     FHandles         : array of THandle;
@@ -360,6 +366,7 @@ type
     FWaitHandles     : TGpInt64ObjectList;
     FWaitMode        : TWaitMode; // for testing
   strict protected
+    function  GetWaitHandles: THandleArr;
     function  MapToHandle(winResult: cardinal): cardinal;
     function  MapToResult(winResult: cardinal): TWaitResult;
     procedure RegisterWaitHandles(extraFlags: cardinal);
@@ -375,6 +382,7 @@ type
     function  WaitAll(timeout_ms: cardinal): TWaitResult;
     function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitResult;
     property Signalled: THandles read FSignalledHandles;
+    property WaitHandles: THandleArr read GetWaitHandles;
   end; { TWaitFor }
 
   TOmniSingleThreadUseChecker = record
@@ -1367,12 +1375,12 @@ constructor TWaitFor.Create(const handles: array of THandle);
 begin
   Create;
   SetHandles(handles);
-  FSignal := CreateEvent(nil, false, false, nil);
 end; { TWaitFor.Create }
 
 constructor TWaitFor.Create;
 begin
   inherited;
+  FSignal := CreateEvent(nil, false, false, nil);
   FWaitMode := wmSmart;
   FWaitHandles := TGpInt64ObjectList.Create;
 end; { TWaitFor.Create }
@@ -1421,6 +1429,13 @@ begin
     TWaitFor.TWaiter(Context).Awaited;
 end; { WaitForCallback }
 
+function TWaitFor.GetWaitHandles: THandleArr;
+begin
+  SetLength(Result, Length(FHandles));
+  if Length(Result) > 0 then
+    Move(FHandles[Low(FHandles)], Result[Low(Result)], Length(Result) * SizeOf(Result[Low(Result)]));
+end; { TWaitFor.GetWaitHandles }
+
 function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
 begin
   Result := winResult;
@@ -1430,7 +1445,9 @@ begin
     SetLength(FSignalledHandles, 1);
     FSignalledHandles[0].Index := winResult - WAIT_OBJECT_0;
     Result := WAIT_OBJECT_0;
-  end;
+  end
+  else
+    SetLength(FSignalledHandles, 0);
 end; { TWaitFor.MapToHandle }
 
 function TWaitFor.MapToResult(winResult: cardinal): TWaitResult;

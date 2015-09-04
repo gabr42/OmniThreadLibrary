@@ -3646,9 +3646,7 @@ begin
       task := CreateTask(
           procedure (const task: IOmniTask)
           var
-            inQueue    : IOmniBlockingCollection;
-            opStage    : IOmniPipelineStageEx;
-            outQueue   : IOmniBlockingCollection;
+            opStage: IOmniPipelineStageEx;
           begin
             try
               try
@@ -4696,5 +4694,8 @@ end; { TOmniParallelMapper<T1,T2> }
 {$ENDIF ~OTL_LimitedGenerics}
 {$ENDIF OTL_HasArrayOfT}
 
+initialization
+finalization
+  GParallelPool := nil;
 end.
 

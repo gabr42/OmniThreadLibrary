@@ -42,7 +42,7 @@
 /// </para><para>
 ///   History:
 ///     2.10: 2015-09-03
-///       - Removed limitation on max 60 concurrent tasks (faciliated by changes in
+///       - Removed limitation on max 60 threads in a pool (faciliated by changes in
 ///         OtlTaskControl).
 ///     2.09a: 2012-01-31
 ///       - More accurate CountQueued.
