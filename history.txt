@@ -16,6 +16,9 @@ TODO: Fix the Environment code for Win64!
   - TWaitFor was not working correctly with more than 64 handles if it was
     create with the parameter-less constructor (that also broke IOmniThreadPool
     for >64 concurrent threads).
+  - TWaitFor.MsgWaitAny now uses RegisterWaitForSingleObject approach when
+    waiting on 64 handles. Previously, MsgWaitForMultipleObjectsEx was called,
+    which can only handle up to 63 handles.
   - Fixed pointer arithmetic in DetailedRTTI for 64-bit compilation.
 
 3.04b: 2015-07-29

@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-08-28
-///   Version           : 1.36a
+///   Last modification : 2015-09-07
+///   Version           : 1.36b
 ///</para><para>
 ///   History:
+///     1.36b: 2015-09-07
+///       - Added a debug log (when compiling a Debug build) when TWaitFor.MsgWaitAny
+///         returns WAIT_FAILED.
 ///     1.36a: 2015-08-28
 ///       - CheckTimers is no longer called from DispatchOmniMessage if that one was
 ///         called from CheckTimers.
@@ -2529,6 +2532,11 @@ begin
   if assigned(WorkerIntf) then
     WorkerIntf.BeforeWait(timeout_ms);
   Result := msgInfo.Waiter.MsgWaitAny(timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
+  {$IFDEF Debug}
+  if Result = waFailed then
+    OutputDebugString(PChar(Format('*** TOmniTaskExecutor.WaitForEvent failed with error [%d] %s',
+      [GetLastError, SysErrorMessage(GetLastError)])));
+  {$ENDIF Debug}
   if assigned(WorkerIntf) then
     WorkerIntf.AfterWait(msgInfo.Waiter, Result);
 end; { TOmniTaskExecutor.WaitForEvent }

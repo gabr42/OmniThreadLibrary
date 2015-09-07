@@ -42,6 +42,10 @@
 ///   Version           : 1.22a
 ///</para><para>
 ///   History:
+///     1.22b: 2015-09-07
+///       - TWaitFor.MsgWaitAny now uses RegisterWaitForSingleObject approach when
+///         waiting on 64 handles. Previously, MsgWaitForMultipleObjectsEx was called,
+///         which can only handle up to 63 handles.
 ///     1.22a: 2015-09-04
 ///       - Fixed a bug in TWaitFor: When the code was waiting on less than 64 handles
 ///         and timeout occurred, the Signalled[] property was not always empty.
@@ -1411,7 +1415,7 @@ function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitResult
 var
   winResult: cardinal;
 begin
-  if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
+  if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) < 64)) then
     winResult := MapToHandle(MsgWaitForMultipleObjectsEx(Length(FHandles), FHandles[0], timeout_ms, wakeMask, flags))
   else begin
     FIdxSignalled := -1;
@@ -1438,6 +1442,7 @@ end; { TWaitFor.GetWaitHandles }
 
 function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
 begin
+OutputDebugString(PChar(Format('WinResult: %d', [winResult])));
   Result := winResult;
   if {(winResult >= WAIT_OBJECT_0) and }
      (winResult < (WAIT_OBJECT_0 + cardinal(Length(FHandles)))) then
@@ -1469,9 +1474,12 @@ var
   newWaitObject: THandle;
   waiter       : TWaiter;
 begin
+  FWaitHandles.Clear;
   for iHandle := Low(FHandles) to High(FHandles) do begin
     waiter := TWaiter.Create(Self, iHandle);
     idxWait := FWaitHandles.AddObject(0 {placeholder}, waiter);
+    if iHandle <> idxWait then
+      raise Exception.Create('TWaitFor.RegisterWaitHandles: Indexes out of sync');
     Win32Check(RegisterWaitForSingleObject(newWaitObject, FHandles[iHandle], WaitForCallback,
                                            pointer(waiter), INFINITE,
                                            extraFlags OR WT_EXECUTEINPERSISTENTTHREAD));
@@ -1498,14 +1506,7 @@ begin
   for i := 0 to FWaitHandles.Count - 1 do
     UnregisterWait(THandle(FWaitHandles[i]));
 
-  countSignalled := 0;
-  for i := 0 to FWaitHandles.Count - 1 do begin
-    waiter := TWaiter(FWaitHandles.Objects[i]);
-    if waiter.Signalled then
-      Inc(countSignalled);
-  end;
-
-  SetLength(FSignalledHandles, countSignalled);
+  SetLength(FSignalledHandles, FWaitHandles.Count);
   countSignalled := 0;
   for i := 0 to FWaitHandles.Count - 1 do begin
     waiter := TWaiter(FWaitHandles.Objects[i]);
@@ -1514,6 +1515,7 @@ begin
       Inc(countSignalled);
     end;
   end;
+  SetLength(FSignalledHandles, countSignalled);
   FWaitHandles.Clear;
 end; { TWaitFor.UnregisterWaitHandles }
 
