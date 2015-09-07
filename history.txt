@@ -1,7 +1,9 @@
-TODO: Fix the Environment code for Win64! 
+3.05: <<unreleased>>
 
 - New features:
   - Added Delphi 10 Seattle packages and projects.
+  - Setting IOmniThreadPool.MinWorkers property will start up idle worker threads 
+    if total number of threads managed by the thread pool is lower than the new value.
 
 - Bug fixes:
   - Fixed 'record' type handling in TOmniValue.FromArray<T> and TOmniValue.ToArray<T>.
@@ -20,6 +22,7 @@ TODO: Fix the Environment code for Win64!
     waiting on 64 handles. Previously, MsgWaitForMultipleObjectsEx was called,
     which can only handle up to 63 handles.
   - Fixed pointer arithmetic in DetailedRTTI for 64-bit compilation.
+  - Fixed: affinity mask in IOmniAffinity was only 32-bit wide on 64-bit platform.
 
 3.04b: 2015-07-29
 - New features:

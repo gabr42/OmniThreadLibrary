@@ -1442,7 +1442,6 @@ end; { TWaitFor.GetWaitHandles }
 
 function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
 begin
-OutputDebugString(PChar(Format('WinResult: %d', [winResult])));
   Result := winResult;
   if {(winResult >= WAIT_OBJECT_0) and }
      (winResult < (WAIT_OBJECT_0 + cardinal(Length(FHandles)))) then
