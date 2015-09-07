@@ -1,5 +1,4 @@
 3.05: 2015-09-07
-
 - New features:
   - Added Delphi 10 Seattle packages and projects.
   - Setting IOmniThreadPool.MinWorkers property will start up idle worker threads 
