@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="xfnfp3d0y7s0l2cni_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest.coiNotifyOnAllInserts" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest.coiNotifyOnAllRemoves" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest.coiNotifyOnPartlyEmpty" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest.coiNotifyOnAlmostFull" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.@unitclass.CreateContainerWindowsEventObserver(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.@unitclass.CreateContainerWindowsMessageObserver(System.Cardinal,System.Cardinal,System.Integer,System.Integer)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.csListLocks" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.csObserverLists" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Attach(OtlContainerObserver.TOmniContainerObserver,OtlContainerObserver.TOmniContainerObserverInterest)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Detach(OtlContainerObserver.TOmniContainerObserver,OtlContainerObserver.TOmniContainerObserverInterest)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Notify(OtlContainerObserver.TOmniContainerObserverInterest)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.NotifyOnce(OtlContainerObserver.TOmniContainerObserverInterest)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject.Rearm(OtlContainerObserver.TOmniContainerObserverInterest)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserver">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserver:OtlContainerObserver.TOmniContainerObserver" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserver.GetEvent()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.coIsActivated" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.Activate()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.CanNotify()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.Deactivate()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver.Notify()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver:OtlContainerObserver.TOmniContainerObserver" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver.GetHandle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver.Send(System.Cardinal,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver.Handle" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl:OtlContainerObserver.TOmniContainerWindowsMessageObserver" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.cwmoHandle" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.cwmoLParam" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.cwmoMessage" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.cwmoWParam" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.GetHandle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.Create(System.Cardinal,System.Cardinal,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.Send(System.Cardinal,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl.Notify()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl:OtlContainerObserver.TOmniContainerWindowsEventObserver" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.cweoEvent" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.cweoEventIsExternal" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.Create(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.GetEvent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl.Notify()" />
+    </reference>
+  </view>
+</nodeSet>

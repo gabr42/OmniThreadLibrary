@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="uranl1zo27s5sqjhg_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue:OtlContainers.IOmniQueue" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqRecycleRingBuffer" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqPublicRingBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqDataBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqElementSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqNumElements" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqPublicRingBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqPublicRingMem" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqRecycleRingBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqRecycleRingMem" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqIsInitialized" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqTaskInsertLoops" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.obqTaskRemoveLoops" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.InsertLink(System.Pointer,OtlContainers.TOmniRingBuffer*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.MeasureExecutionTimes()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.RemoveLink(OtlContainers.TOmniRingBuffer*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.Dequeue(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.Empty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.Enqueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.Initialize(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.IsFull()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.ElementSize" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue.NumElements" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue:OtlContainers.TOmniBaseQueue" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.ocContainerSubject" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.Cleanup()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.Initialize()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.Dequeue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.Enqueue(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.TryDequeue(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue.ContainerSubject" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniTaggedPointer">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniLinkedData">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue:OtlContainers.TOmniBaseBoundedQueue" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.oqAlmostFullCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.oqContainerSubject" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.oqInQueueCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.oqPartlyEmptyCount" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.Create(System.Integer,System.Integer,System.Real,System.Real)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.Dequeue(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.Enqueue()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue.ContainerSubject" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsRecycleChainP" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsPublicChainP" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack:OtlContainers.IOmniStack" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsDataBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsElementSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsNumElements" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsPublicChainP" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsRecycleChainP" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsIsInitialized" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsTaskPopLoops" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.obsTaskPushLoops" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.MeasureExecutionTimes()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.PopLink(ref@OtlContainers.TReferencedPtr)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.PushLink(OtlContainers.TOmniLinkedData*,ref@OtlContainers.TReferencedPtr)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.Empty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.Initialize(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.IsFull()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.Pop(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.Push()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.ElementSize" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack.NumElements" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Tag" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Slot" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Slot" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Tag" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Stuffing" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.CAS(OtlContainers.TOmniTaggedValue*,OtlContainers.TOmniQueueTag,OtlContainers.TOmniTaggedValue*,OtlContainers.TOmniQueueTag)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer.Move(OtlContainers.TOmniTaggedValue*,OtlContainers.TOmniQueueTag)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.Dequeue(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.Empty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.Enqueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.Initialize(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue.IsFull()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniRingBuffer">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniLinkedData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniLinkedData.Next" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniLinkedData.Next" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniLinkedData.Data" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.PReferencedPtr">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue.Tag" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue.Value" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue.Tag" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue.Offset" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue.CASTag(OtlContainers.TOmniQueueTag,OtlContainers.TOmniQueueTag)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.@unitclass.CPartlyEmptyLoadFactor" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.@unitclass.CAlmostFullLoadFactor" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.@unitclass.InitializeTimingInfo()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.Empty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.Initialize(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.IsFull()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.Pop(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack.Push()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagFree" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagAllocating" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagAllocated" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagRemoving" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagEndOfList" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagExtending" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagBlockPointer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagDestroying" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagHeader" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag.tagSentinel" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniTaggedValue">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtr">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtr.PData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtr.Reference" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcTailPointer" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcCachedBlock" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcMemStack" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcHeadPointer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcCachedBlock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcBlockSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcHeadPointer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcMemStack" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcNumSlots" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.obcTailPointer" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.AllocateBlock()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Cleanup()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Initialize()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.NextSlot(OtlContainers.TOmniTaggedValue*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.PartitionMemory(OtlContainers.TOmniTaggedValue*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.PreallocateMemory()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.PrevSlot(OtlContainers.TOmniTaggedValue*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.ReleaseBlock(OtlContainers.TOmniTaggedValue*,System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Create(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Dequeue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.Enqueue(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue.TryDequeue(ref@OtlCommon.TOmniValue)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack:OtlContainers.TOmniBaseBoundedStack" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.osAlmostFullCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.osContainerSubject" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.osInStackCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.osPartlyEmptyCount" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.Create(System.Integer,System.Integer,System.Real,System.Real)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.Pop(ref@)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.Push()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack.ContainerSubject" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtrBuffer">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.Buffer" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.LastIn" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.FirstIn" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.FirstIn" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.Dummy" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.LastIn" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.StartBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.EndBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer.Buffer" />
+    </reference>
+  </view>
+</nodeSet>

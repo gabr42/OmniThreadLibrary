@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="beoktto7k7sq7aa6j_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.@unitclass.Clamp(System.Integer)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.PInterface">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.GetContainerSubject()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.Add(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.CompleteAdding()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.GetEnumerator()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.IsCompleted()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.IsFinalized()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.Next()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.ReraiseExceptions(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.SetThrottling(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.Take(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.TryAdd(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.TryTake(ref@OtlCommon.TOmniValue,System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection.ContainerSubject" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.obceCollection_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.obceCollection_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.obceValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.Create(OtlCollections.TOmniBlockingCollection)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.GetCurrent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.MoveNext()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.TryTake(ref@OtlCommon.TOmniValue,System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator.Current" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection:OtlCollections.IOmniBlockingCollection" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.CCompletedFlag" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcAccessed" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcAddCountAndCompleted" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcApproxCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcCollection" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcCompletedSignal" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcHighWaterMark" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcLowWaterMark" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcNotOverflow" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcObserver" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcReraiseExceptions" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcResourceCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.obcThrottling" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.GetContainerSubject()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.Create(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.ToArray&lt;1&gt;(OtlCollections.IOmniBlockingCollection)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.Add(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.CompleteAdding()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.GetEnumerator()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.IsCompleted()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.IsFinalized()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.Next()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.ReraiseExceptions(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.SetThrottling(System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.Take(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.TryAdd(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.TryTake(ref@OtlCommon.TOmniValue,System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.CompletedSignal" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection.ContainerSubject" />
+    </reference>
+  </view>
+</nodeSet>

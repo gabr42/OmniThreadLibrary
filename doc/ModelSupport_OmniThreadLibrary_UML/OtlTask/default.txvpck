@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="r407p0pe08scdzjak_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.IOmniTask">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetCancellationToken()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetComm()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetCounter()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetImplementor()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetLock()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetName()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetParam()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetTerminateEvent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetThreadData()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.GetUniqueID()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.ClearTimer(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Enforced(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Invoke(OtlTask.TOmniTaskInvokeFunction)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.RegisterComm(OtlComm.IOmniCommunicationEndpoint)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.RegisterWaitObject(System.Cardinal,OtlTask.TOmniWaitObjectMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.SetException(System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.SetExitStatus(System.Integer,System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.SetTimer(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.SetTimer(System.Cardinal,OtlCommon.TOmniMessageID)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.SetTimer(System.Integer,System.Cardinal,OtlCommon.TOmniMessageID)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.StopTimer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Terminate()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Terminated()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Stopped()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.UnregisterComm(OtlComm.IOmniCommunicationEndpoint)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.UnregisterWaitObject(System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.CancellationToken" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Comm" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Counter" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Implementor" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Lock" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Name" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.Param" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.TerminateEvent" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.ThreadData" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.IOmniTask.UniqueID" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniTaskInvokeFunction">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectMethod">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniTaskDelegate">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.@unitclass">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.ResponseHandlers[System.Integer]" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.owolResponseHandlers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.owolWaitObjects" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.GetResponseHandlers(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.GetWaitObjects(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.Add(System.Cardinal,OtlTask.TOmniWaitObjectMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.Remove(System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.ResponseHandlers[System.Integer]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList.WaitObjects[System.Integer]" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.IOmniTaskExecutor">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTaskExecutor.Execute()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlTask.IOmniTaskExecutor.SetThreadData(System.IInterface)" />
+    </reference>
+  </view>
+</nodeSet>

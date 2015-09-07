@@ -1,0 +1,753 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="hen51xkfj8svsvg4q_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.MessageType" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.omidMessageType" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.omidInteger" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.omidMessageType" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.omidPointer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.omidString" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.operator Implicit(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.operator Implicit(System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.operator Implicit(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.operator Implicit(OtlCommon.TOmniMessageID)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.AsString()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID.MessageType" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessTimes">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessTimes.CreationTime" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessTimes.UserTime" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessTimes.KernelTime" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniStringData.SetValue(System.string)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.ocCounter" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.ocCounter" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.SetValue(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Initialize()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Increment()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Decrement()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Take(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Take(System.Integer,ref@System.Integer)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PGp4AlignedInt">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData:OtlCommon.IOmniVariantData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData.ovdValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData.Create(System.Variant)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData.SetValue(System.Variant)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItemOV[OtlCommon.TOmniValue]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[OtlCommon.TOmniValue]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[System.string]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[System.Integer]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.DataType" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ovType" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArray" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ovData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ovIntf" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ovType" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToAnsiString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToBoolean()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToCardinal()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToDouble()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToDateTime()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToException()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToExtended()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToInt64()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToInteger()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToInterface()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToObject()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToPointer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToRecord()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToVariant()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToWideString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsArray()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsArrayItem(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsArrayItem(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsArrayItem(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsArrayItemOV(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsAnsiString(System.AnsiString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsArray(OtlCommon.TOmniValueContainer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsArrayItem(System.Integer,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsArrayItem(System.string,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsArrayItem(OtlCommon.TOmniValue,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsArrayItemOV(OtlCommon.TOmniValue,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsBoolean(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsCardinal(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsDouble(System.Double)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsDateTime(System.TDateTime)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsException(System.SysUtils.Exception)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsExtended(System.Extended)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsInt64(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsInteger(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsInterface(System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsObject(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsOwnedObject(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsPointer(System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsRecord(OtlCommon.IOmniAutoDestroyObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsString(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsVariant(System.Variant)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsWideString(System.WideString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetOwnsObject(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue._RemoveWarnings()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ClearIntf()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.Create(System.TVarRec[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CreateNamed(System.TVarRec[],System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue._AddRef()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue._Release()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue._ReleaseAndClear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToAnsiStringDef(System.AnsiString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToBooleanDef(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToCardinalDef(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToDoubleDef(System.Double)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToDateTimeDef(System.TDateTime)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToExceptionDef(System.SysUtils.Exception)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToExtendedDef(System.Extended)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToInt64Def(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToIntegerDef(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToInterfaceDef(System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToObjectDef(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToPointerDef(System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToStringDef(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToVariantDef(System.Variant)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToWideStringDef(System.WideString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.HasArrayItem(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.HasArrayItem(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.HasArrayItem(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsAnsiString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsArray()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsBoolean()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsEmpty()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsException()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsFloating()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsDateTime()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsInteger()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsInterface()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsInterfacedType()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsObject()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsOwnedObject()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsPointer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsRecord()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsVariant()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.IsWideString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.Null()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.RawData()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.RawZero()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToAnsiString(ref@System.AnsiString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToBoolean(ref@System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToCardinal(ref@System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToDouble(ref@System.Double)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToDateTime(ref@System.TDateTime)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToException(ref@System.SysUtils.Exception)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToExtended(ref@System.Extended)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToInt64(ref@System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToInteger(ref@System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToInterface(ref@System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToObject(ref@System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToPointer(ref@System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToString(ref@System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToVariant(ref@System.Variant)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.TryCastToWideString(ref@System.WideString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Equal(OtlCommon.TOmniValue,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Equal(OtlCommon.TOmniValue,System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.AnsiString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Boolean)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Double)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Extended)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Pointer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.SysUtils.Exception)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.WideString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Variant)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.TDateTime)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArray" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[System.Integer]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[System.string]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItem[OtlCommon.TOmniValue]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsArrayItemOV[OtlCommon.TOmniValue]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsAnsiString" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsBoolean" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsCardinal" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsDouble" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsDateTime" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsException" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsExtended" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsInt64" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsInteger" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsInterface" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsObject" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsOwnedObject" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsPointer" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsString" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsVariant" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsWideString" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.DataType" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.OwnsObject" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastFrom&lt;1&gt;(T)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastTo&lt;1&gt;()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.FromRecord&lt;1&gt;(T)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ToRecord&lt;1&gt;()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.FromArray&lt;1&gt;(T[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ToArray&lt;1&gt;()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.CastToObject&lt;1&gt;()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.ToObject&lt;1&gt;()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetAsTValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetArrayFromTValue(System.Rtti.TValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.GetTValueFromArray(OtlCommon.TOmniValueContainer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.SetAsTValue(System.Rtti.TValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.operator Implicit(System.Rtti.TValue)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue.AsTValue" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.GetEnumerator()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.Add(System.Int64,System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.Remove(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary.ValueOf(System.Int64)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAutoDestroyObject">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAutoDestroyObject.GetValue()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAutoDestroyObject.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData:OtlCommon.IOmniStringData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData.osdValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData.Create(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData.SetValue(System.string)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PPHashItem">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator.Current" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator.GetCurrent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator.MoveNext()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator.Current" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PBucketArray">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.Affinity" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.oteAffinity" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment:OtlCommon.IOmniThreadEnvironment" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.oteAffinity" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.oteThreadID" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.GetID()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.Create()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment.ID" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PHashItem">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary:OtlCommon.IOmniInterfaceDictionary" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.idBuckets" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.idBuckets" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.idCount" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Find(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.HashOf(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Resize(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Add(System.Int64,System.IInterface)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.GetEnumerator()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.Remove(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary.ValueOf(System.Int64)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinityTarget">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinityTarget.atSystem" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinityTarget.atProcess" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinityTarget.atThread" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData:OtlCommon.IOmniExtendedData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData.oedValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData.Create(System.Extended)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData.SetValue(System.Extended)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtNull" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtBoolean" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtInteger" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtDouble" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtObject" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtPointer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtDateTime" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtException" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtExtended" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtString" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtInterface" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtVariant" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtWideString" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtArray" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtRecord" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtAnsiString" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType.ovtOwnedObject" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageIDType">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageIDType.mitInteger" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageIDType.mitString" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageIDType.mitPointer" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj.Value" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj.FValue" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj.FValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj.Create(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAnsiStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAnsiStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAnsiStringData.SetValue(System.AnsiString)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAnsiStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniSystemEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniSystemEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniSystemEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniSystemEnvironment.Affinity" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.System" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeSystemEnv" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.Thread" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeThreadEnv" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.Process" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeProcessEnv" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment:OtlCommon.IOmniEnvironment" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeProcessEnv" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeSystemEnv" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.oeThreadEnv" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.GetProcess()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.GetSystem()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.GetThread()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.Create()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.Process" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.System" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment.Thread" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerable">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerable.GetEnumerator()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.GetAsString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.GetCount()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.GetCountPhysical()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.GetMask()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.SetAsString(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.SetCount(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.SetMask(System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.AsString" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.Count" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.CountPhysical" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity.Mask" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.THashItem">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.THashItem.Next" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.THashItem.Next" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.THashItem.Key" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.THashItem.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TBucketArray">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[OtlCommon.TOmniValue]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[System.Integer]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ovcValues" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[System.string]" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ovcCanModify" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ovcCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ovcNames" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ovcValues" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.AddParam(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.GetItem(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.GetItem(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.GetItem(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.SetItem(System.Integer,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.SetItem(System.string,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.SetItem(OtlCommon.TOmniValue,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Grow(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Add(OtlCommon.TOmniValue,System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Assign(OtlCommon.TOmniValue[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.AssignNamed(OtlCommon.TOmniValue[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ByName(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.ByName(System.string,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Exists(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.IndexOf(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Insert(System.Integer,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.IsLocked()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Lock()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[System.Integer]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[System.string]" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer.Item[OtlCommon.TOmniValue]" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessMemoryCounters">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment.GetID()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment.ID" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Kind" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.oeKind" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.oeDelegate" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.SetAnonDelegate(System.SysUtils.TProc)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.GetDelegate()" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.oeMethod" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.oeProcedure" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.oeKind" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.CheckKind(OtlCommon.TOmniExecutableKind)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.GetMethod()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.GetProc()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.SetMethod(System.TMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.SetProc(System.SysUtils.TProcedure)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Explicit(OtlCommon.TOmniExecutable)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Explicit(System.TMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Explicit(System.SysUtils.TProcedure)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Implicit(System.TMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Implicit(System.SysUtils.TProcedure)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Implicit(OtlCommon.TOmniExecutable)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.IsNull()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Kind" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Method" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Proc" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.AnonCopy(ref@,)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Explicit(System.SysUtils.TProc)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.operator Implicit(System.SysUtils.TProc)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.SetDelegate()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable.Delegate" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject:OtlCommon.IOmniAutoDestroyObject" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.FValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.SetValue(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.Create(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.Destroy()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.Affinity" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.oseAffinity" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment:OtlCommon.IOmniSystemEnvironment" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.oseAffinity" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.Create()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment.Affinity" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.SetValue(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.Increment()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.Decrement()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.Take(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.Take(System.Integer,ref@System.Integer)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniWideStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWideStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWideStringData.SetValue(System.WideString)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniWideStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideBuckets" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator:OtlCommon.IOmniInterfaceDictionaryEnumerator" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideItem" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideCurrent" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.Current" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.idePair" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideBuckets" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideBucketIdx" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideCurrent" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.ideItem" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.idePair" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.Create(OtlCommon.THashItem*[]*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.GetCurrent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.MoveNext()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator.Current" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity:OtlCommon.IOmniAffinity" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.oaTarget" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.oaTarget" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.GetAsString()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.GetCount()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.GetCountPhysical()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.GetMask()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.SetAsString(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.SetCount(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.SetMask(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.Create(OtlCommon.TOmniAffinityTarget)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.AsString" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.Count" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity.Mask" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Times" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Memory" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Affinity" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.PriorityClass" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.GetMemory()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.GetPriorityClass()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.GetTimes()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Memory" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.PriorityClass" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment.Times" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData:OtlCommon.IOmniAnsiStringData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData.osdValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData.Create(System.AnsiString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData.SetValue(System.AnsiString)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair.idpKey" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair.idpValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair.SetKeyValue(System.Int64,System.IInterface)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair.Key" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl:OtlCommon.IOmniCounter" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.ocValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.SetValue(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Create(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Decrement()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Increment()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Take(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Take(System.Integer,ref@System.Integer)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Value" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.FValue" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue:OtlCommon.IOmniWaitableValue" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.FHandle" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.FValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.GetHandle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Reset()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Signal()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Signal(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.WaitFor(System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Handle" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.Current" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.GetCurrent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.MoveNext()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.Current" />
+    </reference>
+    <reference referencedUin="design:view:::0kjfxvon6ttnetbdt_v">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.Utils.@unitclass" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.GEnvironment" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_OK" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_INTERNAL" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_THREADPOOL_QUEUE_TOO_LONG" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_THREADPOOL_STALE_TASK" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_THREADPOOL_CANCELLED" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.EXIT_THREADPOOL_INTERNAL_ERROR" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.CreateCounter(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.CreateInterfaceDictionary()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.CreateWaitableValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.CreateAutoDestroyObject(System.TObject)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.Environment()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.SetThreadName(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.VarToObj(System.Variant)" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.OtlUID" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.TOmniValue_DataSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.GEnvironment" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.StrPasA(System.AnsiChar*)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.@unitclass.StrPasW(System.Char*)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniVariantData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniVariantData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniVariantData.SetValue(System.Variant)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniVariantData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData:OtlCommon.IOmniWideStringData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData.osdValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData.Create(System.WideString)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData.SetValue(System.WideString)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniExtendedData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniExtendedData.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniExtendedData.SetValue(System.Extended)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniExtendedData.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Value" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.GetHandle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.GetValue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Reset()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Signal()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Signal(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.WaitFor(System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Handle" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue.Value" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Memory" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Affinity" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.opeAffinity" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment:OtlCommon.IOmniProcessEnvironment" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Times" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.PriorityClass" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.opeAffinity" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.GetAffinity()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.GetMemory()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.GetPriorityClass()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.GetTimes()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Create()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Affinity" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Memory" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.PriorityClass" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment.Times" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcIdle" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcBelowNormal" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcNormal" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcAboveNormal" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcHigh" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass.pcRealtime" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind.oekNull" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind.oekProcedure" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind.oekMethod" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind.oekDelegate" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.Thread" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.System" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.Process" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.GetProcess()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.GetSystem()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.GetThread()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.Process" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.System" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment.Thread" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator.Current" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator.GetCurrent()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator.MoveNext()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator.TryTake(ref@OtlCommon.TOmniValue,System.Cardinal)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator.Current" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;.FValue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;.Create(T)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;.GetRecord()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;.SetRecord(T)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;.Value" />
+    </reference>
+  </view>
+</nodeSet>

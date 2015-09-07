@@ -6,7 +6,7 @@ OmniThreadLibrary is a simple to use threading library for Delphi. OTL's main "s
 
 Clone the repository with Git or checkout the repository with SVN: https://github.com/gabr42/OmniThreadLibrary/trunk
 
-Download the latest release (3.04b): https://drive.google.com/file/d/0BwqVlLNTK4OxWkZELW1zZ3loUGM/view?usp=sharing
+Download the latest release (3.05): https://drive.google.com/file/d/0BwqVlLNTK4OxdU05UWs1Q3lSUmc/view?usp=sharing
 
 Download an older release: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list
 
@@ -20,7 +20,10 @@ Download and install the sources. Compile and install the OmniThreadLibrary pack
 
 ### Is OmniThreadLibrary supported on my platform?
 
-At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, and XE8 on Win32 and Win64 platforms using the VCL framework. There are no plans to support older Delphi compilers. OS X and FireMonkey will probably be supported in the future, but there are no specific plans for them yet.
+At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, 
+XE6, XE7, XE8, and 10 Seattle on Win32 and Win64 platforms using the VCL framework. 
+There are no plans to support older Delphi compilers. 
+We are working on support for mobile devices, OS X, and FireMonkey.
 
 ### How do I get support?
 

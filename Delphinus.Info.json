@@ -5,7 +5,7 @@
     "license_file": "LICENSE.txt",
     "platforms": "Win32;Win64",
     "package_compiler_min": 19,
-    "package_compiler_max": 29,
+    "package_compiler_max": 30,
     "compiler_min": 19,
-    "compiler_max": 29
+    "compiler_max": 30
 }

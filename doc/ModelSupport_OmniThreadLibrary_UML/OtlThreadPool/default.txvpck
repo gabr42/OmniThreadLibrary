@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="eg3nc01cw7s4end9r_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryFunction">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.GOmniThreadPool" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.CDefaultIdleWorkerThreadTimeout_sec" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.CDefaultWaitOnTerminate_sec" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.CreateThreadPool(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.GlobalOmniThreadPool()" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.WM_REQUEST_COMPLETED" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_RUN" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_THREAD_CREATED" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_THREAD_DESTROYING" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_COMPLETED" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_STOP" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.MSG_CANCEL_RESULT" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.CGlobalOmniThreadPoolName" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass.GOmniThreadPool" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.Executable" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.tdfdExecutable" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.tdfdExecutable" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.Create(OtlThreadPool.TOTPThreadDataFactoryMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.Create(OtlThreadPool.TOTPThreadDataFactoryFunction)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData.Executable" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetIdleWorkerThreadTimeout_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetMaxExecuting()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetMaxQueued()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetMaxQueuedTime_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetMinWorkers()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetName()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetUniqueID()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.GetWaitOnTerminate_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetIdleWorkerThreadTimeout_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetMaxExecuting(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetMaxQueued(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetMaxQueuedTime_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetMinWorkers(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetName(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetWaitOnTerminate_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.Cancel(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.CancelAll()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.CountExecuting()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.CountQueued()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.IsIdle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.MonitorWith(OtlThreadPool.IOmniThreadPoolMonitor)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.RemoveMonitor()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetMonitor(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetThreadDataFactory(OtlThreadPool.TOTPThreadDataFactoryMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.SetThreadDataFactory(OtlThreadPool.TOTPThreadDataFactoryFunction)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.IdleWorkerThreadTimeout_sec" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.MaxExecuting" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.MaxQueued" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.MaxQueuedTime_sec" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.MinWorkers" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.Name" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.UniqueID" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool.WaitOnTerminate_sec" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owThreadDataFactory" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owDestroying" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owIdleWorkers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owMonitorObserver" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owName" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owRunningWorkers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owStoppingWorkers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owThreadDataFactory" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owUniqueID" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.owWorkItemQueue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.ActiveWorkItemDescriptions()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CreateWorker()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.ForwardThreadCreated(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.ForwardThreadDestroying(System.Cardinal,OtlThreadPool.TThreadPoolOperation,OtlThreadPool.TOTPWorkerThread)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.InternalStop()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.LocateThread(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Log(System.string,System.TVarRec[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.NumRunningStoppedThreads()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.ProcessCompletedWorkItem(OtlThreadPool.TOTPWorkItem)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.RequestCompleted(OtlThreadPool.TOTPWorkItem,OtlThreadPool.TOTPWorkerThread)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.ScheduleNext(OtlThreadPool.TOTPWorkItem)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.StopThread(OtlThreadPool.TOTPWorkerThread)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Cleanup()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Initialize()" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CountQueued" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CountQueuedLock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CountRunning" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.IdleWorkerThreadTimeout_sec" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MaxExecuting" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MaxQueued" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MaxQueuedTime_sec" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MinWorkers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.WaitOnTerminate_sec" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Create(System.string,System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Cancel(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CancelAll(ref@OtlCommon.TOmniWaitableValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MaintainanceTimer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.CheckIdleQueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MsgCompleted(ref@OtlComm.TOmniMessage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MsgThreadCreated(ref@OtlComm.TOmniMessage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.MsgThreadDestroying(ref@OtlComm.TOmniMessage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.PruneWorkingQueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.RemoveMonitor()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.Schedule(ref@OtlThreadPool.TOTPWorkItem)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.SetMonitor(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.SetName(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker.SetThreadDataFactory(OtlCommon.TOmniValue)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolScheduler">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolScheduler.Schedule(OtlTask.IOmniTask)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.ThreadPoolOperation" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.otpmiThreadPoolOperation" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.otpmiTaskID" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.otpmiThreadID" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.otpmiThreadPoolOperation" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.otpmiUniqueID" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.Create(System.Int64,OtlThreadPool.TThreadPoolOperation,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.Create(System.Int64,System.Int64)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.TaskID" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.ThreadPoolOperation" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.ThreadID" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo.UniqueID" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryMethod">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThreadEvent">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiThread" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Thread" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiScheduled_ms" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiScheduledAt" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiStartedAt" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiTask" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiThread" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.owiUniqueID" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Create(OtlTask.IOmniTask)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Description()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.TerminateTask(System.Integer,System.string)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.ScheduledAt" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Scheduled_ms" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.StartedAt" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.UniqueID" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Task" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem.Thread" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory.tdfExecutable" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory.Create(OtlThreadPool.TOTPThreadDataFactoryFunction)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory.Create(OtlThreadPool.TOTPThreadDataFactoryMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory.Execute()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory.IsEmpty()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation.tpoCreateThread" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation.tpoDestroyThread" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation.tpoKillThread" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation.tpoWorkItemCompleted" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolMonitor">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolMonitor.Detach(OtlThreadPool.IOmniThreadPool)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolMonitor.Monitor(OtlThreadPool.IOmniThreadPool)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtThreadDataFactory" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.WorkItem_ref" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtWorkItem_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtCommChannel" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtNewWorkEvent" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtRemoveFromPool" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtStartIdle_ms" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtStartStopping_ms" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtStopped" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtTerminateEvent" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtThreadData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtThreadDataFactory" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtWorkItemLock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.owtWorkItem_ref" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Comm()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.ExecuteWorkItem(OtlThreadPool.TOTPWorkItem)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.GetOwnerCommEndpoint()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Log(System.string,System.TVarRec[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Create(OtlThreadPool.TOTPThreadDataFactory)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Asy_Stop()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Asy_TerminateWorkItem(ref@OtlThreadPool.TOTPWorkItem)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Description()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Execute()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.GetWorkItemInfo(ref@System.TDateTime,ref@System.TDateTime,ref@System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.IsExecuting(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Start()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.WorkItemDescription()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.NewWorkEvent" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.OwnerCommEndpoint" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.RemoveFromPool" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.StartIdle_ms" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.StartStopping_ms" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.Stopped" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.TerminateEvent" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread.WorkItem_ref" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpThreadDataFactory" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool:OtlThreadPool.IOmniThreadPoolScheduler" />
+      <reference referencedUin="delphi:l_impl:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool:OtlThreadPool.IOmniThreadPool" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpPoolName" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpThreadDataFactory" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpUniqueID" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpWorker" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.otpWorkerTask" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Log(System.string,System.TVarRec[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetIdleWorkerThreadTimeout_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetMaxExecuting()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetMaxQueued()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetMaxQueuedTime_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetMinWorkers()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetName()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetUniqueID()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.GetWaitOnTerminate_sec()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetIdleWorkerThreadTimeout_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetMaxExecuting(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetMaxQueued(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetMaxQueuedTime_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetMinWorkers(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetName(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetWaitOnTerminate_sec(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.WorkerObj()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Create(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Cancel(System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.CancelAll()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.CountExecuting()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.CountQueued()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.IsIdle()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.MonitorWith(OtlThreadPool.IOmniThreadPoolMonitor)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.RemoveMonitor()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Schedule(OtlTask.IOmniTask)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetMonitor(System.Cardinal)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetThreadDataFactory(OtlThreadPool.TOTPThreadDataFactoryMethod)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.SetThreadDataFactory(OtlThreadPool.TOTPThreadDataFactoryFunction)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.IdleWorkerThreadTimeout_sec" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.MaxExecuting" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.MaxQueued" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.MaxQueuedTime_sec" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.MinWorkers" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.Name" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.UniqueID" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool.WaitOnTerminate_sec" />
+    </reference>
+  </view>
+</nodeSet>

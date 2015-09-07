@@ -94,6 +94,10 @@
         {
             "project": "Packages\\OmniThreadLibraryPackagesXE8.groupproj",
             "compiler": 29
+        },
+        {
+            "project": "Packages\\OmniThreadLibraryPackages10Seattle.groupproj",
+            "compiler": 30
         }
     ]    
 }
