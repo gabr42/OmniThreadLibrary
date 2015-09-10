@@ -38,10 +38,12 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill
 ///
 ///   Creation date     : 2009-03-30
-///   Last modification : 2015-09-04
-///   Version           : 1.22a
+///   Last modification : 2015-09-10
+///   Version           : 1.22c
 ///</para><para>
 ///   History:
+///     1.22c: 2015-09-10
+///       - Fixed unsafe 64-bit pointer-to-integer casts.
 ///     1.22b: 2015-09-07
 ///       - TWaitFor.MsgWaitAny now uses RegisterWaitForSingleObject approach when
 ///         waiting on 64 handles. Previously, MsgWaitForMultipleObjectsEx was called,
@@ -779,8 +781,8 @@ procedure TOmniCS.Initialize;
 var
   syncIntf: IOmniCriticalSection;
 begin
-  Assert(cardinal(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
-  Assert(cardinal(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
+  Assert(DSiNativeUInt(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
+  Assert(DSiNativeUInt(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
   if not assigned(ocsSync) then begin
     syncIntf := CreateOmniCriticalSection;
     if CAS(nil, pointer(syncIntf), ocsSync) then
@@ -1016,8 +1018,8 @@ var
   tmpT        : T;
 begin
   if not assigned(PPointer(@storage)^) then begin
-    Assert(cardinal(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
-    Assert(cardinal(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
+    Assert(DSiNativeUInt(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
+    Assert(DSiNativeUInt(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
     tmpT := factory();
     interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
     case PTypeInfo(TypeInfo(T))^.Kind of

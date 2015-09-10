@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<TgConfig Version="3" SubLevelDisabled="False">
+  <Option Name="namespaceFolder.app_41_Pipeline" Type="System.String" Value="app_41_Pipeline" Category="General" IsBrowsable="False" />
+  <Option Name="namespaceFolder.test_41_Pipeline" Type="System.String" Value="test_41_Pipeline" Category="General" IsBrowsable="False" />
+</TgConfig>

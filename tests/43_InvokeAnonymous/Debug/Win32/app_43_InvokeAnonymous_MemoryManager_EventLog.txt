@@ -1,0 +1,211 @@
+
+--------------------------------2011/3/16 10:15:01--------------------------------
+A memory block has been leaked. The size is: 20
+
+This block was allocated by thread 0xF50, and the stack trace (return addresses) at the time was:
+404586 
+4050EB 
+405666 
+4DE2E6 
+4E9B8E 
+4E38BC 
+409E0C 
+4056D4 
+4EAEDB 
+477C05 
+4A192B 
+
+The block is currently used for an object of class: TOmniInternalFuncMsg
+
+The allocation number is: 963
+
+Current memory dump of 256 bytes starting at pointer address 7EFA68A0:
+EC A3 4D 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 09 86 B1 03 00 00 00 00 01 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 BF 03 00 00 F5 45 40 00 05 2F 44 00 90 2C 44 00
+13 2D 44 00 A2 9C 47 00 C6 A1 47 00 7B F6 4A 00 0F 19 4B 00 22 09 10 77 9C EE 47 00 E9 A2 47 00
+50 0F 00 00 DC 45 40 00 05 2F 44 00 85 2A 44 00 22 2A 44 00 4F 51 40 00 E8 A1 47 00 7B F6 4A 00
+0F 19 4B 00 22 09 10 77 9C EE 47 00 E9 A2 47 00 50 0F 00 00 10 00 00 00 80 A3 EF 7E D5 4C 86 F1
+5C C2 4F 00 80 80 80 80 80 80 80 80 80 80 80 80 2A B3 79 0E 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Ï  £  M  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  Ü  ±  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ø  .  .  .  ı  E  @  .  .  /  D  .  ê  ,  D  .
+.  -  D  .  ¢  ú  G  .  ∆  °  G  .  {  ˆ  J  .  .  .  K  .  "  .  .  w  ú  Ó  G  .  È  ¢  G  .
+P  .  .  .  ‹  E  @  .  .  /  D  .  Ö  *  D  .  "  *  D  .  O  Q  @  .  Ë  °  G  .  {  ˆ  J  .
+.  .  K  .  "  .  .  w  ú  Ó  G  .  È  ¢  G  .  P  .  .  .  .  .  .  .  Ä  £  Ô  ~  ’  L  Ü  Ò
+\  ¬  O  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  *  ≥  y  .  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2011/3/16 10:15:01--------------------------------
+This application has leaked memory. The small block leaks are (excluding expected leaks registered by pointer):
+
+13 - 20 bytes: TOmniInternalFuncMsg x 1
+
+Note: Memory leak detail is logged to a text file in the same folder as this application. To disable this memory leak check, undefine "EnableMemoryLeakReporting".
+
+--------------------------------2011/3/16 10:16:03--------------------------------
+A memory block has been leaked. The size is: 20
+
+This block was allocated by thread 0x1F60, and the stack trace (return addresses) at the time was:
+404586 
+4050EB 
+405666 
+4DE2E6 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniInternalFuncMsg.Create][1080]
+4E9B8E [OtlComm.pas][OtlComm][OtlComm.TOmniTwoWayChannel.Endpoint1][627]
+4E38BC [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskControl.Invoke][2448]
+409E0C 
+4056D4 
+4EAEDF [test_43_InvokeAnonymous.pas][test_43_InvokeAnonymous][test_43_InvokeAnonymous.TfrmInvokeAnonymousDemo.btnInvokeClick][39]
+477C05 [Controls][Controls][Controls.TControl.Click]
+4A192B [StdCtrls][StdCtrls][StdCtrls.TCustomButton.Click]
+
+The block is currently used for an object of class: TOmniInternalFuncMsg
+
+The allocation number is: 963
+
+Current memory dump of 256 bytes starting at pointer address 7EFA68A0:
+EC A3 4D 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 E5 65 B1 03 00 00 00 00 01 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 BF 03 00 00 F5 45 40 00 05 2F 44 00 90 2C 44 00
+13 2D 44 00 A2 9C 47 00 C6 A1 47 00 7B F6 4A 00 0F 19 4B 00 22 09 10 77 9C EE 47 00 E9 A2 47 00
+60 1F 00 00 DC 45 40 00 05 2F 44 00 85 2A 44 00 22 2A 44 00 4F 51 40 00 E8 A1 47 00 7B F6 4A 00
+0F 19 4B 00 22 09 10 77 9C EE 47 00 E9 A2 47 00 60 1F 00 00 10 00 00 00 80 A3 EF 7E F5 6C 86 F1
+5C C2 4F 00 80 80 80 80 80 80 80 80 80 80 80 80 0A 93 79 0E 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Ï  £  M  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  Â  e  ±  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ø  .  .  .  ı  E  @  .  .  /  D  .  ê  ,  D  .
+.  -  D  .  ¢  ú  G  .  ∆  °  G  .  {  ˆ  J  .  .  .  K  .  "  .  .  w  ú  Ó  G  .  È  ¢  G  .
+`  .  .  .  ‹  E  @  .  .  /  D  .  Ö  *  D  .  "  *  D  .  O  Q  @  .  Ë  °  G  .  {  ˆ  J  .
+.  .  K  .  "  .  .  w  ú  Ó  G  .  È  ¢  G  .  `  .  .  .  .  .  .  .  Ä  £  Ô  ~  ı  l  Ü  Ò
+\  ¬  O  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  ì  y  .  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2011/3/16 10:16:03--------------------------------
+This application has leaked memory. The small block leaks are (excluding expected leaks registered by pointer):
+
+13 - 20 bytes: TOmniInternalFuncMsg x 1
+
+Note: Memory leak detail is logged to a text file in the same folder as this application. To disable this memory leak check, undefine "EnableMemoryLeakReporting".
+
+--------------------------------2012/9/27 14:54:36--------------------------------
+A memory block has been leaked. The size is: 36
+
+This block was allocated by thread 0x1F5C, and the stack trace (return addresses) at the time was:
+404796 
+4051EF 
+40A3C1 
+40585E 
+405224 
+53164E [OtlSync.pas][OtlSync][OtlSync.TOmniCriticalSection.Release][619]
+40A402 
+55A783 [test_43_InvokeAnonymous.pas][test_43_InvokeAnonymous][test_43_InvokeAnonymous.TfrmInvokeAnonymousDemo.btnInvokeClick$2446$ActRec.$0$Body][53]
+54DF6A [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniWorker.GetTask][1481]
+54F983 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchOmniMessage][1851]
+54F5B5 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchEvent][1766]
+
+The block is currently used for an object of class: TfrmInvokeAnonymousDemo.btnInvokeClick$2446$ActRec.$0$Body$2447$ActRec
+
+The allocation number is: 1176
+
+Current memory dump of 256 bytes starting at pointer address 7EEE7310:
+0C A5 55 00 01 00 00 00 70 1E 40 00 5C 1F 00 00 C0 73 EE 7E C8 73 EE 7E 80 A4 55 00 00 00 00 00
+A1 3F 23 7A 80 80 80 80 00 00 00 00 C0 66 EE 7E 00 00 00 00 00 00 00 00 3C 11 41 00 00 00 00 00
+95 04 00 00 96 47 40 00 EF 51 40 00 C1 A3 40 00 5E 58 40 00 24 52 40 00 26 A8 55 00 17 55 40 00
+3D C4 48 00 07 4C 4A 00 35 57 4A 00 E4 BE 48 00 3C 1F 00 00 3C 1F 00 00 B2 47 40 00 0D 52 40 00
+A9 58 40 00 46 52 40 00 27 A4 40 00 33 A3 40 00 F5 22 55 00 AA 53 40 00 E0 A3 40 00 78 A3 40 00
+DA 46 55 00 18 00 00 00 0C A5 55 00 E8 08 72 85 98 A3 55 00 01 00 00 00 70 1E 40 00 3C 1F 00 00
+0C A3 55 00 00 00 00 00 17 F7 8D 7A 80 80 80 80 80 80 80 80 80 80 80 80 00 00 00 00 C0 66 EE 7E
+00 00 00 00 00 00 00 00 3C 11 41 00 00 00 00 00 99 04 00 00 96 47 40 00 EF 51 40 00 5E 58 40 00
+.  •  U  .  .  .  .  .  p  .  @  .  \  .  .  .  ¿  s  Ó  ~  »  s  Ó  ~  Ä  §  U  .  .  .  .  .
+°  ?  #  z  Ä  Ä  Ä  Ä  .  .  .  .  ¿  f  Ó  ~  .  .  .  .  .  .  .  .  <  .  A  .  .  .  .  .
+ï  .  .  .  ñ  G  @  .  Ô  Q  @  .  ¡  £  @  .  ^  X  @  .  $  R  @  .  &  ®  U  .  .  U  @  .
+=  ƒ  H  .  .  L  J  .  5  W  J  .  ‰  æ  H  .  <  .  .  .  <  .  .  .  ≤  G  @  .  .  R  @  .
+©  X  @  .  F  R  @  .  '  §  @  .  3  £  @  .  ı  "  U  .  ™  S  @  .  ‡  £  @  .  x  £  @  .
+⁄  F  U  .  .  .  .  .  .  •  U  .  Ë  .  r  Ö  ò  £  U  .  .  .  .  .  p  .  @  .  <  .  .  .
+.  £  U  .  .  .  .  .  .  ˜  ç  z  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  ¿  f  Ó  ~
+.  .  .  .  .  .  .  .  <  .  A  .  .  .  .  .  ô  .  .  .  ñ  G  @  .  Ô  Q  @  .  ^  X  @  .
+
+--------------------------------2012/9/27 14:54:36--------------------------------
+A memory block has been leaked. The size is: 36
+
+This block was allocated by thread 0x1F3C, and the stack trace (return addresses) at the time was:
+404796 
+4051EF 
+40A3C1 
+40585E 
+405224 
+55A826 [test_43_InvokeAnonymous.pas][test_43_InvokeAnonymous][test_43_InvokeAnonymous.TfrmInvokeAnonymousDemo.btnInvokeClick][45]
+405517 
+48C43D [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+4A4C07 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TCustomButton.Click]
+4A5735 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TCustomButton.CNCommand]
+48BEE4 [Vcl.Controls][Vcl][Vcl.Controls.TControl.WndProc]
+
+The block is currently used for an object of class: TfrmInvokeAnonymousDemo.btnInvokeClick$2446$ActRec
+
+The allocation number is: 1173
+
+Current memory dump of 256 bytes starting at pointer address 7EEE73C0:
+98 A3 55 00 01 00 00 00 70 1E 40 00 3C 1F 00 00 0C A3 55 00 00 00 00 00 17 F7 8D 7A 80 80 80 80
+80 80 80 80 80 80 80 80 00 00 00 00 C0 66 EE 7E 00 00 00 00 00 00 00 00 3C 11 41 00 00 00 00 00
+99 04 00 00 96 47 40 00 EF 51 40 00 5E 58 40 00 22 D0 54 00 9D 97 55 00 02 A4 40 00 44 A3 40 00
+B9 DB 54 00 A8 A3 40 00 CC 58 40 00 02 A4 40 00 5C 1F 00 00 3C 1F 00 00 B2 47 40 00 F1 6E 40 00
+14 4E 42 00 C3 3C 82 77 EE 3C 82 77 5E F5 81 77 DD 3F 42 00 75 41 42 00 12 B4 82 77 43 E1 86 77
+1A A7 87 77 18 00 00 00 B0 04 02 00 C3 1B 94 50 D0 8C 54 00 02 00 00 00 00 00 00 00 00 00 00 00
+28 73 EE 7E 00 00 00 00 3C E4 6B AF 80 80 80 80 80 80 80 80 80 80 80 80 00 00 00 00 91 67 EE 7E
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9C 04 00 00 05 48 40 00 BE 8C 40 00 BE 92 CC 76
+ò  £  U  .  .  .  .  .  p  .  @  .  <  .  .  .  .  £  U  .  .  .  .  .  .  ˜  ç  z  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  ¿  f  Ó  ~  .  .  .  .  .  .  .  .  <  .  A  .  .  .  .  .
+ô  .  .  .  ñ  G  @  .  Ô  Q  @  .  ^  X  @  .  "  –  T  .  ù  ó  U  .  .  §  @  .  D  £  @  .
+π  €  T  .  ®  £  @  .  Ã  X  @  .  .  §  @  .  \  .  .  .  <  .  .  .  ≤  G  @  .  Ò  n  @  .
+.  N  B  .  √  <  Ç  w  Ó  <  Ç  w  ^  ı  Å  w  ›  ?  B  .  u  A  B  .  .  ¥  Ç  w  C  ·  Ü  w
+.  ß  á  w  .  .  .  .  ∞  .  .  .  √  .  î  P  –  å  T  .  .  .  .  .  .  .  .  .  .  .  .  .
+(  s  Ó  ~  .  .  .  .  <  ‰  k  Ø  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  ë  g  Ó  ~
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ú  .  .  .  .  H  @  .  æ  å  @  .  æ  í  Ã  v
+
+--------------------------------2012/9/27 14:54:36--------------------------------
+A memory block has been leaked. The size is: 36
+
+This block was allocated by thread 0x1F5C, and the stack trace (return addresses) at the time was:
+404796 
+4051EF 
+40585E 
+54D022 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniInternalFuncMsg.Create][1174]
+55979D [OtlComm.pas][OtlComm][OtlComm.TOmniTwoWayChannel.Endpoint2][647]
+40A402 
+40A344 
+54DBB9 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Invoke][1375]
+40A3A8 
+4058CC 
+40A402 
+
+The block is currently used for an object of class: TOmniInternalFuncMsg
+
+The allocation number is: 1177
+
+Current memory dump of 256 bytes starting at pointer address 7EEE7470:
+D0 8C 54 00 02 00 00 00 00 00 00 00 00 00 00 00 28 73 EE 7E 00 00 00 00 3C E4 6B AF 80 80 80 80
+80 80 80 80 80 80 80 80 00 00 00 00 91 67 EE 7E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+9C 04 00 00 05 48 40 00 BE 8C 40 00 BE 92 CC 76 9A 8D 40 00 7B 92 44 00 FC 8F 44 00 C9 8D 44 00
+3B 27 51 00 6A 94 CC 76 E5 D1 CC 76 00 28 51 00 3C 1F 00 00 3C 1F 00 00 B2 47 40 00 D6 8D 40 00
+F1 8B 40 00 28 8C 40 00 88 13 41 00 9A 8D 40 00 7B 92 44 00 09 8E 44 00 A6 8D 44 00 53 52 40 00
+83 21 51 00 18 00 00 00 00 00 00 00 74 C3 68 E8 8C 02 57 00 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 8B 3C 97 17 80 80 80 80 80 80 80 80 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+–  å  T  .  .  .  .  .  .  .  .  .  .  .  .  .  (  s  Ó  ~  .  .  .  .  <  ‰  k  Ø  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  ë  g  Ó  ~  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+ú  .  .  .  .  H  @  .  æ  å  @  .  æ  í  Ã  v  ö  ç  @  .  {  í  D  .  ¸  è  D  .  …  ç  D  .
+;  '  Q  .  j  î  Ã  v  Â  —  Ã  v  .  (  Q  .  <  .  .  .  <  .  .  .  ≤  G  @  .  ÷  ç  @  .
+Ò  ã  @  .  (  å  @  .  à  .  A  .  ö  ç  @  .  {  í  D  .  .  é  D  .  ¶  ç  D  .  S  R  @  .
+É  !  Q  .  .  .  .  .  .  .  .  .  t  √  h  Ë  å  .  W  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  ã  <  ó  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2012/9/27 14:54:36--------------------------------
+This application has leaked memory. The small block leaks are (excluding expected leaks registered by pointer):
+
+21 - 36 bytes: TOmniInternalFuncMsg x 1, TfrmInvokeAnonymousDemo.btnInvokeClick$2446$ActRec x 1, TfrmInvokeAnonymousDemo.btnInvokeClick$2446$ActRec.$0$Body$2447$ActRec x 1
+
+Note: Memory leak detail is logged to a text file in the same folder as this application. To disable this memory leak check, undefine "EnableMemoryLeakReporting".
