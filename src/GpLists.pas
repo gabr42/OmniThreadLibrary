@@ -299,7 +299,6 @@ interface
 
 uses
   SysUtils,
-  Classes,
   SyncObjs,
   {$IFDEF GpLists_HasSystemTypes}
   System.Types,
@@ -312,8 +311,10 @@ uses
   {$IFDEF POSIX}
   Posix.Pthread,
   {$ENDIF}
-  Generics.Collections;
-
+  {$IFDEF UNICODE}
+  Generics.Collections,
+  {$ENDIF}
+  Classes;
 
 
 const
