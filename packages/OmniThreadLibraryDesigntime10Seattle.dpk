@@ -33,7 +33,7 @@ requires
   rtl,
   vcl,
   vclx,
-  OmniThreadLibraryRuntimeXE8;
+  OmniThreadLibraryRuntime10Seattle;
 
 contains
   OtlRegister in '..\OtlRegister.pas';
