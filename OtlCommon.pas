@@ -833,7 +833,7 @@ type
     function  GetValue: integer; inline;
     procedure SetValue(value: integer); inline;
   public
-    procedure Initialize;
+    procedure Initialize; inline;
     function  Add(value: integer): integer; inline;
     function  Addr: PInteger; inline;
     function  CAS(oldValue, newValue: integer): boolean;
@@ -865,7 +865,7 @@ type
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
-    procedure Initialize;
+    procedure Initialize; inline;
     function  Add(value: int64): int64; inline;
     function  Addr: PInt64; inline;
     function  CAS(oldValue, newValue: int64): boolean;
@@ -3805,6 +3805,8 @@ begin
   {$ENDIF}
 end; { NextOid }
 
+{ TOmniAlignedInt32 }
+
 procedure TOmniAlignedInt32.Initialize;
 begin
   FAddr := PInteger((NativeInt(@FData) + 3) AND NOT 3);
@@ -3815,13 +3817,14 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Add }
 
 function TOmniAlignedInt32.Addr: PInteger;
 begin
-  Result := FAddr
+  Initialize;
+  Result := FAddr;
 end; { TOmniAlignedInt32.Addr }
 
 function TOmniAlignedInt32.CAS(oldValue, newValue: integer): boolean;
@@ -3829,7 +3832,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
   {$ELSE}
-  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
+  Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt32.CAS }
 
@@ -3838,7 +3841,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedDecrement(Addr^);
   {$ELSE}
-  Result := TInterlocked.Decrement(FAddr^);
+  Result := TInterlocked.Decrement(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
@@ -3847,7 +3850,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
@@ -3861,7 +3864,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedIncrement(Addr^);
   {$ELSE}
-  Result := TInterlocked.Increment(FAddr^);
+  Result := TInterlocked.Increment(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
@@ -3870,13 +3873,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
 procedure TOmniAlignedInt32.SetValue(value: integer);
 begin
-  FAddr^ := value;
+  Addr^ := value;
 end; { TOmniAlignedInt32.SetValue }
 
 function TOmniAlignedInt32.Subtract(value: integer): integer;
@@ -3884,7 +3887,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, -value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Subtract }
 
@@ -3945,6 +3948,8 @@ begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TOmniAlignedInt32.Subtract }
 
+{ TOmniAlignedInt64 }
+
 procedure TOmniAlignedInt64.Initialize;
 begin
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
@@ -3956,12 +3961,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Add }
 
 function TOmniAlignedInt64.Addr: PInt64;
 begin
+  Initialize;
   Result := FAddr;
 end; { TOmniAlignedInt64.Addr }
 
@@ -3970,7 +3976,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
   {$ELSE}
-  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
+  Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt64.CAS }
 
@@ -3979,7 +3985,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedDecrement64(Addr^);
   {$ELSE}
-  Result := TInterlocked.Decrement( FAddr^)
+  Result := TInterlocked.Decrement(Addr^)
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
@@ -3988,13 +3994,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
 begin
-  Result := FAddr^;
+  Result := Addr^;
 end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
@@ -4002,7 +4008,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedIncrement64(Addr^);
   {$ELSE}
-  Result := TInterlocked.Increment(FAddr^);
+  Result := TInterlocked.Increment(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
@@ -4011,13 +4017,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
-  FAddr^ := value;
+  Addr^ := value;
 end; { TOmniAlignedInt64.SetValue }
 
 function TOmniAlignedInt64.Subtract(value: int64): int64;
@@ -4025,10 +4031,11 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, -value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
 
+{ TInterlockedEx }
 
 class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
 begin
@@ -4041,7 +4048,7 @@ begin
     Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
     {$IFEND}
   {$ENDIF}
-end;
+end; { TInterlockedEx.CompareExchange }
 
 class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
 begin
@@ -4054,7 +4061,7 @@ begin
     Result := TInterlocked.Add(Integer(Target), Integer(Increment));
     {$IFEND}
   {$ENDIF}
-end;
+end; { TInterlockedEx.Add }
 
 
 initialization
