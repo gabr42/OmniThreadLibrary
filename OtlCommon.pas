@@ -1747,7 +1747,7 @@ var
 
 begin
 {$IFDEF OTL_Generics}
-  FDictionary.Add(key, value);
+  FDictionary.AddOrSetValue(key, value);
 {$ELSE}
   hash := HashOf(key);
   New(bucket);
