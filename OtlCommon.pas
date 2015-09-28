@@ -217,8 +217,6 @@
 ///       - First official release.
 ///</para></remarks>
 
-// TODO 1 -oPrimoz Gabrijelcic : Can CastAs<> and CastFrom<> work in Delphi 2009?
-
 unit OtlCommon;
 
 {$I OtlOptions.inc}
