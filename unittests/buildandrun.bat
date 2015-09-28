@@ -15,7 +15,7 @@ echo Compiling 32-bit
   if errorlevel 1 goto error
 
 echo Running 32-bit
-  %otl_ut_root%\exe\TestRunner >nul 2>nul
+  %otl_ut_root%\exe\TestRunner >%otl_ut_root%\unittest.log 2>&1
   if errorlevel 1 goto error
 
   dcc64 >nul 2>nul
@@ -28,7 +28,7 @@ echo Compiling 64-bit
   if not %PROCESSOR_ARCHITECTURE%==AMD64 goto on32bit
 
 echo Running 64-bit
-  %otl_ut_root%\exe\TestRunner >nul 2>nul
+  %otl_ut_root%\exe\TestRunner >%otl_ut_root%\unittest.log 2>&1
   if errorlevel 1 goto error
 
   goto exit
@@ -44,6 +44,7 @@ echo Running 64-bit
 :error
   echo *** ERROR *** 
   type %otl_ut_root%\build.log
+  type %otl_ut_root%\unittest.log
 
   rem set errorlevel
   VERIFY OTHER 2> NUL
