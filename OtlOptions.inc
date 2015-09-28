@@ -100,3 +100,7 @@
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
+{$IF CompilerVersion >= 29} //DXE8
+  {$DEFINE OTL_MobileSupport}
+{$IFEND}
+

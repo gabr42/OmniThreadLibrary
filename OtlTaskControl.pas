@@ -320,7 +320,7 @@ type
     procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
   //message loop hooks; temporary solution, will be replaced with a better one
-    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult);
+    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult);
     procedure BeforeWait(var timeout_ms: DWORD);
     procedure MessageLoopPayload;
     procedure ProcessThreadMessages;
@@ -340,7 +340,7 @@ type
   strict protected
     procedure ProcessMessages;
   protected //message loop hooks
-    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult); virtual;
+    procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult); virtual;
     procedure BeforeWait(var timeout_ms: DWORD); virtual;
     procedure DispatchMessage(var msg: TOmniMessage); virtual;
     procedure MessageLoopPayload; virtual;
@@ -777,7 +777,7 @@ type
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
   protected
-    function  DispatchEvent(awaited: TWaitFor.TWaitResult; const task: IOmniTask; var msgInfo:
+    function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask; var msgInfo:
       TOmniMessageInfo): boolean; virtual;
     procedure DispatchOmniMessage(msg: TOmniMessage; doCheckTimers: boolean); virtual;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
@@ -785,7 +785,7 @@ type
     procedure ProcessMessages(task: IOmniTask); virtual;
     procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     function  TimeUntilNextTimer_ms: cardinal; virtual;
-    function  WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal): TWaitFor.TWaitResult; virtual;
+    function  WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal): TWaitFor.TWaitForResult; virtual;
   public
     constructor Create(owner_ref: TOmniTaskControl; const workerIntf: IOmniWorker); overload;
     constructor Create(owner_ref: TOmniTaskControl; method: TOmniTaskMethod); overload;
@@ -1555,7 +1555,7 @@ end; { TOmniTask.UnregisterWaitObject }
 
 { TOmniWorker }
 
-procedure TOmniWorker.AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitResult);
+procedure TOmniWorker.AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult);
 begin
   // do nothing
 end; { TOmniWorker.AfterWait }
@@ -1891,7 +1891,7 @@ begin
   until (not gotMsg) or TestForInternalRebuild(task, msgInfo);
 end; { TOmniTaskExecutor.DispatchCommMessage }
 
-function TOmniTaskExecutor.DispatchEvent(awaited: TWaitFor.TWaitResult;
+function TOmniTaskExecutor.DispatchEvent(awaited: TWaitFor.TWaitForResult;
   const task: IOmniTask; var msgInfo: TOmniMessageInfo): boolean;
 var
   info           : TWaitFor.THandleInfo;
@@ -2291,7 +2291,7 @@ end; { TOmniTaskExecutor.MessageLoopPayload }
 
 procedure TOmniTaskExecutor.ProcessMessages(task: IOmniTask);
 var
-  awaited       : TWaitFor.TWaitResult;
+  awaited       : TWaitFor.TWaitForResult;
   msgInfo       : TOmniMessageInfo;
   waitHandlesGen: int64;
 begin
@@ -2527,7 +2527,7 @@ begin
 end; { TOmniTaskExecutor.WaitForInit }
 
 function TOmniTaskExecutor.WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal):
-  TWaitFor.TWaitResult;
+  TWaitFor.TWaitForResult;
 begin
   if assigned(WorkerIntf) then
     WorkerIntf.BeforeWait(timeout_ms);
