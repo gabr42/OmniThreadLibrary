@@ -160,10 +160,10 @@ type
   PNativeInt = PInteger;
 {$IFEND}
 
-   TFixedCriticalSection = class(TCriticalSection)
-   strict protected
-     FDummy: array [0..95] of byte;
-   end; { TFixedCriticalSection }
+  TFixedCriticalSection = class(TCriticalSection)
+  strict protected
+    FDummy: array [0..95] of byte;
+  end; { TFixedCriticalSection }
 
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
     function  GetLockCount: integer;
@@ -173,6 +173,59 @@ type
     function  GetSyncObj: TSynchroObject;
     property LockCount: integer read GetLockCount;
   end; { IOmniCriticalSection }
+
+  {$IFDEF OTL_MobileSupport}
+  IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
+    procedure EnterGate;
+    procedure LeaveGate;
+    /// <param name="SynchObj">SynchObj must support IOmniSynchroObject.</param>
+    procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
+    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
+    procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
+    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
+    procedure AfterSignal(const Signaller: TObject; const Data: TObject);
+  end; { IOmniSynchroObserver }
+
+  IOmniSynchro = interface ['{2C4F0CF8-A722-45EC-BFCA-AA512E58B54D}']
+    function  EnterSpinLock: IInterface;
+    procedure Signal;
+    /// <remarks>
+    ///  If this event is attached to IOmniSynchroObserver,
+    //    such as TWaitFor (acting as a condition variable)
+    ///   a thread must not invoke WaitFor() directly on this event, but
+    ///   rather through the containing TWaitFor, or as otherwise defined by
+    //    the attached observer.
+    /// </remarks>
+    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; overload;
+    procedure ConsumeSignalFromObserver( const Observer: IOmniSynchroObserver);
+    /// <remarks>
+    ///  IsSignaled() is only valid when all the Signal()/ Reset()
+    ///   invocations are done whilst attached to an IOmniEventObserver.
+    ///   Otherwise this returned value must not be relied upon.
+    /// </remarks>
+    function  IsSignalled: boolean;
+    procedure AddObserver( const Observer: IOmniSynchroObserver);
+    procedure RemoveObserver( const Observer: IOmniSynchroObserver);
+    function  Base: TSynchroObject;
+    {$IFDEF MSWINDOWS}
+    function  Handle: THandle;
+    {$ENDIF}
+  end; { IOmniSynchro }
+
+  IOmniSynchroObject = interface ['{A8B95978-87BF-4031-94B2-8EDC351F47BE}']
+    function  GetSynchro: IOmniSynchro;
+  //
+    property Synchro: IOmniSynchro read GetSynchro;
+  end; { IOmniSynchroObject }
+  {$ENDIF OTL_MobileSupport}
+
+  {$IFDEF MSWINDOWS}
+  IOmniHandleObject = interface ['{80B85D03-8E1F-4812-8782-38A04BA52076}']
+    function  GetHandle: THandle;
+  //
+    property Handle: THandle read GetHandle;
+  end; { IOmniHandleObject }
+  {$ENDIF MSWINDOWS}
 
   ///<summary>Simple critical section wrapper. Critical section is automatically
   ///    initialised on first use.</summary>
@@ -205,13 +258,15 @@ type
     function  TryEnterWriteLock: boolean; inline;
   end; { TOmniMREW }
 
-  IOmniResourceCount = interface ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
-    function  GetHandle: THandle;
-    //
+  IOmniResourceCount = interface({$IFDEF MSWINDOWS}
+                                 IOmniHandleObject
+                                 {$ELSE}{$IFDEF OTL_MobileSupport}
+                                 IOmniSynchroObject
+                                 {$ENDIF}{$ENDIF})
+  ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
     function  Allocate: cardinal;
     function  Release: cardinal;
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
-    property Handle: THandle read GetHandle;
   end; { IOmniResourceCount }
 
   ///<summary>Kind of an inverse semaphore. Gets signalled when count drops to 0.
@@ -219,8 +274,8 @@ type
   ///   increments the count.
   ///   Threadsafe.
   ///</summary>
-  ///<since>2009-12-30</since>
-  TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount)
+  {$IFDEF MSWINDOWS}
+  TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount, IOmniHandleObject)
   strict private
     orcAvailable   : TDSiEventHandle;
     orcHandle      : TDSiEventHandle;
@@ -236,6 +291,17 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
+  {$ELSE}{$IFDEF OTL_MobileSupport}
+  TOmniResourceCount = class abstract(TInterfacedObject, IOmniResourceCount, IOmniSynchroObject)
+  strict protected
+    function  GetSynchro: IOmniSynchro; abstract;
+  public
+    function  Allocate: cardinal; abstract;
+    function  Release: cardinal; abstract;
+    function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean; abstract;
+    property Synchro: IOmniSynchro read GetSynchro;
+  end; { TOmniResourceCount }
+  {$ENDIF OTL_MobileSupport}{$ENDIF MSWINDOWS}
 
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
     function  GetHandle: THandle;
@@ -331,45 +397,6 @@ type
     procedure Unlock(const key: K);
   end; { TOmniLockManager<K> }
   {$ENDIF OTL_Generics}
-
-  {$IFDEF OTL_MobileSupport}
-  IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
-    procedure EnterGate;
-    procedure LeaveGate;
-    /// <param name="SynchObj">SynchObj must support IOmniSynchroObject.</param>
-    procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
-    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
-    procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
-    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
-    procedure AfterSignal(const Signaller: TObject; const Data: TObject);
-  end; { IOmniSynchroObserver }
-
-  IOmniSynchro = interface ['{2C4F0CF8-A722-45EC-BFCA-AA512E58B54D}']
-    function  EnterSpinLock: IInterface;
-    procedure Signal;
-    /// <remarks>
-    ///  If this event is attached to IOmniSynchroObserver,
-    //    such as TWaitFor (acting as a condition variable)
-    ///   a thread must not invoke WaitFor() directly on this event, but
-    ///   rather through the containing TWaitFor, or as otherwise defined by
-    //    the attached observer.
-    /// </remarks>
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; overload;
-    procedure ConsumeSignalFromObserver( const Observer: IOmniSynchroObserver);
-    /// <remarks>
-    ///  IsSignaled() is only valid when all the Signal()/ Reset()
-    ///   invocations are done whilst attached to an IOmniEventObserver.
-    ///   Otherwise this returned value must not be relied upon.
-    /// </remarks>
-    function  IsSignalled: boolean;
-    procedure AddObserver( const Observer: IOmniSynchroObserver);
-    procedure RemoveObserver( const Observer: IOmniSynchroObserver);
-    function  Base: TSynchroObject;
-    {$IFDEF MSWINDOWS}
-    function  Handle: THandle;
-    {$ENDIF}
-  end; { IOmniSynchro }
-  {$ENDIF OTL_MobileSupport}
 
   ///<summary>Waits on any/all from any number of handles.</summary>
   ///  Don't use it to wait on mutexes!
