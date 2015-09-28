@@ -1,8 +1,6 @@
 /unittests/Debug
 /__history
-unittests/TestRunner.dproj.local
 *.dsk
-unittests/TestRunner.identcache
 /bag of stuff/async streams/__history
 /bag of stuff/async streams/Win32
 /bag of stuff/async streams/*.identcache
@@ -15,3 +13,10 @@ unittests/TestRunner.identcache
 /examples/TThread communication/*.~dsk
 /examples/TThread communication/*.local
 /examples/TThread communication/*.skincfg
+/*.exe
+/*.map
+/*.drc
+/*.dcu
+/*.dproj.local
+/*.identcache
+/Win32
