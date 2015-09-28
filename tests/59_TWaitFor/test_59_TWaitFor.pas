@@ -29,9 +29,9 @@ type
     procedure SignalEvent(const task: IOmniTask); //asynch
     procedure SignalEventAsync(timeout_ms: cardinal; idx: integer);
     procedure VerifyAwaited(const awaited: array of integer);
-    procedure WaitForAll(timeout_ms: cardinal; expectedResult: TWaitFor.TWaitResult;
+    procedure WaitForAll(timeout_ms: cardinal; expectedResult: TWaitFor.TWaitForResult;
       const msg: string);
-    procedure WaitForAny(timeout_ms: cardinal; expectedResult: TWaitFor.TWaitResult;
+    procedure WaitForAny(timeout_ms: cardinal; expectedResult: TWaitFor.TWaitForResult;
       const msg: string; checkHandle: integer = -1);
   end;
 
@@ -237,7 +237,7 @@ begin
 end;
 
 procedure TfrmTestTWaitFor.WaitForAll(timeout_ms: cardinal;
-  expectedResult: TWaitFor.TWaitResult; const msg: string);
+  expectedResult: TWaitFor.TWaitForResult; const msg: string);
 begin
   Log(msg);
   if FWaiter.WaitAll(timeout_ms) = expectedResult then
@@ -247,7 +247,7 @@ begin
 end;
 
 procedure TfrmTestTWaitFor.WaitForAny(timeout_ms: cardinal;
-  expectedResult: TWaitFor.TWaitResult; const msg: string; checkHandle: integer);
+  expectedResult: TWaitFor.TWaitForResult; const msg: string; checkHandle: integer);
 begin
   if msg <> '' then
     Log(msg);
