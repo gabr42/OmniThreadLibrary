@@ -217,6 +217,31 @@ type
   //
     property Synchro: IOmniSynchro read GetSynchro;
   end; { IOmniSynchroObject }
+
+  IOmniCountdownEvent = interface(IOmniSynchro) ['{40557184-B610-46E8-B186-D5B431D1B1A4}']
+    function  BaseCountdown: TCountdownEvent;
+    procedure Reset;
+  end; { IOmniCountdownEvent }
+
+  /// <remarks>
+  ///   IOmniEvent is a wrapper around a TEvent object.
+  ///   It can co-operate with condition variables through the use of an
+  ///   attached IOmniEventObserver. IOmniEvent objects can be enrolled
+  ///   in TWaitFor objects on non-windows platforms.
+  /// </remarks>
+  IOmniEvent = interface(IOmniSynchro) ['{3403D24B-3CBE-4A83-9F4C-FA4719AA23C5}']
+    procedure SetEvent;
+    procedure Reset;
+    function  BaseEvent: TEvent;
+  end; { IOmniEvent }
+
+  {$IFDEF MSWINDOWS}
+  /// <remarks>IOmniSynchro should also support ISupportsOSWaitForMultiple
+  ///  if they support THandleObject.WaitForMultiple() </remarks>
+  ISupportsOSWaitForMultiple = interface ['{39CD619F-188F-4C7D-9D75-6704A716CC7D}']
+    function MultiWaitableHandleObject: THandleObject;
+  end; { ISupportsOSWaitForMultiple }
+  {$ENDIF}
   {$ENDIF OTL_MobileSupport}
 
   {$IFDEF MSWINDOWS}
@@ -496,6 +521,11 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
+{$IFDEF OTL_MobileSupport}
+function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
+function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+{$ENDIF OTL_MobileSupport}
+
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
@@ -613,6 +643,36 @@ type
     constructor Create(AController: TOmniSynchroObject);
     destructor Destroy; override;
   end; { TSynchroSpin }
+
+  TOmniCountdownEvent = class(TOmniSynchroObject, IOmniCountdownEvent)
+  strict protected
+    FCountdown: TCountdownEvent;
+  public
+    constructor Create(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil);
+    procedure Reset;
+    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
+    function  IsSignalled: boolean; override;
+    function  BaseCountdown: TCountdownEvent;
+  end; { TOmniCountdownEvent }
+
+  TOmniEvent = class(TOmniSynchroObject, IOmniEvent
+                    {$IFDEF MSWINDOWS}, ISupportsOSWaitForMultiple {$ENDIF})
+  strict protected
+    FEvent: TEvent;
+    [Volatile] FState: boolean;
+    FManualReset: boolean;
+    {$IFDEF MSWINDOWS}
+    function MultiWaitableHandleObject: THandleObject;
+    {$ENDIF}
+  public
+    constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil);
+    procedure Reset;
+    procedure SetEvent;
+    function  BaseEvent: TEvent;
+    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
+    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
+    function  IsSignalled: boolean; override;
+  end; { TOmniEvent }
   {$ENDIF OTL_MobileSupport}
 
 { exports }
@@ -631,6 +691,18 @@ function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 begin
   Result := TOmniResourceCount.Create(initialCount);
 end; { CreateResourceCount }
+
+{$IFDEF OTL_MobileSupport}
+function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
+begin
+  Result := TOmniCountdownEvent.Create(Count, SpinCount, AShareLock);
+end; { CreateOmniCountdownEvent }
+
+function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+begin
+  Result := TOmniEvent.Create(AManualReset, InitialState, AShareLock);
+end; { CreateOmniEvent }
+{$ENDIF OTL_MobileSupport}
 
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
 asm
@@ -1722,9 +1794,10 @@ begin
   {$ENDIF MSWINDOWS}
 end; { TOmniSingleThreadUseChecker.DebugCheck }
 
+{$IFDEF OTL_MobileSupport}
+
 { TOmniSynchroObject }
 
-{$IFDEF OTL_MobileSupport}
 constructor TOmniSynchroObject.Create(ABase: TSynchroObject; OwnsIt: boolean;
   const AShareLock: IOmniCriticalSection);
 begin
@@ -1897,6 +1970,98 @@ begin
     FController.Lock.Exit(True);
   inherited;
 end; { TSynchroSpin.Destroy }
+
+{ TOmniCountdownEvent }
+
+constructor TOmniCountdownEvent.Create(Count, SpinCount: Integer; const AShareLock: IOmniCriticalSection);
+begin
+  FCountdown := TCountdownEvent.Create(Count, SpinCount);
+  inherited Create(FCountdown, True, AShareLock)
+end; { TOmniCountdownEvent.Create }
+
+function TOmniCountdownEvent.IsSignalled: boolean;
+begin
+  Result := FCountdown.IsSet;
+end; { TOmniCountdownEvent.IsSignalled }
+
+procedure TOmniCountdownEvent.Reset;
+begin
+  PerformObservableAction(procedure begin FCountdown.Reset; end, True);
+end; { TOmniCountdownEvent.Reset }
+
+function TOmniCountdownEvent.BaseCountdown: TCountdownEvent;
+begin
+  Result := FCountdown;
+end; { TOmniCountdownEvent.BaseCountdown }
+
+procedure TOmniCountdownEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
+begin
+end; { TOmniCountdownEvent.ConsumeSignalFromObserver }
+
+{ TOmniEvent }
+
+constructor TOmniEvent.Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection);
+begin
+  FEvent := TEvent.Create(nil, AManualReset, InitialState, '', False);
+  FState := InitialState;
+  FManualReset := AManualReset;
+  inherited Create(FEvent, True, AShareLock);
+end; { TOmniEvent.Create }
+
+function TOmniEvent.BaseEvent: TEvent;
+begin
+  Result := FEvent;
+end; { TOmniEvent.BaseEvent }
+
+procedure TOmniEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
+begin
+  // Here we are already inside the lock.
+  if not FManualReset then begin
+    FEvent.ResetEvent;
+    FState := False;
+  end
+end; { TOmniEvent.ConsumeSignalFromObserver }
+
+{$IFDEF MSWINDOWS}
+function TOmniEvent.MultiWaitableHandleObject: THandleObject;
+begin
+  Result := FEvent;
+end; { TOmniEvent.MultiWaitableHandleObject }
+{$ENDIF}
+
+function TOmniEvent.IsSignalled: boolean;
+begin
+  Result := FState;
+end; { TOmniEvent.IsSignalled }
+
+procedure TOmniEvent.Reset;
+begin
+  PerformObservableAction(
+    procedure
+    begin
+      FEvent.ResetEvent;
+      FState := False;
+    end,
+    True);
+end; { TOmniEvent.Reset }
+
+procedure TOmniEvent.SetEvent;
+begin
+  PerformObservableAction(
+    procedure
+    begin
+      FEvent.SetEvent;
+      FState := True;
+    end,
+    True);
+end; { TOmniEvent.SetEvent }
+
+function TOmniEvent.WaitFor(Timeout: LongWord): TWaitResult;
+begin
+  Result := inherited WaitFor(Timeout);
+  if (Result = wrSignaled) and (not FManualReset) then
+    FState := False;
+end; { TOmniEvent.WaitFor }
 
 {$ENDIF OTL_MobileSupport}
 
