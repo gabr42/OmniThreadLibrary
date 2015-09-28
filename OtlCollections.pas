@@ -155,8 +155,8 @@ type
     ///	counter. Must be kept together as those two have to be modified atomically so
     ///	that CompleteAdding and Add/TryAdd can stay synchronized.</summary>
     {$ENDREGION}
-    obcAddCountAndCompleted: TGp4AlignedInt;
-    obcApproxCount         : TGp4AlignedInt;
+    obcAddCountAndCompleted: TOmniAlignedInt32;
+    obcApproxCount         : TOmniAlignedInt32;
     obcCollection          : TOmniQueue;
     obcCompletedSignal     : TDSiEventHandle;
     obcHighWaterMark       : integer;

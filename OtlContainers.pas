@@ -191,7 +191,7 @@ type
   strict private
     osAlmostFullCount : integer;
     osContainerSubject: TOmniContainerSubject;
-    osInStackCount    : TGp4AlignedInt;
+    osInStackCount    : TOmniAlignedInt32;
     osPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;
@@ -237,7 +237,7 @@ type
   strict private
     oqAlmostFullCount : integer;
     oqContainerSubject: TOmniContainerSubject;
-    oqInQueueCount    : TGp4AlignedInt;
+    oqInQueueCount    : TOmniAlignedInt32;
     oqPartlyEmptyCount: integer;
   public
     constructor Create(numElements, elementSize: integer;

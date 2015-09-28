@@ -50,7 +50,7 @@ type
     FChanCollection: TOmniBaseQueue;
     FDstCollection : TOmniBaseQueue;
     FForwarders    : array of IOmniTaskControl;
-    FNumWorkers    : TGp4AlignedInt;
+    FNumWorkers    : TOmniAlignedInt32;
     FReaders       : array of IOmniTaskControl;
     FSrcCollection : TOmniBaseQueue;
     FStartTime     : int64;
@@ -84,9 +84,9 @@ const
   MSG_START = 42;
 
 var
-  GForwardersCount: TGp4AlignedInt;
-  GReadersCount   : TGp4AlignedInt;
-  GStartedWorkers : TGp4AlignedInt;
+  GForwardersCount: TOmniAlignedInt32;
+  GReadersCount   : TOmniAlignedInt32;
+  GStartedWorkers : TOmniAlignedInt32;
   GStopForwarders : boolean;
   GStopReaders    : boolean;
 

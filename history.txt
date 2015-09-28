@@ -1,3 +1,8 @@
+- Breaking changes:
+  - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
+- New features:
+  - Added types TOmniAlignedInt32 and TOmniAlignedInt32 which replaced
+    TGp4AlignedInt and TGp8AlignedInt64.
 - Bug fixes:
   - Fixed unsafe 64-bit pointer-to-integer casts in TOmniCS.Initialize and 
     Atomic<T>.Initialize.

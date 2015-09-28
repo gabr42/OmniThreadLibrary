@@ -225,7 +225,7 @@ type
     orcAvailable   : TDSiEventHandle;
     orcHandle      : TDSiEventHandle;
     orcLock        : TOmniCS;
-    orcNumResources: TGp4AlignedInt;
+    orcNumResources: TOmniAlignedInt32;
   protected
     function GetHandle: THandle;
   public

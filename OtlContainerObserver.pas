@@ -75,7 +75,7 @@ type
   ///<summary>Container observer. Class based for performance.</summary>
   TOmniContainerObserver = class
   strict private
-    coIsActivated: TGp4AlignedInt;
+    coIsActivated: TOmniAlignedInt32;
   public
     constructor Create;
     procedure Activate; inline;

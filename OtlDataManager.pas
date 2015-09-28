@@ -168,7 +168,7 @@ type
   strict private
     idpHigh    : int64;
     idpHighSign: int64;
-    idpLow     : TGp8AlignedInt64;
+    idpLow     : TOmniAlignedInt6464;
     idpPosition: integer;
     idpSign    : integer;
     idpStep    : integer;
@@ -186,7 +186,7 @@ type
   strict private
     const CMaxValueEnumeratorDataPackageSize = 1024; // pretty arbitrary, should do some performance tests
   strict private
-    vedpApproxCount: TGp4AlignedInt;
+    vedpApproxCount: TOmniAlignedInt32;
     vedpDataQueue  : TOmniBaseQueue; //TOmniBaseBoundedQueue;
   public
     constructor Create;
@@ -208,7 +208,7 @@ type
   ///<summary>Integer range source provider.</summary>
   TOmniIntegerRangeProvider = class(TOmniSourceProviderBase)
   strict private
-    irpCount   : TGp4AlignedInt;
+    irpCount   : TOmniAlignedInt32;
     irpHigh    : integer;
     irpLock    : TOmniCS;
     irpLow     : integer;
@@ -364,7 +364,7 @@ type
   strict private
     const CFetchTimeout_ms = 10;
   strict private
-    hdmEstimatedPackageSize: TGp4AlignedInt;
+    hdmEstimatedPackageSize: TOmniAlignedInt32;
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer; options:
       TOmniDataManagerOptions);

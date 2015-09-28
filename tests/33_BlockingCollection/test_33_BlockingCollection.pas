@@ -53,7 +53,7 @@ type
     FChanCollection: TOmniBlockingCollection;
     FDstCollection : TOmniBlockingCollection;
     FForwarders    : array of IOmniTaskControl;
-    FNumWorkers    : TGp4AlignedInt;
+    FNumWorkers    : TOmniAlignedInt32;
     FReaders       : array of IOmniTaskControl;
     FSrcCollection : TOmniBlockingCollection;
     FStartTime     : int64;
@@ -80,8 +80,8 @@ const
   CCountSingleTest   = 100000;
 
 var
-  GForwardersCount: TGp4AlignedInt;
-  GReadersCount   : TGp4AlignedInt;
+  GForwardersCount: TOmniAlignedInt32;
+  GReadersCount   : TOmniAlignedInt32;
   GStopForwarders : boolean;
   GStopReaders    : boolean;
 

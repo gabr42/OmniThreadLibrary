@@ -17,7 +17,7 @@ type
     procedure btnStartClick(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
   private
-    FCounter: TGp4AlignedInt;
+    FCounter: TOmniAlignedInt32;
     procedure Log(const msg: string);
     function Sum1: TOmniIteratorSimpleSimpleDelegate;
     function Sum2: TOmniIteratorSimpleDelegate;

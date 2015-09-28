@@ -725,7 +725,7 @@ type
     oteCommRebuildHandles: THandle;
     oteException         : Exception;
     oteExecutorType      : TOmniExecutorType;
-    oteExitCode          : TGp4AlignedInt;
+    oteExitCode          : TOmniAlignedInt32;
     oteExitMessage       : string;
     {$IFDEF OTL_Anonymous}
     oteFunc              : TOmniTaskDelegate;

@@ -1397,7 +1397,7 @@ type
 
   TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem, IOmniWorkItemEx)
   strict private
-    FCancelAllUpToID_ref: ^TGp8AlignedInt64;
+    FCancelAllUpToID_ref: ^TOmniAlignedInt6464;
     FCancellationToken  : IOmniCancellationToken;
     FConfig             : IOmniWorkItemConfig;
     FData               : TOmniValue;
@@ -1421,7 +1421,7 @@ type
     procedure SetTask(const task: IOmniTask; const taskState: TOmniValue); inline;
   public
     constructor Create(const data: TOmniValue; uniqueID: int64; var cancelAllUpToID:
-      TGp8AlignedInt64);
+      TOmniAlignedInt6464);
     destructor  Destroy; override;
   public //IOmniWorkItem
     function  DetachException: Exception;
@@ -1453,7 +1453,7 @@ type
 
   TOmniBackgroundWorker = class(TInterfacedObject, IOmniBackgroundWorker)
   strict private
-    FCancelAllToID    : TGp8AlignedInt64;
+    FCancelAllToID    : TOmniAlignedInt6464;
     FDefaultConfig    : IOmniWorkItemConfig;
     FDefaultConfigEx  : IOmniWorkItemConfigEx;
     FNumTasks         : integer;
@@ -4033,7 +4033,7 @@ end; { TOmniParallelTask.WaitFor }
 { TOmniWorkItem }
 
 constructor TOmniWorkItem.Create(const data: TOmniValue; uniqueID: int64; var
-  cancelAllUpToID: TGp8AlignedInt64);
+  cancelAllUpToID: TOmniAlignedInt6464);
 begin
   inherited Create;
   FData := data;

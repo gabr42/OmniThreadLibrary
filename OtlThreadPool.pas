@@ -116,6 +116,7 @@ interface
 uses
   Windows,
   SysUtils,
+  SyncObjs,
   OtlCommon,
   OtlTask;
 
@@ -350,15 +351,15 @@ type
     procedure Cleanup; override;
     function  Initialize: boolean; override;
   public
-    CountQueued                : TGp4AlignedInt;
+    CountQueued                : TOmniAlignedInt32;
     CountQueuedLock            : TOmniCS;
-    CountRunning               : TGp4AlignedInt;
-    IdleWorkerThreadTimeout_sec: TGp4AlignedInt;
-    MaxExecuting               : TGp4AlignedInt;
-    MaxQueued                  : TGp4AlignedInt;
-    MaxQueuedTime_sec          : TGp4AlignedInt;
-    MinWorkers                 : TGp4AlignedInt;
-    WaitOnTerminate_sec        : TGp4AlignedInt;
+    CountRunning               : TOmniAlignedInt32;
+    IdleWorkerThreadTimeout_sec: TOmniAlignedInt32;
+    MaxExecuting               : TOmniAlignedInt32;
+    MaxQueued                  : TOmniAlignedInt32;
+    MaxQueuedTime_sec          : TOmniAlignedInt32;
+    MinWorkers                 : TOmniAlignedInt32;
+    WaitOnTerminate_sec        : TOmniAlignedInt32;
     constructor Create(const name: string; uniqueID: int64);
   published
     // invoked from TOmniThreadPool
