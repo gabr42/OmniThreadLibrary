@@ -627,7 +627,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   TOmniInterfaceDictionaryPair = TPair<int64, IInterface>;
 {$ELSE}
   TOmniInterfaceDictionaryPair = class
@@ -646,14 +646,14 @@ type
     function  MoveNext: boolean;
     property Current: TOmniInterfaceDictionaryPair read GetCurrent;
   end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_GoodGenerics}
 
   IOmniInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
 {$ELSE}
     function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_GoodGenerics}
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
@@ -718,9 +718,9 @@ type
     property Affinity: IOmniAffinity read GetAffinity;
   end; { IOmniSystemEnvironment }
 
-  {$IF CompilerVersion < 19}//D2007 //TODO
+  {$IFNDEF OTL_HasThreadID}
   TThreadID = LongWord;
-  {$IFEND}
+  {$ENDIF ~OTL_HasThreadID}
 
   IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
     function  GetAffinity: IOmniAffinity;
@@ -1020,7 +1020,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounterImpl }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
   PPHashItem = ^PHashItem;
   PHashItem = ^THashItem;
   THashItem = record
@@ -1046,10 +1046,10 @@ type
     function  MoveNext: boolean;
     property Current: TOmniInterfaceDictionaryPair read GetCurrent;
   end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
   TOmniInterfaceDictionary = class(TInterfacedObject, IOmniInterfaceDictionary)
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   strict private
     FDictionary: TDictionary<int64, IInterface>;
   {$ELSE}
@@ -1060,18 +1060,18 @@ type
     function  Find(const key: int64): PPHashItem;
     function  HashOf(const key: int64): integer; inline;
     procedure Resize(size: Cardinal);
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_GoodGenerics}
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer; inline;
-    {$IFDEF OTL_Generics}
+    {$IFDEF OTL_GoodGenerics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
     {$ELSE}
     function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-    {$ENDIF ~OTL_Generics}
+    {$ENDIF ~OTL_GoodGenerics}
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { TOmniInterfaceDictionary }
@@ -1670,7 +1670,7 @@ begin
   Result := taken > 0
 end; { TOmniCounterImpl.Take }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 { TOmniInterfaceDictionaryPair }
 
 procedure TOmniInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
@@ -1714,39 +1714,39 @@ begin
   ideItem := ideItem^.Next;
   Result := true;
 end; { TOmniInterfaceDictionaryEnumerator.MoveNext }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 { TOmniInterfaceDictionary }
 
 constructor TOmniInterfaceDictionary.Create;
 begin
   inherited Create;
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   FDictionary := TDictionary<int64, IInterface>.Create(100);
   {$ELSE}
   Resize(1);
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Create }
 
 destructor TOmniInterfaceDictionary.Destroy;
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   FreeAndNil(FDictionary);
   {$ELSE}
   Clear;
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
   inherited;
 end; { TOmniInterfaceDictionary.Destroy }
 
 procedure TOmniInterfaceDictionary.Add(const key: int64; const value: IInterface);
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket: PHashItem;
   hash  : integer;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   FDictionary.AddOrSetValue(key, value);
 {$ELSE}
   hash := HashOf(key);
@@ -1758,19 +1758,19 @@ begin
   Inc(idCount);
   if idCount > (1.5 * Length(idBuckets)) then
     Resize(idCount * 2);
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Add }
 
 procedure TOmniInterfaceDictionary.Clear;
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket : PHashItem;
   iBucket: integer;
   next   : PHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   FDictionary.Clear;
 {$ELSE}
   for iBucket := 0 to Length(idBuckets) - 1 do begin
@@ -1784,19 +1784,19 @@ begin
     idBuckets[iBucket] := nil;
   end;
   idCount := 0;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Clear }
 
 function TOmniInterfaceDictionary.Count: integer;
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.Count;;
   {$ELSE}
   Result := idCount;
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Count }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 function TOmniInterfaceDictionary.Find(const key: int64): PPHashItem;
 var
   hash: integer;
@@ -1810,32 +1810,32 @@ begin
       Result := @Result^.Next;
   end;
 end; { TOmniInterfaceDictionary.Find }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
-function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_Generics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_Generics};
+function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_GoodGenerics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_GoodGenerics};
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.GetEnumerator;
   {$ELSE}
   Result := TOmniInterfaceDictionaryEnumerator.Create(@idBuckets);
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.GetEnumerator }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 function TOmniInterfaceDictionary.HashOf(const key: int64): integer;
 begin
   Result := key mod Length(idBuckets);
 end; { TOmniInterfaceDictionary.HashOf }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 procedure TOmniInterfaceDictionary.Remove(const key: int64);
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket    : PHashItem;
   bucketHead: PPHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   if FDictionary.ContainsKey(key) then
     FDictionary.Remove(key);
 {$ELSE}
@@ -1846,10 +1846,10 @@ begin
     Dispose(bucket);
     Dec(idCount);
   end;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Remove }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
 var
   bucket    : PHashItem;
@@ -1877,15 +1877,15 @@ begin
   end;
   Assert(oldSize = Count);
 end; { TOmniInterfaceDictionary.Resize }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucketHead: PHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   if not FDictionary.TryGetValue(key, Result) then
     Result := nil;
 {$ELSE}
@@ -1894,7 +1894,7 @@ begin
     Result := bucketHead^.Value
   else
     Result := nil;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
@@ -4042,11 +4042,11 @@ begin
   {$IFDEF CPUX64}
     Result := TInterlocked.CompareExchange(Int64  (Target), Int64  (Value), Int64  (Comparand));
   {$ELSE}
-    {$IF CompilerVersion < 19}//D2007
-    Result := InterlockedCompareExchange(Target, Value, Comparand);
-    {$ELSE}
+    {$IFDEF OTL_HasTInterlocked}
     Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
-    {$IFEND}
+    {$ELSE}
+    Result := InterlockedCompareExchange(Target, Value, Comparand);
+    {$ENDIF}
   {$ENDIF}
 end; { TInterlockedEx.CompareExchange }
 
@@ -4055,11 +4055,11 @@ begin
   {$IFDEF CPUX64}
     Result := TInterlocked.Add(Int64  (Target), Int64  (Increment));
   {$ELSE}
-    {$IF CompilerVersion < 19}//D2007
-    Result := InterlockedExchangeAdd(Target, Increment);
-    {$ELSE}
+    {$IFDEF OTL_HasTInterlocked}
     Result := TInterlocked.Add(Integer(Target), Integer(Increment));
-    {$IFEND}
+    {$ELSE}
+    Result := InterlockedExchangeAdd(Target, Increment);
+    {$ENDIF}
   {$ENDIF}
 end; { TInterlockedEx.Add }
 

@@ -85,6 +85,9 @@
 
 {$IF CompilerVersion >= 22} //DXE
   {$DEFINE OTL_TOmniValueImplicitDateTime}
+  {$DEFINE OTL_HasThreadID}
+  {$DEFINE OTL_HasTInterlocked}
+  {$DEFINE OTL_GoodGenerics}
 {$IFEND}
 
 {$IF CompilerVersion >= 23} //DXE2
