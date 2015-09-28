@@ -882,7 +882,7 @@ TryAgain:
     {$ENDIF}
     {$Message Warn 'Help! - CAS()'}
     if (ThreadReference <> LastIn.Reference) or
-      not CAS(ringBuffer^.Lock, CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
+      not CAS({ringBuffer^.Lock, }CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
     then
       goto TryAgain;
     //Calculate ringBuffer next LastIn address
@@ -891,7 +891,7 @@ TryAgain:
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
     {$Message Warn 'Help! - CAS()'}
-    if not CAS(ringBuffer^.Lock, CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
+    if not CAS({ringBuffer^.Lock, }CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseBoundedQueue.InsertLink }
@@ -1025,7 +1025,7 @@ TryAgain:
       NewFirstIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
     {$Message Warn 'Help! - CAS()'}
-    if not CAS(ringBuffer^.Lock, CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
+    if not CAS({ringBuffer^.Lock, }CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
 end; { TOmniBaseBoundedQueue.RemoveLink }

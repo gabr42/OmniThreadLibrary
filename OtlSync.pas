@@ -450,7 +450,7 @@ type
     FWaitMode        : TWaitMode; // for testing
   strict protected
     function  MapToHandle(winResult: cardinal): cardinal;
-    function  MapToResult(winResult: cardinal): TWaitFor.TWaitResult;
+    function  MapToResult(winResult: cardinal): TWaitFor.TWaitForResult;
     procedure RegisterWaitHandles(extraFlags: cardinal);
     procedure UnregisterWaitHandles;
   protected //must be visible from the callback
@@ -459,10 +459,10 @@ type
     constructor Create; overload;
     constructor Create(const handles: array of THandle); overload;
     destructor  Destroy; override;
-    function  MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitResult;
+    function  MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitForResult;
     procedure SetHandles(const handles: array of THandle);
-    function  WaitAll(timeout_ms: cardinal): TWaitFor.TWaitResult;
-    function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitFor.TWaitResult;
+    function  WaitAll(timeout_ms: cardinal): TWaitFor.TWaitForResult;
+    function  WaitAny(timeout_ms: cardinal; alertable: boolean = false): TWaitFor.TWaitForResult;
     property Signalled: THandles read FSignalledHandles;
   end; { TWaitForAll }
   {$ENDIF}
@@ -1034,7 +1034,7 @@ var
 begin
   waiter := TWaitFor.Create(handles);
   try
-    Result := (waiter.WaitAll(timeout_ms) = TWaitFor.TWaitResult.waAwaited);
+    Result := (waiter.WaitAll(timeout_ms) = TWaitFor.TWaitForResult.waAwaited);
   finally FreeAndNil(waiter); end;
 end; { WaitForAllObjects }
 {$ENDIF}
@@ -1728,7 +1728,7 @@ begin
   finally FAwaitedLock.Release; end;
 end; { TWaitFor.Awaited_Asy }
 
-function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitResult;
+function TWaitFor.MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitFor.TWaitForResult;
 var
   winResult: cardinal;
 begin
@@ -1762,7 +1762,7 @@ begin
   end;
 end; { TWaitFor.MapToHandle }
 
-function TWaitFor.MapToResult(winResult: cardinal): TWaitFor.TWaitResult;
+function TWaitFor.MapToResult(winResult: cardinal): TWaitFor.TWaitForResult;
 begin
   if winResult = WAIT_OBJECT_0 then
     Result := waAwaited
@@ -1829,7 +1829,7 @@ begin
   FWaitHandles.Clear;
 end; { TWaitFor.UnregisterWaitHandles }
 
-function TWaitFor.WaitAll(timeout_ms: cardinal): TWaitFor.TWaitResult;
+function TWaitFor.WaitAll(timeout_ms: cardinal): TWaitFor.TWaitForResult;
 var
   winResult: cardinal;
 begin
@@ -1847,7 +1847,7 @@ begin
   Result := MapToResult(winResult);
 end; { TWaitFor.WaitAll }
 
-function TWaitFor.WaitAny(timeout_ms: cardinal; alertable: boolean): TWaitFor.TWaitResult;
+function TWaitFor.WaitAny(timeout_ms: cardinal; alertable: boolean): TWaitFor.TWaitForResult;
 var
   winResult: cardinal;
 begin
