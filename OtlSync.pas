@@ -151,6 +151,7 @@ uses
   {$IFDEF OTL_ERTTI}
   RTTI,
   {$ENDIF OTL_ERTTI}
+  OtlCommon,
   GpStuff,
   GpLists;
 

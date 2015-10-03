@@ -61,7 +61,7 @@ interface
 uses
   Classes,
   OtlSync,
-  GpStuff;
+  OtlCommon;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -126,8 +126,7 @@ uses
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  DSiWin32,
-  OtlCommon;
+  DSiWin32;
 
 type
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
