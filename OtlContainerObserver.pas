@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009 Primoz Gabrijelcic
+///Copyright (c) 2015 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,12 +29,19 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-02-19
-///   Last modification : 2010-07-01
-///   Version           : 1.04
+///   Last modification : 2015-10-03
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2015-10-03
+///       - Imported mobile support by [Sean].
 ///     1.04: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.03: 2009-12-22
@@ -60,6 +67,10 @@ interface
 
 uses
   Classes,
+  {$IFDEF OTL_MobileSupport}
+  System.SyncObjs,
+  System.Generics.Collections,
+  {$ENDIF OTL_MobileSupport}
   OtlSync,
   OtlCommon;
 
@@ -84,6 +95,14 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
+  {$IFDEF OTL_MobileSupport}
+  TOmniContainerEventObserver = class(TOmniContainerObserver)
+  public
+    function GetEvent: IOmniEvent; virtual; abstract;
+  end; { TOmniContainerEventObserver }
+  {$ENDIF OTL_MobileSupport}
+
+  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
   public
     function  GetEvent: THandle; virtual; abstract;
@@ -96,6 +115,7 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); virtual; abstract;
     property Handle: THandle read GetHandle;
   end; { TOmniContainerWindowsMessageObserver }
+  {$ENDIF MSWINDOWS}
 
   TOmniContainerSubject = class
   strict private
@@ -113,22 +133,42 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
+  {$IFDEF OTL_MobileSupport}
+  function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
+    TOmniContainerEventObserver;
+  {$ENDIF OTL_MobileSupport}
+  {$IFDEF MSWINDOWS}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
+  {$ENDIF MSWINDOWS}
 
 implementation
 
 uses
-  Windows,
-  SysUtils,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  DSiWin32;
+  {$IFDEF MSWINDOWS}
+  Windows,
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
+  SysUtils;
 
 type
+  {$IFDEF OTL_MobileSupport}
+  TOmniContainerEventObserverImpl = class(TOmniContainerEventObserver)
+  strict private
+    ceoEvent: IOmniEvent;
+  public
+    constructor Create(const externalEvent: IOmniEvent);
+    function  GetEvent: IOmniEvent; override;
+    procedure Notify; override;
+  end; { TOmniContainerEventObserverImpl }
+  {$ENDIF OTL_MobileSupport}
+
+  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
   strict private
     cweoEvent          : THandle;
@@ -153,9 +193,19 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
+  {$ENDIF MSWINDOWS}
 
 { exports }
 
+{$IFDEF OTL_MobileSupport}
+function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
+  TOmniContainerEventObserver;
+begin
+  Result := TOmniContainerEventObserverImpl.Create(externalEvent);
+end; { CreateContainerWindowsEventObserver }
+{$ENDIF OTL_MobileSupport}
+
+{$IFDEF MSWINDOWS}
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
   TOmniContainerWindowsEventObserver;
 begin
@@ -167,6 +217,7 @@ function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; 
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
+{$ENDIF MSWINDOWS}
 
 { TOmniContainerObserver }
 
@@ -183,13 +234,38 @@ end; { TOmniContainerObserver.Activate }
 
 function TOmniContainerObserver.CanNotify: boolean;
 begin
-  Result := (InterlockedCompareExchange(PInteger(coIsActivated.Addr)^, 0, 1) = 1);
+  Result := coIsActivated.CAS(1, 0);
 end; { TOmniContainerObserver.CanNotify }
 
 procedure TOmniContainerObserver.Deactivate;
 begin
   coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
+
+{$IFDEF OTL_MobileSupport}
+
+{ TOmniContainerEventObserverImpl }
+
+constructor TOmniContainerEventObserverImpl.Create(const externalEvent: IOmniEvent);
+begin
+  ceoEvent := externalEvent;
+  if not assigned( ceoEvent) then
+    ceoEvent := CreateOmniEvent(False, False)
+end; { TOmniContainerWindowsEventObserverImpl.Create }
+
+function TOmniContainerEventObserverImpl.GetEvent: IOmniEvent;
+begin
+  Result := ceoEvent;
+end; { TOmniContainerWindowsEventObserverImpl.GetEvent }
+
+procedure TOmniContainerEventObserverImpl.Notify;
+begin
+  ceoEvent.SetEvent;
+end; { TOmniContainerWindowsEventObserverImpl.Notify }
+
+{$ENDIF OTL_MobileSupport}
+
+{$IFDEF MSWINDOWS}
 
 { TOmniContainerWindowsEventObserverImpl }
 
@@ -251,6 +327,8 @@ begin
   Win32Check(PostMessage(cwmoHandle, aMessage, wParam, lParam));
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
 
+{$ENDIF MSWINDOWS}
+
 { TOmniContainerSubject }
 
 constructor TOmniContainerSubject.Create;
@@ -271,7 +349,7 @@ begin
     csObserverLists[interest] := nil;
   end;
   inherited;
-end; { TOmni ContainerSubject.Destroy }
+end; { TOmniContainerSubject.Destroy }
 
 procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
   interest: TOmniContainerObserverInterest);
@@ -320,7 +398,7 @@ begin
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do begin
       observer := TOmniContainerObserver(list[iObserver]);
-      if observer.CanNotify then begin 
+      if observer.CanNotify then begin
         observer.Notify;
         observer.Deactivate;
       end;

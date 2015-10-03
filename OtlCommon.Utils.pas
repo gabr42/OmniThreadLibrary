@@ -28,13 +28,12 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover, scarre
+///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///
 ///   Creation date     : 2011-08-31
 ///   Last modification : 2011-08-31

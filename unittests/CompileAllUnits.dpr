@@ -9,6 +9,7 @@ program CompileAllUnits;
 uses
   SysUtils,
   Classes,
+  OtlContainers,
   OtlCommon,
   OtlCommon.Utils,
   OtlSync,
@@ -16,7 +17,6 @@ uses
   OtlComm,
   OtlCommBufferTest,
   OtlContainerObserver,
-  OtlContainers,
   {$IFDEF OTL_Generics}
   OtlDataManager,
   OtlParallel,

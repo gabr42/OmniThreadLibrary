@@ -28,7 +28,11 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2015-07-28

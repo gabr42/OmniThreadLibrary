@@ -29,14 +29,12 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover, dottor_jeckill
-///
+///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin
 ///   Creation date     : 2009-03-30
 ///   Last modification : 2015-09-10
 ///   Version           : 1.22c
