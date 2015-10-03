@@ -3856,7 +3856,7 @@ end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.GetValue: integer;
 begin
-  Result := FAddr^;
+  Result := Addr^;
 end; { TOmniAlignedInt32.GetValue }
 
 function TOmniAlignedInt32.Increment: integer;
