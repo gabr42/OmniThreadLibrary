@@ -1016,7 +1016,7 @@ type
   TMapProc<T1,T2> = reference to function(const source: T1; var target: T2): boolean;
 
   {$IFDEF OTL_HasArrayOfT}
-  {$IFNDEF OTL_LimitedGenerics}
+  {$IFDEF OTL_GoodGenerics}
   IOmniParallelMapper<T1,T2> = interface
     function  Execute(mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
     function  NoWait: IOmniParallelMapper<T1,T2>;
@@ -1056,7 +1056,7 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { TOmniParallelMapper<T1,T2> }
-  {$ENDIF ~OTL_LimitedGenerics}
+  {$ENDIF OTL_GoodGenerics}
   {$ENDIF OTL_HasArrayOfT}
 
   {$REGION 'Documentation'}
@@ -1137,11 +1137,11 @@ type
 
   // Map
     {$IFDEF OTL_HasArrayOfT}
-    {$IFNDEF OTL_LimitedGenerics}
+    {$IFDEF OTL_GoodGenerics}
     class function Map<T1,T2>: IOmniParallelMapper<T1,T2>; overload;
     class function Map<T1,T2>(const source: TArray<T1>;
       mapper: TMapProc<T1,T2>): TArray<T2>; overload;
-    {$ENDIF ~OTL_LimitedGenerics}
+    {$ENDIF OTL_GoodGenerics}
     {$ENDIF OTL_HasArrayOfT}
 
   // task configuration
@@ -2012,7 +2012,7 @@ begin
 end; { Parallel.Join }
 
 {$IFDEF OTL_HasArrayOfT}
-{$IFNDEF OTL_LimitedGenerics}
+{$IFDEF OTL_GoodGenerics}
 class function Parallel.Map<T1, T2>(const source: TArray<T1>; mapper: TMapProc<T1,T2>):
   TArray<T2>;
 var
@@ -2028,7 +2028,7 @@ class function Parallel.Map<T1,T2>: IOmniParallelMapper<T1,T2>;
 begin
   Result := TOmniParallelMapper<T1,T2>.Create;
 end; { Parallel.Map }
-{$ENDIF ~OTL_LimitedGenerics}
+{$ENDIF OTL_GoodGenerics}
 {$ENDIF OTL_HasArrayOfT}
 
 class function Parallel.ParallelTask: IOmniParallelTask;
@@ -4547,7 +4547,7 @@ begin
 end; { TOmniAwait.Await }
 
 {$IFDEF OTL_HasArrayOfT}
-{$IFNDEF OTL_LimitedGenerics}
+{$IFDEF OTL_GoodGenerics}
 
 { TOmniParallelMapper<T1,T2> }
 
@@ -4698,7 +4698,7 @@ begin
   if assigned(FWorker) then
     Result := FWorker.WaitFor(maxWait_ms);
 end; { TOmniParallelMapper<T1,T2> }
-{$ENDIF ~OTL_LimitedGenerics}
+{$ENDIF OTL_GoodGenerics}
 {$ENDIF OTL_HasArrayOfT}
 
 initialization

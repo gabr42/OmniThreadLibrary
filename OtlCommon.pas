@@ -37,10 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-09-28
-///   Version           : 1.38
+///   Last modification : 2015-10-03
+///   Version           : 1.39
 ///</para><para>
 ///   History:
+///     1.39: 2015-10-03
+///       - [Sean] Implemented TOmniAlignedInt32 (clone of GpStuff.TGp4AlignedInt)
+///         and TOmniAlignedInt64 (clone of GpStuff.TGp8AlignedInt64).
 ///     1.38: 2015-09-28
 ///       - [Sean] Introduced non-Windows compatibility.
 ///     1.37b: 2015-08-30
@@ -256,17 +259,18 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
+{$IFNDEF OTL_HasCorrectNativeInt}
   NativeInt = integer;
+  NativeUInt = cardinal;
   PNativeInt = PInteger;
-{$IFEND}
+  PNativeUInt = PCardinal;
+{$ENDIF}
 
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
-
 
   TOmniValueDataType = (ovtNull,
            {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
@@ -1924,11 +1928,11 @@ begin
       {$IFNDEF NEXTGEN}
         vtChar:          ovc.Add(string(VChar));
         vtString:        ovc.Add(string(VString^));
-        vtPChar:         ovc.Add(string(StrPasA(VPChar)));
       {$ENDIF NEXTGEN}
       {$IFDEF MSWINDOWS}
         vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
         vtWideString:    ovc.Add(WideString(VWideString));
+        vtPChar:         ovc.Add(string(StrPasA(VPChar)));
       {$ENDIF MSWINDOWS}
       else
         raise Exception.Create ('TOmniValue.Create: invalid data type')
@@ -1959,11 +1963,11 @@ begin
         {$IFNDEF NEXTGEN}
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
-          vtPChar:         name := string(StrPasA(VPChar));
         {$ENDIF NEXTGEN}
         {$IFDEF MSWINDOWS}
           vtAnsiString:    name := string(VAnsiString);
           vtWideString:    name := WideString(VWideString);
+          vtPChar:         name := string(StrPasA(VPChar));
         {$ENDIF MSWINDOWS}
         else
           raise Exception.Create ('TOmniValue.CreateNamed: invalid name type')
@@ -1985,11 +1989,11 @@ begin
         {$IFNDEF NEXTGEN}
           vtChar:          ovc.Add(string(VChar), name);
           vtString:        ovc.Add(string(VString^), name);
-          vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
         {$ENDIF NEXTGEN}
         {$IFDEF MSWINDOWS}
           vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtWideString:    ovc.Add(WideString(VWideString), name);
+          vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
         {$ENDIF MSWINDOWS}
         else
           raise Exception.Create ('TOmniValue.CreateNamed: invalid data type')

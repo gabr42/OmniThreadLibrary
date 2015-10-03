@@ -4,23 +4,28 @@ program CompileAllUnits;
 
 {$R *.res}
 
+{$I OtlOptions.inc}
+
 uses
-  System.SysUtils,
+  SysUtils,
+  Classes,
+  OtlCommon,
+  OtlCommon.Utils,
+  OtlSync,
   OtlCollections,
   OtlComm,
   OtlCommBufferTest,
-  OtlCommon,
-  OtlCommon.Utils,
   OtlContainerObserver,
   OtlContainers,
+  {$IFDEF OTL_Generics}
   OtlDataManager,
+  OtlParallel,
+  {$ENDIF OTL_Generics}
   OtlEventMonitor,
   OtlHooks,
   OtlLogger,
-  OtlParallel,
   OtlRegister,
 //  OtlSuperObject,
-  OtlSync,
   OtlTask,
   OtlTaskControl,
   OtlThreadPool;

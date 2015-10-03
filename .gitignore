@@ -60,3 +60,4 @@ __history/
 # OmniThreadLibrary specifics
 *.skincfg
 unittests/Debug/Win32/dunit.ini
+*.xml
