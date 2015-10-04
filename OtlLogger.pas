@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2010-07-08
-///   Last modification : 2010-07-21
-///   Version           : 1.01
+///   Last modification : 2015-10-04
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2015-10-04
+///       - Adapted for non-Windows platforms.
 ///     1.01: 2010-07-21
 ///       - SaveToFile will append original file.
 ///</para></remarks>
@@ -75,9 +77,13 @@ var
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
   Windows,
-  SysUtils,
   DSiWin32,
+  {$ELSE}
+  System.Diagnostics,
+  {$ENDIF ~MSWINDOWS}
+  SysUtils,
   OtlCommon;
 
 { TOmniLogger }
@@ -120,8 +126,9 @@ end; { TOmniLogger.Log }
 procedure TOmniLogger.Log(const msg: string);
 begin
   if StoreTimeOfDay then
-    eventList.Enqueue(Format('[%d] %s %s', [GetCurrentThreadID, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
-  else eventList.Enqueue(Format('[%d] %d %s', [GetCurrentThreadID, DSiTimeGetTime64, msg]));
+    eventList.Enqueue(Format('[%d] %s %s', [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
+  else
+    eventList.Enqueue(Format('[%d] %d %s', [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}, {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF}, msg]));
 end; { TOmniLogger.Log }
 
 procedure TOmniLogger.SaveEventList(const fileName: string);
