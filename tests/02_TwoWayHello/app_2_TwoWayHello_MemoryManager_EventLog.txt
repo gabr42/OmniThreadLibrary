@@ -1,0 +1,45 @@
+
+--------------------------------2011/7/17 19:18:09--------------------------------
+A memory block has been leaked. The size is: 1124
+
+This block was allocated by thread 0x4374, and the stack trace (return addresses) at the time was:
+404586 
+4ECFD8 [test_2_TwoWayHello.pas][test_2_TwoWayHello][test_2_TwoWayHello.TfrmTestTwoWayHello.actStartHelloExecute][122]
+76046D91 [Unknown function at GetThreadDesktop]
+450632 [Classes][Classes][Classes.TBasicAction.Execute]
+466756 [ActnList][ActnList][ActnList.TContainedAction.Execute]
+467511 [ActnList][ActnList][ActnList.TCustomAction.Execute]
+4504F8 [Classes][Classes][Classes.TBasicActionLink.Execute]
+478173 [Controls][Controls][Controls.TControl.Click]
+4A1EB3 [StdCtrls][StdCtrls][StdCtrls.TCustomButton.Click]
+4A29A1 [StdCtrls][StdCtrls][StdCtrls.TCustomButton.CNCommand]
+477C1F [Controls][Controls][Controls.TControl.WndProc]
+
+The block is currently used for an object of class: Unknown
+
+The allocation number is: 1217
+
+Current memory dump of 256 bytes starting at pointer address 7EECB900:
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+€  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €  €
+
+--------------------------------2011/7/17 19:18:09--------------------------------
+This application has leaked memory. The small block leaks are (excluding expected leaks registered by pointer):
+
+1013 - 1124 bytes: Unknown x 1
+
+Note: Memory leak detail is logged to a text file in the same folder as this application. To disable this memory leak check, undefine "EnableMemoryLeakReporting".

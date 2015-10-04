@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="2p6118js07sj12wjk_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager:OtlDataManager.TOmniBaseDataManager" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager.CFetchTimeout_ms" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager.hdmEstimatedPackageSize" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager.Create(OtlDataManager.TOmniSourceProvider,System.Integer,set@OtlDataManager.TOmniDataManagerOption)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager.GetNextFromProvider(OtlDataManager.TOmniDataPackage,System.Integer)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager.CreateLocalQueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager.AllocateOutputBuffer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager.GetNext(OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager.ReleaseOutputBuffer(OtlDataManager.TOmniOutputBuffer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager.SetOutput(OtlCollections.IOmniBlockingCollection)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManagerOptions">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapability">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapability.spcCountable" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapability.spcFast" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapability.spcDataLimit" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider:OtlDataManager.TOmniSourceProviderBase" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.vepEnumerator" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.Create(OtlCommon.IOmniValueEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.CreateDataPackage()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.GetCapabilities()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.GetPackage(System.Integer,OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider.GetPackageSizeLimit()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapabilities">
+      <property name="$shortcutReference" value="true" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange.First" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange.Last" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange.Create(System.Int64,System.Int64)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange.Empty()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniCountableDataManager">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniCountableDataManager:OtlDataManager.TOmniBaseDataManager" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniCountableDataManager.GetNextFromProvider(OtlDataManager.TOmniDataPackage,System.Integer)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManagerOption">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManagerOption.dmoPreserveOrder" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.Range" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiRange" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiDataManager_ref" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl:OtlDataManager.TOmniOutputBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiDataManager_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiEmptyHandle" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiFull" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiHasData" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiNextPosition" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiOutput" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.obiRange" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.SetRange(OtlDataManager.TOmniPositionRange)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.Create(OtlDataManager.TOmniBaseDataManager,OtlCollections.IOmniBlockingCollection)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.CopyToOutput()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.MarkFull()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.Submit(System.Int64,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.EmptyHandle" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.IsFull" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl.Range" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider:OtlDataManager.TOmniSourceProviderBase" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpHigh" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpLock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpLow" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpPosition" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.irpStep" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.CalcCount(System.Integer,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.Create(System.Integer,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.CreateDataPackage()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.GetCapabilities()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.GetPackage(System.Integer,OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider.GetPackageSizeLimit()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.BufferList[System.Integer]" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmOptions" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager:OtlDataManager.TOmniDataManager" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmSourceProvider_ref" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.SourceProvider" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.CMaxPreserveOrderPackageSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmBufferRangeList" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmBufferRangeLock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmNextPosition" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmNumWorkers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmOptions" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmOutputIntf" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmPacketSizes" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmQueueList" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmQueueLock" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmSourceProvider_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmStealIdx" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmUnusedBuffers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.dmUnusedBuffersLock" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.GetBufferList(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.GetSourceProvider()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.InitializePacketSizes()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.BufferList[System.Integer]" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.Create(OtlDataManager.TOmniSourceProvider,System.Integer,set@OtlDataManager.TOmniDataManagerOption)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.AllocateOutputBuffer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.CreateLocalQueue()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.GetDataCountForGeneration(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.GetNext(OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.GetNextFromProvider(OtlDataManager.TOmniDataPackage,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.LocalQueueDestroyed(OtlDataManager.TOmniLocalQueue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.NotifyBufferFull(OtlDataManager.TOmniOutputBufferImpl)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.NotifyBufferRangeChanged(OtlDataManager.TOmniOutputBufferImpl)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.ReleaseOutputBuffer(OtlDataManager.TOmniOutputBuffer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.SetOutput(OtlCollections.IOmniBlockingCollection)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.StealPackage(OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager.SourceProvider" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage:OtlDataManager.TOmniDataPackageBase" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.CMaxValueEnumeratorDataPackageSize" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.vedpApproxCount" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.vedpDataQueue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.GetPackageSizeLimit()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.Add(OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.GetNext(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.Prepare(System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage.Split(OtlDataManager.TOmniDataPackage)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.Range" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.dpbRange" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.Queue" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.dpbQueue" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase:OtlDataManager.TOmniDataPackage" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.dpbGeneration" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.dpbRange" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.dpbQueue" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.NextGeneration()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.Generation" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.Range" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase.Queue" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue.AssociateBuffer(OtlDataManager.TOmniOutputBuffer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue.GetNext(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue.GetNext(ref@System.Int64,ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue.Split(OtlDataManager.TOmniDataPackage)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackage">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackage.GetNext(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackage.GetNext(ref@System.Int64,ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackage.Split(OtlDataManager.TOmniDataPackage)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage:OtlDataManager.TOmniDataPackageBase" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpHigh" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpHighSign" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpLow" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpPosition" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpSign" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpStep" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.idpStepAbs" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.GetNext(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.GetNext(ref@System.Int64,ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.HasData()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.Initialize(System.Integer,System.Integer,System.Integer,OtlDataManager.TOmniPositionRange)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage.Split(OtlDataManager.TOmniDataPackage)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.ActiveBuffer" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsBuffers" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsActiveBuffer_ref" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet:OtlDataManager.TOmniOutputBuffer" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsActiveBuffer_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsActiveIndex" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsBuffers" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.obsWaitHandles" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.Create(OtlDataManager.TOmniBaseDataManager,OtlCollections.IOmniBlockingCollection)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.ActivateBuffer()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.Submit(System.Int64,OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet.ActiveBuffer" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderBase">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderBase:OtlDataManager.TOmniSourceProvider" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderBase.spbStorePositions" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderBase.StorePositions" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider:OtlDataManager.TOmniSourceProviderBase" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.epEnumeratorIntf" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.epEnumeratorObj" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.epEnumLock" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.Create(System.IEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.Create(OtlCommon.TOmniValueEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.CreateDataPackage()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.GetCapabilities()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.GetPackage(System.Integer,OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.GetPackageSizeLimit()" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.EnumeratorIntf" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider.EnumeratorObj" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider.Count()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider.CreateDataPackage()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider.GetCapabilities()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider.GetPackage(System.Integer,OtlDataManager.TOmniDataPackage)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider.GetPackageSizeLimit()" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiDataPackage" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiDataManager_ref" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiBufferSet" />
+      <reference referencedUin="delphi:l_gnt:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl:OtlDataManager.TOmniLocalQueue" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiBufferSet" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiDataManager_ref" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.lqiDataPackage" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.Create(OtlDataManager.TOmniBaseDataManager)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.AssociateBuffer(OtlDataManager.TOmniOutputBuffer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.GetNext(ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.GetNext(ref@System.Int64,ref@OtlCommon.TOmniValue)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl.Split(OtlDataManager.TOmniDataPackage)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBuffer">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBuffer.Submit(System.Int64,OtlCommon.TOmniValue)" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CreateSourceProvider(System.Integer,System.Integer,System.Integer)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CreateSourceProvider(OtlCommon.TOmniValueEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CreateSourceProvider(OtlCommon.IOmniValueEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CreateSourceProvider(System.IEnumerator)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CreateDataManager(OtlDataManager.TOmniSourceProvider,System.Integer,set@OtlDataManager.TOmniDataManagerOption)" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass.CNumBuffersInSet" />
+    </reference>
+  </view>
+</nodeSet>

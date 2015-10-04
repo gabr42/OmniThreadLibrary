@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2009 Primoz Gabrijelcic
+///Copyright (c) 2015 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,12 +29,19 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-02-19
-///   Last modification : 2010-07-01
-///   Version           : 1.04
+///   Last modification : 2015-10-03
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2015-10-03
+///       - Imported mobile support by [Sean].
 ///     1.04: 2010-07-01
 ///       - Includes OTLOptions.inc.
 ///     1.03: 2009-12-22
@@ -60,13 +67,12 @@ interface
 
 uses
   Classes,
+  {$IFDEF OTL_MobileSupport}
+  System.SyncObjs,
+  System.Generics.Collections,
+  {$ENDIF OTL_MobileSupport}
   OtlSync,
-  OtlCommon
-  {$IFNDEF MSWINDOWS}
-  , Generics.Collections
-  , System.SyncObjs
-  {$ENDIF}
-  ;
+  OtlCommon;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -78,7 +84,7 @@ type
   );
 
   ///<summary>Container observer. Class based for performance.</summary>
-  TOmniContainerObserver = class abstract
+  TOmniContainerObserver = class
   strict private
     coIsActivated: TOmniAlignedInt32;
   public
@@ -89,12 +95,19 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
+  {$IFDEF OTL_MobileSupport}
   TOmniContainerEventObserver = class(TOmniContainerObserver)
   public
     function GetEvent: IOmniEvent; virtual; abstract;
   end; { TOmniContainerEventObserver }
+  {$ENDIF OTL_MobileSupport}
 
   {$IFDEF MSWINDOWS}
+  TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
+  public
+    function  GetEvent: THandle; virtual; abstract;
+  end; { TOmniContainerWindowsEventObserver }
+
   TOmniContainerWindowsMessageObserver = class(TOmniContainerObserver)
   strict protected
     function  GetHandle: THandle; virtual; abstract;
@@ -102,16 +115,12 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); virtual; abstract;
     property Handle: THandle read GetHandle;
   end; { TOmniContainerWindowsMessageObserver }
-  {$ENDIF}
+  {$ENDIF MSWINDOWS}
 
   TOmniContainerSubject = class
   strict private
     csListLocks    : array [TOmniContainerObserverInterest] of TOmniMREW;
-    {$IFDEF MSWINDOWS}
     csObserverLists: array [TOmniContainerObserverInterest] of TList;
-    {$ELSE}
-    csObserverLists: array [TOmniContainerObserverInterest] of TList<TOmniContainerObserver>;
-    {$ENDIF}
   public
     constructor Create;
     destructor  Destroy; override;
@@ -124,40 +133,53 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
+  {$IFDEF OTL_MobileSupport}
   function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
     TOmniContainerEventObserver;
-
+  {$ENDIF OTL_MobileSupport}
   {$IFDEF MSWINDOWS}
+  function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
+    TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
-  {$ENDIF}
+  {$ENDIF MSWINDOWS}
 
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  DSiWin32,
-  {$ENDIF}
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
+  {$IFDEF MSWINDOWS}
+  Windows,
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
   SysUtils;
 
-
-
 type
-
+  {$IFDEF OTL_MobileSupport}
   TOmniContainerEventObserverImpl = class(TOmniContainerEventObserver)
   strict private
-    cweoEvent          : IOmniEvent;
+    ceoEvent: IOmniEvent;
   public
     constructor Create(const externalEvent: IOmniEvent);
     function  GetEvent: IOmniEvent; override;
     procedure Notify; override;
   end; { TOmniContainerEventObserverImpl }
+  {$ENDIF OTL_MobileSupport}
 
-{$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS}
+  TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
+  strict private
+    cweoEvent          : THandle;
+    cweoEventIsExternal: boolean;
+  public
+    constructor Create(externalEvent: THandle = 0);
+    destructor  Destroy; override;
+    function  GetEvent: THandle; override;
+    procedure Notify; override;
+  end; { TOmniContainerWindowsEventObserverImpl }
+
   TOmniContainerWindowsMessageObserverImpl = class(TOmniContainerWindowsMessageObserver)
   strict private
     cwmoHandle  : THandle;
@@ -171,29 +193,36 @@ type
     procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
-{$ENDIF}
+  {$ENDIF MSWINDOWS}
 
 { exports }
 
+{$IFDEF OTL_MobileSupport}
 function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
   TOmniContainerEventObserver;
 begin
   Result := TOmniContainerEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
+{$ENDIF OTL_MobileSupport}
 
 {$IFDEF MSWINDOWS}
+function CreateContainerWindowsEventObserver(externalEvent: THandle):
+  TOmniContainerWindowsEventObserver;
+begin
+  Result := TOmniContainerWindowsEventObserverImpl.Create(externalEvent);
+end; { CreateContainerWindowsEventObserver }
+
 function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
   lParam: integer): TOmniContainerWindowsMessageObserver;
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
-{$ENDIF}
+{$ENDIF MSWINDOWS}
 
 { TOmniContainerObserver }
 
 constructor TOmniContainerObserver.Create;
 begin
-  coIsActivated.Initialize;
   inherited;
   Activate;
 end; { TOmniContainerObserver.Create }
@@ -205,7 +234,7 @@ end; { TOmniContainerObserver.Activate }
 
 function TOmniContainerObserver.CanNotify: boolean;
 begin
-  Result := coIsActivated.CAS( 1, 0)
+  Result := coIsActivated.CAS(1, 0);
 end; { TOmniContainerObserver.CanNotify }
 
 procedure TOmniContainerObserver.Deactivate;
@@ -213,26 +242,63 @@ begin
   coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
 
+{$IFDEF OTL_MobileSupport}
 
-{ TOmniContainerWindowsEventObserverImpl }
+{ TOmniContainerEventObserverImpl }
+
 constructor TOmniContainerEventObserverImpl.Create(const externalEvent: IOmniEvent);
 begin
-  cweoEvent := externalEvent;
-  if not assigned( cweoEvent) then
-    cweoEvent := CreateOmniEvent(False, False)
+  ceoEvent := externalEvent;
+  if not assigned( ceoEvent) then
+    ceoEvent := CreateOmniEvent(False, False)
 end; { TOmniContainerWindowsEventObserverImpl.Create }
 
 function TOmniContainerEventObserverImpl.GetEvent: IOmniEvent;
 begin
-  Result := cweoEvent;
+  Result := ceoEvent;
 end; { TOmniContainerWindowsEventObserverImpl.GetEvent }
 
 procedure TOmniContainerEventObserverImpl.Notify;
 begin
-  cweoEvent.SetEvent;
+  ceoEvent.SetEvent;
 end; { TOmniContainerWindowsEventObserverImpl.Notify }
 
+{$ENDIF OTL_MobileSupport}
+
 {$IFDEF MSWINDOWS}
+
+{ TOmniContainerWindowsEventObserverImpl }
+
+constructor TOmniContainerWindowsEventObserverImpl.Create(externalEvent: THandle);
+begin
+  if externalEvent <> 0 then begin
+    cweoEvent := externalEvent;
+    cweoEventIsExternal := true;                               
+  end
+  else begin
+    cweoEvent := Windows.CreateEvent(nil, false, false, nil);
+    cweoEventIsExternal := false;
+  end;
+end; { TOmniContainerWindowsEventObserverImpl.Create }
+
+destructor TOmniContainerWindowsEventObserverImpl.Destroy;
+begin
+  if not cweoEventIsExternal then
+    DSiCloseHandleAndNull(cweoEvent);
+  cweoEvent := 0;
+  inherited;
+end; { TOmniContainerWindowsEventObserverImpl.Destroy }
+
+function TOmniContainerWindowsEventObserverImpl.GetEvent: THandle;
+begin
+  Result := cweoEvent;
+end; { TOmniContainerWindowsEventObserverImpl.GetEvent }
+
+procedure TOmniContainerWindowsEventObserverImpl.Notify;
+begin
+  Win32Check(SetEvent(GetEvent));
+end; { TOmniContainerWindowsEventObserverImpl.Notify }
+
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:
@@ -260,10 +326,8 @@ procedure TOmniContainerWindowsMessageObserverImpl.Send(aMessage: cardinal;
 begin
   Win32Check(PostMessage(cwmoHandle, aMessage, wParam, lParam));
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
-{$ENDIF}  // MSWINDOWS
 
-
-
+{$ENDIF MSWINDOWS}
 
 { TOmniContainerSubject }
 
@@ -273,11 +337,7 @@ var
 begin
   inherited Create;
   for interest := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
-    {$IFDEF MSWINDOWS}
-      csObserverLists[interest] := TList.Create;
-    {$ELSE}
-      csObserverLists[interest] := TList<TOmniContainerObserver>.Create
-    {$ENDIF}
+    csObserverLists[interest] := TList.Create;
 end; { TOmniContainerSubject.Create }
 
 destructor TOmniContainerSubject.Destroy;
@@ -289,7 +349,7 @@ begin
     csObserverLists[interest] := nil;
   end;
   inherited;
-end; { TOmni ContainerSubject.Destroy }
+end; { TOmniContainerSubject.Destroy }
 
 procedure TOmniContainerSubject.Attach(const observer: TOmniContainerObserver;
   interest: TOmniContainerObserverInterest);
@@ -313,11 +373,7 @@ end; { TOmniContainerSubject.Detach }
 procedure TOmniContainerSubject.Notify(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  {$IFDEF MSWINDOWS}
-    list     : TList;
-  {$ELSE}
-    list     : TList<TOmniContainerObserver>;
-  {$ENDIF}
+  list     : TList;
 begin
   {$R-}
   csListLocks[interest].EnterReadLock;
@@ -333,11 +389,7 @@ end; { TOmniContainerSubject.Notify }
 procedure TOmniContainerSubject.NotifyOnce(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  {$IFDEF MSWINDOWS}
-    list     : TList;
-  {$ELSE}
-    list     : TList<TOmniContainerObserver>;
-  {$ENDIF}
+  list     : TList;
   observer : TOmniContainerObserver;
 begin
   {$R-}
@@ -345,11 +397,7 @@ begin
   try
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do begin
-      {$IFDEF MSWINDOWS}
-        observer := TOmniContainerObserver(list[iObserver]);
-      {$ELSE}
-        observer := list[iObserver];
-      {$ENDIF}
+      observer := TOmniContainerObserver(list[iObserver]);
       if observer.CanNotify then begin
         observer.Notify;
         observer.Deactivate;
@@ -362,22 +410,14 @@ end; { TOmniContainerSubject.NotifyAndRemove }
 procedure TOmniContainerSubject.Rearm(interest: TOmniContainerObserverInterest);
 var
   iObserver: integer;
-  {$IFDEF MSWINDOWS}
-    list     : TList;
-  {$ELSE}
-    list     : TList<TOmniContainerObserver>;
-  {$ENDIF}
+  list     : TList;
 begin
   {$R-}
   csListLocks[interest].EnterReadLock;
   try
     list := csObserverLists[interest];
     for iObserver := 0 to list.Count - 1 do
-      {$IFDEF MSWINDOWS}
-        TOmniContainerObserver(list[iObserver]).Activate;
-      {$ELSE}
-        list[iObserver].Activate;
-      {$ENDIF}
+      TOmniContainerObserver(list[iObserver]).Activate;
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}
 end; { TOmniContainerSubject.Rearm }

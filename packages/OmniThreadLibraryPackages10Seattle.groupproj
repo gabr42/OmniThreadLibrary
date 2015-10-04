@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{7BC055F3-64E7-4DA7-8453-9C5170FECA86}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OmniThreadLibraryRuntime10Seattle.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibraryDesigntime10Seattle.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OmniThreadLibraryRuntime10Seattle">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Seattle.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntime10Seattle:Clean">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Seattle.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntime10Seattle:Make">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Seattle.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Seattle">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Seattle.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Seattle:Clean">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Seattle.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Seattle:Make">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Seattle.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Seattle;OmniThreadLibraryDesigntime10Seattle"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Seattle:Clean;OmniThreadLibraryDesigntime10Seattle:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Seattle:Make;OmniThreadLibraryDesigntime10Seattle:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

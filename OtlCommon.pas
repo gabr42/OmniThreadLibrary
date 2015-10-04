@@ -28,21 +28,24 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>                   
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
-///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-05-11
-///   Version           : 1.38
+///   Last modification : 2015-10-03
+///   Version           : 1.39
 ///</para><para>
 ///   History:
-///     1.38: 2015-05-11
+///     1.39: 2015-10-03
+///       - [Sean] Implemented TOmniAlignedInt32 (clone of GpStuff.TGp4AlignedInt)
+///         and TOmniAlignedInt64 (clone of GpStuff.TGp8AlignedInt64).
+///     1.38: 2015-09-28
 ///       - [Sean] Introduced non-Windows compatibility.
+///     1.37b: 2015-08-30
+///       - Fixed record type handling in FromArray<T> and ToArray<T>.
 ///     1.37a: 2015-04-17
 ///       - Added vtWideChar and vtPWideChar handling to TOmniValue.Create and .CreateNamed.
 ///     1.37: 2015-02-09
@@ -254,17 +257,18 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
+{$IFNDEF OTL_HasCorrectNativeInt}
   NativeInt = integer;
+  NativeUInt = cardinal;
   PNativeInt = PInteger;
-{$IFEND}
+  PNativeUInt = PCardinal;
+{$ENDIF}
 
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
-
 
   TOmniValueDataType = (ovtNull,
            {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
@@ -625,7 +629,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   TOmniInterfaceDictionaryPair = TPair<int64, IInterface>;
 {$ELSE}
   TOmniInterfaceDictionaryPair = class
@@ -644,14 +648,14 @@ type
     function  MoveNext: boolean;
     property Current: TOmniInterfaceDictionaryPair read GetCurrent;
   end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_GoodGenerics}
 
   IOmniInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
 {$ELSE}
     function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_GoodGenerics}
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
@@ -716,9 +720,9 @@ type
     property Affinity: IOmniAffinity read GetAffinity;
   end; { IOmniSystemEnvironment }
 
-  {$IF CompilerVersion < 19}//D2007 //TODO
+  {$IFNDEF OTL_HasThreadID}
   TThreadID = LongWord;
-  {$IFEND}
+  {$ENDIF ~OTL_HasThreadID}
 
   IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
     function  GetAffinity: IOmniAffinity;
@@ -826,13 +830,12 @@ type
 
   TOmniAlignedInt32 = record
   strict private
-    aiData: int64;
+    FData: int64;
     FAddr: PInteger;
     function  GetValue: integer; inline;
     procedure SetValue(value: integer); inline;
-
   public
-    procedure Initialize;
+    procedure Initialize; inline;
     function  Add(value: integer): integer; inline;
     function  Addr: PInteger; inline;
     function  CAS(oldValue, newValue: integer): boolean;
@@ -857,14 +860,14 @@ type
 
   TOmniAlignedInt64 = record
   strict private
-    aiData: packed record
+    FData: packed record
       DataLo, DataHi: int64;
     end;
     FAddr: PInt64;
     function  GetValue: int64; inline;
     procedure SetValue(value: int64); inline;
   public
-    procedure Initialize;
+    procedure Initialize; inline;
     function  Add(value: int64): int64; inline;
     function  Addr: PInt64; inline;
     function  CAS(oldValue, newValue: int64): boolean;
@@ -880,13 +883,6 @@ type
   TObjectList = class(TObjectList<TObject>)
   end;
 {$ENDIF}
-
-  // TInterlockedHelper = class helper for TInterlocked doenst seem to be working.
-  TInterlockedEx = class
-  public
-    class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
-    class function Add(var Target: NativeInt; Increment: NativeInt): NativeInt; overload; static; inline;
-  end;
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
@@ -1019,7 +1015,7 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounterImpl }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
   PPHashItem = ^PHashItem;
   PHashItem = ^THashItem;
   THashItem = record
@@ -1045,10 +1041,10 @@ type
     function  MoveNext: boolean;
     property Current: TOmniInterfaceDictionaryPair read GetCurrent;
   end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
   TOmniInterfaceDictionary = class(TInterfacedObject, IOmniInterfaceDictionary)
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   strict private
     FDictionary: TDictionary<int64, IInterface>;
   {$ELSE}
@@ -1059,18 +1055,18 @@ type
     function  Find(const key: int64): PPHashItem;
     function  HashOf(const key: int64): integer; inline;
     procedure Resize(size: Cardinal);
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_GoodGenerics}
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
     function  Count: integer; inline;
-    {$IFDEF OTL_Generics}
+    {$IFDEF OTL_GoodGenerics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
     {$ELSE}
     function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-    {$ENDIF ~OTL_Generics}
+    {$ENDIF ~OTL_GoodGenerics}
     procedure Remove(const key: int64);
     function  ValueOf(const key: int64): IInterface;
   end; { TOmniInterfaceDictionary }
@@ -1669,7 +1665,7 @@ begin
   Result := taken > 0
 end; { TOmniCounterImpl.Take }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 { TOmniInterfaceDictionaryPair }
 
 procedure TOmniInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
@@ -1713,40 +1709,40 @@ begin
   ideItem := ideItem^.Next;
   Result := true;
 end; { TOmniInterfaceDictionaryEnumerator.MoveNext }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 { TOmniInterfaceDictionary }
 
 constructor TOmniInterfaceDictionary.Create;
 begin
   inherited Create;
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   FDictionary := TDictionary<int64, IInterface>.Create(100);
   {$ELSE}
   Resize(1);
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Create }
 
 destructor TOmniInterfaceDictionary.Destroy;
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   FreeAndNil(FDictionary);
   {$ELSE}
   Clear;
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
   inherited;
 end; { TOmniInterfaceDictionary.Destroy }
 
 procedure TOmniInterfaceDictionary.Add(const key: int64; const value: IInterface);
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket: PHashItem;
   hash  : integer;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 begin
-{$IFDEF OTL_Generics}
-  FDictionary.Add(key, value);
+{$IFDEF OTL_GoodGenerics}
+  FDictionary.AddOrSetValue(key, value);
 {$ELSE}
   hash := HashOf(key);
   New(bucket);
@@ -1757,19 +1753,19 @@ begin
   Inc(idCount);
   if idCount > (1.5 * Length(idBuckets)) then
     Resize(idCount * 2);
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Add }
 
 procedure TOmniInterfaceDictionary.Clear;
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket : PHashItem;
   iBucket: integer;
   next   : PHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   FDictionary.Clear;
 {$ELSE}
   for iBucket := 0 to Length(idBuckets) - 1 do begin
@@ -1783,19 +1779,19 @@ begin
     idBuckets[iBucket] := nil;
   end;
   idCount := 0;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Clear }
 
 function TOmniInterfaceDictionary.Count: integer;
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.Count;;
   {$ELSE}
   Result := idCount;
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Count }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 function TOmniInterfaceDictionary.Find(const key: int64): PPHashItem;
 var
   hash: integer;
@@ -1809,32 +1805,32 @@ begin
       Result := @Result^.Next;
   end;
 end; { TOmniInterfaceDictionary.Find }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
-function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_Generics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_Generics};
+function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_GoodGenerics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_GoodGenerics};
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.GetEnumerator;
   {$ELSE}
   Result := TOmniInterfaceDictionaryEnumerator.Create(@idBuckets);
-  {$ENDIF ~OTL_Generics}
+  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.GetEnumerator }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 function TOmniInterfaceDictionary.HashOf(const key: int64): integer;
 begin
   Result := key mod Length(idBuckets);
 end; { TOmniInterfaceDictionary.HashOf }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 procedure TOmniInterfaceDictionary.Remove(const key: int64);
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucket    : PHashItem;
   bucketHead: PPHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   if FDictionary.ContainsKey(key) then
     FDictionary.Remove(key);
 {$ELSE}
@@ -1845,10 +1841,10 @@ begin
     Dispose(bucket);
     Dec(idCount);
   end;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Remove }
 
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
 var
   bucket    : PHashItem;
@@ -1876,15 +1872,15 @@ begin
   end;
   Assert(oldSize = Count);
 end; { TOmniInterfaceDictionary.Resize }
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 
 function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
-{$IFNDEF OTL_Generics}
+{$IFNDEF OTL_GoodGenerics}
 var
   bucketHead: PHashItem;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_GoodGenerics}
   if not FDictionary.TryGetValue(key, Result) then
     Result := nil;
 {$ELSE}
@@ -1893,7 +1889,7 @@ begin
     Result := bucketHead^.Value
   else
     Result := nil;
-{$ENDIF ~OTL_Generics}
+{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
@@ -1923,11 +1919,11 @@ begin
       {$IFNDEF NEXTGEN}
         vtChar:          ovc.Add(string(VChar));
         vtString:        ovc.Add(string(VString^));
-        vtPChar:         ovc.Add(string(StrPasA(VPChar)));
       {$ENDIF NEXTGEN}
       {$IFDEF MSWINDOWS}
         vtAnsiString:    ovc.Add(AnsiString(VAnsiString));
         vtWideString:    ovc.Add(WideString(VWideString));
+        vtPChar:         ovc.Add(string(StrPasA(VPChar)));
       {$ENDIF MSWINDOWS}
       else
         raise Exception.Create ('TOmniValue.Create: invalid data type')
@@ -1958,11 +1954,11 @@ begin
         {$IFNDEF NEXTGEN}
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
-          vtPChar:         name := string(StrPasA(VPChar));
         {$ENDIF NEXTGEN}
         {$IFDEF MSWINDOWS}
           vtAnsiString:    name := string(VAnsiString);
           vtWideString:    name := WideString(VWideString);
+          vtPChar:         name := string(StrPasA(VPChar));
         {$ENDIF MSWINDOWS}
         else
           raise Exception.Create ('TOmniValue.CreateNamed: invalid name type')
@@ -1984,11 +1980,11 @@ begin
         {$IFNDEF NEXTGEN}
           vtChar:          ovc.Add(string(VChar), name);
           vtString:        ovc.Add(string(VString^), name);
-          vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
         {$ENDIF NEXTGEN}
         {$IFDEF MSWINDOWS}
           vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtWideString:    ovc.Add(WideString(VWideString), name);
+          vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
         {$ENDIF MSWINDOWS}
         else
           raise Exception.Create ('TOmniValue.CreateNamed: invalid data type')
@@ -2032,12 +2028,16 @@ begin
       ds := 2
     else
       ds := TOmniValue_DataSize[ti^.Kind];
-  if ds = 0 then // complicated stuff
-    {$IFDEF OTL_ERTTI}
-    Result := AsTValue.AsType<T>
-    {$ELSE}
-    raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
-    {$ENDIF OTL_ERTTI}
+  if ds = 0 then begin // complicated stuff
+    if ti.Kind = tkRecord then
+      Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
+    else
+      {$IFDEF OTL_ERTTI}
+      Result := AsTValue.AsType<T>
+      {$ELSE}
+      raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
+      {$ENDIF OTL_ERTTI}
+  end
   else begin // simple types
     if ds < 8 then begin
       maxValue := uint64($FF) SHL ((ds-1) * 8);
@@ -2064,12 +2064,16 @@ begin
     else
       ds := TOmniValue_DataSize[ti^.Kind];
   end;
-  if ds = 0 then // complicated stuff
-    {$IFDEF OTL_ERTTI}
-    Result.AsTValue := TValue.From<T>(value)
-    {$ELSE}
-    raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
-    {$ENDIF OTL_ERTTI}
+  if ds = 0 then begin // complicated stuff
+    if ti^.Kind = tkRecord then
+      Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)))
+    else
+      {$IFDEF OTL_ERTTI}
+      Result.AsTValue := TValue.From<T>(value)
+      {$ELSE}
+      raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
+      {$ENDIF OTL_ERTTI}
+  end
   else begin // simple types
     data := 0;
     Move(value, data, ds);
@@ -3796,9 +3800,11 @@ begin
   {$ENDIF}
 end; { NextOid }
 
+{ TOmniAlignedInt32 }
+
 procedure TOmniAlignedInt32.Initialize;
 begin
-  FAddr := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
+  FAddr := PInteger((NativeInt(@FData) + 3) AND NOT 3);
 end; { TOmniAlignedInt32.Initialize }
 
 function TOmniAlignedInt32.Add(value: integer): integer;
@@ -3806,13 +3812,14 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Add }
 
 function TOmniAlignedInt32.Addr: PInteger;
 begin
-  Result := FAddr
+  Initialize;
+  Result := FAddr;
 end; { TOmniAlignedInt32.Addr }
 
 function TOmniAlignedInt32.CAS(oldValue, newValue: integer): boolean;
@@ -3820,7 +3827,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
   {$ELSE}
-  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
+  Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt32.CAS }
 
@@ -3829,7 +3836,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedDecrement(Addr^);
   {$ELSE}
-  Result := TInterlocked.Decrement(FAddr^);
+  Result := TInterlocked.Decrement(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
@@ -3838,13 +3845,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.GetValue: integer;
 begin
-  Result := FAddr^;
+  Result := Addr^;
 end; { TOmniAlignedInt32.GetValue }
 
 function TOmniAlignedInt32.Increment: integer;
@@ -3852,7 +3859,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedIncrement(Addr^);
   {$ELSE}
-  Result := TInterlocked.Increment(FAddr^);
+  Result := TInterlocked.Increment(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
@@ -3861,13 +3868,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
 procedure TOmniAlignedInt32.SetValue(value: integer);
 begin
-  FAddr^ := value;
+  Addr^ := value;
 end; { TOmniAlignedInt32.SetValue }
 
 function TOmniAlignedInt32.Subtract(value: integer): integer;
@@ -3875,7 +3882,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := InterlockedExchangeAdd(Addr^, -value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt32.Subtract }
 
@@ -3936,10 +3943,12 @@ begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TOmniAlignedInt32.Subtract }
 
+{ TOmniAlignedInt64 }
+
 procedure TOmniAlignedInt64.Initialize;
 begin
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
-  FAddr := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
+  FAddr := PInt64((NativeInt(@FData) + 7) AND NOT 7);
 end; { TOmniAlignedInt64.Initialize }
 
 function TOmniAlignedInt64.Add(value: int64): int64;
@@ -3947,12 +3956,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Add }
 
 function TOmniAlignedInt64.Addr: PInt64;
 begin
+  Initialize;
   Result := FAddr;
 end; { TOmniAlignedInt64.Addr }
 
@@ -3961,7 +3971,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
   {$ELSE}
-  Result := TInterlocked.CompareExchange(FAddr^, newValue, OldValue) = oldValue;
+  Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
   {$ENDIF}
 end; { TOmniAlignedInt64.CAS }
 
@@ -3970,7 +3980,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedDecrement64(Addr^);
   {$ELSE}
-  Result := TInterlocked.Decrement( FAddr^)
+  Result := TInterlocked.Decrement(Addr^)
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
@@ -3979,13 +3989,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Subtract(value) - value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
 begin
-  Result := FAddr^;
+  Result := Addr^;
 end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
@@ -3993,7 +4003,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedIncrement64(Addr^);
   {$ELSE}
-  Result := TInterlocked.Increment(FAddr^);
+  Result := TInterlocked.Increment(Addr^);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
@@ -4002,13 +4012,13 @@ begin
   {$IFDEF MSWINDOWS}
   Result := Add(value) + value;
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, value);
+  Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
-  FAddr^ := value;
+  Addr^ := value;
 end; { TOmniAlignedInt64.SetValue }
 
 function TOmniAlignedInt64.Subtract(value: int64): int64;
@@ -4016,36 +4026,9 @@ begin
   {$IFDEF MSWINDOWS}
   Result := DSiInterlockedExchangeAdd64(Addr^, -value);
   {$ELSE}
-  Result := TInterlocked.Add(FAddr^, -value);
+  Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
-
-
-class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
-begin
-  {$IFDEF CPUX64}
-    Result := TInterlocked.CompareExchange(Int64  (Target), Int64  (Value), Int64  (Comparand));
-  {$ELSE}
-    {$IF CompilerVersion < 19}//D2007
-    Result := InterlockedCompareExchange(Target, Value, Comparand);
-    {$ELSE}
-    Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
-    {$IFEND}
-  {$ENDIF}
-end;
-
-class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
-begin
-  {$IFDEF CPUX64}
-    Result := TInterlocked.Add(Int64  (Target), Int64  (Increment));
-  {$ELSE}
-    {$IF CompilerVersion < 19}//D2007
-    Result := InterlockedExchangeAdd(Target, Increment);
-    {$ELSE}
-    Result := TInterlocked.Add(Integer(Target), Integer(Increment));
-    {$IFEND}
-  {$ENDIF}
-end;
 
 
 initialization

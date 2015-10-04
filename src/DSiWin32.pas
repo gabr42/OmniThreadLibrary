@@ -7,10 +7,12 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2015-04-24
-   Version           : 1.82
+   Last modification : 2015-07-29
+   Version           : 1.82a
 </pre>*)(*
    History:
+     1.82a: 2015-07-29
+       - Fixed DSiGetClassName for Unicode.
      1.82: 2015-04-24
        - Affinity functions support up to 64 cores in 64-bit mode
          (previously they were limited to 32 cores).
@@ -5869,7 +5871,7 @@ const
   var
     winClass: array [0..1024] of char;
   begin
-    if GetClassName(hwnd, winClass, SizeOf(winClass)) <> 0 then
+    if GetClassName(hwnd, winClass, SizeOf(winClass) div SizeOf(char)) <> 0 then
       Result := winClass
     else
       Result := '';
@@ -8786,8 +8788,6 @@ begin
 end; { DynaLoadAPIs }
 
 procedure InitializeGlobals;
-var
-  ch: char;
 begin
   InitializeCriticalSection(GDSiWndHandlerCritSect);
   GTerminateBackgroundTasks := CreateEvent(nil, false, false, nil);

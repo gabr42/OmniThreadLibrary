@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="gsjgem5bm7s6z318h_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.eventList" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.FStoreTimeOfDay" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.Create()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.Destroy()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.Clear()" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.GetEventList(System.Classes.TStringList)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.Log(System.string,System.TVarRec[])" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.Log(System.string)" />
+      <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.SaveEventList(System.string)" />
+      <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger.StoreTimeOfDay" />
+    </reference>
+    <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlLogger.@unitclass">
+      <property name="$shortcutReference" value="true" />
+      <reference referencedUin="delphi:l_ast:src:OmniThreadLibrary_UML:OtlLogger.@unitclass.GLogger" />
+      <reference referencedUin="delphi:e_field:src:OmniThreadLibrary_UML:OtlLogger.@unitclass.GLogger" />
+    </reference>
+  </view>
+</nodeSet>

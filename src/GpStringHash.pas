@@ -29,10 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2012-02-06
-   Version           : 1.11
+   Last modification : 2015-10-04
+   Version           : 1.11a
 </pre>*)(*
    History:
+     1.11a: 2015-10-04
+       - Removed dependency on DSiWin32.
      1.11: 2012-02-06
        - TGpStringObjectHash.Find returns 'nil' in 'value' parameter if key is not found.
      1.10c: 2011-12-20
@@ -406,8 +408,7 @@ function HashOf(data: pointer; dataLength: integer): cardinal; overload;
 implementation
 
 uses
-  SysUtils,
-  DSiWin32;
+  SysUtils;
 
 const
   //List of good hash table sizes, taken from
@@ -1031,7 +1032,7 @@ end; { TGpStringTable.Create }
 
 destructor TGpStringTable.Destroy;
 begin
-  DSiFreeMemAndNil(stData);
+  FreeMem(stData);
   inherited;
 end; { TGpStringTable.Destroy }
 

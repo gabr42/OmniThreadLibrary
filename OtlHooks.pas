@@ -28,12 +28,18 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
 ///   Creation date     : 2009-05-17
-///   Last modification : 2011-07-14
-///   Version           : 1.02
+///   Last modification : 2015-10-04
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2015-10-04
+///       - Cleaned up 'uses' list.
 ///     1.02: 2011-07-14
 ///       - Support for non-silent exceptions removed.
 ///       - Changed signature for exception filters.
@@ -48,12 +54,6 @@ unit OtlHooks;
 interface
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  {$ELSE}
-  OtlCommon,
-  System.SyncObjs,
-  {$ENDIF}
   SysUtils,
   Classes,
   OtlSync;
@@ -86,14 +86,8 @@ procedure FilterException(var e: Exception);
 
 implementation
 
-
-
-{$IFNDEF MSWINDOWS}
-  uses Generics.Collections;
-{$ENDIF}
-
 type
-  TProcMethodList = class( {$IFDEF MSWINDOWS} TList {$ELSE} TList<pointer> {$ENDIF})
+  TProcMethodList = class(TList)
   strict private
     pmlLock: TOmniMREW;
   strict protected

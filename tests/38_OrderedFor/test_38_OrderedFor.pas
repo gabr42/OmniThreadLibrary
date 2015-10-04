@@ -76,7 +76,7 @@ end;
 
 function TfrmOderedForDemo.MultiThreadedSGPrimes(numTasks: integer): integer;
 var
-  numSGPrimes: TGp4AlignedInt;
+  numSGPrimes: TOmniAlignedInt32;
 begin
   numSGPrimes.Value := 0;
 
@@ -105,7 +105,7 @@ end;
 
 function TfrmOderedForDemo.MultiThreadedOrderedSGPrimes(numTasks: integer): integer;
 var
-  numSGPrimes: TGp4AlignedInt;
+  numSGPrimes: TOmniAlignedInt32;
 begin
   numSGPrimes.Value := 0;
 

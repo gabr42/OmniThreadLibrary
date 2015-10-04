@@ -299,7 +299,7 @@ interface
 
 uses
   SysUtils,
-  SyncObjs,
+  Classes,
   {$IFDEF GpLists_HasSystemTypes}
   System.Types,
   {$ENDIF}
@@ -311,11 +311,10 @@ uses
   {$IFDEF POSIX}
   Posix.Pthread,
   {$ENDIF}
-  {$IFDEF UNICODE}
+  {$IFDEF Unicode}
   Generics.Collections,
   {$ENDIF}
-  Classes;
-
+  SyncObjs;
 
 const
   CUpperListBound = MaxInt; //converted to Self.Count-1 inside Slice and Walk
@@ -3642,7 +3641,7 @@ function TGpInt64List.Restore(baseAddr: pointer): pointer;
 var
   iList   : integer;
   numItems: integer;
-  pList   : {$IFDEF GpLists_RequiresD6CompilerHack} PInteger64 {$ELSE} PInteger64 {$ENDIF};
+  pList   : PInteger64;
 begin
   pList := baseAddr;
   numItems := integer(pList^);

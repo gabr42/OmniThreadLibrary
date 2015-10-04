@@ -28,12 +28,11 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
@@ -86,31 +85,53 @@ uses
   SysUtils,
   Classes,
   SyncObjs,
+  GpLists,
+  {$IFNDEF MSWINDOWS}
+  Generics.Collections,
+  {$ENDIF ~MSWINDOWS}
   OtlCommon,
   OtlSync,
-  OtlComm,
-  Generics.Collections;
+  OtlComm;
 
 type
+  IOmniTask = interface;
+
   TOmniWaitObjectMethod = procedure of object;
 
+  TOmniWaitObjectList = class
+  strict private
+    owolResponseHandlers: TGpTMethodList;
+    owolWaitObjects     : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
+  strict protected
+    function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
+    function  GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+    function  Count: integer;
+    procedure Remove(waitObject: TOmniTransitionEvent);
+    property ResponseHandlers[idxHandler: integer]: TOmniWaitObjectMethod read
+      GetResponseHandlers;
+    property WaitObjects[idxWaitObject: integer]: TOmniTransitionEvent read GetWaitObjects;
+  end; { TOmniWaitObjectList }
+
+  {$IFNDEF MSWINDOWS}
   IOmniEventAndProc = interface(IOmniEvent) ['{2CA14FE0-4616-41CC-BDED-EEDE88BC6492}']
     function BaseEvent: IOmniEvent;
     function Proc: TOmniWaitObjectMethod;
-  end;
+  end; { IOmniEventAndProc }
 
-  function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod):IOmniEventAndProc;
-
-type
-  TOmniSyncroArray = TArray<IOmniSyncro>;
-  TOmniEventProcList = class( TList<IOmniEventAndProc>)
+  TOmniSynchroArray = TArray<IOmniSynchro>;
+  TOmniEventProcList = class(TList<IOmniEventAndProc>)
   public
-    function  AsSyncroArray: TOmniSyncroArray;
+    function  AsSyncroArray: TOmniSynchroArray;
     procedure RemoveBaseEvent(const Base: IOmniEvent);
   end;
+  {$ENDIF ~MSWINDOWS}
 
   {$IFDEF OTL_Anonymous}
-  TOmniTaskInvokeFunction = TProc;
+  TOmniTaskInvokeFunction = reference to procedure;
 //  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTaskControl);
   {$ENDIF OTL_Anonymous}
 
@@ -122,7 +143,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetParam: TOmniValueContainer;
-    function  GetTerminateEvent: IOmniEvent;
+    function  GetTerminateEvent: TOmniTransitionEvent;
     function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
   //
@@ -133,7 +154,7 @@ type
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure RegisterWaitObject(const waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
@@ -144,7 +165,7 @@ type
     function  Terminated: boolean;
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure UnregisterWaitObject(const waitObject: IOmniEvent);
+    procedure UnregisterWaitObject(waitObject: TOmniTransitionEvent);
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -152,7 +173,7 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param: TOmniValueContainer read GetParam;
-    property TerminateEvent: IOmniEvent read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
+    property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }
@@ -166,28 +187,84 @@ type
   TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
 {$ENDIF OTL_Anonymous}
 
+{$IFNDEF MSWINDOWS}
+  function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
+{$ENDIF ~MSWINDOWS}
+
 implementation
 
+{ exports }
 
-
-
-function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod):IOmniEventAndProc;
+{$IFNDEF MSWINDOWS}
+function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
 begin
   // TODO
-
 end;
+{$ENDIF ~MSWINDOWS}
 
+{ TOmniWaitObjectList }
 
-function TOmniEventProcList.AsSyncroArray: TOmniSyncroArray;
+constructor TOmniWaitObjectList.Create;
 begin
-  // TODO
+  inherited Create;
+  owolWaitObjects := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
+  owolResponseHandlers := TGpTMethodList.Create;
+end; { TOmniWaitObjectList.Create }
 
+destructor TOmniWaitObjectList.Destroy;
+begin
+  FreeAndNil(owolResponseHandlers);
+  FreeAndNil(owolWaitObjects);
+  inherited Destroy;
+end; { TOmniWaitObjectList.Destroy }
+
+procedure TOmniWaitObjectList.Add(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectMethod);
+begin
+  Remove(waitObject);
+  owolWaitObjects.Add(waitObject);
+  owolResponseHandlers.Add(TMethod(responseHandler));
+end; { TOmniWaitObjectList.Add }
+
+function TOmniWaitObjectList.Count: integer;
+begin
+  Result := owolWaitObjects.Count;
+end; { TOmniWaitObjectList.Count }
+
+function TOmniWaitObjectList.GetResponseHandlers(idxHandler: integer):
+  TOmniWaitObjectMethod;
+begin
+  Result := TOmniWaitObjectMethod(owolResponseHandlers[idxHandler]);
+end; { TOmniWaitObjectList.GetResponseHandlers }
+
+function TOmniWaitObjectList.GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
+begin
+  Result := owolWaitObjects[idxWaitObject];
+end; { TOmniWaitObjectList.GetWaitObjects }
+
+procedure TOmniWaitObjectList.Remove(waitObject: TOmniTransitionEvent);
+var
+  idxWaitObject: integer;
+begin
+  idxWaitObject := owolWaitObjects.IndexOf(waitObject);
+  if idxWaitObject >= 0 then begin
+    owolWaitObjects.Delete(idxWaitObject);
+    owolResponseHandlers.Delete(idxWaitObject);
+  end;
+end; { TOmniWaitObjectList.Remove }
+
+{$IFNDEF MSWINDOWS}
+function TOmniEventProcList.AsSyncroArray: TOmniSynchroArray;
+begin
+  //TODO
 end;
 
 procedure TOmniEventProcList.RemoveBaseEvent(const Base: IOmniEvent);
 begin
-  // TODO
-
+  //TODO
 end;
+{$ENDIF ~MSWINDOWS}
 
+initialization
+  Assert(SizeOf(THandle) <= SizeOf(int64));
 end.

@@ -28,13 +28,12 @@
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
 ///<remarks><para>
-///   Home              : http://otl.17slon.com
-///   Support           : http://otl.17slon.com/forum/
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///     Web             : http://gp.17slon.com
-///   Contributors      : GJ, Lee_Nover, scarre
+///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///
 ///   Creation date     : 2011-08-31
 ///   Last modification : 2011-08-31
@@ -57,7 +56,25 @@ procedure SetThreadName(const name: string);
 
 implementation
 
-uses Windows;
+{$IFDEF OTL_HasNameThreadForDebugging}
+uses
+  System.Classes;
+{$ELSE ~OTL_HasNameThreadForDebugging}
+{$IFDEF MSWINDOWS}
+uses
+  Windows;
+{$ENDIF MSWINDOWS}
+{$ENDIF ~OTL_HasNameThreadForDebugging}
+
+{$IFDEF OTL_HasNameThreadForDebugging}
+
+procedure SetThreadName(const name: string);
+begin
+  TThread.NameThreadForDebugging(name);
+end; { SetThreadName }
+
+{$ELSE ~OTL_HasNameThreadForDebugging}
+{$IFDEF MSWINDOWS}
 
 procedure SetThreadName(const name: string);
 type
@@ -82,5 +99,14 @@ begin
     except {ignore} end;
   end;
 end; { SetThreadName }
+
+{$ELSE ~MSWINDOWS}
+
+procedure SetThreadName(const name: string);
+begin
+end; { SetThreadName }
+
+{$ENDIF ~MSWINDOWS}
+{$ENDIF ~OTL_HasNameThreadForDebugging}
 
 end.

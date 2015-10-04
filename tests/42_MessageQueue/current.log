@@ -1,0 +1,106 @@
+20:15 Starting 6 second queue stress test, 1 -> 1
+20:15 Reader completed in 6040 ms; 3312801 dequeued, 4289374 empty; 548477 msg/s
+20:15 Writer completed in 6054 ms; 3313801 enqueued, 28534 skipped; 547374 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 548477 msg/s
+20:15 Total writer throughput: 547374 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 1 -> 2
+20:15 Reader completed in 6017 ms; 1583587 dequeued, 6477340 empty; 263185 msg/s
+20:15 Writer completed in 6051 ms; 3211263 enqueued, 0 skipped; 530700 msg/s
+20:15 Reader completed in 6044 ms; 1627676 dequeued, 6367715 empty; 269304 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 532489 msg/s
+20:15 Total writer throughput: 530700 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 1 -> 4
+20:15 Reader completed in 6030 ms; 591397 dequeued, 2423258 empty; 98076 msg/s
+20:15 Reader completed in 6064 ms; 623494 dequeued, 2456697 empty; 102819 msg/s
+20:15 Reader completed in 6072 ms; 626525 dequeued, 2453666 empty; 103183 msg/s
+20:15 Reader completed in 6080 ms; 631120 dequeued, 2449071 empty; 103803 msg/s
+20:15 Writer completed in 6091 ms; 2473536 enqueued, 16831 skipped; 406097 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 407881 msg/s
+20:15 Total writer throughput: 406097 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 2 -> 1
+20:15 Reader completed in 6011 ms; 4287733 dequeued, 889610 empty; 713314 msg/s
+20:15 Writer completed in 6010 ms; 2147955 enqueued, 14732 skipped; 357397 msg/s
+20:15 Writer completed in 6026 ms; 2140778 enqueued, 21909 skipped; 355257 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 713314 msg/s
+20:15 Total writer throughput: 712654 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 2 -> 2
+20:15 Reader completed in 6037 ms; 2072522 dequeued, 3235893 empty; 343303 msg/s
+20:15 Reader completed in 6077 ms; 2087562 dequeued, 3220853 empty; 343519 msg/s
+20:15 Writer completed in 6091 ms; 2080835 enqueued, 16316 skipped; 341625 msg/s
+20:15 Writer completed in 6091 ms; 2080249 enqueued, 16902 skipped; 341528 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 686822 msg/s
+20:15 Total writer throughput: 683153 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 2 -> 4
+20:15 Reader completed in 6005 ms; 834115 dequeued, 1394108 empty; 138903 msg/s
+20:15 Reader completed in 6006 ms; 831261 dequeued, 1396962 empty; 138405 msg/s
+20:15 Reader completed in 6010 ms; 836457 dequeued, 1391766 empty; 139178 msg/s
+20:15 Reader completed in 6016 ms; 830281 dequeued, 1397942 empty; 138012 msg/s
+20:15 Writer completed in 6043 ms; 1666351 enqueued, 37584 skipped; 275749 msg/s
+20:15 Writer completed in 6043 ms; 1666763 enqueued, 37172 skipped; 275817 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 554498 msg/s
+20:15 Total writer throughput: 551566 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 4 -> 1
+20:15 Reader completed in 6055 ms; 3669839 dequeued, 176 empty; 606084 msg/s
+20:15 Writer completed in 6052 ms; 923560 enqueued, 2484311 skipped; 152604 msg/s
+20:15 Writer completed in 6065 ms; 909725 enqueued, 2498146 skipped; 149996 msg/s
+20:15 Writer completed in 6070 ms; 915087 enqueued, 2492784 skipped; 150756 msg/s
+20:15 Writer completed in 6073 ms; 922467 enqueued, 2485404 skipped; 151896 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 606084 msg/s
+20:15 Total writer throughput: 605252 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 4 -> 2
+20:15 Reader completed in 6109 ms; 2340399 dequeued, 543184 empty; 383107 msg/s
+20:15 Writer completed in 6113 ms; 1179320 enqueued, 327 skipped; 192920 msg/s
+20:15 Reader completed in 6118 ms; 2342044 dequeued, 541539 empty; 382812 msg/s
+20:15 Writer completed in 6124 ms; 1173255 enqueued, 6392 skipped; 191583 msg/s
+20:15 Writer completed in 6127 ms; 1168723 enqueued, 10924 skipped; 190750 msg/s
+20:15 Writer completed in 6131 ms; 1162145 enqueued, 17502 skipped; 189552 msg/s
+20:15 All tasks stopped
+20:15 Total reader throughput: 765919 msg/s
+20:15 Total writer throughput: 764805 msg/s
+20:15 Writing to queue
+20:15 Reading from queue
+20:15 Test completed
+20:15 Starting 6 second queue stress test, 4 -> 4
+20:16 Writer completed in 6043 ms; 794093 enqueued, 188946 skipped; 131407 msg/s
+20:16 Reader completed in 6064 ms; 790664 dequeued, 388983 empty; 130387 msg/s
+20:16 Reader completed in 6067 ms; 797796 dequeued, 381851 empty; 131498 msg/s
+20:16 Writer completed in 6074 ms; 774162 enqueued, 208877 skipped; 127455 msg/s
+20:16 Reader completed in 6076 ms; 760136 dequeued, 353975 empty; 125105 msg/s
+20:16 Reader completed in 6100 ms; 849206 dequeued, 395977 empty; 139214 msg/s
+20:16 Writer completed in 6112 ms; 753168 enqueued, 229871 skipped; 123228 msg/s
+20:16 Writer completed in 6113 ms; 877379 enqueued, 236732 skipped; 143527 msg/s
+20:16 All tasks stopped
+20:16 Total reader throughput: 526204 msg/s
+20:16 Total writer throughput: 525617 msg/s
+20:16 Writing to queue
+20:16 Reading from queue
+20:16 Test completed
+20:16 All tests completed. Total run time = 55 seconds

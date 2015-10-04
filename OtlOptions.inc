@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2010 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,14 +30,10 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2015-07-01
-///   Version           : 1.06
+///   Last modification : 2012-09-23
+///   Version           : 1.04
 ///</para><para>
 ///   History:
-///     1.06: 2015-07-01
-///       - Introduced OTL_TCountdownEventHasSpinCount.
-///     1.05: 2013-10-14
-///       - Introduced OTL_StrPasInAnsiStrings.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
@@ -49,6 +45,8 @@
 ///     1.0: 2010-07-01
 ///       - Released.
 ///</para></remarks>
+
+// See the Configuration block below to configure your build process.
 
 {$ALIGN 8}
 {$BOOLEVAL OFF}
@@ -73,32 +71,44 @@
   {$DEFINE OTL_HasInterlockedCompareExchangePointer}
 {$IFEND}
 
-{$IF CompilerVersion <= 21} //D2010
-  {$DEFINE OTL_LimitedGenerics}
-{$IFEND}
-
 {$IF CompilerVersion >= 21} //D2010
   {$DEFINE OTL_ERTTI}
   {$DEFINE OTL_DeprecatedResume}
   {$DEFINE OTL_KnowsParamCount}
   {$DEFINE OTL_HasTkPointer}
   {$DEFINE OTL_HasArrayOfT}
+  {$DEFINE OTL_HasNameThreadForDebugging}
 {$IFEND}
 
 {$IF CompilerVersion >= 22} //DXE
   {$DEFINE OTL_TOmniValueImplicitDateTime}
+  {$DEFINE OTL_HasThreadID}
+  {$DEFINE OTL_HasTInterlocked}
+  {$DEFINE OTL_GoodGenerics}
+  {$DEFINE OTL_HasTThreadYield}
 {$IFEND}
 
 {$IF CompilerVersion >= 23} //DXE2
   {$DEFINE OTL_Supports64Bit}
   {$DEFINE OTL_HasSystemTypes}
+  {$DEFINE OTL_HasCorrectNativeInt}
 {$IFEND}
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
-  {$DEFINE OTL_TCountdownEventHasSpinCount} //not sure yet but it definitely doesn't exist in XE2
 {$IFEND}
 
 {$IF CompilerVersion >= 26} //DXE5
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
+
+{$IF CompilerVersion >= 29} //DXE8
+  {$DEFINE OTL_MobileSupport}
+{$IFEND}
+
+{$IFNDEF MSWINDOWS}
+{$IFNDEF OTL_MobileSupport}
+{$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE8 is required for non-Windows platforms.'}
+{$ENDIF ~OTL_MobileSupport}
+{$ENDIF ~MSWINDOWS}
+

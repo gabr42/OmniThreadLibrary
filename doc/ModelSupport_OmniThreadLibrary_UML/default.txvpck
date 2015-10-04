@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nodeSet version="1.0">
+  <view uin="0l4oqg4k55s79jbis_v">
+    <property name="$defaultDiagram" value="true" />
+    <property name="$metaclass" value="Package Diagram" />
+    <property name="$name" value="default" />
+    <reference referencedUin="design:view:::uranl1zo27s5sqjhg_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="10,10,175,365" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniTaggedPointer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniLinkedData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseBoundedStack" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedPointer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.IOmniQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniRingBuffer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniLinkedData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.PReferencedPtr" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniTaggedValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.IOmniStack" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniQueueTag" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.POmniTaggedValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtr" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBaseQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniBoundedStack" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TReferencedPtrBuffer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainers.TOmniRingBuffer" />
+    </reference>
+    <reference referencedUin="design:view:::tsaeaojw77sj1019i_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="204,1,236,335" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniMessageQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniMessageQueueMessageEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniMessageQueueTee" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.IOmniCommunicationEndpoint" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.IOmniCommunicationEndpointInternal" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniMessage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniTwoWayChannel" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.IOmniCommDispatchingObserver" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.IOmniTwoWayChannel" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniCommDispatchingObserverImpl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.IOmniMessageQueueTee" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlComm.TOmniCommunicationEndpoint" />
+    </reference>
+    <reference referencedUin="design:view:::2p6118js07sj12wjk_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="459,1,231,468" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniHeuristicDataManager" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManager" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManagerOptions" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapability" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorProvider" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderCapabilities" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniPositionRange" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniCountableDataManager" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataManagerOption" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferImpl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerRangeProvider" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniBaseDataManager" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniValueEnumeratorDataPackage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackageBase" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniDataPackage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniIntegerDataPackage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBufferSet" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProviderBase" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniEnumeratorProvider" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniSourceProvider" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniLocalQueueImpl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.TOmniOutputBuffer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlDataManager.@unitclass" />
+    </reference>
+    <reference referencedUin="design:view:::wd1uwsioc7s4gm1ur_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="204,355,159,290" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TExceptionFilters" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TThreadNotificationProc" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TExceptionFilterMeth" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TThreadNotifications" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TProcMethodList" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TExceptionFilterProc" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TThreadNotificationType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlHooks.TThreadNotificationMeth" />
+    </reference>
+    <reference referencedUin="design:view:::emqtotpee7sq7kqbj_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="728,1,195,134" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OmniThreadLibrary_UML.@unitclass" />
+    </reference>
+    <reference referencedUin="design:view:::beoktto7k7sq7aa6j_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="728,154,226,183" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.PInterface" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.IOmniBlockingCollection" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollectionEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCollections.TOmniBlockingCollection" />
+    </reference>
+    <reference referencedUin="design:view:::gsjgem5bm7s6z318h_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="85,394,109,151" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlLogger.TOmniLogger" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlLogger.@unitclass" />
+    </reference>
+    <reference referencedUin="design:view:::ph8alvw9t7swx1irm_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="459,488,250,1627" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorTaskDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniFutureDelegateEx&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TEnumeratorDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelSimpleLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoinDelegateEx&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorIntoDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelJoin" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniAwait" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniCompute&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskStopDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniCompute" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TPipelineStageDelegateEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniWorkItemEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniCompute" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniAggregatorDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniDelegateEnumerator&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniSimpleTaskFinalizerTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TPipelineStageDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TEnumeratorDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniJoinState" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.Parallel" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniCompute&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskFinalizerDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoin&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoinDelegateEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorIntoDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoinDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniFuture&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelLoopOptions" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniForkJoin" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelTask" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelJoin" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniBackgroundWorkerDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniWorkItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelLoop&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniPipelineStage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelAggregatorLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniBackgroundWorker" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorStateDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniWorkItemConfig" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorSimpleDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelLoopBase" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorStateTaskDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniPipelineStage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TPipelineSimpleStageDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniSimpleTaskInitializerDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelIntoLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorIntoTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelSimpleLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelTask" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorSimpleSimpleDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoinDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorSimpleFullDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniPipeline" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniPipelineStageEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelInitializedLoop" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelLoop&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorIntoTaskDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniJoinStateEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorStateTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniWorkItemConfigEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniWorkItemConfig" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskCreateDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniPipeline" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniTaskConfig" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelInitializedLoop&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniFutureDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniWorkItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniForkJoin&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniJoinDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelMapper&lt;2&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskInitializerDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TMapProc&lt;2&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniWorkItemDoneDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniDelegateEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniJoinState" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniAwait" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.EJoinException" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniForkJoin" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskControlCreateDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniBackgroundWorker" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniFuture&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskConfig" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniTaskConfigTerminated" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniSimpleTaskFinalizerDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniSimpleTaskInitializerTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorStateDelegate&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelMapper&lt;2&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelIntoLoop&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniTaskConfigInternal" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniIteratorDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.TOmniParallelLoopOption" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlParallel.IOmniParallelAggregatorLoop&lt;1&gt;" />
+    </reference>
+    <reference referencedUin="design:view:::eg3nc01cw7s4end9r_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="190,664,265,382" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryFunction" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPool" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorker" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolScheduler" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPoolMonitorInfo" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactoryMethod" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThreadEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPThreadDataFactory" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TThreadPoolOperation" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.IOmniThreadPoolMonitor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOTPWorkerThread" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlThreadPool.TOmniThreadPool" />
+    </reference>
+    <reference referencedUin="design:view:::xfnfp3d0y7s0l2cni_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="992,1,288,258" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserverInterest" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerSubject" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserver" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerObserver" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserver" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsMessageObserverImpl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlContainerObserver.TOmniContainerWindowsEventObserverImpl" />
+    </reference>
+    <reference referencedUin="design:view:::rddifaep28setdrgh_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="747,356,202,378" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.Locked&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TWaitFor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.Atomic&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniMREW" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TFixedCriticalSection" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniLockManager&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniCancellationToken" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniResourceCount" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.IOmniResourceCount" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.IOmniLockManager&lt;1&gt;" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.IOmniCriticalSection" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniCriticalSection" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniSingleThreadUseChecker" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.IOmniLockManagerAutoUnlock" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.IOmniCancellationToken" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlSync.TOmniCS" />
+    </reference>
+    <reference referencedUin="design:view:::j1ioc0dh88sbc1z6r_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="210,1065,246,832" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniWorker" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlInvokeFunction" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniMessageExec" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskMessageEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControlMonitor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskExecutor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlOptions" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInvokeSignature_Self" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInternalStringMsg" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInvokeSignature_Self_OmniValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControlSharedInfo" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskProcedure" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlEventMonitorPool" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlList" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskGroup" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskMethod" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControlList" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInternalMessage" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskTerminatedEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniOnTerminatedFunction" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniThread" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInvokeSignature_Self_Object" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlInvokeFunctionEx" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlOption" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlListEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniOnMessageFunction" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControlListEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlInternalDebugFlag" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInternalMessageType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInvokeType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOTLThreadPriority" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniTaskControlInternals" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTask" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskTimerInfo" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInternalAddressMsg" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskGroup" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniOnTerminatedFunctionSimple" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInvokeInfo" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniExecutorType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniInternalFuncMsg" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlInternalDebugFlags" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniTaskControlEventMonitor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.TOmniSharedTaskInfo" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTaskControl.IOmniWorker" />
+    </reference>
+    <reference referencedUin="design:view:::r407p0pe08scdzjak_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="11,683,171,245" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.IOmniTask" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniTaskInvokeFunction" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectMethod" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniTaskDelegate" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.TOmniWaitObjectList" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlTask.IOmniTaskExecutor" />
+    </reference>
+    <reference referencedUin="design:view:::d2opuz5jb8st461ve_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="747,753,211,273" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniMonitorTaskEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniCountedEventMonitor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniMonitorTaskMessageEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniMonitorPoolWorkItemEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniEventMonitorPool" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniMonitorPoolThreadEvent" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniEventMonitor" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlEventMonitor.TOmniEventMonitorClass" />
+    </reference>
+    <reference referencedUin="design:view:::4yz85b3wc8ss14ubq_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="747,1045,117,134" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlRegister.@unitclass" />
+    </reference>
+    <reference referencedUin="design:view:::hen51xkfj8svsvg4q_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="747,1198,228,892" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageID" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessTimes" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounter" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PGp4AlignedInt" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniVariantData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionary" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAutoDestroyObject" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PPHashItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniInterfaceDictionaryEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PBucketArray" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniThreadEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.PHashItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionary" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinityTarget" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExtendedData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueDataType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniMessageIDType" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueObj" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAnsiStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniSystemEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerable" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniAffinity" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.THashItem" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TBucketArray" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueContainer" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessMemoryCounters" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniThreadEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutable" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAutoDestroyObject" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniSystemEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniCounter" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniWideStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAffinity" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniProcessEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniAnsiStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniInterfaceDictionaryPair" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniCounterImpl" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniWaitableValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator" />
+      <reference referencedUin="design:view:::0kjfxvon6ttnetbdt_v" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.@unitclass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniVariantData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniWideStringData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniExtendedData" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniWaitableValue" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniProcessPriorityClass" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniExecutableKind" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniEnvironment" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.IOmniValueEnumerator" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.TOmniRecordWrapper&lt;1&gt;" />
+    </reference>
+    <reference referencedUin="design:view:::yajb4nzk8spb0kye_v">
+      <property name="$shortcutReference" value="true" />
+      <property name="bounds" value="747,2109,164,134" />
+      <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommBufferTest.@unitclass" />
+    </reference>
+  </view>
+</nodeSet>

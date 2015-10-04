@@ -73,7 +73,7 @@ end;
 
 procedure TfrmTestLockManager.btnMonitorClick(Sender: TObject);
 var
-  cnt: TGp4AlignedInt;
+  cnt: TOmniAlignedInt32;
 begin
   Prepare;
   cnt.Value := 0;
@@ -99,9 +99,9 @@ end;
 
 procedure TfrmTestLockManager.btnNoCollisionsClick(Sender: TObject);
 var
-  cnt        : TGp4AlignedInt;
+  cnt        : TOmniAlignedInt32;
   lockManager: TOmniLockManager<integer>;
-  taskNums   : TGp4AlignedInt;
+  taskNums   : TOmniAlignedInt32;
 begin
   Prepare;
   cnt.Value := 0;
@@ -130,8 +130,8 @@ end;
 
 procedure TfrmTestLockManager.btnNoCollisionsMonitorClick(Sender: TObject);
 var
-  cnt     : TGp4AlignedInt;
-  taskNums: TGp4AlignedInt;
+  cnt     : TOmniAlignedInt32;
+  taskNums: TOmniAlignedInt32;
 begin
   Prepare;
   cnt.Value := 0;
@@ -157,7 +157,7 @@ end;
 
 procedure TfrmTestLockManager.btnReentrancyClick(Sender: TObject);
 var
-  cnt        : TGp4AlignedInt;
+  cnt        : TOmniAlignedInt32;
   lockManager: TOmniLockManager<integer>;
 begin
   Prepare;
@@ -191,7 +191,7 @@ end;
 
 procedure TfrmTestLockManager.btnUnsafeClick(Sender: TObject);
 var
-  cnt: TGp4AlignedInt;
+  cnt: TOmniAlignedInt32;
 begin
   Prepare;
   cnt.Value := 0;
@@ -220,7 +220,7 @@ end;
 
 procedure TfrmTestLockManager.btnSafeClick(Sender: TObject);
 var
-  cnt        : TGp4AlignedInt;
+  cnt        : TOmniAlignedInt32;
   lockManager: TOmniLockManager<integer>;
 begin
   Prepare;
