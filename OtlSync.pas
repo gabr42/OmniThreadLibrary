@@ -556,6 +556,8 @@ type
     class function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload; static; inline;
     class function CAS(const oldValue, newValue: pointer; var destination): boolean; overload; static; inline;
     class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
+    class function Increment(var Target: Integer): Integer; overload; static; inline;
+    class function Decrement(var Target: Integer): Integer; overload; static; inline;
   end; { TInterlockedEx }
 
 {$IFDEF OTL_NeedsWindowsAPIs}
@@ -2526,6 +2528,24 @@ begin
   Result := InterlockedCompareExchange(Target, Value, Comparand);
   {$ENDIF}{$ENDIF}
 end; { TInterlockedEx.CompareExchange }
+
+class function TInterlockedEx.Decrement(var Target: Integer): Integer;
+begin
+  {$IFDEF OTL_HasTInterlocked}
+  Result := TInterlocked.Decrement(Target);
+  {$ELSE}
+  Result := InterlockedDecrement(Target);
+  {$ENDIF OTL_HasTInterlocked}
+end; { TInterlockedEx.Decrement }
+
+class function TInterlockedEx.Increment(var Target: Integer): Integer;
+begin
+  {$IFDEF OTL_HasTInterlocked}
+  Result := TInterlocked.Increment(Target);
+  {$ELSE}
+  Result := InterlockedIncrement(Target);
+  {$ENDIF OTL_HasTInterlocked}
+end; { TInterlockedEx.Increment }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
