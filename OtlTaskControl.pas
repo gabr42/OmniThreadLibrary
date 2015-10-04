@@ -284,19 +284,29 @@ unit OtlTaskControl;
 interface
 
 uses
-  Windows, SysUtils, Variants, Classes, SyncObjs, Messages, TypInfo, ObjAuto,
-  GpStuff,
   OtlCommon,
+  {$IFDEF MSWINDOWS}
+  Windows,
+  Messages,
+  DetailedRTTI,
+  DSiWin32,
+  GpStuff,
+  GpLists,
+  GpStringHash,
+  {$ENDIF}
+  {$IFDEF OTL_Generics}
+  Generics.Collections,
+  {$ENDIF}
+  SysUtils,
+  Classes,
+  SyncObjs,
+  TypInfo,
   OtlSync,
   OtlComm,
   OtlTask,
   OtlContainers,
   OtlThreadPool,
-  OtlContainerObserver,
-  DetailedRTTI,
-  DSiWin32,
-  GpLists,
-  GpStringHash;
+  OtlContainerObserver;
 
 type
 {$IF CompilerVersion < 23} //pre-XE2
@@ -1114,6 +1124,7 @@ type
 implementation
 
 uses
+  ObjAuto,
   OtlHooks,
   OtlEventMonitor;
 

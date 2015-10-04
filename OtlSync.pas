@@ -240,6 +240,10 @@ type
   end; { IOmniCountdownEvent }
   {$ENDIF OTL_MobileSupport}
 
+  //At some point this type will be dropped and all the codebase will use
+  //IOmniEvent or something similar.
+  TOmniTransitionEvent = {$IFDEF MSWINDOWS}THandle{$ELSE}IOmniEvent{$ENDIF};
+
   {$IFDEF MSWINDOWS}
   IOmniHandleObject = interface ['{80B85D03-8E1F-4812-8782-38A04BA52076}']
     function  GetHandle: THandle;
