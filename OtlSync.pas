@@ -147,8 +147,8 @@ uses
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
   RTTI,
-  TypInfo,
   {$ENDIF OTL_ERTTI}
+  TypInfo,
   {$IFDEF MSWINDOWS}
   Windows,
   DSiWin32,
@@ -548,6 +548,15 @@ type
     procedure Check; inline;
     procedure DebugCheck; inline;
   end; { TOmniSingleThreadUseChecker }
+
+  // Compatibility layer for interlocked operations.
+  TInterlockedEx = class
+  public
+    class function Add(var Target: NativeInt; Increment: NativeInt): NativeInt; overload; static; inline;
+    class function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload; static; inline;
+    class function CAS(const oldValue, newValue: pointer; var destination): boolean; overload; static; inline;
+    class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
+  end; { TInterlockedEx }
 
 {$IFDEF OTL_NeedsWindowsAPIs}
   TWaitOrTimerCallback = procedure (Context: Pointer; Success: Boolean) stdcall;
@@ -2474,6 +2483,49 @@ end; { TPreSignalData.Create }
 
 {$ENDIF ~MSWINDOWS}
 {$ENDIF OTL_MobileSupport}
+
+{ TInterlockedEx }
+
+class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
+begin
+  {$IFDEF CPUX64}
+  Result := TInterlocked.Add(Int64(Target), Int64(Increment));
+  {$ELSE}{$IFDEF OTL_HasTInterlocked}
+  Result := TInterlocked.Add(Integer(Target), Integer(Increment));
+  {$ELSE}
+  Result := InterlockedExchangeAdd(Target, Increment);
+  {$ENDIF}{$ENDIF}
+end; { TInterlockedEx.Add }
+
+class function TInterlockedEx.CAS(const oldValue, newValue: pointer; var destination): boolean;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := OtlSync.CAS(oldValue, newValue, destination);
+  {$ELSE}
+  Result := CompareExchange(NativeInt(destination), NativeInt(newValue), NativeInt(oldValue)) = NativeInt(newValue);
+  {$ENDIF}
+end; { TInterlockedEx.CAS }
+
+class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
+  var destination): boolean;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := OtlSync.CAS(oldValue, newValue, destination);
+  {$ELSE}
+  Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(newValue);
+  {$ENDIF}
+end; { TInterlockedEx.CAS }
+
+class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
+begin
+  {$IFDEF CPUX64}
+  Result := TInterlocked.CompareExchange(Int64(Target), Int64(Value), Int64(Comparand));
+  {$ELSE}{$IFDEF OTL_HasTInterlocked}
+  Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
+  {$ELSE}
+  Result := InterlockedCompareExchange(Target, Value, Comparand);
+  {$ENDIF}{$ENDIF}
+end; { TInterlockedEx.CompareExchange }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;

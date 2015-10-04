@@ -884,13 +884,6 @@ type
   end;
 {$ENDIF}
 
-  // TInterlockedHelper = class helper for TInterlocked doenst seem to be working.
-  TInterlockedEx = class
-  public
-    class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
-    class function Add(var Target: NativeInt; Increment: NativeInt): NativeInt; overload; static; inline;
-  end;
-
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
   function  CreateWaitableValue: IOmniWaitableValue;
@@ -4036,34 +4029,6 @@ begin
   Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
-
-{ TInterlockedEx }
-
-class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
-begin
-  {$IFDEF CPUX64}
-    Result := TInterlocked.CompareExchange(Int64  (Target), Int64  (Value), Int64  (Comparand));
-  {$ELSE}
-    {$IFDEF OTL_HasTInterlocked}
-    Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
-    {$ELSE}
-    Result := InterlockedCompareExchange(Target, Value, Comparand);
-    {$ENDIF}
-  {$ENDIF}
-end; { TInterlockedEx.CompareExchange }
-
-class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
-begin
-  {$IFDEF CPUX64}
-    Result := TInterlocked.Add(Int64  (Target), Int64  (Increment));
-  {$ELSE}
-    {$IFDEF OTL_HasTInterlocked}
-    Result := TInterlocked.Add(Integer(Target), Integer(Increment));
-    {$ELSE}
-    Result := InterlockedExchangeAdd(Target, Increment);
-    {$ENDIF}
-  {$ENDIF}
-end; { TInterlockedEx.Add }
 
 
 initialization
