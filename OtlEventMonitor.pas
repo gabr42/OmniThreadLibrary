@@ -436,12 +436,12 @@ var
 begin
   empListLock.Acquire;
   try
-    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer(GetCurrentThreadID)));
+    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF})));
     if assigned(monitorInfo) then
       monitorInfo.Allocate
     else begin
       monitorInfo := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
-      empMonitorList.AddObject(integer(GetCurrentThreadID), monitorInfo);
+      empMonitorList.AddObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}), monitorInfo);
     end;
     Result := monitorInfo.Monitor;
   finally empListLock.Release; end;
@@ -457,11 +457,11 @@ var
 begin
   empListLock.Acquire;
   try
-    idxMonitor := empMonitorList.IndexOf(integer(GetCurrentThreadID));
+    idxMonitor := empMonitorList.IndexOf(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}));
     if idxMonitor < 0 then
       raise Exception.CreateFmt(
         'TOmniEventMonitorPool.Release: Monitor is not allocated for thread %d',
-        [GetCurrentThreadID]);
+        [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}]);
     monitorInfo := TOmniCountedEventMonitor(empMonitorList.Objects[idxMonitor]);
     Assert(monitorInfo.Monitor = monitor);
     monitorInfo.Release;

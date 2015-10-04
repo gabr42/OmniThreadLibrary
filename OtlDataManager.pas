@@ -33,13 +33,15 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover
+///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2013-10-19
-///   Version           : 1.0a
+///   Last modification : 2015-10-04
+///   Version           : 1.01
 ///</para><para>
 ///   History:
+///     1.01: 2015-10-04
+///       - Imported mobile support by [Sean].
 ///     1.0a: 2013-10-19
 ///       - Don't crash if the source is empty.
 ///     1.0: 2010-12-10
@@ -53,7 +55,6 @@ unit OtlDataManager;
 interface
 
 uses
-  GpStuff,
   OtlCommon,
   OtlContainers,
   OtlCollections;
@@ -127,15 +128,19 @@ function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: int
 implementation
 
 uses
+{$IFDEF MSWINDOWS}
   Windows,
-  SysUtils,
   Contnrs,
+  DSiWin32,
+{$ELSE}
+  System.Diagnostics,
+{$ENDIF}
+  GpLists,
+  SysUtils,
   Classes,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  DSiWin32,
-  GpLists,
   OtlSync;
 
 const
@@ -167,7 +172,7 @@ type
   strict private
     idpHigh    : int64;
     idpHighSign: int64;
-    idpLow     : TOmniAlignedInt6464;
+    idpLow     : TOmniAlignedInt64;
     idpPosition: integer;
     idpSign    : integer;
     idpStep    : integer;
@@ -261,7 +266,7 @@ type
   strict private
     obiBuffer         : TOmniBlockingCollection;
     obiDataManager_ref: TOmniBaseDataManager;
-    obiEmptyHandle    : THandle;
+    obiEmptyEvent     : TOmniTransitionEvent;
     obiFull           : boolean;
     obiHasData        : boolean;
     obiNextPosition   : int64;
@@ -270,12 +275,13 @@ type
   strict protected
     procedure SetRange(range: TOmniPositionRange);
   public
-    constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
+    constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection;
+      const AShareLock: IOmniCriticalSection = nil);
     destructor  Destroy; override;
     procedure CopyToOutput;
     procedure MarkFull;
     procedure Submit(position: int64; const data: TOmniValue); override;
-    property EmptyHandle: THandle read obiEmptyHandle;
+    property EmptyEvent: TOmniTransitionEvent read obiEmptyEvent;
     property IsFull: boolean read obiFull;
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
@@ -283,9 +289,14 @@ type
   TOmniOutputBufferSet = class(TOmniOutputBuffer)
   strict private
     obsActiveBuffer_ref: TOmniOutputBufferImpl;
-    obsActiveIndex     : integer;
+    obsShareLock       : IOmniCriticalSection;
     obsBuffers         : array [1..CNumBuffersInSet] of TOmniOutputBufferImpl;
-    obsWaitHandles     : array [1..CNumBuffersInSet] of THandle;
+    {$IFDEF MSWINDOWS}
+    obsActiveIndex     : integer;
+    obsWaitHandles     : array[1..CNumBuffersInSet] of THandle;
+    {$ELSE}
+    obsWaitEvents      : TWaitFor;
+    {$ENDIF}
   public
     constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
     destructor  Destroy; override;
@@ -364,6 +375,9 @@ type
     const CFetchTimeout_ms = 10;
   strict private
     hdmEstimatedPackageSize: TOmniAlignedInt32;
+    {$IFNDEF MSWINDOWS}
+    FStopWatch: TStopwatch;
+    {$ENDIF}
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer; options:
       TOmniDataManagerOptions);
@@ -810,18 +824,26 @@ end; { TOmniLocalQueueImpl.Split }
 { TOmniOutputBufferImpl }
 
 constructor TOmniOutputBufferImpl.Create(owner: TOmniBaseDataManager;
-  output: IOmniBlockingCollection);
+  output: IOmniBlockingCollection; const AShareLock: IOmniCriticalSection);
 begin
   inherited Create;
   obiDataManager_ref := owner;
   obiOutput := output;
   obiBuffer := TOmniBlockingCollection.Create;
-  obiEmptyHandle := CreateEvent(nil, false, true, nil);
+  {$IFDEF MSWINDOWS}
+  obiEmptyEvent := CreateEvent(nil, false, true, nil);
+  {$ELSE}
+  obiEmptyEvent := CreateOmniEvent(false, true, AShareLock);
+  {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferImpl.Create }
 
 destructor TOmniOutputBufferImpl.Destroy;
 begin
-  DSiCloseHandleAndNull(obiEmptyHandle);
+  {$IFDEF MSWINDOWS}
+  DSiCloseHandleAndNull(obiEmptyEvent);
+  {$ELSE}
+  obiEmptyEvent := nil;
+  {$ENDIF ~MSWINDOWS}
   FreeAndNil(obiBuffer);
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
@@ -832,7 +854,7 @@ var
 begin
   while obiBuffer.TryTake(value) do
     obiOutput.Add(value);
-  SetEvent(obiEmptyHandle);
+  SetEvent(obiEmptyEvent);
   obiFull := false;
 end; { TOmniOutputBufferImpl.CopyToOutput }
 
@@ -864,11 +886,25 @@ constructor TOmniOutputBufferSet.Create(owner: TOmniBaseDataManager;
   output: IOmniBlockingCollection);
 var
   iBuffer: integer;
+  {$IFNDEF MSWINDOWS}
+  Events: array of IOmniSynchro;
+  {$ENDIF ~MSWINDOWS}
 begin
+  obsShareLock := CreateOmniCriticalSection;
+  {$IFNDEF MSWINDOWS}
+  SetLength(Events, CNumBuffersInSet);
+  {$ENDIF}
   for iBuffer := 1 to CNumBuffersInSet do begin
     obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output);
-    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyHandle;
+    {$IFDEF MSWINDOWS}
+    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyEvent;
+    {$ELSE}
+    Events[iBuffer-1] := obsBuffers[iBuffer].EmptyEvent;
+    {$ENDIF ~MSWINDOWS}
   end;
+  {$IFNDEF MSWINDOWS}
+  obsWaitEvents := TWaitFor.Create(Events, obsShareLock);
+  {$ENDIF}
   ActivateBuffer;
 end; { TOmniOutputBufferSet.Create }
 
@@ -878,17 +914,35 @@ var
 begin
   for iBuffer := 1 to CNumBuffersInSet do
     obsBuffers[iBuffer].Free;
+  {$IFNDEF MSWINDOWS}
+  FreeAndNil(obsWaitEvents);
+  {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniOutputBufferSet.Destroy }
 
 procedure TOmniOutputBufferSet.ActivateBuffer;
 var
+  {$IFDEF MSWINDOWS}
   awaited: cardinal;
+  {$ELSE}
+  Signaller: IOmniSynchro;
+  iBuffer  : integer;
+  {$ENDIF}
 begin
+  {$IFDEF MSWINDOWS}
   awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE);
   Assert({(awaited >= WAIT_OBJECT_0) and } (awaited < (WAIT_OBJECT_0 + CNumBuffersInSet)));
   obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
   obsActiveBuffer_ref := obsBuffers[obsActiveIndex];
+  {$ELSE}
+  obsWaitEvents.WaitAny(INFINITE, Signaller);
+  for iBuffer := 1 to CNumBuffersInSet do begin
+    if Signaller <> obsBuffers[iBuffer].EmptyEvent then
+      continue; //for
+    obsActiveBuffer_ref := obsBuffers[iBuffer];
+    break; //for
+  end;
+  {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferSet.ActivateBuffer }
 
 procedure TOmniOutputBufferSet.Submit(position: int64; const data: TOmniValue);
@@ -1086,6 +1140,9 @@ constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider
 begin
   inherited Create(sourceProvider, numWorkers, options);
   hdmEstimatedPackageSize.Value := GetDataCountForGeneration(High(integer)); // hope for the best
+  {$IFNDEF MSWINDOWS}
+  FStopWatch := TStopWatch.Create;
+  {$ENDIF}
 end; { TOmniHeuristicDataManager.Create }
 
 function TOmniHeuristicDataManager.GetNextFromProvider(package: TOmniDataPackage;
@@ -1103,9 +1160,19 @@ begin
   dataSize := GetDataCountForGeneration(generation);
   if dataSize > hdmEstimatedPackageSize.Value then
     dataSize := hdmEstimatedPackageSize.Value;
+  {$IFDEF MSWINDOWS}
   time := DSiTimeGetTime64;
+  {$ELSE}
+  FStopWatch.Reset;
+  FStopWatch.Start;
+  {$ENDIF}
   Result := SourceProvider.GetPackage(dataSize, package);
+  {$IFDEF MSWINDOWS}
   time := DSiTimeGetTime64 - time;
+  {$ELSE}
+  FStopWatch.Stop;
+  time := FStopWatch.ElapsedMilliseconds;
+  {$ENDIF}
   if Result then begin
     if time = 0 then
       dataPerMs := CDataLimit

@@ -33,12 +33,14 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover
+///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-09-07
-///   Version           : 1.36b
+///   Last modification : 2015-10-04
+///   Version           : 1.37
 ///</para><para>
 ///   History:
+///     1.37: 2015-10-04
+///       - Imported mobile support by [Sean].
 ///     1.36b: 2015-09-07
 ///       - Added a debug log (when compiling a Debug build) when TWaitFor.MsgWaitAny
 ///         returns WAIT_FAILED.
@@ -291,12 +293,11 @@ uses
   DetailedRTTI,
   DSiWin32,
   GpStuff,
+  {$ELSE}
+  Generics.Collections,
+  {$ENDIF ~MSWINDOWS}
   GpLists,
   GpStringHash,
-  {$ENDIF}
-  {$IFDEF OTL_Generics}
-  Generics.Collections,
-  {$ENDIF}
   SysUtils,
   Classes,
   SyncObjs,
@@ -309,16 +310,14 @@ uses
   OtlContainerObserver;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   IOmniTaskControl = interface;
   TOmniSharedTaskInfo = class;
   
   IOmniTaskControlMonitor = interface ['{20CB3AB7-04D8-454B-AEFE-CFCFF8F27301}']
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl;
+    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl;
+    {$ENDIF MSWINDOWS}
   end; { IOmniTaskControlMonitor }
 
   {$TYPEINFO ON} {$METHODINFO ON}
@@ -329,7 +328,7 @@ type
     procedure SetTask(const value: IOmniTask);
   //message loop hooks; temporary solution, will be replaced with a better one
     procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult);
-    procedure BeforeWait(var timeout_ms: DWORD);
+    procedure BeforeWait(var timeout_ms: cardinal);
     procedure MessageLoopPayload;
     procedure ProcessThreadMessages;
   //
@@ -349,7 +348,7 @@ type
     procedure ProcessMessages;
   protected //message loop hooks
     procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult); virtual;
-    procedure BeforeWait(var timeout_ms: DWORD); virtual;
+    procedure BeforeWait(var timeout_ms: cardinal); virtual;
     procedure DispatchMessage(var msg: TOmniMessage); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessThreadMessages; virtual;
@@ -442,7 +441,7 @@ type
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
-    function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  MsgWait({$IFDEF MSWINDOWS}wakeMask: DWORD = QS_ALLEVENTS{$ELSE}wakeAll: boolean = true{$ENDIF}): IOmniTaskControl;
     function  OnMessage(eventDispatcher: TObject): IOmniTaskControl; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
@@ -467,7 +466,9 @@ type
     function  Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
     {$ENDIF OTL_Anonymous}
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
+    {$IFDEF MSWINDOWS}
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
+    {$ENDIF MSWINDOWS}
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
@@ -479,7 +480,7 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
-    function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
+    function  TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -567,12 +568,14 @@ type
     ostiCommChannel       : IOmniTwoWayChannel;
     ostiCounter           : IOmniCounter;
     ostiLock              : TSynchroObject;
+    {$IFDEF MSWINDOWS}
     ostiMonitor           : TOmniContainerWindowsMessageObserver;
+    {$ENDIF MSWINDOWS}
     ostiMonitorLock       : TOmniCS;
     ostiStopped           : boolean;
     ostiTaskName          : string;
-    ostiTerminatedEvent   : THandle;
-    ostiTerminateEvent    : THandle;
+    ostiTerminatedEvent   : TOmniTransitionEvent;
+    ostiTerminateEvent    : TOmniTransitionEvent;
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
   strict protected
@@ -586,12 +589,14 @@ type
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
+    {$IFDEF MSWINDOWS}
     property Monitor: TOmniContainerWindowsMessageObserver read ostiMonitor write ostiMonitor;
+    {$ENDIF MSWINDOWS}
     property MonitorLock: TOmniCS read ostiMonitorLock;
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
-    property TerminatedEvent: THandle read ostiTerminatedEvent write ostiTerminatedEvent;
-    property TerminateEvent: THandle read ostiTerminateEvent write ostiTerminateEvent;
+    property TerminatedEvent: TOmniTransitionEvent read ostiTerminatedEvent write ostiTerminatedEvent;
+    property TerminateEvent: TOmniTransitionEvent read ostiTerminateEvent write ostiTerminateEvent;
     property Terminating: boolean read ostiTerminating write ostiTerminating;
     property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
   end; { TOmniSharedTaskInfo }
@@ -715,13 +720,20 @@ type
       IdxLastTerminate  : integer;
       IdxLastWaitObject : integer;
       IdxRebuildHandles : integer;
-      NewMessageEvent   : THandle;
+      NewMessageEvent   : TOmniTransitionEvent;
       NumWaitHandles    : integer;
-      WaitFlags         : DWORD;
-      WaitHandles       : array of THandle;
+      WaitHandles       : {$IFDEF MSWINDOWS}array of THandle{$ELSE}TOmniSynchroArray{$ENDIF};
       Waiter            : TWaitFor;
+      {$IFDEF MSWINDOWS}
+      WaitFlags         : DWORD;
       WaitWakeMask      : DWORD;
+      {$ELSE}
+      WaitWakeAll       : boolean;
+      {$ENDIF ~MSWINDOWS}
       function  AsString: string;
+      {$IFNDEF MSWINDOWS}
+      function  GetSynchroIndex(WaitResult: TWaitResult; const Handle: IOmniSynchro): integer;
+      {$ENDIF ~MSWINDOWS}
     end;
   strict private // those must be 4-aligned, keep them on the top
     oteInternalLock      : TOmniCS;
@@ -729,8 +741,8 @@ type
     oteTimerLock         : TOmniCS;
   strict private
     oteCommList          : TInterfaceList;
-    oteCommNewMsgList    : TGpInt64List;
-    oteCommRebuildHandles: THandle;
+    oteCommNewMsgList    : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
+    oteCommRebuildHandles: TOmniTransitionEvent;
     oteException         : Exception;
     oteExecutorType      : TOmniExecutorType;
     oteExitCode          : TOmniAlignedInt32;
@@ -745,21 +757,25 @@ type
     oteOwner_ref         : TOmniTaskControl;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
-    oteTerminateHandles  : TGpInt64List;
+    oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
     oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList;
+    {$IFDEF MSWINDOWS}
     oteWakeMask          : DWORD;
+    {$ELSE}
+    oteWakeAll           : boolean;
+    {$ENDIF ~MSWINDOWS}
     oteWaitHandlesGen    : int64;
     oteWaitObjectList    : TOmniWaitObjectList;
-    oteWorkerInitialized : THandle;
+    oteWorkerInitialized : TOmniTransitionEvent;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
   strict protected
     procedure CallOmniTimer;
     procedure CheckTimers;
     procedure Cleanup;
-    procedure DispatchCommMessage(newMsgHandle: THandle; const task: IOmniTask;
-      var msgInfo: TOmniMessageInfo);
+    procedure DispatchCommMessage(newMsgHandle: TOmniTransitionEvent;
+      const task: IOmniTask; var msgInfo: TOmniMessageInfo);
     procedure DispatchMessages(const task: IOmniTask);
     function  GetExitCode: integer; inline;
     function  GetExitMessage: string;
@@ -774,7 +790,9 @@ type
     procedure Initialize;
     procedure InsertTimer(wakeUpTime_ms: int64; timerInfo: TOmniTaskTimerInfo);
     function  LocateTimer(timerID: integer): integer;
+    {$IFDEF MSWINDOWS}
     procedure ProcessThreadMessages;
+    {$ENDIF MSWINDOWS}
     procedure RaiseInvalidSignature(const methodName: string);
     procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
       TOmniMessageInfo);
@@ -785,15 +803,16 @@ type
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
   protected
-    function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask; var msgInfo:
-      TOmniMessageInfo): boolean; virtual;
+    function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask;
+      var msgInfo: TOmniMessageInfo{$IFNDEF MSWINDOWS}; SignalEvent: IOmnIEvent{$ENDIF}): boolean; virtual;
     procedure DispatchOmniMessage(msg: TOmniMessage; doCheckTimers: boolean); virtual;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessMessages(task: IOmniTask); virtual;
     procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     function  TimeUntilNextTimer_ms: cardinal; virtual;
-    function  WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal): TWaitFor.TWaitForResult; virtual;
+    function  WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal
+      {$IFNDEF MSWINDOWS}; var SignalEvent: IOmniEvent{$ENDIF}): TWaitFor.TWaitForResult; virtual;
   public
     constructor Create(owner_ref: TOmniTaskControl; const workerIntf: IOmniWorker); overload;
     constructor Create(owner_ref: TOmniTaskControl; method: TOmniTaskMethod); overload;
@@ -804,14 +823,14 @@ type
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure Asy_RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
+    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure Asy_SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage:
       TOmniMessageID); overload;
     procedure Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure Asy_UnregisterWaitObject(waitObject: THandle);
+    procedure Asy_UnregisterWaitObject(waitObject: TOmniTransitionEvent);
     procedure EmptyMessageQueues(const task: IOmniTask);
-    procedure TerminateWhen(handle: THandle); overload;
+    procedure TerminateWhen(handle: TOmniTransitionEvent); overload;
     function  WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -820,8 +839,12 @@ type
     property Priority: TOTLThreadPriority read otePriority write otePriority;
     property TaskException: Exception read oteException write oteException;
     property Terminating: boolean read oteTerminating write oteTerminating;
+    {$IFDEF MSWINDOWS}
     property WakeMask: DWORD read oteWakeMask write oteWakeMask;
-    property WorkerInitialized: THandle read oteWorkerInitialized;
+    {$ELSE}
+    property WakeAll: boolean read oteWakeAll write oteWakeAll;
+    {$ENDIF ~MSWINDOWS}
+    property WorkerInitialized: TOmniTransitionEvent read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
   end; { TOmniTaskExecutor }
@@ -835,7 +858,7 @@ type
     otSharedInfo_ref          : TOmniSharedTaskInfo;
     otTerminateWillCallExecute: boolean;
     otThreadData              : IInterface;
-    otThreadID                : DWORD;
+    otThreadID                : TThreadID;
   protected
     function  GetCancellationToken: IOmniCancellationToken; inline;
     function  GetComm: IOmniCommunicationEndpoint; inline;
@@ -844,7 +867,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam: TOmniValueContainer; inline;
-    function  GetTerminateEvent: THandle; inline;
+    function  GetTerminateEvent: TOmniTransitionEvent; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
     procedure InternalExecute(calledFromTerminate: boolean);
@@ -860,7 +883,7 @@ type
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
+    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetTimer(interval_ms: cardinal); overload;
@@ -871,7 +894,7 @@ type
     procedure StopTimer;
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure UnregisterWaitObject(waitObject: THandle);
+    procedure UnregisterWaitObject(waitObject: TOmniTransitionEvent);
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -880,7 +903,7 @@ type
     property Name: string read GetName;
     property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
-    property TerminateEvent: THandle read GetTerminateEvent;
+    property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTask }
@@ -888,11 +911,20 @@ type
   TOmniThread = class(TThread) // Factor this class into OtlThread unit?
   strict private
     otTask: IOmniTask;
+    {$IFNDEF MSWINDOWS}
+    otThreadTerminationEvent: IOmniEvent;
+    {$ENDIF}
   protected
     procedure Execute; override;
+    {$IFNDEF MSWINDOWS}
+    procedure DoTerminate; override;
+    {$ENDIF}
   public
     constructor Create(task: IOmniTask);
     property Task: IOmniTask read otTask;
+    {$IFNDEF MSWINDOWS}
+    property ThreadTerminationEvent: IOmniEvent read otThreadTerminationEvent;
+    {$ENDIF}
   end; { TOmniThread }
 
   TOmniTaskControlInternalDebugFlag = (dfLogDispatch);
@@ -900,7 +932,7 @@ type
 
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
-    function  GetTerminatedEvent: THandle;
+    function  GetTerminatedEvent: TOmniTransitionEvent;
     procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
   //
     function  FilterMessage(const msg: TOmniMessage): boolean;
@@ -908,7 +940,7 @@ type
     procedure ForwardTaskTerminated;
     property DebugFlags: TOmniTaskControlInternalDebugFlags read GetDebugFlags
       write SetDebugFlags;
-    property TerminatedEvent: THandle read GetTerminatedEvent;
+    property TerminatedEvent: TOmniTransitionEvent read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
@@ -934,6 +966,9 @@ type
     otcTerminateTokens     : TInterfaceList;
     otcThread              : TOmniThread;
     otcUserData            : TOmniValueContainer;
+    {$IFNDEF MSWINDOWS}
+    FMultiWaitLock         : IOmniCriticalSection;
+    {$ENDIF ~MSWINDOWS}
   strict protected
     procedure CreateInternalMonitor;
     function  CreateTask: IOmniTask;
@@ -955,8 +990,8 @@ type
     function  GetOptions: TOmniTaskControlOptions;
     function  GetParam: TOmniValueContainer;
     function  GetSharedInfo: TOmniSharedTaskInfo;
-    function  GetTerminatedEvent: THandle;
-    function  GetTerminateEvent: THandle;
+    function  GetTerminatedEvent: TOmniTransitionEvent;
+    function  GetTerminateEvent: TOmniTransitionEvent;
     function  GetUniqueID: int64; inline;
     function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
     procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
@@ -998,7 +1033,7 @@ type
     function  Join(const group: IOmniTaskGroup): IOmniTaskControl;
     function  Leave(const group: IOmniTaskGroup): IOmniTaskControl;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
-    function  MsgWait(wakeMask: DWORD = QS_ALLEVENTS): IOmniTaskControl;
+    function  MsgWait({$IFDEF MSWINDOWS}wakeMask: DWORD = QS_ALLEVENTS{$ELSE}wakeAll: boolean = true{$ENDIF}): IOmniTaskControl;
     function  OnMessage(eventDispatcher: TObject): IOmniTaskControl; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl; overload;
@@ -1018,7 +1053,9 @@ type
     {$ENDIF OTL_Anonymous}
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
       IOmniTaskControl;
+    {$IFDEF MSWINDOWS}
     function  SetMonitor(hWindow: THandle): IOmniTaskControl;
+    {$ENDIF MSWINDOWS}
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
@@ -1031,7 +1068,7 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
-    function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
+    function  TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -1101,6 +1138,9 @@ type
   strict private
     otgRegisteredWith: IOmniTask;
     otgTaskList      : IOmniTaskControlList;
+    {$IFNDEF MSWINDOWS}
+    FMultiWaitLock   : IOmniCriticalSection;
+    {$ENDIF ~MSWINDOWS}
   strict protected
     procedure AutoUnregisterComms;
     procedure InternalUnregisterAllCommFrom(const task: IOmniTask);
@@ -1126,6 +1166,10 @@ implementation
 uses
   ObjAuto,
   OtlHooks,
+  {$IFNDEF MSWINDOWS}
+  Rtti,
+  Diagnostics,
+  {$ENDIF ~MSWINDOWS}
   OtlEventMonitor;
 
 type
@@ -1390,7 +1434,7 @@ begin
   Result := otParameters_ref;
 end; { TOmniTask.GetParam }
 
-function TOmniTask.GetTerminateEvent: THandle;
+function TOmniTask.GetTerminateEvent: TOmniTransitionEvent;
 begin
   Result := otSharedInfo_ref.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
@@ -1410,7 +1454,7 @@ var
   chainTo       : IOmniTaskControl;
   sync          : TSynchroObject;
   taskException : Exception;
-  terminateEvent: TDSiEventHandle;
+  terminateEvent: TOmniTransitionEvent;
 begin
   otCleanupLock.EnterWriteLock;
   try
@@ -1418,9 +1462,9 @@ begin
       Exit;
     otExecuting := true;
   finally otCleanupLock.ExitWriteLock; end;
-  otThreadID := GetCurrentThreadID;
+  otThreadID := GetThreadID;
   chainTo := nil;
-  terminateEvent := 0;
+  terminateEvent := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
   try
     try
       try
@@ -1452,9 +1496,11 @@ begin
         otSharedInfo_ref.MonitorLock.Acquire;
         try
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
+          {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
               integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+          {$ENDIF MSWINDOWS}
           otSharedInfo_ref := nil;
         finally sync.Release; end;
       end;
@@ -1464,8 +1510,7 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      if terminateEvent <> 0 then
-        SetEvent(terminateEvent);
+      SetEvent(terminateEvent);
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
@@ -1484,7 +1529,7 @@ begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
-procedure TOmniTask.RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
+procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
 begin
   otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
 end; { TOmniTask.RegisterWaitObject }
@@ -1557,7 +1602,7 @@ begin
   otExecutor_ref.Asy_UnregisterComm(comm);
 end; { TOmniTask.UnregisterComm }
 
-procedure TOmniTask.UnregisterWaitObject(waitObject: THandle);
+procedure TOmniTask.UnregisterWaitObject(waitObject: TOmniTransitionEvent);
 begin
   otExecutor_ref.Asy_UnregisterWaitObject(waitObject);
 end; { TOmniTask.UnregisterWaitObject }
@@ -1569,7 +1614,7 @@ begin
   // do nothing
 end; { TOmniWorker.AfterWait }
 
-procedure TOmniWorker.BeforeWait(var timeout_ms: DWORD);
+procedure TOmniWorker.BeforeWait(var timeout_ms: cardinal);
 begin
   // do nothing
 end; { TOmniWorker.BeforeWait }
@@ -1657,9 +1702,40 @@ var
   iHandle: integer;
 begin
   Result := '';
+  {$IFDEF MSWINDOWS}
   for iHandle := 0 to NumWaitHandles - 1 do
     Result := Result + IntToStr(WaitHandles[iHandle]) + ' ';
+  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.TOmniMessageInfo.AsString }
+
+{$IFNDEF MSWINDOWS}
+function TOmniTaskExecutor.TOmniMessageInfo.GetSynchroIndex(
+  WaitResult: TWaitResult; const Handle: IOmniSynchro): integer;
+var
+  Member   : IOmniSynchro;
+  Idx      : integer;
+  Comparand: IOmniSynchro;
+
+  function Canonical(const Overridable: IOmniSynchro): IOmniSynchro;
+  begin
+    if not Supports(Overridable, IOmniSynchro, result) then
+     result := Overridable
+  end;
+
+begin
+  Result := -1;
+  if WaitResult <> wrSignaled then
+    Exit;
+  Idx := -1;
+  Comparand := Canonical(Handle);
+  for Member in WaitHandles do begin
+    Inc(Idx);
+    if (Member <> Comparand) and (Canonical(Member) <> Comparand) then
+      continue; //for
+    Exit(Idx);
+  end
+end; { TOmniTaskExecutor.TOmniMessageInfo.GetSynchroIndex }
+{$ENDIF ~MSWINDOWS}
 
 { TOmniTaskExecutor }
 
@@ -1709,21 +1785,59 @@ begin
     FreeAndNil(oteCommNewMsgList);
     FreeAndNil(oteWaitObjectList);
   finally oteInternalLock.Release; end;
+  {$IFNDEF MSWINDOWS}
   FreeAndNil(oteTerminateHandles);
+  {$ENDIF ~MSWINDOWS}
   FreeAndNil(oteMethodHash);
   FreeAndNil(oteException);
+  {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(oteCommRebuildHandles);
   DSiCloseHandleAndNull(oteWorkerInitialized);
+  {$ELSE}
+  oteCommRebuildHandles := nil;
+  oteWorkerInitialized := nil;
+  {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniTaskExecutor.Destroy }
 
 procedure TOmniTaskExecutor.Asy_Execute(const task: IOmniTask);
 const
+  {$IFDEF MSWINDOWS}
   CThreadPriorityNum: array [TOTLThreadPriority] of integer = (
     THREAD_PRIORITY_IDLE, THREAD_PRIORITY_LOWEST, THREAD_PRIORITY_BELOW_NORMAL,
     THREAD_PRIORITY_NORMAL, THREAD_PRIORITY_ABOVE_NORMAL, THREAD_PRIORITY_HIGHEST);
+  {$ENDIF MSWINDOWS}
+
+  {$IFDEF POSIX}
+  CThreadPriorityNum: array [TOTLThreadPriority] of integer = (1, 10, 25, 50, 75, 99);
+  {$ENDIF}
+{$IFDEF POSIX}
+var
+  This : TThread;
+  Value: integer;
+{$ENDIF}
 begin
+  {$IFDEF MSWINDOWS}
   SetThreadPriority(GetCurrentThread, CThreadPriorityNum[Priority]);
+  {$ELSE}
+  This  := TThread.CurrentThread;
+  Value := CThreadPriorityNum[Priority];
+  if This.Policy = 0 {SCHED_OTHER} then begin
+    if Value = 0 then
+      This.Priority := 0
+  end
+  else begin
+    if Value <= 1 then
+      Value := 1;
+    if Value >= 99 then
+      Value := 99;
+    try
+      This.Priority := Value
+    except
+      // We don't have privilege. We need to be root to do this.
+    end
+  end;
+  {$ENDIF}
   try
     case oteExecutorType of
       etMethod:
@@ -1754,7 +1868,7 @@ begin
   try
     if not assigned(oteCommList) then begin
       oteCommList := TInterfaceList.Create;
-      oteCommNewMsgList := TGpInt64List.Create;
+      oteCommNewMsgList := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
     end;
     oteCommList.Add(comm);
     oteCommNewMsgList.Add((comm as IOmniCommunicationEndpoint).NewMessageEvent);
@@ -1762,7 +1876,7 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
 
-procedure TOmniTaskExecutor.Asy_RegisterWaitObject(waitObject: THandle;
+procedure TOmniTaskExecutor.Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent;
   responseHandler: TOmniWaitObjectMethod);
 begin
   if oteExecutorType <> etWorker then
@@ -1818,7 +1932,7 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
-procedure TOmniTaskExecutor.Asy_UnregisterWaitObject(waitObject: THandle);
+procedure TOmniTaskExecutor.Asy_UnregisterWaitObject(waitObject: TOmniTransitionEvent);
 begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterWaitObject: ' +
@@ -1874,8 +1988,8 @@ begin
   FreeAndNil(oteTimers);
 end; { TOmniTaskExecutor.Cleanup }
 
-procedure TOmniTaskExecutor.DispatchCommMessage(newMsgHandle: THandle; const task: IOmniTask;
-  var msgInfo: TOmniMessageInfo);
+procedure TOmniTaskExecutor.DispatchCommMessage(newMsgHandle: TOmniTransitionEvent;
+  const task: IOmniTask; var msgInfo: TOmniMessageInfo);
 var
   gotMsg: boolean;
   i     : integer;
@@ -1901,7 +2015,8 @@ begin
 end; { TOmniTaskExecutor.DispatchCommMessage }
 
 function TOmniTaskExecutor.DispatchEvent(awaited: TWaitFor.TWaitForResult;
-  const task: IOmniTask; var msgInfo: TOmniMessageInfo): boolean;
+  const task: IOmniTask; var msgInfo: TOmniMessageInfo
+  {$IFNDEF MSWINDOWS}; SignalEvent: IOmnIEvent{$ENDIF}): boolean;
 var
   info           : TWaitFor.THandleInfo;
   rebuildHandles : boolean;
@@ -1919,19 +2034,27 @@ begin
   else if awaited <> waAwaited then
     raise Exception.Create('TOmniTaskExecutor.DispatchEvent: Unexpected TWaitResult')
   else begin
+    {$IFNDEF MSWINDOWS}
+    info.Index := msgInfo.GetSynchroIndex(TWaitResult(awaited), SignalEvent); //TODO: This TWaitResult cast is probably incorrect
+    {$ENDIF ~MSWINDOWS}
     // First test if any of Terminate events was signalled
     if (msgInfo.IdxFirstTerminate <> -1) then
+      {$IFDEF MSWINDOWS}
       for info in msgInfo.Waiter.Signalled do
+      {$ENDIF MSWINDOWS}
         if ((info.Index >= msgInfo.IdxFirstTerminate) and (info.Index <= msgInfo.IdxLastTerminate)) then begin
           Result := false; //break out of the message loop
           Exit;
         end;
 
     // Only then test other events
-    for info in msgInfo.Waiter.Signalled do begin
+    {$IFDEF MSWINDOWS}
+    for info in msgInfo.Waiter.Signalled do
+    {$ENDIF MSWINDOWS}
+    begin
       if (info.Index >= msgInfo.IdxFirstMessage) and (info.Index <= msgInfo.IdxLastMessage) then begin
         if (info.Index = msgInfo.IdxFirstMessage) or assigned(oteCommList) then
-          DispatchCommMessage(msgInfo.WaitHandles[info.Index], task, msgInfo);
+          DispatchCommMessage({$IFDEF MSWINDOWS}msgInfo.WaitHandles[info.Index]{$ELSE}SignalEvent{$ENDIF}, task, msgInfo);
       end
       else if (info.Index >= msgInfo.IdxFirstWaitObject) and (info.Index <= msgInfo.IdxLastWaitObject) then begin
         if assigned(oteWaitObjectList) then begin
@@ -1945,14 +2068,18 @@ begin
       end // comm handles
       else if info.Index = msgInfo.IdxRebuildHandles then
         rebuildHandles := true
+      {$IFDEF MSWINDOWS} //TODO: Implement for non-Windows platforms
       else if info.Index = WAIT_OBJECT_0 + msgInfo.NumWaitHandles then //message
         // thread messages are always processed below
         if assigned(WorkerIntf) then
           WorkerIntf.ProcessThreadMessages;
-      end;
+      {$ENDIF MSWINDOWS}
     end;
+  end;
 
+  {$IFDEF MSWINDOWS}
   ProcessThreadMessages;
+  {$ENDIF MSWINDOWS}
   if rebuildHandles then begin
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
@@ -1975,14 +2102,25 @@ begin
       end;
       oteWorkerInitOK := true;
     finally SetEvent(WorkerInitialized); end;
+
     if tcoMessageWait in Options then
+      {$IFDEF MSWINDOWS}
       oteMsgInfo.WaitWakeMask := WakeMask
+      {$ELSE}
+      oteMsgInfo.WaitWakeAll := WakeAll
+      {$ENDIF}
     else
+      {$IFDEF MSWINDOWS}
       oteMsgInfo.WaitWakeMask := 0;
+      {$ELSE}
+      oteMsgInfo.WaitWakeAll := false;
+      {$ENDIF}
+    {$IFDEF MSWINDOWS}
     if tcoAlertableWait in Options then
       oteMsgInfo.WaitFlags := MWMO_ALERTABLE
     else
       oteMsgInfo.WaitFlags := 0;
+    {$ENDIF}
     RebuildWaitHandles(task, oteMsgInfo);
     MainMessageLoop(task, oteMsgInfo);
   finally
@@ -2146,6 +2284,9 @@ var
   end; { VerifyConstFlags }
 
 begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
+  {$IFNDEF MSWINDOWS} //TODO: repimplement using ERTTI for D2010+
+  methodAddress := nil;
+  {$ELSE}
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
   methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor,
@@ -2200,6 +2341,7 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
       RaiseInvalidSignature(methodName);
     params := params.NextParam;
   end;
+  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
 
 procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage; var
@@ -2248,18 +2390,23 @@ function TOmniTaskExecutor.HaveElapsedTimer: boolean;
 begin
   oteTimerLock.Acquire;
   try
-    Result := (oteTimers.Count > 0) and (oteTimers[0] <= DSiTimeGetTime64);
+    Result := (oteTimers.Count > 0) and (oteTimers[0] <= {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopwatch.GetTimeStamp {$ENDIF});
   finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.HaveElapsedTimer }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
-  oteMsgInfo.Waiter := TWaitFor.Create;
+  oteMsgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
   oteTimers := TGpInt64ObjectList.Create;
+  {$IFDEF MSWINDOWS}
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
+  {$ELSE}
+  oteWorkerInitialized := CreateOmniEvent(true, false);
+  oteCommRebuildHandles := CreateOmniEvent(false, false);
+  {$ENDIF ~MSWINDOWS}
   otePriority := tpNormal;
 end; { TOmniTaskExecutor.Initialize }
 
@@ -2285,9 +2432,15 @@ end; { TOmniTaskExecutor.LocateTimer }
 
 procedure TOmniTaskExecutor.MainMessageLoop(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
+{$IFNDEF MSWINDOWS}
+var
+  SignalEvent: IOmnIEvent;
+{$ENDIF ~MSWINDOWS}
 begin
   EmptyMessageQueues(task);
-  while DispatchEvent(WaitForEvent(msgInfo, TimeUntilNextTimer_ms), task, msgInfo) do
+  while DispatchEvent(
+          WaitForEvent(msgInfo, TimeUntilNextTimer_ms {$IFNDEF MSWINDOWS}, SignalEvent{$ENDIF}),
+          task, msgInfo {$IFNDEF MSWINDOWS}, SignalEvent{$ENDIF}) do
     MessageLoopPayload;
 end; { TOmniTaskExecutor.MainMessageLoop }
 
@@ -2303,16 +2456,19 @@ var
   awaited       : TWaitFor.TWaitForResult;
   msgInfo       : TOmniMessageInfo;
   waitHandlesGen: int64;
+  {$IFNDEF MSWINDOWS}
+  SignalEvent   : IOmniEvent;
+  {$ENDIF ~MSWINDOWS}
 begin
-  msgInfo.Waiter := TWaitFor.Create;
+  msgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
   try
     RemoveTerminationEvents(oteMsgInfo, msgInfo);
     waitHandlesGen := oteWaitHandlesGen;
     repeat
-      awaited := WaitForEvent(msgInfo, 1);
+      awaited := WaitForEvent(msgInfo, 1 {$IFNDEF MSWINDOWS}, SignalEvent{$ENDIF});
       if awaited = waTimeout then
         Exit;
-      if not DispatchEvent(awaited, task, msgInfo) then
+      if not DispatchEvent(awaited, task, msgInfo {$IFNDEF MSWINDOWS}, SignalEvent{$ENDIF}) then
         Exit;
       MessageLoopPayload;
       if waitHandlesGen <> oteWaitHandlesGen then begin
@@ -2324,6 +2480,7 @@ begin
   finally msgInfo.Waiter.Free; end;
 end; { TOmniTaskExecutor.ProcessMessages }
 
+{$IFDEF MSWINDOWS}
 procedure TOmniTaskExecutor.ProcessThreadMessages;
 var
   msg: TMsg;
@@ -2333,6 +2490,7 @@ begin
     DispatchMessage(Msg);
   end;
 end; { TOmniTaskExecutor.ProcessThreadMessages }
+{$ENDIF MSWINDOWS}
 
 procedure TOmniTaskExecutor.RaiseInvalidSignature(const methodName: string);
 begin
@@ -2346,8 +2504,8 @@ end; { TOmniTaskExecutor.RaiseInvalidSignature }
 procedure TOmniTaskExecutor.RebuildWaitHandles(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
 var
-  aHandle    : THandle;
-  handles    : TGpInt64List;
+  aHandle    : {$IFDEF MSWINDOWS}THandle{$ELSE}IOmniSynchro{$ENDIF};
+  handles    : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniSynchro>{$ENDIF};
   iHandle    : integer;
   iIntf      : integer;
   intf       : IInterface;
@@ -2356,7 +2514,7 @@ begin
   Inc(oteWaitHandlesGen);
   oteInternalLock.Acquire;
   try
-    handles := TGpInt64List.Create;
+    handles := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniSynchro>.Create{$ENDIF};
     try
       // termination events
       msgInfo.IdxFirstTerminate := 0;
@@ -2399,7 +2557,10 @@ begin
       SetLength(msgInfo.WaitHandles, handles.Count);
       for iHandle := 0 to handles.Count - 1 do
         msgInfo.WaitHandles[iHandle] := handles[iHandle];
+
+      {$IFDEF MSWINDOWS} //TODO: Add support for non-Windows platforms
       msgInfo.Waiter.SetHandles(msgInfo.WaitHandles);
+      {$ENDIF MSWINDOWS}
     finally FreeAndNil(handles); end;
   finally oteInternalLock.Release; end;
 end; { RebuildWaitHandles }
@@ -2416,12 +2577,18 @@ begin
   dstMsgInfo.IdxLastMessage := srcMsgInfo.IdxLastMessage - offset;
   dstMsgInfo.IdxRebuildHandles := srcMsgInfo.IdxRebuildHandles - offset;
   dstMsgInfo.NumWaitHandles := srcMsgInfo.NumWaitHandles - offset;
+  {$IFDEF MSWINDOWS}
   dstMsgInfo.WaitFlags := srcMsgInfo.WaitFlags;
   dstMsgInfo.WaitWakeMask := srcMsgInfo.WaitWakeMask;
+  {$ELSE}
+  dstMsgInfo.WaitWakeAll := srcMsgInfo.WaitWakeAll;
+  {$ENDIF ~MSWINDOWS}
   SetLength(dstMsgInfo.WaitHandles, dstMsgInfo.NumWaitHandles);
   Move(srcMsgInfo.WaitHandles[offset], dstMsgInfo.WaitHandles[0],
     Length(dstMsgInfo.WaitHandles) * SizeOf(THandle));
+  {$IFDEF MSWINDOWS} //TODO: Add support for non-Windows platforms
   dstMsgInfo.Waiter.SetHandles(dstMsgInfo.WaitHandles);
+  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.RemoveTerminationEvents }
 
 procedure TOmniTaskExecutor.ReportInvalidHandle(msgInfo: TOmniMessageInfo);
@@ -2431,7 +2598,11 @@ var
 begin
   failedList := SysErrorMessage(GetLastError);
   for iHandle := 0 to msgInfo.NumWaitHandles - 1 do begin
+    {$IFDEF MSWINDOWS}
     if WaitForSingleObject(msgInfo.WaitHandles[iHandle], 0) = WAIT_FAILED then begin
+    {$ELSE}
+    if msgInfo.WaitHandles[iHandle].WaitFor(0) in [wrAbandoned, wrError] then begin
+    {$ENDIF ~MSWINDOWS}
       failedList := failedList + #13#10;
       failedList := failedList + Format('Invalid handle: %d; ', [msgInfo.WaitHandles[iHandle]]);
       if ((msgInfo.IdxFirstTerminate <> -1) and
@@ -2447,7 +2618,7 @@ begin
     end;
   end;
   raise Exception.CreateFmt('[%d] TOmniTaskExecutor: Invalid handle!'#13#10'%s',
-    [GetCurrentThreadID, failedList]);
+    [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}GetThreadID{$ENDIF}, failedList]);
 end; { TOmniTaskExecutor.ReportInvalidHandle}
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);
@@ -2485,23 +2656,32 @@ begin
       timerInfo.Interval_ms := interval_ms;
       timerInfo.MessageID := timerMessage;
     end;
-    InsertTimer(DSiTimeGetTime64 + interval_ms, timerInfo);
+    InsertTimer({$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF} + interval_ms, timerInfo);
   end;
 end; { TOmniTaskExecutor.SetTimer }
 
-procedure TOmniTaskExecutor.TerminateWhen(handle: THandle);
+procedure TOmniTaskExecutor.TerminateWhen(handle: TOmniTransitionEvent);
 begin
   Assert(SizeOf(THandle) <= SizeOf(int64));
+  {$IFDEF MSWINDOWS}
   if not assigned(oteTerminateHandles) then
     oteTerminateHandles := TGpInt64List.Create;
   oteTerminateHandles.Add(handle);
+  {$ELSE}
+  SetLength(oteTerminateHandles, Length(oteTerminateHandles) + 1);
+  oteTerminateHandles[Length(oteTerminateHandles) - 1] := handle;
+  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.TerminateWhen }
 
 function TOmniTaskExecutor.TestForInternalRebuild(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo): boolean;
 begin
   Result := false;
+  {$IFDEF MSWINDOWS}
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
+  {$ELSE}
+  if oteCommRebuildHandles.WaitFor(0) = wrSignaled then begin
+  {$ENDIF ~MSWINDOWS}
     //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
@@ -2518,7 +2698,7 @@ begin
     if oteTimers.Count = 0 then
       Result := INFINITE
     else begin
-      timeout_ms := oteTimers[0] - DSiTimeGetTime64;
+      timeout_ms := oteTimers[0] - {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF};
       if timeout_ms < 0 then
         timeout_ms := 0;
       Result := timeout_ms;
@@ -2531,15 +2711,20 @@ begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.WaitForInit: ' +
       'Wait for init is only available when working with an IOmniWorker');
+  {$IFDEF MSWINDOWS}
   WaitForSingleObject(WorkerInitialized, INFINITE);
+  {$ELSE}
+  WorkerInitialized.WaitFor(INFINITE);
+  {$ENDIF ~MSWINDOWS}
   Result := WorkerInitOK;
 end; { TOmniTaskExecutor.WaitForInit }
 
-function TOmniTaskExecutor.WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal):
-  TWaitFor.TWaitForResult;
+function TOmniTaskExecutor.WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal
+  {$IFNDEF MSWINDOWS}; var SignalEvent: IOmniEvent{$ENDIF}): TWaitFor.TWaitForResult;
 begin
   if assigned(WorkerIntf) then
     WorkerIntf.BeforeWait(timeout_ms);
+  {$IFDEF MSWINDOWS} //TODO: Implement for non-Windows platforms
   Result := msgInfo.Waiter.MsgWaitAny(timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
   {$IFDEF Debug}
   if Result = waFailed then
@@ -2548,6 +2733,7 @@ begin
   {$ENDIF Debug}
   if assigned(WorkerIntf) then
     WorkerIntf.AfterWait(msgInfo.Waiter, Result);
+  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.WaitForEvent }
 
 { TOmniTaskControl }
@@ -2597,6 +2783,8 @@ begin
     end;
     FreeAndNil(otcExecutor);
     otcSharedInfo.CommChannel := nil;
+
+    {$IFDEF MSWINDOWS}
     if otcSharedInfo.TerminateEvent <> 0 then begin
       CloseHandle(otcSharedInfo.TerminateEvent);
       otcSharedInfo.TerminateEvent := 0;
@@ -2605,6 +2793,10 @@ begin
       CloseHandle(otcSharedInfo.TerminatedEvent);
       otcSharedInfo.TerminatedEvent := 0;
     end;
+    {$ELSE}
+    otcSharedInfo.TerminateEvent := nil;
+    otcSharedInfo.TerminatedEvent := nil;
+    {$ENDIF ~MSWINDOWS}
     FreeAndNil(otcParameters);
   finally
     if assigned(otcSharedInfo) then begin
@@ -2654,7 +2846,9 @@ begin
   if not assigned(otcEventMonitor) then begin
     otcEventMonitorInternal := true;
     otcEventMonitor := GTaskControlEventMonitorPool.Allocate;
+    {$IFDEF MSWINDOWS}
     TOmniEventMonitor(otcEventMonitor).Monitor(Self);
+    {$ENDIF MSWINDOWS}
   end;
 end; { TOmniTaskControl.CreateInternalMonitor }
 
@@ -2816,12 +3010,12 @@ begin
   result := otcSharedInfo;
 end; { GetSharedInfo: TOmniSharedTaskInfo }
 
-function TOmniTaskControl.GetTerminatedEvent: THandle;
+function TOmniTaskControl.GetTerminatedEvent: TOmniTransitionEvent;
 begin
   Result := otcSharedInfo.TerminatedEvent;
 end; { TOmniTaskControl.GetTerminatedEvent }
 
-function TOmniTaskControl.GetTerminateEvent: THandle;
+function TOmniTaskControl.GetTerminateEvent: TOmniTransitionEvent;
 begin
   Result := otcSharedInfo.TerminateEvent;
 end; { TOmniTaskControl.GetTerminateEvent }
@@ -2844,10 +3038,15 @@ begin
   otcSharedInfo.TaskName := taskName;
   otcSharedInfo.UniqueID := OtlUID.Increment;
   otcParameters := TOmniValueContainer.Create;
+  {$IFDEF MSWINDOWS}
   otcSharedInfo.TerminateEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
+  {$ELSE}
+  otcSharedInfo.TerminateEvent := CreateOmniEvent(true, false);
+  otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false);
+  {$ENDIF ~MSWINDOWS}
   otcUserData := TOmniValueContainer.Create;
   otcOnMessageList := TGpIntegerObjectList.Create(true);
 end; { TOmniTaskControl.Initialize }
@@ -2916,14 +3115,20 @@ end; { TOmniTaskControl.Leave }
 
 function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
 begin
+  {$IFDEF MSWINDOWS}
   monitor.Monitor(Self);
+  {$ENDIF MSWINDOWS}
   Result := Self;
 end; { TOmniTaskControl.MonitorWith }
 
-function TOmniTaskControl.MsgWait(wakeMask: DWORD): IOmniTaskControl;
+function TOmniTaskControl.MsgWait({$IFDEF MSWINDOWS}wakeMask: DWORD = QS_ALLEVENTS{$ELSE}wakeAll: boolean = true{$ENDIF}): IOmniTaskControl;
 begin
   Options := Options + [tcoMessageWait];
+  {$IFDEF MSWINDOWS}
   otcExecutor.WakeMask := wakeMask;
+  {$ELSE}
+  otcExecutor.WakeAll := wakeAll;
+  {$ENDIF ~MSWINDOWS}
   Result := Self;
 end; { TOmniTaskControl.MsgWait }
 
@@ -3079,6 +3284,7 @@ end; { TOmniTaskControl.Run }
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
+  {$IFDEF MSWINDOWS}
   if assigned(otcSharedInfo.Monitor) then begin
     EnsureCommChannel;
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
@@ -3089,6 +3295,7 @@ begin
       otcSharedInfo.Monitor := nil;
     finally otcSharedInfo.MonitorLock.Release; end;
   end;
+  {$ENDIF MSWINDOWS}
   Result := Self;
   if otcDelayedTerminate then begin
     otcDelayedTerminate := false;
@@ -3112,6 +3319,7 @@ begin
   otcDebugFlags := value;
 end; { TOmniTaskControl.SetDebugFlags }
 
+{$IFDEF MSWINDOWS}
 function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
 begin
   if not assigned(otcSharedInfo.Monitor) then begin
@@ -3129,6 +3337,7 @@ begin
   otcSharedInfo.Monitor.Activate;
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
+{$ENDIF MSWINDOWS}
 
 procedure TOmniTaskControl.SetOptions(const value: TOmniTaskControlOptions);
 begin
@@ -3229,12 +3438,18 @@ begin
     ForwardTaskMessage(msg);
   if otcEventMonitorInternal and assigned(otcEventMonitor) then begin
     //! must process monitor messages first
+    {$IFDEF MSWINDOWS}
     TOmniEventMonitor(otcEventMonitor).ProcessMessages;
+    {$ENDIF MSWINDOWS}
     DestroyMonitor;
   end;
   if not Result then begin
     if assigned(otcThread) then begin
+      {$IFDEF MSWINDOWS}
       TerminateThread(otcThread.Handle, cardinal(-1));
+      {$ELSE}
+      otcThread.Terminate;
+      {$ENDIF MSWINDOWS}
       otcThread := nil;
     end
     else if assigned(otcOwningPool) then begin
@@ -3248,7 +3463,7 @@ begin
   FreeAndNil(otcOnTerminatedExec);
 end; { TOmniTaskControl.Terminate }
 
-function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
+function TOmniTaskControl.TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl;
 begin
   otcExecutor.TerminateWhen(event);
   Result := Self;
@@ -3259,7 +3474,11 @@ begin
   if not assigned(otcTerminateTokens) then
     otcTerminateTokens := TInterfaceList.Create;
   otcTerminateTokens.Add(token);
+  {$IFDEF MSWINDOWS}
   otcExecutor.TerminateWhen(token.Handle);
+  {$ELSE}
+  otcExecutor.TerminateWhen(token.Event);
+  {$ENDIF ~MSWINDOWS}
   Result := Self;
 end; { TOmniTaskControl.TerminateWhen }
 
@@ -3271,11 +3490,29 @@ begin
 end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
+{$IFNDEF MSWINDOWS}
+var
+  DualWaiter: TSynchroWaitFor;
+  Signaller : IOmniSynchro;
+{$ENDIF ~MSWINDOWS}
 begin
-  if assigned(otcThread) then
+  if assigned(otcThread) then begin
+    {$IFDEF MSWINDOWS}
     Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1]
-  else
+    {$ELSE}
+    DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], FMultiWaitLock);
+    try
+      Result     := DualWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
+    finally DualWaiter.Free; end;
+    {$ENDIF ~MSWINDOWS}
+  end
+  else begin
+    {$IFDEF MSWINDOWS}
     Result := WaitForSingleObject(otcSharedInfo.TerminatedEvent, maxWait_ms) = WAIT_OBJECT_0;
+    {$ELSE}
+    Result := otcSharedInfo.TerminatedEvent.WaitFor(maxWait_ms) = wrSignaled;
+    {$ENDIF ~MSWINDOWS}
+  end;
 end; { TOmniTaskControl.WaitFor }
 
 function TOmniTaskControl.WaitForInit: boolean;
@@ -3320,6 +3557,15 @@ begin
     // task reference may not be valid anymore
   finally SendThreadNotifications(tntDestroy, taskName); end;
 end; { TOmniThread.Execute }
+
+
+{$IFNDEF MSWINDOWS}
+procedure TOmniThread.DoTerminate;
+begin
+  inherited;
+  otThreadTerminationEvent.SetEvent;
+end; { TOmniThread.DoTerminate }
+{$ENDIF}
 
 { TOmniTaskControlListEnumerator }
 
@@ -3555,13 +3801,30 @@ end; { TOmniTaskGroup.UnregisterAllCommFrom }
 
 function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal): boolean;
 var
+  {$IFDEF MSWINDOWS}
   iIntf      : integer;
-  waitHandles: array of THandle;
+  waitHandles: array of TOmniTransitionEvent;
+  {$ELSE}
+  MultiWaiter: TSynchroWaitFor;
+  Signaller  : IOmniSynchro;
+  Syncs      : array of IOmniSynchro;
+  Idx        : integer;
+  {$ENDIF ~MSWINDOWS}
 begin
+  {$IFDEF MSWINDOWS}
   SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
     waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent;
   Result := WaitForAllObjects(waitHandles, maxWait_ms);
+  {$ELSE}
+  SetLength(Syncs, otgTaskList.Count);
+  for Idx := 0 to otgTaskList.Count - 1 do
+    Syncs[Idx] := (otgTaskList[Idx] as IOmniTaskControlInternals).TerminatedEvent;
+  MultiWaiter := TSynchroWaitFor.Create(Syncs, FMultiWaitLock);
+  try
+    Result := MultiWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
+  finally MultiWaiter.Free; end;
+  {$ENDIF ~MSWINDOWS}
 end; { TOmniTaskGroup.WaitForAll }
 
 { TOmniTaskControlEventMonitor }
@@ -3624,7 +3887,7 @@ begin
 
   if not assigned(ostiCancellationToken) then begin
     token := CreateOmniCancellationToken;
-    if CAS(nil, pointer(token), ostiCancellationToken) then
+    if TInterlockedEx.CAS(nil, pointer(token), ostiCancellationToken) then
       pointer(token) := nil;
   end;
   Result := ostiCancellationToken;

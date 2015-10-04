@@ -333,6 +333,8 @@ type
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
     {$IFDEF MSWINDOWS}
     function  GetHandle: THandle;
+    {$ELSE}
+    function  GetEvent: IOmniEvent;
     {$ENDIF MSWINDOWS}
   //
     procedure Clear;
@@ -340,6 +342,8 @@ type
     procedure Signal;
     {$IFDEF MSWINDOWS}
     property Handle: THandle read GetHandle;
+    {$ELSE}
+    property Event: IOmniEvent read GetEvent;
     {$ENDIF MSWINDOWS}
   end; { IOmniCancellationToken }
 
@@ -494,6 +498,16 @@ type
   {$IFDEF OTL_MobileSupport}
   ///<summary>Waits on any/all from any number of synchroobjects such as Events and CountDownEvents.</summary>
   TSynchroWaitFor = class
+  public type //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
+    TWaitForResult = (
+      waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
+      waTimeout,      // WAIT_TIMEOUT
+      waFailed,       // WAIT_FAILED
+      waIOCompletion  // WAIT_IO_COMPLETION
+    );
+    THandleInfo = record //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
+      Index: integer;
+    end;
   strict private type
     TSynchroList = class(TList<IOmniSynchro>) end;
     ISynchroClientEx = interface ['{A4D963B3-88CD-466A-9885-3C66E605E32E}']
@@ -629,6 +643,8 @@ function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal
 function GetThreadId: NativeInt;
 function GetCPUTimeStamp: int64;
 
+function SetEvent(event: TOmniTransitionEvent): boolean;
+
 var
   GOmniCancellationToken: IOmniCancellationToken;
   CASAlignment: integer; //required alignment for the CAS function - 8 or 16, depending on the platform
@@ -659,6 +675,8 @@ type
   {$ELSE}
   private
     FEvent: IOmniEvent;
+  protected
+    function  GetEvent: IOmniEvent; inline;
   {$ENDIF MSWINDOWS}
   public
     constructor Create;
@@ -668,6 +686,8 @@ type
   {$IFDEF MSWINDOWS}
     destructor  Destroy; override;
     property Handle: THandle read GetHandle;
+  {$ELSE}
+    property Event: IOmniEvent read GetEvent;
   {$ENDIF MSWINDOWS}
   end; { TOmniCancellationToken }
 
@@ -766,6 +786,20 @@ type
   end; { TPreSignaData }
   {$ENDIF ~MSWINDOWS}
   {$ENDIF OTL_MobileSupport}
+
+{ transitional }
+
+function SetEvent(event: TOmniTransitionEvent): boolean;
+begin
+  Result := true;
+  {$IFDEF MSWINDOWS}
+  if event <> 0 then
+    Result := Windows.SetEvent(event);
+  {$ELSE}
+  if assigned(event) then
+    event.SetEvent;
+  {$ENDIF ~MSWINDOWS}
+end; { SetEvent }
 
 { exports }
 
@@ -1149,6 +1183,11 @@ function TOmniCancellationToken.GetHandle: THandle;
 begin
   Result := FEvent;
 end; { TOmniCancellationToken.GetHandle }
+{$ELSE}
+function TOmniCancellationToken.GetEvent: IOmniEvent;
+begin
+  Result := FEvent;
+end; { TOmniCancellationToken.GetEvent }
 {$ENDIF MSWINDOWS}
 
 function TOmniCancellationToken.IsSignalled: boolean;

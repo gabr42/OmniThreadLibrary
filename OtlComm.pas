@@ -417,7 +417,7 @@ begin
     tmp.MsgData._Release;
 end; { TOmniMessageQueue.Enqueue }
 
-function TOmniMessageQueue.GetNewMessageEvent: THandle;
+function TOmniMessageQueue.GetNewMessageEvent: TOmniTransitionEvent;
 begin
   AttachEventObserver;
   {$IFDEF MSWINDOWS}
@@ -626,12 +626,12 @@ begin
   msg.msgData := msgData;
   Result := ceWriter_ref.Enqueue(msg);
   if (not Result) and (timeout_ms > 0) then begin
-    if ceTaskTerminatedEvent_ref = 0 then
+    if ceTaskTerminatedEvent_ref = {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF} then
       raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
     startTime := {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.StartNew{$ENDIF};
 
     partlyEmptyObserver := {$IFDEF MSWINDOWS}CreateContainerWindowsEventObserver
-                           {$ELSE}CreateContainterEventObserver{$ENDIF};
+                           {$ELSE}CreateContainerEventObserver{$ENDIF};
     try
       {$IFNDEF MSWINDOWS}
       partlyEvent       := partlyEmptyObserver.GetEvent;
@@ -710,8 +710,8 @@ end; { TOmniCommunicationEndpoint.GetWriter }
 
 { TOmniTwoWayChannel }
 
-constructor TOmniTwoWayChannel.Create(messageQueueSize: integer; taskTerminatedEvent:
-  THandle);
+constructor TOmniTwoWayChannel.Create(messageQueueSize: integer;
+  taskTerminatedEvent: TOmniTransitionEvent);
 begin
   inherited Create;
   twcMessageQueueSize := messageQueueSize;
@@ -821,6 +821,8 @@ begin
   finally obqtQueueLock.Release; end;
 end; { TOmniMessageQueueTee.Enqueue }
 
+{$IFDEF MSWINDOWS}
+
 { TOmniCommDispatchingObserverImpl }
 
 constructor TOmniCommDispatchingObserverImpl.Create(queue: TOmniMessageQueue;
@@ -859,6 +861,8 @@ begin
   else
     msg.Result := DefWindowProc(cdoDispatchWnd, msg.Msg, msg.WParam, msg.LParam);
 end; { TOmniCommDispatchingObserverImpl.WndProc }
+
+{$ENDIF MSWINDOWS}
 
 end.
 

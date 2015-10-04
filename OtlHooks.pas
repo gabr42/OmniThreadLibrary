@@ -34,10 +34,12 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Creation date     : 2009-05-17
-///   Last modification : 2011-07-14
-///   Version           : 1.02
+///   Last modification : 2015-10-04
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2015-10-04
+///       - Cleaned up 'uses' list.
 ///     1.02: 2011-07-14
 ///       - Support for non-silent exceptions removed.
 ///       - Changed signature for exception filters.
@@ -52,7 +54,6 @@ unit OtlHooks;
 interface
 
 uses
-  Windows,
   SysUtils,
   Classes,
   OtlSync;
