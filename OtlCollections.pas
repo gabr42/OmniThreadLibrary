@@ -33,11 +33,14 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
+///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2015-02-04
-///   Version           : 1.07a
+///   Last modification : 2015-10-04
+///   Version           : 1.08
 ///</para><para>
 ///   History:
+///     1.08: 2015-10-04
+///       - Imported mobile support by [Sean].
 ///     1.07a: 2015-02-04
 ///       - ToArrayIntf<T> and TArrayRec<T> functionality moved to ToArray<T>.
 ///     1.07: 2015-02-03
@@ -166,14 +169,18 @@ type
     obcAddCountAndCompleted: TOmniAlignedInt32;
     obcApproxCount         : TOmniAlignedInt32;
     obcCollection          : TOmniQueue;
-    obcCompletedSignal     : TDSiEventHandle;
+    obcCompletedSignal     : IOmniEvent;
     obcHighWaterMark       : integer;
     obcLowWaterMark        : integer;
-    obcNotOverflow         : THandle {event};
-    obcObserver            : TOmniContainerWindowsEventObserver;
+    obcNotOverflow         : IOmniEvent;
+    obcObserver            : TOmniContainerEventObserver;
     obcReraiseExceptions   : boolean;
-    obcResourceCount       : TOmniResourceCount;
+    obcResourceCount       : IOmniResourceCount;
     obcThrottling          : boolean;
+    {$IFNDEF MSWINDOWS}
+    FCompletedWaiter       : TSynchroWaitFor;
+    FTakableWaiter         : TSynchroWaitFor;
+    {$ENDIF}
   protected
     function  GetContainerSubject: TOmniContainerSubject;
   public
@@ -198,7 +205,7 @@ type
     function  Take(var value: TOmniValue): boolean; inline;
     function  TryAdd(const value: TOmniValue): boolean; inline;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
-    property CompletedSignal: THandle read obcCompletedSignal;
+    property CompletedSignal: IOmniEvent read obcCompletedSignal;
     property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
   end; { TOmniBlockingCollection }
 
@@ -225,8 +232,10 @@ implementation
 
 uses
   Classes,
+  Diagnostics,
   TypInfo;
 
+{$IFDEF MSWINDOWS}
 {$IFDEF CPUX64}
 procedure AsmPause;
 asm
@@ -234,6 +243,7 @@ asm
   pause
 end; { AsmPause }
 {$ENDIF CPUX64}
+{$ENDIF}
 
 { TOmniBlockingCollectionEnumerator }
 
@@ -264,26 +274,48 @@ end; { TOmniBlockingCollectionEnumerator.TryTake }
 ///when this number of .Take calls is simultaneously blocked because the collection is
 ///empty.
 constructor TOmniBlockingCollection.Create(numProducersConsumers: integer);
+var
+  ShareLock: IOmniCriticalSection;
 begin
   inherited Create;
+  // SBD: TODO: Work needs to be done here
+  //  1. obcResourceCount needs to be constructed with ShareLock
+  //  2. Find out what is the interaction with obcObserver. Does it block taking?
+  ShareLock := CreateOmniCriticalSection;
+  obcAddCountAndCompleted.Initialize;
+  obcApproxCount.Initialize;
   if numProducersConsumers > 0 then
-    obcResourceCount := TOmniResourceCount.Create(numProducersConsumers);
+    obcResourceCount := CreateResourceCount(numProducersConsumers);
   obcCollection := TOmniQueue.Create;
-  obcCompletedSignal := CreateEvent(nil, true, false, nil);
-  obcObserver := CreateContainerWindowsEventObserver;
+  obcCompletedSignal := CreateOmniEvent(true, false, ShareLock);
+  obcObserver := CreateContainerEventObserver;
   obcCollection.ContainerSubject.Attach(obcObserver, coiNotifyOnAllInserts);
-  obcNotOverflow := CreateEvent(nil, true, true, nil);
+  obcNotOverflow := CreateOmniEvent(true, true, ShareLock);
+  {$IFNDEF MSWINDOWS}
+  FCompletedWaiter := TSynchroWaitFor.Create([obcCompletedSignal, obcNotOverflow], ShareLock);
+  if assigned( obcResourceCount) then
+      // SBD: TODO: Not sure if obcObserver needs to be included.
+      FTakableWaiter := TSynchroWaitFor.Create([obcCompletedSignal, {obcObserver,
+        }(obcResourceCount as IOmniSynchroObject).Synchro], ShareLock)
+    else
+      // FTakableWaiter := TSynchroWaitFor.Create([obcCompletedSignal, obcObserver], ShareLock);
+      FTakableWaiter := nil
+  {$ENDIF}
 end; { TOmniBlockingCollection.Create }
 
 destructor TOmniBlockingCollection.Destroy;
 begin
-  DSiCloseHandleAndNull(obcNotOverflow);
+  obcNotOverflow := nil;
   if assigned(obcCollection) and assigned(obcObserver) then
     obcCollection.ContainerSubject.Detach(obcObserver, coiNotifyOnAllInserts);
   FreeAndNil(obcObserver);
-  DSiCloseHandleAndNull(obcCompletedSignal);
+  obcCompletedSignal := nil;
   FreeAndNil(obcCollection);
-  FreeAndNil(obcResourceCount);
+  obcResourceCount := nil;
+  {$IFNDEF MSWINDOWS}
+  FCompletedWaiter.Free;
+  FTakableWaiter.Free;
+  {$ENDIF}
   inherited Destroy;
 end; { TOmniBlockingCollection.Destroy }
 
@@ -299,10 +331,14 @@ begin
     if IsCompleted then // CompleteAdding was already called
       Exit;
     if obcAddCountAndCompleted.CAS(0, CCompletedFlag) then begin // there must be no active writers
-      Win32Check(SetEvent(obcCompletedSignal)); // tell blocked readers to quit
+      obcCompletedSignal.SetEvent; // tell blocked readers to quit
       Exit;
     end;
+    {$IFDEF MSWINDOWS}
     {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF CPUX64}
+    {$ELSE}
+    TThread.Yield;
+    {$ENDIF}
   until false;
 end; { TOmniBlockingCollection.CompleteAdding }
 
@@ -424,7 +460,12 @@ end; { TOmniBlockingCollection.ToArray<T> }
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 var
+  {$IFDEF MSWINDOWS}
   awaited: cardinal;
+  {$ELSE}
+  waitResult: TWaitResult;
+  Signaller: IOmniSynchro;
+  {$ENDIF}
 begin
   obcAddCountAndCompleted.Increment;
   try
@@ -433,14 +474,20 @@ begin
     if Result then begin
       obcAccessed := true;
       if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-        Win32Check(ResetEvent(obcNotOverflow));
+        obcNotOverflow.Reset;
         // it's possible that messages were removed and obcNotOverflow set *before* the
         // previous line has executed so test again ...
         if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
           obcAddCountAndCompleted.Decrement; // Leave the Add temporarily so that CompleteAdding can succeed
-          awaited := DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE);
+          {$IFDEF MSWINDOWS}
+          awaited := DSiWaitForTwoObjects(obcCompletedSignal.Handle, obcNotOverflow.Handle, false, INFINITE);
           obcAddCountAndCompleted.Increment; // Re-enter Add; queue may be now in 'completed' state
           if (awaited = WAIT_OBJECT_0) or IsCompleted then begin
+          {$ELSE}
+          waitResult := FCompletedWaiter.WaitAny(INFINITE,Signaller);
+          obcAddCountAndCompleted.Increment;
+          if ((waitResult = wrSignaled) and (Signaller = obcCompletedSignal)) or IsCompleted then begin
+          {$ENDIF}
             Result := false; // completed
             Exit;
           end;
@@ -453,6 +500,7 @@ begin
   finally obcAddCountAndCompleted.Decrement; end;
 end; { TOmniBlockingCollection.TryAdd }
 
+{$IFDEF MSWINDOWS}
 function TOmniBlockingCollection.TryTake(var value: TOmniValue;
   timeout_ms: cardinal): boolean;
 var
@@ -491,8 +539,8 @@ begin { TOmniBlockingCollection.TryTake }
       obcResourceCount.Allocate;
     try
       startTime := DSiTimeGetTime64;
-      waitHandles[0] := obcCompletedSignal;
-      waitHandles[1] := obcObserver.GetEvent;
+      waitHandles[0] := obcCompletedSignal.Handle;
+      waitHandles[1] := obcObserver.GetEvent.Handle;
       if assigned(obcResourceCount) then
         waitHandles[2] := obcResourceCount.Handle;
       Result := false;
@@ -518,11 +566,78 @@ begin { TOmniBlockingCollection.TryTake }
   if obcThrottling and Result then begin
     obcApproxCount.Decrement;
     if obcApproxCount.Value <= obcLowWaterMark then
-      SetEvent(obcNotOverflow);
+      obcNotOverflow.SetEvent
   end;
   if Result and obcReraiseExceptions and value.IsException then
     raise value.AsException;
 end; { TOmniBlockingCollection.TryTake }
+
+{$ELSE}
+
+// Non-windows version of TryTake().
+function TOmniBlockingCollection.TryTake(
+  var value: TOmniValue; timeout_ms: cardinal): boolean;
+var
+  StopWatch: TStopWatch;
+  awaited: TWaitResult;
+  Signaller: IOmniSynchro;
+
+  function TimeLeft_ms: cardinal;
+  var
+    intTime: integer;
+  begin
+    if timeout_ms = INFINITE then
+      Result := INFINITE
+    else begin
+      intTime := timeout_ms - StopWatch.ElapsedMilliseconds;
+      if intTime < 0 then
+        Result := 0
+      else
+        Result := intTime;
+    end;
+  end; { TimeLeft }
+
+begin
+  if obcCollection.TryDequeue(value) then
+    Result := true
+  else begin // must be executed even if timeout_ms = 0 or the algorithm will break
+    if assigned(obcResourceCount) then
+      obcResourceCount.Allocate;
+    try
+      StopWatch := TStopWatch.StartNew;
+      Result := false;
+      repeat
+        if assigned(FTakableWaiter) then
+          awaited := FTakableWaiter.WaitAny(TimeLeft_ms, Signaller)
+        else begin
+          awaited   := obcCompletedSignal.WaitFor(TimeLeft_ms);
+          Signaller := obcCompletedSignal
+        end;
+        if obcCollection.TryDequeue(value) then begin // there may still be data in completed queue
+          Result := true;
+          break; //repeat
+        end;
+        if (awaited = wrSignaled) and (Signaller = (obcResourceCount as IOmniSynchroObject).Synchro) then
+          CompleteAdding;
+        if {(}awaited <> wrSignaled {) or (Signaller <> obcObserver)} then begin
+          Result := false;
+          break; //while
+        end;
+      until TimeLeft_ms = 0
+    finally
+      if assigned(obcResourceCount) then
+        obcResourceCount.Release;
+    end;
+  end;
+  if obcThrottling and Result then begin
+    obcApproxCount.Decrement;
+    if obcApproxCount.Value <= obcLowWaterMark then
+      obcNotOverflow.SetEvent
+  end;
+  if Result and obcReraiseExceptions and value.IsException then
+    raise value.AsException;
+end;
+{$ENDIF}
 
 end.
 
