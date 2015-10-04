@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015, Primoz Gabrijelcic
+///Copyright (c) 2012, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -33,15 +33,15 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover
+///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-07-29
+///   Last modification : 2015-10-04
 ///   Version           : 1.08
 ///</para><para>
 ///   History:
-///     1.08: 2015-07-29
-///       - DSiTimeGetTime64 is used instead of GetTickCount to prevent wraparound problems.
+///     1.08: 2015-10-04
+///       - Imported mobile support by [Sean].
 ///     1.07e: 2012-10-02
 ///       - TOmniEventMonitor is marked for 64-bit support.
 ///     1.07d: 2012-10-01
@@ -96,16 +96,19 @@ unit OtlEventMonitor;
 interface
 
 uses
+  OtlCommon,
   SysUtils,
+  {$IFDEF MSWINDOWS}
   Messages,
-  Classes,
   GpStuff,
   GpLists,
-  OtlCommon,
+  {$ENDIF}
+  Classes,
   OtlComm,
   OtlSync,
   OtlTaskControl,
-  OtlThreadPool;
+  OtlThreadPool,
+  Generics.Collections;
 
 type
   TOmniMonitorTaskEvent = procedure(const task: IOmniTaskControl) of object;
@@ -118,7 +121,9 @@ type
   {$ENDIF OTL_Supports64Bit}
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
-    emMessageWindow           : THandle;
+    {$IFDEF MSWINDOWS}
+      emMessageWindow         : THandle;
+    {$ENDIF}
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
     emOnPoolThreadCreated     : TOmniMonitorPoolThreadEvent;
@@ -128,19 +133,27 @@ type
     emOnTaskMessage           : TOmniMonitorTaskMessageEvent;
     emOnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent;
     emOnTaskTerminated        : TOmniMonitorTaskEvent;
-    emCurrentMsg              : TOmniMessage;
+    {$IFDEF MSWINDOWS}
+      emCurrentMsg            : TOmniMessage;
+    {$ENDIF}
+  {$IFDEF MSWINDOWS}
   strict protected
     procedure WndProc(var msg: TMessage);
+  {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     procedure ProcessMessages;
+    {$ENDIF}
   published
+    {$IFDEF MSWINDOWS}
     property MessageWindow: THandle read emMessageWindow;
+    {$ENDIF}
     property OnPoolThreadCreated: TOmniMonitorPoolThreadEvent read emOnPoolThreadCreated
       write emOnPoolThreadCreated;
     property OnPoolThreadDestroying: TOmniMonitorPoolThreadEvent read emOnPoolThreadDestroying
@@ -165,7 +178,7 @@ type
   strict private
     empListLock    : TOmniCS;
     empMonitorClass: TOmniEventMonitorClass;
-    empMonitorList : TGpIntegerObjectList;
+    empMonitorList : TDictionary<TThreadId,TObject>; // TOmniCountedEventMonitor. TODO: Ownership
   public
     constructor Create;
     destructor  Destroy; override;
@@ -181,9 +194,11 @@ var
   
 implementation
 
+{$IFDEF MSWINDOWS}
 uses
   Windows,
   DSiWin32;
+{$ENDIF}
 
 const
   CMaxReceiveLoop_ms = 5;
@@ -208,8 +223,10 @@ type
 constructor TOmniEventMonitor.Create(AOwner: TComponent);
 begin
   inherited;
+  {$IFDEF MSWINDOWS}
   emMessageWindow := DSiAllocateHWnd(WndProc);
   Win32Check(emMessageWindow <> 0);
+  {$ENDIF}
   emMonitoredTasks := CreateInterfaceDictionary;
   emMonitoredPools := CreateInterfaceDictionary;
 end; { TOmniEventMonitor.Create }
@@ -217,7 +234,9 @@ end; { TOmniEventMonitor.Create }
 destructor TOmniEventMonitor.Destroy;
 var
   intfKV   : TOmniInterfaceDictionaryPair;
+  {$IFDEF MSWINDOWS}
   winHandle: THandle;
+  {$ENDIF}
 begin
   for intfKV in emMonitoredTasks do
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;
@@ -225,11 +244,13 @@ begin
   for intfKV in emMonitoredPools do
     (intfKV.Value as IOmniThreadPool).RemoveMonitor;
   emMonitoredPools.Clear;
+  {$IFDEF MSWINDOWS}
   if emMessageWindow <> 0 then begin
     winHandle := emMessageWindow;
     emMessageWindow := 0;
     DSiDeallocateHWnd(winHandle);
   end;
+  {$ENDIF}
   inherited;
 end; { TOmniEventMonitor.Destroy }
 
@@ -245,20 +266,25 @@ begin
   Result := pool.RemoveMonitor;
 end; { TOmniEventMonitor.Detach }
 
+{$IFDEF MSWINDOWS}
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
   Assert(emMessageWindow <> 0);
   emMonitoredTasks.Add(task.UniqueID, task);
   Result := task.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
+{$ENDIF}
 
+{$IFDEF MSWINDOWS}
 function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
   Assert(emMessageWindow <> 0);
   emMonitoredPools.Add(pool.UniqueID, pool);
   Result := pool.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
+{$ENDIF}
 
+{$IFDEF MSWINDOWS}
 procedure TOmniEventMonitor.ProcessMessages;
 var
   msg: TMsg;
@@ -271,7 +297,9 @@ begin
     DispatchMessage(Msg);
   end;
 end; { TOmniEventMonitor.ProcessMessages }
+{$ENDIF}
 
+{$IFDEF MSWINDOWS}
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   endpoint     : IOmniCommunicationEndpoint;
@@ -289,7 +317,7 @@ var
          assigned(emOnTaskMessage)
       then
         emOnTaskMessage(task, emCurrentMsg);
-      if (DSiElapsedTime64(timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
+      if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
         if rearmSelf then
           Win32Check(PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
         Result := false;
@@ -303,7 +331,7 @@ begin { TOmniEventMonitor.WndProc }
   if msg.Msg = COmniTaskMsg_NewMessage then begin
     task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
     if assigned(task) then begin
-      timeStart := DSiTimeGetTime64;
+      timeStart := GetTickCount;
       ProcessMessages;
     end;
     msg.Result := 0;
@@ -353,6 +381,7 @@ begin { TOmniEventMonitor.WndProc }
   else
     msg.Result := DefWindowProc(emMessageWindow, msg.Msg, msg.WParam, msg.LParam);
 end; { TOmniEventMonitor.WndProc }
+{$ENDIF}
 
 { TOmniCountedEventMonitor }
 
@@ -390,8 +419,7 @@ end; { TOmniCountedEventMonitor.Release }
 constructor TOmniEventMonitorPool.Create;
 begin
   inherited Create;
-  empMonitorList := TGpIntegerObjectList.Create;
-  empMonitorList.Sorted := true;
+  empMonitorList := TDictionary<TThreadId,TObject>.Create
 end; { TOmniEventMonitorPool.Create }
 
 destructor TOmniEventMonitorPool.Destroy;
@@ -404,18 +432,20 @@ end; { TOmniEventMonitorPool.Destroy }
 ///    no monitor has been associated with this thread.</summary>
 function TOmniEventMonitorPool.Allocate: TOmniEventMonitor;
 var
-  monitorInfo: TOmniCountedEventMonitor;
+  Id: TThreadId;
+  Addend: TOmniCountedEventMonitor;
 begin
   empListLock.Acquire;
   try
-    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer(GetCurrentThreadID)));
-    if assigned(monitorInfo) then
-      monitorInfo.Allocate
-    else begin
-      monitorInfo := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
-      empMonitorList.AddObject(integer(GetCurrentThreadID), monitorInfo);
-    end;
-    Result := monitorInfo.Monitor;
+    Id := GetThreadId;
+    if empMonitorList.ContainsKey(Id) then
+        result := (empMonitorList[Id] as TOmniCountedEventMonitor).Allocate
+      else
+        begin
+        Addend := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
+        empMonitorList.Add(Id, Addend);
+        result := Addend.Monitor
+        end
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Allocate }
 
@@ -424,25 +454,25 @@ end; { TOmniEventMonitorPool.Allocate }
 ///<since>2010-03-03</since>
 procedure TOmniEventMonitorPool.Release(monitor: TOmniEventMonitor);
 var
-  idxMonitor : integer;
+  Id: TThreadId;
   monitorInfo: TOmniCountedEventMonitor;
 begin
   empListLock.Acquire;
   try
-    idxMonitor := empMonitorList.IndexOf(integer(GetCurrentThreadID));
-    if idxMonitor < 0 then
+    Id := GetThreadId;
+    if not empMonitorList.ContainsKey(Id) then
       raise Exception.CreateFmt(
         'TOmniEventMonitorPool.Release: Monitor is not allocated for thread %d',
-        [GetCurrentThreadID]);
-    monitorInfo := TOmniCountedEventMonitor(empMonitorList.Objects[idxMonitor]);
+        [Id]);
+    monitorInfo := empMonitorList[Id] as TOmniCountedEventMonitor;
     Assert(monitorInfo.Monitor = monitor);
     monitorInfo.Release;
-    if monitorInfo.RefCount = 0 then begin
-      empMonitorList.Delete(idxMonitor);
-    end;
+    if monitorInfo.RefCount = 0 then
+      empMonitorList.Remove(Id)
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Release }
 
+{$IFDEF MSWINDOWS}
 initialization
   COmniTaskMsg_NewMessage := RegisterWindowMessage('Gp/OtlTaskEvents/NewMessage');
   Win32Check(COmniTaskMsg_NewMessage <> 0);
@@ -450,4 +480,6 @@ initialization
   Win32Check(COmniTaskMsg_Terminated <> 0);
   COmniPoolMsg := RegisterWindowMessage('Gp/OtlThreadPool');
   Win32CHeck(COmniPoolMsg <> 0);
+{$ENDIF}
+
 end.
