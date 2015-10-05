@@ -213,10 +213,10 @@ type
   IOmniCommDispatchingObserver = interface ['{3DCC4745-14E1-4AE2-B2B3-D4B9E36CF483}']
   end; { IOmniCommDispatchingObserver }
 
-  {$IFDEF TOmniTransitionEvent}
+  {$IFDEF MSWINDOWS}
   function CreateDispatchingObserver(queue: TOmniMessageQueue; dispatchTo: TObject):
     IOmniCommDispatchingObserver;
-  {$ENDIF TOmniTransitionEvent}
+  {$ENDIF MSWINDOWS}
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
     taskTerminatedEvent: TOmniTransitionEvent =
