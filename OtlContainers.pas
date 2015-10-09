@@ -1236,8 +1236,6 @@ Dequeue:
 { TOmniTaggedValue }
 
 function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniQueueTag): boolean;
-var
-  OldVal, NewVal: integer;
 begin
   {$IFDEF OTL_HaveCmpx16b}
   Result := CAS8(Ord(oldTag), Ord(newTag), Tag);

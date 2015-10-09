@@ -6,6 +6,7 @@
 - Bug fixes:
   - Fixed unsafe 64-bit pointer-to-integer casts in TOmniCS.Initialize and 
     Atomic<T>.Initialize.
+  - Fixed processing of 'new message'/'new wake event' events in TWaitFor.
 
 3.05: 2015-09-07
 - New features:
