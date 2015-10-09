@@ -2031,6 +2031,11 @@ begin
     // do-nothing
   else if awaited = waTimeout then
     CheckTimers
+  else if awaited = waMessage then begin
+    // thread messages are always processed below
+    if assigned(WorkerIntf) then
+      WorkerIntf.ProcessThreadMessages;
+  end
   else if awaited <> waAwaited then
     raise Exception.Create('TOmniTaskExecutor.DispatchEvent: Unexpected TWaitResult')
   else begin
@@ -2067,13 +2072,7 @@ begin
 //        TestForInternalRebuild(task, msgInfo); // doesn't seem safe anymore
       end // comm handles
       else if info.Index = msgInfo.IdxRebuildHandles then
-        rebuildHandles := true
-      {$IFDEF MSWINDOWS} //TODO: Implement for non-Windows platforms
-      else if info.Index = WAIT_OBJECT_0 + msgInfo.NumWaitHandles then //message
-        // thread messages are always processed below
-        if assigned(WorkerIntf) then
-          WorkerIntf.ProcessThreadMessages;
-      {$ENDIF MSWINDOWS}
+        rebuildHandles := true;
     end;
   end;
 
@@ -3030,7 +3029,7 @@ begin
   Result := otcUserData[idxData];
 end; { TOmniTaskControl.GetUserDataVal }
 
-procedure TOmniTaskControl.Initialize;
+procedure TOmniTaskControl.Initialize(const taskName: string);
 begin
   otcExecutor.Options := [tcoForceExecution];
   otcQueueLength := CDefaultQueueSize;

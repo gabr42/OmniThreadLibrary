@@ -459,7 +459,8 @@ type
       waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
       waTimeout,      // WAIT_TIMEOUT
       waFailed,       // WAIT_FAILED
-      waIOCompletion  // WAIT_IO_COMPLETION
+      waIOCompletion, // WAIT_IO_COMPLETION
+      waMessage       // message or wake event (WAIT_OBJECT_n+1)
     );
     THandleInfo = record
       Index: integer;
@@ -477,7 +478,7 @@ type
     FWaitMode        : TWaitMode; // for testing
   strict protected
     function  GetWaitHandles: THandleArr;
-    function  MapToHandle(winResult: cardinal): cardinal;
+    function  MapToHandle(winResult: cardinal; isMsgWait: boolean): cardinal;
     function  MapToResult(winResult: cardinal): TWaitForResult;
     procedure RegisterWaitHandles(extraFlags: cardinal);
     procedure UnregisterWaitHandles;
@@ -503,7 +504,8 @@ type
       waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
       waTimeout,      // WAIT_TIMEOUT
       waFailed,       // WAIT_FAILED
-      waIOCompletion  // WAIT_IO_COMPLETION
+      waIOCompletion, // WAIT_IO_COMPLETION
+      waMessage       // message or wake event (WAIT_OBJECT_n+1)
     );
     THandleInfo = record //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
       Index: integer;
@@ -1835,7 +1837,7 @@ var
   winResult: cardinal;
 begin
   if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) < 64)) then
-    winResult := MapToHandle(MsgWaitForMultipleObjectsEx(Length(FHandles), FHandles[0], timeout_ms, wakeMask, flags))
+    winResult := MapToHandle(MsgWaitForMultipleObjectsEx(Length(FHandles), FHandles[0], timeout_ms, wakeMask, flags), true)
   else begin
     FIdxSignalled := -1;
     RegisterWaitHandles(0);
@@ -1859,18 +1861,23 @@ begin
     Move(FHandles[Low(FHandles)], Result[Low(Result)], Length(Result) * SizeOf(Result[Low(Result)]));
 end; { TWaitFor.GetWaitHandles }
 
-function TWaitFor.MapToHandle(winResult: cardinal): cardinal;
+function TWaitFor.MapToHandle(winResult: cardinal; isMsgWait: boolean): cardinal;
 begin
-  Result := winResult;
-  if {(winResult >= WAIT_OBJECT_0) and }
+  if isMsgWait and (winResult = (WAIT_OBJECT_0 + cardinal(Length(FHandles)))) then begin
+    SetLength(FSignalledHandles, 0);
+    Result := WAIT_OBJECT_0 + 64; //unused value in Windows API
+  end
+  else if {(winResult >= WAIT_OBJECT_0) and }
      (winResult < (WAIT_OBJECT_0 + cardinal(Length(FHandles)))) then
   begin
     SetLength(FSignalledHandles, 1);
     FSignalledHandles[0].Index := winResult - WAIT_OBJECT_0;
     Result := WAIT_OBJECT_0;
   end
-  else
+  else begin
     SetLength(FSignalledHandles, 0);
+    Result := winResult;
+  end;
 end; { TWaitFor.MapToHandle }
 
 function TWaitFor.MapToResult(winResult: cardinal): TWaitForResult;
@@ -1881,6 +1888,8 @@ begin
     Result := waTimeout
   else if winResult = WAIT_IO_COMPLETION then
     Result := waIOCompletion
+  else if winResult = (WAIT_OBJECT_0 + 64) then
+    Result := waMessage
   else
     Result := waFailed;
 end; { TWaitFor.MapToResult }
@@ -1942,7 +1951,7 @@ var
   winResult: cardinal;
 begin
   if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
-    winResult := MapToHandle(WaitForMultipleObjects(Length(FHandles), @(FHandles[0]), true, timeout_ms))
+    winResult := MapToHandle(WaitForMultipleObjects(Length(FHandles), @(FHandles[0]), true, timeout_ms), false)
   else begin
     FResourceCount := CreateResourceCount(Length(FHandles));
     try
@@ -1961,7 +1970,7 @@ var
   winResult: cardinal;
 begin
   if (FWaitMode = wmForceWFM) or ((FWaitMode = wmSmart) and (Length(FHandles) <= 64)) then
-    winResult := MapToHandle(WaitForMultipleObjectsEx(Length(FHandles), @(FHandles[0]), false, timeout_ms, alertable))
+    winResult := MapToHandle(WaitForMultipleObjectsEx(Length(FHandles), @(FHandles[0]), false, timeout_ms, alertable), false)
   else begin
     FIdxSignalled := -1;
     RegisterWaitHandles(0);
@@ -2348,7 +2357,6 @@ begin
       for iObserver := 0 to FObservers.Count - 1 do
         observer.BeforeSignal(self, FData[iObserver]);
       Action;
-      iObserver := -1;
       for iObserver := 0 to FObservers.Count - 1 do
         observer.AfterSignal(self, FData[iObserver]);
     finally
