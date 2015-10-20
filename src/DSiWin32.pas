@@ -1354,7 +1354,7 @@ const
     'Windows NT 4', 'Windows 2000', 'Windows XP', 'Windows NT', 'Windows Server 2003',
     'Windows Vista', 'Windows Server 2008', 'Windows Server 2008 or Windows Vista SP1',
     'Windows 7', 'Windows Server 2008 R2', 'Windows 7 or Windows Server 2008 R2',
-    'Windows 8', 'Windows 8.1', 'Windows Server 2012 R2', 'Windows 10',
+    'Windows 8', 'Windows 8.1', 'Windows Server 2012', 'Windows Server 2012 R2', 'Windows 10',
     'Windows Server 2016');
 
   VER_SUITE_BACKOFFICE     = $00000004; // Microsoft BackOffice components are installed.
@@ -6867,7 +6867,7 @@ var
               end
             else
               case versionInfoEx.dwMinorVersion of
-                0: Result := wvWinServer2008
+                0: Result := wvWinServer2008;
                 1: Result := wvWinServer2008R2;
                 2: Result := wvWinServer2012;
                 else Result := wvWinServer2012R2;
