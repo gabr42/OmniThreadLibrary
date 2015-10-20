@@ -7,10 +7,17 @@
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
    Creation date     : 2002-10-09
-   Last modification : 2015-07-29
-   Version           : 1.82a
+   Last modification : 2015-10-20
+   Version           : 1.84
 </pre>*)(*
    History:
+     1.84: 2015-10-20
+       - Updated DSiGetWindowsVersion for Windows 8.1, Windows 10, Windows Server 2012,
+         and Windows Server 2016.
+     1.83: 2015-09-22
+       - Added function DSiFileSizeAndTime.
+     1.82b: 2015-09-22
+       - File handle is open with least access in DSiGetFileTimes.
      1.82a: 2015-07-29
        - Fixed DSiGetClassName for Unicode.
      1.82: 2015-04-24
@@ -1145,6 +1152,7 @@ type
   function  DSiFileExtensionIs(const fileName: string; extension: array of string):
     boolean; overload;
   function  DSiFileSize(const fileName: string): int64;
+  function  DSiFileSizeAndTime(const fileName: string; var dtModified_UTC: TDateTime; var size: int64): boolean;
   function  DSiFileSizeW(const fileName: WideString): int64;
   function  DSiGetFolderSize(const folder: string; includeSubfolders: boolean): int64;
   function  DSiGetFileTime(const fileName: string; whatTime: TDSiFileTime): TDateTime;
@@ -1334,7 +1342,8 @@ type
   TDSiWindowsVersion = (wvUnknown, wvWin31, wvWin95, wvWin95OSR2, wvWin98,
     wvWin98SE, wvWinME, wvWin9x, wvWinNT3, wvWinNT4, wvWin2000, wvWinXP,
     wvWinNT, wvWinServer2003, wvWinVista, wvWinServer2008, wvWinServer2008OrVistaSP1,
-    wvWin7, wvWinServer2008R2, wvWin7OrServer2008R2, wvWin8);
+    wvWin7, wvWinServer2008R2, wvWin7OrServer2008R2, wvWin8, wvWin81,
+    wvWinServer2012, wvWinServer2012R2, wvWin10, wvWinServer2016);
 
   TDSiUIElement = (ueMenu, ueMessage, ueWindowCaption, ueStatus);
 
@@ -1345,7 +1354,8 @@ const
     'Windows NT 4', 'Windows 2000', 'Windows XP', 'Windows NT', 'Windows Server 2003',
     'Windows Vista', 'Windows Server 2008', 'Windows Server 2008 or Windows Vista SP1',
     'Windows 7', 'Windows Server 2008 R2', 'Windows 7 or Windows Server 2008 R2',
-    'Windows 8');
+    'Windows 8', 'Windows 8.1', 'Windows Server 2012 R2', 'Windows 10',
+    'Windows Server 2016');
 
   VER_SUITE_BACKOFFICE     = $00000004; // Microsoft BackOffice components are installed.
   VER_SUITE_BLADE          = $00000400; // Windows Server 2003, Web Edition is installed.
@@ -3497,6 +3507,28 @@ const
     finally CloseHandle(fHandle); end;
   end; { DSiFileSize }
 
+  {:Retrieves file size and file time (last modification time).
+    @returns -1 for unexisting/unaccessible file or file size.
+    @author  gabr
+    @since   2015-09-22
+  }
+  function DSiFileSizeAndTime(const fileName: string; var dtModified_UTC: TDateTime; var size: int64): boolean;
+  var
+    fileHandle            : THandle;
+    fsCreationTime        : TFileTime;
+    fsLastAccessTime      : TFileTime;
+    fsLastModificationTime: TFileTime;
+  begin
+    Result := false;
+    fileHandle := CreateFile(PChar(fileName), 0, FILE_SHARE_READ OR FILE_SHARE_WRITE OR FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, 0);
+    if fileHandle <> INVALID_HANDLE_VALUE then
+    try
+      Int64Rec(size).Lo := GetFileSize(fileHandle, @Int64Rec(size).Hi);
+      Result := GetFileTime(fileHandle, @fsCreationTime, @fsLastAccessTime, @fsLastModificationTime) and
+        DSiFileTimeToDateTime(fsLastModificationTime, dtModified_UTC);
+    finally CloseHandle(fileHandle); end;
+  end; { DSiFileSizeAndTime }
+
   {:Wide version of DSiFileSize.
     @returns -1 for unexisting/unaccessible file or file size.
     @author  gabr
@@ -3573,7 +3605,8 @@ const
     fsLastModificationTime: TFileTime;
   begin
     Result := false;
-    fileHandle := CreateFile(PChar(fileName), GENERIC_READ, FILE_SHARE_READ, nil,
+    fileHandle := CreateFile(PChar(fileName), 0,
+      FILE_SHARE_READ OR FILE_SHARE_WRITE OR FILE_SHARE_DELETE, nil,
       OPEN_EXISTING, 0, 0);
     if fileHandle <> INVALID_HANDLE_VALUE then try
       Result :=
@@ -6829,15 +6862,22 @@ var
               case versionInfoEx.dwMinorVersion of
                 0: Result := wvWinVista;
                 1: Result := wvWin7;
-              else
-                Result := wvWin8;
+                2: Result := wvWin8;
+                else Result := wvWin81;
               end
             else
-              if versionInfoEx.dwMinorVersion = 0 then
-                Result := wvWinServer2008
-              else
-                Result := wvWinServer2008R2;
+              case versionInfoEx.dwMinorVersion of
+                0: Result := wvWinServer2008
+                1: Result := wvWinServer2008R2;
+                2: Result := wvWinServer2012;
+                else Result := wvWinServer2012R2;
+              end;
           end;
+          10:
+            if versionInfoEx.wProductType = VER_NT_WORKSTATION then
+              Result := wvWin10
+            else
+              Result := wvWinServer2016;
         end; //case versionInfo.dwMajorVersion
       end; //versionInfo.dwPlatformID
   end; { DSiGetWindowsVersion }
