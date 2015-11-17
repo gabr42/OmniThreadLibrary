@@ -54,6 +54,6 @@ contains
   OtlCollections in '..\OtlCollections.pas',
   OtlCommon.Utils in '..\OtlCommon.Utils.pas',
   OtlDataManager in '..\OtlDataManager.pas',
-  OtlParallel in '..\OtlParallel.pas';  
+  OtlParallel in '..\OtlParallel.pas';
 
 end.
