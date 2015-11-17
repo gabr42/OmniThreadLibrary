@@ -9,6 +9,9 @@
         <Projects Include="OmniThreadLibraryDesigntimeXE7.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="OmniThreadLibraryPOSIXRuntimeXE7.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="OmniThreadLibraryDesigntimeXE7:Make">
         <MSBuild Projects="OmniThreadLibraryDesigntimeXE7.dproj" Targets="Make"/>
     </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntimeXE7">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntimeXE7.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntimeXE7:Clean">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntimeXE7.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntimeXE7:Make">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntimeXE7.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="OmniThreadLibraryRuntimeXE7;OmniThreadLibraryDesigntimeXE7"/>
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE7;OmniThreadLibraryDesigntimeXE7;OmniThreadLibraryPOSIXRuntimeXE7"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="OmniThreadLibraryRuntimeXE7:Clean;OmniThreadLibraryDesigntimeXE7:Clean"/>
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE7:Clean;OmniThreadLibraryDesigntimeXE7:Clean;OmniThreadLibraryPOSIXRuntimeXE7:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="OmniThreadLibraryRuntimeXE7:Make;OmniThreadLibraryDesigntimeXE7:Make"/>
+        <CallTarget Targets="OmniThreadLibraryRuntimeXE7:Make;OmniThreadLibraryDesigntimeXE7:Make;OmniThreadLibraryPOSIXRuntimeXE7:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
