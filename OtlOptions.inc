@@ -46,7 +46,7 @@
 ///       - Released.
 ///</para></remarks>
 
-// See the Configuration block below to configure your build process.
+// See the Configuration block in the OtlAddionalSymbols.inc file to configure your build process.
 
 {$ALIGN 8}
 {$BOOLEVAL OFF}
@@ -102,13 +102,14 @@
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
-{$IF CompilerVersion >= 29} //DXE8
+{$IF CompilerVersion >= 28} //DXE7
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
 {$IFNDEF MSWINDOWS}
 {$IFNDEF OTL_MobileSupport}
-{$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE8 is required for non-Windows platforms.'}
+{$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE7 is required for non-Windows platforms.'}
 {$ENDIF ~OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
 
+{$I OtlAdditionalSymbols.inc}

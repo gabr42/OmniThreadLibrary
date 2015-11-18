@@ -134,6 +134,7 @@
 unit OtlSync;
 
 {$I OtlOptions.inc}
+{$I HintReporting.inc}
 
 interface
 
@@ -642,7 +643,7 @@ procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); 
 function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
 {$ENDIF MSWINDOWS}
 
-function GetThreadId: NativeInt;
+function GetThreadId: TThreadId;
 function GetCPUTimeStamp: int64;
 
 function SetEvent(event: TOmniTransitionEvent): boolean;
@@ -1021,7 +1022,8 @@ asm
 end;
 {$ENDIF MSWINDOWS}
 
-function GetThreadId: NativeInt;
+{$IFDEF MSWINDOWS}
+function GetThreadId: TThreadId; // Equates to DWORD on windows.
 //result := GetCurrentThreadId;
 asm
 {$IFNDEF CPUX64}
@@ -1032,7 +1034,15 @@ asm
   mov   eax, [rax + $48]
 {$ENDIF CPUX64}
 end; { GetThreadId }
+{$ELSE}
 
+function GetThreadId: TThreadId;
+begin
+  result := GetCurrentThreadId
+end;
+{$ENDIF}
+
+{$IFDEF MSWINDOWS}
 function GetCPUTimeStamp: int64;
 asm
   rdtsc
@@ -1041,11 +1051,20 @@ asm
   or    rax, rdx
 {$ENDIF CPUX64}
 end; { GetCPUTimeStamp }
+{$ELSE}
 
+function GetCPUTimeStamp: int64;
+begin
+  result := TStopwatch.GetTimeStamp
+end;
+{$ENDIF}
+
+{$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
 asm
   lock  xadd [addend], value
 end; { NInterlockedExchangeAdd }
+{$ENDIF}
 
 {$IFNDEF OTL_HasInterlockedCompareExchangePointer}
 function InterlockedCompareExchangePointer(var destination: pointer; exchange: pointer;
@@ -1056,10 +1075,12 @@ begin
 end; { InterlockedCompareExchangePointer }
 {$ENDIF OTL_HasInterlockedCompareExchangePointer}
 
+{$IFDEF MSWINDOWS}
 procedure MFence; assembler;
 asm
   mfence
 end; { MFence }
+{$ENDIF}
 
 {$IFDEF MSWINDOWS}
 function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal):
