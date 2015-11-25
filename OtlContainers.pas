@@ -1612,7 +1612,11 @@ begin
           break; //repeat
         end
         else
+        {$IFDEF MSWINDOWS}
           {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+        {$ELSE}
+          System.YieldProcessor
+        {$ENDIF}
       until false;
       if Result then begin // dequeueing
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}

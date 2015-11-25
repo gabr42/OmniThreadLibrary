@@ -101,8 +101,10 @@ uses
   {$IFDEF MSWINDOWS}
   Messages,
   GpStuff,
-  {$ENDIF}
   GpLists,
+  {$ELSE}
+  System.Generics.Collections,
+  {$ENDIF}
   Classes,
   OtlComm,
   OtlSync,
@@ -177,7 +179,14 @@ type
   strict private
     empListLock    : TOmniCS;
     empMonitorClass: TOmniEventMonitorClass;
+    {$IFDEF MSWINDOWS}
     empMonitorList : TGpIntegerObjectList;
+    {$ELSE}
+    empMonitorList : TDictionary<TThreadId,TObject>;
+
+    procedure MonitorList_OnValueNotify( Sender: TObject; const Item: TObject; Action: System.Generics.Collections.TCollectionNotification);
+    {$ENDIF}
+
   public
     constructor Create;
     destructor  Destroy; override;
@@ -418,8 +427,13 @@ end; { TOmniCountedEventMonitor.Release }
 constructor TOmniEventMonitorPool.Create;
 begin
   inherited Create;
-  empMonitorList := TGpIntegerObjectList.Create;
-  empMonitorList.Sorted := true;
+  {$IFDEF MSWINDOWS}
+    empMonitorList := TGpIntegerObjectList.Create;
+    empMonitorList.Sorted := true;
+  {$ELSE}
+    empMonitorList := TDictionary<TThreadId,TObject>.Create;
+    empMonitorList.OnValueNotify := MonitorList_OnValueNotify
+  {$ENDIF}
 end; { TOmniEventMonitorPool.Create }
 
 destructor TOmniEventMonitorPool.Destroy;
@@ -430,26 +444,49 @@ end; { TOmniEventMonitorPool.Destroy }
 
 ///<summary>Returns monitor associated with the current thread. Allocates new monitor if
 ///    no monitor has been associated with this thread.</summary>
+{$IFDEF MSWINDOWS}
 function TOmniEventMonitorPool.Allocate: TOmniEventMonitor;
 var
   monitorInfo: TOmniCountedEventMonitor;
 begin
   empListLock.Acquire;
   try
-    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF})));
+    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer(GetCurrentThreadID)));
     if assigned(monitorInfo) then
       monitorInfo.Allocate
     else begin
       monitorInfo := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
-      empMonitorList.AddObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}), monitorInfo);
+      empMonitorList.AddObject(integer(GetCurrentThreadID), monitorInfo);
     end;
     Result := monitorInfo.Monitor;
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Allocate }
 
+{$ELSE}
+function TOmniEventMonitorPool.Allocate: TOmniEventMonitor;
+var
+  Id: TThreadId;
+  Addend: TOmniCountedEventMonitor;
+begin
+  empListLock.Acquire;
+  try
+    Id := TThread.CurrentThread.ThreadID;
+    if empMonitorList.ContainsKey(Id) then
+        result := (empMonitorList[Id] as TOmniCountedEventMonitor).Allocate
+      else
+        begin
+        Addend := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
+        empMonitorList.Add(Id, Addend);
+        result := Addend.Monitor
+        end
+  finally empListLock.Release; end;
+end; { TOmniEventMonitorPool.Allocate }
+{$ENDIF MSWINDOWS}
+
 ///<summary>Releases monitor from the current thread. If monitor is no longer in use,
 ///    destroys the monitor.</summary>
 ///<since>2010-03-03</since>
+{$IFDEF MSWINDOWS}
 procedure TOmniEventMonitorPool.Release(monitor: TOmniEventMonitor);
 var
   idxMonitor : integer;
@@ -470,6 +507,39 @@ begin
     end;
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Release }
+
+{$ELSE}
+procedure TOmniEventMonitorPool.Release(monitor: TOmniEventMonitor);
+var
+  Id: TThreadId;
+  monitorInfo: TOmniCountedEventMonitor;
+begin
+  empListLock.Acquire;
+  try
+    Id := TThread.CurrentThread.ThreadID;
+    if not empMonitorList.ContainsKey(Id) then
+      raise Exception.CreateFmt(
+        'TOmniEventMonitorPool.Release: Monitor is not allocated for thread %d',
+        [Id]);
+    monitorInfo := empMonitorList[Id] as TOmniCountedEventMonitor;
+    Assert(monitorInfo.Monitor = monitor);
+    monitorInfo.Release;
+    if monitorInfo.RefCount = 0 then
+      empMonitorList.Remove(Id)
+  finally empListLock.Release; end;
+end; { TOmniEventMonitorPool.Release }
+{$ENDIF MSWINDOWS}
+
+{$IFNDEF MSWINDOWS}
+procedure TOmniEventMonitorPool.MonitorList_OnValueNotify( Sender: TObject; const Item: TObject; Action: System.Generics.Collections.TCollectionNotification);
+begin
+  case Action of
+    System.Generics.Collections.cnAdded    ,
+    System.Generics.Collections.cnExtracted: ;
+    System.Generics.Collections.cnRemoved  : Item.Free;
+  end;
+end;
+{$ENDIF}
 
 {$IFDEF MSWINDOWS}
 initialization

@@ -85,8 +85,9 @@ uses
   SysUtils,
   Classes,
   SyncObjs,
+  {$IFDEF MSWINDOWS}
   GpLists,
-  {$IFNDEF MSWINDOWS}
+  {$ELSE}
   Generics.Collections,
   {$ENDIF ~MSWINDOWS}
   OtlCommon,
@@ -100,8 +101,13 @@ type
 
   TOmniWaitObjectList = class
   strict private
+    {$IFDEF MSWINDOWS}
     owolResponseHandlers: TGpTMethodList;
-    owolWaitObjects     : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
+    owolWaitObjects     : TGpInt64List;
+    {$ELSE}
+    owolResponseHandlers: TList<TOmniWaitObjectMethod>;
+    owolWaitObjects     : TList<IOmniEvent>;
+    {$ENDIF}
   strict protected
     function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
     function  GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
@@ -207,8 +213,13 @@ end;
 constructor TOmniWaitObjectList.Create;
 begin
   inherited Create;
-  owolWaitObjects := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
-  owolResponseHandlers := TGpTMethodList.Create;
+  {$IFDEF MSWINDOWS}
+    owolWaitObjects      := TGpInt64List.Create;
+    owolResponseHandlers := TGpTMethodList.Create;
+  {$ELSE}
+    owolWaitObjects      := TList<IOmniEvent>.Create;
+    owolResponseHandlers := TList<TOmniWaitObjectMethod>.Create;
+  {$ENDIF}
 end; { TOmniWaitObjectList.Create }
 
 destructor TOmniWaitObjectList.Destroy;
@@ -223,7 +234,11 @@ procedure TOmniWaitObjectList.Add(waitObject: TOmniTransitionEvent;
 begin
   Remove(waitObject);
   owolWaitObjects.Add(waitObject);
-  owolResponseHandlers.Add(TMethod(responseHandler));
+  {$IFDEF MSWINDOWS}
+    owolResponseHandlers.Add(TMethod(responseHandler));
+  {$ELSE}
+    owolResponseHandlers.Add( responseHandler);
+  {$ENDIF}
 end; { TOmniWaitObjectList.Add }
 
 function TOmniWaitObjectList.Count: integer;
