@@ -293,11 +293,11 @@ uses
   DetailedRTTI,
   DSiWin32,
   GpStuff,
-  {$ELSE}
-  Generics.Collections,
-  {$ENDIF ~MSWINDOWS}
   GpLists,
   GpStringHash,
+  {$ELSE}
+  System.Generics.Collections,
+  {$ENDIF ~MSWINDOWS}
   SysUtils,
   Classes,
   SyncObjs,
@@ -708,6 +708,18 @@ type
     property TimerID: integer read ottiTimerID write ottiTimerID;
   end; { TOmniTaskTimerInfo }
 
+  {$IFNDEF MSWINDOWS}
+  ROmniTaskTimerInfo = record
+    FwakeUpTime_ms: int64;
+    timerInfo: TOmniTaskTimerInfo;
+    end;
+
+  TOmniTaskTimerInfoList = class( TList<ROmniTaskTimerInfo>)
+  protected
+    procedure Notify(const Item: ROmniTaskTimerInfo; Action: System.Generics.Collections.TCollectionNotification); override;
+  end;
+  {$ENDIF}
+
   TOmniTaskControl = class;
 
   TOmniTaskExecutor = class
@@ -751,7 +763,12 @@ type
     oteFunc              : TOmniTaskDelegate;
     {$ENDIF OTL_Anonymous}
     oteMethod            : TOmniTaskMethod;
-    oteMethodHash        : TGpStringObjectHash;
+    {$IFDEF MSWINDOWS}
+      oteMethodHash      : TGpStringObjectHash;
+    {$ELSE}
+       /// <remarks>OnValueNotify event is MethodHashDict_OnValueNotify, to implement value ownership.</remarks>
+      oteMethodHash      : TDictionary<string,TObject>;
+    {$ENDIF MSWINDOWS}
     oteMsgInfo           : TOmniMessageInfo;
     oteOptions           : TOmniTaskControlOptions;
     oteOwner_ref         : TOmniTaskControl;
@@ -759,10 +776,11 @@ type
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
     oteTerminating       : boolean;
-    oteTimers            : TGpInt64ObjectList;
     {$IFDEF MSWINDOWS}
+    oteTimers            : TGpInt64ObjectList;
     oteWakeMask          : DWORD;
     {$ELSE}
+    oteTimers            : TOmniTaskTimerInfoList;
     oteWakeAll           : boolean;
     {$ENDIF ~MSWINDOWS}
     oteWaitHandlesGen    : int64;
@@ -847,6 +865,12 @@ type
     property WorkerInitialized: TOmniTransitionEvent read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
+
+  {$IFNDEF MSWINDOWS}
+  private
+      /// <remarks>OnValueNotify event for oteMethodHash</remarks>
+      procedure MethodHashDict_OnValueNotify( Sender: TObject; const Item: TObject; Action: System.Generics.Collections.TCollectionNotification);
+  {$ENDIF ~MSWINDOWS}
   end; { TOmniTaskExecutor }
 
   TOmniTask = class(TInterfacedObject, IOmniTask, IOmniTaskExecutor)
@@ -957,7 +981,12 @@ type
     otcExecutor            : TOmniTaskExecutor;
     otcInEventHandler      : boolean;
     otcOnMessageExec       : TOmniMessageExec;
+    {$IFDEF MSWINDOWS}
     otcOnMessageList       : TGpIntegerObjectList;
+    {$ELSE}
+    /// <remarks>OnValueNotify event is OnMessageList_OnValueNotify, to implement value ownership.</remarks>
+    otcOnMessageList       : TDictionary<integer,TOmniMessageExec>;
+    {$ENDIF}
     otcOnTerminatedExec    : TOmniMessageExec;
     otcOwningPool          : IOmniThreadPool;
     otcParameters          : TOmniValueContainer;
@@ -1089,6 +1118,11 @@ type
     property SharedInfo: TOmniSharedTaskInfo read otcSharedInfo;
     property UniqueID: int64 read GetUniqueID;
     property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
+  {$IFNDEF MSWINDOWS}
+  private
+      /// <remarks>OnValueNotify event for otcOnMessageList</remarks>
+      procedure OnMessageList_OnValueNotify( Sender: TObject; const Item: TOmniMessageExec; Action: System.Generics.Collections.TCollectionNotification);
+  {$ENDIF ~MSWINDOWS}
   end; { TOmniTaskControl }
 
   TOmniTaskControlList = class;
@@ -1953,7 +1987,11 @@ var
 begin
   oteTimerLock.Acquire;
   try
-    timerInfo := TOmniTaskTimerInfo(oteTimers.Objects[0]);
+    {$IFDEF MSWINDOWS}
+      timerInfo := TOmniTaskTimerInfo(oteTimers.Objects[0]);
+    {$ELSE}
+      timerInfo := oteTimers[0].timerInfo;
+    {$ENDIF}
     SetTimer(timerInfo.TimerID, timerInfo.Interval_ms, timerInfo.MessageID); // rearm
   finally oteTimerLock.Release; end;
   if (timerInfo.MessageID.MessageType <> mitInteger) or (integer(timerInfo.MessageID) >= 0) then begin
@@ -2163,8 +2201,17 @@ begin
       if methodName = '' then
         raise Exception.Create('TOmniTaskExecutor.DispatchOmniMessage: Method name not set');
       if not assigned(oteMethodHash) then
-        oteMethodHash := TGpStringObjectHash.Create(17, true); //usually there won't be many methods
-      if not oteMethodHash.Find(methodName, methodInfoObj) then begin
+        {$IFDEF MSWINDOWS}
+          oteMethodHash := TGpStringObjectHash.Create(17, true); //usually there won't be many methods
+        {$ELSE}
+          begin
+          oteMethodHash := TDictionary<string,TObject>.Create;
+          oteMethodHash.OnValueNotify := MethodHashDict_OnValueNotify
+          end;
+        {$ENDIF MSWINDOWS}
+
+      if not {$IFDEF MSWINDOWS} oteMethodHash.Find(methodName, methodInfoObj)
+             {$ELSE}            oteMethodHash.ContainsKey(methodName) {$ENDIF} then begin
         GetMethodAddrAndSignature(methodName, methodAddr, methodSignature);
         methodInfo := TOmniInvokeInfo.Create(methodAddr, methodSignature);
         oteMethodHash.Add(methodName, methodInfo);
@@ -2240,6 +2287,7 @@ begin
   end;
 end; { TOmniTaskExecutor.GetImplementor }
 
+{$IFDEF MSWINDOWS}
 procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
   methodAddress: pointer; var methodSignature: TOmniInvokeType);
 const
@@ -2342,6 +2390,15 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
   end;
   {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
+{$ELSE}
+
+procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
+  methodAddress: pointer; var methodSignature: TOmniInvokeType);
+begin
+  // TODO: Non-windows implementation using RTTI unit.
+
+end;
+{$ENDIF}
 
 procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage; var
   msgName: string; var msgData: TOmniValue {$IFDEF OTL_Anonymous};
@@ -2389,20 +2446,21 @@ function TOmniTaskExecutor.HaveElapsedTimer: boolean;
 begin
   oteTimerLock.Acquire;
   try
-    Result := (oteTimers.Count > 0) and (oteTimers[0] <= {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopwatch.GetTimeStamp {$ENDIF});
+    Result := (oteTimers.Count > 0) and (oteTimers[0] {$IFDEF MSWINDOWS} <= DSiTimeGetTime64 {$ELSE} .FwakeUpTime_ms <= TStopwatch.GetTimeStamp {$ENDIF});
   finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.HaveElapsedTimer }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
   oteMsgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
-  oteTimers := TGpInt64ObjectList.Create;
   {$IFDEF MSWINDOWS}
+  oteTimers := TGpInt64ObjectList.Create;
   oteWorkerInitialized := CreateEvent(nil, true, false, nil);
   Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
   {$ELSE}
+  oteTimers := TOmniTaskTimerInfoList.Create;
   oteWorkerInitialized := CreateOmniEvent(true, false);
   oteCommRebuildHandles := CreateOmniEvent(false, false);
   {$ENDIF ~MSWINDOWS}
@@ -2412,20 +2470,35 @@ end; { TOmniTaskExecutor.Initialize }
 procedure TOmniTaskExecutor.InsertTimer(wakeUpTime_ms: int64; timerInfo: TOmniTaskTimerInfo);
 var
   idxTimer: integer;
+  {$IFNDEF MSWINDOWS}
+    Addend: ROmniTaskTimerInfo;
+  {$ENDIF}
 begin
   // expects the caller to take care of the synchronicity
   idxTimer := 0;
-  while (idxTimer < oteTimers.Count) and (wakeUpTime_ms > oteTimers[idxTimer]) do
-    Inc(idxTimer);
-  oteTimers.InsertObject(idxTimer, wakeUpTime_ms, timerInfo);
+  {$IFDEF MSWINDOWS}
+    while (idxTimer < oteTimers.Count) and (wakeUpTime_ms > oteTimers[idxTimer]) do
+      Inc(idxTimer);
+    oteTimers.InsertObject(idxTimer, wakeUpTime_ms, timerInfo);
+  {$ELSE}
+    while (idxTimer < oteTimers.Count) and (wakeUpTime_ms > oteTimers[idxTimer].FwakeUpTime_ms) do
+      Inc(idxTimer);
+    Addend.FwakeUpTime_ms := wakeUpTime_ms;
+    Addend.timerInfo      := timerInfo;
+    oteTimers.Insert(idxTimer, Addend);
+  {$ENDIF}
 end; { TOmniTaskExecutor.InsertTimer }
 
 function TOmniTaskExecutor.LocateTimer(timerID: integer): integer;
 begin
   // expects the caller to take care of the synchronicity
   for Result := 0 to oteTimers.Count - 1 do
-    if TOmniTaskTimerInfo(oteTimers.Objects[Result]).TimerID = timerID then
-      Exit;
+    {$IFDEF MSWINDOWS}
+      if TOmniTaskTimerInfo(oteTimers.Objects[Result]).TimerID = timerID then
+    {$ELSE}
+      if TOmniTaskTimerInfo(oteTimers[Result].timerInfo).TimerID = timerID then
+    {$ENDIF}
+       Exit;
   Result := -1;
 end; { TOmniTaskExecutor.LocateTimer }
 
@@ -2651,7 +2724,11 @@ begin
     if idxTimer < 0 then // new timer
       timerInfo := TOmniTaskTimerInfo.Create(timerID, interval_ms, timerMessage)
     else begin // rearm
-      timerInfo := TOmniTaskTimerInfo(oteTimers.ExtractObject(idxTimer));
+      {$IFDEF MSWINDOWS}
+        timerInfo := TOmniTaskTimerInfo(oteTimers.ExtractObject(idxTimer));
+      {$ELSE}
+        timerInfo := TOmniTaskTimerInfo(oteTimers[idxTimer].timerInfo);
+      {$ENDIF}
       timerInfo.Interval_ms := interval_ms;
       timerInfo.MessageID := timerMessage;
     end;
@@ -2697,7 +2774,11 @@ begin
     if oteTimers.Count = 0 then
       Result := INFINITE
     else begin
-      timeout_ms := oteTimers[0] - {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF};
+      {$IFDEF MSWINDOWS}
+        timeout_ms := oteTimers[0] - DSiTimeGetTime64;
+      {$ELSE}
+        timeout_ms := oteTimers[0].FwakeUpTime_ms - TStopWatch.GetTimeStamp;
+      {$ENDIF}
       if timeout_ms < 0 then
         timeout_ms := 0;
       Result := timeout_ms;
@@ -2916,8 +2997,12 @@ var
 {$ENDIF OTL_Anonymous}
 var
   exec: TOmniMessageExec;
-  kv  : TGpKeyValue;
   msg1: TOmniMessage;
+  {$IFDEF MSWINDOWS}
+    kv: TGpKeyValue;
+  {$ELSE}
+    kv: TPair<integer,TOmniMessageExec>;
+  {$ENDIF}
 begin
   {$IFDEF OTL_Anonymous}
   if (msg.MsgID = COtlReservedMsgID) and TOmniInternalFuncMsg.UnpackMessage(msg, func) then
@@ -2925,12 +3010,23 @@ begin
   else
   {$ENDIF OTL_Anonymous}
   begin
-    for kv in otcOnMessageList.WalkKV do
-      if kv.Key = COtlReservedMsgID then begin
-        msg1 := msg;
-        TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
-      end;
-    exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+    {$IFDEF MSWINDOWS}
+      for kv in otcOnMessageList.WalkKV do
+        if kv.Key = COtlReservedMsgID then begin
+          msg1 := msg;
+          TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+        end;
+      exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
+    {$ELSE}
+
+      for kv in otcOnMessageList do
+        if kv.Key = COtlReservedMsgID then begin
+          msg1 := msg;
+          TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
+        end;
+      exec := otcOnMessageList[msg.MsgID];
+    {$ENDIF}
+
     otcInEventHandler := true;
     try
       if assigned(exec) then
@@ -3042,12 +3138,14 @@ begin
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
   otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminatedEvent <> 0);
+  otcOnMessageList := TGpIntegerObjectList.Create(true);
   {$ELSE}
   otcSharedInfo.TerminateEvent := CreateOmniEvent(true, false);
   otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false);
+  otcOnMessageList := TDictionary<integer,TOmniMessageExec>.Create;
+  otcOnMessageList.OnValueNotify := OnMessageList_OnValueNotify;
   {$ENDIF ~MSWINDOWS}
   otcUserData := TOmniValueContainer.Create;
-  otcOnMessageList := TGpIntegerObjectList.Create(true);
 end; { TOmniTaskControl.Initialize }
 
 function TOmniTaskControl.Invoke(const msgMethod: pointer): IOmniTaskControl;
@@ -3133,7 +3231,11 @@ end; { TOmniTaskControl.MsgWait }
 
 function TOmniTaskControl.OnMessage(eventDispatcher: TObject): IOmniTaskControl;
 begin
-  otcOnMessageList.AddObject(COtlReservedMsgID, TOmniMessageExec.Create(eventDispatcher));
+  {$IFDEF MSWINDOWS}
+    otcOnMessageList.AddObject(COtlReservedMsgID, TOmniMessageExec.Create(eventDispatcher));
+  {$ELSE}
+    otcOnMessageList.AddOrSetValue(COtlReservedMsgID, TOmniMessageExec.Create(eventDispatcher));
+  {$ENDIF}
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -3150,7 +3252,11 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
   IOmniTaskControl;
 begin
-  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  {$IFDEF MSWINDOWS}
+    otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  {$ELSE}
+    otcOnMessageList.AddOrSetValue(msgID, TOmniMessageExec.Create(eventHandler));
+  {$ENDIF}
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -3158,7 +3264,11 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(msgID: word;
   eventHandler: TOmniMessageExec): IOmniTaskControl;
 begin
-  otcOnMessageList.AddObject(msgID, eventHandler);
+  {$IFDEF MSWINDOWS}
+    otcOnMessageList.AddObject(msgID, eventHandler);
+  {$ELSE}
+    otcOnMessageList.AddOrSetValue(msgID, eventHandler);
+  {$ENDIF}
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -3177,7 +3287,11 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction):
   IOmniTaskControl;
 begin
-  otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  {$IFDEF MSWINDOWS}
+    otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
+  {$ELSE}
+    otcOnMessageList.AddOrSetValue(msgID, TOmniMessageExec.Create(eventHandler));
+  {$ENDIF}
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
@@ -4003,6 +4117,40 @@ begin
 end; { TOmniMessageExec.SetOnTerminated }
 
 {$ENDIF OTL_Anonymous}
+
+
+{$IFNDEF MSWINDOWS}
+procedure TOmniTaskTimerInfoList.Notify(const Item: ROmniTaskTimerInfo; Action: System.Generics.Collections.TCollectionNotification);
+begin
+  case Action of
+    System.Generics.Collections.cnAdded    ,
+    System.Generics.Collections.cnExtracted: ;
+    System.Generics.Collections.cnRemoved  : Item.timerInfo.Free;
+  end;
+end;
+{$ENDIF}
+
+{$IFNDEF MSWINDOWS}
+procedure TOmniTaskExecutor.MethodHashDict_OnValueNotify( Sender: TObject; const Item: TObject; Action: System.Generics.Collections.TCollectionNotification);
+begin
+  case Action of
+    System.Generics.Collections.cnAdded    ,
+    System.Generics.Collections.cnExtracted: ;
+    System.Generics.Collections.cnRemoved  : Item.Free;
+  end;
+end;
+{$ENDIF ~MSWINDOWS}
+
+{$IFNDEF MSWINDOWS}
+procedure TOmniTaskControl.OnMessageList_OnValueNotify( Sender: TObject; const Item: TOmniMessageExec; Action: System.Generics.Collections.TCollectionNotification);
+begin
+  case Action of
+    System.Generics.Collections.cnAdded    ,
+    System.Generics.Collections.cnExtracted: ;
+    System.Generics.Collections.cnRemoved  : Item.Free;
+  end;
+end;
+{$ENDIF ~MSWINDOWS}
 
 initialization
   GTaskControlEventMonitorPool := TOmniTaskControlEventMonitorPool.Create;

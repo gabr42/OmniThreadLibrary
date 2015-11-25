@@ -132,10 +132,12 @@ uses
   Windows,
   Contnrs,
   DSiWin32,
+  GpLists,
 {$ELSE}
   System.Diagnostics,
+  System.Generics.Collections,
+  System.Generics.Defaults,
 {$ENDIF}
-  GpLists,
   SysUtils,
   Classes,
   {$IFDEF OTL_HasSystemTypes}
@@ -325,7 +327,12 @@ type
   strict private
     const CMaxPreserveOrderPackageSize = 1024; // pretty arbitrary, should do some performance tests
   strict private
+    {$IFDEF MSWINDOWS}
     dmBufferRangeList   : TGpInt64ObjectList;
+    {$ELSE}
+    dmBufferRangeList   : TList<Int64>;
+    dmBufferImpls       : TObjectList<TOmniOutputBufferImpl>;
+    {$ENDIF}
     dmBufferRangeLock   : TOmniCS;
     dmNextPosition      : int64;
     dmNumWorkers        : integer;
@@ -950,10 +957,32 @@ begin
   obsActiveBuffer_ref.Submit(position, data);
 end; { TOmniOutputBufferSet.Submit }
 
+
+{$IFNDEF MSWINDOWS}
+type TInt64Comparer = class( TInterfacedObject, IComparer<int64>)
+  private
+    function Compare(const Left, Right: int64): Integer;
+  end;
+
+function TInt64Comparer.Compare( const Left, Right: int64): Integer;
+begin
+  if Left < Right then
+    Result := -1
+  else if Left > Right then
+    Result := 1
+  else
+    Result := 0;
+end;
+{$ENDIF}
+
 { TOmniBaseDataManager }
 
 constructor TOmniBaseDataManager.Create(sourceProvider: TOmniSourceProvider; numWorkers:
   integer; options: TOmniDataManagerOptions);
+{$IFNDEF MSWINDOWS}
+var
+  Cmp: IComparer<int64>;
+{$ENDIF}
 begin
   inherited Create;
   dmSourceProvider_ref := (sourceProvider as TOmniSourceProviderBase);
@@ -962,19 +991,28 @@ begin
   dmOptions := options;
   dmSourceProvider_ref.StorePositions := (dmoPreserveOrder in dmOptions);
   if dmoPreserveOrder in dmOptions then begin
+    {$IFDEF MSWINDOWS}
     dmBufferRangeList := TGpInt64ObjectList.Create(false);
     dmBufferRangeList.Sorted := true;
     dmBufferRangeList.Duplicates := dupError;
+    {$ELSE}
+    Cmp := TInt64Comparer.Create;
+    dmBufferRangeList := TList<Int64>.Create( Cmp);
+    dmBufferImpls     := TObjectList<TOmniOutputBufferImpl>.Create( False);
+    {$ENDIF}
     dmUnusedBuffers := TObjectList.Create;
   end;
   InitializePacketSizes;
-end; { TOmniBaseDataManager.Create }
+end;
 
 destructor TOmniBaseDataManager.Destroy;
 begin
   dmOutputIntf := nil;
   FreeAndNil(dmQueueList);
   FreeAndNil(dmBufferRangeList);
+  {$IFNDEF MSWINDOWS}
+  FreeAndNil(dmBufferImpls);
+  {$ENDIF}
   FreeAndNil(dmUnusedBuffers);
   inherited;
 end; { TOmniBaseDataManager.Destroy }
@@ -1003,7 +1041,13 @@ begin
           (BufferList[0].Range.First = dmNextPosition) and
           BufferList[0].IsFull do
     begin
+      {$IFDEF MSWINDOWS}
       buffer := TOmniOutputBufferImpl(dmBufferRangeList.ExtractObject(0));
+      {$ELSE}
+      buffer := dmBufferImpls.First;
+      dmBufferRangeList.Delete( 0);
+      dmBufferImpls    .Delete( 0);
+      {$ENDIF}
       dmNextPosition := buffer.Range.Last + 1;
       buffer.CopyToOutput; // this will put the 'buffer' back into 'empty' state so from this point onwards 'buffer' must not be used!
     end;
@@ -1011,10 +1055,20 @@ begin
 end; { TOmniBaseDataManager.NotifyBufferFull }
 
 procedure TOmniBaseDataManager.NotifyBufferRangeChanged(buffer: TOmniOutputBufferImpl);
+{$IFNDEF MSWINDOWS}
+var
+  Idx: integer;
+{$ENDIF}
 begin
   dmBufferRangeLock.Acquire;
   try
+    {$IFDEF MSWINDOWS}
     dmBufferRangeList.AddObject(buffer.Range.First, buffer);
+    {$ELSE}
+    dmBufferRangeList.BinarySearch( buffer.Range.First, Idx);
+    dmBufferRangeList.Insert( Idx, buffer.Range.First);
+    dmBufferImpls    .Insert( Idx, buffer);
+    {$ENDIF}
   finally dmBufferRangeLock.Release; end;
 end; { TOmniBaseDataManager.NotifyBufferRangeChanged }
 
@@ -1029,7 +1083,11 @@ end; { TOmniBaseDataManager.CreateLocalQueue }
 
 function TOmniBaseDataManager.GetBufferList(idxBuffer: integer): TOmniOutputBufferImpl;
 begin
+  {$IFDEF MSWINDOWS}
   Result := TOmniOutputBufferImpl(dmBufferRangeList.Objects[idxBuffer]);
+  {$ELSE}
+  Result := dmBufferImpls[ idxBuffer];
+  {$ENDIF}
 end; { TOmniBaseDataManager.GetBufferList }
 
 function TOmniBaseDataManager.GetDataCountForGeneration(generation: integer): integer;
