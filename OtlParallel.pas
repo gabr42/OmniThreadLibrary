@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-10-04
-///   Version           : 1.41
+///   Last modification : 2015-12-14
+///   Version           : 1.42
 ///</para><para>
 ///   History:
+///     1.42: 2015-12-14
+///       - Added DetachException, FatalException, and IsExceptional to IOmniParallelTask.
 ///     1.41: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.40: 2015-09-04
@@ -961,8 +963,11 @@ type
   TOmniParallelTaskDelegate = reference to procedure (const task: IOmniTask);
 
   IOmniParallelTask = interface
+    function  DetachException: Exception;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
+    function  FatalException: Exception;
+    function  IsExceptional: boolean;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
@@ -1325,8 +1330,11 @@ type
     optNumTasks: integer;
   public
     constructor Create;
+    function  DetachException: Exception; inline;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
+    function  FatalException: Exception; inline;
+    function  IsExceptional: boolean; inline;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
     function  OnStop(const stopCode: TProc): IOmniParallelTask;
@@ -4027,6 +4035,11 @@ begin
     end);
 end; { TOmniParallelTask.Execute }
 
+function TOmniParallelTask.DetachException: Exception;
+begin
+  Result := optJoin.DetachException;
+end; { TOmniParallelTask.DetachException }
+
 function TOmniParallelTask.Execute(const aTask: TOmniParallelTaskDelegate):
   IOmniParallelTask;
 var
@@ -4047,6 +4060,16 @@ begin
     WaitFor(INFINITE);
   Result := Self;
 end;
+
+function TOmniParallelTask.FatalException: Exception;
+begin
+  Result := optJoin.FatalException;
+end; { TOmniParallelTask.FatalException }
+
+function TOmniParallelTask.IsExceptional: boolean;
+begin
+  Result := optJoin.IsExceptional;
+end; { TOmniParallelTask.IsExceptional }
 
 function TOmniParallelTask.NoWait: IOmniParallelTask;
 begin
