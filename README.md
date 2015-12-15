@@ -27,7 +27,7 @@ We are working on support for mobile devices, OS X, and FireMonkey.
 
 ### How do I get support?
 
-Support is provided through the [Google+ community](https://plus.google.com/communities/112307748950248514961https://plus.google.com/communities/112307748950248514961).
+Support is provided through the [Google+ community](https://plus.google.com/communities/112307748950248514961).
 
 ### Where can I get more information?
 
