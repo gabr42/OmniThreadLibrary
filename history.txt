@@ -1,6 +1,7 @@
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
 - New features:
+  - Implemented Parallel.For<T>(const arr: TArray<T>).
   - Added types TOmniAlignedInt32 and TOmniAlignedInt32 which replaced
     TGp4AlignedInt and TGp8AlignedInt64.
 - Bug fixes:
