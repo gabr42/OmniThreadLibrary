@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2016 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2015-12-16
-///   Version           : 1.43
+///   Last modification : 2016-01-14
+///   Version           : 1.44
 ///</para><para>
 ///   History:
+///     1.44: 2016-01-14
+///       - Implemented EJoinException.DetachInner.
 ///     1.43: 2015-12-16
 ///       - Implemented Parallel.For<T>(const arr: TArray<T>).
 ///     1.42: 2015-12-14
@@ -911,6 +913,7 @@ type
     destructor  Destroy; override;
     procedure Add(iTask: integer; taskException: Exception);
     function  Count: integer;
+    function  DetachInner(idxException: integer): Exception;
     property Inner[idxException: integer]: TJoinInnerException read GetInner; default;
   end; { EJoinException }
 
@@ -1622,6 +1625,19 @@ function EJoinException.Count: integer;
 begin
   Result := FExceptions.Count;
 end; { EJoinException.Count }
+
+function EJoinException.DetachInner(idxException: integer): Exception;
+var
+  i: integer;
+begin
+  Result := Exception(FExceptions.ExtractObject(idxException));
+  Message := '';
+  for i := 0 to Count - 1 do
+    if Message = '' then
+      Message := Inner[i].FatalException.Message
+    else
+      Message := Message + '; '#13#10 + Inner[i].FatalException.Message;
+end; { EJoinException.DetachInner }
 
 function EJoinException.GetInner(idxException: integer): TJoinInnerException;
 begin
