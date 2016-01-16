@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-07-24
-   Version           : 1.53
+   Last modification : 2015-09-21
+   Version           : 1.55
 </pre>*)(*
    History:
+     1.55: 2015-09-21
+       - Added interface identification to IGpBuffer.
      1.54: 2015-07-24
        - Added function ParamArray which returns all command-line parameters
          (except ParamStr(0)) as TArray<string>.
@@ -328,7 +330,7 @@ type
     procedure Release(buf: pointer); overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end; { TGpMemoryBuffer }
 
-  IGpBuffer = interface
+  IGpBuffer = interface ['{0B9FF0FC-492B-412D-B716-618355908550}']
     function  GetAsAnsiString: AnsiString;
     function  GetAsStream: TStream;
     function  GetAsString: string;
