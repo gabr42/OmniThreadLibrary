@@ -134,7 +134,6 @@
 unit OtlSync;
 
 {$I OtlOptions.inc}
-{$I HintReporting.inc}
 
 interface
 
@@ -783,9 +782,9 @@ type
 
   TPreSignalData = class
   public
-    OneSignalled: boolean;
-    AllSignalled: boolean;
-    constructor Create(AOneSignalled, AllSignalled: boolean);
+    FOneSignalled: boolean;
+    FAllSignalled: boolean;
+    constructor Create( AOneSignalled, AAllSignalled: boolean);
   end; { TPreSignaData }
   {$ENDIF ~MSWINDOWS}
   {$ENDIF OTL_MobileSupport}
@@ -2055,11 +2054,11 @@ begin
   try
     if not assigned(FController) then
       Exit;
-    if (not (Data as TPreSignalData).OneSignalled)
+    if (not (Data as TPreSignalData).FOneSignalled)
        and FController.FOneSignalled.Test(Dummy)
     then
       FController.FOneSignalled.FCondVar.Release;
-    if (not (Data as TPreSignalData).AllSignalled)
+    if (not (Data as TPreSignalData).FAllSignalled)
        and FController.FAllSignalled.Test(Dummy)
     then
       FController.FAllSignalled.FCondVar.Release;
@@ -2549,10 +2548,10 @@ end; { TOmniEvent.WaitFor }
 
 { TPreSignalData }
 
-constructor TPreSignalData.Create(AOneSignalled, AllSignalled: boolean);
+constructor TPreSignalData.Create( AOneSignalled, AAllSignalled: boolean);
 begin
-  OneSignalled := AOneSignalled;
-  AllSignalled := AllSignalled;
+  FOneSignalled := AOneSignalled;
+  FAllSignalled := AAllSignalled;
 end; { TPreSignalData.Create }
 
 {$ENDIF ~MSWINDOWS}

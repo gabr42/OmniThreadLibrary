@@ -119,6 +119,13 @@
         <DCCReference Include="..\OtlCommon.Utils.pas"/>
         <DCCReference Include="..\OtlDataManager.pas"/>
         <DCCReference Include="..\OtlParallel.pas"/>
+        <DCCReference Include="..\Otl.Parallel.Atomic.pas"/>
+        <DCCReference Include="..\Otl.Parallel.Errors.pas"/>
+        <DCCReference Include="..\Otl.Parallel.SynchroPrimitives.BasicLevel.pas"/>
+        <DCCReference Include="..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas"/>
+        <DCCReference Include="..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas"/>
+        <DCCReference Include="..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas"/>
+        <DCCReference Include="..\Otl.Parallel.SynchroPrimitives.pas"/>
         <None Include="..\OtlOptions.inc"/>
         <None Include="..\OtlAdditionalSymbols.inc"/>
         <None Include="..\HintReporting.inc"/>

@@ -54,6 +54,13 @@ contains
   OtlCollections in '..\OtlCollections.pas',
   OtlCommon.Utils in '..\OtlCommon.Utils.pas',
   OtlDataManager in '..\OtlDataManager.pas',
-  OtlParallel in '..\OtlParallel.pas';
+  OtlParallel in '..\OtlParallel.pas',
+  Otl.Parallel.Atomic in '..\Otl.Parallel.Atomic.pas',
+  Otl.Parallel.Errors in '..\Otl.Parallel.Errors.pas',
+  Otl.Parallel.SynchroPrimitives.BasicLevel in '..\Otl.Parallel.SynchroPrimitives.BasicLevel.pas',
+  Otl.Parallel.SynchroPrimitives.ConditionVariables in '..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas',
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel in '..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas',
+  Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
+  Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas';
 
 end.
