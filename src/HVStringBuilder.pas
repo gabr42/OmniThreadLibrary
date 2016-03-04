@@ -104,8 +104,8 @@ type
     function Remove(StartIndex: Integer; Length: Integer): StringBuilder;
     function Replace(OldChar: Char; NewChar: Char): StringBuilder; overload;
     function Replace(OldChar: Char; NewChar: Char; StartIndex: Integer; Count: Integer): StringBuilder; overload;
-    function Replace(const OldValue: String; NewValue: String): StringBuilder; overload;
-    function Replace(const OldValue: String; NewValue: String; StartIndex: Integer; Count: Integer): StringBuilder; overload;
+    function Replace(const OldValue, NewValue: String): StringBuilder; overload;
+    function Replace(const OldValue, NewValue: String; StartIndex: Integer; Count: Integer): StringBuilder; overload;
     function ToString: String; {$IF CompilerVersion >= 21}reintroduce;{$IFEND} overload;
     function ToString(StartIndex: Integer; Length: Integer): String; {$IF CompilerVersion >= 21}reintroduce;{$IFEND} overload;
     property Capacity: Integer read GetCapacity write SetCapacity;
@@ -469,7 +469,7 @@ begin
   Result := Replace(OldChar, NewChar, 0, Length);
 end;
 
-function StringBuilder.Replace(const OldValue: String; NewValue: String;
+function StringBuilder.Replace(const OldValue: String; const NewValue: String;
   StartIndex, Count: Integer): StringBuilder;
 begin
   Inc(StartIndex);
@@ -483,8 +483,7 @@ begin
   Result := Self;
 end;
 
-function StringBuilder.Replace(const OldValue: String;
-  NewValue: String): StringBuilder;
+function StringBuilder.Replace(const OldValue, NewValue: String): StringBuilder;
 begin
   NeedStringValue;
   // Note: StringReplace is slow

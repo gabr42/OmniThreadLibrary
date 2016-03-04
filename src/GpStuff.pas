@@ -399,7 +399,7 @@ function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString; ove
 {$ENDIF Unicode}
 function  Asgn(var output: WideString; const value: WideString): WideString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
-function  IFF(condit: boolean; iftrue, iffalse: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  IFF(condit: boolean; const iftrue, iffalse: string): string; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: real): real; overload;        {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -868,7 +868,7 @@ begin
   Result := output;
 end; { Asgn64 }
 
-function IFF(condit: boolean; iftrue, iffalse: string): string;
+function IFF(condit: boolean; const iftrue, iffalse: string): string;
 begin
   if condit then
     Result := iftrue

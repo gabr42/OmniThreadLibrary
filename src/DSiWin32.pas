@@ -1254,18 +1254,18 @@ type
   function  DSiRealModuleName: string;
   function  DSiRemoveAceFromDesktop(desktop: HDESK; sid: PSID): boolean;
   function  DSiRemoveAceFromWindowStation(station: HWINSTA; sid: PSID): boolean;
-  function  DSiSetProcessAffinity(affinity: string): string;
+  function  DSiSetProcessAffinity(const affinity: string): string;
   function  DSiSetProcessPriorityClass(const processName: string;
     priority: DWORD): boolean;
-  function  DSiSetThreadAffinity(affinity: string): string;
+  function  DSiSetThreadAffinity(const affinity: string): string;
   procedure DSiStopImpersonatingUser;
-  function  DSiStringToAffinityMask(affinity: string): DSiNativeUInt;
+  function  DSiStringToAffinityMask(const affinity: string): DSiNativeUInt;
   function  DSiTerminateProcessById(processID: DWORD; closeWindowsFirst: boolean = true;
     maxWait_sec: integer = 10): boolean;
   procedure DSiTrimWorkingSet;
-  function  DSiValidateProcessAffinity(affinity: string): string;
+  function  DSiValidateProcessAffinity(const affinity: string): string;
   function  DSiValidateProcessAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
-  function  DSiValidateThreadAffinity(affinity: string): string;
+  function  DSiValidateThreadAffinity(const affinity: string): string;
   function  DSiValidateThreadAffinityMask(affinityMask: DSiNativeUInt): DSiNativeUInt;
   procedure DSiYield;
 
@@ -1662,14 +1662,14 @@ type // Firewall management types
 
   function  DSiAddApplicationToFirewallExceptionList(const entryName,
     applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
-    description: string = ''; grouping: string = '';
-    serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
-    localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
+    const description: string = ''; const grouping: string = '';
+    const serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
+    const localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
   function  DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
     applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
-    description: string = ''; grouping: string = '';
-    serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
-    localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
+    const description: string = ''; const grouping: string = '';
+    const serviceName: string = ''; protocols: TDSiFwIPProtocols = [fwProtoTCP];
+    const localPorts: string = '*'; profiles: TDSiFwIPProfiles = [fwProfileAll]): boolean;
   function  DSiAddApplicationToFirewallExceptionListXP(const entryName,
     applicationFullPath: string; resolveConflict: TDSiFwResolveConflict = rcDuplicate;
     profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
@@ -2058,7 +2058,7 @@ const
     TBackgroundThread.Create(task);
   end; { CreateProcessWatchdog }
 
-  function FileOpenSafe(fileName: string; var fileHandle: textfile;
+  function FileOpenSafe(const fileName: string; var fileHandle: textfile;
     diskRetryDelay, diskRetryCount: integer): boolean;
   var
     dum: integer;
@@ -5421,7 +5421,7 @@ const
     @author  gabr
     @since   2003-11-12
   }
-  function DSiSetProcessAffinity(affinity: string): string;
+  function DSiSetProcessAffinity(const affinity: string): string;
   begin
     SetProcessAffinityMask(GetCurrentProcess,
       DSiValidateProcessAffinityMask(DSiStringToAffinityMask(affinity)));
@@ -5471,7 +5471,7 @@ const
     @author  gabr
     @since   2003-11-12
   }        
-  function DSiSetThreadAffinity(affinity: string): string;
+  function DSiSetThreadAffinity(const affinity: string): string;
   begin
     SetThreadAffinityMask(GetCurrentThread,
       DSiValidateThreadAffinityMask(DSiStringToAffinityMask(affinity)));
@@ -5490,7 +5490,7 @@ const
     @author  gabr
     @since   2003-11-14
   }        
-  function DSiStringToAffinityMask(affinity: string): DSiNativeUInt;
+  function DSiStringToAffinityMask(const affinity: string): DSiNativeUInt;
   var
     idxID: integer;
   begin
@@ -5552,7 +5552,7 @@ const
     @author  gabr
     @since   2003-11-14
   }
-  function DSiValidateProcessAffinity(affinity: string): string;
+  function DSiValidateProcessAffinity(const affinity: string): string;
   begin
     Result := DSiAffinityMaskToString(DSiValidateProcessAffinityMask(
                 DSiStringToAffinityMask(affinity)));
@@ -5573,7 +5573,7 @@ const
     @author  gabr
     @since   2003-11-14
   }
-  function DSiValidateThreadAffinity(affinity: string): string;
+  function DSiValidateThreadAffinity(const affinity: string): string;
   begin
     Result := DSiAffinityMaskToString(DSiValidateThreadAffinityMask(
                 DSiStringToAffinityMask(affinity)));
@@ -7138,8 +7138,8 @@ var
   }
   function DSiAddApplicationToFirewallExceptionList(const entryName,
     applicationFullPath: string; resolveConflict: TDSiFwResolveConflict;
-    description: string; grouping: string; serviceName: string;
-    protocols: TDSiFwIPProtocols; localPorts: string; profiles: TDSiFwIPProfiles): boolean;
+    const description: string; const grouping: string; const serviceName: string;
+    protocols: TDSiFwIPProtocols; const localPorts: string; profiles: TDSiFwIPProfiles): boolean;
   var
     profile    : TDSiFwIPProfile;
     versionInfo: TOSVersionInfo;
@@ -7175,8 +7175,8 @@ var
   }
   function DSiAddApplicationToFirewallExceptionListAdvanced(const entryName,
     applicationFullPath: string; resolveConflict: TDSiFwResolveConflict;
-    description: string; grouping: string; serviceName: string;
-    protocols: TDSiFwIPProtocols; localPorts: string; profiles: TDSiFwIPProfiles): boolean;
+    const description: string; const grouping: string; const serviceName: string;
+    protocols: TDSiFwIPProtocols; const localPorts: string; profiles: TDSiFwIPProfiles): boolean;
   var
     fwPolicy2  : OleVariant;
     profileMask: integer;
