@@ -586,7 +586,7 @@ type
     procedure Grow(requiredIdx: integer = -1);
   public
     constructor Create;
-    procedure Add(const paramValue: TOmniValue; paramName: string = '');
+    procedure Add(const paramValue: TOmniValue; const paramName: string = '');
     procedure Assign(const parameters: array of TOmniValue);
     procedure AssignNamed(const parameters: array of TOmniValue);
     function  ByName(const paramName: string): TOmniValue; overload;
@@ -1304,7 +1304,7 @@ begin
   ovcCount := 0;
 end; { TOmniValueContainer.Create }
 
-procedure TOmniValueContainer.Add(const paramValue: TOmniValue; paramName: string);
+procedure TOmniValueContainer.Add(const paramValue: TOmniValue; const paramName: string);
 var
   idxParam: integer;
 begin
