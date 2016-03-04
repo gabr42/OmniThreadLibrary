@@ -1454,7 +1454,7 @@ var
   chainTo       : IOmniTaskControl;
   sync          : TSynchroObject;
   taskException : Exception;
-  terminateEvent: TOmniTransitionEvent;
+  terminatesEvent: TOmniTransitionEvent;
 begin
   otCleanupLock.EnterWriteLock;
   try
@@ -1464,7 +1464,7 @@ begin
   finally otCleanupLock.ExitWriteLock; end;
   otThreadID := GetThreadID;
   chainTo := nil;
-  terminateEvent := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
+  terminatesEvent := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
   try
     try
       try
@@ -1489,7 +1489,7 @@ begin
         then
           chainTo := otSharedInfo_ref.ChainTo;
         otSharedInfo_ref.ChainTo := nil;
-        terminateEvent := otSharedInfo_ref.TerminatedEvent;
+        terminatesEvent := otSharedInfo_ref.TerminatedEvent;
         otSharedInfo_ref.Stopped := true;
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
         sync := nil; // to remove the warning in the 'finally' clause below
@@ -1510,7 +1510,7 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      SetEvent(terminateEvent);
+      SetEvent(terminatesEvent);
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
