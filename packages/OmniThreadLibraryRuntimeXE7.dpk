@@ -61,6 +61,9 @@ contains
   Otl.Parallel.SynchroPrimitives.ConditionVariables in '..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas',
   Otl.Parallel.SynchroPrimitives.InterfaceLevel in '..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas',
   Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
-  Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas';
+  Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas',
+  Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
+  Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas';
 
 end.

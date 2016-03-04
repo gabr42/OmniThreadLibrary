@@ -138,19 +138,19 @@ unit OtlSync;
 interface
 
 uses
-  SysUtils,
-  SyncObjs,
-  Classes,
+  System.SysUtils,
+  System.SyncObjs,
+  System.Classes,
   {$IFDEF OTL_Generics}
   Generics.Defaults,
   Generics.Collections,
   {$ENDIF OTL_Generics}
   {$IFDEF OTL_ERTTI}
-  RTTI,
+  System.RTTI,
   {$ENDIF OTL_ERTTI}
-  TypInfo,
+  System.TypInfo,
   {$IFDEF MSWINDOWS}
-  Windows,
+  WinApi.Windows,
   DSiWin32,
   GpStuff,
   GpLists,
@@ -161,88 +161,96 @@ uses
   {$ENDIF}
   System.Diagnostics,
   {$ENDIF OTL_MobileSupport}
-  OtlCommon;
+  OtlCommon,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
+  Otl.Parallel.Atomic;
 
 type
-  TFixedCriticalSection = class(TCriticalSection)
-  strict protected
-    FDummy: array [0..95] of byte;
-  end; { TFixedCriticalSection }
+  // Type TFixedCriticalSection moved to unit Otl.Parallel.SynchroPrimitives.BasicLevel.
+  // Type IOmniCriticalSection moved to unit Otl.Parallel.SynchroPrimitives.InterfaceLevel (named ILock).
 
-  IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
-    function  GetLockCount: integer;
-    //
-    procedure Acquire;
-    procedure Release;
-    function  GetSyncObj: TSynchroObject;
-    property LockCount: integer read GetLockCount;
-  end; { IOmniCriticalSection }
+//  TFixedCriticalSection = class(TCriticalSection)
+//  strict protected
+//    FDummy: array [0..95] of byte;
+//  end; { TFixedCriticalSection }
+//
+//  IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
+//    function  GetLockCount: integer;
+//    //
+//    procedure Acquire;
+//    procedure Release;
+//    function  GetSyncObj: TSynchroObject;
+//    property LockCount: integer read GetLockCount;
+//  end; { IOmniCriticalSection }
+    IOmniCriticalSection = ILock;
 
-  {$IFDEF OTL_MobileSupport}
-  IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
-    procedure EnterGate;
-    procedure LeaveGate;
-    /// <param name="SynchObj">SynchObj must support IOmniSynchroObject.</param>
-    procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
-    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
-    procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
-    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
-    procedure AfterSignal(const Signaller: TObject; var Data: TObject);
-  end; { IOmniSynchroObserver }
+//  {$IFDEF OTL_MobileSupport}
+//  IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
+//    procedure EnterGate;
+//    procedure LeaveGate;
+//    /// <param name="SynchObj">SynchObj must support IOmniSynchroObject.</param>
+//    procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
+//    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
+//    procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
+//    /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
+//    procedure AfterSignal(const Signaller: TObject; var Data: TObject);
+//  end; { IOmniSynchroObserver }
+//
+//  IOmniSynchro = interface ['{2C4F0CF8-A722-45EC-BFCA-AA512E58B54D}']
+//    function  EnterSpinLock: IInterface;
+//    procedure Signal;
+//    /// <remarks>
+//    ///  If this event is attached to IOmniSynchroObserver,
+//    //    such as TWaitFor (acting as a condition variable)
+//    ///   a thread must not invoke WaitFor() directly on this event, but
+//    ///   rather through the containing TWaitFor, or as otherwise defined by
+//    //    the attached observer.
+//    /// </remarks>
+//    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; overload;
+//    procedure ConsumeSignalFromObserver( const Observer: IOmniSynchroObserver);
+//    /// <remarks>
+//    ///  IsSignaled() is only valid when all the Signal()/ Reset()
+//    ///   invocations are done whilst attached to an IOmniEventObserver.
+//    ///   Otherwise this returned value must not be relied upon.
+//    /// </remarks>
+//    function  IsSignalled: boolean;
+//    procedure AddObserver(const Observer: IOmniSynchroObserver);
+//    procedure RemoveObserver(const Observer: IOmniSynchroObserver);
+//    function  Base: TSynchroObject;
+//    {$IFDEF MSWINDOWS}
+//    function  Handle: THandle;
+//    {$ENDIF}
+//  end; { IOmniSynchro }
+//
+//  IOmniSynchroObject = interface ['{A8B95978-87BF-4031-94B2-8EDC351F47BE}']
+//    function  GetSynchro: IOmniSynchro;
+//  //
+//    property Synchro: IOmniSynchro read GetSynchro;
+//  end; { IOmniSynchroObject }
+//
+//  /// <remarks>
+//  ///   IOmniEvent is a wrapper around a TEvent object.
+//  ///   It can co-operate with condition variables through the use of an
+//  ///   attached IOmniEventObserver. IOmniEvent objects can be enrolled
+//  ///   in TWaitFor objects on non-windows platforms.
+//  /// </remarks>
+//  IOmniEvent = interface(IOmniSynchro) ['{3403D24B-3CBE-4A83-9F4C-FA4719AA23C5}']
+//    procedure SetEvent;
+//    procedure Reset;
+//    function  BaseEvent: TEvent;
+//  end; { IOmniEvent }
+//
+//  IOmniCountdownEvent = interface(IOmniSynchro) ['{40557184-B610-46E8-B186-D5B431D1B1A4}']
+//    function  BaseCountdown: TCountdownEvent;
+//    procedure Reset;
+//  end; { IOmniCountdownEvent }
+//  {$ENDIF OTL_MobileSupport}
 
-  IOmniSynchro = interface ['{2C4F0CF8-A722-45EC-BFCA-AA512E58B54D}']
-    function  EnterSpinLock: IInterface;
-    procedure Signal;
-    /// <remarks>
-    ///  If this event is attached to IOmniSynchroObserver,
-    //    such as TWaitFor (acting as a condition variable)
-    ///   a thread must not invoke WaitFor() directly on this event, but
-    ///   rather through the containing TWaitFor, or as otherwise defined by
-    //    the attached observer.
-    /// </remarks>
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; overload;
-    procedure ConsumeSignalFromObserver( const Observer: IOmniSynchroObserver);
-    /// <remarks>
-    ///  IsSignaled() is only valid when all the Signal()/ Reset()
-    ///   invocations are done whilst attached to an IOmniEventObserver.
-    ///   Otherwise this returned value must not be relied upon.
-    /// </remarks>
-    function  IsSignalled: boolean;
-    procedure AddObserver(const Observer: IOmniSynchroObserver);
-    procedure RemoveObserver(const Observer: IOmniSynchroObserver);
-    function  Base: TSynchroObject;
-    {$IFDEF MSWINDOWS}
-    function  Handle: THandle;
-    {$ENDIF}
-  end; { IOmniSynchro }
-
-  IOmniSynchroObject = interface ['{A8B95978-87BF-4031-94B2-8EDC351F47BE}']
-    function  GetSynchro: IOmniSynchro;
-  //
-    property Synchro: IOmniSynchro read GetSynchro;
-  end; { IOmniSynchroObject }
-
-  /// <remarks>
-  ///   IOmniEvent is a wrapper around a TEvent object.
-  ///   It can co-operate with condition variables through the use of an
-  ///   attached IOmniEventObserver. IOmniEvent objects can be enrolled
-  ///   in TWaitFor objects on non-windows platforms.
-  /// </remarks>
-  IOmniEvent = interface(IOmniSynchro) ['{3403D24B-3CBE-4A83-9F4C-FA4719AA23C5}']
-    procedure SetEvent;
-    procedure Reset;
-    function  BaseEvent: TEvent;
-  end; { IOmniEvent }
-
-  IOmniCountdownEvent = interface(IOmniSynchro) ['{40557184-B610-46E8-B186-D5B431D1B1A4}']
-    function  BaseCountdown: TCountdownEvent;
-    procedure Reset;
-  end; { IOmniCountdownEvent }
-  {$ENDIF OTL_MobileSupport}
+  IOmniEvent = IEvent;
 
   //At some point this type will be dropped and all the codebase will use
   //IOmniEvent or something similar.
-  TOmniTransitionEvent = {$IFDEF MSWINDOWS}THandle{$ELSE}IOmniEvent{$ENDIF};
+  TOmniTransitionEvent = {$IFDEF MSWINDOWS}THandle{$ELSE}IEvent{$ENDIF};
 
   {$IFDEF MSWINDOWS}
   IOmniHandleObject = interface ['{80B85D03-8E1F-4812-8782-38A04BA52076}']
@@ -259,13 +267,13 @@ type
     ocsSync: IOmniCriticalSection;
   private
     function  GetLockCount: integer; inline;
-    function  GetSyncObj: TSynchroObject; inline;
+    function  GetSyncObj: TObject; inline;
   public
     procedure Initialize;
     procedure Acquire; inline;
     procedure Release; inline;
     property LockCount: integer read GetLockCount;
-    property SyncObj: TSynchroObject read GetSyncObj;
+    property SyncObj: TObject read GetSyncObj;
   end; { TOmniCS }
 
   ///<summary>Very lightweight multiple-readers-exclusive-writer lock.</summary>
@@ -275,6 +283,7 @@ type
     //Bit0 is 'writing in progress' flag.
     omrewReference: IInterface;
   public
+    procedure CheckValidAlignment;
     procedure EnterReadLock; inline;
     procedure EnterWriteLock; inline;
     procedure ExitReadLock; inline;
@@ -283,11 +292,8 @@ type
     function  TryEnterWriteLock: boolean; inline;
   end; { TOmniMREW }
 
-  IOmniResourceCount = interface({$IFDEF MSWINDOWS}
-                                 IOmniHandleObject
-                                 {$ELSE}{$IFDEF OTL_MobileSupport}
-                                 IOmniSynchroObject
-                                 {$ENDIF}{$ENDIF})
+{$IFDEF MSWINDOWS}
+  IOmniResourceCount = interface( IOmniHandleObject)
   ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
     function  Allocate: cardinal;
     function  Release: cardinal;
@@ -299,7 +305,6 @@ type
   ///   increments the count.
   ///   Threadsafe.
   ///</summary>
-  {$IFDEF MSWINDOWS}
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount, IOmniHandleObject)
   strict private
     orcAvailable   : TDSiEventHandle;
@@ -316,25 +321,13 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
-  {$ELSE}{$IFDEF OTL_MobileSupport}
-  TOmniResourceCount = class abstract(TInterfacedObject, IOmniResourceCount, IOmniSynchroObject)
-  strict protected
-    function  GetSynchro: IOmniSynchro;
-  public
-    constructor Create(initialCount: cardinal);
-    destructor  Destroy; override;
-    function  Allocate: cardinal;
-    function  Release: cardinal;
-    function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
-    property Synchro: IOmniSynchro read GetSynchro;
-  end; { TOmniResourceCount }
-  {$ENDIF OTL_MobileSupport}{$ENDIF MSWINDOWS}
+{$ENDIF MSWINDOWS}
 
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
     {$IFDEF MSWINDOWS}
     function  GetHandle: THandle;
     {$ELSE}
-    function  GetEvent: IOmniEvent;
+    function  GetEvent: IEvent;
     {$ENDIF MSWINDOWS}
   //
     procedure Clear;
@@ -343,19 +336,19 @@ type
     {$IFDEF MSWINDOWS}
     property Handle: THandle read GetHandle;
     {$ELSE}
-    property Event: IOmniEvent read GetEvent;
+    property Event: IEvent read GetEvent;
     {$ENDIF MSWINDOWS}
   end; { IOmniCancellationToken }
 
   {$IFDEF OTL_Generics}
-  Atomic<T> = class
-    type TFactory = reference to function: T;
-    class function Initialize(var storage: T; factory: TFactory): T; overload;
-    {$IFDEF OTL_ERTTI}
-    class function Initialize(var storage: T): T; overload;
-    {$ENDIF OTL_ERTTI}
-  end; { Atomic<T> }
-
+//  Atomic<T> = class
+//    type TFactory = reference to function: T;
+//    class function Initialize(var storage: T; factory: TFactory): T; overload;
+//    {$IFDEF OTL_ERTTI}
+//    class function Initialize(var storage: T): T; overload;
+//    {$ENDIF OTL_ERTTI}
+//  end; { Atomic<T> }
+//
   Locked<T> = record
   strict private // keep those aligned!
     FLock     : TOmniCS;
@@ -495,70 +488,72 @@ type
     property Signalled: THandles read FSignalledHandles;
     property WaitHandles: THandleArr read GetWaitHandles;
   end; { TWaitFor }
-  {$ELSE ~MSWINDOWS}
-  {$IFDEF OTL_MobileSupport}
-  ///<summary>Waits on any/all from any number of synchroobjects such as Events and CountDownEvents.</summary>
-  TSynchroWaitFor = class
-  public type //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
-    TWaitForResult = (
-      waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
-      waTimeout,      // WAIT_TIMEOUT
-      waFailed,       // WAIT_FAILED
-      waIOCompletion, // WAIT_IO_COMPLETION
-      waMessage       // message or wake event (WAIT_OBJECT_n+1)
-    );
-    THandleInfo = record //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
-      Index: integer;
-    end;
-  strict private type
-    TSynchroList = class(TList<IOmniSynchro>) end;
-    ISynchroClientEx = interface ['{A4D963B3-88CD-466A-9885-3C66E605E32E}']
-      procedure Deref;
-    end; { ISyncroClientEx }
-    TSynchroClient = class(TInterfacedObject, IOmniSynchroObserver, ISynchroClientEx)
-    strict private
-      FController: TSynchroWaitFor;
-      procedure EnterGate;
-      procedure LeaveGate;
-      procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
-      procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
-      procedure AfterSignal(const Signaller: TObject; var Data: TObject);
-      procedure Deref;
-    public
-      constructor Create(AController: TSynchroWaitFor);
-    end; { TSynchroClient }
-  protected type
-    TCondition = class
-    protected
-      FCondVar   : TConditionVariableCS;
-      FController: TSynchroWaitFor;
-    public
-      constructor Create(AController: TSynchroWaitFor);
-      destructor  Destroy; override;
-      function  Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
-      function  Test(var Signaller: IOmniSynchro): boolean; virtual; abstract;
-      function  WaitAll: boolean; virtual; abstract;
-    end;
-  strict private
-    FAllSignalled: TCondition;
-    FGate        : IOmniCriticalSection;
-    FOneSignalled: TCondition;
-    FSynchObjects: TSynchroList;
-    FSynchClient : IOmniSynchroObserver;
-  protected
-    property Gate: IOmniCriticalSection read FGate;
-    property SynchObjects: TSynchroList read FSynchObjects;
-  public
-    constructor Create(const SynchObjects: array of IOmniSynchro; const AShareLock: IOmniCriticalSection = nil);
-    destructor  Destroy; override;
-    function  WaitAll(timeout_ms: cardinal): TWaitResult;
-    function  WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
-  end; { TWaitForAll }
+  {$ENDIF}
 
-  TWaitFor = TSynchroWaitFor;
-  {$ENDIF OTL_MobileSupport}
-  {$ENDIF ~MSWINDOWS}
-
+//  {$ELSE ~MSWINDOWS}
+//  {$IFDEF OTL_MobileSupport}
+//  ///<summary>Waits on any/all from any number of synchroobjects such as Events and CountDownEvents.</summary>
+//  TSynchroWaitFor = class
+//  public type //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
+//    TWaitForResult = (
+//      waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
+//      waTimeout,      // WAIT_TIMEOUT
+//      waFailed,       // WAIT_FAILED
+//      waIOCompletion, // WAIT_IO_COMPLETION
+//      waMessage       // message or wake event (WAIT_OBJECT_n+1)
+//    );
+//    THandleInfo = record //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
+//      Index: integer;
+//    end;
+//  strict private type
+//    TSynchroList = class(TList<IOmniSynchro>) end;
+//    ISynchroClientEx = interface ['{A4D963B3-88CD-466A-9885-3C66E605E32E}']
+//      procedure Deref;
+//    end; { ISyncroClientEx }
+//    TSynchroClient = class(TInterfacedObject, IOmniSynchroObserver, ISynchroClientEx)
+//    strict private
+//      FController: TSynchroWaitFor;
+//      procedure EnterGate;
+//      procedure LeaveGate;
+//      procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
+//      procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
+//      procedure AfterSignal(const Signaller: TObject; var Data: TObject);
+//      procedure Deref;
+//    public
+//      constructor Create(AController: TSynchroWaitFor);
+//    end; { TSynchroClient }
+//  protected type
+//    TCondition = class
+//    protected
+//      FCondVar   : TConditionVariableCS;
+//      FController: TSynchroWaitFor;
+//    public
+//      constructor Create(AController: TSynchroWaitFor);
+//      destructor  Destroy; override;
+//      function  Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+//      function  Test(var Signaller: IOmniSynchro): boolean; virtual; abstract;
+//      function  WaitAll: boolean; virtual; abstract;
+//    end;
+//  strict private
+//    FAllSignalled: TCondition;
+//    FGate        : IOmniCriticalSection;
+//    FOneSignalled: TCondition;
+//    FSynchObjects: TSynchroList;
+//    FSynchClient : IOmniSynchroObserver;
+//  protected
+//    property Gate: IOmniCriticalSection read FGate;
+//    property SynchObjects: TSynchroList read FSynchObjects;
+//  public
+//    constructor Create(const SynchObjects: array of IOmniSynchro; const AShareLock: IOmniCriticalSection = nil);
+//    destructor  Destroy; override;
+//    function  WaitAll(timeout_ms: cardinal): TWaitResult;
+//    function  WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+//  end; { TWaitForAll }
+//
+//  TWaitFor = TSynchroWaitFor;
+//  {$ENDIF OTL_MobileSupport}
+//  {$ENDIF ~MSWINDOWS}
+//
   TOmniSingleThreadUseChecker = record
   private
     FLock    : TOmniCS;
@@ -605,12 +600,18 @@ function UnregisterWaitEx(WaitHandle: THandle; CompletionEvent: THandle): BOOL; 
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
-function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
-{$IFDEF OTL_MobileSupport}
-function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
-function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
-{$ENDIF OTL_MobileSupport}
+
+{$IFDEF MSWINDOWS}
+function CreateResourceCount(initialCount: integer): IOmniResourceCount;
+{$ENDIF MSWINDOWS}
+
+//{$IFDEF OTL_MobileSupport}
+//function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
+//function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+//{$ENDIF OTL_MobileSupport}
+
+function CreateOmniEvent( AManualReset, InitialState: boolean): IOmniEvent;
 
 {$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
@@ -645,7 +646,7 @@ function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal
 function GetThreadId: TThreadId;
 function GetCPUTimeStamp: int64;
 
-function SetEvent(event: TOmniTransitionEvent): boolean;
+procedure SetEvent( event: TOmniTransitionEvent);
 
 var
   GOmniCancellationToken: IOmniCancellationToken;
@@ -654,18 +655,18 @@ var
 implementation
 
 type
-  TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
-  strict private
-    ocsCritSect : TSynchroObject;
-    ocsLockCount: integer;
-  public
-    constructor Create;
-    destructor  Destroy; override;
-    procedure Acquire; inline;
-    function  GetLockCount: integer;
-    function  GetSyncObj: TSynchroObject;
-    procedure Release; inline;
-  end; { TOmniCriticalSection }
+//  TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
+//  strict private
+//    ocsCritSect : TSynchroObject;
+//    ocsLockCount: integer;
+//  public
+//    constructor Create;
+//    destructor  Destroy; override;
+//    procedure Acquire; inline;
+//    function  GetLockCount: integer;
+//    function  GetSyncObj: TSynchroObject;
+//    procedure Release; inline;
+//  end; { TOmniCriticalSection }
 
   TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
   {$IFDEF MSWINDOWS}
@@ -676,9 +677,9 @@ type
     function  GetHandle: THandle; inline;
   {$ELSE}
   private
-    FEvent: IOmniEvent;
+    FEvent: IEvent;
   protected
-    function  GetEvent: IOmniEvent; inline;
+    function  GetEvent: IEvent; inline;
   {$ENDIF MSWINDOWS}
   public
     constructor Create;
@@ -689,116 +690,115 @@ type
     destructor  Destroy; override;
     property Handle: THandle read GetHandle;
   {$ELSE}
-    property Event: IOmniEvent read GetEvent;
+    property Event: IEvent read GetEvent;
   {$ENDIF MSWINDOWS}
   end; { TOmniCancellationToken }
 
-  {$IFDEF OTL_MobileSupport}
-  TOmniSynchroObject = class abstract(TSynchroObject, IInterface, IOmniSynchro)
-  private
-    procedure PerformObservableAction(Action: TProc; DoLock: boolean);
-    function  Base: TSynchroObject;
-    {$IFDEF MSWINDOWS}
-    function  Handle: THandle;
-    {$ENDIF}
-  strict protected
-    FBase               : TSynchroObject;
-    FOwnsBase           : boolean;
-    FLock               : TSpinLock;
-    FObservers          : TList<IOmniSynchroObserver>;
-    FData               : TArray<TObject>;
-    [Volatile] FRefCount: integer;
-    FShareLock          : IOmniCriticalSection;
-  private
-    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
-    function _AddRef: Integer; stdcall;
-    function _Release: Integer; stdcall;
-  protected
-    property Lock: TSpinLock read FLock;
-    property ShareLock: IOmniCriticalSection read FShareLock;
-  public
-    procedure AfterConstruction; override;
-    class function NewInstance: TObject; override;
-  public
-    constructor Create(ABase: TSynchroObject; OwnsIt: boolean; const AShareLock: IOmniCriticalSection = nil);
-    destructor  Destroy; override;
-    function  EnterSpinLock: IInterface;
-    procedure Acquire; override;
-    procedure Release; override;
-    procedure Signal;
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
-    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver); virtual; abstract;
-    function  IsSignalled: boolean; virtual; abstract;
-    procedure AddObserver(const Observer: IOmniSynchroObserver);
-    procedure RemoveObserver(const Observer: IOmniSynchroObserver);
-  end; { TOmniSynchroObject }
-
-  TSynchroSpin = class(TInterfacedObject)
-  private
-    FController: TOmniSynchroObject;
-  public
-    constructor Create(AController: TOmniSynchroObject);
-    destructor Destroy; override;
-  end; { TSynchroSpin }
-
-  TOmniCountdownEvent = class(TOmniSynchroObject, IOmniCountdownEvent)
-  strict protected
-    FCountdown: TCountdownEvent;
-  public
-    constructor Create(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil);
-    procedure Reset;
-    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
-    function  IsSignalled: boolean; override;
-    function  BaseCountdown: TCountdownEvent;
-  end; { TOmniCountdownEvent }
-
-  TOmniEvent = class(TOmniSynchroObject, IOmniEvent)
-  strict protected
-    FEvent: TEvent;
-    [Volatile] FState: boolean;
-    FManualReset: boolean;
-  public
-    constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil);
-    procedure Reset;
-    procedure SetEvent;
-    function  BaseEvent: TEvent;
-    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
-    function  IsSignalled: boolean; override;
-  end; { TOmniEvent }
-
-  {$IFNDEF MSWINDOWS}
-  TOneCondition = class(TSynchroWaitFor.TCondition)
-  public
-    function  Test(var Signaller: IOmniSynchro): boolean; override;
-    function  WaitAll: boolean; override;
-  end; { TOneCondition }
-
-  TAllCondition = class( TSynchroWaitFor.TCondition)
-  public
-    function  Test(var Signaller: IOmniSynchro): boolean; override;
-    function  WaitAll: boolean; override;
-  end; { TAllCondition }
-
-  TPreSignalData = class
-  public
-    FOneSignalled: boolean;
-    FAllSignalled: boolean;
-    constructor Create( AOneSignalled, AAllSignalled: boolean);
-  end; { TPreSignaData }
-  {$ENDIF ~MSWINDOWS}
-  {$ENDIF OTL_MobileSupport}
+//  {$IFDEF OTL_MobileSupport}
+//  TOmniSynchroObject = class abstract(TSynchroObject, IInterface, IOmniSynchro)
+//  private
+//    procedure PerformObservableAction(Action: TProc; DoLock: boolean);
+//    function  Base: TSynchroObject;
+//    {$IFDEF MSWINDOWS}
+//    function  Handle: THandle;
+//    {$ENDIF}
+//  strict protected
+//    FBase               : TSynchroObject;
+//    FOwnsBase           : boolean;
+//    FLock               : TSpinLock;
+//    FObservers          : TList<IOmniSynchroObserver>;
+//    FData               : TArray<TObject>;
+//    [Volatile] FRefCount: integer;
+//    FShareLock          : IOmniCriticalSection;
+//  private
+//    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+//    function _AddRef: Integer; stdcall;
+//    function _Release: Integer; stdcall;
+//  protected
+//    property Lock: TSpinLock read FLock;
+//    property ShareLock: IOmniCriticalSection read FShareLock;
+//  public
+//    procedure AfterConstruction; override;
+//    class function NewInstance: TObject; override;
+//  public
+//    constructor Create(ABase: TSynchroObject; OwnsIt: boolean; const AShareLock: IOmniCriticalSection = nil);
+//    destructor  Destroy; override;
+//    function  EnterSpinLock: IInterface;
+//    procedure Acquire; override;
+//    procedure Release; override;
+//    procedure Signal;
+//    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
+//    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver); virtual; abstract;
+//    function  IsSignalled: boolean; virtual; abstract;
+//    procedure AddObserver(const Observer: IOmniSynchroObserver);
+//    procedure RemoveObserver(const Observer: IOmniSynchroObserver);
+//  end; { TOmniSynchroObject }
+//
+//  TSynchroSpin = class(TInterfacedObject)
+//  private
+//    FController: TOmniSynchroObject;
+//  public
+//    constructor Create(AController: TOmniSynchroObject);
+//    destructor Destroy; override;
+//  end; { TSynchroSpin }
+//
+//  TOmniCountdownEvent = class(TOmniSynchroObject, IOmniCountdownEvent)
+//  strict protected
+//    FCountdown: TCountdownEvent;
+//  public
+//    constructor Create(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil);
+//    procedure Reset;
+//    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
+//    function  IsSignalled: boolean; override;
+//    function  BaseCountdown: TCountdownEvent;
+//  end; { TOmniCountdownEvent }
+//
+//  TOmniEvent = class(TOmniSynchroObject, IOmniEvent)
+//  strict protected
+//    FEvent: TEvent;
+//    [Volatile] FState: boolean;
+//    FManualReset: boolean;
+//  public
+//    constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil);
+//    procedure Reset;
+//    procedure SetEvent;
+//    function  BaseEvent: TEvent;
+//    procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
+//    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
+//    function  IsSignalled: boolean; override;
+//  end; { TOmniEvent }
+//
+//  {$IFNDEF MSWINDOWS}
+//  TOneCondition = class(TSynchroWaitFor.TCondition)
+//  public
+//    function  Test(var Signaller: IOmniSynchro): boolean; override;
+//    function  WaitAll: boolean; override;
+//  end; { TOneCondition }
+//
+//  TAllCondition = class( TSynchroWaitFor.TCondition)
+//  public
+//    function  Test(var Signaller: IOmniSynchro): boolean; override;
+//    function  WaitAll: boolean; override;
+//  end; { TAllCondition }
+//
+//  TPreSignalData = class
+//  public
+//    FOneSignalled: boolean;
+//    FAllSignalled: boolean;
+//    constructor Create( AOneSignalled, AAllSignalled: boolean);
+//  end; { TPreSignaData }
+//  {$ENDIF ~MSWINDOWS}
+//  {$ENDIF OTL_MobileSupport}
 
 { transitional }
 
-function SetEvent(event: TOmniTransitionEvent): boolean;
+procedure SetEvent( event: TOmniTransitionEvent);
 begin
-  Result := true;
   {$IFDEF MSWINDOWS}
   if event <> 0 then
-    Result := Windows.SetEvent(event);
+    WinApi.Windows.SetEvent(event);
   {$ELSE}
-  if assigned(event) then
+  if assigned( event) then
     event.SetEvent;
   {$ENDIF ~MSWINDOWS}
 end; { SetEvent }
@@ -807,7 +807,7 @@ end; { SetEvent }
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 begin
-  Result := TOmniCriticalSection.Create;
+  Result := TSynchroFactory.AcquireCriticalSection
 end; { CreateOmniCriticalSection }
 
 function CreateOmniCancellationToken: IOmniCancellationToken;
@@ -815,22 +815,30 @@ begin
   Result := TOmniCancellationToken.Create;
 end; { CreateOmniCancellationToken }
 
+{$IFDEF MSWINDOWS}
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 begin
   Result := TOmniResourceCount.Create(initialCount);
 end; { CreateResourceCount }
+{$ENDIF MSWINDOWS}
 
-{$IFDEF OTL_MobileSupport}
-function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
-begin
-  Result := TOmniCountdownEvent.Create(Count, SpinCount, AShareLock);
-end; { CreateOmniCountdownEvent }
+//{$IFDEF OTL_MobileSupport}
+//function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
+//begin
+//  Result := TOmniCountdownEvent.Create(Count, SpinCount, AShareLock);
+//end; { CreateOmniCountdownEvent }
+//
+//function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+//begin
+//  Result := TOmniEvent.Create(AManualReset, InitialState, AShareLock);
+//end; { CreateOmniEvent }
+//{$ENDIF OTL_MobileSupport}
 
-function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+function CreateOmniEvent( AManualReset, InitialState: boolean): IOmniEvent;
 begin
-  Result := TOmniEvent.Create(AManualReset, InitialState, AShareLock);
-end; { CreateOmniEvent }
-{$ENDIF OTL_MobileSupport}
+  result := _CreateKernalEventIntf( nil, True, False)
+end;
+
 
 {$IFDEF MSWINDOWS}
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
@@ -1099,7 +1107,7 @@ end; { WaitForAllObjects }
 procedure TOmniCS.Acquire;
 begin
   Initialize;
-  ocsSync.Acquire;
+  ocsSync.Enter
 end; { TOmniCS.Acquire }
 
 function TOmniCS.GetLockCount: integer;
@@ -1109,67 +1117,74 @@ begin
     Result := ocsSync.LockCount;
 end; { TOmniCS.GetLockCount }
 
-function TOmniCS.GetSyncObj: TSynchroObject;
+function TOmniCS.GetSyncObj: TObject;
 begin
   Initialize;
-  Result := ocsSync.GetSyncObj;
+  Result := ocsSync.AsObject
 end; { TOmniCS.GetSyncObj }
 
 procedure TOmniCS.Initialize;
+{$IFDEF MSWINDOWS}
 var
   syncIntf: IOmniCriticalSection;
+  {$ENDIF}
 begin
-  Assert(NativeUInt(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
-  Assert(NativeUInt(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
-  if not assigned(ocsSync) then begin
-    syncIntf := CreateOmniCriticalSection;
-    {$IFDEF MSWINDOWS}
-    if CAS(nil, pointer(syncIntf), ocsSync) then
-    {$ELSE}
-    if TInterlocked.CompareExchange(pointer(ocsSync), pointer(syncIntf), nil) = nil then
-    {$ENDIF}
-      pointer(syncIntf) := nil;
-  end;
+  {$IFDEF MSWINDOWS}
+    Assert(NativeUInt(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
+    Assert(NativeUInt(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
+    if not assigned(ocsSync) then begin
+      syncIntf := CreateOmniCriticalSection;
+      if CAS(nil, pointer(syncIntf), ocsSync) then
+        pointer(syncIntf) := nil;
+    end;
+
+  {$ELSE}
+    TAtomic.Initialize( IInterface( ocsSync),
+      function: IInterface
+      begin
+        result := CreateOmniCriticalSection
+      end);
+  {$ENDIF}
 end; { TOmniCS.Initialize }
 
 procedure TOmniCS.Release;
 begin
-  ocsSync.Release;
+  ocsSync.Leave
 end; { TOmniCS.Release }
 
-{ TOmniCriticalSection }
-
-constructor TOmniCriticalSection.Create;
-begin
-  ocsCritSect := TFixedCriticalSection.Create;
-end; { TOmniCriticalSection.Create }
-
-destructor TOmniCriticalSection.Destroy;
-begin
-  FreeAndNil(ocsCritSect);
-end; { TOmniCriticalSection.Destroy }
-
-procedure TOmniCriticalSection.Acquire;
-begin
-  ocsCritSect.Acquire;
-  Inc(ocsLockCount);
-end; { TOmniCriticalSection.Acquire }
-
-function TOmniCriticalSection.GetLockCount: integer;
-begin
-  Result := ocsLockCount;
-end; { TOmniCriticalSection.GetLockCount }
-
-function TOmniCriticalSection.GetSyncObj: TSynchroObject;
-begin
-  Result := ocsCritSect;
-end; { TOmniCriticalSection.GetSyncObj }
-
-procedure TOmniCriticalSection.Release;
-begin
-  ocsCritSect.Release;
-  Dec(ocsLockCount);
-end; { TOmniCriticalSection.Release }
+//{ TOmniCriticalSection }
+//
+//constructor TOmniCriticalSection.Create;
+//begin
+//  ocsCritSect := TFixedCriticalSection.Create;
+//end; { TOmniCriticalSection.Create }
+//
+//destructor TOmniCriticalSection.Destroy;
+//begin
+//  FreeAndNil(ocsCritSect);
+//end; { TOmniCriticalSection.Destroy }
+//
+//procedure TOmniCriticalSection.Acquire;
+//begin
+//  ocsCritSect.Acquire;
+//  Inc(ocsLockCount);
+//end; { TOmniCriticalSection.Acquire }
+//
+//function TOmniCriticalSection.GetLockCount: integer;
+//begin
+//  Result := ocsLockCount;
+//end; { TOmniCriticalSection.GetLockCount }
+//
+//function TOmniCriticalSection.GetSyncObj: TSynchroObject;
+//begin
+//  Result := ocsCritSect;
+//end; { TOmniCriticalSection.GetSyncObj }
+//
+//procedure TOmniCriticalSection.Release;
+//begin
+//  ocsCritSect.Release;
+//  Dec(ocsLockCount);
+//end; { TOmniCriticalSection.Release }
 
 { TOmniCancellationToken }
 
@@ -1178,7 +1193,7 @@ begin
   {$IFDEF MSWINDOWS}
   FEvent := CreateEvent(nil, true, false, nil);
   {$ELSE}
-  FEvent := CreateOmniEvent(True, False);
+  FEvent := _CreateKernalEventIntf( nil, True, False);
   {$ENDIF ~MSWINDOWS}
 end; { TOmniCancellationToken.Create }
 
@@ -1196,7 +1211,7 @@ begin
   FIsSignalled := false;
   ResetEvent(FEvent);
   {$ELSE}
-  FEvent.Reset;
+  FEvent.ResetEvent;
   {$ENDIF ~MSWINDOWS}
 end; { TOmniCancellationToken.Clear }
 
@@ -1206,7 +1221,7 @@ begin
   Result := FEvent;
 end; { TOmniCancellationToken.GetHandle }
 {$ELSE}
-function TOmniCancellationToken.GetEvent: IOmniEvent;
+function TOmniCancellationToken.GetEvent: IEvent;
 begin
   Result := FEvent;
 end; { TOmniCancellationToken.GetEvent }
@@ -1231,7 +1246,18 @@ begin
   {$ENDIF ~MSWINDOWS}
 end; { TOmniCancellationToken.Signal }
 
+
+
+
 { TOmniMREW }
+
+procedure TOmniMREW.CheckValidAlignment;
+begin
+  {$IFNDEF MSWINDOWS}
+    TAtomic.Assert_isReadWriteAtomicallyIntegral<IInterface>( omrewReference);
+  {$ENDIF}
+end;
+
 
 procedure TOmniMREW.EnterReadLock;
 var
@@ -1396,109 +1422,72 @@ begin
       break; //repeat
     end;
   until false;
-  orcLock.Release; 
+  orcLock.Release;
 end; { TOmniResourceCount.TryAllocate }
-
-{$ELSE ~MSWINDOWS}
-
-constructor TOmniResourceCount.Create(initialCount: cardinal);
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.Create }
-
-destructor TOmniResourceCount.Destroy;
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.Destroy }
-
-function TOmniResourceCount.Allocate: cardinal;
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.Allocate }
-
-function TOmniResourceCount.GetSynchro: IOmniSynchro;
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.GetSynchro }
-
-function TOmniResourceCount.Release: cardinal;
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.Release }
-
-function TOmniResourceCount.TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal): boolean;
-begin
-  { TODO : Not implemented! }
-  raise Exception.Create('Not implemented!');
-end; { TOmniResourceCount.TryAllocate }
-
 {$ENDIF ~MSWINDOWS}
+
+
 {$IFDEF OTL_Generics}
 
-{ Atomic<T> }
-
-class function Atomic<T>.Initialize(var storage: T; factory: TFactory): T;
-var
-  interlockRes: pointer;
-  tmpT        : T;
-begin
-  if not assigned(PPointer(@storage)^) then begin
-    Assert(NativeUInt(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
-    Assert(NativeUInt(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
-    tmpT := factory();
-    {$IFDEF MSWINDOWS}
-    interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
-    {$ELSE}
-    interlockRes := TInterlocked.CompareExchange(PPointer(@storage)^, PPointer(@tmpT)^, nil);
-    {$ENDIF}
-    case PTypeInfo(TypeInfo(T))^.Kind of
-      tkInterface:
-        if interlockRes = nil then
-          PPointer(@tmpT)^ := nil;
-      tkClass:
-        if interlockRes <> nil then
-          TObject(PPointer(@tmpT)^).Free;
-      else
-        raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-    end; //case
-  end;
-  Result := storage;
-end; { Atomic<T>.Initialize }
-
-{$IFDEF OTL_ERTTI}
-class function Atomic<T>.Initialize(var storage: T): T;
-begin
-  if not assigned(PPointer(@storage)^) then begin
-    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
-      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
-    Result := Atomic<T>.Initialize(storage,
-      function: T
-      var
-        aMethCreate : TRttiMethod;
-        instanceType: TRttiInstanceType;
-        ctx         : TRttiContext;
-        resValue    : TValue;
-        rType       : TRttiType;
-      begin
-        ctx := TRttiContext.Create;
-        rType := ctx.GetType(TypeInfo(T));
-        for aMethCreate in rType.GetMethods do begin
-          if (aMethCreate.IsConstructor) and (Length(aMethCreate.GetParameters) = 0) then begin
-            instanceType := rType.AsInstance;
-            resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
-            Result := resValue.AsType<T>;
-            break; //for
-          end;
-        end; //for
-      end);
-  end;
-end; { Atomic<T>.Initialize }
-{$ENDIF OTL_ERTTI}
+//{ Atomic<T> }
+//
+//class function Atomic<T>.Initialize(var storage: T; factory: TFactory): T;
+//var
+//  interlockRes: pointer;
+//  tmpT        : T;
+//begin
+//  if not assigned(PPointer(@storage)^) then begin
+//    Assert(NativeUInt(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
+//    Assert(NativeUInt(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
+//    tmpT := factory();
+//    {$IFDEF MSWINDOWS}
+//    interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
+//    {$ELSE}
+//    interlockRes := TInterlocked.CompareExchange(PPointer(@storage)^, PPointer(@tmpT)^, nil);
+//    {$ENDIF}
+//    case PTypeInfo(TypeInfo(T))^.Kind of
+//      tkInterface:
+//        if interlockRes = nil then
+//          PPointer(@tmpT)^ := nil;
+//      tkClass:
+//        if interlockRes <> nil then
+//          TObject(PPointer(@tmpT)^).Free;
+//      else
+//        raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+//    end; //case
+//  end;
+//  Result := storage;
+//end; { Atomic<T>.Initialize }
+//
+//{$IFDEF OTL_ERTTI}
+//class function Atomic<T>.Initialize(var storage: T): T;
+//begin
+//  if not assigned(PPointer(@storage)^) then begin
+//    if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
+//      raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
+//    Result := Atomic<T>.Initialize(storage,
+//      function: T
+//      var
+//        aMethCreate : TRttiMethod;
+//        instanceType: TRttiInstanceType;
+//        ctx         : TRttiContext;
+//        resValue    : TValue;
+//        rType       : TRttiType;
+//      begin
+//        ctx := TRttiContext.Create;
+//        rType := ctx.GetType(TypeInfo(T));
+//        for aMethCreate in rType.GetMethods do begin
+//          if (aMethCreate.IsConstructor) and (Length(aMethCreate.GetParameters) = 0) then begin
+//            instanceType := rType.AsInstance;
+//            resValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
+//            Result := resValue.AsType<T>;
+//            break; //for
+//          end;
+//        end; //for
+//      end);
+//  end;
+//end; { Atomic<T>.Initialize }
+//{$ENDIF OTL_ERTTI}
 
 { Locked<T> }
 
@@ -2004,232 +1993,233 @@ end; { TWaitFor.WaitAny }
 {$ELSE ~MSWINDOWS}
 {$IFDEF OTL_MobileSupport}
 
-{ TSynchroWaitFor.TSynchroClient }
-
-constructor TSynchroWaitFor.TSynchroClient.Create(AController: TSynchroWaitFor);
-begin
-  FController := AController;
-  FController.FSynchClient := Self;
-end; { TSynchroWaitFor.TSynchroClient.Create }
-
-procedure TSynchroWaitFor.TSynchroClient.EnterGate;
-begin
-  if assigned( FController) then
-    FController.FGate.Acquire;
-end; { TSynchroWaitFor.TSynchroClient.EnterGate }
-
-procedure TSynchroWaitFor.TSynchroClient.LeaveGate;
-begin
-  if assigned( FController) then
-    FController.FGate.Release;
-end; { TSynchroWaitFor.TSynchroClient.LeaveGate }
-
-procedure TSynchroWaitFor.TSynchroClient.Deref;
-begin
-  FController := nil;
-end; { TSynchroWaitFor.TSynchroClient.Deref }
-
-procedure TSynchroWaitFor.TSynchroClient.DereferenceSynchObj(const SynchObj: TObject;
-  AllowInterface: boolean);
-begin
-  if not assigned(FController) then
-    Exit;
-  { TODO : Is there something mising? }
-end; { TSynchroWaitFor.TSynchroClient.DereferenceSynchObj }
-
-procedure TSynchroWaitFor.TSynchroClient.BeforeSignal(const Signaller: TObject; var Data: TObject);
-var
-  Dummy: IOmniSynchro;
-begin
-  if assigned(FController) then
-    Data := TPreSignalData.Create(
-      FController.FOneSignalled.Test(Dummy),
-      FController.FAllSignalled.Test(Dummy));
-end; { TSynchroWaitFor.TSynchroClient.BeforeSignal }
-
-procedure TSynchroWaitFor.TSynchroClient.AfterSignal(const Signaller: TObject; var Data: TObject);
-var
-  Dummy: IOmniSynchro;
-begin
-  try
-    if not assigned(FController) then
-      Exit;
-    if (not (Data as TPreSignalData).FOneSignalled)
-       and FController.FOneSignalled.Test(Dummy)
-    then
-      FController.FOneSignalled.FCondVar.Release;
-    if (not (Data as TPreSignalData).FAllSignalled)
-       and FController.FAllSignalled.Test(Dummy)
-    then
-      FController.FAllSignalled.FCondVar.Release;
-  finally FreeAndNil(Data); end;
-end; { TSynchroWaitFor.TSynchroClient.AfterSignal }
-
-{ TSynchroWaitFor.TCondition }
-
-constructor TSynchroWaitFor.TCondition.Create(AController: TSynchroWaitFor);
-begin
-  inherited Create;
-  FCondVar := TConditionVariableCS.Create;
-  FController := AController;
-end; { TSynchroWaitFor.TCondition.Create }
-
-destructor TSynchroWaitFor.TCondition.Destroy;
-begin
-  FreeAndNil(FCondVar);
-  inherited;
-end; { TSynchroWaitFor.TCondition.Destroy }
-
-function TSynchroWaitFor.TCondition.Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
-var
-  Elapsed   : int64;
-  Signaller1: IOmniSynchro;
-  Timer     : TStopWatch;
-  WaitTime  : cardinal;
-begin
-  Result := wrError;
-  WaitTime := timeout_ms;
-  if WaitTime > 0 then
-    Timer := TStopWatch.StartNew;
-  FController.FGate.Acquire;
-  try
-    repeat
-      if WaitTime > 0 then begin
-        Elapsed := Timer.ElapsedMilliseconds;
-        if timeout_ms <= Elapsed then
-          WaitTime := 0
-        else
-          WaitTime := timeout_ms - Elapsed;
-      end;
-      if Test(Signaller1) then
-        Result := wrSignaled
-      else  if WaitTime = 0 then
-        Result := wrTimeout
-      else begin
-        case FCondVar.WaitFor(TCriticalSection(FController.FGate.GetSyncObj), WaitTime) of
-          wrSignaled:
-            begin
-              if Test( Signaller1) then
-                Result := wrSignaled
-              else if WaitTime = 0 then
-                Result := wrTimeout
-              else
-                Result := wrIOCompletion
-            end;
-          wrTimeout:
-            Result := wrTimeout;
-          wrAbandoned,
-          wrError,
-          wrIOCompletion:
-            Result := wrError;
-        end; // case
-      end;
-      if Result = wrSignaled then begin
-        if assigned(Signaller1) then
-          Signaller1.ConsumeSignalFromObserver(FController.FSynchClient);
-        Signaller := Signaller1;
-      end
-    until Result <> wrIOCompletion;
-  finally FController.FGate.Release; end;
-end; { TSynchroWaitFor.TCondition.Wait }
-
-{ TSynchroWaitFor }
-
-constructor TSynchroWaitFor.Create(const SynchObjects: array of IOmniSynchro;
-  const AShareLock: IOmniCriticalSection = nil);
-var
-  Member: IOmniSynchro;
-begin
-  if assigned( AShareLock) then
-    FGate := AShareLock
-  else
-    FGate := CreateOmniCriticalSection;
-  Assert(FGate.GetSyncObj is TCriticalSection);
-  FSynchObjects := TSynchroList.Create;
-  FOneSignalled := TOneCondition.Create(self);
-  FAllSignalled := TAllCondition.Create(self);
-  TSynchroClient.Create(self);
-  for Member in SynchObjects do
-    FSynchObjects.Add(Member);
-end; { TSynchroWaitFor.Create }
-
-destructor TSynchroWaitFor.Destroy;
-var
-  SynchClientEx: ISynchroClientEx;
-begin
-  FSynchObjects.Clear;
-  FGate := nil;
-  FreeAndNil(FSynchObjects);
-  FreeAndNil(FOneSignalled);
-  FreeAndNil(FAllSignalled);
-  if Supports(FSynchClient, ISynchroClientEx, SynchClientEx) then
-    SynchClientEx.Deref;
-  FSynchClient := nil;
-  inherited;
-end; { TSynchroWaitFor.Destroy }
-
-function TSynchroWaitFor.WaitAll(timeout_ms: cardinal): TWaitResult;
-var
-  Signaller: IOmniSynchro;
-begin
-  Result := FAllSignalled.Wait(timeout_ms, Signaller);
-end; { TSynchroWaitFor.WaitAll }
-
-function TSynchroWaitFor.WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
-begin
-  result := FAllSignalled.Wait(timeout_ms, Signaller);
-end; { TSynchroWaitFor.WaitAny }
-
-{ TOneCondition }
-
-function TOneCondition.Test(var Signaller: IOmniSynchro): boolean;
-var
-  member: IOmniSynchro;
-begin
-  Result := False;
-  FController.Gate.Acquire;
-  try
-    for member in FController.SynchObjects do begin
-      Result := member.IsSignalled;
-      if Result then
-        continue; //for
-      Signaller := member;
-      break; //for
-    end; //for
-  finally FController.Gate.Release; end
-end; { TOneCondition.Test }
-
-function TOneCondition.WaitAll: boolean;
-begin
-  Result := False;
-end; { TOneCondition.WaitAll }
-
-{ TAllCondition }
-
-function TAllCondition.Test(var Signaller: IOmniSynchro): boolean;
-var
-  member: IOmniSynchro;
-begin
-  Result := True;
-  Signaller := nil;
-  FController.Gate.Acquire;
-  try
-    for member in FController.SynchObjects do begin
-      Result := member.IsSignalled;
-      if not Result then
-        break; //for
-      if not assigned(Signaller) then
-        Signaller := member;
-    end; //for
-  finally FController.Gate.Release; end;
-end; { TAllCondition.Test }
-
-function TAllCondition.WaitAll: boolean;
-begin
-  Result := True;
-end; { TAllCondition.WaitAll }
+//{ TSynchroWaitFor.TSynchroClient }
+//
+//constructor TSynchroWaitFor.TSynchroClient.Create(AController: TSynchroWaitFor);
+//begin
+//  FController := AController;
+//  FController.FSynchClient := Self;
+//end; { TSynchroWaitFor.TSynchroClient.Create }
+//
+//procedure TSynchroWaitFor.TSynchroClient.EnterGate;
+//begin
+//  if assigned( FController) then
+//    FController.FGate.Acquire;
+//end; { TSynchroWaitFor.TSynchroClient.EnterGate }
+//
+//procedure TSynchroWaitFor.TSynchroClient.LeaveGate;
+//begin
+//  if assigned( FController) then
+//    FController.FGate.Release;
+//end; { TSynchroWaitFor.TSynchroClient.LeaveGate }
+//
+//procedure TSynchroWaitFor.TSynchroClient.Deref;
+//begin
+//  FController := nil;
+//end; { TSynchroWaitFor.TSynchroClient.Deref }
+//
+//procedure TSynchroWaitFor.TSynchroClient.DereferenceSynchObj(const SynchObj: TObject;
+//  AllowInterface: boolean);
+//begin
+//  if not assigned(FController) then
+//    Exit;
+//  { TODO : Is there something mising? }
+//end; { TSynchroWaitFor.TSynchroClient.DereferenceSynchObj }
+//
+//procedure TSynchroWaitFor.TSynchroClient.BeforeSignal(const Signaller: TObject; var Data: TObject);
+//var
+//  Dummy: IOmniSynchro;
+//begin
+//  if assigned(FController) then
+//    Data := TPreSignalData.Create(
+//      FController.FOneSignalled.Test(Dummy),
+//      FController.FAllSignalled.Test(Dummy));
+//end; { TSynchroWaitFor.TSynchroClient.BeforeSignal }
+//
+//procedure TSynchroWaitFor.TSynchroClient.AfterSignal(const Signaller: TObject; var Data: TObject);
+//var
+//  Dummy: IOmniSynchro;
+//begin
+//  try
+//    if not assigned(FController) then
+//      Exit;
+//    if (not (Data as TPreSignalData).FOneSignalled)
+//       and FController.FOneSignalled.Test(Dummy)
+//    then
+//      FController.FOneSignalled.FCondVar.Release;
+//    if (not (Data as TPreSignalData).FAllSignalled)
+//       and FController.FAllSignalled.Test(Dummy)
+//    then
+//      FController.FAllSignalled.FCondVar.Release;
+//  finally FreeAndNil(Data); end;
+//end; { TSynchroWaitFor.TSynchroClient.AfterSignal }
+//
+//{ TSynchroWaitFor.TCondition }
+//
+//constructor TSynchroWaitFor.TCondition.Create(AController: TSynchroWaitFor);
+//begin
+//  inherited Create;
+//  FCondVar := TConditionVariableCS.Create;
+//  FController := AController;
+//end; { TSynchroWaitFor.TCondition.Create }
+//
+//destructor TSynchroWaitFor.TCondition.Destroy;
+//begin
+//  FreeAndNil(FCondVar);
+//  inherited;
+//end; { TSynchroWaitFor.TCondition.Destroy }
+//
+//function TSynchroWaitFor.TCondition.Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+//var
+//  Elapsed   : int64;
+//  Signaller1: IOmniSynchro;
+//  Timer     : TStopWatch;
+//  WaitTime  : cardinal;
+//begin
+//  Result := wrError;
+//  WaitTime := timeout_ms;
+//  if WaitTime > 0 then
+//    Timer := TStopWatch.StartNew;
+//  FController.FGate.Acquire;
+//  try
+//    repeat
+//      if WaitTime > 0 then begin
+//        Elapsed := Timer.ElapsedMilliseconds;
+//        if timeout_ms <= Elapsed then
+//          WaitTime := 0
+//        else
+//          WaitTime := timeout_ms - Elapsed;
+//      end;
+//      if Test(Signaller1) then
+//        Result := wrSignaled
+//      else  if WaitTime = 0 then
+//        Result := wrTimeout
+//      else begin
+//        case FCondVar.WaitFor(TCriticalSection(FController.FGate.GetSyncObj), WaitTime) of
+//          wrSignaled:
+//            begin
+//              if Test( Signaller1) then
+//                Result := wrSignaled
+//              else if WaitTime = 0 then
+//                Result := wrTimeout
+//              else
+//                Result := wrIOCompletion
+//            end;
+//          wrTimeout:
+//            Result := wrTimeout;
+//          wrAbandoned,
+//          wrError,
+//          wrIOCompletion:
+//            Result := wrError;
+//        end; // case
+//      end;
+//      if Result = wrSignaled then begin
+//        if assigned(Signaller1) then
+//          Signaller1.ConsumeSignalFromObserver(FController.FSynchClient);
+//        Signaller := Signaller1;
+//      end
+//    until Result <> wrIOCompletion;
+//  finally FController.FGate.Release; end;
+//end; { TSynchroWaitFor.TCondition.Wait }
+//
+//{ TSynchroWaitFor }
+//
+//constructor TSynchroWaitFor.Create(const SynchObjects: array of IOmniSynchro;
+//  const AShareLock: IOmniCriticalSection = nil);
+//var
+//  Member: IOmniSynchro;
+//begin
+//  if assigned( AShareLock) then
+//    FGate := AShareLock
+//  else
+//    FGate := CreateOmniCriticalSection;
+//  Assert(FGate.GetSyncObj is TCriticalSection);
+//  FSynchObjects := TSynchroList.Create;
+//  FOneSignalled := TOneCondition.Create(self);
+//  FAllSignalled := TAllCondition.Create(self);
+//  TSynchroClient.Create(self);
+//  for Member in SynchObjects do
+//    FSynchObjects.Add(Member);
+//end; { TSynchroWaitFor.Create }
+//
+//destructor TSynchroWaitFor.Destroy;
+//var
+//  SynchClientEx: ISynchroClientEx;
+//begin
+//  FSynchObjects.Clear;
+//  FGate := nil;
+//  FreeAndNil(FSynchObjects);
+//  FreeAndNil(FOneSignalled);
+//  FreeAndNil(FAllSignalled);
+//  if Supports(FSynchClient, ISynchroClientEx, SynchClientEx) then
+//    SynchClientEx.Deref;
+//  FSynchClient := nil;
+//  inherited;
+//end; { TSynchroWaitFor.Destroy }
+//
+//function TSynchroWaitFor.WaitAll(timeout_ms: cardinal): TWaitResult;
+//var
+//  Signaller: IOmniSynchro;
+//begin
+//  Result := FAllSignalled.Wait(timeout_ms, Signaller);
+//end; { TSynchroWaitFor.WaitAll }
+//
+//function TSynchroWaitFor.WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+//begin
+//  result := FAllSignalled.Wait(timeout_ms, Signaller);
+//end; { TSynchroWaitFor.WaitAny }
+//
+//{ TOneCondition }
+//
+//function TOneCondition.Test(var Signaller: IOmniSynchro): boolean;
+//var
+//  member: IOmniSynchro;
+//begin
+//  Result := False;
+//  FController.Gate.Acquire;
+//  try
+//    for member in FController.SynchObjects do begin
+//      Result := member.IsSignalled;
+//      if Result then
+//        continue; //for
+//      Signaller := member;
+//      break; //for
+//    end; //for
+//  finally FController.Gate.Release; end
+//end; { TOneCondition.Test }
+//
+//function TOneCondition.WaitAll: boolean;
+//begin
+//  Result := False;
+//end; { TOneCondition.WaitAll }
+//
+//{ TAllCondition }
+//
+//function TAllCondition.Test(var Signaller: IOmniSynchro): boolean;
+//var
+//  member: IOmniSynchro;
+//begin
+//  Result := True;
+//  Signaller := nil;
+//  FController.Gate.Acquire;
+//  try
+//    for member in FController.SynchObjects do begin
+//      Result := member.IsSignalled;
+//      if not Result then
+//        break; //for
+//      if not assigned(Signaller) then
+//        Signaller := member;
+//    end; //for
+//  finally FController.Gate.Release; end;
+//end; { TAllCondition.Test }
+//
+//function TAllCondition.WaitAll: boolean;
+//begin
+//  Result := True;
+//end; { TAllCondition.WaitAll }
 {$ENDIF OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
+
 
 { TOmniSingleThreadUseChecker }
 
@@ -2283,279 +2273,279 @@ begin
   {$ENDIF MSWINDOWS}
 end; { TOmniSingleThreadUseChecker.DebugCheck }
 
-{$IFDEF OTL_MobileSupport}
-
-{ TOmniSynchroObject }
-
-constructor TOmniSynchroObject.Create(ABase: TSynchroObject; OwnsIt: boolean;
-  const AShareLock: IOmniCriticalSection);
-begin
-  FBase := ABase;
-  FOwnsBase := OwnsIt;
-  if assigned(AShareLock) then
-    FShareLock := AShareLock
-  else
-    FLock.Create(False);
-  FObservers := TList<IOmniSynchroObserver>.Create
-end; { TOmniSynchroObject.Create }
-
-destructor TOmniSynchroObject.Destroy;
-var
-  Obs: IOmniSynchroObserver;
-begin
-  if FRefCount <> 0 then
-    raise Exception.Create('TOmniSynchroObject.Destroy RefCount not zero.');
-  with EnterSpinLock do begin
-    for Obs in FObservers do
-      Obs.DereferenceSynchObj(self, False);
-    if FOwnsBase then
-      FreeAndNil(FBase);
-    FObservers.Free;
-    inherited;
-  end;
-end; { TOmniSynchroObject.Destroy }
-
-class function TOmniSynchroObject.NewInstance: TObject;
-var
-  Inst: TOmniSynchroObject;
-begin
-  Inst := TOmniSynchroObject(inherited NewInstance);
-  Inst.FrefCount := 1;
-  Result := Inst;
-end; { TOmniSynchroObject.NewInstance }
-
-procedure TOmniSynchroObject.AfterConstruction;
-begin
-  inherited;
-  TInterlocked.Decrement(FRefCount);
-end; { TOmniSynchroObject.AfterConstruction }
-
-function TOmniSynchroObject._AddRef: Integer;
-begin
-  Result := TInterlocked.Increment(FRefCount)
-end; { TOmniSynchroObject._AddRef }
-
-function TOmniSynchroObject._Release: Integer;
-begin
-  result := TInterlocked.Decrement(FRefCount);
-  if result = 0 then
-    Destroy;
-end; { TOmniSynchroObject._Release }
-
-function TOmniSynchroObject.Base: TSynchroObject;
-begin
-  Result := FBase;
-end; { TOmniSynchroObject.Base }
-
-function TOmniSynchroObject.EnterSpinLock: IInterface;
-begin
-  Result := TSynchroSpin.Create(Self)
-end; { TOmniSynchroObject.EnterSpinLock }
-
-function TOmniSynchroObject.QueryInterface(const IID: TGUID; out Obj): HResult;
-begin
-  if GetInterface(IID, Obj) then
-    Result := 0
-  else
-    Result := E_NOINTERFACE;
-end; { TOmniSynchroObject.QueryInterface }
-
-procedure TOmniSynchroObject.PerformObservableAction(Action: TProc; DoLock: boolean);
-var
-  iObserver: integer;
-  observer : IOmniSynchroObserver;
-begin
-  if DoLock then
-    EnterSpinLock; //until end of method
-
-  if FObservers.Count = 0 then
-    Action
-  else begin
-    for observer in FObservers do
-      observer.EnterGate;
-    try
-      for iObserver := 0 to FObservers.Count - 1 do
-        observer.BeforeSignal(self, FData[iObserver]);
-      Action;
-      for iObserver := 0 to FObservers.Count - 1 do
-        observer.AfterSignal(self, FData[iObserver]);
-    finally
-      for observer in FObservers do
-        observer.LeaveGate;
-    end // try
-  end;
-end; { TOmniSynchroObject.PerformObservableAction }
-
-procedure TOmniSynchroObject.Release;
-begin
-  PerformObservableAction(procedure begin FBase.Release; end, True);
-end; { TOmniSynchroObject.Release }
-
-procedure TOmniSynchroObject.Signal;
-begin
-  Release;
-end; { TOmniSynchroObject.Signal }
-
-function TOmniSynchroObject.WaitFor(Timeout: LongWord): TWaitResult;
-begin
-  if FObservers.Count > 0 then
-    raise Exception.Create('Cannot wait directly on TOmniSynchroObject whilst it is enrolled in a compound syncro object.')
-  else
-    Result := FBase.WaitFor(Timeout);
-end; { TOmniSynchroObject.WaitFor }
-
-{$IFDEF MSWINDOWS}
-function TOmniSynchroObject.Handle: THandle;
-begin
-  if FBase is THandleObject then
-    Result := THandleObject(FBase).Handle
-  else
-    raise Exception.Create('TOmniSynchroObject.Handle: Handle is not available!');
-end; { TOmniSynchroObject.Handle }
-{$ENDIF}
-
-procedure TOmniSynchroObject.Acquire;
-begin
-  WaitFor(INFINITE)
-end; { TOmniSynchroObject.Acquire }
-
-procedure TOmniSynchroObject.AddObserver(const Observer: IOmniSynchroObserver);
-begin
-  with EnterSpinLock do begin
-    if FObservers.IndexOf(Observer) = -1 then
-      FObservers.Add(Observer);
-    SetLength(FData, FObservers.Count);
-  end;
-end; { TOmniSynchroObject.AddObserver }
-
-procedure TOmniSynchroObject.RemoveObserver(const Observer: IOmniSynchroObserver);
-begin
-  with EnterSpinLock do begin
-    if FObservers.Count = 0 then
-      Exit;
-    FObservers.Remove(Observer);
-    Observer.DereferenceSynchObj(self, FRefCount > 0);
-    SetLength(FData, FObservers.Count)
-  end;
-end; { TOmniSynchroObject.RemoveObserver }
-
-{ TSynchroSpin }
-
-constructor TSynchroSpin.Create(AController: TOmniSynchroObject);
-begin
-  FController := AController;
-  if assigned(FController.ShareLock) then
-    FController.ShareLock.Acquire
-  else
-    FController.Lock.Enter;
-end; { TSynchroSpin.Create }
-
-destructor TSynchroSpin.Destroy;
-begin
-  if assigned(FController.ShareLock) then
-    FController.ShareLock.Release
-  else
-    FController.Lock.Exit(True);
-  inherited;
-end; { TSynchroSpin.Destroy }
-
-{ TOmniCountdownEvent }
-
-constructor TOmniCountdownEvent.Create(Count, SpinCount: Integer; const AShareLock: IOmniCriticalSection);
-begin
-  FCountdown := TCountdownEvent.Create(Count, SpinCount);
-  inherited Create(FCountdown, True, AShareLock)
-end; { TOmniCountdownEvent.Create }
-
-function TOmniCountdownEvent.IsSignalled: boolean;
-begin
-  Result := FCountdown.IsSet;
-end; { TOmniCountdownEvent.IsSignalled }
-
-procedure TOmniCountdownEvent.Reset;
-begin
-  PerformObservableAction(procedure begin FCountdown.Reset; end, True);
-end; { TOmniCountdownEvent.Reset }
-
-function TOmniCountdownEvent.BaseCountdown: TCountdownEvent;
-begin
-  Result := FCountdown;
-end; { TOmniCountdownEvent.BaseCountdown }
-
-procedure TOmniCountdownEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
-begin
-end; { TOmniCountdownEvent.ConsumeSignalFromObserver }
-
-{ TOmniEvent }
-
-constructor TOmniEvent.Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection);
-begin
-  FEvent := TEvent.Create(nil, AManualReset, InitialState, '', False);
-  FState := InitialState;
-  FManualReset := AManualReset;
-  inherited Create(FEvent, True, AShareLock);
-end; { TOmniEvent.Create }
-
-function TOmniEvent.BaseEvent: TEvent;
-begin
-  Result := FEvent;
-end; { TOmniEvent.BaseEvent }
-
-procedure TOmniEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
-begin
-  // Here we are already inside the lock.
-  if not FManualReset then begin
-    FEvent.ResetEvent;
-    FState := False;
-  end
-end; { TOmniEvent.ConsumeSignalFromObserver }
-
-function TOmniEvent.IsSignalled: boolean;
-begin
-  Result := FState;
-end; { TOmniEvent.IsSignalled }
-
-procedure TOmniEvent.Reset;
-begin
-  PerformObservableAction(
-    procedure
-    begin
-      FEvent.ResetEvent;
-      FState := False;
-    end,
-    True);
-end; { TOmniEvent.Reset }
-
-procedure TOmniEvent.SetEvent;
-begin
-  PerformObservableAction(
-    procedure
-    begin
-      FEvent.SetEvent;
-      FState := True;
-    end,
-    True);
-end; { TOmniEvent.SetEvent }
-
-function TOmniEvent.WaitFor(Timeout: LongWord): TWaitResult;
-begin
-  Result := inherited WaitFor(Timeout);
-  if (Result = wrSignaled) and (not FManualReset) then
-    FState := False;
-end; { TOmniEvent.WaitFor }
-
-{$IFNDEF MSWINDOWS}
-
-{ TPreSignalData }
-
-constructor TPreSignalData.Create( AOneSignalled, AAllSignalled: boolean);
-begin
-  FOneSignalled := AOneSignalled;
-  FAllSignalled := AAllSignalled;
-end; { TPreSignalData.Create }
-
-{$ENDIF ~MSWINDOWS}
-{$ENDIF OTL_MobileSupport}
+//{$IFDEF OTL_MobileSupport}
+//
+//{ TOmniSynchroObject }
+//
+//constructor TOmniSynchroObject.Create(ABase: TSynchroObject; OwnsIt: boolean;
+//  const AShareLock: IOmniCriticalSection);
+//begin
+//  FBase := ABase;
+//  FOwnsBase := OwnsIt;
+//  if assigned(AShareLock) then
+//    FShareLock := AShareLock
+//  else
+//    FLock.Create(False);
+//  FObservers := TList<IOmniSynchroObserver>.Create
+//end; { TOmniSynchroObject.Create }
+//
+//destructor TOmniSynchroObject.Destroy;
+//var
+//  Obs: IOmniSynchroObserver;
+//begin
+//  if FRefCount <> 0 then
+//    raise Exception.Create('TOmniSynchroObject.Destroy RefCount not zero.');
+//  with EnterSpinLock do begin
+//    for Obs in FObservers do
+//      Obs.DereferenceSynchObj(self, False);
+//    if FOwnsBase then
+//      FreeAndNil(FBase);
+//    FObservers.Free;
+//    inherited;
+//  end;
+//end; { TOmniSynchroObject.Destroy }
+//
+//class function TOmniSynchroObject.NewInstance: TObject;
+//var
+//  Inst: TOmniSynchroObject;
+//begin
+//  Inst := TOmniSynchroObject(inherited NewInstance);
+//  Inst.FrefCount := 1;
+//  Result := Inst;
+//end; { TOmniSynchroObject.NewInstance }
+//
+//procedure TOmniSynchroObject.AfterConstruction;
+//begin
+//  inherited;
+//  TInterlocked.Decrement(FRefCount);
+//end; { TOmniSynchroObject.AfterConstruction }
+//
+//function TOmniSynchroObject._AddRef: Integer;
+//begin
+//  Result := TInterlocked.Increment(FRefCount)
+//end; { TOmniSynchroObject._AddRef }
+//
+//function TOmniSynchroObject._Release: Integer;
+//begin
+//  result := TInterlocked.Decrement(FRefCount);
+//  if result = 0 then
+//    Destroy;
+//end; { TOmniSynchroObject._Release }
+//
+//function TOmniSynchroObject.Base: TSynchroObject;
+//begin
+//  Result := FBase;
+//end; { TOmniSynchroObject.Base }
+//
+//function TOmniSynchroObject.EnterSpinLock: IInterface;
+//begin
+//  Result := TSynchroSpin.Create(Self)
+//end; { TOmniSynchroObject.EnterSpinLock }
+//
+//function TOmniSynchroObject.QueryInterface(const IID: TGUID; out Obj): HResult;
+//begin
+//  if GetInterface(IID, Obj) then
+//    Result := 0
+//  else
+//    Result := E_NOINTERFACE;
+//end; { TOmniSynchroObject.QueryInterface }
+//
+//procedure TOmniSynchroObject.PerformObservableAction(Action: TProc; DoLock: boolean);
+//var
+//  iObserver: integer;
+//  observer : IOmniSynchroObserver;
+//begin
+//  if DoLock then
+//    EnterSpinLock; //until end of method
+//
+//  if FObservers.Count = 0 then
+//    Action
+//  else begin
+//    for observer in FObservers do
+//      observer.EnterGate;
+//    try
+//      for iObserver := 0 to FObservers.Count - 1 do
+//        observer.BeforeSignal(self, FData[iObserver]);
+//      Action;
+//      for iObserver := 0 to FObservers.Count - 1 do
+//        observer.AfterSignal(self, FData[iObserver]);
+//    finally
+//      for observer in FObservers do
+//        observer.LeaveGate;
+//    end // try
+//  end;
+//end; { TOmniSynchroObject.PerformObservableAction }
+//
+//procedure TOmniSynchroObject.Release;
+//begin
+//  PerformObservableAction(procedure begin FBase.Release; end, True);
+//end; { TOmniSynchroObject.Release }
+//
+//procedure TOmniSynchroObject.Signal;
+//begin
+//  Release;
+//end; { TOmniSynchroObject.Signal }
+//
+//function TOmniSynchroObject.WaitFor(Timeout: LongWord): TWaitResult;
+//begin
+//  if FObservers.Count > 0 then
+//    raise Exception.Create('Cannot wait directly on TOmniSynchroObject whilst it is enrolled in a compound syncro object.')
+//  else
+//    Result := FBase.WaitFor(Timeout);
+//end; { TOmniSynchroObject.WaitFor }
+//
+//{$IFDEF MSWINDOWS}
+//function TOmniSynchroObject.Handle: THandle;
+//begin
+//  if FBase is THandleObject then
+//    Result := THandleObject(FBase).Handle
+//  else
+//    raise Exception.Create('TOmniSynchroObject.Handle: Handle is not available!');
+//end; { TOmniSynchroObject.Handle }
+//{$ENDIF}
+//
+//procedure TOmniSynchroObject.Acquire;
+//begin
+//  WaitFor(INFINITE)
+//end; { TOmniSynchroObject.Acquire }
+//
+//procedure TOmniSynchroObject.AddObserver(const Observer: IOmniSynchroObserver);
+//begin
+//  with EnterSpinLock do begin
+//    if FObservers.IndexOf(Observer) = -1 then
+//      FObservers.Add(Observer);
+//    SetLength(FData, FObservers.Count);
+//  end;
+//end; { TOmniSynchroObject.AddObserver }
+//
+//procedure TOmniSynchroObject.RemoveObserver(const Observer: IOmniSynchroObserver);
+//begin
+//  with EnterSpinLock do begin
+//    if FObservers.Count = 0 then
+//      Exit;
+//    FObservers.Remove(Observer);
+//    Observer.DereferenceSynchObj(self, FRefCount > 0);
+//    SetLength(FData, FObservers.Count)
+//  end;
+//end; { TOmniSynchroObject.RemoveObserver }
+//
+//{ TSynchroSpin }
+//
+//constructor TSynchroSpin.Create(AController: TOmniSynchroObject);
+//begin
+//  FController := AController;
+//  if assigned(FController.ShareLock) then
+//    FController.ShareLock.Acquire
+//  else
+//    FController.Lock.Enter;
+//end; { TSynchroSpin.Create }
+//
+//destructor TSynchroSpin.Destroy;
+//begin
+//  if assigned(FController.ShareLock) then
+//    FController.ShareLock.Release
+//  else
+//    FController.Lock.Exit(True);
+//  inherited;
+//end; { TSynchroSpin.Destroy }
+//
+//{ TOmniCountdownEvent }
+//
+//constructor TOmniCountdownEvent.Create(Count, SpinCount: Integer; const AShareLock: IOmniCriticalSection);
+//begin
+//  FCountdown := TCountdownEvent.Create(Count, SpinCount);
+//  inherited Create(FCountdown, True, AShareLock)
+//end; { TOmniCountdownEvent.Create }
+//
+//function TOmniCountdownEvent.IsSignalled: boolean;
+//begin
+//  Result := FCountdown.IsSet;
+//end; { TOmniCountdownEvent.IsSignalled }
+//
+//procedure TOmniCountdownEvent.Reset;
+//begin
+//  PerformObservableAction(procedure begin FCountdown.Reset; end, True);
+//end; { TOmniCountdownEvent.Reset }
+//
+//function TOmniCountdownEvent.BaseCountdown: TCountdownEvent;
+//begin
+//  Result := FCountdown;
+//end; { TOmniCountdownEvent.BaseCountdown }
+//
+//procedure TOmniCountdownEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
+//begin
+//end; { TOmniCountdownEvent.ConsumeSignalFromObserver }
+//
+//{ TOmniEvent }
+//
+//constructor TOmniEvent.Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection);
+//begin
+//  FEvent := TEvent.Create(nil, AManualReset, InitialState, '', False);
+//  FState := InitialState;
+//  FManualReset := AManualReset;
+//  inherited Create(FEvent, True, AShareLock);
+//end; { TOmniEvent.Create }
+//
+//function TOmniEvent.BaseEvent: TEvent;
+//begin
+//  Result := FEvent;
+//end; { TOmniEvent.BaseEvent }
+//
+//procedure TOmniEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
+//begin
+//  // Here we are already inside the lock.
+//  if not FManualReset then begin
+//    FEvent.ResetEvent;
+//    FState := False;
+//  end
+//end; { TOmniEvent.ConsumeSignalFromObserver }
+//
+//function TOmniEvent.IsSignalled: boolean;
+//begin
+//  Result := FState;
+//end; { TOmniEvent.IsSignalled }
+//
+//procedure TOmniEvent.Reset;
+//begin
+//  PerformObservableAction(
+//    procedure
+//    begin
+//      FEvent.ResetEvent;
+//      FState := False;
+//    end,
+//    True);
+//end; { TOmniEvent.Reset }
+//
+//procedure TOmniEvent.SetEvent;
+//begin
+//  PerformObservableAction(
+//    procedure
+//    begin
+//      FEvent.SetEvent;
+//      FState := True;
+//    end,
+//    True);
+//end; { TOmniEvent.SetEvent }
+//
+//function TOmniEvent.WaitFor(Timeout: LongWord): TWaitResult;
+//begin
+//  Result := inherited WaitFor(Timeout);
+//  if (Result = wrSignaled) and (not FManualReset) then
+//    FState := False;
+//end; { TOmniEvent.WaitFor }
+//
+//{$IFNDEF MSWINDOWS}
+//
+//{ TPreSignalData }
+//
+//constructor TPreSignalData.Create( AOneSignalled, AAllSignalled: boolean);
+//begin
+//  FOneSignalled := AOneSignalled;
+//  FAllSignalled := AAllSignalled;
+//end; { TPreSignalData.Create }
+//
+//{$ENDIF ~MSWINDOWS}
+//{$ENDIF OTL_MobileSupport}
 
 { TInterlockedEx }
 

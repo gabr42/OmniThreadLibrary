@@ -95,6 +95,7 @@ uses
   DSiWin32,
   {$ELSE}
   Generics.Collections,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
   {$ENDIF}
   SysUtils,
   Classes,
@@ -200,7 +201,7 @@ type
 
   TOmniMessageQueueTee = class(TInterfacedObject, IOmniMessageQueueTee)
   strict private
-    obqtQueueList: TList;
+    obqtQueueList: {$IFDEF MSWINDOWS} TList{$ELSE} TList<TOmniMessageQueue>{$ENDIF};
     obqtQueueLock: TOmniCS;
   public
     constructor Create;
@@ -231,6 +232,7 @@ uses
   {$IFDEF MSWINDOWS}{$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}{$ENDIF}
   {$IFNDEF MSWINDOWS}
   Diagnostics,
+  Otl.Parallel.SynchroPrimitives.ModularLevel,
   {$ENDIF}
   OtlEventMonitor;
 
@@ -255,10 +257,11 @@ type
     ceTaskTerminatedEvent_ref: TOmniTransitionEvent;
     ceWriter_ref             : TOmniMessageQueue;
     {$IFNDEF MSWINDOWS}
-    FMultiWaitLock           : IOmniCriticalSection;
-    FReadWaiter              : TSynchroWaitFor;
-    FNewMessageEvent         : IOmniSynchro;
+    FEventFactory            : TSynchroFactory;
+    FReadWaiter              : ICompositeSynchro;
+    FNewMessageEvent         : IEvent;
     {$ENDIF}
+
   protected
     procedure DetachFromQueues;
     function  GetNewMessageEvent: TOmniTransitionEvent;
@@ -294,11 +297,16 @@ type
     twcMessageQueueSize     : integer;
     twcTaskTerminatedEvt_ref: TOmniTransitionEvent;
     twcUnidirQueue          : array [1..2] of TOmniMessageQueue;
+
   strict protected
     procedure CreateBuffers; inline;
+
   protected
     function  OtherEndpoint(endpoint: IOmniCommunicationEndpoint): IOmniCommunicationEndpoint;
+
   public
+    FEventFactory: TSynchroFactory;
+
     constructor Create(messageQueueSize: integer; taskTerminatedEvent: TOmniTransitionEvent);
     destructor  Destroy; override;
     function Endpoint1: IOmniCommunicationEndpoint; inline;
@@ -474,6 +482,8 @@ end; { TOmniMessageQueue.WndProc }
 
 constructor TOmniCommunicationEndpoint.Create(owner: TOmniTwoWayChannel; readQueue,
   writeQueue: TOmniMessageQueue; taskTerminatedEvent_ref: TOmniTransitionEvent);
+var
+  Factors: TSynchroArray;
 begin
   inherited Create;
   ceOwner_ref := owner;
@@ -482,16 +492,21 @@ begin
   ceTaskTerminatedEvent_ref := taskTerminatedEvent_ref;
   {$IFNDEF MSWINDOWS}
   FNewMessageEvent   := ceReader_ref.GetNewMessageEvent;
-  FMultiWaitLock     := CreateOmniCriticalSection;
-  FReadWaiter        := TSynchroWaitFor.Create( [FNewMessageEvent, ceTaskTerminatedEvent_ref], FMultiWaitLock);
+  //FMultiWaitLock     := CreateOmniCriticalSection;
+  SetLength( Factors, 2);
+  Factors[0]    := FNewMessageEvent;
+  Factors[1]    := ceTaskTerminatedEvent_ref;
+  FEventFactory := owner.FEventFactory;
+  FReadWaiter   := TCompositeSynchro.Create( Factors, FEventFactory, ConsumeOneSignalled, nil,  TestAny, False);
+  //FMultiWaitLock :=
   {$ENDIF}
 end; { TOmniCommunicationEndpoint.Create }
 
 destructor TOmniCommunicationEndpoint.Destroy;
 begin
   {$IFNDEF MSWINDOWS}
-  FReadWaiter.Free;
-  FMultiWaitLock := nil;
+  FReadWaiter    := nil;
+  //FMultiWaitLock := nil;
   {$ENDIF}
   inherited;
 end; { TOmniCommunicationEndpoint.Destroy }
@@ -541,7 +556,7 @@ var
   {$IFDEF MSWINDOWS}
   insertObserver: TOmniContainerWindowsEventObserver;
   {$ELSE}
-  Signaller     : IOmniSynchro;
+  SignallerIdx  : integer;
   {$ENDIF MSWINDOWS}
   retry         : boolean;
   startTime     : int64;
@@ -577,10 +592,10 @@ begin
       finally ceReader_ref.ContainerSubject.Detach(insertObserver, coiNotifyOnAllInserts); end;
     finally FreeAndNil(insertObserver); end;
     {$ELSE ~MSWINDOWS}
-    ceReader_ref.GetNewMessageEvent.Reset;
+    ceReader_ref.GetNewMessageEvent.ResetEvent;
     Result := Receive(msg);
     if not Result then begin
-      if (FReadWaiter.WaitAny(timeout_ms, Signaller) = wrSignaled) and (Signaller = FNewMessageEvent) then
+      if (FReadWaiter.WaitFor( SignallerIdx, timeout_ms) = wrSignaled) and (SignallerIdx = 0) then
       begin
         msg := ceReader_ref.Dequeue;
         Result := true;
@@ -618,8 +633,9 @@ var
   waitTime           : integer;
   {$IFNDEF MSWINDOWS}
   partlyEvent        : IOmniEvent;
-  partlyEmptyWaiter  : TSynchroWaitFor;
-  Signaller          : IOmniSynchro;
+  partlyEmptyWaiter  : ICompositeSynchro;
+  Signaller          : integer;
+  Factors: TSynchroArray;
   {$ENDIF ~MSWINDOWS}
 begin
   msg.msgID := msgID;
@@ -635,7 +651,10 @@ begin
     try
       {$IFNDEF MSWINDOWS}
       partlyEvent       := partlyEmptyObserver.GetEvent;
-      partlyEmptyWaiter := TSynchroWaitFor.Create([partlyEvent, ceTaskTerminatedEvent_ref], FMultiWaitLock);
+      SetLength( Factors, 2);
+      Factors[0] := partlyEvent;
+      Factors[1] := ceTaskTerminatedEvent_ref;
+      partlyEmptyWaiter := TCompositeSynchro.Create( Factors, FEventFactory, ConsumeOneSignalled, nil, TestAny, False);
       try
       {$ENDIF}
         OtherEndpoint.Reader.ContainerSubject.Attach(partlyEmptyObserver, coiNotifyOnPartlyEmpty);
@@ -652,8 +671,8 @@ begin
               {$ELSE}
               waitTime := timeout_ms - startTime.ElapsedMilliseconds;
               if (waitTime >= 0) and
-                 (partlyEmptyWaiter.WaitAny(waitTime, Signaller) = wrSignaled) and
-                 (Signaller = partlyEvent)
+                 (partlyEmptyWaiter.WaitFor( Signaller, waitTime) = wrSignaled) and
+                 (Signaller = 0{partlyEvent})
               {$ENDIF}
               then begin
                 Result := ceWriter_ref.Enqueue(msg);
@@ -666,7 +685,7 @@ begin
           until not retry;
         finally ceWriter_ref.ContainerSubject.Detach(partlyEmptyObserver, coiNotifyOnPartlyEmpty); end;
       {$IFNDEF MSWINDOWS}
-      finally FreeAndNil(partlyEmptyWaiter); end;
+      finally partlyEmptyWaiter := nil end;
       {$ENDIF ~MSWINDOWS}
     finally FreeAndNil(partlyEmptyObserver); end;
   end;
@@ -714,6 +733,7 @@ constructor TOmniTwoWayChannel.Create(messageQueueSize: integer;
   taskTerminatedEvent: TOmniTransitionEvent);
 begin
   inherited Create;
+  FEventFactory := TSynchroFactory.Create( 100);
   twcMessageQueueSize := messageQueueSize;
   twcTaskTerminatedEvt_ref := taskTerminatedEvent;
 end; { TOmniTwoWayChannel.Create }
@@ -730,6 +750,7 @@ begin
     twcUnidirQueue[i] := nil;
   end;
   inherited;
+  FEventFactory.Free
 end; { TOmniTwoWayChannel.Destroy }
 
 procedure TOmniTwoWayChannel.CreateBuffers;
@@ -784,7 +805,7 @@ end; { TOmniTwoWayChannel.OtherEndpoint }
 constructor TOmniMessageQueueTee.Create;
 begin
   inherited Create;
-  obqtQueueList := TList.Create;
+  obqtQueueList := TList<TOmniMessageQueue>.Create;
 end; { TOmniMessageQueueTee.Create }
 
 destructor TOmniMessageQueueTee.Destroy;

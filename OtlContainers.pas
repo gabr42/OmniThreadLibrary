@@ -122,7 +122,8 @@ uses
   DSiWin32,
   GpStuff,
 {$ENDIF}
-  OtlContainerObserver;
+  OtlContainerObserver,
+  Otl.Parallel.SynchroPrimitives.BasicLevel;
 
 const
   CPartlyEmptyLoadFactor = 0.8; // When an element count drops below 80%, the container is considered 'partly empty'.
@@ -419,7 +420,7 @@ type
 
   TOmniValueQueueCS = class(TOmniValueQueue)
   strict private
-    FCritSect: TFixedCriticalSection;
+    FCritSect: TCriticalSection;
   protected
     procedure EnterCriticalSection; override;
     procedure LeaveCriticalSection; override;
@@ -487,7 +488,8 @@ end; { TOmniBaseBoundedStack.Destroy }
 procedure TOmniBaseBoundedStack.Acquire;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obsLock.Acquire;
+  // obsLock.Acquire;
+  obsLock.Enter;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedStack.Acquire }
 
@@ -710,7 +712,7 @@ end; { TOmniBaseBoundedStack.PushLink }
 procedure TOmniBaseBoundedStack.Release;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obsLock.Release;
+  obsLock.Leave;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedStack.Release }
 
@@ -799,7 +801,7 @@ end; { TOmniBaseBoundedQueue.Dequeue }
 procedure TOmniBaseBoundedQueue.Acquire;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obqLock.Acquire;
+  obqLock.Enter;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedQueue.Acquire }
 
@@ -1015,7 +1017,7 @@ end; { TOmniBaseBoundedQueue.MeasureExecutionTimes }
 procedure TOmniBaseBoundedQueue.Release;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obqLock.Release;
+  obqLock.Leave;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedQueue.Release }
 
@@ -1316,7 +1318,7 @@ end; { TOmniBaseQueue.Destroy }
 procedure TOmniBaseQueue.Acquire;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obcLock.Acquire;
+  obcLock.Enter;
   {$ENDIF OTL_HaveCmpx16b}
 end; { TOmniBaseQueue.Acquire }
 
@@ -1556,7 +1558,7 @@ end; { TOmniBaseQueue.PrevSlot }
 procedure TOmniBaseQueue.Release;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
-  obcLock.Release;
+  obcLock.Leave;
   {$ENDIF OTL_HaveCmpx16b}
 end; { TOmniBaseQueue.Release }
 

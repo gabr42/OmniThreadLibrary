@@ -174,6 +174,9 @@ type
       /// <remarks>Like Signal(), but if this call was responsible for the count going to zero, then return True.</remarks>
       function  SignalHit: boolean;
 
+      /// <remarks>Like Signal(), but returns the value.</remarks>
+      function  Allocate: cardinal;
+
       /// <remarks>True iff the count is zero.</remarks>
       function  isSignalled: boolean; override;
 
@@ -625,7 +628,6 @@ begin
     Timer.Start
     end;
   TimeOutRemaining    := TimeOut;
-  //result              := wrIOCompletion;          // Warning, Android, XE7: value never used
   repeat
     Clipped := False;
     if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
@@ -666,8 +668,10 @@ begin
         end);
       if Acquired then
           result := wrSignaled
+        else if TimeOutRemaining = 0 then
+          result := wrTimeOut
         else
-          result := wrTimeout
+          result := wrIOCompletion
       end
   until result <> wrIOCompletion
 end;
@@ -720,21 +724,29 @@ end;
 
 procedure TCountDown.Signal;
 begin
-  SignalHit
+  Allocate
 end;
 
-function TCountDown.SignalHit: boolean;
+function TCountDown.Allocate: cardinal;
 var
   Bonkers: boolean;
 begin
   FLock.Enter;
   Bonkers := FValue.Read = 0;
-  result  := (not Bonkers) and (FValue.Decrement = 0);
+  if not Bonkers then
+      result := FValue.Decrement
+    else
+      result := 0;
   FLock.Leave;
   if Bonkers then
       raise TParallelException.Create( ESignalCountUpDownRange)
     else
       FCountDownFunc.Pulse
+end;
+
+function TCountDown.SignalHit: boolean;
+begin
+  result := Allocate = 0
 end;
 
 function TCountDown.AsMWObject: TObject;

@@ -241,6 +241,7 @@ type
     function  Value: cardinal;
     function  SignalHit: boolean;
     procedure CounterSignal;
+    function  Allocate: cardinal;
     procedure Signal;                                                  override;
     function  IsResourceCounting: boolean;                             override;
     function  ConsumeResource: TWaitResult;                            override;
@@ -285,6 +286,11 @@ begin
   SetLength( FFactors, FMemberCount);
   FEventFactory := AEventFactory;
   FAllowSolo := AAllowSolo;
+
+  case FTestClass of
+    TestAny   : FTest := IsAny;
+    TestAll   : FTest := IsAll;
+  end;
 
   for i := 1 to FMemberCount - 1 do
     begin
@@ -609,7 +615,7 @@ begin
   if isKernal then
       result := KernalLocking
     else
-      result := BusLocking  
+      result := BusLocking
 end;
 
 function TCompositeSynchro.NativeMultiwait(
@@ -661,7 +667,7 @@ begin
   if FisSignalled then
       result := esSignalled
     else
-      result := esNotSignalled  
+      result := esNotSignalled
 end;
 
 procedure TCompositeSynchro.Unenrol( ObserverToken: TObject);
@@ -703,7 +709,7 @@ var
 begin
   Idx := -1;
   result := wrError;
-  ImproperConstructionDetected := False;  
+  ImproperConstructionDetected := False;
   case FImplementation of
     Indirect, Solo:
       begin
@@ -744,7 +750,7 @@ begin
                         //  multiple waiters (including TConditionEvent) and where the propagation is ConsumeAllSignalled
                         //  and at least one of the members are resource-counting synchros.
                         ImproperConstructionDetected := True;
-                        result := True  
+                        result := True
                         end;
                     break
                     end
@@ -759,7 +765,7 @@ begin
 
       if ImproperConstructionDetected then
         result := wrError;
-        
+
       if result = wrSignaled then
         SignallerIdx := Idx
       end;
@@ -1034,8 +1040,7 @@ var
   WR: TWaitResult;
   AnyTest: TConditionTest;
 begin
-  result  := wrError;
-  WR      := wrIOCompletion;
+  WR := wrIOCompletion;
   AnyTest := TCompositeSynchro.AnyTest();
   ObserverProc( procedure begin
     if FIndirectWaiters.Read > 0 then
@@ -1066,7 +1071,7 @@ begin
           result := FBase.WaitFor( Timeout)
       end;
 
-    wrTimeout, wrAbandoned, wrError, wrIOCompletion:
+    else // wrTimeout, wrAbandoned, wrError, wrIOCompletion:
       result := wrError
     end
 end;
@@ -1083,9 +1088,10 @@ end;
 
 function TModularEvent.ConsumeResource: TWaitResult;
 begin
-  result := wrSignaled;
   if not FBaseEvent.isManualEvent then
-    FBaseEvent.WaitFor( 0) // Equivalent to ResetEvent()
+      result := FBaseEvent.WaitFor( 0) // Equivalent to ResetEvent()
+    else
+      result := wrSignaled
 end;
 
 
@@ -1221,6 +1227,18 @@ begin
     end);
   result := Res
 end;
+
+
+function TModularCountDown.Allocate: cardinal;
+var
+  Res: cardinal;
+begin
+  ObserverProc( procedure begin
+    res := FBaseCountDown.Allocate
+    end);
+  result := Res
+end;
+
 
 function TModularCountDown.Value: cardinal;
 begin
