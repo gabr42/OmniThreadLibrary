@@ -74,7 +74,7 @@ implementation
 
 
 
-uses System.Diagnostics;
+uses Diagnostics;
 
 
 {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFDEF MSWINDOWS}
@@ -179,9 +179,6 @@ var
   Ev: IEvent;
   {$ENDIF} {$ENDIF}
 begin
-  {$IFNDEF MSWINDOWS}
-    result := wrError;
-  {$ENDIF}
   if (TimeOut <> INFINITE) and (TimeOut <> 0) then
     begin
     Timer.Reset;

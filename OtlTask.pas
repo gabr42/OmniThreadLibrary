@@ -92,7 +92,8 @@ uses
   {$ENDIF ~MSWINDOWS}
   OtlCommon,
   OtlSync,
-  OtlComm;
+  OtlComm,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel;
 
 type
   IOmniTask = interface;
@@ -128,7 +129,7 @@ type
     function Proc: TOmniWaitObjectMethod;
   end; { IOmniEventAndProc }
 
-  TOmniSynchroArray = TArray<IOmniSynchro>;
+  TOmniSynchroArray = TSynchroArray; // TArray<IOmniSynchro>;
   TOmniEventProcList = class(TList<IOmniEventAndProc>)
   public
     function  AsSyncroArray: TOmniSynchroArray;

@@ -57,7 +57,8 @@ interface
 uses
   OtlCommon,
   OtlContainers,
-  OtlCollections;
+  OtlCollections,
+  Otl.Parallel.SynchroPrimitives.ModularLevel;
 
 type
   ///<summary>Source provider capabilities.</summary>
@@ -137,6 +138,8 @@ uses
   System.Diagnostics,
   System.Generics.Collections,
   System.Generics.Defaults,
+  Otl.Parallel.Extras,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
 {$ENDIF}
   SysUtils,
   Classes,
@@ -291,13 +294,12 @@ type
   TOmniOutputBufferSet = class(TOmniOutputBuffer)
   strict private
     obsActiveBuffer_ref: TOmniOutputBufferImpl;
-    obsShareLock       : IOmniCriticalSection;
     obsBuffers         : array [1..CNumBuffersInSet] of TOmniOutputBufferImpl;
     {$IFDEF MSWINDOWS}
     obsActiveIndex     : integer;
     obsWaitHandles     : array[1..CNumBuffersInSet] of THandle;
     {$ELSE}
-    obsWaitEvents      : TWaitFor;
+    obsWaitEvents      : ICompositeSynchro;
     {$ENDIF}
   public
     constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
@@ -350,7 +352,12 @@ type
     function  GetSourceProvider: TOmniSourceProvider;
     procedure InitializePacketSizes;
     property BufferList[idxBuffer: integer]: TOmniOutputBufferImpl read GetBufferList;
+
   public
+    {$IFNDEF MSWINDOWS}
+    FWorkFactory: IWorkFactory;
+    {$ENDIF}
+
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer;
       options: TOmniDataManagerOptions);
     destructor  Destroy; override;
@@ -840,7 +847,7 @@ begin
   {$IFDEF MSWINDOWS}
   obiEmptyEvent := CreateEvent(nil, false, true, nil);
   {$ELSE}
-  obiEmptyEvent := CreateOmniEvent(false, true, AShareLock);
+  obiEmptyEvent := owner.FWorkFactory.Event( False, True);
   {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferImpl.Create }
 
@@ -894,10 +901,9 @@ constructor TOmniOutputBufferSet.Create(owner: TOmniBaseDataManager;
 var
   iBuffer: integer;
   {$IFNDEF MSWINDOWS}
-  Events: array of IOmniSynchro;
+  Events: TSynchroArray;
   {$ENDIF ~MSWINDOWS}
 begin
-  obsShareLock := CreateOmniCriticalSection;
   {$IFNDEF MSWINDOWS}
   SetLength(Events, CNumBuffersInSet);
   {$ENDIF}
@@ -910,7 +916,7 @@ begin
     {$ENDIF ~MSWINDOWS}
   end;
   {$IFNDEF MSWINDOWS}
-  obsWaitEvents := TWaitFor.Create(Events, obsShareLock);
+  obsWaitEvents := owner.FWorkFactory.CompositeSynchro_WaitAny( Events, ConsumeOneSignalled);
   {$ENDIF}
   ActivateBuffer;
 end; { TOmniOutputBufferSet.Create }
@@ -922,7 +928,7 @@ begin
   for iBuffer := 1 to CNumBuffersInSet do
     obsBuffers[iBuffer].Free;
   {$IFNDEF MSWINDOWS}
-  FreeAndNil(obsWaitEvents);
+  obsWaitEvents := nil;
   {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniOutputBufferSet.Destroy }
@@ -932,8 +938,7 @@ var
   {$IFDEF MSWINDOWS}
   awaited: cardinal;
   {$ELSE}
-  Signaller: IOmniSynchro;
-  iBuffer  : integer;
+  SignallerIdx: integer;
   {$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
@@ -942,13 +947,8 @@ begin
   obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
   obsActiveBuffer_ref := obsBuffers[obsActiveIndex];
   {$ELSE}
-  obsWaitEvents.WaitAny(INFINITE, Signaller);
-  for iBuffer := 1 to CNumBuffersInSet do begin
-    if Signaller <> obsBuffers[iBuffer].EmptyEvent then
-      continue; //for
-    obsActiveBuffer_ref := obsBuffers[iBuffer];
-    break; //for
-  end;
+  obsWaitEvents.WaitFor( SignallerIdx);
+  obsActiveBuffer_ref := obsBuffers[ SignallerIdx + 1]
   {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferSet.ActivateBuffer }
 
@@ -984,6 +984,9 @@ var
   Cmp: IComparer<int64>;
 {$ENDIF}
 begin
+  {$IFNDEF MSWINDOWS}
+  FWorkFactory := TSBDParallel.WorkFactory( 0, 0, 100, 100, nil);
+  {$ENDIF}
   inherited Create;
   dmSourceProvider_ref := (sourceProvider as TOmniSourceProviderBase);
   dmQueueList := TObjectList.Create;

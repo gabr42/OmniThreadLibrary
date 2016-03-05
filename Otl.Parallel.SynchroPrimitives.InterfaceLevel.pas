@@ -69,12 +69,14 @@ type
     function  IsKernalMode: boolean;
     function  AsSpinLock: PSBDSpinLock;
     function  AsCriticalSection: TCriticalSection;
+    function  LockCount: integer;
   end;
 
   ICountDown = interface( ISynchro) ['{23D82B7E-9670-4B24-835C-D1E879CF36C9}']
     function InitialValue: cardinal;
     function Value: cardinal;
     function SignalHit: boolean;
+    function Allocate: cardinal; // Signal and return the value.
     procedure CounterSignal;
   end;
 
@@ -204,7 +206,7 @@ type
     function  SignalState: TSignalState;                             override;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   virtual; abstract;
     function  IsModular: boolean;                                    virtual;
-    function  AsMWObject: TObject;                                   virtual; abstract;
+    function  AsMWObject: TObject;                                   virtual;
   end;
 
   TRecycleEvent = class( TRecycleSynchro, IEvent)
@@ -329,9 +331,13 @@ type
 
 
   TRecycleCrit = class( TRecycleObject, ILock)
+  private
+    [Volatile] FLockCount: TVolatileInt32;
+
   protected
     function Pool: TObjectQueue;                override;
     function SignalState: TSignalState;         override;
+    function LockCount: integer;
 
   public
     constructor Create( const APool: TSynchroFactory);
@@ -353,6 +359,7 @@ type
 
   private
     [Volatile] FLock: TSBDSpinLock;
+    function  LockCount: integer;
     procedure Enter;
     procedure Leave;
     function  AsObject: TObject;
@@ -370,7 +377,6 @@ type
     function  isSignalled: boolean;                                  override;
     function  isSignalled_IsSupported: boolean;                      override;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   override;
-    function  AsMWObject: TObject;                                   override;
   public
     constructor Create( const APool: TSynchroFactory; AInitialValue: cardinal);
     destructor Destroy; override;
@@ -379,6 +385,7 @@ type
     function InitialValue: cardinal;
     function Value: cardinal;
     function SignalHit: boolean;
+    function Allocate: cardinal; // Signal and return the value.
     procedure Reconfigure( AInitial: cardinal);
     procedure CounterSignal;
   end;
@@ -390,7 +397,6 @@ type
     function  isSignalled: boolean;                                  override;
     function  isSignalled_IsSupported: boolean;                      override;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   override;
-    function  AsMWObject: TObject;                                   override;
   public
     constructor Create( const APool: TSynchroFactory; AInitial, AMaxValue: cardinal);
     destructor Destroy; override;
@@ -415,7 +421,6 @@ type
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   override;
     function  Pool: TObjectQueue;                                    override;
     procedure ReleaseConfiguration;                                  override;
-    function  AsMWObject: TObject;                                   override;
 
   private
     FBase: TFunctionalEvent;
@@ -448,7 +453,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -477,7 +485,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -509,7 +520,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -541,7 +555,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave;
   if doPulse then
     Addend.Signal
@@ -583,7 +600,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -620,7 +640,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -656,7 +679,10 @@ begin
       end;
   result := Addend;
   if AReUse then
-    FAquisitionCount.Increment;
+    begin
+    Addend.FAcquired := True;
+    FAquisitionCount.Increment
+    end;
   FLock.Leave
 end;
 
@@ -797,7 +823,7 @@ begin
         FPool.FAquisitionCount.Decrement
         end;
       Pl := Pool;
-      if cardinal( Pl.Count) < FPool.FPoolMax then          // Warning, XE7: widen
+      if cardinal( Pl.Count) < FPool.FPoolMax then
           Pool.Enqueue( self)
         else
           begin
@@ -995,6 +1021,11 @@ begin
   result := True
 end;
 
+
+function TRecycleSynchro.AsMWObject: TObject;
+begin
+  result := nil
+end;
 
 {$IFDEF MSWINDOWS}
 function TRecycleSynchro.GetHandle: THandle;
@@ -1284,12 +1315,14 @@ end;
 constructor TRecycleCrit.Create(const APool: TSynchroFactory);
 begin
   inherited Create( APool);
-  FCrit := TFixedCriticalSection.Create
+  FCrit := TFixedCriticalSection.Create;
+  FLockCount.Initialize( 0);
 end;
 
 destructor TRecycleCrit.Destroy;
 begin
   FCrit.Free;
+  FLockCount.Finalize;
   inherited
 end;
 
@@ -1305,7 +1338,8 @@ end;
 
 procedure TRecycleCrit.Enter;
 begin
-  FCrit.Enter
+  FCrit.Enter;
+  FLockCount.Increment
 end;
 
 function TRecycleCrit.IsKernalMode: boolean;
@@ -1316,7 +1350,13 @@ end;
 
 procedure TRecycleCrit.Leave;
 begin
+  FLockCount.Decrement;
   FCrit.Leave
+end;
+
+function TRecycleCrit.LockCount: integer;
+begin
+  result := FLockCount.Read
 end;
 
 function TRecycleCrit.Pool: TObjectQueue;
@@ -1380,20 +1420,25 @@ begin
 end;
 
 
-function TRecycleCountDown.AsMWObject: TObject;
+constructor TRecycleCountDown.Create( const APool: TSynchroFactory; AInitialValue: cardinal);
 begin
-  result := nil
+  inherited Create( APool);
+  FBase := TCountDown.Create( AInitialValue)
+end;
+
+function TSpinIntf.LockCount: integer;
+begin
+  result := FLock.FEntryCount.Read
+end;
+
+function TRecycleCountDown.Allocate: cardinal;
+begin
+  result := FBase.Allocate
 end;
 
 procedure TRecycleCountDown.CounterSignal;
 begin
   FBase.CounterSignal
-end;
-
-constructor TRecycleCountDown.Create( const APool: TSynchroFactory; AInitialValue: cardinal);
-begin
-  inherited Create( APool);
-  FBase := TCountDown.Create( AInitialValue)
 end;
 
 destructor TRecycleCountDown.Destroy;
@@ -1450,11 +1495,6 @@ begin
   result := FBase.WaitFor( Timeout)
 end;
 
-
-function TRecycleCountUp.AsMWObject: TObject;
-begin
-  result := nil
-end;
 
 constructor TRecycleCountUp.Create(
   const APool: TSynchroFactory; AInitial, AMaxValue: cardinal);
@@ -1522,11 +1562,6 @@ begin
   result := FBase.WaitFor( Timeout)
 end;
 
-
-function TRecycleFunctional.AsMWObject: TObject;
-begin
-  result := nil
-end;
 
 constructor TRecycleFunctional.Create(
   const APool: TSynchroFactory; ASignalTest: TEventFunction; APLock: PSBDSpinLock);

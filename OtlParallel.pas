@@ -318,7 +318,8 @@ uses
   OtlTaskControl,
   OtlDataManager,
   OtlEventMonitor,
-  OtlThreadPool;
+  OtlThreadPool,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel;
 
 const
   CDefaultPipelineThrottle = 10240;
@@ -690,7 +691,11 @@ type
     FAggregate          : TOmniValue;
     FAggregator         : TOmniAggregatorDelegate;
     FCancellationToken  : IOmniCancellationToken;
+    {$IFDEF MSWINDOWS}
     FCountStopped       : IOmniResourceCount;
+    {$ELSE}
+    FCountStopped       : ICountDown;
+    {$ENDIF}
     FDataManager        : TOmniDataManager;
     FDelegateEnum       : TOmniDelegateEnumerator;
     FIntoQueueIntf      : IOmniBlockingCollection;
@@ -833,7 +838,11 @@ type
     TTaskDelegate = reference to procedure (const task: IOmniTask; taskIndex: integer);
   strict private
     FCancelWith         : IOmniCancellationToken;
+    {$IFDEF MSWINDOWS}
     FCountStopped       : IOmniResourceCount;
+    {$ELSE}
+    FCountStopped       : ICountDown;
+    {$ENDIF}
     FFinalizerDelegate  : TOmniSimpleTaskFinalizerTaskDelegate;
     FFirst              : integer;
     FInitializerDelegate: TOmniSimpleTaskInitializerTaskDelegate;
@@ -953,7 +962,11 @@ type
 
   TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
   strict private
-    FCountStopped          : IOmniResourceCount;
+    {$IFDEF MSWINDOWS}
+    FCountStopped       : IOmniResourceCount;
+    {$ELSE}
+    FCountStopped       : ICountDown;
+    {$ENDIF}
     FGlobalCancellationFlag: IOmniCancellationToken;
     FGlobalExceptionFlag   : IOmniCancellationToken;
     FInput                 : IOmniBlockingCollection;
@@ -1215,10 +1228,13 @@ uses
   Windows,
   Messages,
   DSiWin32,
+  {$ELSE}
+  Otl.Parallel.Extras,
   {$ENDIF MSWINDOWS}
   Classes,
   OtlComm,
-  OtlContainerObserver;
+  OtlContainerObserver,
+  Otl.Parallel.Atomic;
 
 type
 {$IF CompilerVersion < 23} //pre-XE2
@@ -1300,7 +1316,11 @@ type
   strict private
     opCancelWith      : IOmniCancellationToken;
     opCheckpoint      : integer;
+    {$IFDEF MSWINDOWS}
     opCountStopped    : IOmniResourceCount;
+    {$ELSE}
+    opCountStopped    : ICountDown;
+    {$ENDIF}
     opHandleExceptions: boolean;
     opInput           : IOmniBlockingCollection;
     opNumTasks        : integer;
@@ -1710,7 +1730,11 @@ begin
   if numTasks > FTasks.Count then
     numTasks := FTasks.Count;
   SetLength(FJoinStates, numTasks);
-  FCountStopped := CreateResourceCount(numTasks + 1);
+  {$IFDEF MSWINDOWS}
+    FCountStopped := CreateResourceCount(numTasks + 1);
+  {$ELSE}
+    FCountStopped := TSBDParallel.CountDown(numTasks + 1);
+  {$ENDIF}
   FInput := TOmniBlockingCollection.Create;
   for iProc := 0 to numTasks - 1 do
     FJoinStates[iProc] := TOmniJoinState.Create(FGlobalCancellationFlag, FGlobalExceptionFlag);
@@ -1747,7 +1771,7 @@ begin
             if FCountStopped.Allocate = 1 then begin
               if FNoWait then
                 DoOnStop;
-              FCountStopped.Allocate;
+              FCountStopped.Allocate
             end;
           end;
         end,
@@ -1776,7 +1800,8 @@ begin
   {$IFDEF MSWINDOWS}
   Result := WaitForSingleObject(FCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0;
   {$ELSE}
-  Result := FCountStopped.Synchro.WaitFor(timeout_ms) = wrSignaled;
+  result := FCountStopped.WaitFor( timeout_ms) = wrSignaled
+  // Result := FCountStopped.Synchro.WaitFor(timeout_ms) = wrSignaled;
   {$ENDIF}
 end; { TOmniParallelJoin.InternalWaitFor }
 
@@ -2186,7 +2211,7 @@ begin
     {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
     {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
+    FCountStopped.WaitFor;
     {$ENDIF ~MSWINDOWS}
   if FManagedProvider then
     FreeAndNil(FSourceProvider);
@@ -2422,7 +2447,11 @@ begin
   else if (ploNoWait in Options) and (numTasks > 1) and (not FNumTasksManual) then
     Dec(numTasks);
   FDataManager := CreateDataManager(FSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
+  {$IFDEF MSWINDOWS}
   FCountStopped := CreateResourceCount(numTasks + 1);
+  {$ELSE}
+  FCountStopped := TSBDParallel.CountDown(numTasks + 1);
+  {$ENDIF}
   lockAggregate := CreateOmniCriticalSection;
   for iTask := 1 to numTasks do begin
     task := CreateTask(
@@ -2459,7 +2488,7 @@ begin
     {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
     {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
+    FCountStopped.WaitFor;
     {$ENDIF ~MSWINDOWS}
     if assigned(FIntoQueueIntf) then
       FIntoQueueIntf.CompleteAdding;
@@ -3010,7 +3039,7 @@ begin
     {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
     {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
+    FCountStopped.WaitFor;
     {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniParallelSimpleLoop.Destroy }
@@ -3239,7 +3268,11 @@ begin
   if FNoWait and (numTasks > 1) and (not FNumTasksManual) then
     Dec(numTasks);
   CreatePartitions(numTasks);
-  FCountStopped := CreateResourceCount(numTasks + 1);
+  {$IFDEF MSWINDOWS}
+    FCountStopped := CreateResourceCount(numTasks + 1);
+  {$ELSE}
+    FCountStopped := TSBDParallel.CountDown(numTasks + 1);
+  {$ENDIF}
   lockAggregate := CreateOmniCriticalSection;
   for iTask := 0 to numTasks - 1 do begin
     task := CreateForTask(iTask, taskDelegate);
@@ -3261,7 +3294,7 @@ begin
       {$IFDEF MSWINDOWS}
       WaitForSingleObject(FCountStopped.Handle, INFINITE);
       {$ELSE}
-      FCountStopped.Synchro.WaitFor(INFINITE);
+      FCountStopped.WaitFor;
       {$ENDIF ~MSWINDOWS}
     if assigned(FOnStop) then
       FOnStop(nil);
@@ -3313,7 +3346,7 @@ begin
   {$IFDEF MSWINDOWS}
   Result := WaitForSingleObject(FCountStopped.Handle, maxWait_ms) = WAIT_OBJECT_0;
   {$ELSE}
-  Result := FCountStopped.Synchro.WaitFor(maxWait_ms) = wrSignaled;
+  Result := FCountStopped.WaitFor( maxWait_ms) = wrSignaled;
   {$ENDIF ~MSWINDOWS}
 end; { TOmniParallelSimpleLoop.WaitFor }
 
@@ -3731,7 +3764,11 @@ end; { TOmniPipeline.OnStop }
 
 function TOmniPipeline.Run: IOmniPipeline;
 var
+  {$IFDEF MSWINDOWS}
   countStopped: IOmniResourceCount;
+  {$ELSE}
+  countStopped: ICountDown;
+  {$ENDIF}
   exc         : Exception;
   inQueue     : IOmniBlockingCollection;
   iStage      : integer;
@@ -3741,11 +3778,17 @@ var
   task        : IOmniTaskControl;
   totalTasks  : integer;
 begin
+  {$IFDEF MSWINDOWS}
   Assert(not assigned(opCountStopped), 'TOmniPipeline.Run: Pipeline is already running');
+  {$ENDIF}
   totalTasks := 0;
   for iStage := 0 to opStages.Count - 1 do
     Inc(totalTasks, PipeStage[iStage].NumTasks);
-  opCountStopped := CreateResourceCount(totalTasks);
+  {$IFDEF MSWINDOWS}
+    opCountStopped := CreateResourceCount(totalTasks);
+  {$ELSE}
+    opCountStopped := TSBDParallel.CountDown(totalTasks);
+  {$ENDIF}
   outQueue := opInput;
   for iStage := 0 to opStages.Count - 1 do begin
     inQueue := outQueue;
@@ -3759,7 +3802,11 @@ begin
       outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
     inQueue.ReraiseExceptions(not PipeStage[iStage].HandleExceptions);
     opOutQueues.Add(outQueue);
-    countStopped := CreateResourceCount(PipeStage[iStage].NumTasks);
+    {$IFDEF MSWINDOWS}
+      countStopped := CreateResourceCount(PipeStage[iStage].NumTasks);
+    {$ELSE}
+      countStopped := TSBDParallel.CountDown(PipeStage[iStage].NumTasks);
+    {$ENDIF}
     for iTask := 1 to PipeStage[iStage].NumTasks do begin
       stageName := Format('Pipeline stage #%d', [iStage+1]);
       if PipeStage[iStage].NumTasks > 1 then
@@ -3781,11 +3828,19 @@ begin
                     Exc.Free;
                 end;
               finally
+                {$IFDEF MSWINDOWS}
                 if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+                {$ELSE}
+                if (Task.Param['Stopped'].AsInterface as ICountDown).Allocate = 0 then
+                {$ENDIF}
                   (opStage as IOmniPipelineStage).Output.CompleteAdding;
               end;
             finally
+              {$IFDEF MSWINDOWS}
               if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+              {$ELSE}
+              if (Task.Param['TotalStopped'].AsInterface as ICountDown).Allocate = 0 then
+              {$ENDIF}
               begin
                 DoOnStop(task);
                 {$IFDEF MSWINDOWS}
@@ -4158,6 +4213,7 @@ end; { TOmniParallelTask.WaitFor }
 constructor TOmniWorkItem.Create(const data: TOmniValue; uniqueID: int64; var
   cancelAllUpToID: TOmniAlignedInt64);
 begin
+  TAtomic.Assert_isWithinCacheLines<IOmniCancellationToken>( FCancellationToken);
   inherited Create;
   FData := data;
   FUniqueID := uniqueID;
@@ -4195,7 +4251,9 @@ function TOmniWorkItem.GetCancellationToken: IOmniCancellationToken;
 var
   cancelUpToID: int64;
 begin
-  Result := Atomic<IOmniCancellationToken>.Initialize(FCancellationToken, CreateOmniCancellationToken);
+  // Result := Atomic<IOmniCancellationToken>.Initialize(FCancellationToken, CreateOmniCancellationToken);
+  result := TAtomic.Initialize( IInterface( FCancellationToken),
+             function: IInterface begin result := CreateOmniCancellationToken end) as IOmniCancellationToken;
   cancelUpToID := FCancelAllUpToID_ref^.Value;
   if (cancelUpToID > 0) and (UniqueID <= cancelUpToID) then
     Result.Signal;

@@ -51,20 +51,9 @@ contains
   Otl.Parallel.SynchroPrimitives.BasicLevel in '..\Otl.Parallel.SynchroPrimitives.BasicLevel.pas',
   Otl.Parallel.SynchroPrimitives.InterfaceLevel in '..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas',
   Otl.Parallel.SynchroPrimitives.ConditionVariables in '..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas',
-  Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas';
-
-//  OtlCommon in '..\..\OtlCommon.pas',
-//  OtlContainers in '..\..\OtlContainers.pas',
-//  OtlTask in '..\..\OtlTask.pas',
-//  OtlTaskControl in '..\..\OtlTaskControl.pas',
-//  OtlThreadPool in '..\..\OtlThreadPool.pas',
-//  OtlEventMonitor in '..\..\OtlEventMonitor.pas',
-//  OtlContainerObserver in '..\..\OtlContainerObserver.pas',
-//  OtlSync in '..\..\OtlSync.pas',
-//  OtlHooks in '..\..\OtlHooks.pas',
-//  OtlCollections in '..\..\OtlCollections.pas',
-//  OtlDataManager in '..\..\OtlDataManager.pas',
-//  OtlParallel in '..\..\OtlParallel.pas',
-//  OtlComm in '..\..\OtlComm.pas';
+  Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
+  Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
+  Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas';
 
 end.

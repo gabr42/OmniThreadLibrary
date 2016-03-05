@@ -381,6 +381,7 @@ procedure TVolatileInt32Helper.Finalize;
 begin
 end;
 
+{$HINTS OFF}
 function TVolatileInt32Helper.Add( Addend: integer): integer;
 begin
   result := TInterlocked.Add( self, Addend)
@@ -416,6 +417,7 @@ procedure TVolatileInt32Helper.Write( const Value: integer);
 begin
   TInterlocked.Exchange( self, Value)
 end;
+{$HINTS ON}
 {$ENDIF}
 
 
@@ -541,6 +543,8 @@ end;
 {$ELSE}
   {$UNDEF OVERFLOW_ON}
 {$ENDIF}
+
+{$HINTS OFF}
 function TVolatileUInt32Helper.Add( Addend: cardinal): cardinal;
 begin
   result := cardinal( TInterlocked.Add( integer( self), integer( Addend)))
@@ -567,6 +571,7 @@ begin
       result := TInterlocked.CompareExchange( integer( self), integer( Val - 1), integer( Val)) = integer( Val)
   until result or (Val = 0)
 end;
+{$HINTS ON}
 
 
 {$IFDEF OVERFLOW_ON}
@@ -575,6 +580,7 @@ end;
 {$ENDIF}
 
 
+{$HINTS OFF}
 procedure TVolatileUInt32Helper.Assign( var Source: TVolatileUInt32);
 begin
   TInterlocked.Exchange( integer( self), TInterlocked.CompareExchange( integer( Source), 0, 0))
@@ -600,6 +606,7 @@ procedure TVolatileUInt32Helper.Write( const Value: cardinal);
 begin
   TInterlocked.Exchange( integer( self), integer( Value))
 end;
+{$HINTS ON}
 {$ENDIF}
 
 
@@ -707,6 +714,7 @@ procedure TVolatileInt64Helper.Finalize;
 begin
 end;
 
+{$HINTS OFF}
 function TVolatileInt64Helper.Increment: int64;
 begin
   result := TInterlocked.Increment( self)
@@ -741,6 +749,7 @@ procedure TVolatileInt64Helper.Write( const Value: int64);
 begin
   TInterlocked.Exchange( self, Value)
 end;
+{$HINTS OFF}
 {$ENDIF}
 
 
