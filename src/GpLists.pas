@@ -352,7 +352,7 @@ type
   private
     sValue: string;
   public
-    constructor Create(aValue: string = '');
+    constructor Create(const aValue: string = '');
     property Value: string read sValue write sValue;
   end; { TGpString }
 
@@ -364,7 +364,7 @@ type
   private
     sValue: WideString;
   public
-    constructor Create(aValue: WideString = '');
+    constructor Create(const aValue: WideString = '');
     property Value: WideString read sValue write sValue;
   end; { TGpWideString }
   {$ENDIF}
@@ -1585,14 +1585,14 @@ type
     function  Add(aClass: TClass): integer;
     procedure Clear;
     procedure Delete(idx: integer);
-    function  CreateObject(sClass: string): TObject;
+    function  CreateObject(const sClass: string): TObject;
     {$IFDEF GpLists_Enumerators}
     function  GetEnumerator: TGpClassListEnumerator;
     {$ENDIF GpLists_Enumerators}
     function  IndexOf(aClass: TClass): integer; overload;
-    function  IndexOf(sClass: string): integer; overload;
+    function  IndexOf(const sClass: string): integer; overload;
     procedure Remove(aClass: TClass); overload;
-    procedure Remove(sClass: string); overload;
+    procedure Remove(const sClass: string); overload;
     property Capacity: integer read GetCapacity write SetCapacity;
     property Count: integer read GetCount;
     property Items[idx: integer]: TClass read GetItems; default;
@@ -1617,14 +1617,14 @@ type
     function  Add(aClass: TClass): integer;
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer);                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  CreateObject(sClass: string): TObject;
+    function  CreateObject(const sClass: string): TObject;
     {$IFDEF GpLists_Enumerators}
     function  GetEnumerator: TGpClassListEnumerator;{$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$ENDIF GpLists_Enumerators}
     function  IndexOf(aClass: TClass): integer; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  IndexOf(sClass: string): integer; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  IndexOf(const sClass: string): integer; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Remove(aClass: TClass); overload;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Remove(sClass: string); overload;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Remove(const sClass: string); overload;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
     property Capacity: integer read GetCapacity write SetCapacity;
     property Count: integer read GetCount;
     property Items[idx: integer]: TClass read GetItems; default;
@@ -2371,7 +2371,7 @@ begin
     Result := 1
   else if DWORD(guid1.D4[4]) < DWORD(guid2.D4[4]) then
     Result := -1
-  else if DWORD(guid1.D4[4]) < DWORD(guid2.D4[4]) then
+  else if DWORD(guid1.D4[4]) > DWORD(guid2.D4[4]) then
     Result := 1
   else
     Result := 0;
@@ -2422,7 +2422,7 @@ end; { TGpDateTime.Create }
 
 { TGpString }
 
-constructor TGpString.Create(aValue: string);
+constructor TGpString.Create(const aValue: string);
 begin
   inherited Create;
   sValue := aValue;
@@ -2431,7 +2431,7 @@ end; { TGpString.Create }
 { TGpWideString }
 
 {$IFDEF MSWINDOWS}
-constructor TGpWideString.Create(aValue: WideString);
+constructor TGpWideString.Create(const aValue: WideString);
 begin
   inherited Create;
   sValue := aValue;
@@ -5677,7 +5677,7 @@ begin
   Result := TGpClassList.Create;
 end; { TGpClassList.CreateInterface }
 
-function TGpClassList.CreateObject(sClass: string): TObject;
+function TGpClassList.CreateObject(const sClass: string): TObject;
 var
   idxClass: integer;
 begin
@@ -5700,12 +5700,12 @@ begin
   Result := clClasses.IndexOf(aClass.ClassName);
 end; { TGpClassList.IndexOf }
 
-function TGpClassList.IndexOf(sClass: string): integer;
+function TGpClassList.IndexOf(const sClass: string): integer;
 begin
   Result := clClasses.IndexOf(sClass);
 end; { TGpClassList.IndexOf }
 
-procedure TGpClassList.Remove(sClass: string);
+procedure TGpClassList.Remove(const sClass: string);
 var
   idxItem: integer;
 begin
