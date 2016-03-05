@@ -5,12 +5,15 @@
    Maintainer        : gabr
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
-                       Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole.
+                       Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
+                       bero.
    Creation date     : 2002-10-09
-   Last modification : 2015-11-20
-   Version           : 1.85
+   Last modification : 2016-03-05
+   Version           : 1.86
 </pre>*)(*
    History:
+     1.86: 2016-03-05
+       - [bero] Added 'const' to various 'string' parameters.
      1.85: 2016-01-16
        - DSiExecuteAndCapture supports #10-delimited program output in
          combination with the `onNewLine` handler.
@@ -4646,8 +4649,9 @@ const
 
     procedure ProcessPartialLine(buffer: PAnsiChar; numBytes: integer);
     var
-      now_ms: int64;
-      p     : integer;
+      now_ms  : int64;
+      p       : integer;
+      tokenLen: integer;
     begin
       if lineBufferSize < (numBytes + 1) then begin
         lineBufferSize := numBytes + 1;
@@ -4662,15 +4666,19 @@ const
       {$ENDIF Unicode}
       repeat
         p := Pos(#13#10, partialLine);
-        if p <= 0 then
+        if p <= 0 then begin
           p := Pos(#10, partialLine);
+          tokenLen := 1;
+        end
+        else
+          tokenLen := 2;
         if p <= 0 then
           break; //repeat
         now_ms := DSiTimeGetTime64;
         runningTimeLeft_sec := (endTime_ms - now_ms) div 1000;
         onNewLine(Copy(partialLine, 1, p-1), runningTimeLeft_sec);
         endTime_ms := now_ms + runningTimeLeft_sec * 1000;
-        Delete(partialLine, 1, p+1);
+        Delete(partialLine, 1, p + tokenLen - 1);
       until false;
     end; { ProcessPartialLine }
 

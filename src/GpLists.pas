@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2014, Primoz Gabrijelcic
+Copyright (c) 2016, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2014-10-13
-   Version           : 1.66
+   Last modification : 2016-03-05
+   Version           : 1.71
 </pre>*)(*
    History:
+     1.71: 2016-03-05
+       - [bero] Added 'const' to various 'string' parameters.
+       - [bero] Fixed invalid condition in GUIDCompare.
+     1.70: 2016-03-04
+       - TGpRingBuffer<T>.Dequeue: T returns Default(T) if queue is empty.
+     1.69: 2016-02-24
+       - Implemented TGpFifoBuffer.Clear.
+     1.68: 2016-02-15
+       - Implemented TGpObjectRingBuffer.BufferSizse.
+     1.67: 2016-02-12
+       - TGpFifoBuffer can maintain cached list of TFifoBlock objects.
      1.66: 2014-10-13
        - Implemented TGpDoublyLinkedList.EnumerateAs<T>.
      1.65: 2013-03-11
@@ -314,7 +325,8 @@ uses
   {$IFDEF Unicode}
   Generics.Collections,
   {$ENDIF}
-  SyncObjs;
+  SyncObjs,
+  Math;
 
 const
   CUpperListBound = MaxInt; //converted to Self.Count-1 inside Slice and Walk
@@ -1749,6 +1761,7 @@ type
       orbBufferAlmostFullEvent;
     property BufferAlmostFullThreshold: integer read orbBufferAlmostFullThreshold write
       orbBufferAlmostFullThreshold;
+    property BufferSize: integer read orbBufferSize;
     property Items[iObject: integer]: TObject read GetItem write SetItem; default;
     property OwnsObjects: boolean read orbOwnsObjects;
   end; { TGpObjectRingBuffer }
@@ -2031,8 +2044,10 @@ type
     dllLock : TCriticalSection;
     dllTail : TGpDoublyLinkedListObject;
   protected
-    procedure Linking(obj: TGpDoublyLinkedListObject);      {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  HeadUnsafe: TGpDoublyLinkedListObject;
+    procedure InsertAtHeadUnsafe(obj: TGpDoublyLinkedListObject); {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure InsertAtTailUnsafe(obj: TGpDoublyLinkedListObject); {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Linking(obj: TGpDoublyLinkedListObject);      {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  TailUnsafe: TGpDoublyLinkedListObject;
     procedure Unlinking(obj: TGpDoublyLinkedListObject);    {$IFDEF GpLists_Inline}inline;{$ENDIF}
   public
@@ -2120,6 +2135,7 @@ type
     FData          : pointer;
     FDataSize      : integer;
     FMemEventSender: TObject;
+    FOnGetMem      : TGpFifoMemoryEvent;
     FOnFreeMem     : TGpFifoMemoryEvent;
   public
     {$IFDEF VER150}
@@ -2132,39 +2148,48 @@ type
     constructor Create(const data: TStream; bufSize: integer; memoryEventSender: TObject = nil;
       onGetMem: TGpFifoMemoryEvent = nil; onFreeMem: TGpFifoMemoryEvent = nil); overload;
     destructor  Destroy; override;
+    procedure Reallocate(bufSize: integer);
     property Data: pointer read FData;
     property Size: integer read FDataSize;
   end; { TFifoBlock }
 
   TGpFifoBuffer = class(TInterfacedObject, IGpFifoBuffer)
-  {$IFDEF USE_STRICT} strict {$ENDIF}  private
-    FActiveBlock : TStream;
-    FCurrentSize : integer;
-    FFifo        : TGpDoublyLinkedList;
-    FLastThreadId: cardinal;
-    FMaxSize     : integer;
-    FOnGetMem    : TGpFifoMemoryEvent;
-    FOnFreeMem   : TGpFifoMemoryEvent;
+  {$IFDEF USE_STRICT} strict {$ENDIF} private
+    FActiveBlock     : TStream;
+    FActiveBlockInUse: boolean;
+    FBlocksToCache   : integer;
+    FCachedBlocks    : TGpDoublyLinkedList;
+    FCurrentSize     : integer;
+    FFifo            : TGpDoublyLinkedList;
+    FLastThreadId    : cardinal;
+    FMaxSize         : integer;
+    FOnGetMem        : TGpFifoMemoryEvent;
+    FOnFreeMem       : TGpFifoMemoryEvent;
   {$IFDEF USE_STRICT} strict {$ENDIF} protected
     procedure AddBlock(block: TFifoBlock);          {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Truncate;
     procedure VerifyList;
   protected
+    function  AllocateBlockBuf(const buf; bufSize: integer): TFifoBlock;         {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  AllocateBlockStream(data: TStream; dataSize: integer): TFifoBlock; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetDataSize: integer;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetOnFreeMem: TGpFifoMemoryEvent;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetOnGetMem: TGpFifoMemoryEvent;        {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetSize: integer;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure SetOnFreeMem(value: TGpFifoMemoryEvent);{$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure SetOnGetMem(value: TGpFifoMemoryEvent); {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure ReleaseBlock(var block: TFifoBlock);    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  GetCachedBlock(bufSize: integer): TFifoBlock;
     procedure SetSize(value: integer);                {$IFDEF GpLists_Inline}inline;{$ENDIF}
   public
-    constructor Create(maxSize: integer; threadSafe: boolean);
+    constructor Create(maxSize: integer; threadSafe: boolean; numBlocksToCache: integer = 0);
     destructor  Destroy; override;
     class function CreateInterface(maxSize: integer; threadSafe: boolean): IGpFifoBuffer;
-    function  FifoPlace: integer;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Clear;
+    function  FifoPlace: integer;                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Read(data: TStream; maxSize: integer = MaxInt): integer;
-    function  Write(const buf; bufSize: integer): boolean; overload;
-    function  Write(data: TStream; dataSize: integer = MaxInt): boolean; overload;
+    function  Write(const buf; bufSize: integer): boolean; overload;               {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Write(data: TStream; dataSize: integer = MaxInt): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     property DataSize: integer read GetDataSize;
     property Size: integer read GetSize write SetSize;
     property OnFreeMem: TGpFifoMemoryEvent read GetOnFreeMem write SetOnFreeMem;
@@ -2322,9 +2347,6 @@ type
   function Int64Compare(avalue1, avalue2: int64): integer; {$IFDEF GpLists_Inline}inline;{$ENDIF}
 
 implementation
-
-uses
-  Math;
 
 { publics }
 
@@ -6075,7 +6097,8 @@ end; { TGpRingBuffer<T>.CreateInterface }
 }
 function TGpRingBuffer<T>.Dequeue: T;
 begin
-  Dequeue(Result);
+  if not Dequeue(Result) then
+    Result := Default(T);
 end; { TGpRingBuffer<T>.Dequeue }
 
 function TGpRingBuffer<T>.Dequeue(var item: T): boolean;
@@ -6686,6 +6709,11 @@ begin
   finally if assigned(dllLock) then dllLock.Release; end;
 end; { TGpDoublyLinkedList.InsertAtHead }
 
+procedure TGpDoublyLinkedList.InsertAtHeadUnsafe(obj: TGpDoublyLinkedListObject);
+begin
+  InsertAfter(dllHead, obj);
+end; { TGpDoublyLinkedList.InsertAtHeadUnsafe }
+
 procedure TGpDoublyLinkedList.InsertAtTail(obj: TGpDoublyLinkedListObject);
 begin
   if assigned(dllLock) then dllLock.Acquire;
@@ -6693,6 +6721,11 @@ begin
     InsertBefore(dllTail, obj);
   finally if assigned(dllLock) then dllLock.Release; end;
 end; { TGpDoublyLinkedList.InsertAtTail }
+
+procedure TGpDoublyLinkedList.InsertAtTailUnsafe(obj: TGpDoublyLinkedListObject);
+begin
+  InsertBefore(dllTail, obj);
+end; { TGpDoublyLinkedList.InsertAtTailUnsafe }
 
 procedure TGpDoublyLinkedList.InsertBefore(existingObject,
   obj: TGpDoublyLinkedListObject);
@@ -6819,6 +6852,7 @@ begin
   Move(buf, FData^, bufSize);
   FDataSize := bufSize;
   FMemEventSender := memoryEventSender;
+  FOnGetMem := onGetMem;
   FOnFreeMem := onFreeMem;
 end; { TFifoBlock.Create }
 
@@ -6833,6 +6867,7 @@ begin
   data.Read(FData^, bufSize);
   FDataSize := bufSize;
   FMemEventSender := memoryEventSender;
+  FOnGetMem := onGetMem;
   FOnFreeMem := onFreeMem;
 end; { TFifoBlock.Create }
 
@@ -6845,13 +6880,36 @@ begin
   inherited;
 end; { TFifoBlock.Destroy }
 
+procedure TFifoBlock.Reallocate(bufSize: integer);
+begin
+  if not (assigned(FOnGetMem) or assigned(FOnFreeMem)) then
+    ReallocMem(FData, bufSize)
+  else begin
+    if assigned(FOnFreeMem) then
+      FOnFreeMem(FMemEventSender, FDataSize, FData)
+    else
+      FreeMem(FData);
+    if assigned(FOnGetMem) then
+      FOnGetMem(FMemEventSender, bufSize, FData)
+    else
+      GetMem(FData, bufSize);
+  end;
+  FDataSize := bufSize;
+end; { TFifoBlock.Reallocate }
+
 { TGpFifoBuffer }
 
-constructor TGpFifoBuffer.Create(maxSize: integer; threadSafe: boolean);
+constructor TGpFifoBuffer.Create(maxSize: integer; threadSafe: boolean;
+  numBlocksToCache: integer);
 begin
   inherited Create;
   FMaxSize := maxSize;
   FFifo := TGpDoublyLinkedList.Create(threadSafe);
+  FBlocksToCache := numBlocksToCache;
+  if FBlocksToCache > 0 then
+    FCachedBlocks := TGpDoublyLinkedList.Create(threadSafe);
+  FActiveBlock := TMemoryStream.Create;
+  FActiveBlockInUse := false;
 end; { TGpFifoBuffer.Create }
 
 destructor TGpFifoBuffer.Destroy;
@@ -6866,6 +6924,15 @@ begin
     FreeAndNil(block);
   until false;
   FreeAndNil(FFifo);
+  if assigned(FCachedBlocks) then begin
+    repeat
+      block := (FCachedBlocks.RemoveFromHead as TFifoBlock);
+      if not assigned(block) then
+        break; //repeat
+      FreeAndNil(block);
+    until false;
+    FreeAndNil(FCachedBlocks);
+  end;
   inherited Destroy;
 end; { TGpFifoBuffer.Destroy }
 
@@ -6875,6 +6942,37 @@ begin
   Inc(FCurrentSize, block.Size);
   Assert(FCurrentSize <= FMaxSize);
 end; { TGpFifoBuffer.AddBlock }
+
+function TGpFifoBuffer.AllocateBlockBuf(const buf; bufSize: integer): TFifoBlock;
+begin
+  Result := GetCachedBlock(bufSize);
+  if assigned(Result) then
+    Move(buf, Result.Data^, bufSize)
+  else
+    {$IFDEF VER150}
+    Result := TFifoBlock.CreateD7(buf, Min(bufSize, FifoPlace), Self, FOnGetMem, FOnFreeMem);
+    {$ELSE}
+    Result := TFifoBlock.Create(buf, Min(bufSize, FifoPlace), Self, FOnGetMem, FOnFreeMem);
+    {$ENDIF}
+end; { TGpFifoBuffer.AllocateBlockBuf }
+
+function TGpFifoBuffer.AllocateBlockStream(data: TStream; dataSize: integer): TFifoBlock;
+begin
+  Result := GetCachedBlock(dataSize);
+  if assigned(Result) then
+    data.Read(Result.Data^, dataSize)
+  else
+    Result := TFifoBlock.Create(data, dataSize, Self, FOnGetMem, FOnFreeMem);
+end; { TGpFifoBuffer.AllocateBlockStream }
+
+procedure TGpFifoBuffer.Clear;
+var
+  origSize: integer;
+begin
+  origSize := Size;
+  Size := 0;
+  Size := origSize;
+end; { TGpFifoBuffer.Clear }
 
 class function TGpFifoBuffer.CreateInterface(maxSize: integer; threadSafe: boolean):
   IGpFifoBuffer;
@@ -6887,6 +6985,27 @@ begin
   Result := FMaxSize - FCurrentSize;
   Assert(Result >= 0);
 end; { TGpFifoBuffer.FifoPlace }
+
+function TGpFifoBuffer.GetCachedBlock(bufSize: integer): TFifoBlock;
+begin
+  Result := nil;
+  if FBlocksToCache > 0 then begin
+    FCachedBlocks.Lock;
+    try
+      Result := TFifoBlock(FCachedBlocks.HeadUnsafe);
+      while assigned(Result) do begin
+        if Result.Size = bufSize then
+          break; //while
+        Result := TFifoBlock(Result.NextUnsafe);
+      end; //while
+      if not assigned(Result) then begin
+        Result := TFifoBlock(FCachedBlocks.HeadUnsafe);
+        if assigned(Result) then
+          Result.Reallocate(bufSize);
+      end;
+    finally FCachedBlocks.Unlock; end;
+  end;
+end; { TGpFifoBuffer.GetCachedBlock }
 
 function TGpFifoBuffer.GetDataSize: integer;
 begin
@@ -6915,12 +7034,12 @@ var
 begin
   Result := 0;
   while Result < maxSize do begin
-    if assigned(FActiveBlock) then begin
+    if FActiveBlockInUse then begin
       readSize := data.CopyFrom(FActiveBlock, Min(FActiveBlock.Size - FActiveBlock.Position, maxSize - Result));
       Dec(FCurrentSize, readSize);
       Inc(Result, readSize);
       if FActiveBlock.Position >= FActiveBlock.Size then
-        FreeAndNil(FActiveBlock)
+        FActiveBlockInUse := false
       else begin
         Assert(Result = maxSize);
         break; //while
@@ -6931,8 +7050,10 @@ begin
       break;
     end;
     if block.Size > (maxSize - Result) then begin
-      FActiveBlock := TMemoryStream.Create;
+      FActiveBlockInUse := true;
+      FActiveBlock.Position := 0;
       FActiveBlock.Write(block.Data^, block.Size);
+      FActiveBlock.Size := FActiveBlock.Position;
       FActiveBlock.Position := 0;
     end
     else begin
@@ -6940,11 +7061,28 @@ begin
       data.Write(block.Data^, block.Size);
       Inc(Result, block.Size);
     end;
-    FreeAndNil(block);
+    ReleaseBlock(block);
   end; //while
   Assert(FCurrentSize >= 0);
   Assert((Result = maxSize) or (FCurrentSize = 0));
 end; { TGpFifoBuffer.Read }
+
+procedure TGpFifoBuffer.ReleaseBlock(var block: TFifoBlock);
+begin
+  if FBlocksToCache = 0 then
+    FreeAndNil(block)
+  else begin
+    FCachedBlocks.Lock;
+    try
+      if FCachedBlocks.Count >= FBlocksToCache then
+        FreeAndNil(block)
+      else begin
+        FCachedBlocks.InsertAtTailUnsafe(block);
+        block := nil;
+      end;
+    finally FCachedBlocks.Unlock; end;
+  end;
+end; { TGpFifoBuffer.ReleaseBlock }
 
 procedure TGpFifoBuffer.SetOnFreeMem(value: TGpFifoMemoryEvent);
 begin
@@ -6969,7 +7107,7 @@ begin
   while FCurrentSize > Size do begin
     block := (FFifo.RemoveFromTail as TFifoBlock);
     Dec(FCurrentSize, block.Size);
-    FreeAndNil(block);
+    ReleaseBlock(block);
   end;
   Assert(FCurrentSize >= 0);
   Assert(FCurrentSize <= Size);
@@ -6985,7 +7123,7 @@ begin
   else if FLastThreadId <> GetCurrentThreadID then
     raise Exception.CreateFmt('TGpFifoBuffer: Used from %d and %d', [FLastThreadId, GetCurrentThreadID]);
   totalSize := 0;
-  if assigned(FActiveBlock) then
+  if FActiveBlockInUse then
     Inc(totalSize, FActiveBlock.Size - FActiveBlock.Position);
   {$IFDEF VER150}
   // TP Non tested D7 friendly loop
@@ -7007,21 +7145,15 @@ function TGpFifoBuffer.Write(const buf; bufSize: integer): boolean;
 begin
   Result := FifoPlace >= bufSize;
   if Result then
-  begin
-    {$IFDEF VER150}
-    AddBlock(TFifoBlock.CreateD7(buf, Min(bufSize, FifoPlace), Self, FOnGetMem, FOnFreeMem));
-    {$ELSE}
-    AddBlock(TFifoBlock.Create(buf, Min(bufSize, FifoPlace), Self, FOnGetMem, FOnFreeMem));
-    {$ENDIF}
-  end;
+    AddBlock(AllocateBlockBuf(buf,bufSize));
 end; { TGpFifoBuffer.Write }
 
-function TGpFifoBuffer.Write(data: TStream; dataSize: integer = MaxInt): boolean;
+function TGpFifoBuffer.Write(data: TStream; dataSize: integer): boolean;
 begin
   dataSize := Min(dataSize, data.Size);
   Result := FifoPlace >= dataSize;
   if Result then
-    AddBlock(TFifoBlock.Create(TStream(data), Min(dataSize, FifoPlace), Self, FOnGetMem, FOnFreeMem));
+    AddBlock(AllocateBlockStream(data, Min(dataSize, FifoPlace)));
 end; { TGpFifoBuffer.Write }
 
 {$IFDEF Unicode}

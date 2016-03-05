@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2015 Primoz Gabrijelcic
+   (c) 2016 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2015-09-21
-   Version           : 1.55
+   Last modification : 2016-03-05
+   Version           : 1.56
 </pre>*)(*
    History:
+     1.56: 2016-03-05
+       - [bero] Added 'const' to IFF(boolean, string, string) overload.
      1.55: 2015-09-21
        - Added interface identification to IGpBuffer.
      1.54: 2015-07-24
@@ -91,9 +93,9 @@
      1.22: 2010-07-09
        - Added IFF overload with AnsiString parameters (Unicode Delphi only).
      1.21: 2010-04-13
-       - Implemented overloads for Increment and Decrement in TOmniAlignedInt32 and
-         TOmniAlignedInt6464.
-       - Implemented Add/Subtract methods in TOmniAlignedInt32 and TOmniAlignedInt6464.
+       - Implemented overloads for Increment and Decrement in TGp4AlignedInt and
+         TGp8AlignedInt64.
+       - Implemented Add/Subtract methods in TGp4AlignedInt and TGp8AlignedInt64.
      1.20: 2010-02-01
        - OpenArrayToVarArray supports vtUnicodeString variant type.
      1.19a: 2009-11-16
@@ -102,32 +104,32 @@
        - Added EnumPairs string array enumerator.
        - Added EnumList string enumerator.
      1.18: 2009-05-08
-       - TOmniAlignedInt32 fully changed from working with Cardinal to Integer.
-       - Implemented function CAS (compare and swap) in TOmniAlignedInt32 and
-         TOmniAlignedInt6464 records. 
+       - TGp4AlignedInt fully changed from working with Cardinal to Integer.
+       - Implemented function CAS (compare and swap) in TGp4AlignedInt and
+         TGp8AlignedInt64 records. 
      1.17a: 2009-04-21
        - InterlockedIncrement/InterlockedDecrement deal with integers, therefore
-         TOmniAlignedInt32.Increment/Decrement must return integers.
+         TGp4AlignedInt.Increment/Decrement must return integers.
      1.17: 2009-03-29
        - Implemented IGpTraceable interface.
      1.16: 2009-03-16
-       - TOmniAlignedInt64.Addr must be PInt64, not PCardinal.
-       - TOmniAlignedInt64 renamed to TOmniAlignedInt6464.
+       - TGp8AlignedInt.Addr must be PInt64, not PCardinal.
+       - TGp8AlignedInt renamed to TGp8AlignedInt64.
      1.15: 2009-03-11
        - Implemented EnumStrings enumerator.
      1.14: 2008-10-26
        - Implemented EnumValues enumerator.
      1.13: 2008-09-09
-       - Added >= and <= operators to the TOmniAlignedInt32.
+       - Added >= and <= operators to the TGp4AlignedInt.
      1.12: 2008-07-28
        - Added int64 support to the OpenArrayToVarArray.
      1.11: 2008-07-20
-       - Implemented 8-aligned integer, TOmniAlignedInt64.
-       - TOmniAlignedInt32 and TOmniAlignedInt64 ifdef'd to be only available on D2007+.
+       - Implemented 8-aligned integer, TGp8AlignedInt.
+       - TGp4AlignedInt and TGp8AlignedInt ifdef'd to be only available on D2007+.
      1.10: 2008-07-08
        - [GJ] ReverseWord/ReverseDWord rewritten in assembler.
      1.09: 2008-06-19
-       - Implemented 4-aligned integer, TOmniAlignedInt32.
+       - Implemented 4-aligned integer, TGp4AlignedInt.
      1.08: 2008-04-08
        - Declared MaxInt64 constant.
      1.07: 2008-03-31
@@ -201,7 +203,7 @@ const
 
 {$IFDEF GpStuff_AlignedInt}
 type
-  TOmniAlignedInt32 = record
+  TGp4AlignedInt = record
   strict private
     aiData: int64;
     function  GetValue: integer; inline;
@@ -215,21 +217,21 @@ type
     function  Increment: integer; overload; inline;
     function  Increment(value: integer): integer; overload; inline;
     function  Subtract(value: integer): integer; inline;
-    class operator Add(const ai: TOmniAlignedInt32; i: integer): cardinal; inline;
-    class operator Equal(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator Implicit(const ai: TOmniAlignedInt32): integer; inline;
-    class operator Implicit(const ai: TOmniAlignedInt32): cardinal; inline;
-    class operator Implicit(const ai: TOmniAlignedInt32): PInteger; inline;
-    class operator LessThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator Subtract(ai: TOmniAlignedInt32; i: integer): cardinal; inline;
+    class operator Add(const ai: TGp4AlignedInt; i: integer): cardinal; inline;
+    class operator Equal(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator GreaterThan(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator GreaterThanOrEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): integer; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): cardinal; inline;
+    class operator Implicit(const ai: TGp4AlignedInt): PInteger; inline;
+    class operator LessThan(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator LessThanOrEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator NotEqual(const ai: TGp4AlignedInt; i: integer): boolean; inline;
+    class operator Subtract(ai: TGp4AlignedInt; i: integer): cardinal; inline;
     property Value: integer read GetValue write SetValue;
-  end; { TOmniAlignedInt32 }
+  end; { TGp4AlignedInt }
 
-  TOmniAlignedInt6464 = record
+  TGp8AlignedInt64 = record
   strict private
     aiData: packed record
       DataLo, DataHi: int64;
@@ -246,7 +248,7 @@ type
     function  Increment(value: int64): int64; overload; inline;
     function  Subtract(value: int64): int64; inline;
     property Value: int64 read GetValue write SetValue;
-  end; { TOmniAlignedInt6464 }
+  end; { TGp8AlignedInt64 }
 
   TGpObjectListHelper = class helper for TObjectList
   public
@@ -399,7 +401,7 @@ function  Asgn(var output: AnsiString; const value: AnsiString): AnsiString; ove
 {$ENDIF Unicode}
 function  Asgn(var output: WideString; const value: WideString): WideString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
-function  IFF(condit: boolean; const iftrue, iffalse: string): string; overload; {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  IFF(condit: boolean; const iftrue, iffalse: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: real): real; overload;        {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -1080,165 +1082,165 @@ end; { TableFindNE }
 
 { TGpAlignedInt }
 
-function TOmniAlignedInt32.Add(value: integer): integer;
+function TGp4AlignedInt.Add(value: integer): integer;
 begin
   Result := InterlockedExchangeAdd(Addr^, value);
-end; { TOmniAlignedInt32.Add }
+end; { TGp4AlignedInt.Add }
 
-function TOmniAlignedInt32.Addr: PInteger;
+function TGp4AlignedInt.Addr: PInteger;
 begin
   Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
-end; { TOmniAlignedInt32.Addr }
+end; { TGp4AlignedInt.Addr }
 
-function TOmniAlignedInt32.CAS(oldValue, newValue: integer): boolean;
+function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;
 begin
   Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue; 
-end; { TOmniAlignedInt32.CAS }
+end; { TGp4AlignedInt.CAS }
 
-function TOmniAlignedInt32.Decrement: integer;
+function TGp4AlignedInt.Decrement: integer;
 begin
   Result := InterlockedDecrement(Addr^);
-end; { TOmniAlignedInt32.Decrement }
+end; { TGp4AlignedInt.Decrement }
 
-function TOmniAlignedInt32.Decrement(value: integer): integer;
+function TGp4AlignedInt.Decrement(value: integer): integer;
 begin
   Result := Subtract(value) - value;
-end; { TOmniAlignedInt32.Decrement }
+end; { TGp4AlignedInt.Decrement }
 
-function TOmniAlignedInt32.GetValue: integer;
+function TGp4AlignedInt.GetValue: integer;
 begin
   Result := Addr^;
-end; { TOmniAlignedInt32.GetValue }
+end; { TGp4AlignedInt.GetValue }
 
-function TOmniAlignedInt32.Increment: integer;
+function TGp4AlignedInt.Increment: integer;
 begin
   Result := InterlockedIncrement(Addr^);
-end; { TOmniAlignedInt32.Increment }
+end; { TGp4AlignedInt.Increment }
 
-function TOmniAlignedInt32.Increment(value: integer): integer;
+function TGp4AlignedInt.Increment(value: integer): integer;
 begin
   Result := Add(value) + value;
-end; { TOmniAlignedInt32.Increment }
+end; { TGp4AlignedInt.Increment }
 
-procedure TOmniAlignedInt32.SetValue(value: integer);
+procedure TGp4AlignedInt.SetValue(value: integer);
 begin
   Addr^ := value;
-end; { TOmniAlignedInt32.SetValue }
+end; { TGp4AlignedInt.SetValue }
 
-function TOmniAlignedInt32.Subtract(value: integer): integer;
+function TGp4AlignedInt.Subtract(value: integer): integer;
 begin
   Result := InterlockedExchangeAdd(Addr^, -value);
-end; { TOmniAlignedInt32.Subtract }
+end; { TGp4AlignedInt.Subtract }
 
-class operator TOmniAlignedInt32.Add(const ai: TOmniAlignedInt32; i: integer): cardinal;
+class operator TGp4AlignedInt.Add(const ai: TGp4AlignedInt; i: integer): cardinal;
 begin
   Result := cardinal(int64(ai.Value) + i);
-end; { TOmniAlignedInt32.Add }
+end; { TGp4AlignedInt.Add }
 
-class operator TOmniAlignedInt32.Equal(const ai: TOmniAlignedInt32; i: integer): boolean;
+class operator TGp4AlignedInt.Equal(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value = i);
-end; { TOmniAlignedInt32.Equal }
+end; { TGp4AlignedInt.Equal }
 
-class operator TOmniAlignedInt32.GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean;
+class operator TGp4AlignedInt.GreaterThan(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value > i);
-end; { TOmniAlignedInt32.GreaterThan }
+end; { TGp4AlignedInt.GreaterThan }
 
-class operator TOmniAlignedInt32.GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer):
+class operator TGp4AlignedInt.GreaterThanOrEqual(const ai: TGp4AlignedInt; i: integer):
   boolean;
 begin
   Result := (ai.Value >= i);
-end; { TOmniAlignedInt32.GreaterThanOrEqual }
+end; { TGp4AlignedInt.GreaterThanOrEqual }
 
-class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): PInteger;
+class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): PInteger;
 begin
   Result := ai.Addr;
-end; { TOmniAlignedInt32.Implicit }
+end; { TGp4AlignedInt.Implicit }
 
-class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): cardinal;
+class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): cardinal;
 begin
   Result := ai.Value;
-end; { TOmniAlignedInt32.Implicit }
+end; { TGp4AlignedInt.Implicit }
 
-class operator TOmniAlignedInt32.Implicit(const ai: TOmniAlignedInt32): integer;
+class operator TGp4AlignedInt.Implicit(const ai: TGp4AlignedInt): integer;
 begin
   Result := integer(ai.Value);
-end; { TOmniAlignedInt32.Implicit }
+end; { TGp4AlignedInt.Implicit }
 
-class operator TOmniAlignedInt32.LessThan(const ai: TOmniAlignedInt32; i: integer): boolean;
+class operator TGp4AlignedInt.LessThan(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value < i);
-end; { TOmniAlignedInt32.LessThan }
+end; { TGp4AlignedInt.LessThan }
 
-class operator TOmniAlignedInt32.LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer):
+class operator TGp4AlignedInt.LessThanOrEqual(const ai: TGp4AlignedInt; i: integer):
   boolean;
 begin
   Result := (ai.Value <= i);
-end; { TOmniAlignedInt32.LessThanOrEqual }
+end; { TGp4AlignedInt.LessThanOrEqual }
 
-class operator TOmniAlignedInt32.NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean;
+class operator TGp4AlignedInt.NotEqual(const ai: TGp4AlignedInt; i: integer): boolean;
 begin
   Result := (ai.Value <> i);
-end; { TOmniAlignedInt32.NotEqual }
+end; { TGp4AlignedInt.NotEqual }
 
-class operator TOmniAlignedInt32.Subtract(ai: TOmniAlignedInt32; i: integer): cardinal;
+class operator TGp4AlignedInt.Subtract(ai: TGp4AlignedInt; i: integer): cardinal;
 begin
   Result := cardinal(int64(ai.Value) - i);
-end; { TOmniAlignedInt32.Subtract }
+end; { TGp4AlignedInt.Subtract }
 
-{ TOmniAlignedInt6464 }
+{ TGp8AlignedInt64 }
 
-function TOmniAlignedInt6464.Add(value: int64): int64;
+function TGp8AlignedInt64.Add(value: int64): int64;
 begin
   Result := DSiInterlockedExchangeAdd64(Addr^, value);
-end; { TOmniAlignedInt6464.Add }
+end; { TGp8AlignedInt64.Add }
 
-function TOmniAlignedInt6464.Addr: PInt64;
+function TGp8AlignedInt64.Addr: PInt64;
 begin
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   Result := PInt64((NativeInt(@aiData) + 7) AND NOT 7);
-end; { TOmniAlignedInt6464.Addr }
+end; { TGp8AlignedInt64.Addr }
 
-function TOmniAlignedInt6464.CAS(oldValue, newValue: int64): boolean;
+function TGp8AlignedInt64.CAS(oldValue, newValue: int64): boolean;
 begin
   Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
-end; { TOmniAlignedInt6464.CAS }
+end; { TGp8AlignedInt64.CAS }
 
-function TOmniAlignedInt6464.Decrement: int64;
+function TGp8AlignedInt64.Decrement: int64;
 begin
   Result := DSiInterlockedDecrement64(Addr^);
-end; { TOmniAlignedInt6464.Decrement }
+end; { TGp8AlignedInt64.Decrement }
 
-function TOmniAlignedInt6464.Decrement(value: int64): int64;
+function TGp8AlignedInt64.Decrement(value: int64): int64;
 begin
   Result := Subtract(value) - value;
-end; { TOmniAlignedInt6464.Decrement }
+end; { TGp8AlignedInt64.Decrement }
 
-function TOmniAlignedInt6464.GetValue: int64;
+function TGp8AlignedInt64.GetValue: int64;
 begin
   Result := Addr^;
-end; { TOmniAlignedInt6464.GetValue }
+end; { TGp8AlignedInt64.GetValue }
 
-function TOmniAlignedInt6464.Increment: int64;
+function TGp8AlignedInt64.Increment: int64;
 begin
   Result := DSiInterlockedIncrement64(Addr^);
-end; { TOmniAlignedInt6464.Increment }
+end; { TGp8AlignedInt64.Increment }
 
-function TOmniAlignedInt6464.Increment(value: int64): int64;
+function TGp8AlignedInt64.Increment(value: int64): int64;
 begin
   Result := Add(value) + value;
-end; { TOmniAlignedInt6464.Increment }
+end; { TGp8AlignedInt64.Increment }
 
-procedure TOmniAlignedInt6464.SetValue(value: int64);
+procedure TGp8AlignedInt64.SetValue(value: int64);
 begin
   Addr^ := value;
-end; { TOmniAlignedInt6464.SetValue }
+end; { TGp8AlignedInt64.SetValue }
 
-function TOmniAlignedInt6464.Subtract(value: int64): int64;
+function TGp8AlignedInt64.Subtract(value: int64): int64;
 begin
   Result := DSiInterlockedExchangeAdd64(Addr^, -value);
-end; { TOmniAlignedInt6464.Subtract }
+end; { TGp8AlignedInt64.Subtract }
 
 {$ENDIF GpStuff_AlignedInt}
 
