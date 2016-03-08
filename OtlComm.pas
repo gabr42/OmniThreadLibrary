@@ -305,7 +305,9 @@ type
     function  OtherEndpoint(endpoint: IOmniCommunicationEndpoint): IOmniCommunicationEndpoint;
 
   public
+    {$IFNDEF MSWINDOWS}
     FEventFactory: TSynchroFactory;
+    {$ENDIF}
 
     constructor Create(messageQueueSize: integer; taskTerminatedEvent: TOmniTransitionEvent);
     destructor  Destroy; override;
@@ -482,8 +484,10 @@ end; { TOmniMessageQueue.WndProc }
 
 constructor TOmniCommunicationEndpoint.Create(owner: TOmniTwoWayChannel; readQueue,
   writeQueue: TOmniMessageQueue; taskTerminatedEvent_ref: TOmniTransitionEvent);
+{$IFNDEF MSWINDOWS}
 var
   Factors: TSynchroArray;
+{$ENDIF}
 begin
   inherited Create;
   ceOwner_ref := owner;
@@ -555,12 +559,12 @@ function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_m
 var
   {$IFDEF MSWINDOWS}
   insertObserver: TOmniContainerWindowsEventObserver;
-  {$ELSE}
-  SignallerIdx  : integer;
-  {$ENDIF MSWINDOWS}
   retry         : boolean;
   startTime     : int64;
   waitTime      : int64;
+  {$ELSE}
+  SignallerIdx  : integer;
+  {$ENDIF MSWINDOWS}
 begin
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
@@ -733,7 +737,9 @@ constructor TOmniTwoWayChannel.Create(messageQueueSize: integer;
   taskTerminatedEvent: TOmniTransitionEvent);
 begin
   inherited Create;
+  {$IFNDEF MSWINDOWS}
   FEventFactory := TSynchroFactory.Create( 100);
+  {$ENDIF}
   twcMessageQueueSize := messageQueueSize;
   twcTaskTerminatedEvt_ref := taskTerminatedEvent;
 end; { TOmniTwoWayChannel.Create }
@@ -750,7 +756,9 @@ begin
     twcUnidirQueue[i] := nil;
   end;
   inherited;
+  {$IFNDEF MSWINDOWS}
   FEventFactory.Free
+  {$ENDIF}
 end; { TOmniTwoWayChannel.Destroy }
 
 procedure TOmniTwoWayChannel.CreateBuffers;
@@ -805,7 +813,11 @@ end; { TOmniTwoWayChannel.OtherEndpoint }
 constructor TOmniMessageQueueTee.Create;
 begin
   inherited Create;
-  obqtQueueList := TList<TOmniMessageQueue>.Create;
+  {$IFDEF MSWINDOWS}
+    obqtQueueList := TList.Create;
+  {$ELSE}
+    obqtQueueList := TList<TOmniMessageQueue>.Create;
+  {$ENDIF}
 end; { TOmniMessageQueueTee.Create }
 
 destructor TOmniMessageQueueTee.Destroy;
