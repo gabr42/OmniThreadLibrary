@@ -412,7 +412,6 @@ Executive summary
 7. MREW primitives (basic level + interfaced level)
 8. Unit header and general unit descriptions
 9. Descriptions for Parallel Programming abstractions
-10. Integration into OmniThreadLibrary
 
 
 
@@ -440,128 +439,6 @@ The user supplies functions to create/destroy the objects, or take action on the
 }
 
 
-{  OmniThreadLibrary migration notes
-First tranche
-==================
-1.
-SBD.Parallel.Atomic head & body
-  -
-Rename unit to OtlExtras.Atomic
-
-2.
-SBD.Parallel.Errors
-  -
-Rename unit to OtlExtras.Errors
-
-3.
-SBD.Parallel.SynchroPrimitives head & body
-  -
-Rename unit to OtlExtras.SynchroPrimitives
-
-4.
-SBD.Parallel.SynchroPrimitives.BasicLevel head
-  SBD.Parallel.Atomic
-
-SBD.Parallel.SynchroPrimitives.BasicLevel body
-  SBD.Parallel.Errors
-Rename unit to OtlExtras.SynchroPrimitives.BasicLevel
-
-5.
-SBD.Parallel.SynchroPrimitives.InterfaceLevel head
-  SBD.Parallel.SynchroPrimitives.BasicLevel
-  SBD.Parallel.Atomic
-
-SBD.Parallel.SynchroPrimitives.InterfaceLevel body
-  SBD.Parallel.Errors
-Rename unit to OtlExtras.SynchroPrimitives.InterfaceLevel
-
-6.
-SBD.Parallel.SynchroPrimitives.ConditionVariables head
-  SBD.Parallel.SynchroPrimitives.InterfaceLevel
-  SBD.Parallel.Atomic
-
-SBD.Parallel.SynchroPrimitives.ConditionVariables body
-  -
-Rename unit to OtlExtras.SynchroPrimitives.ConditionVariables
-
-7.
-SBD.Parallel.SynchroPrimitives.ModularLevel head
-  SBD.Parallel.SynchroPrimitives.InterfaceLevel
-  SBD.Parallel.SynchroPrimitives.ConditionVariables
-  SBD.Parallel.Atomic
-
-SBD.Parallel.SynchroPrimitives.ModularLevel body
-  SBD.Parallel.Errors
-Rename unit to OtlExtras.SynchroPrimitives.ModularLevel
-
-Second tranche
-==================
-8.
-SBD.Parallel.Pipe head
-  SBD.Parallel,
-  SBD.Parallel.SynchroPrimitives.InterfaceLevel,
-  SBD.Parallel.Atomic
-
-SBD.Parallel.Pipe body
-  -
-Rename unit to OtlExtras.Pipe
-
-Third tranche
-==================
-9.
-SBD.Parallel.Tasks head
-  SBD.Parallel
-  SBD.Parallel.Pipe
-  SBD.Parallel.SynchroPrimitives.InterfaceLevel
-  SBD.Parallel.SynchroPrimitives.ModularLevel
-  SBD.Parallel.Atomic
-
-SBD.Parallel.Tasks body
-  ?
-Rename unit to OtlExtras.Tasks
-
-Fourth tranche
-==================
-10.
-SBD.Parallel head
-  SBD.Parallel.SynchroPrimitives.InterfaceLevel
-  SBD.Parallel.SynchroPrimitives.BasicLevel
-  SBD.Parallel.SynchroPrimitives.ModularLevel
-  SBD.Parallel.Atomic
-
-SBD.Parallel body
-  SBD.Parallel.Pipe
-  SBD.Parallel.Tasks
-Rename unit to OtlExtras.Parallel
-
--------------------------------------------------------------
-ITask
-  There is an IOmniTask
-  Rename to IOmniTaskEx
-  ..and ITaskEx to IOmniTaskExIntrnl
-IEvent
-  There is an IOmniEvent
-  Rename to IOmniEvent
-ISemaphore
-  All good
-ICountdown
-  There is an IOmniCountdownEvent
-ICriticalSection
-  There is an IOmniCriticalSection
-  Rename to IOmniCriticalSection
-ILock
-  All good
-ISynchro
-  There is an IOmniSynchro and a TOmniSynchroObject
-  Rename to IOmniSynchro2 and TOmniSynchro2
-TParallel
-  There is a Parallel = class
-  Rename to TParallelEx
-IFuture
-  There is a IOmniFuture<T> and a TOmniFuture<T>
-  Rename to IFutureEx<T> and a TFutureEx<T>
-
-}
 initialization
 InitUnit_Parallel;
 
