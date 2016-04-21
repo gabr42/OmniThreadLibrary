@@ -20,8 +20,8 @@ type
     procedure btnJoinTProcClick(Sender: TObject);
     procedure btnNoWaitClick(Sender: TObject);
   protected
-    FJoinCount: TOmniAlignedInt32;
-    FJoinCount2: TOmniAlignedInt32;
+    FJoinCount: TGp4AlignedInt;
+    FJoinCount2: TGp4AlignedInt;
     procedure Log(const msg: string);
   end;
 

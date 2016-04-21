@@ -1,8 +1,8 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{9315B28C-F04C-443F-AE8B-CFB935ACFDB7}</ProjectGuid>
-        <ProjectVersion>18.1</ProjectVersion>
-        <MainSource>app_37_ParallelJoin.dpr</MainSource>
+        <ProjectGuid>{9B686D01-24D4-480A-94BD-06A83A2440D4}</ProjectGuid>
+        <ProjectVersion>14.6</ProjectVersion>
+        <MainSource>app_40_Mandelbrot.dpr</MainSource>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <Base>True</Base>
@@ -35,25 +35,22 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <SanitizedProjectName>app_37_ParallelJoin_10Seattle</SanitizedProjectName>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1060</VerInfo_Locale>
         <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_UnitSearchPath>..\..;..\..\fastmm;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DependencyCheckOutputName>app_37_ParallelJoin.exe</DCC_DependencyCheckOutputName>
+        <DCC_DependencyCheckOutputName>app_40_Mandelbrot.exe</DCC_DependencyCheckOutputName>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Platform>x86</DCC_Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
@@ -63,12 +60,13 @@
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-        <DCC_DebugInformation>0</DCC_DebugInformation>
+        <DCC_DebugInformation>false</DCC_DebugInformation>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
-        <DCC_Optimize>false</DCC_Optimize>
-        <DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
+        <DCC_UNIT_PLATFORM>false</DCC_UNIT_PLATFORM>
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
+        <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -77,8 +75,8 @@
         <RcCompile Include="..\..\res\MainIcon.rc">
             <Form>MainIcon.res</Form>
         </RcCompile>
-        <DCCReference Include="test_37_ParallelJoin.pas">
-            <Form>frmTestParallelJoin</Form>
+        <DCCReference Include="test_40_Mandelbrot.pas">
+            <Form>frmParallelMandelbrot</Form>
         </DCCReference>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
@@ -100,7 +98,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">app_37_ParallelJoin.dpr</Source>
+                    <Source Name="MainSource">app_40_Mandelbrot.dpr</Source>
                 </Source>
                 <Parameters/>
                 <VersionInfo>
@@ -130,10 +128,6 @@
                     <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
                     <VersionInfoKeys Name="Comments"/>
                 </VersionInfoKeys>
-                <Excluded_Packages>
-                    <Excluded_Packages Name="%BDSBIN%\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="%BDSBIN%\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-                </Excluded_Packages>
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Win32">True</Platform>

@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2016-01-14
-///   Version           : 1.44
+///   Last modification : 2016-04-21
+///   Version           : 1.45
 ///</para><para>
 ///   History:
+///     1.45: 2016-04-21
+///       - Parallel.For<T>(const arr: TArray<T>) is not available on 2009 and 2010
+///         because generics support is not good enough in these two compilers.
 ///     1.44: 2016-01-14
 ///       - Implemented EJoinException.DetachInner.
 ///     1.43: 2015-12-16
@@ -474,6 +477,7 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
+  {$IFDEF OTL_GoodGenerics}
   TOmniIteratorSimpleSimpleDelegate<T> = reference to procedure(var value: T);
   TOmniIteratorSimpleDelegate<T> = reference to procedure(taskIndex: integer; var value: T);
   TOmniIteratorSimpleFullDelegate<T> = reference to procedure(const task: IOmniTask; taskIndex: integer; var value: T);
@@ -494,6 +498,7 @@ type
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop<T>; overload;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
+  {$ENDIF OTL_GoodGenerics}
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
   TEnumeratorDelegate<T> = reference to function(var next: T): boolean;
@@ -876,6 +881,7 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
+  {$IFDEF OTL_GoodGenerics}
   TOmniParallelSimpleLoop<T> = class(TInterfacedObject, IOmniParallelSimpleLoop<T>)
   strict private
     FData    : TArray<T>;
@@ -897,6 +903,7 @@ type
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop<T>; overload; inline;
     function  WaitFor(maxWait_ms: cardinal): boolean; inline;
   end; { TOmniParallelSimpleLoop<T> }
+  {$ENDIF OTL_GoodGenerics}
 
   EJoinException = class(Exception)
   strict private
@@ -1130,9 +1137,11 @@ type
     /// <summary>Creates fast parallel loop without support for work stealing which
     /// only enumerates integer ranges.</summary>
     class function  &For(first, last: integer; step: integer = 1): IOmniParallelSimpleLoop; overload;
+    {$IFDEF OTL_GoodGenerics}
     /// <summary>Creates fast parallel loop without support for work stealing which
     /// only enumerates dynamic arrays.</summary>
-    class function &For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>; overload;
+    class function  &For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>; overload;
+    {$ENDIF OTL_GoodGenerics}
 
   // ForEach
     ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
@@ -1939,10 +1948,12 @@ begin
   Result := TOmniParallelSimpleLoop.Create(first, last, step);
 end; { Parallel.&For }
 
+{$IFDEF OTL_GoodGenerics}
 class function Parallel.&For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>;
 begin
   Result := TOmniParallelSimpleLoop<T>.Create(arr);
 end; { Parallel }
+{$ENDIF OTL_GoodGenerics}
 
 class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
   IOmniParallelLoop;
@@ -3327,6 +3338,7 @@ begin
   {$ENDIF ~MSWINDOWS}
 end; { TOmniParallelSimpleLoop.WaitFor }
 
+{$IFDEF OTL_GoodGenerics}
 { TOmniParallelSimpleLoop<T> }
 
 constructor TOmniParallelSimpleLoop<T>.Create(const arr: TArray<T>);
@@ -3437,6 +3449,7 @@ function TOmniParallelSimpleLoop<T>.WaitFor(maxWait_ms: cardinal): boolean;
 begin
   Result := FIterator.WaitFor(maxWait_ms);
 end; { TOmniParallelSimpleLoop<T>.WaitFor }
+{$ENDIF OTL_GoodGenerics}
 
 { TOmniFuture<T> }
 

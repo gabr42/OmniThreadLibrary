@@ -815,7 +815,7 @@ begin
       {$IFDEF LogThreadPool}Log('Cancel request %d on thread %p:%d', [taskID, pointer(worker), worker.threadID]); {$ENDIF LogThreadPool}
       owRunningWorkers.Delete(iWorker);
       worker.Asy_Stop;
-      endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec) * 1000;
+      endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
       while ({$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} < endWait_ms) and (not worker.Stopped) do begin
         ProcessMessages;
         Sleep(10);
@@ -947,7 +947,7 @@ begin
     StopThread(TOTPWorkerThread(owRunningWorkers[iWorker]));
   owRunningWorkers.Clear;
   CountRunning.Value := 0;
-  endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec) * 1000;
+  endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
   while (endWait_ms > {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) and (NumRunningStoppedThreads > 0) do
   begin
     ProcessMessages;
@@ -1004,7 +1004,7 @@ begin
     begin
       worker := TOTPWorkerThread(owIdleWorkers[iWorker]);
       if (worker.StartStopping_ms = 0) and
-        ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec) * 1000)
+        ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec.Value) * 1000)
          < {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) then
       begin
         {$IFDEF LogThreadPool}Log(
@@ -1021,8 +1021,8 @@ begin
   iWorker := 0;
   while iWorker < owStoppingWorkers.Count do begin
     worker := TOTPWorkerThread(owStoppingWorkers[iWorker]);
-    if worker.Stopped or ((worker.StartStopping_ms + int64(WaitOnTerminate_sec)
-          * 1000) < {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) then
+    if worker.Stopped or ((worker.StartStopping_ms + int64(WaitOnTerminate_sec.Value) * 1000) <
+                         {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) then
     begin
       if not worker.Stopped then begin
         {$IFDEF MSWINDOWS}

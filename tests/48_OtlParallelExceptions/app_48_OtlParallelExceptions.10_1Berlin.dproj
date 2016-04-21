@@ -1,13 +1,13 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{9315B28C-F04C-443F-AE8B-CFB935ACFDB7}</ProjectGuid>
-        <ProjectVersion>18.1</ProjectVersion>
-        <MainSource>app_37_ParallelJoin.dpr</MainSource>
-        <Config Condition="'$(Config)'==''">Debug</Config>
-        <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+        <ProjectGuid>{EC7B207F-EB79-4226-ABE9-DAB62E572D40}</ProjectGuid>
+        <MainSource>app_48_OtlParallelExceptions.dpr</MainSource>
+        <ProjectVersion>14.6</ProjectVersion>
         <Base>True</Base>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
+        <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
@@ -24,51 +24,53 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
+    <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
         <Cfg_1>true</Cfg_1>
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
+    <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <SanitizedProjectName>app_37_ParallelJoin_10Seattle</SanitizedProjectName>
-        <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1060</VerInfo_Locale>
-        <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_UnitSearchPath>..\..;..\..\fastmm;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DependencyCheckOutputName>app_37_ParallelJoin.exe</DCC_DependencyCheckOutputName>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <DCC_Platform>x86</DCC_Platform>
+        <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_E>false</DCC_E>
+        <DCC_N>false</DCC_N>
+        <DCC_S>false</DCC_S>
+        <DCC_F>false</DCC_F>
+        <DCC_K>false</DCC_K>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
+        <DCC_MapFile>3</DCC_MapFile>
+        <DCC_Optimize>false</DCC_Optimize>
+        <DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
+        <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
+        <DCC_DcuOutput>..\..\lib\XE3\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_UnitSearchPath>..\..;..\..\fastmm;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-        <DCC_DebugInformation>0</DCC_DebugInformation>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2)'!=''">
-        <DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
-        <DCC_Optimize>false</DCC_Optimize>
-        <DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
+        <DCC_DebugInformation>false</DCC_DebugInformation>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -77,17 +79,17 @@
         <RcCompile Include="..\..\res\MainIcon.rc">
             <Form>MainIcon.res</Form>
         </RcCompile>
-        <DCCReference Include="test_37_ParallelJoin.pas">
-            <Form>frmTestParallelJoin</Form>
+        <DCCReference Include="test_48_OtlParallelExceptions.pas">
+            <Form>frmOtlParallelExceptions</Form>
         </DCCReference>
-        <BuildConfiguration Include="Debug">
+        <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
         </BuildConfiguration>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
-        <BuildConfiguration Include="Release">
+        <BuildConfiguration Include="Debug">
             <Key>Cfg_1</Key>
             <CfgParent>Base</CfgParent>
         </BuildConfiguration>
@@ -99,10 +101,6 @@
         <Borland.ProjectType/>
         <BorlandProject>
             <Delphi.Personality>
-                <Source>
-                    <Source Name="MainSource">app_37_ParallelJoin.dpr</Source>
-                </Source>
-                <Parameters/>
                 <VersionInfo>
                     <VersionInfo Name="IncludeVerInfo">False</VersionInfo>
                     <VersionInfo Name="AutoIncBuild">False</VersionInfo>
@@ -130,10 +128,9 @@
                     <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
                     <VersionInfoKeys Name="Comments"/>
                 </VersionInfoKeys>
-                <Excluded_Packages>
-                    <Excluded_Packages Name="%BDSBIN%\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="%BDSBIN%\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-                </Excluded_Packages>
+                <Source>
+                    <Source Name="MainSource">app_48_OtlParallelExceptions.dpr</Source>
+                </Source>
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Win32">True</Platform>

@@ -1,0 +1,157 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{E0BC1D31-F3B9-4822-A6BF-E584C18B3053}</ProjectGuid>
+			<ProjectVersion>16.0</ProjectVersion>
+			<FrameworkType>VCL</FrameworkType>
+			<MainSource>app_59_TWaitFor.dpr</MainSource>
+			<Base>True</Base>
+			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Platform Condition="'$(Platform)'==''">Win32</Platform>
+			<TargetedPlatforms>1</TargetedPlatforms>
+			<AppType>Application</AppType>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Base)'=='true') or '$(Base_Win64)'!=''">
+			<Base_Win64>true</Base_Win64>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
+			<Base_Win32>true</Base_Win32>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
+			<Cfg_1>true</Cfg_1>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
+			<Cfg_1_Win32>true</Cfg_1_Win32>
+			<CfgParent>Cfg_1</CfgParent>
+			<Cfg_1>true</Cfg_1>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
+			<Cfg_2>true</Cfg_2>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base)'!=''">
+			<SanitizedProjectName>app_59_TWaitFor</SanitizedProjectName>
+			<DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
+			<Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
+			<DCC_UsePackage>fmx;DBXInterBaseDriver;DataSnapClient;DataSnapCommon;DataSnapServer;DataSnapProviderClient;DbxCommonDriver;dbxcds;DBXOracleDriver;CustomIPTransport;JvCore;dsnap;fmxase;inetdbxpress;bindcompfmx;IcsCommonDXE2Run;rtl;dbrtl;DbxClientDriver;bindcomp;inetdb;xmlrtl;ibxpress;DBXMySQLDriver;bindengine;soaprtl;DBXInformixDriver;DBXFirebirdDriver;inet;fmxobj;DBXSybaseASADriver;fmxdae;kbmMemRunDXE2Std;dbexpress;DataSnapIndy10ServerTransport;$(DCC_UsePackage)</DCC_UsePackage>
+			<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
+			<DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base_Win64)'!=''">
+			<DCC_UsePackage>dxSkinSharpPlusRS16;cxLibraryRS16;dxLayoutControlRS16;dxCoreRS16;cxExportRS16;dxSkinSevenRS16;dxBarRS16;dxSkinsdxNavBarPainterRS16;AbbreviaVCL;dxSkinCoffeeRS16;dxDBXServerModeRS16;TeeDB;dxSkinSummer2008RS16;vclib;cxPageControlRS16;dxRibbonRS16;DBXSybaseASEDriver;dxSkinVS2010RS16;vclimg;dxSkinDevExpressStyleRS16;dxSkinWhiteprintRS16;dxComnRS16;dxSkinOffice2007SilverRS16;vcldb;dxSkinsdxRibbonPainterRS16;dxADOServerModeRS16;vcldsnap;dxSkinBlackRS16;dxBarExtDBItemsRS16;dxSkinBlueRS16;DBXDb2Driver;dxSkinXmas2008BlueRS16;dxSkinDarkRoomRS16;vcl;dxSkinDevExpressDarkStyleRS16;dxSkinOffice2007BlueRS16;DBXMSSQLDriver;dxSkinOffice2007GreenRS16;cxDataRS16;cxBarEditItemRS16;cxPageControldxBarPopupMenuRS16;dxDockingRS16;webdsnap;dxBarExtItemsRS16;dxSkinsdxDLPainterRS16;dxSkinTheAsphaltWorldRS16;dxSkinOffice2010BlackRS16;dxSkinMoneyTwinsRS16;adortl;dxSkinPumpkinRS16;dxSkinSharpRS16;dxSkinHighContrastRS16;dxSkinOffice2007BlackRS16;dxSkinBlueprintRS16;dxNavBarRS16;dxSkiniMaginaryRS16;dxSkinLondonLiquidSkyRS16;dxSkinsdxBarPainterRS16;Tee;dxSkinGlassOceansRS16;DBXOdbcDriver;dxSkinLiquidSkyRS16;dxSkinFoggyRS16;dxSkinsCoreRS16;dxmdsRS16;dxSkinDarkSideRS16;cxGridRS16;dxSkinscxPCPainterRS16;cxEditorsRS16;vclactnband;dxServerModeRS16;bindcompvcl;vclie;dxSkinSevenClassicRS16;TeeUI;dxSkinOffice2010SilverRS16;vcltouch;websnap;dxSkinOffice2007PinkRS16;VclSmp;dxSkinSpringTimeRS16;dxTabbedMDIRS16;DataSnapConnectors;dxSkinSilverRS16;dxSkinStardustRS16;dsnapcon;dxSkinOffice2010BlueRS16;dxThemeRS16;dcldxSkinsCoreRS16;dxSkinLilianRS16;vclx;dxSkinCaramelRS16;dxSkinValentineRS16;dxSkinMcSkinRS16;dxBarDBNavRS16;dxGDIPlusRS16;$(DCC_UsePackage)</DCC_UsePackage>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base_Win32)'!=''">
+			<Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
+			<VerInfo_Locale>1033</VerInfo_Locale>
+			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+			<DCC_UsePackage>JvBDE;JvGlobus;dxSkinSharpPlusRS16;JvMM;cxLibraryRS16;dxLayoutControlRS16;JvManagedThreads;dxCoreRS16;cxExportRS16;dxSkinSevenRS16;dxBarRS16;dxSkinsdxNavBarPainterRS16;AbbreviaVCL;JvDlgs;IndySystem;JvCrypt;dxSkinCoffeeRS16;dxDBXServerModeRS16;TeeDB;inetdbbde;dxSkinSummer2008RS16;Rave100VCL;vclib;JvNet;cxPageControlRS16;dxRibbonRS16;DBXSybaseASEDriver;JvDotNetCtrls;dxSkinVS2010RS16;vclimg;dxSkinDevExpressStyleRS16;dxSkinWhiteprintRS16;fmi;vclSvComV7D16;dxComnRS16;JvXPCtrls;AsyncPro;dxSkinOffice2007SilverRS16;vcldb;dxSkinsdxRibbonPainterRS16;dxADOServerModeRS16;vcldsnap;dxSkinBlackRS16;dxBarExtDBItemsRS16;dxSkinBlueRS16;DBXDb2Driver;Intraweb_120_160;dxSkinXmas2008BlueRS16;vclribbon;dxSkinDarkRoomRS16;vcl;IndyCore;dxSkinDevExpressDarkStyleRS16;dxSkinOffice2007BlueRS16;CloudService;DBXMSSQLDriver;dxSkinOffice2007GreenRS16;FmxTeeUI;cxDataRS16;cxBarEditItemRS16;cxPageControldxBarPopupMenuRS16;dxDockingRS16;JvAppFrm;JvDB;JvRuntimeDesign;webdsnap;dxBarExtItemsRS16;dxSkinsdxDLPainterRS16;dxSkinTheAsphaltWorldRS16;JclDeveloperTools;dxSkinOffice2010BlackRS16;dxSkinMoneyTwinsRS16;JvDocking;adortl;dxSkinPumpkinRS16;JvWizards;dxSkinSharpRS16;dxSkinHighContrastRS16;dxSkinOffice2007BlackRS16;JvHMI;dxSkinBlueprintRS16;JvBands;vcldbx;dxNavBarRS16;dxSkiniMaginaryRS16;dxSkinLondonLiquidSkyRS16;dxSkinsdxBarPainterRS16;VirtualTreesD;JvPluginSystem;Tee;dxSkinGlassOceansRS16;DBXOdbcDriver;dxSkinLiquidSkyRS16;JvCmp;TsiLang_XE2r;dxSkinFoggyRS16;dxSkinsCoreRS16;JvSystem;svnui;SynEdit_RXE2;JvTimeFramework;JvControls;dxmdsRS16;IndyProtocols;dxSkinDarkSideRS16;cxGridRS16;dxSkinscxPCPainterRS16;intrawebdb_120_160;cxEditorsRS16;vclactnband;JvJans;JvPrintPreview;dxServerModeRS16;bindcompvcl;JvStdCtrls;JvCustom;Jcl;vclie;JvPageComps;dxSkinSevenClassicRS16;FMXTee;TeeUI;dxSkinOffice2010SilverRS16;vcltouch;websnap;dxSkinOffice2007PinkRS16;VclSmp;dxSkinSpringTimeRS16;dxTabbedMDIRS16;DataSnapConnectors;dxSkinSilverRS16;dxSkinStardustRS16;dsnapcon;dxSkinOffice2010BlueRS16;dxThemeRS16;JclVcl;dcldxSkinsCoreRS16;JvPascalInterpreter;dxSkinLilianRS16;vclx;svn;dxSkinCaramelRS16;dxSkinValentineRS16;bdertl;dxSkinMcSkinRS16;VirtualTreesR;dxBarDBNavRS16;dxGDIPlusRS16;$(DCC_UsePackage)</DCC_UsePackage>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+			<DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+			<DCC_Optimize>false</DCC_Optimize>
+			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
+			<DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
+			<DCC_RemoteDebug>true</DCC_RemoteDebug>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+			<DCC_UnitSearchPath>..\..;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<VerInfo_Locale>1033</VerInfo_Locale>
+			<DCC_RemoteDebug>false</DCC_RemoteDebug>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_DebugInformation>0</DCC_DebugInformation>
+		</PropertyGroup>
+		<ItemGroup>
+			<DelphiCompile Include="$(MainSource)">
+				<MainSource>MainSource</MainSource>
+			</DelphiCompile>
+			<DCCReference Include="test_59_TWaitFor.pas">
+				<Form>frmTestTWaitFor</Form>
+				<FormType>dfm</FormType>
+			</DCCReference>
+			<BuildConfiguration Include="Release">
+				<Key>Cfg_2</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Debug">
+				<Key>Cfg_1</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+		</ItemGroup>
+		<ProjectExtensions>
+			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
+			<Borland.ProjectType/>
+			<BorlandProject>
+				<Delphi.Personality>
+					<VersionInfo>
+						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
+						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
+						<VersionInfo Name="MinorVer">0</VersionInfo>
+						<VersionInfo Name="Release">0</VersionInfo>
+						<VersionInfo Name="Build">0</VersionInfo>
+						<VersionInfo Name="Debug">False</VersionInfo>
+						<VersionInfo Name="PreRelease">False</VersionInfo>
+						<VersionInfo Name="Special">False</VersionInfo>
+						<VersionInfo Name="Private">False</VersionInfo>
+						<VersionInfo Name="DLL">False</VersionInfo>
+						<VersionInfo Name="Locale">1060</VersionInfo>
+						<VersionInfo Name="CodePage">1250</VersionInfo>
+					</VersionInfo>
+					<VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
+						<VersionInfoKeys Name="FileDescription"/>
+						<VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="InternalName"/>
+						<VersionInfoKeys Name="LegalCopyright"/>
+						<VersionInfoKeys Name="LegalTrademarks"/>
+						<VersionInfoKeys Name="OriginalFilename"/>
+						<VersionInfoKeys Name="ProductName"/>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="Comments"/>
+					</VersionInfoKeys>
+					<Excluded_Packages>
+						<Excluded_Packages Name="C:\Users\Public\Documents\RAD Studio\9.0\Bpl\OmniThreadLibraryDesigntimeXE2.bpl">OmniThreadLibrary designtime</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfs16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrx16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfsDB16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxDB16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl">File C:\Program Files (x86)\FastReports\LibD16\dclfrxe16.bpl not found</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclIPIndyImpl160.bpl">IP Abstraction Indy Implementation Design Time</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k160.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp160.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+					</Excluded_Packages>
+					<Source>
+						<Source Name="MainSource">app_59_TWaitFor.dpr</Source>
+					</Source>
+				</Delphi.Personality>
+				<Deployment/>
+				<Platforms>
+					<Platform value="Win64">False</Platform>
+					<Platform value="Win32">True</Platform>
+				</Platforms>
+			</BorlandProject>
+			<ProjectFileVersion>12</ProjectFileVersion>
+		</ProjectExtensions>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
+		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
+	</Project>

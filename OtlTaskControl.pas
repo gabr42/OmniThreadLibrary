@@ -1785,7 +1785,7 @@ begin
     FreeAndNil(oteCommNewMsgList);
     FreeAndNil(oteWaitObjectList);
   finally oteInternalLock.Release; end;
-  {$IFNDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS}
   FreeAndNil(oteTerminateHandles);
   {$ENDIF ~MSWINDOWS}
   FreeAndNil(oteMethodHash);
