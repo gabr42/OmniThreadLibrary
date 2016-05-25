@@ -54,6 +54,7 @@ contains
   Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
   Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
   Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
-  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas';
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas',
+  Otl.Parallel.HeavyPool in '..\Otl.Parallel.HeavyPool.pas';
 
 end.

@@ -179,6 +179,7 @@ var
   Ev: IEvent;
   {$ENDIF} {$ENDIF}
 begin
+  result := wrError;
   if (TimeOut <> INFINITE) and (TimeOut <> 0) then
     begin
     Timer.Reset;

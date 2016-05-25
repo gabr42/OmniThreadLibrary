@@ -166,6 +166,38 @@ type
   /// <remarks>TForkJoinerAction is a private type. Do not use.</remarks>
   TForkJoinerAction = (actNothing, actDequeueJoinStack, actDequeueForkStack, actDequeueTestStack, actCancel, actException);
 
+  TGenerate<T> = reference to function(): T;
+  TDestroy<T>  = reference to procedure( const Destructee: T);
+
+  RHeavyPoolStats = record
+    FGenerateCount: uint64;
+    FDestroyCount: uint64;
+    FAcquireCount: uint64;
+    FReleaseCount: uint64;
+    FFreeQueueCount: cardinal;
+    FInWorkCount: cardinal;
+  end;
+
+  IHeavyPool<T> = interface
+    function  GetMaxAge: double;
+    procedure SetMaxAge( const Value: double);
+    function  GetMaxPop: cardinal;
+    procedure SetMaxPop( const Value: cardinal);
+    function  GetMinReserve: cardinal;
+    procedure SetMinReserve( const Value: cardinal);
+    function  GetDatum: pointer;
+
+    procedure ShutDown;
+    function  GetStats: RHeavyPoolStats;
+    function  Acquire: T;
+    procedure Release( const Retiree: T);
+
+    property MaxAge       : double   read GetMaxAge     write SetMaxAge;
+    property MaxPopulation: cardinal read GetMaxPop     write SetMaxPop;
+    property MinReserve   : cardinal read GetMinReserve write SetMinReserve;
+    property Datum: pointer          read GetDatum;
+  end;
+
   TSBDParallel = class
   public
      // Basic level constructors
@@ -217,6 +249,7 @@ type
     class function SolveByForkJoin<T>( const WF: IWorkFactory; const Seed: T; NumTasks: cardinal; DoFork: TTestFunc<T>; Fork: TForkFunc<T>; Join: TJoinFunc<T>): IFuture<T>;
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: IEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: TEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
+    class function HeavyPool<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>): IHeavyPool<T>;
   end;
 
 
@@ -229,7 +262,7 @@ implementation
 
 
 uses System.Diagnostics, Otl.Parallel.Pipe, System.RTLConsts, TypInfo,
-     Otl.Parallel.Tasks;
+     Otl.Parallel.Tasks, Otl.Parallel.HeavyPool;
 
 
 
@@ -324,6 +357,11 @@ begin
   result := TTasking.CreateFuture<T>( WF, Func)
 end;
 
+class function TSBDParallel.HeavyPool<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>): IHeavyPool<T>;
+begin
+  result := THeavyPool<T>.CreateHeavy( ADatum, AMaxPopulation, AMinReserve, MaxAge, AGenFunc, ARelFunc)
+end;
+
 class function TSBDParallel.LightEvent(
   ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
 begin
@@ -408,7 +446,6 @@ end;
 Executive summary
 ====================
 5. PipeServer abstraction
-6. HeavyPool abstraction
 7. MREW primitives (basic level + interfaced level)
 8. Unit header and general unit descriptions
 9. Descriptions for Parallel Programming abstractions
@@ -428,14 +465,6 @@ TParallel = class
      Proc: TProcessValueProc<T>; TaskCount: integer): ITask;
 end;
 
-Heavy Pool
-===============
-Overview
-A heavy pool is a pool of re-usable heavy weight objects. The pool can be constrained by:
-•	A maximum number of created objects (available or in-use)
-•	Available (that is to say, not in current use) pooled objects can have a maximum age. If they exceed this age, then are destroyed.
-•	A minimum number of available objects. When less, a background house keeping pool will slowly grow the pool.
-The user supplies functions to create/destroy the objects, or take action on the event of Acquire from/ release back to the pool. Removing too-old pool objects, or growing the pool to the specified minimum are house-keeping jobs performed by a task on a periodic basis.
 }
 
 
