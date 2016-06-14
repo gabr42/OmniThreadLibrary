@@ -170,11 +170,22 @@ type
   TDestroy<T>  = reference to procedure( const Destructee: T);
 
   RHeavyPoolStats = record
+    /// <summary>Number of times the generate function has been called to create a new object instance.</summary>
     FGenerateCount: uint64;
+
+    /// <summary>Number of times the release function has been called to permanently dispose of an object instance.</summary>
     FDestroyCount: uint64;
+
+    /// <summary>Number of times a client has succesfuly acquired an object from the heavy pool.</summary>
     FAcquireCount: uint64;
+
+    /// <summary>Number of times a client has returned a previously acquired object back to the heavy pool.</summary>
     FReleaseCount: uint64;
+
+    /// <summary>Current size of the free pool, available for fast acquisition.</summary>
     FFreeQueueCount: cardinal;
+
+    /// <summary>Count of objects which have been acquired by clients, but not yet returned.</summary>
     FInWorkCount: cardinal;
   end;
 
@@ -201,9 +212,9 @@ type
   TSBDParallel = class
   public
      // Basic level constructors
-    class function EventObj     ( ManualReset, InitialState: boolean): TSBDEvent;
-    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TSBDEvent;
-    class function SemaphoreObj ( AInitialCount: cardinal): TSBDSemaphore;
+    class function EventObj     ( ManualReset, InitialState: boolean): TOtlEvent;
+    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
+    class function SemaphoreObj ( AInitialCount: cardinal): TOtlSemaphore;
     class function CountDownObj ( AInitialValue: cardinal): TCountDown;
     class function CountUpObj   ( AInitialValue, AMaxValue: cardinal): TCountUp;
     class function CritSect: TCriticalSection;
@@ -345,7 +356,7 @@ end;
 
 
 class function TSBDParallel.EventObj(
-  ManualReset, InitialState: boolean): TSBDEvent;
+  ManualReset, InitialState: boolean): TOtlEvent;
 begin
   result := TKernelEvent.Create( ManualReset, InitialState)
 end;
@@ -370,7 +381,7 @@ end;
 
 
 class function TSBDParallel.LightEventObj(
-  ManualReset, InitialState: boolean; SpinMax: cardinal): TSBDEvent;
+  ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
 begin
   result := TLightEvent.Create( ManualReset, InitialState, SpinMax)
 end;
@@ -411,9 +422,9 @@ begin
   result := _CreateNativeSemaphoreIntf( AInitialCount)
 end;
 
-class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TSBDSemaphore;
+class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TOtlSemaphore;
 begin
-  result := TSBDSemaphore.Create( AInitialCount);
+  result := TOtlSemaphore.Create( AInitialCount);
 end;
 
 class function TSBDParallel.UnboundedObjectPipe( const WorkFactory: IWorkFactory): IObjectPipe;
@@ -446,6 +457,8 @@ end;
 Executive summary
 ====================
 5. PipeServer abstraction
+-- I'm not sure if this is worth doing. Postpone.
+
 7. MREW primitives (basic level + interfaced level)
 8. Unit header and general unit descriptions
 9. Descriptions for Parallel Programming abstractions

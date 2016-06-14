@@ -11,7 +11,7 @@ type
 
   /// <remarks>Base class for low-level synchronisation primitives
   //   at the basic level.</remarks>
-  TSBDSynchro = class abstract
+  TOtlSynchro = class abstract
     {$IFDEF MSWINDOWS}
     protected
       function GetHandle: THandle; virtual;
@@ -28,19 +28,19 @@ type
     {$ENDIF}
     end;
 
-  TSBDEvent = class abstract( TSBDSynchro)
+  TOtlEvent = class abstract( TOtlSynchro)
     public
       procedure SetEvent;       virtual; abstract;
       procedure ResetEvent;     virtual; abstract;
     end;
 
-  TKernelEvent = class( TSBDEvent)
+  TKernelEvent = class( TOtlEvent)
     public
       procedure SetEvent;             override;
       procedure ResetEvent;           override;
       procedure Signal;               override;
 
-      /// <remarks>TSBDEvent.isSignalled() is not supported .</remarks>
+      /// <remarks>TOtlEvent.isSignalled() is not supported .</remarks>
       function  isSignalled: boolean; override;
       function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
 
@@ -61,7 +61,7 @@ type
     end;
 
 
-  TLightEvent = class( TSBDEvent)
+  TLightEvent = class( TOtlEvent)
     public
       procedure SetEvent;             override;
       procedure ResetEvent;           override;
@@ -93,10 +93,10 @@ type
 
 
 
-  TSBDSemaphore = class( TSBDSynchro)
+  TOtlSemaphore = class( TOtlSynchro)
     public
       procedure Signal;               override;
-      /// <remarks>TSBDSemaphore.isSignalled() is not supported .</remarks>
+      /// <remarks>TOtlSemaphore.isSignalled() is not supported .</remarks>
       function  isSignalled: boolean; override;
       function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
 
@@ -135,7 +135,7 @@ type
 
   TEventFunction = reference to procedure( doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 
-  TFunctionalEvent = class( TSBDSynchro)
+  TFunctionalEvent = class( TOtlSynchro)
     public
       procedure Signal;               override;
       function  isSignalled: boolean; override;
@@ -163,7 +163,7 @@ type
       procedure Reconfigure( ASignalTest: TEventFunction; APLock: PSBDSpinLock);        virtual;
     end;
 
-  TCountDown = class( TSBDSynchro)
+  TCountDown = class( TOtlSynchro)
     public
       /// <remarks>Signal() decrements the count. Raises exception if was zero.</remarks>
       procedure Signal;               override;
@@ -221,7 +221,7 @@ type
       procedure Reconfigure( AInitial: cardinal);
     end;
 
-  TCountUp = class( TSBDSynchro)
+  TCountUp = class( TOtlSynchro)
     public
       /// <remarks>Signal() increments the count. Raises exception if the max was breached.</remarks>
       procedure Signal;               override;
@@ -263,6 +263,27 @@ type
     end;
 
 
+  TOtlMREW = class // Multi-read, exclusive write
+  public
+    function  EnterRead( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitRead;
+    function  EnterWrite( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitWrite;
+    function  ReaderCount: integer; // if +ve, this is the number of entered readers,
+                                    // if -ve, there is an entered writer.
+
+  private
+    [Volatile] FReaders: TVolatileInt32;
+    FZeroOrAbove: System.SyncObjs.TEvent;
+    FZero       : System.SyncObjs.TEvent;
+    FWriterThread: TThreadId;
+    FGate: TCriticalSection;
+
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
 
 implementation
 
@@ -280,14 +301,14 @@ implementation
 uses Otl.Parallel.Errors, System.Diagnostics;
 
 {$IFDEF MSWINDOWS}
-function TSBDSynchro.GetHandle: THandle;
+function TOtlSynchro.GetHandle: THandle;
 begin
   result := 0
 end;
 {$ENDIF}
 
 
-procedure TSBDSynchro.Signal;
+procedure TOtlSynchro.Signal;
 begin
 end;
 
@@ -406,7 +427,9 @@ begin
   SetEvent
 end;
 
-const MaxCardinal: cardinal = cardinal( -1);
+const
+  MaxCardinal      : cardinal = Cardinal( $FFFFFFFF);
+  MaxFiniteCardinal: cardinal = Cardinal( $FFFFFFFE);
 
 function TLightEvent.WaitFor( Timeout: cardinal): TWaitResult;
 var
@@ -480,40 +503,40 @@ begin
 end;
 
 
-function TSBDSemaphore.AsMWObject: TObject;
+function TOtlSemaphore.AsMWObject: TObject;
 begin
   result := FSem
 end;
 
-constructor TSBDSemaphore.Create( AInitialCount: cardinal);
+constructor TOtlSemaphore.Create( AInitialCount: cardinal);
 begin
   FSem := System.SyncObjs.TSemaphore.Create( nil, AInitialCount, MaxInt, '', False)
 end;
 
-destructor TSBDSemaphore.Destroy;
+destructor TOtlSemaphore.Destroy;
 begin
   FSem.Free;
   inherited
 end;
 
 {$IFDEF MSWINDOWS}
-function TSBDSemaphore.GetHandle: THandle;
+function TOtlSemaphore.GetHandle: THandle;
 begin
   result := FSem.Handle
 end;
 {$ENDIF}
 
-function TSBDSemaphore.isSignalled: boolean;
+function TOtlSemaphore.isSignalled: boolean;
 begin
   raise TParallelException.Create( EIsSignalledNotSupported);
 end;
 
-procedure TSBDSemaphore.Signal;
+procedure TOtlSemaphore.Signal;
 begin
   FSem.Release
 end;
 
-function TSBDSemaphore.WaitFor( Timeout: cardinal): TWaitResult;
+function TOtlSemaphore.WaitFor( Timeout: cardinal): TWaitResult;
 begin
   result := FSem.WaitFor( Timeout)
 end;
@@ -881,6 +904,200 @@ end;
 
 
 
+
+constructor TOtlMREW.Create;
+begin
+  FReaders.Initialize( 0);
+  FZeroOrAbove  := System.SyncObjs.TEvent.Create( nil, False, False, '');
+  FZero         := System.SyncObjs.TEvent.Create( nil, False, False, '');
+  FWriterThread := 0;
+  // This is an auto-reset event.
+  FGate := TFixedCriticalSection.Create
+end;
+
+destructor TOtlMREW.Destroy;
+begin
+  FReaders.Finalize;
+  FZeroOrAbove.Free;
+  FZero.Free;
+  FGate.Free;
+  inherited
+end;
+
+function TOtlMREW.EnterRead( Timeout: cardinal): TWaitResult;
+var
+  Watch: TStopWatch;
+  Elapsed: int64;
+  TimeoutRemaining: cardinal;
+  Readers: integer;
+  isStable: boolean;
+begin
+  Readers := FReaders.Read;
+  if (Readers >= 0) and
+     (FReaders.CompareAndExchange( Readers, Readers + 1)) then
+      result := wrSignaled
+      // It is possible that FZero will now be in a false positive state.
+      // If this is the case, it will be corrected on the next EnterWrite()
+    else
+      result := wrIOCompletion;
+  if result <> wrIOCompletion then exit;
+  TimeoutRemaining := Timeout;
+  if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
+    begin
+    Watch.Reset;
+    Watch.Start
+    end;
+  repeat
+    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
+      begin
+      Elapsed := Watch.ElapsedMilliseconds;
+      if Elapsed > MaxCardinal then
+        Elapsed := MaxCardinal;
+      if TimeOut > Elapsed then
+          TimeOutRemaining := TimeOut - cardinal( Elapsed)
+        else
+          TimeOutRemaining := 0
+      end;
+    if (TimeOutRemaining > 0) and (FReaders.Read < 0) then
+      FZeroOrAbove.WaitFor( TimeOutRemaining);
+    FGate.Enter;
+    isStable := False;
+    repeat
+      Readers := FReaders.Read;
+      if Readers >= 0 then
+          begin
+          if FReaders.CompareAndExchange( Readers, Readers + 1) then
+              begin
+              isStable := True;
+              Inc( Readers)
+              end
+          end
+        else
+          isStable := True
+    until isStable;
+    if Readers >= 1 then
+        begin
+        result := wrSignaled;
+        FZeroOrAbove.SetEvent
+        end
+      else if Readers < 0 then
+        FZeroOrAbove.ResetEvent;
+    FGate.Leave;
+    if (result = wrIOCompletion) and (TimeOutRemaining = 0) then
+      result := wrTimeout
+  until result <> wrIOCompletion
+end;
+
+
+
+procedure TOtlMREW.ExitRead;
+var
+  Readers: integer;
+begin
+  Readers := FReaders.Decrement;
+  if Readers >= 0 then
+    FZeroOrAbove.SetEvent;
+  if Readers = 0 then
+    FZero.SetEvent
+end;
+
+
+function TOtlMREW.EnterWrite( Timeout: cardinal): TWaitResult;
+var
+  Watch: TStopWatch;
+  Elapsed: int64;
+  TimeoutRemaining: cardinal;
+  Readers: integer;
+  isStable: boolean;
+  This: TThreadId;
+  doWait: boolean;
+  Hit: boolean;
+begin
+  This := TThread.CurrentThread.ThreadID;
+  FGate.Enter;
+  Readers := FReaders.Read;
+  if (Readers < 0) and (This = FWriterThread) and
+     (FReaders.CompareAndExchange( Readers, Readers - 1)) then
+      result := wrSignaled
+    else
+      result := wrIOCompletion;
+  FGate.Leave;
+  if result <> wrIOCompletion then exit;
+  TimeoutRemaining := Timeout;
+  Watch.Reset;
+  Watch.Start;
+  repeat
+    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
+      begin
+      Elapsed := Watch.ElapsedMilliseconds;
+      if Elapsed > MaxCardinal then
+        Elapsed := MaxCardinal;
+      if TimeOut > Elapsed then
+          TimeOutRemaining := TimeOut - cardinal( Elapsed)
+        else
+          TimeOutRemaining := 0
+      end;
+    FGate.Enter;
+    Readers := FReaders.Read;
+    doWait := (TimeOutRemaining > 0) and
+              (Readers <> 0) and
+              ((Readers >= 0) or (FWriterThread <> This));
+    FGate.Leave;
+    if doWait then
+      FZero.WaitFor( TimeOutRemaining);
+    FGate.Enter;
+    Hit := False;
+    isStable := False;
+    repeat
+      Readers := FReaders.Read;
+      if (Readers = 0) or ((Readers < 0) and (FWriterThread = This)) then
+          begin
+          if FReaders.CompareAndExchange( Readers, Readers - 1) then
+              begin
+              Hit := True;
+              isStable := True;
+              Dec( Readers);
+              if Readers = -1 then
+                FWriterThread := This
+              end
+          end
+        else
+          isStable := True
+    until isStable;
+    if Hit then
+      result := wrSignaled;
+    if Readers = 0 then
+        FZero.SetEvent
+      else
+        FZero.ResetEvent;
+    FGate.Leave;
+    if (result = wrIOCompletion) and (TimeOutRemaining = 0) then
+      result := wrTimeout
+  until result <> wrIOCompletion
+end;
+
+procedure TOtlMREW.ExitWrite;
+var
+  Readers: integer;
+begin
+  FGate.Enter;
+  Readers := FReaders.Increment;
+  if Readers >= 0 then
+    FZeroOrAbove.SetEvent;
+  if Readers = 0 then
+    begin
+    FWriterThread := 0;
+    FZero.SetEvent
+    end;
+  FGate.Leave
+end;
+
+function TOtlMREW.ReaderCount: integer;
+begin
+  result := FReaders.Read;
+  if result < -1 then
+    result := -1
+end;
 
 initialization
 InitUnit_BasicLevel;

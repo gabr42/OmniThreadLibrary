@@ -11,11 +11,17 @@ uses Otl.Parallel.Extras, System.SysUtils, Generics.Collections,
 //Overview
 //A heavy pool is a pool of re-usable heavy weight objects. The pool can be constrained by:
 //•	A maximum number of created objects (available or in-use)
-//•	Available (that is to say, not in current use) pooled objects can have a maximum age. If they exceed this age, then are destroyed.
+//•	Available (that is to say, not in current use) pooled objects can have a maximum age.
+//   If they exceed this age, then are destroyed.
 //•	A minimum number of available objects. When less, a background house keeping pool will slowly grow the pool.
-//The user supplies functions to create/destroy the objects, or take action on the event of Acquire from/ release back to the pool. Removing too-old pool objects, or growing the pool to the specified minimum are house-keeping jobs performed by a task on a periodic basis.
+//The user supplies functions to create/destroy the objects, or take action on
+//   the event of Acquire from/ release back to the pool. Removing too-old pool
+//   objects, or growing the pool to the specified minimum are house-keeping
+//   jobs performed by a task on a periodic basis.
 
 type
+  TAquireResult = (aRecycle, aNew, aOverPop, aNoGenerator);
+
   THeavyPool<T> = class( TInterfacedObject, IHeavyPool<T>)
   private type
     RBasket = record
@@ -34,13 +40,23 @@ type
     FFreePool: TBasketList;
     FAcquired: TList<T>;
     FGate: ILock;
-    FAcquisitionCount: uint64;
-    FReleaseCount: uint64;
     FHouseKeeperThread: TThread;
     FWakeHouseKeeper: IEvent;
     [Volatile] FIsShutdown: TVolatileInt32;
     FGenFunc: TGenerate<T>;
     FRelFunc: TDestroy<T>;
+
+    /// <summary>Number of times the generate function has been called to create a new object instance.</summary>
+    FGenerateCount: uint64;
+
+    /// <summary>Number of times the release function has been called to permanently dispose of an object instance.</summary>
+    FDestroyCount: uint64;
+
+    /// <summary>Number of times a client has succesfuly acquired an object from the heavy pool.</summary>
+    FAcquireCount: uint64;
+
+    /// <summary>Number of times a client has returned a previously acquired object back to the heavy pool.</summary>
+    FReleaseCount: uint64;
 
     function  GetMaxAge: double;
     procedure SetMaxAge( const Value: double);
@@ -56,6 +72,8 @@ type
     function  NextToMature: integer;
     procedure HouseKeepProper;
     procedure Touch( var Item: RBasket);
+    function  LiveCount: cardinal;
+    procedure Pop( Idx: integer);
 
   public
     constructor CreateHeavy( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>);
@@ -103,8 +121,10 @@ begin
   FGate       := _CreateCritLockIntf( nil);
   FGenFunc    := AGenFunc;
   FRelFunc    := ARelFunc;
-  FAcquisitionCount := 0;
-  FReleaseCount     := 0;
+  FGenerateCount := 0;
+  FDestroyCount  := 0;
+  FAcquireCount  := 0;
+  FReleaseCount  := 0;
   FWakeHouseKeeper  := _CreateKernalEventIntf( nil, False, True); // Auto-reset. Starts set.
   FIsShutdown.Initialize( 0);
   FHouseKeeperThread := THouseKeeperThread<T>.CreateHouseKeeper( self);
@@ -176,37 +196,50 @@ begin
 end;
 
 
+
 function THeavyPool<T>.Acquire: T;
 var
   MinIdx: integer;
+  Res: TAquireResult;
 begin
   FGate.Enter;
   try
-    if FAcquired.Count >= FMaxPop then
-        result := Default(T)
+    if cardinal( FAcquired.Count) >= FMaxPop then
+        Res := aOverPop
       else
         begin
         MinIdx := NextToMature;
         if MinIdx >= 0 then
             begin
+            Res    := aRecycle;
             result := FFreePool[ MinIdx].FObject;
             FFreePool.Delete( MinIdx);
+            Inc( FAcquireCount);
             FAcquired.Add( result)
             end
 
-          else if assigned( @FGenFunc) and ((FAcquired.Count + FFreePool.Count) < FMaxPop) then
+          else if assigned( @FGenFunc) and (LiveCount < FMaxPop) then
             begin
+            Res    := aNew;
             result := FGenFunc;
+            Inc( FGenerateCount);
+            Inc( FAcquireCount);
             FAcquired.Add( result)
             end
 
+          else if assigned( @FGenFunc) then
+            Res := aOverPop
           else
-            result := Default(T)
+            Res := aNoGenerator
         end
   finally
     FGate.Leave;
     FWakeHouseKeeper.SetEvent
-  end
+  end;
+  case Res of
+    aOverPop    : raise Exception.Create( 'THeavyPool<T>.Acquire() - Over-population');
+    aNoGenerator: raise Exception.Create( 'THeavyPool<T>.Acquire() - No generator function defined');
+  end;
 end;
 
 
@@ -240,16 +273,20 @@ end;
 function THeavyPool<T>.GetStats: RHeavyPoolStats;
 begin
   FGate.Enter;
-  with result do
-    begin
-    FGenerateCount  := 0;
-    FDestroyCount   := 0;
-    FAcquireCount   := 0;
-    FReleaseCount   := 0;
-    FFreeQueueCount := 0;
-    FInWorkCount    := 0
-    end;
+  result.FGenerateCount  := FGenerateCount;
+  result.FDestroyCount   := FDestroyCount;
+  result.FAcquireCount   := FAcquireCount;
+  result.FReleaseCount   := FReleaseCount;
+  result.FFreeQueueCount := FFreePool.Count;
+  result.FInWorkCount    := FAcquired.Count;
   FGate.Leave
+end;
+
+procedure THeavyPool<T>.Pop( Idx: integer);
+begin
+  FRelFunc( FFreePool[ Idx].FObject);
+  FFreePool.Delete( Idx);
+  Inc( FDestroyCount)
 end;
 
 procedure THeavyPool<T>.HouseKeepProper;
@@ -258,6 +295,7 @@ var
   dNow: TDateTime;
   Addend:  THeavyPool<T>.RBasket;
   didAnAction: boolean;
+
 begin
   didAnAction := False;
   repeat
@@ -266,13 +304,12 @@ begin
       if assigned( FRelFunc) then
         begin
         // Check for the Maximum Population restriction. Enforce it.
-        if ((FAcquired.Count + FFreePool.Count) > FMaxPop) and (FFreePool.Count > 0) then
+        if (LiveCount > FMaxPop) and (FFreePool.Count > 0) then
           begin
           MinIdx := NextToMature;
           if MinIdx >= 0 then
             begin
-            FRelFunc( FFreePool[ MinIdx].FObject);
-            FFreePool.Delete( MinIdx);
+            Pop( MinIdx);
             didAnAction := True
             end
           end;
@@ -283,8 +320,7 @@ begin
             begin
               if FFreePool[ i].FMaturity >= dNow then
                 begin
-                FRelFunc( FFreePool[ MinIdx].FObject);
-                FFreePool.Delete( MinIdx);
+                Pop( MinIdx);
                 didAnAction := True;
                 break
                 end
@@ -292,14 +328,22 @@ begin
         end;
 
       // Check for the Minimum Free Pool Requirement. Pre-build, if required.
-      if (not didAnAction) and assigned( @FGenFunc) and
-         (FFreePool.Count < FMinReserve) and ((FAcquired.Count + FFreePool.Count) < FMaxPop) then
+      if assigned( @FGenFunc) and
+         (cardinal( FFreePool.Count) < FMinReserve) and (LiveCount < FMaxPop) then
             begin
-            Addend.FObject   := FGenFunc;
-            Touch( Addend);
-            FFreePool.Add( Addend);
-            didAnAction := True
-            end;
+            if didAnAction then
+                // Do it soon, but not just now.
+                // Don't want to do too much at once.
+                FWakeHouseKeeper.SetEvent
+              else
+                begin
+                Addend.FObject := FGenFunc;
+                Touch( Addend);
+                FFreePool.Add( Addend);
+                Inc( FGenerateCount);
+                didAnAction := True
+                end
+            end
     finally
       FGate.Leave
     end
@@ -308,6 +352,11 @@ end;
 
 
 
+
+function THeavyPool<T>.LiveCount: cardinal;
+begin
+  result := cardinal( FAcquired.Count + FFreePool.Count)
+end;
 
 procedure THeavyPool<T>.Release( const Retiree: T);
 var
@@ -324,6 +373,7 @@ begin
       end
     else
       begin
+      Inc( FReleaseCount);
       FAcquired.Delete( Idx);
       Addend.FObject := Retiree;
       Touch( Addend);
@@ -372,7 +422,10 @@ begin
     FGate.Enter;
     try
       for i := FFreePool.Count - 1 downto 0 do
-        FRelFunc( FFreePool[i].FObject)
+        begin
+        FRelFunc( FFreePool[i].FObject);
+        Inc( FReleaseCount)
+        end
     finally
       FGate.Leave;
       FRelFunc := nil
