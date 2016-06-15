@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2016-03-05
-   Version           : 1.71
+   Last modification : 2016-05-03
+   Version           : 1.72
 </pre>*)(*
    History:
+     1.72: 2016-05-03
+       - Implemented IGpInt64ObjectList<T> and TGpInt64ObjectList<T>.
      1.71: 2016-03-05
        - [bero] Added 'const' to various 'string' parameters.
        - [bero] Fixed invalid condition in GUIDCompare.
@@ -969,7 +971,7 @@ type
     function  FetchObject(item: integer): T; reintroduce; inline;
     procedure InsertObject(idx: integer; item: integer; obj: T); reintroduce; inline;
     property Objects[idxObject: integer]: T read GetObject write SetObject;
-  end; { TGpIntegerObjectList }
+  end; { TGpIntegerObjectList<T> }
   {$ENDIF GpLists_LimitedGenerics}
   {$ENDIF Unicode}
 
@@ -1104,6 +1106,41 @@ type
     {$ENDIF GpLists_Enumerators}
     property Objects[idxObject: integer]: TObject read GetObject write SetObject;
   end; { TGpInt64ObjectList }
+
+  {$IFDEF Unicode}
+  {$IFNDEF GpLists_LimitedGenerics}
+  IGpInt64ObjectList<T> = interface
+    function  GetObject(idxObject: integer): T;
+    procedure SetObject(idxObject: integer; const value: T);
+    //
+    function  AddObject(item: integer; obj: T): integer;
+    function  EnsureObject(item: integer): integer; overload;
+    function  EnsureObject(item: integer; obj: T): integer; overload;
+    function  ExtractObject(idxObject: integer): T;
+    function  FetchObject(item: integer): T;
+    procedure InsertObject(idx: integer; item: integer; obj: T);
+    property Objects[idxObject: integer]: T read GetObject write SetObject;
+  end; { IGpInt64ObjectList<T> }
+
+  {:Integer list where each integer is accompanied with a typed object.
+    @since   2003-06-09
+  }
+  TGpInt64ObjectList<T: class, constructor> = class(TGpInt64ObjectList, IGpInt64ObjectList<T>)
+  protected
+    function  GetObject(idxObject: integer): T; reintroduce;
+    procedure SetObject(idxObject: integer; const value: T); reintroduce;
+  public
+    class function CreateInterface(ownsObjects: boolean = true): IGpInt64ObjectList<T>;
+    function  AddObject(item: integer; obj: T): integer; reintroduce; inline;
+    function  EnsureObject(item: integer): integer; overload; inline;
+    function  EnsureObject(item: integer; obj: T): integer; reintroduce; overload; inline;
+    function  ExtractObject(idxObject: integer): T; reintroduce; inline;
+    function  FetchObject(item: integer): T; reintroduce; inline;
+    procedure InsertObject(idx: integer; item: integer; obj: T); reintroduce; inline;
+    property Objects[idxObject: integer]: T read GetObject write SetObject;
+  end; { TGpInt64ObjectList<T> }
+  {$ENDIF GpLists_LimitedGenerics}
+  {$ENDIF Unicode}
 
   IGpCountedInt64List = interface ['{74326A7E-F5FC-42CA-8322-43866D7C2437}']
     function  GetCounter(idx: integer): int64;
@@ -4094,7 +4131,6 @@ begin
   inherited SetObject(idxObject, value);
 end; { TGpIntegerObjectList<T>.SetObject }
 {$ENDIF GpLists_LimitedGenerics}
-
 {$ENDIF Unicode}
 
 { TGpCountedIntegerList }
@@ -4478,6 +4514,58 @@ begin
   Result := TGpInt64ObjectListWalkKVEnumeratorFactory.Create(Self, idxFrom, idxTo, step);
 end; { TGpInt64ObjectList.WalkKV }
 {$ENDIF GpLists_Enumerators}
+
+{$IFDEF Unicode}
+{$IFNDEF GpLists_LimitedGenerics}
+{ TGpInt64ObjectList<T> }
+
+class function TGpInt64ObjectList<T>.CreateInterface(ownsObjects: boolean = true):
+  IGpInt64ObjectList<T>;
+begin
+  Result := TGpInt64ObjectList<T>.Create(ownsObjects);
+end; { TGpInt64ObjectList<T>.CreateInterface }
+
+function TGpInt64ObjectList<T>.AddObject(item: integer; obj: T): integer;
+begin
+  Result := inherited AddObject(item, obj);
+end; { TGpInt64ObjectList<T>.AddObject }
+
+function TGpInt64ObjectList<T>.EnsureObject(item: integer; obj: T): integer;
+begin
+  Result := inherited EnsureObject(item, TObject(PPointer(@obj)^));
+end; { TGpInt64ObjectList<T>.EnsureObject }
+
+function TGpInt64ObjectList<T>.EnsureObject(item: integer): integer;
+begin
+  Result := inherited EnsureObject(item, TClass(T));
+end; { TGpInt64ObjectList<T>.EnsureObject }
+
+function TGpInt64ObjectList<T>.ExtractObject(idxObject: integer): T;
+begin
+  Result := T(inherited ExtractObject(idxObject));
+end; { TGpInt64ObjectList<T>.ExtractObject }
+
+function TGpInt64ObjectList<T>.FetchObject(item: integer): T;
+begin
+  Result := T(inherited FetchObject(item));
+end; { TGpInt64ObjectList<T>.FetchObject }
+
+function TGpInt64ObjectList<T>.GetObject(idxObject: integer): T;
+begin
+  Result := T(inherited GetObject(idxObject));
+end; { TGpInt64ObjectList<T>.GetObject }
+
+procedure TGpInt64ObjectList<T>.InsertObject(idx, item: integer; obj: T);
+begin
+  inherited InsertObject(idx, item, obj);
+end; { TGpInt64ObjectList<T>.InsertObject }
+
+procedure TGpInt64ObjectList<T>.SetObject(idxObject: integer; const value: T);
+begin
+  inherited SetObject(idxObject, value);
+end; { TGpInt64ObjectList<T>.SetObject }
+{$ENDIF GpLists_LimitedGenerics}
+{$ENDIF Unicode}
 
 { TGpCountedInt64List }
 

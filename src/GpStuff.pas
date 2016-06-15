@@ -6,10 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2016-03-05
-   Version           : 1.56
+   Last modification : 2016-03-29
+   Version           : 1.57
 </pre>*)(*
    History:
+     1.57: 2016-03-29
+       - Added type TCFunc.
+       - Added two EnumList overloads acception filter with signature (const string): string.
      1.56: 2016-03-05
        - [bero] Added 'const' to IFF(boolean, string, string) overload.
      1.55: 2015-09-21
@@ -534,6 +537,10 @@ type
     procedure Restore;
   end; { IGpDisableHandler }
 
+{$IFDEF GpStuff_FullAnonymous}
+  TCFunc<T,TResult> = reference to function (const Arg1: T): TResult;
+{$ENDIF}
+
 function EnumValues(const aValues: array of integer): IGpIntegerValueEnumeratorFactory;
 function EnumStrings(const aValues: array of string): IGpStringValueEnumeratorFactory;
 function EnumPairs(const aValues: array of string): IGpStringPairEnumeratorFactory;
@@ -543,6 +550,12 @@ function EnumList(const aList: string; delim: char; const quoteChar: string = ''
 function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true{$IFDEF GpStuff_FullAnonymous};
   filter: TFunc<string,string> = nil{$ENDIF GpStuff_FullAnonymous}): IGpStringValueEnumeratorFactory; overload;
+{$IFDEF GpStuff_FullAnonymous}
+function EnumList(const aList: string; delim: char; const quoteChar: string;
+  stripQuotes: boolean; filter: TCFunc<string,string>): IGpStringValueEnumeratorFactory; overload;
+function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string;
+  stripQuotes: boolean; filter: TCFunc<string,string>): IGpStringValueEnumeratorFactory; overload;
+{$ENDIF}
 function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolean = false;
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
@@ -1481,6 +1494,76 @@ begin
   Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
 end; { EnumList }
 
+{$IFDEF GpStuff_FullAnonymous}
+function EnumList(const aList: string; delim: char; const quoteChar: string;
+  stripQuotes: boolean; filter: TCFunc<string,string>): IGpStringValueEnumeratorFactory;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+  s         : string;
+  sl        : TStringList;
+begin
+  sl := TStringList.Create;
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        s := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+      else
+        s := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+      if assigned(filter) then
+        s := filter(s);
+      sl.Add(s);
+    end;
+  end;
+  Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumList }
+
+function EnumList(const aList: string; delim: TSysCharSet; const quoteChar: string;
+  stripQuotes: boolean; filter: TCFunc<string,string>): IGpStringValueEnumeratorFactory;
+var
+  delimiters: TDelimiters;
+  iDelim    : integer;
+  quote     : char;
+  s         : string;
+  sl        : TStringList;
+begin
+  sl := TStringList.Create;
+  if aList <> '' then begin
+    if stripQuotes and (quoteChar <> '') then
+      quote := quoteChar[1]
+    else begin
+      stripQuotes := false;
+      quote := #0; //to keep compiler happy;
+    end;
+    GetDelimiters(aList, delim, quoteChar, true, delimiters);
+    for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
+      if stripQuotes and
+         (aList[delimiters[iDelim  ] + 1] = quote) and
+         (aList[delimiters[iDelim+1] - 1] = quote)
+      then
+        s := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+      else
+        s := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+      if assigned(filter) then
+        s := filter(s);
+      sl.Add(s);
+    end;
+  end;
+  Result := TGpStringValueEnumeratorFactory.Create(sl); //factory takes ownership
+end; { EnumList }
+{$ENDIF}
+
 {$IFDEF GpStuff_TArrayOfT}
 function SplitList(const aList: string; delim: char; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
@@ -1714,11 +1797,14 @@ begin
 end; { TGpTraceable._AddRef }
 
 function TGpTraceable._Release: integer;
+var
+  sClassName: string;
 begin
+  sClassName := ClassName;
   DebugBreak(gtTraceRef);
   Result := inherited _Release;
   if gtLogRef then
-    OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [ClassName, Result])));
+    OutputDebugString(PChar(Format('TGpTraceable._Release: [%s] %d', [sClassName, Result])));
 end; { TGpTraceable._Release }
 
 {$IFDEF GpStuff_ValuesEnumerators}

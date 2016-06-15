@@ -8,10 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2016-03-05
-   Version           : 1.86
+   Last modification : 2016-06-15
+   Version           : 1.88
 </pre>*)(*
    History:
+     1.88: 2016-06-15
+       - [shaun07776] C++Builder compatible.
+     1.87: 2016-05-18
+       - Added function DSiExecuteAsAdmin.
      1.86: 2016-03-05
        - [bero] Added 'const' to various 'string' parameters.
      1.85: 2016-01-16
@@ -542,51 +546,93 @@ const
   WAIT_OBJECT_9 = WAIT_OBJECT_0+9;
 
   // folder constants missing from ShellObj
+  {$EXTERNALSYM CSIDL_ADMINTOOLS}
   CSIDL_ADMINTOOLS              = $0030; //v5.0; <user name>\Start Menu\Programs\Administrative Tools
+  {$EXTERNALSYM CSIDL_ALTSTARTUP}
   CSIDL_ALTSTARTUP              = $001D; //The file system directory that corresponds to the user's nonlocalized Startup program group.
+  {$EXTERNALSYM CSIDL_APPDATA}
   CSIDL_APPDATA                 = $001A; //v4.71; Application Data, new for NT4
+  {$EXTERNALSYM CSIDL_CDBURN_AREA}
   CSIDL_CDBURN_AREA             = $003B; //v6.0; The file system directory acting as a staging area for files waiting to be written to CD.
+  {$EXTERNALSYM CSIDL_COMMON_ADMINTOOLS}
   CSIDL_COMMON_ADMINTOOLS       = $002F; //v5.0; All Users\Start Menu\Programs\Administrative Tools
+  {$EXTERNALSYM CSIDL_COMMON_ALTSTARTUP}
   CSIDL_COMMON_ALTSTARTUP       = $001E; //The file system directory that corresponds to the nonlocalized Startup program group for all users.
+  {$EXTERNALSYM CSIDL_COMMON_APPDATA}
   CSIDL_COMMON_APPDATA          = $0023; //v5.0; All Users\Application Data
+  {$EXTERNALSYM CSIDL_COMMON_DESKTOPDIRECTORY}
   CSIDL_COMMON_DESKTOPDIRECTORY = $0019; //The file system directory that contains files and folders that appear on the desktop for all users.
+  {$EXTERNALSYM CSIDL_COMMON_DOCUMENTS}
   CSIDL_COMMON_DOCUMENTS        = $002E; //All Users\Documents
+  {$EXTERNALSYM CSIDL_COMMON_FAVORITES}
   CSIDL_COMMON_FAVORITES        = $001F; //The file system directory that serves as a common repository for favorite items common to all users.
+  {$EXTERNALSYM CSIDL_COMMON_MUSIC}
   CSIDL_COMMON_MUSIC            = $0035; //v6.0; The file system directory that serves as a repository for music files common to all users.
+  {$EXTERNALSYM CSIDL_COMMON_PICTURES}
   CSIDL_COMMON_PICTURES         = $0036; //v6.0; The file system directory that serves as a repository for image files common to all users.
+  {$EXTERNALSYM CSIDL_COMMON_PROGRAMS}
   CSIDL_COMMON_PROGRAMS         = $0017; //The file system directory that contains the directories for the common program groups that appear on the Start menu for all users.
+  {$EXTERNALSYM CSIDL_COMMON_STARTMENU}
   CSIDL_COMMON_STARTMENU        = $0016; //The file system directory that contains the programs and folders that appear on the Start menu for all users.
+  {$EXTERNALSYM CSIDL_COMMON_STARTUP}
   CSIDL_COMMON_STARTUP          = $0018; //The file system directory that contains the programs that appear in the Startup folder for all users.
+  {$EXTERNALSYM CSIDL_COMMON_TEMPLATES}
   CSIDL_COMMON_TEMPLATES        = $002D; //The file system directory that contains the templates that are available to all users.
+  {$EXTERNALSYM CSIDL_COMMON_VIDEO}
   CSIDL_COMMON_VIDEO            = $0037; //v6.0; The file system directory that serves as a repository for video files common to all users.
+  {$EXTERNALSYM CSIDL_COMPUTERSNEARME}
   CSIDL_COMPUTERSNEARME         = $003D; //The folder representing other machines in your workgroup.
+  {$EXTERNALSYM CSIDL_CONNECTIONS}
   CSIDL_CONNECTIONS             = $0031; //The virtual folder representing Network Connections, containing network and dial-up connections.
+  {$EXTERNALSYM CSIDL_COOKIES}
   CSIDL_COOKIES                 = $0021; //The file system directory that serves as a common repository for Internet cookies.
+  {$EXTERNALSYM CSIDL_HISTORY}
   CSIDL_HISTORY                 = $0022; //The file system directory that serves as a common repository for Internet history items.
+  {$EXTERNALSYM CSIDL_INTERNET}
   CSIDL_INTERNET                = $0001; //A viritual folder for Internet Explorer (icon on desktop).
+  {$EXTERNALSYM CSIDL_INTERNET_CACHE}
   CSIDL_INTERNET_CACHE          = $0020; //v4.72; The file system directory that serves as a common repository for temporary Internet files.
+  {$EXTERNALSYM CSIDL_LOCAL_APPDATA}
   CSIDL_LOCAL_APPDATA           = $001C; //v5.0; non roaming, user\Local Settings\Application Data
+  {$EXTERNALSYM CSIDL_MYDOCUMENTS}
   CSIDL_MYDOCUMENTS             = $000C; //v6.0; The virtual folder representing the My Documents desktop item.
+  {$EXTERNALSYM CSIDL_MYMUSIC}
   CSIDL_MYMUSIC                 = $000D; //The file system directory that serves as a common repository for music files.
+  {$EXTERNALSYM CSIDL_MYPICTURES}
   CSIDL_MYPICTURES              = $0027; //v5.0; My Pictures, new for Win2K
+  {$EXTERNALSYM CSIDL_MYVIDEO}
   CSIDL_MYVIDEO                 = $000E; //v6.0; The file system directory that serves as a common repository for video files.
+  {$EXTERNALSYM CSIDL_PERSONAL}
   CSIDL_PERSONAL                = $0005; //v6.0; Equal to CSIDL_MYDOCUMENTS; previous; The file system directory used to physically store a user's common repository of documents.
+
   CSIDL_PHOTOALBUMS             = $0045; //Vista; The virtual folder used to store photo albums.
   CSIDL_PLAYLISTS               = $003F; //Vista; The virtual folder used to store play albums.
+
+  {$EXTERNALSYM CSIDL_PRINTHOOD}
   CSIDL_PRINTHOOD               = $001B; //The file system directory that contains the link objects that can exist in the Printers virtual folder.
+  {$EXTERNALSYM CSIDL_PROFILE}
   CSIDL_PROFILE                 = $0028; //v5.0; The user's profile folder.
+  {$EXTERNALSYM CSIDL_PROGRAM_FILES}
   CSIDL_PROGRAM_FILES           = $0026; //v5.0; C:\Program Files
+  {$EXTERNALSYM CSIDL_PROGRAM_FILES_COMMON}
   CSIDL_PROGRAM_FILES_COMMON    = $002B; //v5.0; C:\Program Files\Common
+  {$EXTERNALSYM CSIDL_RESOURCES}
   CSIDL_RESOURCES               = $0038; //Vista; The file system directory that contains resource data.
+
   CSIDL_SAMPLE_MUSIC            = $0040; //Vista; The file system directory that contains sample music.
   CSIDL_SAMPLE_PICTURES         = $0042; //Vista; The file system directory that contains sample pictures.
   CSIDL_SAMPLE_PLAYLISTS        = $0041; //Vista; The file system directory that contains sample playlists.
   CSIDL_SAMPLE_VIDEOS           = $0043; //Vista; The file system directory that contains sample videos.
-  CSIDL_SYSTEM                  = $0025; //v5.0; GetSystemDirectory()
-  CSIDL_WINDOWS                 = $0024; //GetWindowsDirectory()
 
+  {$EXTERNALSYM CSIDL_SYSTEM}
+  CSIDL_SYSTEM                  = $0025; //v5.0; GetSystemDirectory()
+  {$EXTERNALSYM CSIDL_WINDOWS}
+  CSIDL_WINDOWS                 = $0024; //GetWindowsDirectory()
+  {$EXTERNALSYM CSIDL_FLAG_DONT_UNEXPAND}
   CSIDL_FLAG_DONT_UNEXPAND = $2000; //Combine with another CSIDL constant to ensure expanding of environment variables.
+  {$EXTERNALSYM CSIDL_FLAG_DONT_VERIFY}
   CSIDL_FLAG_DONT_VERIFY   = $4000; //Combine with another CSIDL constant, except for CSIDL_FLAG_CREATE, to return an unverified folder path-with no attempt to create or initialize the folder.
+  {$EXTERNALSYM CSIDL_FLAG_CREATE}
   CSIDL_FLAG_CREATE        = $8000; // new for Win2K, OR this in to force creation of folder
 
   FILE_DEVICE_FILE_SYSTEM  = 9;
@@ -608,10 +654,14 @@ const
                               (16 shl 2)                                       OR
                               (METHOD_BUFFERED);
 
+  {$EXTERNALSYM COMPRESSION_FORMAT_NONE}
   COMPRESSION_FORMAT_NONE    = 0;
+  {$EXTERNALSYM COMPRESSION_FORMAT_DEFAULT}
   COMPRESSION_FORMAT_DEFAULT = 1;
 
+  {$EXTERNALSYM SPI_GETFOREGROUNDLOCKTIMEOUT}
   SPI_GETFOREGROUNDLOCKTIMEOUT = $2000;
+  {$EXTERNALSYM SPI_SETFOREGROUNDLOCKTIMEOUT}
   SPI_SETFOREGROUNDLOCKTIMEOUT = $2001;
 
   STYPE_DISKTREE = 0;
@@ -628,8 +678,11 @@ const
   CLinkExt = '.lnk';
 
   // ShEmptyRecycleBinA flags
+  {$EXTERNALSYM SHERB_NOCONFIRMATION}
   SHERB_NOCONFIRMATION = $00000001;
+  {$EXTERNALSYM SHERB_NOPROGRESSUI}
   SHERB_NOPROGRESSUI   = $00000002;
+  {$EXTERNALSYM SHERB_NOSOUND}
   SHERB_NOSOUND        = $00000004;
 
   // CurrentVersion registry key
@@ -642,12 +695,18 @@ const
 
 const
   // security constants needed in DSiIsAdmin
+  {$EXTERNALSYM SECURITY_NT_AUTHORITY}
   SECURITY_NT_AUTHORITY: TSIDIdentifierAuthority = (Value: (0, 0, 0, 0, 0, 5));
+  {$EXTERNALSYM SECURITY_BUILTIN_DOMAIN_RID}
   SECURITY_BUILTIN_DOMAIN_RID = $00000020;
+  {$EXTERNALSYM DOMAIN_ALIAS_RID_ADMINS}
   DOMAIN_ALIAS_RID_ADMINS = $00000220;
+  {$EXTERNALSYM DOMAIN_ALIAS_RID_USERS}
   DOMAIN_ALIAS_RID_USERS : DWORD = $00000221;
+  {$EXTERNALSYM DOMAIN_ALIAS_RID_GUESTS}
   DOMAIN_ALIAS_RID_GUESTS: DWORD = $00000222;
   DOMAIN_ALIAS_RID_POWER_: DWORD = $00000223;
+  {$EXTERNALSYM SE_GROUP_ENABLED}
   SE_GROUP_ENABLED = $00000004;
 
   //LCID values, http://msdn.microsoft.com/nb-no/goglobal/bb964664.aspx
@@ -890,6 +949,22 @@ const
   LCID_Zulu                          = $0435;
   LCID_HID                           = $04ff;
 
+  // Undocumented WM_SYSCOMMAND WPARAM.
+  // http://users.atw.hu/delphicikk/listaz.php?id=353&oldal=15
+  SC_RESIZELEFT        = $F001; // Resize from left
+  SC_RESIZERIGHT       = $F002; // Resize from right
+  SC_RESIZETOP         = $F003; // Resize from up
+  SC_RESIZETOPLEFT     = $F004; // Lock the bottom right corner of the form, the up left corner move for resize
+  SC_RESIZETOPRIGHT    = $F005; // Same from bottom left corner
+  SC_RESIZEBOTTOM      = $F006; // Lock up right and left border, resize other
+  SC_RESIZEBOTTOMLEFT  = $F007; // Lock up and right border, resize other border
+  SC_RESIZEBOTTOMRIGHT = $F008; // Lock left and up border and resize other
+  SC_DRAGMOVE          = $F009; // Drag from anywhere
+  SC_MINIMIZE          = $F020; // Auto-Minimize Form
+  SC_MAXIMIZE          = $F030; // Auto-Maximize Form
+  SC_SCREENSAVER       = $F148; // Activate ScreenSaver
+  SC_STARTBUTTON       = $F13E; // Activate StartButton
+
 type
   {$IFDEF DSiNeedULONGEtc}
     ULONG_PTR = Cardinal;
@@ -907,6 +982,7 @@ type
   {$ENDIF}
 
   // API types not defined in Delphi 5
+  {$EXTERNALSYM PWkstaInfo100}
   PWkstaInfo100 = ^TWkstaInfo100;
   _WKSTA_INFO_100 = record
     wki100_platform_id: DWORD;
@@ -916,6 +992,7 @@ type
     wki100_ver_minor: DWORD;
   end;
   {$EXTERNALSYM _WKSTA_INFO_100}
+  {$EXTERNALSYM TWkstaInfo100}
   TWkstaInfo100 = _WKSTA_INFO_100;
   WKSTA_INFO_100 = _WKSTA_INFO_100;
   {$EXTERNALSYM WKSTA_INFO_100}
@@ -1025,6 +1102,7 @@ type
 { Registry }
 
 const
+  {$EXTERNALSYM KEY_WOW64_64KEY}
   KEY_WOW64_64KEY = $0100;
 
 type
@@ -1087,19 +1165,29 @@ type
   TShFileOpFlags = set of TShFileOpFlag;
 
 const
+  {$EXTERNALSYM FILE_LIST_DIRECTORY}
   FILE_LIST_DIRECTORY = $0001;
   FILE_SHARE_FULL     = FILE_SHARE_DELETE OR FILE_SHARE_READ OR FILE_SHARE_WRITE;
 
+  {$EXTERNALSYM FILE_ACTION_ADDED}
   FILE_ACTION_ADDED            = $00000001;
+  {$EXTERNALSYM FILE_ACTION_REMOVED}
   FILE_ACTION_REMOVED          = $00000002;
+  {$EXTERNALSYM FILE_ACTION_MODIFIED}
   FILE_ACTION_MODIFIED         = $00000003;
+  {$EXTERNALSYM FILE_ACTION_RENAMED_OLD_NAME}
   FILE_ACTION_RENAMED_OLD_NAME = $00000004;
+  {$EXTERNALSYM FILE_ACTION_RENAMED_NEW_NAME}
   FILE_ACTION_RENAMED_NEW_NAME = $00000005;
 
   FOF_NOCONNECTEDELEMENTS = $2000;
+  {$EXTERNALSYM FOF_NORECURSION}
   FOF_NORECURSION         = $1000;
+  {$EXTERNALSYM FOF_NORECURSEREPARSE}
   FOF_NORECURSEREPARSE    = $8000;
+  {$EXTERNALSYM FOF_WANTNUKEWARNING}
   FOF_WANTNUKEWARNING     = $4000;
+  {$EXTERNALSYM FOF_NO_UI}
   FOF_NO_UI               =  FOF_SILENT OR FOF_NOCONFIRMATION OR FOF_NOERRORUI OR FOF_NOCONFIRMMKDIR;
 
   CShFileOpFlagMappings: array [TShFileOpFlag] of FILEOP_FLAGS = (FOF_ALLOWUNDO,
@@ -1209,6 +1297,8 @@ type
     var exitCode: longword; waitTimeout_sec: integer = 15;
     onNewLine: TDSiOnNewLineCallback = nil;
     creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal;
+  function  DSiExecuteAsAdmin(const path: string; parentWindow: THandle = 0;
+    showWindow: integer = SW_NORMAL): boolean;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
     var winErrorCode: cardinal; const domain: string = '.';
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
@@ -1365,24 +1455,39 @@ const
     'Windows 8', 'Windows 8.1', 'Windows Server 2012', 'Windows Server 2012 R2', 'Windows 10',
     'Windows Server 2016');
 
+  {$EXTERNALSYM VER_SUITE_BACKOFFICE}
   VER_SUITE_BACKOFFICE     = $00000004; // Microsoft BackOffice components are installed.
+  {$EXTERNALSYM VER_SUITE_BLADE}
   VER_SUITE_BLADE          = $00000400; // Windows Server 2003, Web Edition is installed.
+  {$EXTERNALSYM VER_SUITE_COMPUTE_SERVER}
   VER_SUITE_COMPUTE_SERVER = $00004000; // Windows Server 2003, Compute Cluster Edition is installed.
+  {$EXTERNALSYM VER_SUITE_DATACENTER}
   VER_SUITE_DATACENTER     = $00000080; // Windows Server 2008 Datacenter, Windows Server 2003, Datacenter Edition, or Windows 2000 Datacenter Server is installed.
+  {$EXTERNALSYM VER_SUITE_ENTERPRISE}
   VER_SUITE_ENTERPRISE     = $00000002; // Windows Server 2008 Enterprise, Windows Server 2003, Enterprise Edition, or Windows 2000 Advanced Server is installed. Refer to the Remarks section for more information about this bit flag.
+  {$EXTERNALSYM VER_SUITE_EMBEDDEDNT}
   VER_SUITE_EMBEDDEDNT     = $00000040; // Windows XP Embedded is installed.
+  {$EXTERNALSYM VER_SUITE_PERSONAL}
   VER_SUITE_PERSONAL       = $00000200; // Windows Vista Home Premium, Windows Vista Home Basic, or Windows XP Home Edition is installed.
+  {$EXTERNALSYM VER_SUITE_SINGLEUSERTS}
   VER_SUITE_SINGLEUSERTS   = $00000100; // Remote Desktop is supported, but only one interactive session is supported. This value is set unless the system is running in application server mode.
+  {$EXTERNALSYM VER_SUITE_SMALLBUSINESS}
   VER_SUITE_SMALLBUSINESS  = $00000001; // Microsoft Small Business Server was once installed on the system, but may have been upgraded to another version of Windows. Refer to the Remarks section for more information about this bit flag.
-  VER_SUITE_SMALLBUSINESS_RESTRICTED
-                           = $00000020; // Microsoft Small Business Server is installed with the restrictive client license in force. Refer to the Remarks section for more information about this bit flag.
+  {$EXTERNALSYM VER_SUITE_SMALLBUSINESS_RESTRICTED}
+  VER_SUITE_SMALLBUSINESS_RESTRICTED = $00000020; // Microsoft Small Business Server is installed with the restrictive client license in force. Refer to the Remarks section for more information about this bit flag.
+  {$EXTERNALSYM VER_SUITE_STORAGE_SERVER}
   VER_SUITE_STORAGE_SERVER = $00002000; // Windows Storage Server 2003 R2 or Windows Storage Server 2003is installed.
+  {$EXTERNALSYM VER_SUITE_TERMINAL}
   VER_SUITE_TERMINAL       = $00000010; // Terminal Services is installed. This value is always set.
+  {$EXTERNALSYM VER_SUITE_WH_SERVER}
   VER_SUITE_WH_SERVER      = $00008000; // Windows Home Server is installed.
 
+  {$EXTERNALSYM VER_NT_DOMAIN_CONTROLLER}
   VER_NT_DOMAIN_CONTROLLER = $0000002; // The system is a domain controller and the operating system is Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
+  {$EXTERNALSYM VER_NT_SERVER}
   VER_NT_SERVER            = $0000003; // The operating system is Windows Server 2008, Windows Server 2003, or Windows 2000 Server.
                                        // Note that a server that is also a domain controller is reported as VER_NT_DOMAIN_CONTROLLER, not VER_NT_SERVER.
+  {$EXTERNALSYM VER_NT_WORKSTATION}
   VER_NT_WORKSTATION       = $0000001; // The operating system is Windows Vista, Windows XP Professional, Windows XP Home Edition, or Windows 2000 Professional.
 
 type
@@ -1505,8 +1610,11 @@ const
 
 // Crypt32.dll
 const
+  {$EXTERNALSYM CERT_NAME_SIMPLE_DISPLAY_TYPE}
   CERT_NAME_SIMPLE_DISPLAY_TYPE = 4;
+  {$EXTERNALSYM PKCS_7_ASN_ENCODING}
   PKCS_7_ASN_ENCODING = $00010000;
+  {$EXTERNALSYM X509_ASN_ENCODING}
   X509_ASN_ENCODING = $00000001;
 
 type
@@ -1525,8 +1633,11 @@ type
 // WinTrust.dll
 const
   WINTRUST_ACTION_GENERIC_VERIFY_V2: TGUID = '{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}';
+  {$EXTERNALSYM WTD_CHOICE_FILE}
   WTD_CHOICE_FILE = 1;
+  {$EXTERNALSYM WTD_REVOKE_NONE}
   WTD_REVOKE_NONE = 0;
+  {$EXTERNALSYM WTD_UI_NONE}
   WTD_UI_NONE = 2;
 
 type
@@ -1772,7 +1883,9 @@ function  DSiInterlockedCompareExchange64(destination: PInt64; exchange, compara
 { DynaLoad }
 
 const // composition action values for DSiDwmEnableComposition
+  {$EXTERNALSYM DWM_EC_DISABLECOMPOSITION}
   DWM_EC_DISABLECOMPOSITION = 0;
+  {$EXTERNALSYM DWM_EC_ENABLECOMPOSITION}
   DWM_EC_ENABLECOMPOSITION = 1;
 
 type
@@ -4420,6 +4533,24 @@ const
     else
       Result := 0;
   end; { DSiExecute }
+
+  {:Executes application with elevated privileges.
+    @author  gabr
+    @returns True if application was allowed to start.
+    @since   2016-05-18
+  }
+  function DSiExecuteAsAdmin(const path: string; parentWindow: THandle; showWindow: integer): boolean;
+  var
+    sei: TShellExecuteInfo;
+  begin
+    FillChar(sei, SizeOf(sei), 0);
+    sei.cbSize := SizeOf(sei);
+    sei.lpVerb := 'runas';
+    sei.lpFile := PChar(path);
+    sei.Wnd := parentWindow;
+    sei.nShow := showWindow;
+    Result := ShellExecuteEx(@sei);
+  end; { DSiExecuteAsAdmin }
 
   {:Simplified DSiExecuteAsUser.
     @author  gabr
