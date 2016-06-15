@@ -6,7 +6,7 @@ unit Otl.Parallel.SynchroPrimitives.InterfaceLevel;
 
 interface
 uses System.SyncObjs, Otl.Parallel.SynchroPrimitives.BasicLevel,
-     Generics.Collections, Otl.Parallel.Atomic;
+     Generics.Collections, System.SysUtils, Otl.Parallel.Atomic;
 
 type
   TLockingMechanism = (KernalLocking, BusLocking);
@@ -87,6 +87,20 @@ type
     function SignalHit: boolean;
   end;
 
+  IOtlMREW = interface ['{4929F170-F5DC-41F8-852E-400D99B441BC}']
+    function  EnterRead( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitRead;
+    function  EnterWrite( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitWrite;
+    function  ReaderCount: integer; // if +ve, this is the number of entered readers,
+                                    // if -ve, there is an entered writer.
+    function  AsReadLock: ILock;
+    function  AsWriteLock: ILock;
+  end;
+
+function CreateMREW: IOtlMREW;
+
+type
   TObjectList = class( TObjectList<TObject>) end;
   TObjectQueue = class( TQueue<TObject>) end;
 
@@ -224,7 +238,7 @@ type
     function  AsMWObject: TObject;                                   override;
 
   private
-    FBase: TSBDEvent;
+    FBase: TOtlEvent;
     FManual: boolean;
     FShadow: TSignalState;
     FWaiters: cardinal;
@@ -305,7 +319,7 @@ type
     constructor Create( AInitialCount: cardinal);
     destructor Destroy; override;
   private
-    FBase: TSBDSemaphore;
+    FBase: TOtlSemaphore;
     FInitial: cardinal;
     FWaiters: cardinal;
     FShadow: cardinal;
@@ -418,15 +432,67 @@ type
     procedure Signal;                                                override;
     function  isSignalled: boolean;                                  override;
     function  isSignalled_IsSupported: boolean;                      override;
-    function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   override;
     function  Pool: TObjectQueue;                                    override;
     procedure ReleaseConfiguration;                                  override;
+    function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;   override;
 
   private
     FBase: TFunctionalEvent;
     procedure Reconfigure( ASignalTest: TEventFunction; APLock: PSBDSpinLock);
   end;
 
+
+  TIntfMREW = class( TInterfacedObject, IOtlMREW)
+  private
+    FMREW: TOtlMREW;
+    function  EnterRead( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitRead;
+    function  EnterWrite( Timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitWrite;
+    function  ReaderCount: integer;
+    function  AsReadLock: ILock;
+    function  AsWriteLock: ILock;
+
+  private type
+    TFacade = class( TInterfacedObject, IInterface, ILock)
+    private
+      FController: TIntfMREW;
+      function  AsObject: TObject;
+      function  IsPoolManaged: boolean;
+      function  IsKernalMode: boolean;
+      function  AsSpinLock: PSBDSpinLock;
+      function  AsCriticalSection: TCriticalSection;
+
+    protected
+      procedure Enter;                        virtual; abstract;
+      procedure Leave;                        virtual; abstract;
+      function  LockCount: integer;           virtual;
+      function _AddRef: Integer; stdcall;
+      function _Release: Integer; stdcall;
+    end;
+
+    TReaderLock = class( TFacade)
+    protected
+      procedure Enter;                        override;
+      procedure Leave;                        override;
+      function  LockCount: integer;           override;
+    end;
+
+    TWriterLock = class( TFacade)
+    protected
+      procedure Enter;                        override;
+      procedure Leave;                        override;
+      function  LockCount: integer;           override;
+    end;
+
+  private
+    FReadFacade : TReaderLock;
+    FWriteFacade: TWriterLock;
+
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
 
 function TSynchroFactory.AcquireCountDown(
   InitialValue: cardinal; AReUse: boolean): ICountDown;
@@ -1186,7 +1252,7 @@ end;
 constructor TNativeSemaphore.Create( AInitialCount: cardinal);
 begin
   FInitial := AInitialCount;
-  FBase    := TSBDSemaphore.Create( FInitial);
+  FBase    := TOtlSemaphore.Create( FInitial);
   FWaiters := 0;
   FShadow  := FInitial;
   FLock.Initialize;
@@ -1659,5 +1725,141 @@ begin
   result := TNativeSemaphore.Create( AInitialCount)
 end;
 
+
+
+function TIntfMREW.AsReadLock: ILock;
+begin
+  result := FReadFacade as ILock
+end;
+
+function TIntfMREW.AsWriteLock: ILock;
+begin
+  result := FWriteFacade as ILock
+end;
+
+constructor TIntfMREW.Create;
+begin
+  FMREW := TOtlMREW.Create;
+  FReadFacade := TIntfMREW.TReaderLock.Create;
+  FReadFacade.FController := self;
+  FWriteFacade := TIntfMREW.TWriterLock.Create;
+  FWriteFacade.FController := self
+end;
+
+destructor TIntfMREW.Destroy;
+begin
+  FReadFacade.FController := nil;
+  FreeAndNil( FReadFacade);
+  FreeAndNil( FWriteFacade);
+  FreeAndNil( FMREW);
+  inherited;
+end;
+
+function TIntfMREW.EnterRead( Timeout: cardinal): TWaitResult;
+begin
+  result := FMREW.EnterRead( Timeout)
+end;
+
+function TIntfMREW.EnterWrite( Timeout: cardinal): TWaitResult;
+begin
+  result := FMREW.EnterWrite( Timeout)
+end;
+
+procedure TIntfMREW.ExitRead;
+begin
+  FMREW.ExitRead
+end;
+
+procedure TIntfMREW.ExitWrite;
+begin
+  FMREW.ExitWrite
+end;
+
+function TIntfMREW.ReaderCount: integer;
+begin
+  result := FMREW.ReaderCount
+end;
+
+
+function TIntfMREW.TFacade.AsCriticalSection: TCriticalSection;
+begin
+  result := nil
+end;
+
+function TIntfMREW.TFacade.AsObject: TObject;
+begin
+  result := self
+end;
+
+function TIntfMREW.TFacade.AsSpinLock: PSBDSpinLock;
+begin
+  result := nil
+end;
+
+procedure TIntfMREW.TReaderLock.Enter;
+begin
+  FController.FMREW.EnterRead( INFINITE)
+end;
+
+function TIntfMREW.TFacade.IsKernalMode: boolean;
+begin
+  result := False
+end;
+
+function TIntfMREW.TFacade.IsPoolManaged: boolean;
+begin
+  result := False
+end;
+
+function TIntfMREW.TFacade.LockCount: integer;
+begin
+  result := FController.FMREW.ReaderCount
+end;
+
+procedure TIntfMREW.TReaderLock.Leave;
+begin
+  FController.FMREW.ExitRead
+end;
+
+function TIntfMREW.TReaderLock.LockCount: integer;
+begin
+  result := inherited LockCount;
+  if result < 0 then
+    result := 1
+end;
+
+function TIntfMREW.TFacade._AddRef: Integer;
+begin
+  result := FController._AddRef
+end;
+
+function TIntfMREW.TFacade._Release: Integer;
+begin
+  result := FController._Release
+end;
+
+
+function CreateMREW: IOtlMREW;
+begin
+  result := TIntfMREW.Create
+end;
+
+
+procedure TIntfMREW.TWriterLock.Enter;
+begin
+  FController.FMREW.EnterWrite( INFINITE)
+end;
+
+procedure TIntfMREW.TWriterLock.Leave;
+begin
+  FController.FMREW.ExitWrite
+end;
+
+function TIntfMREW.TWriterLock.LockCount: integer;
+begin
+  result := - inherited LockCount;
+  if result < 0 then
+    result := 1
+end;
 
 end.

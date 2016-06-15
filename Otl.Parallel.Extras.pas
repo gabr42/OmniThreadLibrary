@@ -166,12 +166,55 @@ type
   /// <remarks>TForkJoinerAction is a private type. Do not use.</remarks>
   TForkJoinerAction = (actNothing, actDequeueJoinStack, actDequeueForkStack, actDequeueTestStack, actCancel, actException);
 
+  TGenerate<T> = reference to function(): T;
+  TDestroy<T>  = reference to procedure( const Destructee: T);
+
+  RHeavyPoolStats = record
+    /// <summary>Number of times the generate function has been called to create a new object instance.</summary>
+    FGenerateCount: uint64;
+
+    /// <summary>Number of times the release function has been called to permanently dispose of an object instance.</summary>
+    FDestroyCount: uint64;
+
+    /// <summary>Number of times a client has succesfuly acquired an object from the heavy pool.</summary>
+    FAcquireCount: uint64;
+
+    /// <summary>Number of times a client has returned a previously acquired object back to the heavy pool.</summary>
+    FReleaseCount: uint64;
+
+    /// <summary>Current size of the free pool, available for fast acquisition.</summary>
+    FFreeQueueCount: cardinal;
+
+    /// <summary>Count of objects which have been acquired by clients, but not yet returned.</summary>
+    FInWorkCount: cardinal;
+  end;
+
+  IHeavyPool<T> = interface
+    function  GetMaxAge: double;
+    procedure SetMaxAge( const Value: double);
+    function  GetMaxPop: cardinal;
+    procedure SetMaxPop( const Value: cardinal);
+    function  GetMinReserve: cardinal;
+    procedure SetMinReserve( const Value: cardinal);
+    function  GetDatum: pointer;
+
+    procedure ShutDown;
+    function  GetStats: RHeavyPoolStats;
+    function  Acquire: T;
+    procedure Release( const Retiree: T);
+
+    property MaxAge       : double   read GetMaxAge     write SetMaxAge;
+    property MaxPopulation: cardinal read GetMaxPop     write SetMaxPop;
+    property MinReserve   : cardinal read GetMinReserve write SetMinReserve;
+    property Datum: pointer          read GetDatum;
+  end;
+
   TSBDParallel = class
   public
      // Basic level constructors
-    class function EventObj     ( ManualReset, InitialState: boolean): TSBDEvent;
-    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TSBDEvent;
-    class function SemaphoreObj ( AInitialCount: cardinal): TSBDSemaphore;
+    class function EventObj     ( ManualReset, InitialState: boolean): TOtlEvent;
+    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
+    class function SemaphoreObj ( AInitialCount: cardinal): TOtlSemaphore;
     class function CountDownObj ( AInitialValue: cardinal): TCountDown;
     class function CountUpObj   ( AInitialValue, AMaxValue: cardinal): TCountUp;
     class function CritSect: TCriticalSection;
@@ -217,6 +260,7 @@ type
     class function SolveByForkJoin<T>( const WF: IWorkFactory; const Seed: T; NumTasks: cardinal; DoFork: TTestFunc<T>; Fork: TForkFunc<T>; Join: TJoinFunc<T>): IFuture<T>;
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: IEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: TEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
+    class function HeavyPool<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>): IHeavyPool<T>;
   end;
 
 
@@ -229,7 +273,7 @@ implementation
 
 
 uses System.Diagnostics, Otl.Parallel.Pipe, System.RTLConsts, TypInfo,
-     Otl.Parallel.Tasks;
+     Otl.Parallel.Tasks, Otl.Parallel.HeavyPool;
 
 
 
@@ -312,7 +356,7 @@ end;
 
 
 class function TSBDParallel.EventObj(
-  ManualReset, InitialState: boolean): TSBDEvent;
+  ManualReset, InitialState: boolean): TOtlEvent;
 begin
   result := TKernelEvent.Create( ManualReset, InitialState)
 end;
@@ -324,6 +368,11 @@ begin
   result := TTasking.CreateFuture<T>( WF, Func)
 end;
 
+class function TSBDParallel.HeavyPool<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>): IHeavyPool<T>;
+begin
+  result := THeavyPool<T>.CreateHeavy( ADatum, AMaxPopulation, AMinReserve, MaxAge, AGenFunc, ARelFunc)
+end;
+
 class function TSBDParallel.LightEvent(
   ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
 begin
@@ -332,7 +381,7 @@ end;
 
 
 class function TSBDParallel.LightEventObj(
-  ManualReset, InitialState: boolean; SpinMax: cardinal): TSBDEvent;
+  ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
 begin
   result := TLightEvent.Create( ManualReset, InitialState, SpinMax)
 end;
@@ -373,9 +422,9 @@ begin
   result := _CreateNativeSemaphoreIntf( AInitialCount)
 end;
 
-class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TSBDSemaphore;
+class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TOtlSemaphore;
 begin
-  result := TSBDSemaphore.Create( AInitialCount);
+  result := TOtlSemaphore.Create( AInitialCount);
 end;
 
 class function TSBDParallel.UnboundedObjectPipe( const WorkFactory: IWorkFactory): IObjectPipe;
@@ -408,7 +457,8 @@ end;
 Executive summary
 ====================
 5. PipeServer abstraction
-6. HeavyPool abstraction
+-- I'm not sure if this is worth doing. Postpone.
+
 7. MREW primitives (basic level + interfaced level)
 8. Unit header and general unit descriptions
 9. Descriptions for Parallel Programming abstractions
@@ -428,14 +478,6 @@ TParallel = class
      Proc: TProcessValueProc<T>; TaskCount: integer): ITask;
 end;
 
-Heavy Pool
-===============
-Overview
-A heavy pool is a pool of re-usable heavy weight objects. The pool can be constrained by:
-•	A maximum number of created objects (available or in-use)
-•	Available (that is to say, not in current use) pooled objects can have a maximum age. If they exceed this age, then are destroyed.
-•	A minimum number of available objects. When less, a background house keeping pool will slowly grow the pool.
-The user supplies functions to create/destroy the objects, or take action on the event of Acquire from/ release back to the pool. Removing too-old pool objects, or growing the pool to the specified minimum are house-keeping jobs performed by a task on a periodic basis.
 }
 
 

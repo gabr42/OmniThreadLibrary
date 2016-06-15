@@ -152,6 +152,7 @@
         <DCCReference Include="..\Otl.Parallel.Extras.pas"/>
         <DCCReference Include="..\Otl.Parallel.Pipe.pas"/>
         <DCCReference Include="..\Otl.Parallel.Tasks.pas"/>
+        <DCCReference Include="..\Otl.Parallel.HeavyPool.pas"/>
         <None Include="..\OtlOptions.inc"/>
         <None Include="..\OtlAdditionalSymbols.inc"/>
         <None Include="..\HintReporting.inc"/>

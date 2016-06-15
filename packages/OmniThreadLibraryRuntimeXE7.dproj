@@ -3,7 +3,7 @@
         <ProjectGuid>{2FCB214C-2EBE-4450-BF73-C4913A71810E}</ProjectGuid>
         <MainSource>OmniThreadLibraryRuntimeXE7.dpk</MainSource>
         <ProjectVersion>16.1</ProjectVersion>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <Base>True</Base>
         <AppType>Package</AppType>

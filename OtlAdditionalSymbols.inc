@@ -66,7 +66,7 @@
   {$ifdef CONDITIONALEXPRESSIONS}
     {$if CompilerVersion >= 25.0}
       {$LEGACYIFEND OFF}
-    {$ifend}
+    {$endif}
   {$endif}
 
   {$IFDEF CPU386} {$define CPUINTEL} {$ENDIF}
