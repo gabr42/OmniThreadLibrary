@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2013, Primoz Gabrijelcic
+///Copyright (c) 2016, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,14 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2015-10-04
-///   Version           : 1.01
+///   Last modification : 2016-06-30
+///   Version           : 1.01a
 ///</para><para>
 ///   History:
+///     1.01a: 2016-06-30
+///       - TOmniValueEnumeratorDataPackage.Add was incrementing refcount for refcounted
+///         data one time too many. This caused memory leaks when iterating over
+///         interfaced types in Parallel.For.
 ///     1.01: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.0a: 2013-10-19
@@ -597,10 +601,8 @@ var
 begin
 //  {$IFDEF Debug} Assert(not vedpDataQueue.IsFull); {$ENDIF}
   tmp := value;
-  if tmp.IsInterface then
-    tmp.AsInterface._AddRef;
   vedpDataQueue.Enqueue(tmp);
-  tmp.RawZero;
+  tmp.RawZero; // queue keeps holding the reference
   vedpApproxCount.Increment;
 //  {$IFDEF Debug} Assert(not vedpDataQueue.IsFull); {$ENDIF} // full queue corrupts data
 end; { TOmniValueEnumeratorDataPackage.Add }
@@ -614,8 +616,7 @@ begin
   if not Result then
     Exit;
   value := tmp;
-  if tmp.IsInterface then
-    tmp.AsInterface._Release;
+  tmp._Release; // queue was holding the reference
   vedpApproxCount.Decrement;
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
