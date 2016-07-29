@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015, Primoz Gabrijelcic
+///Copyright (c) 2016, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-10-03
-///   Version           : 1.39
+///   Last modification : 2016-07-29
+///   Version           : 1.39a
 ///</para><para>
 ///   History:
+///     1.39a: 2016-07-29
+///       - [HHasenack] TOmniValue.IsInterfacedType was returning wrong result for the
+///         'owned object' data type. This could cause objects assigned to .AsOwnedObject
+///         to hang in memory and never be destroyed.
 ///     1.39: 2015-10-03
 ///       - [Sean] Implemented TOmniAlignedInt32 (clone of GpStuff.TGp4AlignedInt)
 ///         and TOmniAlignedInt64 (clone of GpStuff.TGp8AlignedInt64).
@@ -270,6 +274,7 @@ type
   TOmniValueContainer = class;
   IOmniAutoDestroyObject = interface;
 
+  //Update IsInterfacedType function when changing this enum!
   TOmniValueDataType = (ovtNull,
            {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
            {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtArray, ovtRecord, ovtOwnedObject
@@ -2536,7 +2541,7 @@ end; { TOmniValue.IsInterface }
 
 function TOmniValue.IsInterfacedType: boolean;
 begin
-  Result := ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtArray, ovtRecord
+  Result := ovType in [ovtInterface, ovtExtended, ovtString, ovtVariant, ovtArray, ovtRecord, ovtOwnedObject
                        {$IFDEF MSWINDOWS}, ovtWideString, ovtAnsiString {$ENDIF}];
 end; { TOmniValue.IsInterfacedType }
 

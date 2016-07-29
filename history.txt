@@ -4,10 +4,12 @@
   - Implemented Parallel.For<T>(const arr: TArray<T>).
   - Added types TOmniAlignedInt32 and TOmniAlignedInt32 which replaced
     TGp4AlignedInt and TGp8AlignedInt64.
+  - [HHasenack] Added more unit tests.
 - Bug fixes:
   - Fixed unsafe 64-bit pointer-to-integer casts in TOmniCS.Initialize and 
     Atomic<T>.Initialize.
   - Fixed processing of 'new message'/'new wake event' events in TWaitFor.
+  - [HHasenack] Fixed memory leak in handling 'owned objects' in TOmniValue.
 
 3.05: 2015-09-07
 - New features:
