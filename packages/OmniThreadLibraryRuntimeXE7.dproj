@@ -129,6 +129,7 @@
         <DCCReference Include="..\Otl.Parallel.Extras.pas"/>
         <DCCReference Include="..\Otl.Parallel.Pipe.pas"/>
         <DCCReference Include="..\Otl.Parallel.Tasks.pas"/>
+        <DCCReference Include="..\Otl.Parallel.HeavyPool.pas"/>
         <None Include="..\OtlOptions.inc"/>
         <None Include="..\OtlAdditionalSymbols.inc"/>
         <None Include="..\HintReporting.inc"/>
@@ -199,6 +200,12 @@
             </Platforms>
             <Deployment>
                 <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\15.0\Bpl\OmniThreadLibraryRuntimeXE7.bpl" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>OmniThreadLibraryRuntimeXE7.bpl</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\15.0\Bpl\OmniThreadLibraryRuntimeXE7.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>OmniThreadLibraryRuntimeXE7.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
