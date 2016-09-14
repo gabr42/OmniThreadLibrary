@@ -9,7 +9,7 @@ package OmniThreadLibraryRuntimeXE7;
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS OFF}
+{$LOCALSYMBOLS ON}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
 {$OPTIMIZATION ON}
@@ -23,7 +23,7 @@ package OmniThreadLibraryRuntimeXE7;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE RELEASE}
+{$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'OmniThreadLibrary runtime'}
 {$RUNONLY}
@@ -64,6 +64,7 @@ contains
   Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas',
   Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
   Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
-  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas';
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas',
+  Otl.Parallel.HeavyPool in '..\Otl.Parallel.HeavyPool.pas';
 
 end.

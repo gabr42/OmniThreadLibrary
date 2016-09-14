@@ -166,8 +166,19 @@ type
   /// <remarks>TForkJoinerAction is a private type. Do not use.</remarks>
   TForkJoinerAction = (actNothing, actDequeueJoinStack, actDequeueForkStack, actDequeueTestStack, actCancel, actException);
 
-  TGenerate<T> = reference to function(): T;
-  TDestroy<T>  = reference to procedure( const Destructee: T);
+  IResourceFlavour = interface ['{9E06B156-7ECB-47AC-B19D-73C6177AB93B}']
+    function Matches( const Other: IResourceFlavour): boolean;
+    /// <remarks>Do not return sensitive information. </remarks>
+    function Descriptor: string;
+  end;
+
+  function FlavourMatches( const PoolItem, Requirement: IResourceFlavour): boolean;
+
+type
+  TGenerate<T>   = reference to function(): T;
+  TGenerateEx<T> = reference to function( const OfFlavour: IResourceFlavour): T;
+  TTaste<T>      = reference to function( const PooledItem: T): IResourceFlavour;
+  TDestroy<T>    = reference to procedure( const Destructee: T);
 
   RHeavyPoolStats = record
     /// <summary>Number of times the generate function has been called to create a new object instance.</summary>
@@ -202,11 +213,36 @@ type
     function  GetStats: RHeavyPoolStats;
     function  Acquire: T;
     procedure Release( const Retiree: T);
+    procedure ReleaseNoRecycle( const Retiree: T);
 
     property MaxAge       : double   read GetMaxAge     write SetMaxAge;
     property MaxPopulation: cardinal read GetMaxPop     write SetMaxPop;
     property MinReserve   : cardinal read GetMinReserve write SetMinReserve;
     property Datum: pointer          read GetDatum;
+  end;
+
+  IHeavyPoolEx<T> = interface
+    function  GetMaxAge: double;
+    procedure SetMaxAge( const Value: double);
+    function  GetMaxPop: cardinal;
+    procedure SetMaxPop( const Value: cardinal);
+    function  GetMinReserve: cardinal;
+    procedure SetMinReserve( const Value: cardinal);
+    function  GetDatum: pointer;
+    function  GetDefaultFlavour: IResourceFlavour;
+    procedure SetDefaultFlavour( const Value: IResourceFlavour);
+
+    procedure ShutDown;
+    function  GetStats: RHeavyPoolStats;
+    function  Acquire( const MatchingFlavour: IResourceFlavour): T;
+    procedure Release( const Retiree: T);
+    procedure ReleaseNoRecycle( const Retiree: T);
+
+    property MaxAge       : double   read GetMaxAge     write SetMaxAge;
+    property MaxPopulation: cardinal read GetMaxPop     write SetMaxPop;
+    property MinReserve   : cardinal read GetMinReserve write SetMinReserve;
+    property Datum: pointer          read GetDatum;
+    property DefaultFlavour: IResourceFlavour read GetDefaultFlavour write SetDefaultFlavour;
   end;
 
   TSBDParallel = class
@@ -261,10 +297,44 @@ type
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: IEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
     class function CoForEach<T>( const WF: IWorkFactory; const Collection: TEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;    overload;
     class function HeavyPool<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double; AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>): IHeavyPool<T>;
+    class function HeavyPoolEx<T>( ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
+                                   const ADefaultFlavour: IResourceFlavour;
+                                   AGenFunc: TGenerateEx<T>; ARelFunc: TDestroy<T>;
+                                   ATasteItem: TTaste<T>): IHeavyPoolEx<T>;
   end;
 
 
+  IConnectionFlavourR = interface ['{F30B1258-1C87-4DAD-B167-78A31101A1DD}']
+    function GetServer  : string;
+    function GetDatabase: string;
+    function GetSchema  : string;
+    function GetUser    : string;
+    function GetPassword: string;
+    function AsObject: TObject;
+  end;
 
+  TConnectionFlavour = class( TInterfacedObject, IResourceFlavour, IConnectionFlavourR)
+  private
+    function AsObject: TObject;
+
+  protected
+    function GetServer  : string;  virtual;
+    function GetDatabase: string;  virtual;
+    function GetSchema  : string;  virtual;
+    function GetUser    : string;  virtual;
+    function GetPassword: string;  virtual;
+
+  public
+    FServer  : string;
+    FDatabase: string;
+    FSchema  : string;
+    FUser    : string;
+    FPassword: string;
+    function Matches( const Other: IResourceFlavour): boolean; virtual;
+    function Descriptor: string;                               virtual;
+
+    constructor Create( const AServer, ADatabase, ASchema, AUser, APassword: string);
+  end;
 
 
 implementation
@@ -373,6 +443,15 @@ begin
   result := THeavyPool<T>.CreateHeavy( ADatum, AMaxPopulation, AMinReserve, MaxAge, AGenFunc, ARelFunc)
 end;
 
+class function TSBDParallel.HeavyPoolEx<T>(
+  ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
+  const ADefaultFlavour: IResourceFlavour;
+  AGenFunc: TGenerateEx<T>; ARelFunc: TDestroy<T>;
+  ATasteItem: TTaste<T>): IHeavyPoolEx<T>;
+begin
+  result := THeavyPoolEx<T>.CreateHeavyEx( ADatum, AMaxPopulation, AMinReserve, MaxAge, ADefaultFlavour, AGenFunc, ARelFunc, ATasteItem)
+end;
+
 class function TSBDParallel.LightEvent(
   ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
 begin
@@ -451,6 +530,20 @@ begin
 end;
 
 
+function FlavourMatches( const PoolItem, Requirement: IResourceFlavour): boolean;
+begin
+  if assigned( PoolItem) and assigned( Requirement) then
+      result := PoolItem.Matches( Requirement)
+
+  else if assigned( PoolItem) then
+      result := PoolItem.Matches( nil)
+
+  else if assigned( Requirement) then
+      result := Requirement.Matches( nil)
+
+  else
+      result := True
+end;
 { TODO
  =========
 
@@ -480,6 +573,65 @@ end;
 
 }
 
+
+
+function TConnectionFlavour.AsObject: TObject;
+begin
+  result := self
+end;
+
+constructor TConnectionFlavour.Create(
+  const AServer, ADatabase, ASchema, AUser, APassword: string);
+begin
+  FServer   := AServer;
+  FDatabase := ADatabase;
+  FSchema   := ASchema;
+  FUser     := AUser;
+  FPassword := APassword
+end;
+
+function TConnectionFlavour.Descriptor: string;
+begin
+  result := 'Server=' + FServer + ';Database=' + FDatabase +
+            ';Schema=' + FSchema + ';User=' + FUser;
+end;
+
+function TConnectionFlavour.GetDatabase: string;
+begin
+  result := FDatabase
+end;
+
+function TConnectionFlavour.GetPassword: string;
+begin
+  result := FPassword
+end;
+
+function TConnectionFlavour.GetSchema: string;
+begin
+  result := FSchema
+end;
+
+function TConnectionFlavour.GetServer: string;
+begin
+  result := FServer
+end;
+
+function TConnectionFlavour.GetUser: string;
+begin
+  result := FUser
+end;
+
+function TConnectionFlavour.Matches( const Other: IResourceFlavour): boolean;
+var
+  OtherConnection: IConnectionFlavourR;
+begin
+  result := Supports( Other, IConnectionFlavourR, OtherConnection) and
+            (FServer   = OtherConnection.GetServer) and
+            (FDatabase = OtherConnection.GetDatabase) and
+            (FSchema   = OtherConnection.GetSchema) and
+            (Fuser     = OtherConnection.GetUser) and
+            (FPassword = OtherConnection.GetPassword)
+end;
 
 initialization
 InitUnit_Parallel;
