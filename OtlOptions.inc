@@ -69,6 +69,7 @@
   {$DEFINE OTL_Anonymous}
   {$DEFINE OTL_Generics}
   {$DEFINE OTL_HasInterlockedCompareExchangePointer}
+  {$DEFINE OTL_NUMASupport}
 {$IFEND}
 
 {$IF CompilerVersion >= 21} //D2010
