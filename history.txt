@@ -1,5 +1,7 @@
+3.06: 2016-10-17
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
+  - Packages were renamed. Now they are using $LIBSUFFIX scheme.
 - New features:
   - Implemented Parallel.For<T>(const arr: TArray<T>).
   - New abstraction Parallel.TimedTask.  
@@ -23,8 +25,7 @@
     allows a thread pool to be created inside DLL initialization code.
   - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
   - Added thread pool lifecycle notifications to OtlHooks 
-    (RegisterPoolNotification, UnregisterPoolNotification).
-  
+    (RegisterPoolNotification, UnregisterPoolNotification).  
 - Demos:
   - [HHasenack] Added more unit tests.
 - Bug fixes:
