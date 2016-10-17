@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2016-04-21
-///   Version           : 1.45
+///   Last modification : 2016-10-17
+///   Version           : 1.46
 ///</para><para>
 ///   History:
+///     1.46: 2016-10-17
+///       - Implemented Parallel.TimedTask.
 ///     1.45: 2016-04-21
 ///       - Parallel.For<T>(const arr: TArray<T>) is not available on 2009 and 2010
 ///         because generics support is not good enough in these two compilers.
@@ -370,7 +372,7 @@ type
   TOmniIteratorIntoTaskDelegate = reference to procedure(const task: IOmniTask; const value: TOmniValue; var result: TOmniValue);
   TOmniIteratorIntoTaskDelegate<T> = reference to procedure(const task: IOmniTask; const value: T; var result: TOmniValue);
 
-  TOmniTaskCreateDelegate = reference to procedure(const task: IOmniTask);
+  TOmniTaskCreateDelegate = TOmniTaskDelegate;
   TOmniTaskControlCreateDelegate = reference to procedure(const task: IOmniTaskControl);
 
   TOmniTaskInitializerDelegate = reference to procedure(var taskState: TOmniValue);
@@ -406,7 +408,7 @@ type
     procedure Execute(loopBody: TOmniIteratorIntoTaskDelegate<T>); overload;
   end; { IOmniParallelIntoLoop<T> }
 
-  TOmniTaskStopDelegate = reference to procedure (const task: IOmniTask);
+  TOmniTaskStopDelegate = TOmniTaskDelegate;
 
   IOmniParallelLoop = interface
     function  Aggregate(defaultAggregateValue: TOmniValue;
@@ -587,7 +589,7 @@ type
   end; { IOmniPipeline }
 
   TOmniForkJoinDelegate = reference to procedure;
-  TOmniForkJoinDelegateEx = reference to procedure(const task: IOmniTask);
+  TOmniForkJoinDelegateEx = TOmniTaskDelegate;
 
   TOmniForkJoinDelegate<T> = reference to function: T;
   TOmniForkJoinDelegateEx<T> = reference to function(const task: IOmniTask): T;
@@ -1015,7 +1017,7 @@ type
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniParallelJoin }
 
-  TOmniParallelTaskDelegate = reference to procedure (const task: IOmniTask);
+  TOmniParallelTaskDelegate = TOmniTaskDelegate;
 
   IOmniParallelTask = interface
     function  DetachException: Exception;
@@ -1079,6 +1081,25 @@ type
     function  Terminate(maxWait_ms: cardinal): boolean;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniBackgroundWorker }
+
+  IOmniTimedTask = interface
+    function  GetActive: boolean;
+    function  GetInterval: integer;
+    procedure SetActive(const value: boolean);
+    procedure SetInterval(const value: integer);
+  //
+    function  Every(interval_ms: integer): IOmniTimedTask;
+    function  Execute(const aTask: TProc): IOmniTimedTask; overload;
+    function  Execute(const aTask: TOmniTaskDelegate): IOmniTimedTask; overload;
+    procedure ExecuteNow;
+    procedure Start;
+    procedure Stop;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniTimedTask;
+    function  Terminate(maxWait_ms: cardinal): boolean;
+    function  WaitFor(maxWait_ms: cardinal): boolean;
+    property Active: boolean read GetActive write SetActive;
+    property Interval: integer read GetInterval write SetInterval;
+  end; { IOmniTimedTask }
 
   TMapProc<T1,T2> = reference to function(const source: T1; var target: T2): boolean;
 
@@ -1206,6 +1227,9 @@ type
 
   // BackgroundWorker
     class function BackgroundWorker: IOmniBackgroundWorker;
+
+  // TimedTask
+    class function TimedTask: IOmniTimedTask;
 
   // Map
     {$IFDEF OTL_HasArrayOfT}
@@ -1452,6 +1476,48 @@ type
     procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
     function  GetThreadPool: IOmniThreadPool; inline;
   end; { TOmniTaskConfig }
+
+  TOmniTimedTaskWorker = class(TOmniWorker)
+  public const
+    MsgSetTask    = 1;
+    MsgExecuteNow = 2;
+  strict private
+    FTask: TOmniTaskDelegate;
+  strict protected
+    procedure DoExecute;
+  public
+    procedure ExecuteNow(var msg: TOmniMessage); message MsgExecuteNow;
+    procedure SetTask(var msg: TOmniMessage); message MsgSetTask;
+  published
+    procedure TaskInterval;
+  end; { TOmniTimedTaskWorker }
+
+  TOmniTimedTask = class(TInterfacedObject, IOmniTimedTask)
+  strict private
+    FActive  : boolean;
+    FInterval: integer;
+    FWorker  : IOmniTaskControl;
+  strict protected
+    procedure ApplyTimer;
+    function  GetActive: boolean; inline;
+    function  GetInterval: integer; inline;
+    procedure SetActive(const value: boolean);
+    procedure SetInterval(const value: integer);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    function  Every(interval_ms: integer): IOmniTimedTask;
+    function  Execute(const aTask: TProc): IOmniTimedTask; overload;
+    function  Execute(const aTask: TOmniTaskDelegate): IOmniTimedTask; overload;
+    procedure ExecuteNow; inline;
+    procedure Start; inline;
+    procedure Stop; inline;
+    function  TaskConfig(const config: IOmniTaskConfig): IOmniTimedTask; inline;
+    function  Terminate(maxWait_ms: cardinal): boolean; inline;
+    function  WaitFor(maxWait_ms: cardinal): boolean; inline;
+    property Active: boolean read GetActive write SetActive;
+    property Interval: integer read GetInterval write SetInterval;
+  end; { TOmniTimedTask }
 
 {$IFDEF MSWINDOWS}
 const
@@ -2172,6 +2238,11 @@ class function Parallel.TaskConfig: IOmniTaskConfig;
 begin
   Result := TOmniTaskConfig.Create;
 end; { Parallel.TaskConfig }
+
+class function Parallel.TimedTask: IOmniTimedTask;
+begin
+  Result := TOmniTimedTask.Create;
+end; { Parallel.TimedTask }
 
 { TOmniParallelLoopBase }
 
@@ -4976,8 +5047,133 @@ begin
   if assigned(FWorker) then
     Result := FWorker.WaitFor(maxWait_ms);
 end; { TOmniParallelMapper<T1,T2> }
+
 {$ENDIF OTL_GoodGenerics}
 {$ENDIF OTL_HasArrayOfT}
+
+{ TOmniTimedTaskWorker }
+
+procedure TOmniTimedTaskWorker.DoExecute;
+begin
+  if assigned(FTask) then
+    FTask(Task);
+end; { TOmniTimedTaskWorker.DoExecute }
+
+procedure TOmniTimedTaskWorker.ExecuteNow(var msg: TOmniMessage);
+begin
+  DoExecute;
+end; { TOmniTimedTaskWorker.ExecuteNow }
+
+procedure TOmniTimedTaskWorker.SetTask(var msg: TOmniMessage);
+begin
+  FTask := msg.MsgData.ToRecord<TOmniRecord<TOmniTaskDelegate>>.Value;
+end; { TOmniTimedTaskWorker.SetTask }
+
+procedure TOmniTimedTaskWorker.TaskInterval;
+begin
+  DoExecute;
+end; { TOmniTimedTaskWorker.TaskInterval }
+
+{ TOmniTimedTask }
+
+constructor TOmniTimedTask.Create;
+begin
+  inherited;
+  FWorker := CreateTask(TOmniTimedTaskWorker.Create(), 'Timed task').Unobserved.Run;
+end; { TOmniTimedTask.Create }
+
+destructor TOmniTimedTask.Destroy;
+begin
+  Terminate(INFINITE);
+  FWorker := nil;
+  inherited;
+end; { TOmniTimedTask.Destroy }
+
+procedure TOmniTimedTask.ApplyTimer;
+begin
+  if FActive and (Interval >= 0) then
+    FWorker.SetTimer(1, Interval, @TOmniTimedTaskWorker.TaskInterval)
+  else
+    FWorker.ClearTimer(1);
+end; { TOmniTimedTask.ApplyTimer }
+
+function TOmniTimedTask.Every(interval_ms: integer): IOmniTimedTask;
+begin
+  Interval := interval_ms;
+  Result := Self;
+end; { TOmniTimedTask.Every }
+
+function TOmniTimedTask.Execute(const aTask: TProc): IOmniTimedTask;
+begin
+  Result := Execute(procedure (const task: IOmniTask) begin aTask(); end);
+end; { TOmniTimedTask.Execute }
+
+function TOmniTimedTask.Execute(const aTask: TOmniTaskDelegate): IOmniTimedTask;
+begin
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgSetTask,
+    TOmniValue.FromRecord<TOmniRecord<TOmniTaskDelegate>>(TOmniRecord<TOmniTaskDelegate>.Create(aTask)));
+  FActive := true;
+  ApplyTimer;
+  Result := Self;
+end; { TOmniTimedTask.Execute }
+
+procedure TOmniTimedTask.ExecuteNow;
+begin
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgExecuteNow);
+  ApplyTimer;
+end; { TOmniTimedTask.ExecuteNow }
+
+function TOmniTimedTask.GetActive: boolean;
+begin
+  Result := FActive;
+end; { TOmniTimedTask.GetActive }
+
+function TOmniTimedTask.GetInterval: integer;
+begin
+  Result := FInterval;
+end; { TOmniTimedTask.GetInterval }
+
+procedure TOmniTimedTask.SetActive(const value: boolean);
+begin
+  if value = FActive then
+    Exit;
+  FActive := value;
+  ApplyTimer;
+end; { TOmniTimedTask.SetActive }
+
+procedure TOmniTimedTask.SetInterval(const value: integer);
+begin
+  if value <= 0 then
+    raise Exception.CreateFmt('TOmniTimedTask.SetInterval: Invalid interval %d', [value]);
+  FInterval := value;
+  ApplyTimer;
+end; { TOmniTimedTask.SetInterval }
+
+procedure TOmniTimedTask.Start;
+begin
+  Active := true;
+end; { TOmniTimedTask.Start }
+
+procedure TOmniTimedTask.Stop;
+begin
+  Active := false;
+end; { TOmniTimedTask.Stop }
+
+function TOmniTimedTask.TaskConfig(const config: IOmniTaskConfig): IOmniTimedTask;
+begin
+  config.Apply(FWorker);
+  Result := Self;
+end; { TOmniTimedTask.TaskConfig }
+
+function TOmniTimedTask.Terminate(maxWait_ms: cardinal): boolean;
+begin
+  Result := FWorker.Terminate(maxWait_ms);
+end; { TOmniTimedTask.Terminate }
+
+function TOmniTimedTask.WaitFor(maxWait_ms: cardinal): boolean;
+begin
+  Result := FWorker.WaitFor(maxWait_ms);
+end; { TOmniTimedTask.WaitFor }
 
 initialization
 finalization
