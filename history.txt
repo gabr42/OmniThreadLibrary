@@ -5,6 +5,14 @@
   - New abstraction Parallel.TimedTask.  
   - Added types TOmniAlignedInt32 and TOmniAlignedInt32 which replaced
     TGp4AlignedInt and TGp8AlignedInt64.
+  - Implemented Environment.ProcessorGroups and Environment.NUMANode to 
+    provide information about processors in a massively parallel systems.    
+    (Windows only, simulated on other platforms.)
+  - Added NUMA support
+    - Implemented IOmniTaskControl.ProcessorGroup and .NUMANode.
+    - Implemented IOmniTask.SetProcessorGroup and .SetNUMANode.  
+    - Implemented IOmniThreadPool.ProcessorGroups, .NUMANodes.
+  - Implemented IOmniThreadPool.Affinity.
   - In the past, unhandled exceptions in the code handling the task execution
     were lost. Now, they are passed up to the IOmniThreadPool. If its property
     Asy_OnUnhandledWorkerException is set, exception will be passed to the event
@@ -13,7 +21,10 @@
     the application.
   - TOmniThreadPool.Create no longer waits on thread to be initialized. This
     allows a thread pool to be created inside DLL initialization code.
-  - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.    
+  - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
+  - Added thread pool lifecycle notifications to OtlHooks 
+    (RegisterPoolNotification, UnregisterPoolNotification).
+  
 - Demos:
   - [HHasenack] Added more unit tests.
 - Bug fixes:
@@ -21,6 +32,9 @@
     Atomic<T>.Initialize.
   - Fixed processing of 'new message'/'new wake event' events in TWaitFor.
   - [HHasenack] Fixed memory leak in handling 'owned objects' in TOmniValue.
+  - IOmniAffinity.Mask changed from DWORD to NativeUInt to correctly support
+    up to 64 processors on 64-bit systems.
+  - Fixed memory leaks when iterating over interface types with Parallel.For.
 
 3.05: 2015-09-07
 - New features:
