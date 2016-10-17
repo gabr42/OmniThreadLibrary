@@ -2,8 +2,19 @@
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
 - New features:
   - Implemented Parallel.For<T>(const arr: TArray<T>).
+  - New abstraction Parallel.TimedTask.  
   - Added types TOmniAlignedInt32 and TOmniAlignedInt32 which replaced
     TGp4AlignedInt and TGp8AlignedInt64.
+  - In the past, unhandled exceptions in the code handling the task execution
+    were lost. Now, they are passed up to the IOmniThreadPool. If its property
+    Asy_OnUnhandledWorkerException is set, exception will be passed to the event
+    handler and application should react to it. The only safe way at that point
+    is to log the error (and stack trace for the current thread) and terminate
+    the application.
+  - TOmniThreadPool.Create no longer waits on thread to be initialized. This
+    allows a thread pool to be created inside DLL initialization code.
+  - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.    
+- Demos:
   - [HHasenack] Added more unit tests.
 - Bug fixes:
   - Fixed unsafe 64-bit pointer-to-integer casts in TOmniCS.Initialize and 

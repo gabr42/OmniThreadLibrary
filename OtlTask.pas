@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2016, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2011-07-14
-///   Version           : 1.13
+///   Last modification : 2016-07-01
+///   Version           : 1.14
 ///</para><para>
 ///   History:
+///     1.14: 2016-07-01
+///       - Defined IOmniTask.SetProcessorGroup and .SetNUMANode.
 ///     1.13: 2011-07-14
 ///       - IOmniTaskExecutionModifier removed again.
 ///     1.12: 2011-07-04
@@ -157,6 +159,8 @@ type
     procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
+    procedure SetProcessorGroup(procGroupNumber: integer);
+    procedure SetNUMANode(numaNodeNumber: integer);
     procedure SetTimer(interval_ms: cardinal); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
     procedure SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID); overload;

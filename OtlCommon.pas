@@ -35,14 +35,37 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-07-29
-///   Version           : 1.39a
+///   Last modification : 2016-10-17
+///   Version           : 1.45
 ///</para><para>
 ///   History:
-///     1.39a: 2016-07-29
+///     1.45: 2016-10-17
+///       - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
+///     1.44b: 2016-08-31
+///       - Environment.Thread was not thread safe!
+///     1.44a: 2016-07-29
 ///       - [HHasenack] TOmniValue.IsInterfacedType was returning wrong result for the
 ///         'owned object' data type. This could cause objects assigned to .AsOwnedObject
 ///         to hang in memory and never be destroyed.
+///     1.44: 2016-07-18
+///       - Implemented Environment.NUMANodes.Distance which returns relative distance
+///         between two nodes, as reported by the ACPI (5.2.17 System Locality Distance
+///         Information Table).
+///     1.43a: 2016-07-13
+///       - TOmniIntegerSet only calls OnChange event when value is actually changed.
+///         (Was called on each assign.)
+///     1.43: 2016-07-05
+///       - Implemented IOmniIntegerSet.
+///       - Implemented IOmniThreadEnvironment.GroupAffinity.
+///     1.42: 2016-07-01
+///       - Implemented Environment.NUMANodes.FindNode.
+///     1.41: 2016-06-27
+///       - Environment.ProcessorGroups and .NUMANodes are supported on all platforms.
+///         Pseudo-group 0 and NUMA node 0 are reported on non-Windows platforms.
+///     1.40: 2016-06-23
+///       - Implemented Environment.ProcessorGroups and Environment.NUMANodes (Win64 only).
+///       - IOmniAffinity.Mask changed from DWORD to NativeUInt to properly support
+///         up to 64 processors on Win64.
 ///     1.39: 2015-10-03
 ///       - [Sean] Implemented TOmniAlignedInt32 (clone of GpStuff.TGp4AlignedInt)
 ///         and TOmniAlignedInt64 (clone of GpStuff.TGp8AlignedInt64).
@@ -236,6 +259,7 @@ uses
   Variants,
   TypInfo,
   SyncObjs,
+  Types,
 {$IFDEF MSWINDOWS}
   Windows,
   DSiWin32,
@@ -247,6 +271,7 @@ uses
   RTTI,
 {$ENDIF OTL_ERTTI}
 {$IFDEF OTL_Generics}
+  Generics.Defaults,
   Generics.Collections,
 {$ENDIF OTL_Generics}
   SysUtils;
@@ -503,6 +528,16 @@ type
     property Value: TOmniValue read FValue;
   end; { TOmniValueObj }
 
+  {$IFDEF OTL_Generics}
+  TOmniRecord<T> = record
+  strict private
+    FValue: T;
+  public
+    constructor Create(const aValue: T);
+    property Value: T read FValue write FValue;
+  end;
+  {$ENDIF OTL_Generics}
+
   ///<summary>Slightly different from the IEnumerable:
   ///    - Returns TOmniValue.
   ///    - Must ensure correct operation of multiple simultaneous enumerators.
@@ -669,6 +704,86 @@ type
     function  ValueOf(const key: int64): IInterface;
   end; { IOmniInterfaceDictionary }
 
+  IOmniIntegerSet = interface;
+
+  TOmniIntegerSetChangedEvent = procedure(const intSet: IOmniIntegerSet) of object;
+
+  IOmniIntegerSet = interface ['{571F85D0-CFD8-40FE-8860-A8C1C932028C}']
+    function  GetAsBits: TBits;
+    function  GetAsIntArray: TIntegerDynArray;
+    function  GetAsMask: int64;
+    function  GetItem(idx: integer): integer;
+    function  GetOnChange: TOmniIntegerSetChangedEvent;
+    procedure SetAsBits(const value: TBits);
+    procedure SetAsIntArray(const Value: TIntegerDynArray);
+    procedure SetAsMask(const value: int64);
+    procedure SetOnChange(const value: TOmniIntegerSetChangedEvent);
+  {$IFDEF OTL_Generics}
+    function  GetAsArray: TArray<integer>;
+    procedure SetAsArray(const Value: TArray<integer>);
+  {$ENDIF OTL_Generics}
+  //
+    function  Add(value: integer): boolean;
+    procedure Assign(const value: IOmniIntegerSet);
+    procedure Clear;
+    function  Contains(value: integer): boolean;
+    function  Count: integer;
+    function  IsEmpty: boolean;
+    function  Remove(value: integer): boolean;
+  {$IFDEF OTL_Generics}
+    property AsArray: TArray<integer> read GetAsArray write SetAsArray;
+  {$ENDIF OTL_Generics}
+    property AsBits: TBits read GetAsBits write SetAsBits;
+    property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
+    property AsMask: int64 read GetAsMask write SetAsMask;
+    property OnChange: TOmniIntegerSetChangedEvent read GetOnChange write SetOnChange;
+    property Item[idx: integer]: integer read GetItem; default;
+  end; { IOmniIntegerSet }
+
+  TOmniIntegerSet = class(TInterfacedObject, IOmniIntegerSet)
+  strict private
+    FBits        : TBits;
+    FHasValueCopy: boolean;
+    FOnChange    : TOmniIntegerSetChangedEvent;
+    FValueCopy   : TIntegerDynArray;
+  strict protected
+    procedure DoOnChange;
+    function  GetAsBits: TBits; inline;
+    function  GetAsIntArray: TIntegerDynArray;
+    function  GetAsMask: int64;
+    function  GetItem(idx: integer): integer;
+    function  GetOnChange: TOmniIntegerSetChangedEvent; inline;
+    procedure PrepareValueCopy;
+    procedure SetAsBits(const value: TBits);
+    procedure SetAsIntArray(const value: TIntegerDynArray);
+    procedure SetAsMask(const value: int64);
+    procedure SetOnChange(const value: TOmniIntegerSetChangedEvent); inline;
+  {$IFDEF OTL_Generics}
+    function  GetAsArray: TArray<integer>;
+    procedure SetAsArray(const value: TArray<integer>);
+  {$ENDIF OTL_Generics}
+  public
+    constructor Create;
+    constructor Clone(const value: IOmniIntegerSet);
+    destructor  Destroy; override;
+    function  Add(value: integer): boolean;
+    procedure Assign(const value: IOmniIntegerSet); overload;
+    procedure Assign(const value: TOmniIntegerSet); overload;
+    procedure Clear; inline;
+    function  Contains(value: integer): boolean; inline;
+    function  Count: integer;
+    function  IsEmpty: boolean;
+    function  Remove(value: integer): boolean;
+  {$IFDEF OTL_Generics}
+    property AsArray: TArray<integer> read GetAsArray write SetAsArray;
+  {$ENDIF OTL_Generics}
+    property AsBits: TBits read GetAsBits write SetAsBits;
+    property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
+    property AsMask: int64 read GetAsMask write SetAsMask;
+    property OnChange: TOmniIntegerSetChangedEvent read GetOnChange write SetOnChange;
+    property Item[idx: integer]: integer read GetItem; default;
+  end; { TOmniIntegerSet }
+
   IOmniAffinity = interface ['{8A6DDC70-F705-4577-869B-6810E776132B}']
     function  GetAsString: string;
     function  GetCount: integer;
@@ -676,15 +791,15 @@ type
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
   {$IFDEF MSWINDOWS}
-    function  GetMask: DWORD;
-    procedure SetMask(const value: DWORD);
+    function  GetMask: NativeUInt;
+    procedure SetMask(const value: NativeUInt);
   {$ENDIF}
   //
     property AsString: string read GetAsString write SetAsString;
     property Count: integer read GetCount write SetCount;
     property CountPhysical: integer read GetCountPhysical;
   {$IFDEF MSWINDOWS}
-    property Mask: DWORD read GetMask write SetMask;
+    property Mask: NativeUInt read GetMask write SetMask;
   {$ENDIF}
   end; { IOmniAffinity }
 
@@ -729,19 +844,83 @@ type
   TThreadID = LongWord;
   {$ENDIF ~OTL_HasThreadID}
 
+  TOmniGroupAffinity = record
+  private
+    FAffinity: IOmniIntegerSet;
+    FGroup   : integer;
+    function GetAffinity: IOmniIntegerSet;
+  public
+    constructor Create(groupNumber: integer; const affinity: IOmniIntegerSet); overload;
+    constructor Create(groupNumber: integer; const affinityMask: int64); overload;
+    property Group: integer read FGroup write FGroup;
+    property Affinity: IOmniIntegerSet read GetAffinity;
+  end; { TOmniGroupAffinity }
+
   IOmniThreadEnvironment = interface ['{5C11FEC7-9FBE-423F-B30E-543C8240E3A3}']
     function  GetAffinity: IOmniAffinity;
+    function  GetGroupAffinity: TOmniGroupAffinity;
     function  GetID: TThreadId;
+    procedure SetGroupAffinity(const value: TOmniGroupAffinity);
   //
     property Affinity: IOmniAffinity read GetAffinity;
+    property GroupAffinity: TOmniGroupAffinity read GetGroupAffinity write SetGroupAffinity;
     property ID: TThreadId read GetID;
   end; { IOmniThreadEnvironment }
 
+  {$IFDEF OTL_NUMASupport}
+  IOmniNUMANode = interface ['{8D3B415F-8B13-4BFF-B7C7-2D0BC1705217}']
+    function  GetAffinity: IOmniIntegerSet;
+    function  GetGroupNumber: integer;
+    function  GetNodeNumber: integer;
+  //
+    property NodeNumber: integer read GetNodeNumber;
+    property GroupNumber: integer read GetGroupNumber;
+    property Affinity: IOmniIntegerSet read GetAffinity;
+  end; { IOmniNUMANode }
+
+  IOmniNUMANodes = interface ['{4407E795-ED35-4DD1-9EC6-D59758BAF581}']
+    function  GetItem(idx: integer): IOmniNUMANode;
+  //
+    function  All: IOmniIntegerSet;
+    function  Count: integer;
+    function  Distance(fromNode, toNode: integer): integer;
+    function  FindNode(nodeNumber: integer): IOmniNUMANode;
+    function  GetEnumerator: TList<IOmniNUMANode>.TEnumerator;
+    property Item[idx: integer]: IOmniNUMANode read GetItem; default;
+  end; { IOmniNUMANodes }
+
+  IOmniProcessorGroup = interface ['{BCFB0AE8-A378-4A4B-AD73-EF9B59218B55}']
+    function  GetAffinity: IOmniIntegerSet;
+    function  GetGroupNumber: integer;
+    //
+    property GroupNumber: integer read GetGroupNumber;
+    property Affinity: IOmniIntegerSet read GetAffinity;
+  end; { IOmniProcessorGroup }
+
+  IOmniProcessorGroups = interface ['{B4C871C0-CF61-4BC9-98DE-87F720F51853}']
+    function  GetItem(idx: integer): IOmniProcessorGroup;
+  //
+    function  All: IOmniIntegerSet;
+    function  Count: integer;
+    function  FindGroup(groupNumber: integer): IOmniProcessorGroup;
+    function  GetEnumerator: TList<IOmniProcessorGroup>.TEnumerator;
+    property Item[idx: integer]: IOmniProcessorGroup read GetItem; default;
+  end; { IOmniProcessorGroups }
+  {$ENDIF OTL_NUMASupport}
+
   IOmniEnvironment = interface ['{4F9594E2-8B88-483C-9616-85B50493406D}']
+  {$IFDEF OTL_NUMASupport}
+    function  GetNUMANodes: IOmniNUMANodes;
+    function  GetProcessorGroups: IOmniProcessorGroups;
+  {$ENDIF OTL_NUMASupport}
     function  GetProcess: IOmniProcessEnvironment;
     function  GetSystem: IOmniSystemEnvironment;
     function  GetThread: IOmniThreadEnvironment;
   //
+  {$IFDEF OTL_NUMASupport}
+    property NUMANodes: IOmniNUMANodes read GetNUMANodes;
+    property ProcessorGroups: IOmniProcessorGroups read GetProcessorGroups;
+  {$ENDIF OTL_NUMASupport}
     property Process: IOmniProcessEnvironment read GetProcess;
     property System: IOmniSystemEnvironment read GetSystem;
     property Thread: IOmniThreadEnvironment read GetThread;
@@ -913,7 +1092,8 @@ implementation
 {$IFDEF MSWINDOWS}
 uses
   {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
-  GpStringHash;
+  GpStringHash,
+  OtlSync;
 {$ENDIF}
 
 type
@@ -1088,15 +1268,15 @@ type
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
   {$IFDEF MSWINDOWS}
-    function  GetMask: DWORD;
-    procedure SetMask(const value: DWORD);
+    function  GetMask: NativeUInt;
+    procedure SetMask(const value: NativeUInt);
   {$ENDIF}
   public
     constructor Create(target: TOmniAffinityTarget);
     property AsString: string read GetAsString write SetAsString;
     property Count: integer read GetCount write SetCount;
   {$IFDEF MSWINDOWS}
-    property Mask: DWORD read GetMask write SetMask;
+    property Mask: NativeUInt read GetMask write SetMask;
   {$ENDIF}
   end; { TOmniAffinity }
 
@@ -1133,27 +1313,123 @@ type
   TOmniThreadEnvironment = class(TInterfacedObject, IOmniThreadEnvironment)
   strict private
     oteAffinity: IOmniAffinity;
-    oteThreadID:  TThreadID;
+    oteThreadID: TThreadID;
   protected
     function  GetAffinity: IOmniAffinity;
+    function  GetGroupAffinity: TOmniGroupAffinity;
     function  GetID: TThreadID;
+    procedure SetGroupAffinity(const value: TOmniGroupAffinity);
   public
     constructor Create;
     property Affinity: IOmniAffinity read GetAffinity;
+    property GroupAffinity: TOmniGroupAffinity read GetGroupAffinity write SetGroupAffinity;
     property ID: TThreadID read GetID;
   end; { TOmniThreadEnvironment }
+
+  {$IFDEF OTL_NUMASupport}
+  TOmniNUMANode = class(TInterfacedObject, IOmniNUMANode)
+  private
+    FAffinity   : IOmniIntegerSet;
+    FGroupNumber: integer;
+    FNodeNumber : integer;
+  protected
+    function GetAffinity: IOmniIntegerSet;
+    function GetGroupNumber: integer;
+    function GetNodeNumber: integer;
+  public
+    constructor Create(nodeNumber, groupNumber: integer; affinity: NativeUInt);
+    property Affinity: IOmniIntegerSet read GetAffinity;
+    property GroupNumber: integer read GetGroupNumber;
+    property NodeNumber: integer read GetNodeNumber;
+  end; { TOmniNUMANode }
+
+  IOmniNUMANodesInternal = interface ['{080E0660-4D9C-4F47-994E-9D0337AABB2B}']
+    procedure Add(const node: IOmniNUMANode);
+    procedure Sort;
+  end; { IOmniNUMANodesInternal }
+
+  TOmniNUMANodes = class(TInterfacedObject, IOmniNUMANodes,
+                                            IOmniNUMANodesInternal)
+  private
+    FNodes               : TList<IOmniNUMANode>;
+    FProximityInitialized: boolean;
+    FProximity           : array of array of integer;
+  strict protected
+    function  GetItem(idx: integer): IOmniNUMANode; inline;
+    procedure InitializeProximity;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Add(const node: IOmniNUMANode); inline;
+    function  All: IOmniIntegerSet;
+    function  Count: integer; inline;
+    function  Distance(fromNode, toNode: integer): integer;
+    function  FindNode(nodeNumber: integer): IOmniNUMANode;
+    function  GetEnumerator: TList<IOmniNUMANode>.TEnumerator; inline;
+    procedure Sort;
+    property Item[idx: integer]: IOmniNUMANode read GetItem; default;
+  end; { TOmniNUMANodes }
+
+  TOmniProcessorGroup = class(TInterfacedObject, IOmniProcessorGroup)
+  private
+    FAffinity   : IOmniIntegerSet;
+    FGroupNumber: integer;
+  protected
+    function GetAffinity: IOmniIntegerSet;
+    function GetGroupNumber: integer;
+  public
+    constructor Create(groupNumber: integer; affinity: NativeUInt);
+    property Affinity: IOmniIntegerSet read GetAffinity;
+    property GroupNumber: integer read GetGroupNumber;
+  end; { TOmniProcessorGroup }
+
+  IOmniProcessorGroupsInternal = interface ['{E9A146BC-C1CF-4D2B-8764-2041AC24D424}']
+    procedure Add(const group: IOmniProcessorGroup);
+  end; { IOmniProcessorGroupsInternal }
+
+  TOmniProcessorGroups = class(TInterfacedObject, IOmniProcessorGroups,
+                                                  IOmniProcessorGroupsInternal)
+  private
+    FGroups: TList<IOmniProcessorGroup>;
+  strict protected
+    function  GetItem(idx: integer): IOmniProcessorGroup; inline;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Add(const group: IOmniProcessorGroup); inline;
+    function  All: IOmniIntegerSet;
+    function  Count: integer; inline;
+    function  FindGroup(groupNumber: integer): IOmniProcessorGroup; inline;
+    function  GetEnumerator: TList<IOmniProcessorGroup>.TEnumerator; inline;
+    property Item[idx: integer]: IOmniProcessorGroup read GetItem; default;
+  end; { IOmniProcessorGroups }
+  {$ENDIF OTL_NUMASupport}
 
   TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
   strict private
     oeProcessEnv: IOmniProcessEnvironment;
     oeSystemEnv : IOmniSystemEnvironment;
-    oeThreadEnv : IOmniThreadEnvironment;
+  {$IFDEF OTL_NUMASupport}
+    oeNUMANodes      : IOmniNUMANodes;
+    oeProcessorGroups: IOmniProcessorGroups;
+  strict protected
+    procedure LoadNUMAInfo;
+  {$ENDIF OTL_NUMASupport}
   protected
+  {$IFDEF OTL_NUMASupport}
+    function  GetNUMANodes: IOmniNUMANodes;
+    function  GetProcessorGroups: IOmniProcessorGroups;
+  {$ENDIF OTL_NUMASupport}
     function  GetProcess: IOmniProcessEnvironment;
     function  GetSystem: IOmniSystemEnvironment;
     function  GetThread: IOmniThreadEnvironment;
   public
     constructor Create;
+  {$IFDEF OTL_NUMASupport}
+    destructor  Destroy; override;
+    property NUMANodes: IOmniNUMANodes read GetNUMANodes;
+    property ProcessorGroups: IOmniProcessorGroups read GetProcessorGroups;
+  {$ENDIF OTL_NUMASupport}
     property Process: IOmniProcessEnvironment read GetProcess;
     property System: IOmniSystemEnvironment read GetSystem;
     property Thread: IOmniThreadEnvironment read GetThread;
@@ -3224,6 +3500,15 @@ begin
   FValue := value;
 end; { TOmniValueObj.Create }
 
+{$IFDEF OTL_Generics}
+{ TOmniRecord<T> }
+
+constructor TOmniRecord<T>.Create(const aValue: T);
+begin
+  Value := aValue;
+end; { TOmniRecord<T>.Create }
+{$ENDIF OTL_Generics}
+
 { TOmniWaitableValue }
 
 constructor TOmniWaitableValue.Create;
@@ -3441,7 +3726,7 @@ end;
 {$ENDIF}
 
 {$IFDEF MSWINDOWS}
-function TOmniAffinity.GetMask: DWORD;
+function TOmniAffinity.GetMask: NativeUInt;
 begin
   case oaTarget of
     atSystem:
@@ -3494,7 +3779,7 @@ begin
 end; { TOmniAffinity.SetCount }
 
 {$IFDEF MSWINDOWS}
-procedure TOmniAffinity.SetMask(const value: DWORD);
+procedure TOmniAffinity.SetMask(const value: NativeUInt);
 begin
   AsString := DSiAffinityMaskToString(value);
 end; { TOmniAffinity.SetMask }
@@ -3579,10 +3864,278 @@ begin
   Result := oteAffinity;
 end; { TOmniThreadEnvironment.GetAffinity }
 
+function TOmniThreadEnvironment.GetGroupAffinity: TOmniGroupAffinity;
+var
+  groupAffinity: TGroupAffinity;
+begin
+  {$IFDEF MSWindows}
+  DSiGetThreadGroupAffinity(GetCurrentThread, groupAffinity);
+  Result.Group := groupAffinity.Group;
+  Result.Affinity.AsMask := groupAffinity.Mask;
+  {$ELSE}
+  Result.Group := 0;
+  Result.Affinity.AsMask := Affinity.Mask;
+  {$ENDIF}
+end; { TOmniThreadEnvironment.GetGroupAffinity }
+
 function TOmniThreadEnvironment.GetID: TThreadId;
 begin
   Result := oteThreadID;
 end; { TOmniThreadEnvironment.GetID }
+
+procedure TOmniThreadEnvironment.SetGroupAffinity(const value: TOmniGroupAffinity);
+var
+  groupAffinity: TGroupAffinity;
+begin
+  {$IFDEF MSWindows}
+  FillChar(groupAffinity, SizeOf(groupAffinity), 0);
+  groupAffinity.Group := value.Group;
+  groupAffinity.Mask := value.Affinity.AsMask;
+  DSiSetThreadGroupAffinity(GetCurrentThread, groupAffinity, nil);
+  {$ELSE}
+  if value.Group <> 0 then
+    raise Exception.Create('TOmniThreadEnvironment.SetGroupAffinity: Processor group must be 0');
+  Affinity.Mask := value.Affinity.AsMask;
+  {$ENDIF}
+end; { TOmniThreadEnvironment.SetGroupAffinity }
+
+{$IFDEF OTL_NUMASupport}
+
+{ TOmniNUMANode }
+
+constructor TOmniNUMANode.Create(nodeNumber, groupNumber: integer; affinity: NativeUInt);
+begin
+  inherited Create;
+  FAffinity := TOmniIntegerSet.Create;
+  FAffinity.AsMask := affinity;
+  FGroupNumber := groupNumber;
+  FNodeNumber := nodeNumber;
+end; { TOmniNUMANode.Create }
+
+function TOmniNUMANode.GetAffinity: IOmniIntegerSet;
+begin
+  Result := FAffinity;
+end; { TOmniNUMANode.GetAffinity }
+
+function TOmniNUMANode.GetGroupNumber: integer;
+begin
+  Result := FGroupNumber;
+end; { TOmniNUMANode.GetGroupNumber }
+
+function TOmniNUMANode.GetNodeNumber: integer;
+begin
+  Result := FNodeNumber;
+end; { TOmniNUMANode.GetNodeNumber }
+
+{ TOmniNUMANodes }
+
+constructor TOmniNUMANodes.Create;
+begin
+  inherited Create;
+  FNodes := TList<IOmniNUMANode>.Create;
+end; { TOmniNUMANodes.Create }
+
+destructor TOmniNUMANodes.Destroy;
+begin
+  FreeAndNil(FNodes);
+  inherited;
+end; { TOmniNUMANodes.Destroy }
+
+procedure TOmniNUMANodes.Add(const node: IOmniNUMANode);
+begin
+  FNodes.Add(node);
+end; { TOmniNUMANodes.Add }
+
+function TOmniNUMANodes.All: IOmniIntegerSet;
+var
+  i    : integer;
+  nodes: TArray<integer>;
+begin
+  SetLength(nodes, Count);
+  for i := 0 to Count - 1 do
+    nodes[i] := Item[i].NodeNumber;
+  Result := TOmniIntegerSet.Create;
+  Result.AsArray := nodes;
+end; { TOmniNUMANodes.All }
+
+function TOmniNUMANodes.Count: integer;
+begin
+  Result := FNodes.Count;
+end; { TOmniNUMANodes.Count }
+
+function TOmniNUMANodes.Distance(fromNode, toNode: integer): integer;
+begin
+  if not FProximityInitialized then
+    InitializeProximity;
+  Result := FProximity[fromNode, toNode];
+end; { TOmniNUMANodes.Distance }
+
+function TOmniNUMANodes.FindNode(nodeNumber: integer): IOmniNUMANode;
+var
+  node: IOmniNUMANode;
+begin
+  Result := nil;
+  for node in Environment.NUMANodes do
+    if node.NodeNumber = nodeNumber then
+      Exit(node);
+end; { TOmniNUMANodes.FindNode }
+
+function TOmniNUMANodes.GetEnumerator: TList<IOmniNUMANode>.TEnumerator;
+begin
+  Result := FNodes.GetEnumerator;
+end; { TOmniNUMANodes.GetEnumerator }
+
+function TOmniNUMANodes.GetItem(idx: integer): IOmniNUMANode;
+begin
+  Result := FNodes[idx];
+end; { TOmniNUMANodes.GetItem }
+
+procedure TOmniNUMANodes.InitializeProximity;
+
+  function MakeDWORD(const name: AnsiString): DWORD;
+  begin
+    Result := (Ord(name[1]) SHL 24)
+           OR (Ord(name[2]) SHL 16)
+           OR (Ord(name[3]) SHL  8)
+           OR (Ord(name[4])       );
+  end; { MakeDWORD }
+
+var
+  highestNuma    : cardinal;
+  i              : integer;
+  j              : integer;
+  node           : word;
+  nodeFrom       : integer;
+  nodeTo         : integer;
+  numLocalities  : integer;
+  p              : pointer;
+  proximityToNuma: array of integer;
+  q              : PByte;
+  size           : integer;
+
+begin { TOmniNUMANodes.InitializeProximity }
+  if not DSiGetNumaHighestNodeNumber(highestNuma) then
+    raise Exception.Create('TOmniNUMANodes.InitializeProximity: Failed to read highest NUMA node number');
+
+  SetLength(FProximity, highestNuma+1);
+  for i := 0 to highestNuma do begin
+    Setlength(FProximity[i], highestNuma + 1);
+    for j := 0 to highestNuma do
+      FProximity[i,j] := 10;
+  end;
+
+  size := DSiGetSystemFirmwareTable(MakeDWORD('ACPI'), MakeDWORD('TILS'), nil, 0);
+  if size > 44 then begin
+    GetMem(p, size);
+    try
+      DSiGetSystemFirmwareTable(MakeDWORD('ACPI'), MakeDWORD('TILS'), p, size);
+      q := PByte(NativeUInt(p) + 36);
+      numLocalities := PInt64(q)^;
+      Inc(q, 8);
+
+      SetLength(proximityToNuma, numLocalities);
+      for i := 0 to numLocalities - 1do
+        if DSiGetNumaProximityNodeEx(i, node) then
+          proximityToNuma[i] := node
+        else
+          proximityToNuma[i] := -1;
+
+      for i := 0 to numLocalities - 1 do begin
+        nodeFrom := proximityToNuma[i];
+        for j := 0 to numLocalities - 1 do begin
+          nodeTo := proximityToNuma[j];
+          if (nodeFrom >= 0) and (nodeTo >= 0) then
+            FProximity[nodeFrom, nodeTo] := q^;
+          Inc(q);
+        end;
+      end;
+    finally FreeMem(p); end;
+  end; // if size > 44
+
+  FProximityInitialized := true;
+end; { TOmniNUMANodes.InitializeProximity }
+
+procedure TOmniNUMANodes.Sort;
+begin
+  FNodes.Sort(TComparer<IOmniNUMANode>.Construct(
+    function (const N1, N2: IOmniNUMANode): integer
+    begin
+      Result := N1.NodeNumber - N2.NodeNumber;
+    end));
+end; { TOmniNUMANodes.Sort }
+
+{ TOmniProcessorGroup }
+
+constructor TOmniProcessorGroup.Create(groupNumber: integer; affinity: NativeUInt);
+begin
+  inherited Create;
+  FAffinity := TOmniIntegerSet.Create;
+  FAffinity.AsMask := affinity;
+  FGroupNumber := groupNumber;
+end; { TOmniProcessorGroup.Create }
+
+function TOmniProcessorGroup.GetAffinity: IOmniIntegerSet;
+begin
+  Result := FAffinity;
+end; { TOmniProcessorGroup.GetAffinity }
+
+function TOmniProcessorGroup.GetGroupNumber: integer;
+begin
+  Result := FGroupNumber;
+end; { TOmniProcessorGroup.GetGroupNumber }
+
+{ TOmniProcessorGroups }
+
+constructor TOmniProcessorGroups.Create;
+begin
+  inherited Create;
+  FGroups := TList<IOmniProcessorGroup>.Create;
+end; { TOmniProcessorGroups.Create }
+
+destructor TOmniProcessorGroups.Destroy;
+begin
+  FreeAndNil(FGroups);
+  inherited;
+end; { TOmniProcessorGroups.Destroy }
+
+procedure TOmniProcessorGroups.Add(const group: IOmniProcessorGroup);
+begin
+  FGroups.Add(group);
+end; { TOmniProcessorGroups.Add }
+
+function TOmniProcessorGroups.All: IOmniIntegerSet;
+var
+  i    : integer;
+  nodes: TArray<integer>;
+begin
+  SetLength(nodes, Count);
+  for i := 0 to Count - 1 do
+    nodes[i] := Item[i].GroupNumber;
+  Result := TOmniIntegerSet.Create;
+  Result.AsArray := nodes;
+end; { TOmniProcessorGroups.All }
+
+function TOmniProcessorGroups.Count: integer;
+begin
+  Result := FGroups.Count;
+end; { TOmniProcessorGroups.Count }
+
+function TOmniProcessorGroups.FindGroup(groupNumber: integer): IOmniProcessorGroup;
+begin
+  Result := Item[groupNumber];
+end; { TOmniProcessorGroups.FindGroup }
+
+function TOmniProcessorGroups.GetEnumerator: TList<IOmniProcessorGroup>.TEnumerator;
+begin
+  Result := FGroups.GetEnumerator;
+end; { TOmniProcessorGroups.GetEnumerator }
+
+function TOmniProcessorGroups.GetItem(idx: integer): IOmniProcessorGroup;
+begin
+  Result := FGroups[idx];
+end; { TOmniProcessorGroups.GetItem }
+
+{$ENDIF OTL_NUMASupport}
 
 { TOmniEnvironment }
 
@@ -3591,7 +4144,31 @@ begin
   inherited Create;
   oeProcessEnv := TOmniProcessEnvironment.Create;
   oeSystemEnv := TOmniSystemEnvironment.Create;
+{$IFDEF OTL_NUMASupport}
+  oeNUMANodes       := TOmniNUMANodes.Create;
+  oeProcessorGroups := TOmniProcessorGroups.Create;
+  LoadNUMAInfo;
+{$ENDIF OTL_NUMASupport}
 end; { TOmniEnvironment.Create }
+
+{$IFDEF OTL_NUMASupport}
+destructor TOmniEnvironment.Destroy;
+begin
+  oeNUMANodes := nil;
+  oeProcessorGroups := nil;
+  inherited;
+end; { TOmniEnvironment.Destroy }
+
+function TOmniEnvironment.GetNUMANodes: IOmniNUMANodes;
+begin
+  Result := oeNUMANodes;
+end; { TOmniEnvironment.GetNUMANodes }
+
+function TOmniEnvironment.GetProcessorGroups: IOmniProcessorGroups;
+begin
+  Result := oeProcessorGroups;
+end; { TOmniEnvironment.GetProcessorGroups }
+{$ENDIF OTL_NUMASupport}
 
 function TOmniEnvironment.GetProcess: IOmniProcessEnvironment;
 begin
@@ -3605,10 +4182,61 @@ end; { TOmniEnvironment.GetSystem }
 
 function TOmniEnvironment.GetThread: IOmniThreadEnvironment;
 begin
-  if (not assigned(oeThreadEnv)) or (oeThreadEnv.ID <> GetCurrentThreadID) then
-    oeThreadEnv := TOmniThreadEnvironment.Create;
-  Result := oeThreadEnv;
+  Result := TOmniThreadEnvironment.Create;
 end; { TOmniEnvironment.GetThread }
+
+{$IFDEF OTL_NUMASupport}
+procedure TOmniEnvironment.LoadNUMAInfo;
+var
+{$IFNDEF MSWindows}
+  i          : integer;
+  mask       : DWORD;
+{$ELSE}
+  bufLen                 : DWORD;
+  currentInfo            : PSystemLogicalProcessorInformationEx;
+  iGroup                 : integer;
+  numaNodesInternal      : IOmniNUMANodesInternal;
+  pGroupInfo             : PProcessorGroupInfo;
+  processorGroupsInternal: IOmniProcessorGroupsInternal;
+  procInfo               : PSystemLogicalProcessorInformationEx;
+{$ENDIF}
+begin
+  {$IFNDEF MSWindows}
+  mask := 0;
+  for i := 1 to System.Affinity.Count do
+    mask := (mask shl 1) OR 1;
+  oeProcessorGroups.Add(TOmniProcessorGroup.Create(0, mask));
+  oeNUMANodes.Add(TOmniNUMANode.Create(0, 0, mask));
+  {$ELSE}
+  bufLen := 0;
+  GetLogicalProcessorInformationEx(Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, nil, bufLen);
+  if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+    raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[1] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
+  GetMem(procInfo, bufLen);
+  try
+    if not GetLogicalProcessorInformationEx(Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, Windows.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
+      raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[2] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
+    numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
+    processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
+    currentInfo := procInfo;
+    while (NativeUInt(currentInfo) - NativeUInt(procInfo)) < bufLen do begin
+      if currentInfo.Relationship = Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
+        numaNodesInternal.Add(TOmniNUMANode.Create(currentInfo.NumaNode.NodeNumber,
+          currentInfo.NumaNode.GroupMask.Group, currentInfo.NumaNode.GroupMask.Mask))
+      else if currentInfo.Relationship = Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
+        pGroupInfo := @currentInfo.Group.GroupInfo;
+        for iGroup := 0 to currentInfo.Group.ActiveGroupCount - 1 do begin
+          processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));
+          Inc(pGroupInfo);
+        end;
+      end;
+      currentInfo := PSystemLogicalProcessorInformationEx(NativeUInt(currentInfo) + currentInfo.Size);
+    end;
+    numaNodesInternal.Sort;
+  finally FreeMem(procInfo); end;
+  {$ENDIF MSWindows}
+end; { TOmniEnvironment.LoadNUMAInfo }
+{$ENDIF OTL_NUMASupport}
 
 { TOmniExecutable }
 
@@ -4035,6 +4663,293 @@ begin
   {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
 
+{ TOmniIntegerSet }
+
+constructor TOmniIntegerSet.Clone(const value: IOmniIntegerSet);
+begin
+  Create;
+  Assign(value);
+end; { TOmniIntegerSet.Clone }
+
+constructor TOmniIntegerSet.Create;
+begin
+  inherited Create;
+  FBits := TBits.Create;
+end; { TOmniIntegerSet.Create }
+
+destructor TOmniIntegerSet.Destroy;
+begin
+  FreeAndNil(FBits);
+  inherited;
+end; { TOmniIntegerSet.Destroy }
+
+function TOmniIntegerSet.Add(value: integer): boolean;
+begin
+  if value >= FBits.Size then
+    FBits.Size := value + 1;
+  Result := FBits[value];
+  FBits[value] := true;
+  if not Result then
+    DoOnChange;
+end; { TOmniIntegerSet.Add }
+
+procedure TOmniIntegerSet.Assign(const value: IOmniIntegerSet);
+var
+  i       : integer;
+  oldValue: int64;
+  valBits : TBits;
+begin
+  oldValue := AsMask;
+  valBits := value.AsBits;
+  FBits.Size := valBits.Size;
+  for i := 0 to FBits.Size - 1 do
+    FBits[i] := valBits[i];
+  if oldValue <> AsMask then
+    DoOnChange;
+end; { TOmniIntegerSet.Assign }
+
+procedure TOmniIntegerSet.Assign(const value: TOmniIntegerSet);
+begin
+  Assign(value as IOmniIntegerSet);
+end; { TOmniIntegerSet.Assign }
+
+procedure TOmniIntegerSet.Clear;
+begin
+  AsMask := 0;
+end; { TOmniIntegerSet.Clear }
+
+function TOmniIntegerSet.Contains(value: integer): boolean;
+begin
+  Result := (value < FBits.Size) and FBits[value];
+end; { TOmniIntegerSet.Contains }
+
+function TOmniIntegerSet.Count: integer;
+begin
+  PrepareValueCopy;
+  Result := Length(FValueCopy);
+end; { TOmniIntegerSet.Count }
+
+procedure TOmniIntegerSet.DoOnChange;
+begin
+  FHasValueCopy := false;
+  if assigned(OnChange) then
+    OnChange(Self);
+end; { TOmniIntegerSet.DoOnChange }
+
+{$IFDEF OTL_Generics}
+function TOmniIntegerSet.GetAsArray: TArray<integer>;
+var
+  count: integer;
+  i    : integer;
+begin
+  count := 0;
+  for i := 0 to FBits.Size - 1 do
+    if FBits[i] then
+      Inc(count);
+  SetLength(Result, count);
+  count := 0;
+  for i := 0 to FBits.Size - 1 do
+    if FBits[i] then begin
+      Result[count] := i;
+      Inc(count);
+    end;
+end; { TOmniIntegerSet.GetAsArray }
+{$ENDIF OTL_Generics}
+
+function TOmniIntegerSet.GetAsBits: TBits;
+begin
+  Result := FBits;
+end; { TOmniIntegerSet.GetAsBits }
+
+function TOmniIntegerSet.GetAsIntArray: TIntegerDynArray;
+var
+  count: integer;
+  i    : integer;
+begin
+  count := 0;
+  for i := 0 to FBits.Size - 1 do
+    if FBits[i] then
+      Inc(count);
+  SetLength(Result, count);
+  count := 0;
+  for i := 0 to FBits.Size - 1 do
+    if FBits[i] then begin
+      Result[count] := i;
+      Inc(count);
+    end;
+end; { TOmniIntegerSet.GetAsIntArray }
+
+function TOmniIntegerSet.GetAsMask: int64;
+var
+  i: integer;
+begin
+  if FBits.Size > 64 then
+    raise Exception.CreateFmt('Cannot convert %d elements to a 8-byte mask', [FBits.Size]);
+
+  Result := 0;
+  for i := FBits.Size - 1 downto 0 do begin
+    Result := Result SHL 1;
+    if FBits[i] then
+      Result := Result OR 1;
+  end;
+end; { TOmniIntegerSet.GetAsMask }
+
+function TOmniIntegerSet.GetItem(idx: integer): integer;
+begin
+  PrepareValueCopy;
+  Result := FValueCopy[idx];
+end; { TOmniIntegerSet.GetItem }
+
+function TOmniIntegerSet.GetOnChange: TOmniIntegerSetChangedEvent;
+begin
+  Result := FOnChange;
+end; { TOmniIntegerSet.GetOnChange }
+
+function TOmniIntegerSet.IsEmpty: boolean;
+var
+  i: integer;
+begin
+  Result := true;
+  for i := 0 to FBits.Size - 1 do
+    if FBits[i] then
+      Exit(false);
+end; { TOmniIntegerSet.IsEmpty }
+
+procedure TOmniIntegerSet.PrepareValueCopy;
+begin
+  if FHasValueCopy then
+    Exit;
+  FValueCopy := AsIntArray;
+  FHasValueCopy := true;
+end; { TOmniIntegerSet.PrepareValueCopy }
+
+function TOmniIntegerSet.Remove(value: integer): boolean;
+begin
+  Result := FBits[value];
+  FBits[value] := false;
+  if Result then
+    DoOnChange;
+end; { TOmniIntegerSet.Remove }
+
+{$IFDEF OTL_Generics}
+procedure TOmniIntegerSet.SetAsArray(const value: TArray<integer>);
+var
+  max     : integer;
+  oldValue: int64;
+  val     : integer;
+begin
+  oldValue := AsMask;
+  max := 0;
+  for val in value do
+    if val > max then
+      max := val;
+  FBits.Size := max + 1;
+  for val := 0 to FBits.Size - 1 do
+    FBits[val] := false;
+  for val in value do
+    FBits[val] := true;
+  if oldValue <> AsMask then
+    DoOnChange;
+end; { TOmniIntegerSet.SetAsArray }
+{$ENDIF OTL_Generics}
+
+procedure TOmniIntegerSet.SetAsBits(const value: TBits);
+var
+  i       : integer;
+  max     : integer;
+  oldValue: int64;
+begin
+  oldValue := AsMask;
+  max := 0;
+  for i := 0 to value.Size - 1 do
+    if value[i] then
+      max := i;
+  FBits.Size := max+1;
+  for i := 0 to FBits.Size - 1 do
+    FBits[i] := value[i];
+  if oldValue <> AsMask then
+    DoOnChange;
+end; { TOmniIntegerSet.SetAsBits }
+
+procedure TOmniIntegerSet.SetAsIntArray(const value: TIntegerDynArray);
+var
+  max     : integer;
+  oldValue: int64;
+  val     : integer;
+begin
+  oldValue := AsMask;
+  max := 0;
+  for val in value do
+    if val > max then
+      max := val;
+  FBits.Size := max + 1;
+  for val := 0 to FBits.Size - 1 do
+    FBits[val] := false;
+  for val in value do
+    FBits[val] := true;
+  if oldValue <> AsMask then
+    DoOnChange;
+end; { TOmniIntegerSet.SetAsIntArray }
+
+procedure TOmniIntegerSet.SetAsMask(const value: int64);
+var
+  b       : boolean;
+  i       : integer;
+  max     : integer;
+  oldValue: int64;
+  val     : int64;
+begin
+  oldValue := AsMask;
+  FBits.Size := 64;
+  val := value;
+  max := 0;
+  for i := 0 to FBits.Size - 1 do begin
+    b := Odd(val);
+    if b then
+      max := i;
+    FBits[i] := b;
+    val := val SHR 1;
+  end;
+  if max <> 63 then
+    FBits.Size := max + 1;
+  if oldValue <> value then
+    DoOnChange;
+end; { TOmniIntegerSet.SetAsMask }
+
+procedure TOmniIntegerSet.SetOnChange(const value: TOmniIntegerSetChangedEvent);
+begin
+  FOnChange := value;
+end; { TOmniIntegerSet.SetOnChange }
+
+{ TOmniGroupAffinity }
+
+constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinity: IOmniIntegerSet);
+begin
+  Create(groupNumber, affinity.AsMask);
+end; { TOmniGroupAffinity.Create }
+
+constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinityMask: int64);
+begin
+  FGroup := groupNumber;
+  FAffinity := TOmniIntegerSet.Create;
+  FAffinity.AsMask := affinityMask;
+end; { TOmniGroupAffinity.Create }
+
+function TOmniGroupAffinity.GetAffinity: IOmniIntegerSet;
+var
+  syncMask: IOmniIntegerSet;
+begin
+  if not assigned(FAffinity) then begin
+    syncMask := TOmniIntegerSet.Create;
+    {$IFDEF MSWINDOWS}
+    if CAS(nil, pointer(syncMask), FAffinity) then
+    {$ELSE}
+    if TInterlocked.CompareExchange(pointer(FAffinity), pointer(syncMask), nil) = nil then
+    {$ENDIF}
+      pointer(syncMask) := nil;
+  end;
+  Result := FAffinity;
+end; { TOmniGroupAffinity.GetAffinity }
 
 initialization
   Assert(SizeOf(TObject) = {$IFDEF CPUX64}SizeOf(NativeUInt){$ELSE}SizeOf(cardinal){$ENDIF}); //in VarToObj

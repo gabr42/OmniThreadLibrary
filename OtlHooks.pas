@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2011, Primoz Gabrijelcic
+///Copyright (c) 2016, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -34,10 +34,12 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Creation date     : 2009-05-17
-///   Last modification : 2015-10-04
-///   Version           : 1.03
+///   Last modification : 2016-08-31
+///   Version           : 1.04
 ///</para><para>
 ///   History:
+///     1.04: 2016-08-31
+///       - Added thread pool lifecycle notifications.
 ///     1.03: 2015-10-04
 ///       - Cleaned up 'uses' list.
 ///     1.02: 2011-07-14
@@ -56,7 +58,8 @@ interface
 uses
   SysUtils,
   Classes,
-  OtlSync;
+  OtlSync,
+  OtlThreadPool;
 
 type
   TThreadNotificationType = (tntCreate, tntDestroy);
@@ -72,6 +75,21 @@ procedure UnregisterThreadNotification(notifyMethod: TThreadNotificationMeth); o
 
 procedure SendThreadNotifications(notifyType: TThreadNotificationType;
   const threadName: string);
+
+type
+  TPoolNotificationType = (pntCreate, pntDestroy);
+  TPoolNotificationProc = procedure(notifyType: TPoolNotificationType;
+                            const pool: IOmniThreadPool);
+  TPoolNotificationMeth = procedure(notifyType: TPoolNotificationType;
+                            const pool: IOmniThreadPool) of object;
+
+procedure RegisterPoolNotification(notifyProc: TPoolNotificationProc); overload;
+procedure RegisterPoolNotification(notifyMethod: TPoolNotificationMeth); overload;
+procedure UnregisterPoolNotification(notifyProc: TPoolNotificationProc); overload;
+procedure UnregisterPoolNotification(notifyMethod: TPoolNotificationMeth); overload;
+
+procedure SendPoolNotifications(notifyType: TPoolNotificationType;
+  const pool: IOmniThreadPool);
 
 type
   TExceptionFilterProc = procedure(var e: Exception; var continueProcessing: boolean);
@@ -114,7 +132,20 @@ type
     procedure Register(notifyMethod: TThreadNotificationMeth); overload;
     procedure Unregister(notifyProc: TThreadNotificationProc); overload;
     procedure Unregister(notifyMethod: TThreadNotificationMeth); overload;
-  end; { TThreadNotificationProc }
+  end; { TThreadNotifications }
+
+  TPoolNotifications = class
+  strict private
+    pnList: TProcMethodList;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Notify(notifyType: TPoolNotificationType; const pool: IOmniThreadPool);
+    procedure Register(notifyProc: TPoolNotificationProc); overload;
+    procedure Register(notifyMethod: TPoolNotificationMeth); overload;
+    procedure Unregister(notifyProc: TPoolNotificationProc); overload;
+    procedure Unregister(notifyMethod: TPoolNotificationMeth); overload;
+  end; { TPoolNotifications }
 
   TExceptionFilters = class
   strict private
@@ -132,6 +163,7 @@ type
 var
   GExceptionFilters   : TExceptionFilters;
   GThreadNotifications: TThreadNotifications;
+  GPoolNotifications  : TPoolNotifications;
 
 procedure RegisterThreadNotification(notifyProc: TThreadNotificationProc); overload;
 begin
@@ -158,6 +190,32 @@ procedure SendThreadNotifications(notifyType: TThreadNotificationType;
 begin
   GThreadNotifications.Notify(notifyType, threadName);
 end; { SendThreadNotifications }
+
+procedure RegisterPoolNotification(notifyProc: TPoolNotificationProc);
+begin
+  GPoolNotifications.Register(notifyProc);
+end; { RegisterPoolNotification }
+
+procedure RegisterPoolNotification(notifyMethod: TPoolNotificationMeth);
+begin
+  GPoolNotifications.Register(notifyMethod);
+end; { RegisterPoolNotification }
+
+procedure UnregisterPoolNotification(notifyProc: TPoolNotificationProc);
+begin
+  GPoolNotifications.Unregister(notifyProc);
+end; { UnregisterPoolNotification }
+
+procedure UnregisterPoolNotification(notifyMethod: TPoolNotificationMeth);
+begin
+  GPoolNotifications.Unregister(notifyMethod);
+end; { UnregisterPoolNotification }
+
+procedure SendPoolNotifications(notifyType: TPoolNotificationType;
+  const pool: IOmniThreadPool);
+begin
+  GPoolNotifications.Notify(notifyType, pool);
+end; { SendPoolNotifications }
 
 procedure RegisterExceptionFilter(filterProc: TExceptionFilterProc); overload;
 begin
@@ -308,6 +366,64 @@ begin
   tnList.Remove(TMethod(notifyMethod));
 end; { TThreadNotifications.Unregister }
 
+{ TPoolNotifications }
+
+constructor TPoolNotifications.Create;
+begin
+  inherited Create;
+  pnList := TProcMethodList.Create;
+end; { TPoolNotifications.Create }
+
+destructor TPoolNotifications.Destroy;
+begin
+  FreeAndNil(pnList);
+  inherited Destroy;
+end; { TPoolNotifications.Destroy }
+
+procedure TPoolNotifications.Notify(notifyType: TPoolNotificationType;
+  const pool: IOmniThreadPool);
+var
+  iObserver: integer;
+  meth     : TMethod;
+begin
+  if not assigned(Self) then
+    Exit; //finalization
+  pnList.EnterReadLock;
+  try
+    iObserver := 0;
+    while iObserver < pnList.Count do begin
+      if pnList[iObserver] = nil then
+        TPoolNotificationProc(pnList[iObserver+1])(notifyType, pool)
+      else begin
+        meth.Data := pnList[iObserver];
+        meth.Code := pnList[iObserver+1];
+        TPoolNotificationMeth(meth)(notifyType, pool);
+      end;
+      Inc(iObserver, 2);
+    end;
+  finally pnList.ExitReadLock; end;
+end; { TPoolNotifications.Notify }
+
+procedure TPoolNotifications.Register(notifyProc: TPoolNotificationProc);
+begin
+  pnList.Add(pointer(@notifyProc));
+end; { TPoolNotifications.Register }
+
+procedure TPoolNotifications.Register(notifyMethod: TPoolNotificationMeth);
+begin
+  pnList.Add(TMethod(notifyMethod));
+end; { TPoolNotifications.Register }
+
+procedure TPoolNotifications.Unregister(notifyProc: TPoolNotificationProc);
+begin
+  pnList.Remove(pointer(@notifyProc));
+end; { TPoolNotifications.Unregister }
+
+procedure TPoolNotifications.Unregister(notifyMethod: TPoolNotificationMeth);
+begin
+  pnList.Remove(TMethod(notifyMethod));
+end; { TPoolNotifications.Unregister }
+
 { TExceptionFilters }
 
 constructor TExceptionFilters.Create;
@@ -368,7 +484,9 @@ end; { TExceptionFilters.Unregister }
 initialization
   GExceptionFilters := TExceptionFilters.Create;
   GThreadNotifications := TThreadNotifications.Create;
+  GPoolNotifications := TPoolNotifications.Create;
 finalization
   FreeAndNil(GExceptionFilters);
   FreeAndNil(GThreadNotifications);
+  FreeAndNil(GPoolNotifications);
 end.
