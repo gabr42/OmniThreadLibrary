@@ -64,40 +64,44 @@
     "projects":
     [
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE.groupproj",
+            "project": "Packages\\Delphi XE\\OmniThreadLibraryPackages.groupproj",
             "compiler": 22
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE2.groupproj",
+            "project": "Packages\\Delphi XE2\\OmniThreadLibraryPackages.groupproj",
             "compiler": 23
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE3.groupproj",
+            "project": "Packages\\Delphi XE3\\OmniThreadLibraryPackages.groupproj",
             "compiler": 24
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE4.groupproj",
+            "project": "Packages\\Delphi XE4\\OmniThreadLibraryPackages.groupproj",
             "compiler": 25
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE5.groupproj",
+            "project": "Packages\\Delphi XE5\\OmniThreadLibraryPackages.groupproj",
             "compiler": 26
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE6.groupproj",
+            "project": "Packages\\Delphi XE6\\OmniThreadLibraryPackages.groupproj",
             "compiler": 27
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE7.groupproj",
+            "project": "Packages\\Delphi XE7\\OmniThreadLibraryPackages.groupproj",
             "compiler": 28
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackagesXE8.groupproj",
+            "project": "Packages\\Delphi XE8\\OmniThreadLibraryPackages.groupproj",
             "compiler": 29
         },
         {
-            "project": "Packages\\OmniThreadLibraryPackages10Seattle.groupproj",
+            "project": "Packages\\Delphi 10 Seattle\\OmniThreadLibraryPackages.groupproj",
             "compiler": 30
+        },
+        {
+            "project": "Packages\\Delphi 10.1 Berlin\\OmniThreadLibraryPackages.groupproj",
+            "compiler": 31
         }
     ]    
 }
