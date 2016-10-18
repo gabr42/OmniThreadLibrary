@@ -10,6 +10,8 @@
   mkdir %otl_ut_root%\dcu\Win32 >nul 2>nul
   mkdir %otl_ut_root%\dcu\Win64 >nul 2>nul
 
+  if exist %otl_ut_root%\unittest.log del %otl_ut_root%\unittest.log
+
 echo Compiling 32-bit
   dcc32 CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error

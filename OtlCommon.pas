@@ -4209,21 +4209,21 @@ begin
   oeNUMANodes.Add(TOmniNUMANode.Create(0, 0, mask));
   {$ELSE}
   bufLen := 0;
-  GetLogicalProcessorInformationEx(Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, nil, bufLen);
+  DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, nil, bufLen);
   if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
     raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[1] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
   GetMem(procInfo, bufLen);
   try
-    if not GetLogicalProcessorInformationEx(Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, Windows.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
+    if not DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, DSiWin32.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
       raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[2] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
     numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
     processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
     currentInfo := procInfo;
     while (NativeUInt(currentInfo) - NativeUInt(procInfo)) < bufLen do begin
-      if currentInfo.Relationship = Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
+      if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
         numaNodesInternal.Add(TOmniNUMANode.Create(currentInfo.NumaNode.NodeNumber,
           currentInfo.NumaNode.GroupMask.Group, currentInfo.NumaNode.GroupMask.Mask))
-      else if currentInfo.Relationship = Windows._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
+      else if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
         pGroupInfo := @currentInfo.Group.GroupInfo;
         for iGroup := 0 to currentInfo.Group.ActiveGroupCount - 1 do begin
           processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));

@@ -1183,7 +1183,7 @@ implementation
 
 uses
   {$IFDEF OTL_Generics}
-  System.Generics.Collections,
+  Generics.Collections,
   {$ENDIF OTL_Generics}
   ObjAuto,
   OtlHooks,

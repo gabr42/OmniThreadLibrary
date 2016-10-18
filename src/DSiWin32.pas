@@ -509,14 +509,16 @@ interface
 {$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
+{$UNDEF DSiHasGroupAffinity}{$UNDEF DSiNeedUSHORT}
 {$IFDEF ConditionalExpressions}
   {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}{$UNDEF UseAnsiStrings}
   {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
-  {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$IFEND}
-  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
+  {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
+  {$IF CompilerVersion >= 21}{$DEFINE DSiHasUShort}{$IFEND}
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
+  {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
 {$ENDIF}
 {$IFDEF Unicode}{$UNDEF DSiNeedRawByteString}{$ENDIF}
@@ -979,11 +981,16 @@ const
 
 type
   {$IFDEF DSiNeedULONGEtc}
-    ULONG_PTR = Cardinal;
-    {$EXTERNALSYM ULONG_PTR}
-    ULONGLONG = UInt64;
-    {$EXTERNALSYM ULONGLONG}
+  ULONG_PTR = Cardinal;
+  {$EXTERNALSYM ULONG_PTR}
+  ULONGLONG = UInt64;
+  {$EXTERNALSYM ULONGLONG}
   {$ENDIF}
+  {$IFDEF DSiNeedUSHORT}
+  USHORT = Word;
+  {$EXTERNALSYM USHORT}
+  {$ENDIF}
+
   {$IFDEF DSiHasSafeNativeInt}
   DSiNativeInt = NativeInt;
   DSiNativeUInt = NativeUInt;
@@ -1617,6 +1624,113 @@ type
   PSystemLogicalProcessorInformation = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
   TSystemLogicalProcessorInformationArr = array of TSystemLogicalProcessorInformation;
 
+{$IFNDEF DSiHasGroupAffinity}
+  KAFFINITY = ULONG_PTR;
+
+  _GROUP_AFFINITY = record
+      Mask: KAFFINITY;
+      Group: WORD;
+      Reserved: array[0..2] of WORD;
+  end;
+  {$EXTERNALSYM _GROUP_AFFINITY}
+  GROUP_AFFINITY = _GROUP_AFFINITY;
+  {$EXTERNALSYM GROUP_AFFINITY}
+  PGROUP_AFFINITY = ^_GROUP_AFFINITY;
+  {$EXTERNALSYM PGROUP_AFFINITY}
+  TGroupAffinity = _GROUP_AFFINITY;
+  PGroupAffinity = PGROUP_AFFINITY;
+
+  _PROCESSOR_GROUP_INFO = record
+    MaximumProcessorCount: BYTE;
+    ActiveProcessorCount: BYTE;
+    Reserved: array[0..37] of BYTE;
+    ActiveProcessorMask: KAFFINITY;
+  end;
+  {$EXTERNALSYM _PROCESSOR_GROUP_INFO}
+  PROCESSOR_GROUP_INFO = _PROCESSOR_GROUP_INFO;
+  {$EXTERNALSYM PROCESSOR_GROUP_INFO}
+  PPROCESSOR_GROUP_INFO = ^_PROCESSOR_GROUP_INFO;
+  {$EXTERNALSYM PPROCESSOR_GROUP_INFO}
+  TProcessorGroupInfo = _PROCESSOR_GROUP_INFO;
+  PProcessorGroupInfo = PPROCESSOR_GROUP_INFO;
+
+  _PROCESSOR_RELATIONSHIP = record
+    Flags: BYTE;
+    Reserved: array[0..20] of BYTE;
+    GroupCount: WORD;
+    GroupMask: array[0..0] of GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _PROCESSOR_RELATIONSHIP}
+  PROCESSOR_RELATIONSHIP = _PROCESSOR_RELATIONSHIP;
+  {$EXTERNALSYM PROCESSOR_RELATIONSHIP}
+  PPROCESSOR_RELATIONSHIP = ^_PROCESSOR_RELATIONSHIP;
+  {$EXTERNALSYM PPROCESSOR_RELATIONSHIP}
+  TProcessorRelationship = _PROCESSOR_RELATIONSHIP;
+  PProcessorRelationship = PPROCESSOR_RELATIONSHIP;
+
+  _NUMA_NODE_RELATIONSHIP = record
+    NodeNumber: DWORD;
+    Reserved: array[0..19] of BYTE;
+    GroupMask: GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _NUMA_NODE_RELATIONSHIP}
+  NUMA_NODE_RELATIONSHIP = _NUMA_NODE_RELATIONSHIP;
+  {$EXTERNALSYM NUMA_NODE_RELATIONSHIP}
+  PNUMA_NODE_RELATIONSHIP = ^_NUMA_NODE_RELATIONSHIP;
+  {$EXTERNALSYM PNUMA_NODE_RELATIONSHIP}
+  TNumaNodeRelationship = _NUMA_NODE_RELATIONSHIP;
+  PNumaNodeRelationship = PNUMA_NODE_RELATIONSHIP;
+
+  _CACHE_RELATIONSHIP = record
+    Level: BYTE;
+    Associativity: BYTE;
+    LineSize: WORD;
+    CacheSize: DWORD;
+    _Type: PROCESSOR_CACHE_TYPE;
+    Reserved: array[0..19] of BYTE;
+    GroupMask: GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _CACHE_RELATIONSHIP}
+  CACHE_RELATIONSHIP = _CACHE_RELATIONSHIP;
+  {$EXTERNALSYM CACHE_RELATIONSHIP}
+  PCACHE_RELATIONSHIP = ^_CACHE_RELATIONSHIP;
+  {$EXTERNALSYM PCACHE_RELATIONSHIP}
+  TCacheRelationship = _CACHE_RELATIONSHIP;
+  PCacheRelationship = PCACHE_RELATIONSHIP;
+
+  _GROUP_RELATIONSHIP = record
+    MaximumGroupCount: WORD;
+    ActiveGroupCount: WORD;
+    Reserved: array[0..19] of BYTE;
+    GroupInfo: array[0..0] of PROCESSOR_GROUP_INFO;
+  end;
+  {$EXTERNALSYM _GROUP_RELATIONSHIP}
+  GROUP_RELATIONSHIP = _GROUP_RELATIONSHIP;
+  {$EXTERNALSYM GROUP_RELATIONSHIP}
+  PGROUP_RELATIONSHIP = ^_GROUP_RELATIONSHIP;
+  {$EXTERNALSYM PGROUP_RELATIONSHIP}
+  TGroupRelationship = _GROUP_RELATIONSHIP;
+  PGroupRelationship = PGROUP_RELATIONSHIP;
+
+  _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = record
+    Relationship: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Size: DWORD;
+    case Integer of
+      0: (Processor: PROCESSOR_RELATIONSHIP);
+      1: (NumaNode: NUMA_NODE_RELATIONSHIP);
+      2: (Cache: CACHE_RELATIONSHIP);
+      3: (Group: GROUP_RELATIONSHIP);
+  end;
+  {$EXTERNALSYM _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  {$EXTERNALSYM SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = ^_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  {$EXTERNALSYM PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  TSystemLogicalProcessorInformationEx = _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  PSystemLogicalProcessorInformationEx = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+
+{$ENDIF ~DSiHasGroupAffinity}
+
 // Imagehlp.dll
 const
   CERT_SECTION_TYPE_ANY = $FF;      // Any Certificate type
@@ -1937,6 +2051,10 @@ type
   function  DSiGetLogicalProcessorInformation(
     pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
     var ReturnLength: DWORD): BOOL; stdcall;
+  function  DSiGetLogicalProcessorInformationEx(
+    RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnedLength: DWORD): BOOL; stdcall;
   function  DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcAddress(const libFileName, procName: string): FARPROC;
@@ -2100,6 +2218,10 @@ type
   TGetLogicalProcessorInformation = function(
     pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
     var ReturnLength: DWORD): BOOL; stdcall;
+  TGetLogicalProcessorInformationEx = function(
+    RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnedLength: DWORD): BOOL; stdcall;
   TGetModuleFileNameEx = function(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   TGetProcessImageFileName = function(hProcess: THandle; lpImageFileName: PChar;
@@ -2163,6 +2285,7 @@ const
   GDwmIsCompositionEnabled: TDwmIsCompositionEnabled = nil;
   GEnumProcessModules: TEnumProcessModules = nil;
   GGetLogicalProcessorInformation: TGetLogicalProcessorInformation = nil;
+  GGetLogicalProcessorInformationEx: TGetLogicalProcessorInformationEx = nil;
   GGetModuleFileNameEx: TGetModuleFileNameEx = nil;
   GGetLongPathName: TGetLongPathName = nil;
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
@@ -8670,7 +8793,22 @@ var
       Result := false;
     end;
   end; { DSiGetLogicalProcessorInformation }
-  
+
+  function DSiGetLogicalProcessorInformationEx(
+    RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    var ReturnedLength: DWORD): BOOL;
+  begin
+    if not assigned(GGetLogicalProcessorInformationEx) then
+      GGetLogicalProcessorInformationEx := DSiGetProcAddress('kernel32.dll', 'GetLogicalProcessorInformationEx');
+    if assigned(GGetLogicalProcessorInformationEx) then
+      Result := GGetLogicalProcessorInformationEx(RelationshipType, Buffer, ReturnedLength)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetLogicalProcessorInformationEx }
+
   function DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
   begin
