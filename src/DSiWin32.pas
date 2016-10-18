@@ -8,10 +8,22 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2016-06-15
-   Version           : 1.88
+   Last modification : 2016-10-05
+   Version           : 1.93
 </pre>*)(*
    History:
+     1.93: 2016-10-05
+       - DSiGetWindowsVersion didn't call GetVersionEx() for MajorVersion 10 (Windows 10 and Server 2016).
+     1.92: 2016-09-23
+       - Added optional 'window class' parameter to DSiFindWindow.
+     1.91: 2016-07-19
+       - Implemented DSiFindWindow.
+     1.90: 2016-07-18
+       - Implemented dynamically loaded forwarders DSiGetSystemFirmwareTable,
+         DSiGetNumaProximityNodeEx, and DSiGetNumaHighestNodeNumber.
+     1.89: 2016-07-01
+       - Implemented dynamically loaded forwarders DSiGetThreadGroupAffinity and
+         DSiSetThreadGroupAffinity.
      1.88: 2016-06-15
        - [shaun07776] C++Builder compatible.
      1.87: 2016-05-18
@@ -1382,6 +1394,7 @@ type
   procedure DSiDisableX(hwnd: THandle);
   procedure DSiEnableX(hwnd: THandle);
   function  DSiExitWindows(exitType: TDSiExitWindows): boolean;
+  function  DSiFindWindow(const caption: string; const wndClass: string = ''): HWND;
   function  DSiForceForegroundWindow(hwnd: THandle;
     restoreFirst: boolean = true): boolean;
   function  DSiGetClassName(hwnd: THandle): string;
@@ -1931,6 +1944,9 @@ type
     nSize: DWORD): DWORD; stdcall;
   function  DSiGetProcessMemoryInfo(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  function  DSiGetSystemFirmwareTable(FirmwareTableProviderSignature: DWORD;
+    FirmwareTableID: DWORD; pFirmwareTableBuffer: pointer; BufferSize: DWORD): UInt; stdcall;
+  function  DSiGetThreadGroupAffinity(hThread: THandle; var GroupAffinity: TGroupAffinity): BOOL; stdcall;
   function  DSiGetTickCount64: int64; stdcall;
   function  DSiGetUserProfileDirectoryW(hToken: THandle; lpProfileDir: PWideChar;
     var lpcchSize: DWORD): BOOL; stdcall;
@@ -1948,6 +1964,9 @@ type
   function  DSiNetApiBufferFree(buffer: pointer): cardinal; stdcall;
   function  DSiNetWkstaGetInfo(servername: PChar; level: cardinal;
     out bufptr: pointer): cardinal; stdcall;
+  function  DSiGetNumaHighestNodeNumber(var HighestNodeNunber: ULONG): BOOL; stdcall;
+  function  DSiGetNumaProximityNodeEx(ProximityId: ULONG;
+    var NodeNumber: USHORT): BOOL; stdcall;
   function  DSiNTNetShareAdd(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord; stdcall;
   function  DSiNTNetShareDel(serverName: PChar; netName: PWideChar;
@@ -1958,6 +1977,8 @@ type
   function  DSiSetDllDirectory(path: PChar): boolean; stdcall;
   function  DSiSetSuspendState(hibernate: BOOL; forceCritical: BOOL = false;
     disableWakeEvent: BOOL = false): BOOL; stdcall;
+  function  DSiSetThreadGroupAffinity(hThread: THandle; const GroupAffinity: TGroupAffinity;
+    PreviousGroupAffinity: PGroupAffinity): BOOL; stdcall;
   function  DSiSHEmptyRecycleBin(Wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
   function  DSiWinVerifyTrust(hwnd: HWND; const ActionID: TGUID;
@@ -2085,6 +2106,9 @@ type
     nSize: DWORD): DWORD; stdcall;
   TGetProcessMemoryInfo = function(process: THandle; memCounters: PProcessMemoryCounters;
     cb: DWORD): boolean; stdcall;
+  TGetSystemFirmwareTable = function (FirmwareTableProviderSignature: DWORD;
+    FirmwareTableID: DWORD; pFirmwareTableBuffer: pointer; BufferSize: DWORD): UInt; stdcall;
+  TGetThreadGroupAffinity = function(hThread: THandle; var GroupAffinity: TGroupAffinity): BOOL; stdcall;
   TGetTickCount64 = function: int64; stdcall;
   TGetUserProfileDirectoryW = function(hToken: THandle; lpProfileDir: PWideChar;
     var lpcchSize: DWORD): BOOL; stdcall;
@@ -2102,6 +2126,9 @@ type
   TNetApiBufferFree = function(buffer: pointer): cardinal; stdcall;
   TNetWkstaGetInfo = function(servername: PChar; level: cardinal;
     out bufptr: pointer): cardinal; stdcall;
+  TGetNumaHighestNodeNumber = function(var HighestNodeNunber: ULONG): BOOL; stdcall;
+  TGetNumaProximityNodeEx = function (ProximityId: ULONG;
+    var NodeNumber: USHORT): BOOL; stdcall;
   TNTNetShareAdd = function(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord; stdcall;
   TNTNetShareDel = function(serverName: PChar; netName: PWideChar;
@@ -2111,6 +2138,8 @@ type
   TRevertToSelf = function: BOOL; stdcall;
   TSetDllDirectory = function(path: PChar): boolean; stdcall;
   TSetSuspendState = function(hibernate, forceCritical, disableWakeEvent: BOOL): BOOL; stdcall;
+  TSetThreadGroupAffinity = function(hThread: THandle; const GroupAffinity: TGroupAffinity;
+    PreviousGroupAffinity: PGroupAffinity): BOOL; stdcall;
   TSHEmptyRecycleBin = function(wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
   TWinVerifyTrust = function(hwnd: HWND; const ActionID: TGUID;
@@ -2138,6 +2167,8 @@ const
   GGetLongPathName: TGetLongPathName = nil;
   GGetProcessImageFileName: TGetProcessImageFileName = nil;
   GGetProcessMemoryInfo: TGetProcessMemoryInfo = nil;
+  GGetSystemFirmwareTable: TGetSystemFirmwareTable = nil;
+  GGetThreadGroupAffinity: TGetThreadGroupAffinity = nil;
   GGetTickCount64: TGetTickCount64 = nil;
   GGetUserProfileDirectoryW: TGetUserProfileDirectoryW = nil;
   GGlobalMemoryStatusEx: TGlobalMemoryStatusEx = nil;
@@ -2149,12 +2180,15 @@ const
   GLogonUser: TLogonUser = nil;
   GNetApiBufferFree: TNetApiBufferFree = nil;
   GNetWkstaGetInfo: TNetWkstaGetInfo = nil;
+  GGetNumaHighestNodeNumber: TGetNumaHighestNodeNumber = nil;
+  GGetNumaProximityNodeEx: TGetNumaProximityNodeEx = nil;
   GNTNetShareAdd: TNTNetShareAdd = nil;
   GNTNetShareDel: TNTNetShareDel = nil;
   GOpenSCManager: TOpenSCManager = nil;
   GRevertToSelf: TRevertToSelf = nil;
   GSetDllDirectory: TSetDllDirectory = nil;
   GSetSuspendState: TSetSuspendState = nil;
+  GSetThreadGroupAffinity: TSetThreadGroupAffinity = nil;
   GSHEmptyRecycleBin: TSHEmptyRecycleBin = nil;
   GWinVerifyTrust: TWinVerifyTrust = nil;
   GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
@@ -5983,13 +6017,46 @@ const
   {:Exits (logoff, shutdown, restart) the Windows.
     @author  xtreme
     @since   2005-02-13
-  }        
+  }
   function DSiExitWindows(exitType: TDSiExitWindows): boolean;
   begin
     Result := false;
     if DSiEnablePrivilege('SeShutdownPrivilege') then
       Result := ExitWindowsEx(CExitWindows[exitType], 0);
   end; { DSiExitWindows }
+
+type
+  TCaptWndInfo = record
+    Caption    : string;
+    WindowClass: string;
+    FoundWindow: HWND;
+  end; { TCaptWndInfo }
+  PCaptWndInfo = ^TCaptWndInfo;
+
+  function EnumGetProcessWindowByCaption(wnd: HWND; userParam: LPARAM): BOOL; stdcall;
+  begin
+    if SameText(DSiGetWindowText(wnd), PCaptWndInfo(userParam)^.Caption)
+       and ((PCaptWndInfo(userParam)^.WindowClass = '')
+            or SameText(DSiGetClassName(wnd), PCaptWndInfo(userParam)^.WindowClass)) then
+    begin
+      PCaptWndInfo(userParam)^.FoundWindow := Wnd;
+      Result := false;
+    end
+    else
+      Result := true;
+  end; { EnumGetProcessWindowByCaption }
+
+  {gp}
+  function DSiFindWindow(const caption, wndClass: string): HWND;
+  var
+    captWndInfo: TCaptWndInfo;
+  begin
+    captWndInfo.Caption := caption;
+    captWndInfo.WindowClass := wndClass;
+    captWndInfo.FoundWindow := 0;
+    EnumWindows(@EnumGetProcessWindowByCaption, LPARAM(@captWndInfo));
+    Result := captWndInfo.FoundWindow;
+  end; { DSiFindWindow }
 
   {gp}
   function DSiForceForegroundWindow(hwnd: THandle; restoreFirst: boolean): boolean;
@@ -6082,7 +6149,7 @@ type
   end; { TProcWndInfo }
   PProcWndInfo = ^TProcWndInfo;
 
-  function EnumGetProcessWindow(wnd: HWND; userParam: LPARAM): BOOL; stdcall;
+  function EnumGetProcessWindowByProcessID(wnd: HWND; userParam: LPARAM): BOOL; stdcall;
   var
     wndProcessID: DWORD;
   begin
@@ -6095,7 +6162,7 @@ type
     end
     else
       Result := true;
-  end; { EnumGetProcessWindow }
+  end; { EnumGetProcessWindowByProcessID }
 
   {ln}
   function DSiGetProcessWindow(targetProcessID: cardinal): HWND;
@@ -6104,7 +6171,7 @@ type
   begin
     procWndInfo.TargetProcessID := targetProcessID;
     procWndInfo.FoundWindow := 0;
-    EnumWindows(@EnumGetProcessWindow, LPARAM(@procWndInfo));
+    EnumWindows(@EnumGetProcessWindowByProcessID, LPARAM(@procWndInfo));
     Result := procWndInfo.FoundWindow;
   end; { DSiGetProcessWindow }
 
@@ -7019,11 +7086,14 @@ var
                 else Result := wvWinServer2012R2;
               end;
           end;
-          10:
+          10: begin
+            versionInfoEx.dwOSVersionInfoSize := SizeOf(versionInfoEx);
+            GetVersionEx(versionInfoExFake);
             if versionInfoEx.wProductType = VER_NT_WORKSTATION then
               Result := wvWin10
             else
               Result := wvWinServer2016;
+          end;
         end; //case versionInfo.dwMajorVersion
       end; //versionInfo.dwPlatformID
   end; { DSiGetWindowsVersion }
@@ -8640,6 +8710,30 @@ var
     end;
   end; { DSiGetProcessMemoryInfo }
 
+  function DSiGetThreadGroupAffinity(hThread: THandle; var GroupAffinity: TGroupAffinity): BOOL;
+  begin
+    if not assigned(GGetThreadGroupAffinity) then
+      GGetThreadGroupAffinity := DSiGetProcAddress('kernel32.dll', 'GetThreadGroupAffinity');
+    if assigned(GGetThreadGroupAffinity) then
+      Result := GGetThreadGroupAffinity(hThread, GroupAffinity)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetThreadGroupAffinity }
+
+  function DSiGetSystemFirmwareTable(FirmwareTableProviderSignature: DWORD;
+    FirmwareTableID: DWORD; pFirmwareTableBuffer: pointer; BufferSize: DWORD): UInt;
+  begin
+    if not assigned(GGetSystemFirmwareTable) then
+      GGetSystemFirmwareTable := DSiGetProcAddress('kernel32.dll', 'GetSystemFirmwareTable');
+    if assigned(GGetSystemFirmwareTable) then
+      Result := GGetSystemFirmwareTable(FirmwareTableProviderSignature, FirmwareTableID,
+        pFirmwareTableBuffer, BufferSize)
+    else
+      Result := ERROR_NOT_SUPPORTED;
+  end; { DSiGetSystemFirmwareTable }
+
   function DSiGetTickCount64: int64; stdcall;
   begin
     if not assigned(GGetTickCount64) then
@@ -8783,6 +8877,30 @@ var
       Result := ERROR_NOT_SUPPORTED;
   end; { DSiNetWkstaGetInfo }
 
+  function DSiGetNumaHighestNodeNumber(var HighestNodeNunber: ULONG): BOOL;
+  begin
+    if not assigned(GGetNumaHighestNodeNumber) then
+      GGetNumaHighestNodeNumber := DSiGetProcAddress('kernel32.dll', 'GetNumaHighestNodeNumber');
+    if assigned(GGetNumaHighestNodeNumber) then
+      Result := GGetNumaHighestNodeNumber(HighestNodeNunber)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetNumaHighestNodeNumber }
+
+  function DSiGetNumaProximityNodeEx(ProximityId: ULONG; var NodeNumber: USHORT): BOOL; stdcall;
+  begin
+    if not assigned(GGetNumaProximityNodeEx) then
+      GGetNumaProximityNodeEx := DSiGetProcAddress('kernel32.dll', 'GetNumaProximityNodeEx');
+    if assigned(GGetNumaProximityNodeEx) then
+      Result := GGetNumaProximityNodeEx(ProximityId, NodeNumber)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiGetNumaProximityNodeEx }
+
   function DSiNTNetShareAdd(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord;
   begin
@@ -8849,6 +8967,17 @@ var
     else
       Result := false;
   end; { DSiSetSuspendState }
+
+  function DSiSetThreadGroupAffinity(hThread: THandle; const GroupAffinity: TGroupAffinity;
+    PreviousGroupAffinity: PGroupAffinity): BOOL;
+  begin
+    if not assigned(GSetThreadGroupAffinity) then
+      GSetThreadGroupAffinity := DSiGetProcAddress('kernel32.dll', 'SetThreadGroupAffinity');
+    if assigned(GSetThreadGroupAffinity) then
+      Result := GSetThreadGroupAffinity(hThread, GroupAffinity, PreviousGroupAffinity)
+    else
+      Result := false;
+  end; { DSiSetThreadGroupAffinity }
 
   function DSiSHEmptyRecycleBin(Wnd: HWND; pszRootPath: PChar;
     dwFlags: DWORD): HRESULT; stdcall;
