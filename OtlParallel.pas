@@ -1497,7 +1497,7 @@ type
     FActive  : boolean;
     FInterval: integer;
     FWorker  : IOmniTaskControl;
-  strict protected
+  protected
     procedure ApplyTimer;
     function  GetActive: boolean; inline;
     function  GetInterval: integer; inline;

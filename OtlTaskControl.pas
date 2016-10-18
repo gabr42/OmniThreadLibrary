@@ -843,8 +843,10 @@ type
     procedure Asy_UnregisterWaitObject(waitObject: TOmniTransitionEvent);
     procedure EmptyMessageQueues(const task: IOmniTask);
     procedure TerminateWhen(handle: TOmniTransitionEvent); overload;
+    {$IFDEF OTL_NUMASupport}
     class function VerifyNUMANode(numaNodeNumber: integer): IOmniNUMANode;
     class procedure VerifyProcessorGroup(procGroupNumber: integer);
+    {$ENDIF OTL_NUMASupport}
     function  WaitForInit: boolean;
     property ExitCode: integer read GetExitCode;
     property ExitMessage: string read GetExitMessage;
@@ -2669,15 +2671,15 @@ begin
 end; { TOmniTaskExecutor.SetOptions }
 
 procedure TOmniTaskExecutor.SetNUMANode(numaNodeNumber: integer);
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_NUMASupport}
 var
   node         : IOmniNUMANode;
 {$IFDEF MSWindows}
   groupAffinity: TGroupAffinity;
 {$ENDIF MSWindows}
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_NUMASupport}
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_NUMASupport}
   node := VerifyNUMANode(numaNodeNumber);
   {$IFDEF MSWindows}
   FillChar(groupAffinity, SizeOf(groupAffinity), 0);
@@ -2685,18 +2687,18 @@ begin
   groupAffinity.Mask := node.Affinity.AsMask;
   DSiSetThreadGroupAffinity(GetCurrentThread, groupAffinity, nil);
   {$ENDIF MSWindows}
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_NUMASupport}
 end; { TOmniTaskExecutor.SetNUMANode }
 
 procedure TOmniTaskExecutor.SetProcessorGroup(procGroupNumber: integer);
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_NUMASupport}
 {$IFDEF MSWindows}
 var
   groupAffinity: TGroupAffinity;
 {$ENDIF MSWindows}
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_NUMASupport}
 begin
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_NUMASupport}
   VerifyProcessorGroup(procGroupNumber);
   {$IFDEF MSWindows}
   FillChar(groupAffinity, SizeOf(groupAffinity), 0);
@@ -2704,7 +2706,7 @@ begin
   groupAffinity.Mask := Environment.ProcessorGroups[procGroupNumber].Affinity.AsMask;
   DSiSetThreadGroupAffinity(GetCurrentThread, groupAffinity, nil);
   {$ENDIF MSWindows}
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_NUMASupport}
 end; { TOmniTaskExecutor.SetProcessorGroup }
 
 procedure TOmniTaskExecutor.SetTimer(timerID: integer; interval_ms: cardinal; const
@@ -2779,6 +2781,7 @@ begin
   finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.TimeUntilNextTimer_ms }
 
+{$IFDEF OTL_NUMASupport}
 class function TOmniTaskExecutor.VerifyNUMANode(numaNodeNumber: integer): IOmniNUMANode;
 begin
   Result := Environment.NUMANodes.FindNode(numaNodeNumber);
@@ -2796,6 +2799,7 @@ begin
             'Processor group number (%d) is out of range [0..%d]',
             [procGroupNumber, procGroups.Count - 1]);
 end; { TOmniTaskExecutor.VerifyProcessorGroup }
+{$ENDIF OTL_NUMASupport}
 
 function TOmniTaskExecutor.WaitForInit: boolean;
 begin
@@ -3225,7 +3229,9 @@ end; { TOmniTaskControl.MsgWait }
 
 function TOmniTaskControl.NUMANode(numaNodeNumber: integer): IOmniTaskControl;
 begin
+  {$IFDEF OTL_NUMASupport}
   TOmniTaskExecutor.VerifyNUMANode(numaNodeNumber);
+  {$ENDIF OTL_NUMASupport}
   otcSharedInfo.NUMANode := numaNodeNumber;
   Result := Self;
 end; { TOmniTaskControl.NUMANode }
@@ -3294,7 +3300,9 @@ end; { TOmniTaskControl.OnTerminated }
 
 function TOmniTaskControl.ProcessorGroup(procGroupNumber: integer): IOmniTaskControl;
 begin
+  {$IFDEF OTL_NUMASupport}
   TOmniTaskExecutor.VerifyProcessorGroup(procGroupNumber);
+  {$ENDIF OTL_NUMASupport}
   otcSharedInfo.ProcessorGroup := procGroupNumber;
   Result := Self;
 end; { TOmniTaskControl.ProcessorGroup }

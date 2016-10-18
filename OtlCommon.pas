@@ -746,7 +746,7 @@ type
     FHasValueCopy: boolean;
     FOnChange    : TOmniIntegerSetChangedEvent;
     FValueCopy   : TIntegerDynArray;
-  strict protected
+  protected
     procedure DoOnChange;
     function  GetAsBits: TBits; inline;
     function  GetAsIntArray: TIntegerDynArray;
@@ -1354,7 +1354,7 @@ type
     FNodes               : TList<IOmniNUMANode>;
     FProximityInitialized: boolean;
     FProximity           : array of array of integer;
-  strict protected
+  protected
     function  GetItem(idx: integer): IOmniNUMANode; inline;
     procedure InitializeProximity;
   public
@@ -1391,7 +1391,7 @@ type
                                                   IOmniProcessorGroupsInternal)
   private
     FGroups: TList<IOmniProcessorGroup>;
-  strict protected
+  protected
     function  GetItem(idx: integer): IOmniProcessorGroup; inline;
   public
     constructor Create;
@@ -3949,13 +3949,13 @@ end; { TOmniNUMANodes.Add }
 function TOmniNUMANodes.All: IOmniIntegerSet;
 var
   i    : integer;
-  nodes: TArray<integer>;
+  nodes: TIntegerDynArray;
 begin
   SetLength(nodes, Count);
   for i := 0 to Count - 1 do
     nodes[i] := Item[i].NodeNumber;
   Result := TOmniIntegerSet.Create;
-  Result.AsArray := nodes;
+  Result.AsIntArray := nodes;
 end; { TOmniNUMANodes.All }
 
 function TOmniNUMANodes.Count: integer;
@@ -4106,13 +4106,13 @@ end; { TOmniProcessorGroups.Add }
 function TOmniProcessorGroups.All: IOmniIntegerSet;
 var
   i    : integer;
-  nodes: TArray<integer>;
+  nodes: TIntegerDynArray;
 begin
   SetLength(nodes, Count);
   for i := 0 to Count - 1 do
     nodes[i] := Item[i].GroupNumber;
   Result := TOmniIntegerSet.Create;
-  Result.AsArray := nodes;
+  Result.AsIntArray := nodes;
 end; { TOmniProcessorGroups.All }
 
 function TOmniProcessorGroups.Count: integer;
@@ -4811,8 +4811,10 @@ var
 begin
   Result := true;
   for i := 0 to FBits.Size - 1 do
-    if FBits[i] then
-      Exit(false);
+    if FBits[i] then begin
+      Result := false;
+      Exit;
+    end;
 end; { TOmniIntegerSet.IsEmpty }
 
 procedure TOmniIntegerSet.PrepareValueCopy;

@@ -1,7 +1,7 @@
 program app_63_Service;
 
 uses
-  Vcl.SvcMgr,
+  SvcMgr,
   test_63_Service in 'test_63_Service.pas' {frm63Service: TService};
 
 {$R *.RES}

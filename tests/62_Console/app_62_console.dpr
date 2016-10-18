@@ -2,12 +2,10 @@ program app_62_console;
 
 {$APPTYPE CONSOLE}
 
-{$R *.res}
-
 uses
-  Winapi.Windows,
-  Winapi.Messages,
-  System.SysUtils,
+  Windows,
+  Messages,
+  SysUtils,
   OtlComm,
   OtlTask,
   OtlTaskControl,

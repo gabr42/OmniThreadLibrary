@@ -3,8 +3,7 @@ unit test_63_Service;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
-  Vcl.Graphics, Vcl.Controls, Vcl.SvcMgr, Vcl.Dialogs,
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, SvcMgr, Dialogs,
   OtlParallel;
 
 type

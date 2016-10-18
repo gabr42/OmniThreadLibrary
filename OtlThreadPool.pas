@@ -443,7 +443,6 @@ type
     procedure ForwardThreadCreated(threadID: TThreadID);
     procedure ForwardThreadDestroying(threadID: TThreadID;
       threadPoolOperation: TThreadPoolOperation; worker: TOTPWorkerThread = nil);
-    function  GetAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
     procedure InternalStop;
     function  LocateThread(threadID: DWORD): TOTPWorkerThread;
     procedure Log(const msg: string; const params: array of const);
@@ -451,12 +450,13 @@ type
     procedure ProcessCompletedWorkItem(workItem: TOTPWorkItem);
     procedure RequestCompleted(workItem: TOTPWorkItem; worker: TOTPWorkerThread);
     procedure ScheduleNext(workItem: TOTPWorkItem);
-    procedure SetAsy_OnUnhandledWorkerException(const value: TOTPUnhandledWorkerException);
     procedure StopThread(worker: TOTPWorkerThread);
     procedure UpdateScheduler;
   protected
     procedure Cleanup; override;
+    function  GetAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
     function  Initialize: boolean; override;
+    procedure SetAsy_OnUnhandledWorkerException(const value: TOTPUnhandledWorkerException);
   public
     CountQueued                : TOmniAlignedInt32;
     CountQueuedLock            : TOmniCS;
@@ -525,6 +525,7 @@ type
     function  GetName: string;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
+    procedure Log(const msg: string; const params: array of const);
     procedure NotifyAffinityChanged(const value: IOmniIntegerSet);
     procedure SetAsy_OnUnhandledWorkerException(const value: TOTPUnhandledWorkerException);
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -538,7 +539,6 @@ type
   {$IFDEF OTL_NUMASupport}
     function  GetNUMANodes: IOmniIntegerSet;
     function  GetProcessorGroups: IOmniIntegerSet;
-    procedure Log(const msg: string; const params: array of const);
     procedure NotifyNUMANodesChanged(const value: IOmniIntegerSet);
     procedure NotifyProcessorGroupsChanged(const value: IOmniIntegerSet);
     procedure SetNUMANodes(const value: IOmniIntegerSet);
@@ -1434,10 +1434,14 @@ begin
 end; { TOTPWorker.ScheduleNext }
 
 procedure TOTPWorker.SetAffinity(const value: TOmniValue);
+var
+  ov: TOmniValue;
 begin
-  owAffinity.Assign(value[0].AsInterface as IOmniIntegerSet);
+  ov := value[0];
+  owAffinity.Assign(ov.AsInterface as IOmniIntegerSet);
   UpdateScheduler;
-  (value[1].AsObject as TOmniWaitableValue).Signal;
+  ov := value[1];
+  (ov.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetAffinity }
 
 procedure TOTPWorker.SetAsy_OnUnhandledWorkerException(const value:
@@ -1473,17 +1477,25 @@ begin
 end; { TOTPWorker.SetName }
 
 procedure TOTPWorker.SetNUMANodes(const value: TOmniValue);
+var
+  ov: TOmniValue;
 begin
-  owNUMANodes.Assign(value[0].AsInterface as IOmniIntegerSet);
+  ov := value[0];
+  owNUMANodes.Assign(ov.AsInterface as IOmniIntegerSet);
   UpdateScheduler;
-  (value[1].AsObject as TOmniWaitableValue).Signal;
+  ov := value[1];
+  (ov.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetNUMANodes }
 
 procedure TOTPWorker.SetProcessorGroups(const value: TOmniValue);
+var
+  ov: TOmniValue;
 begin
-  owProcessorGroups.Assign(value[0].AsInterface as IOmniIntegerSet);
+  ov := value[0];
+  owProcessorGroups.Assign(ov.AsInterface as IOmniIntegerSet);
   UpdateScheduler;
-  (value[1].AsObject as TOmniWaitableValue).Signal;
+  ov := value[1];
+  (ov.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetProcessorGroups }
 
 procedure TOTPWorker.SetThreadDataFactory(const threadDataFactory: TOmniValue);
@@ -1803,6 +1815,7 @@ begin
   otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
 end; { TOmniThreadPool.SetName }
 
+{$IFDEF OTL_NUMASupport}
 procedure TOmniThreadPool.SetNUMANodes(const value: IOmniIntegerSet);
 begin
   otpNUMANodes.Assign(value);
@@ -1812,6 +1825,7 @@ procedure TOmniThreadPool.SetProcessorGroups(const value: IOmniIntegerSet);
 begin
   otpProcessorGroups.Assign(value);
 end; { TOmniThreadPool.SetProcessorGroups }
+{$ENDIF OTL_NUMASupport}
 
 procedure TOmniThreadPool.SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod);
 begin
