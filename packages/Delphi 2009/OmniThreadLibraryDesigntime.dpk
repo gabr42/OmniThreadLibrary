@@ -26,7 +26,7 @@ package OmniThreadLibraryDesigntime;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'OmniThreadLibrary designtime'}
-{$LIBSUFFIX '230'}
+{$LIBSUFFIX '120'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 

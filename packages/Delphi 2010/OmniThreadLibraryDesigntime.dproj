@@ -83,7 +83,7 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DllSuffix>230</DllSuffix>
+        <DllSuffix>140</DllSuffix>
         <DCC_UnitSearchPath>..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
@@ -147,10 +147,10 @@
                     <VersionInfoKeys Name="Comments"/>
                 </VersionInfoKeys>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclsoapmidas230.bpl">Embarcadero SOAP Midas Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclsoapserver230.bpl">Embarcadero SOAP Server Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k230.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp230.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclsoapmidas140.bpl">Embarcadero SOAP Midas Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclsoapserver140.bpl">Embarcadero SOAP Server Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k140.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp140.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
                 <isVersionControl>
                     <isVersionControl Name="isVersionControlID"/>
