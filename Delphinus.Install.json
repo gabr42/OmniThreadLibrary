@@ -44,7 +44,7 @@
         {
             "folder": "packages",
             "base": "",
-            "recursive": false,
+            "recursive": true,
             "filter": "*;*.*"
         },
         {
