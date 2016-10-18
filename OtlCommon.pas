@@ -718,10 +718,10 @@ type
     procedure SetAsIntArray(const Value: TIntegerDynArray);
     procedure SetAsMask(const value: int64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent);
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_HasArrayOfT}
     function  GetAsArray: TArray<integer>;
     procedure SetAsArray(const Value: TArray<integer>);
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_HasArrayOfT}
   //
     function  Add(value: integer): boolean;
     procedure Assign(const value: IOmniIntegerSet);
@@ -730,9 +730,9 @@ type
     function  Count: integer;
     function  IsEmpty: boolean;
     function  Remove(value: integer): boolean;
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_HasArrayOfT}
     property AsArray: TArray<integer> read GetAsArray write SetAsArray;
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
     property AsMask: int64 read GetAsMask write SetAsMask;
@@ -758,10 +758,10 @@ type
     procedure SetAsIntArray(const value: TIntegerDynArray);
     procedure SetAsMask(const value: int64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent); inline;
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_HasArrayOfT}
     function  GetAsArray: TArray<integer>;
     procedure SetAsArray(const value: TArray<integer>);
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_HasArrayOfT}
   public
     constructor Create;
     constructor Clone(const value: IOmniIntegerSet);
@@ -774,9 +774,9 @@ type
     function  Count: integer;
     function  IsEmpty: boolean;
     function  Remove(value: integer): boolean;
-  {$IFDEF OTL_Generics}
+  {$IFDEF OTL_HasArrayOfT}
     property AsArray: TArray<integer> read GetAsArray write SetAsArray;
-  {$ENDIF OTL_Generics}
+  {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
     property AsMask: int64 read GetAsMask write SetAsMask;
@@ -4736,7 +4736,7 @@ begin
     OnChange(Self);
 end; { TOmniIntegerSet.DoOnChange }
 
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_HasArrayOfT}
 function TOmniIntegerSet.GetAsArray: TArray<integer>;
 var
   count: integer;
@@ -4754,7 +4754,7 @@ begin
       Inc(count);
     end;
 end; { TOmniIntegerSet.GetAsArray }
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_HasArrayOfT}
 
 function TOmniIntegerSet.GetAsBits: TBits;
 begin
@@ -4831,7 +4831,7 @@ begin
     DoOnChange;
 end; { TOmniIntegerSet.Remove }
 
-{$IFDEF OTL_Generics}
+{$IFDEF OTL_HasArrayOfT}
 procedure TOmniIntegerSet.SetAsArray(const value: TArray<integer>);
 var
   max     : integer;
@@ -4851,7 +4851,7 @@ begin
   if oldValue <> AsMask then
     DoOnChange;
 end; { TOmniIntegerSet.SetAsArray }
-{$ENDIF OTL_Generics}
+{$ENDIF OTL_HasArrayOfT}
 
 procedure TOmniIntegerSet.SetAsBits(const value: TBits);
 var
