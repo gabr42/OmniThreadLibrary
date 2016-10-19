@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-10-17
-///   Version           : 1.45
+///   Last modification : 2016-10-19
+///   Version           : 1.46
 ///</para><para>
 ///   History:
+///     1.46: 2016-10-19
+///       - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
+///         (including TMethod and 'reference to procedure') in a TOmniObject.
+///          [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
 ///     1.45: 2016-10-17
 ///       - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
 ///     1.44b: 2016-08-31
@@ -503,6 +507,8 @@ type
     function  CastTo<T>: T;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
     function  ToRecord<T>: T;
+    class function Wrap<T>(const value: T): TOmniValue; static;
+    function  Unwrap<T>: T; //Use this form to call: omnivalue.Unwrap<T>()
   {$IFDEF OTL_HasArrayOfT}
     class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     function  ToArray<T>: TArray<T>;
@@ -2412,6 +2418,16 @@ begin
   Result := T(AsObject);
  end; { TOmniValue.CastToObject<T> }
 {$IFEND}
+
+function TOmniValue.Unwrap<T>: T;
+begin
+  Result := TOmniRecordWrapper<T>(AsOwnedObject).Value;
+end; { TOmniValue.Unwrap }
+
+class function TOmniValue.Wrap<T>(const value: T): TOmniValue;
+begin
+  Result.AsOwnedObject := TOmniRecordWrapper<T>.Create(value);
+end; { TOmniValue.Wrap }
 {$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;

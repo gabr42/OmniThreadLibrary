@@ -1,3 +1,9 @@
+3.06.1: <<unreleased>>
+- New features:
+  - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
+    (including TMethod and 'reference to procedure') in a TOmniObject.
+    [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
+
 3.06: 2016-10-17
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
