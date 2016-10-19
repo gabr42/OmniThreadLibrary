@@ -8,10 +8,13 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2016-10-05
-   Version           : 1.93
+   Last modification : 2016-10-19
+   Version           : 1.94
 </pre>*)(*
    History:
+     1.94: 2016-10-19
+       - Added DSiGetLogicalProcessorInformationEx.
+       - Added some Winapi stuff needed in older Delphis.
      1.93: 2016-10-05
        - DSiGetWindowsVersion didn't call GetVersionEx() for MajorVersion 10 (Windows 10 and Server 2016).
      1.92: 2016-09-23
@@ -509,15 +512,16 @@ interface
 {$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
-{$UNDEF DSiHasGroupAffinity}
+{$UNDEF DSiHasGroupAffinity}{$UNDEF DSiNeedUSHORT}
 {$IFDEF ConditionalExpressions}
   {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}{$UNDEF UseAnsiStrings}
   {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
-  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
+  {$IF CompilerVersion >= 21}{$DEFINE DSiHasUShort}{$IFEND}
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
+  {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
 {$ENDIF}
 {$IFDEF Unicode}{$UNDEF DSiNeedRawByteString}{$ENDIF}
@@ -983,11 +987,16 @@ const
 
 type
   {$IFDEF DSiNeedULONGEtc}
-    ULONG_PTR = Cardinal;
-    {$EXTERNALSYM ULONG_PTR}
-    ULONGLONG = UInt64;
-    {$EXTERNALSYM ULONGLONG}
+  ULONG_PTR = Cardinal;
+  {$EXTERNALSYM ULONG_PTR}
+  ULONGLONG = UInt64;
+  {$EXTERNALSYM ULONGLONG}
   {$ENDIF}
+  {$IFDEF DSiNeedUSHORT}
+  USHORT = Word;
+  {$EXTERNALSYM USHORT}
+  {$ENDIF}
+
   {$IFDEF DSiHasSafeNativeInt}
   DSiNativeInt = NativeInt;
   DSiNativeUInt = NativeUInt;
