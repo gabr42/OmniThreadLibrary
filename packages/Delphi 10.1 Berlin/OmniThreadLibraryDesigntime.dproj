@@ -59,10 +59,10 @@
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Platform>x86</DCC_Platform>
+        <DllSuffix>240</DllSuffix>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
-        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
@@ -83,7 +83,6 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DllSuffix>240</DllSuffix>
         <DCC_UnitSearchPath>..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
@@ -488,7 +487,13 @@
                     </Platform>
                 </DeployClass>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
+                <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win32" Name="$(PROJECTNAME)"/>
+                <ProjectRoot Platform="Linux64" Name="$(PROJECTNAME)"/>
+                <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME)"/>
+                <ProjectRoot Platform="Android" Name="$(PROJECTNAME)"/>
+                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
             </Deployment>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
