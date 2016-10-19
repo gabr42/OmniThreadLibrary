@@ -4,7 +4,8 @@
     (including TMethod and 'reference to procedure') in a TOmniObject.
     [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
 - Bug fixes:
-  - Fixed enum size enforcement in DSiWin32.
+  - Fixed enum size enforcement in DSiWin32. [Could cause an application
+    to crash if OtlCommon was used in the program.]
 
 3.06: 2016-10-17
 - Breaking changes:
