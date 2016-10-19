@@ -509,19 +509,21 @@ interface
 {$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
-{$UNDEF DSiHasGroupAffinity}{$UNDEF DSiNeedUSHORT}
+{$UNDEF DSiHasGroupAffinity}
 {$IFDEF ConditionalExpressions}
   {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}{$UNDEF UseAnsiStrings}
   {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
-  {$IF CompilerVersion >= 21}{$DEFINE DSiHasUShort}{$IFEND}
+  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
-  {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
 {$ENDIF}
 {$IFDEF Unicode}{$UNDEF DSiNeedRawByteString}{$ENDIF}
+
+{$ALIGN ON}
+{$MINENUMSIZE 4}
 
 uses
   {$IFDEF DSiScopedUnitNames}Winapi.Windows{$ELSE}Windows{$ENDIF},
@@ -981,16 +983,11 @@ const
 
 type
   {$IFDEF DSiNeedULONGEtc}
-  ULONG_PTR = Cardinal;
-  {$EXTERNALSYM ULONG_PTR}
-  ULONGLONG = UInt64;
-  {$EXTERNALSYM ULONGLONG}
+    ULONG_PTR = Cardinal;
+    {$EXTERNALSYM ULONG_PTR}
+    ULONGLONG = UInt64;
+    {$EXTERNALSYM ULONGLONG}
   {$ENDIF}
-  {$IFDEF DSiNeedUSHORT}
-  USHORT = Word;
-  {$EXTERNALSYM USHORT}
-  {$ENDIF}
-
   {$IFDEF DSiHasSafeNativeInt}
   DSiNativeInt = NativeInt;
   DSiNativeUInt = NativeUInt;

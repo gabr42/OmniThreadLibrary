@@ -1,10 +1,4 @@
-3.06.1: <<unreleased>>
-- New features:
-  - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
-    (including TMethod and 'reference to procedure') in a TOmniObject.
-    [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
-
-3.06: 2016-10-17
+3.06: 2016-10-19
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
   - Packages were renamed. Now they are using $LIBSUFFIX scheme.
@@ -30,6 +24,9 @@
   - TOmniThreadPool.Create no longer waits on thread to be initialized. This
     allows a thread pool to be created inside DLL initialization code.
   - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
+  - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
+    (including TMethod and 'reference to procedure') in a TOmniObject.
+    [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
   - Added thread pool lifecycle notifications to OtlHooks 
     (RegisterPoolNotification, UnregisterPoolNotification).  
 - Demos:
