@@ -27,7 +27,7 @@
 ///(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///</license>
-///<remarks><para>                   
+///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
 ///   Support           : https://plus.google.com/communities/112307748950248514961
 ///   Author            : Primoz Gabrijelcic
@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-10-19
-///   Version           : 1.46
+///   Last modification : 2016-10-24
+///   Version           : 1.46a
 ///</para><para>
 ///   History:
+///     1.46: 2016-10-24
+///       - Corrected Environment.GroupAffinity and Environment.LoadNUMAInfo to work
+///         on Windows XP.
 ///     1.46: 2016-10-19
 ///       - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
 ///         (including TMethod and 'reference to procedure') in a TOmniObject.
@@ -167,7 +170,7 @@
 ///       - Implemented IOmniCounter.Take.
 ///     1.22: 2011-08-31
 ///       - [Lee_Nover] SetThreadName implementation moved into a separate unit with debug
-///         info disabled. That way, debugger doesn't stop on SetThreadName while 
+///         info disabled. That way, debugger doesn't stop on SetThreadName while
 ///         single-stepping in another thread.
 ///     1.21: 2011-08-28
 ///       - TOmniValue can natively store exception objects (AsException, IsException).
@@ -469,7 +472,7 @@ type
     {$IF CompilerVersion >= 19}//D2007 has problems understanding this overload
     property AsArrayItem[const param: TOmniValue]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
     {$IFEND}
-    property AsArrayItemOV[const param: TOmniValue]: TOmniValue read GetAsArrayItemOV write SetAsArrayItemOV; 
+    property AsArrayItemOV[const param: TOmniValue]: TOmniValue read GetAsArrayItemOV write SetAsArrayItemOV;
     property AsBoolean: boolean read CastToBoolean write SetAsBoolean;
     property AsCardinal: cardinal read CastToCardinal write SetAsCardinal;
     property AsDouble: Double read CastToDouble write SetAsDouble;
@@ -1419,6 +1422,7 @@ type
     oeNUMANodes      : IOmniNUMANodes;
     oeProcessorGroups: IOmniProcessorGroups;
   strict protected
+    procedure CreateFakeNUMAInfo;
     procedure LoadNUMAInfo;
   {$ENDIF OTL_NUMASupport}
   protected
@@ -1703,7 +1707,7 @@ begin
   else if param.IsString then
     Result := GetItem(param.AsString)
   else
-    raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');  
+    raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');
 end; { TOmniValueContainer.GetItem }
 
 procedure TOmniValueContainer.Grow(requiredIdx: integer = -1);
@@ -3885,13 +3889,18 @@ var
   groupAffinity: TGroupAffinity;
 begin
   {$IFDEF MSWindows}
-  DSiGetThreadGroupAffinity(GetCurrentThread, groupAffinity);
-  Result.Group := groupAffinity.Group;
-  Result.Affinity.AsMask := groupAffinity.Mask;
-  {$ELSE}
-  Result.Group := 0;
-  Result.Affinity.AsMask := Affinity.Mask;
-  {$ENDIF}
+  if DSiGetThreadGroupAffinity(GetCurrentThread, groupAffinity) then begin
+    Result.Group := groupAffinity.Group;
+    Result.Affinity.AsMask := groupAffinity.Mask;
+  end
+  else if GetLastError <> ERROR_NOT_SUPPORTED  then
+    raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: DSiGetThreadGroupAffinity failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)])
+  else
+  {$ENDIF MSWindows}
+  begin
+    Result.Group := 0;
+    Result.Affinity.AsMask := Affinity.Mask;
+  end;
 end; { TOmniThreadEnvironment.GetGroupAffinity }
 
 function TOmniThreadEnvironment.GetID: TThreadId;
@@ -4175,6 +4184,18 @@ begin
   inherited;
 end; { TOmniEnvironment.Destroy }
 
+procedure TOmniEnvironment.CreateFakeNUMAInfo;
+var
+  i   : integer;
+  mask: DWORD;
+begin
+  mask := 0;
+  for i := 1 to System.Affinity.Count do
+    mask := (mask shl 1) OR 1;
+  (oeProcessorGroups as IOmniProcessorGroupsInternal).Add(TOmniProcessorGroup.Create(0, mask));
+  (oeNUMANodes as IOmniNUMANodesInternal).Add(TOmniNUMANode.Create(0, 0, mask));
+end; { TOmniEnvironment.CreateFakeNUMAInfo }
+
 function TOmniEnvironment.GetNUMANodes: IOmniNUMANodes;
 begin
   Result := oeNUMANodes;
@@ -4203,11 +4224,8 @@ end; { TOmniEnvironment.GetThread }
 
 {$IFDEF OTL_NUMASupport}
 procedure TOmniEnvironment.LoadNUMAInfo;
+{$IFDEF MSWindows}
 var
-{$IFNDEF MSWindows}
-  i          : integer;
-  mask       : DWORD;
-{$ELSE}
   bufLen                 : DWORD;
   currentInfo            : PSystemLogicalProcessorInformationEx;
   iGroup                 : integer;
@@ -4218,38 +4236,38 @@ var
 {$ENDIF}
 begin
   {$IFNDEF MSWindows}
-  mask := 0;
-  for i := 1 to System.Affinity.Count do
-    mask := (mask shl 1) OR 1;
-  oeProcessorGroups.Add(TOmniProcessorGroup.Create(0, mask));
-  oeNUMANodes.Add(TOmniNUMANode.Create(0, 0, mask));
+  CreateFakeNUMAInfo;
   {$ELSE}
   bufLen := 0;
   DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, nil, bufLen);
-  if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
-    raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[1] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
-  GetMem(procInfo, bufLen);
-  try
-    if not DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, DSiWin32.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
-      raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: GetLogicalProcessorInformation[2] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
-    numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
-    processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
-    currentInfo := procInfo;
-    while (NativeUInt(currentInfo) - NativeUInt(procInfo)) < bufLen do begin
-      if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
-        numaNodesInternal.Add(TOmniNUMANode.Create(currentInfo.NumaNode.NodeNumber,
-          currentInfo.NumaNode.GroupMask.Group, currentInfo.NumaNode.GroupMask.Mask))
-      else if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
-        pGroupInfo := @currentInfo.Group.GroupInfo;
-        for iGroup := 0 to currentInfo.Group.ActiveGroupCount - 1 do begin
-          processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));
-          Inc(pGroupInfo);
+  if GetLastError = ERROR_NOT_SUPPORTED then
+    CreateFakeNUMAInfo
+  else begin
+    if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+      raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: DSiGetLogicalProcessorInformation[1] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
+    GetMem(procInfo, bufLen);
+    try
+      if not DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, DSiWin32.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
+        raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: DSiGetLogicalProcessorInformation[2] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
+      numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
+      processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
+      currentInfo := procInfo;
+      while (NativeUInt(currentInfo) - NativeUInt(procInfo)) < bufLen do begin
+        if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
+          numaNodesInternal.Add(TOmniNUMANode.Create(currentInfo.NumaNode.NodeNumber,
+            currentInfo.NumaNode.GroupMask.Group, currentInfo.NumaNode.GroupMask.Mask))
+        else if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
+          pGroupInfo := @currentInfo.Group.GroupInfo;
+          for iGroup := 0 to currentInfo.Group.ActiveGroupCount - 1 do begin
+            processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));
+            Inc(pGroupInfo);
+          end;
         end;
+        currentInfo := PSystemLogicalProcessorInformationEx(NativeUInt(currentInfo) + currentInfo.Size);
       end;
-      currentInfo := PSystemLogicalProcessorInformationEx(NativeUInt(currentInfo) + currentInfo.Size);
-    end;
-    numaNodesInternal.Sort;
-  finally FreeMem(procInfo); end;
+      numaNodesInternal.Sort;
+    finally FreeMem(procInfo); end;
+  end;
   {$ENDIF MSWindows}
 end; { TOmniEnvironment.LoadNUMAInfo }
 {$ENDIF OTL_NUMASupport}

@@ -1,3 +1,7 @@
+3.06.2: <<unreleased>>
+- Bug fixes:
+  - Programs using OtlCommon can be started on Windows XP.
+
 3.06.1: 2016-10-19
 - New features:
   - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
