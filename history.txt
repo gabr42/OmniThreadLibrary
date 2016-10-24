@@ -1,4 +1,4 @@
-3.06.2: <<unreleased>>
+3.06.2: 2016-10-24
 - New features:
   - Implemented two-parameter version of Atomic initializer which 
     intializes an interface type from a class type.

@@ -42,8 +42,8 @@ Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.06
-===========================
+Changes since version 3.05
+==========================
 
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.

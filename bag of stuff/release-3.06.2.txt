@@ -1,7 +1,7 @@
-OmniThreadLibrary 3.06.1 has just been released. It is available via
-SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.06.1)
+OmniThreadLibrary 3.06.2 has just been released. It is available via
+SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.06.2)
 or as a ZIP archive
-(https://drive.google.com/file/d/0BwqVlLNTK4OxaWx4MVU2Q0RUVG8/view?usp=sharing).
+(https://drive.google.com/file/d/0BwqVlLNTK4OxY2ExVFdDREZlWDA/view?usp=sharing).
 
 What is OmniThreadLibrary?
 ==========================
@@ -42,16 +42,15 @@ Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.06
-==========================
+Changes since version 3.06.1
+============================
 
 - New features:
-  - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
-    (including TMethod and 'reference to procedure') in a TOmniObject.
-    [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
+  - Implemented two-parameter version of Atomic initializer which 
+    intializes an interface type from a class type.
 - Bug fixes:
-  - Fixed enum size enforcement in DSiWin32. [Could cause an application
-    to crash if OtlCommon was used in the program.]    
+  - Programs using OtlCommon can be started on Windows XP.
+
 --
 Primoz
 [http://thedelphigeek.com]
