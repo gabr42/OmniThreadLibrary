@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin
 ///   Creation date     : 2009-03-30
-///   Last modification : 2015-09-10
-///   Version           : 1.22c
+///   Last modification : 2016-10-24
+///   Version           : 1.23
 ///</para><para>
 ///   History:
+///     1.23: 2016-10-24
+///       - Implemented two-parameter version of Atomic initializer which intializes
+///         an interface type from a class type.
 ///     1.22c: 2015-09-10
 ///       - Fixed unsafe 64-bit pointer-to-integer casts.
 ///     1.22b: 2015-09-07
@@ -355,6 +358,12 @@ type
     class function Initialize(var storage: T): T; overload;
     {$ENDIF OTL_ERTTI}
   end; { Atomic<T> }
+
+  {$IFDEF OTL_ERTTI}
+  Atomic<I; T:constructor> = class
+    class function Initialize(var storage: I): I;
+  end; { Atomic<I,T> }
+  {$ENDIF OTL_ERTTI}
 
   Locked<T> = record
   strict private // keep those aligned!
@@ -1478,6 +1487,18 @@ begin
       end);
   end;
 end; { Atomic<T>.Initialize }
+
+{ ATomic<I,T> }
+
+class function Atomic<I,T>.Initialize(var storage: I): I;
+begin
+  Result := Atomic<I>.Initialize(storage,
+    function: I
+    begin
+      Result := TValue.From<T>(T.Create).AsType<I>;
+    end);
+end; { Atomic<I,T>.Initialize }
+
 {$ENDIF OTL_ERTTI}
 
 { Locked<T> }

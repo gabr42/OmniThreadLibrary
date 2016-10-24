@@ -1,4 +1,7 @@
 3.06.2: <<unreleased>>
+- New features:
+  - Implemented two-parameter version of Atomic initializer which 
+    intializes an interface type from a class type.
 - Bug fixes:
   - Programs using OtlCommon can be started on Windows XP.
 
