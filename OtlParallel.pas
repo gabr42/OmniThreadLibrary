@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2016-10-17
-///   Version           : 1.46
+///   Last modification : 2016-11-08
+///   Version           : 1.47
 ///</para><para>
 ///   History:
+///     1.47: 2016-11-08
+///       - Added function IOmniPipeline.NoThrottle which disables throttling on an
+///         entire pipeline or one of its stages.
 ///     1.46: 2016-10-17
 ///       - Implemented Parallel.TimedTask.
 ///     1.45: 2016-04-21
@@ -574,6 +577,7 @@ type
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniPipeline; overload;
+    function  NoThrottle: IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -1388,6 +1392,7 @@ type
     procedure Cancel;
     function  From(const queue: IOmniBlockingCollection): IOmniPipeline;
     function  HandleExceptions: IOmniPipeline;
+    function  NoThrottle: IOmniPipeline;
     { TODO 1 -ogabr : When running stages in parallel, additional work has to be done to ensure proper output order! }
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
@@ -3904,6 +3909,11 @@ begin
   Result := Self;
 end; { TOmniPipeline.HandleExceptions }
 
+function TOmniPipeline.NoThrottle: IOmniPipeline;
+begin
+  Result := Throttle(0, -1);
+end; { TOmniPipeline.NoThrottle }
+
 function TOmniPipeline.NumTasks(numTasks: integer): IOmniPipeline;
 var
   iStage: integer;
@@ -3958,10 +3968,11 @@ begin
       outQueue := TOmniBlockingCollection.Create
     else
       outQueue := opOutput;
-    if totalTasks > Environment.Process.Affinity.Count then
-      outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLowSat)
-    else
-      outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
+    if PipeStage[iStage].Throttle > 0 then
+      if totalTasks > Environment.Process.Affinity.Count then
+        outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLowSat)
+      else
+        outQueue.SetThrottling(PipeStage[iStage].Throttle, PipeStage[iStage].ThrottleLow);
     inQueue.ReraiseExceptions(not PipeStage[iStage].HandleExceptions);
     opOutQueues.Add(outQueue);
     countStopped := CreateResourceCount(PipeStage[iStage].NumTasks);
@@ -5066,7 +5077,7 @@ end; { TOmniTimedTaskWorker.ExecuteNow }
 
 procedure TOmniTimedTaskWorker.SetTask(var msg: TOmniMessage);
 begin
-  FTask := msg.MsgData.ToRecord<TOmniRecord<TOmniTaskDelegate>>.Value;
+  FTask := msg.MsgData.Unwrap<TOmniTaskDelegate>();
 end; { TOmniTimedTaskWorker.SetTask }
 
 procedure TOmniTimedTaskWorker.TaskInterval;
@@ -5110,8 +5121,7 @@ end; { TOmniTimedTask.Execute }
 
 function TOmniTimedTask.Execute(const aTask: TOmniTaskDelegate): IOmniTimedTask;
 begin
-  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgSetTask,
-    TOmniValue.FromRecord<TOmniRecord<TOmniTaskDelegate>>(TOmniRecord<TOmniTaskDelegate>.Create(aTask)));
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgSetTask, TOmniValue.Wrap<TOmniTaskDelegate>(aTask));
   FActive := true;
   ApplyTimer;
   Result := Self;

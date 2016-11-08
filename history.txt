@@ -1,4 +1,7 @@
 3.07: <<unreleased>>
+- New features:
+  - Added function IOmniPipeline.NoThrottle which disables throttling 
+    on an entire pipeline or one of its stages.
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.
