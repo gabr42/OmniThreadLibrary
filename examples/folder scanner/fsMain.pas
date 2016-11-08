@@ -67,6 +67,7 @@ begin
   FCancelProcessing := false;
 
   FFolderScanner := Parallel.Pipeline
+    .NoThrottle
     .Stage(UniqueFilter_asy)           // filters out duplicates (in case of symlink loops); also ensures that folder names include trailing backslash
     .Stage(FolderScanner_asy)          // collects information about files and feeds subfolders back into the pipeline
       .NumTasks(inpNumScanners.Value)
