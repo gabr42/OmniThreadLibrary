@@ -41,7 +41,7 @@
 ///</para><para>
 ///   History:
 ///     1.47: 2016-11-08
-///       - Added function IOmniPipeline.NoThrottle which disables throttling on an
+///       - Added function IOmniPipeline.NoThrottling which disables throttling on an
 ///         entire pipeline or one of its stages.
 ///     1.46: 2016-10-17
 ///       - Implemented Parallel.TimedTask.
@@ -577,7 +577,7 @@ type
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniPipeline; overload;
-    function  NoThrottle: IOmniPipeline;
+    function  NoThrottling: IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -1164,96 +1164,128 @@ type
     class function  &For(first, last: integer; step: integer = 1): IOmniParallelSimpleLoop; overload;
     {$IFDEF OTL_GoodGenerics}
     /// <summary>Creates fast parallel loop without support for work stealing which
-    /// only enumerates dynamic arrays.</summary>
+    ///   only enumerates dynamic arrays.</summary>
     class function  &For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>; overload;
     {$ENDIF OTL_GoodGenerics}
 
   // ForEach
-    ///	<summary>Creates parallel loop that iterates over IOmniValueEnumerable (for
-    ///	example IOmniBlockingCollection).</summary>
+    ///	<summary>Creates parallel loop that iterates over an IOmniValueEnumerable.</summary>
     class function  ForEach(const enumerable: IOmniValueEnumerable): IOmniParallelLoop; overload;
-
-    ///	<summary>Creates parallel loop that iterates over IOmniEnumerator (for example
-    ///	IOmniBlockingCollection).</summary>
+    ///	<summary>Creates parallel loop that iterates over an IOmniEnumerator.</summary>
     class function  ForEach(const enum: IOmniValueEnumerator): IOmniParallelLoop; overload;
-
-    ///	<summary>Creates parallel loop that iterates over IEnumerable.</summary>
+    ///	<summary>Creates parallel loop that iterates over an IEnumerable.</summary>
     class function  ForEach(const enumerable: IEnumerable): IOmniParallelLoop; overload;
+    ///	<summary>Creates parallel loop that iterates with an IEnumerator.</summary>
     class function  ForEach(const enum: IEnumerator): IOmniParallelLoop; overload;
+    ///	<summary>Creates parallel loop that iterates over an IOmniBlockingCollection.</summary>
     class function  ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop; overload;
+    ///	<summary>Creates parallel loop that iterates over a TOmniSourceProvider.</summary>
     class function  ForEach(const sourceProvider: TOmniSourceProvider): IOmniParallelLoop; overload;
+    ///	<summary>Creates parallel loop that uses a TEnumeratorDelegate to produce elements.</summary>
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
+    ///	<summary>Creates parallel loop that iterates over an integer range.</summary>
     class function  ForEach(first, last: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
     {$IFDEF OTL_ERTTI}
+    ///	<summary>Creates parallel loop that iterates over a GetEnumerator implemented in the object.</summary>
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
     {$ENDIF OTL_ERTTI}
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IOmniValueEnumerable.</summary>
     class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IOmniEnumerator.</summary>
     class function  ForEach<T>(const enum: IOmniValueEnumerator): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IEnumerable.</summary>
     class function  ForEach<T>(const enumerable: IEnumerable): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IEnumerator.</summary>
     class function  ForEach<T>(const enum: IEnumerator): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IEnumerable&lt;T&gt;.</summary>
     class function  ForEach<T>(const enumerable: TEnumerable<T>): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IEnumerator&lt;T&gt;.</summary>
     class function  ForEach<T>(const enum: TEnumerator<T>): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IOmniBlockingCollection.</summary>
     class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from a TEnumeratorDelegate.</summary>
     class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
     {$IFDEF OTL_ERTTI}
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</summary>
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
     {$ENDIF OTL_ERTTI}
 
   // Join
+    ///	<summary>Creates a Join interface.</summary>
     class function  Join: IOmniParallelJoin; overload;
+    ///	<summary>Creates Join of two tasks.</summary>
     class function  Join(const task1, task2: TProc): IOmniParallelJoin; overload;
+    ///	<summary>Creates Join of two tasks.</summary>
     class function  Join(const task1, task2: TOmniJoinDelegate): IOmniParallelJoin; overload;
+    ///	<summary>Creates Join of any number of tasks.</summary>
     class function  Join(const tasks: array of TProc): IOmniParallelJoin; overload;
+    ///	<summary>Creates Join of any number of tasks.</summary>
     class function  Join(const tasks: array of TOmniJoinDelegate): IOmniParallelJoin; overload;
 
   // Future
+    ///	<summary>Creates a Future returning &lt;T&gt;.</summary>
     class function Future<T>(action: TOmniFutureDelegate<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
+    ///	<summary>Creates a Future returning &lt;T&gt;.</summary>
     class function Future<T>(action: TOmniFutureDelegateEx<T>; taskConfig: IOmniTaskConfig = nil): IOmniFuture<T>; overload;
 
   // Pipeline
+    ///	<summary>Creates a Pipeline interface.</summary>
     class function Pipeline: IOmniPipeline; overload;
+    ///	<summary>Creates a Pipeline from given stage delegates.</summary>
     class function Pipeline(const stages: array of TPipelineStageDelegate;
       const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
+    ///	<summary>Creates a Pipeline from given stage delegates.</summary>
     class function Pipeline(const stages: array of TPipelineStageDelegateEx;
       const input: IOmniBlockingCollection = nil): IOmniPipeline; overload;
 
   // Fork/Join
+    ///	<summary>Creates a Fork/Join interface.</summary>
     class function ForkJoin: IOmniForkJoin; overload;
+    ///	<summary>Creates a Fork/Join&lt;T&gt; interface.</summary>
     class function ForkJoin<T>: IOmniForkJoin<T>; overload;
 
   // Async
+    ///	<summary>Creates an Async task.</summary>
     class procedure Async(task: TProc; taskConfig: IOmniTaskConfig = nil); overload;
+    ///	<summary>Creates an Async task.</summary>
     class procedure Async(task: TOmniTaskDelegate; taskConfig: IOmniTaskConfig = nil);
       overload;
 
   // Parallel
+    ///	<summary>Creates a Parallel task.</summary>
     class function ParallelTask: IOmniParallelTask;
 
   // BackgroundWorker
+    ///	<summary>Creates a Background worker.</summary>
     class function BackgroundWorker: IOmniBackgroundWorker;
 
   // TimedTask
+    ///	<summary>Creates a Timed task.</summary>
     class function TimedTask: IOmniTimedTask;
 
   // Map
     {$IFDEF OTL_HasArrayOfT}
     {$IFDEF OTL_GoodGenerics}
+    ///	<summary>Creates a parallel Map mapping &lt;T1&gt; to &lt;T2&gt;.</summary>
     class function Map<T1,T2>: IOmniParallelMapper<T1,T2>; overload;
+    ///	<summary>Maps and array of &lt;T1&gt; to an array of &lt;T2&gt;.</summary>
     class function Map<T1,T2>(const source: TArray<T1>;
       mapper: TMapProc<T1,T2>): TArray<T2>; overload;
     {$ENDIF OTL_GoodGenerics}
     {$ENDIF OTL_HasArrayOfT}
 
   // task configuration
+    ///	<summary>Creates Task configuration block.</summary>
     class function TaskConfig: IOmniTaskConfig;
 
   // helpers
-    {$REGION 'Documentation'}
     ///	<summary>Applies task configuration to a task. TaskConfig may be nil - in this case
     ///	nothing is done.</summary>
-    {$ENDREGION}
     class procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
+    /// <summary>Creates an anonymous method which calls CompleteAdding on a queue.</summary>
     class function CompleteQueue(const queue: IOmniBlockingCollection): TProc;
+    /// <summary>Returns the thread pool specified in the taskConfig parameter or
+    ///   a global parallel pool if taskConfig is nil or it doesn't specify a pool.</summary>
     class function GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
   end; { Parallel }
 
@@ -1392,7 +1424,7 @@ type
     procedure Cancel;
     function  From(const queue: IOmniBlockingCollection): IOmniPipeline;
     function  HandleExceptions: IOmniPipeline;
-    function  NoThrottle: IOmniPipeline;
+    function  NoThrottling: IOmniPipeline;
     { TODO 1 -ogabr : When running stages in parallel, additional work has to be done to ensure proper output order! }
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
@@ -3909,10 +3941,10 @@ begin
   Result := Self;
 end; { TOmniPipeline.HandleExceptions }
 
-function TOmniPipeline.NoThrottle: IOmniPipeline;
+function TOmniPipeline.NoThrottling: IOmniPipeline;
 begin
   Result := Throttle(0, -1);
-end; { TOmniPipeline.NoThrottle }
+end; { TOmniPipeline.NoThrottling }
 
 function TOmniPipeline.NumTasks(numTasks: integer): IOmniPipeline;
 var
