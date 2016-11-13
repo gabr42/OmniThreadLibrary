@@ -325,7 +325,7 @@ end;
 
 destructor TKernelEvent.Destroy;
 begin
-  FEvent.Free;
+  FreeAndNil( FEvent);
   inherited
 end;
 

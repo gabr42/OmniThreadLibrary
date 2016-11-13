@@ -73,7 +73,6 @@ type
     function  GetDefaultFlavour: IResourceFlavour;
     procedure SetDefaultFlavour( const Value: IResourceFlavour);
     function  Acquire( const MatchingFlavour: IResourceFlavour): T;
-    function  AcquireVanilla: T;
     procedure Release( const Retiree: T);
     procedure ReleaseNoRecycle( const Retiree: T);
     procedure PopAnOldOne;
@@ -86,6 +85,7 @@ type
     procedure Pop( Idx: integer);
 
   public
+    function  AcquireVanilla: T;
     constructor CreateHeavyEx(
       ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
       const ADefaultFlavour: IResourceFlavour;
@@ -95,9 +95,8 @@ type
   end;
 
   THeavyPool<T> = class( THeavyPoolEx<T>, IHeavyPool<T>)
-  private
-    function IHeavyPool<T>.Acquire = AcquireVanilla;
   public
+    function IHeavyPool<T>.Acquire = AcquireVanilla;
     constructor CreateHeavy(
       ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
       AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>);
@@ -141,6 +140,8 @@ begin
   FMaxPop     := AMaxPopulation;
   FMinReserve := AMinReserve;
   FMaxAge     := MaxAge;
+  if FMaxAge = -1.0 then
+    FMaxAge := 1E999; // Forever.
   FFreePool   := TBasketList.Create;
   FAcquired   := TList<T>.Create;
   FGate       := _CreateCritLockIntf( nil);
@@ -195,8 +196,10 @@ end;
 procedure THouseKeeperThread<T>.Execute;
 var
   doBreak: boolean;
+  Id: TThreadId;
 begin
   doBreak := False;
+  Id      := System.Classes.TThread.CurrentThread.ThreadID;
   try
     repeat
       case FOwner.FWakeHouseKeeper.WaitFor( 1000) of
@@ -411,9 +414,10 @@ begin
     didAnAction := False;
     FGate.Enter;
     try
-      if assigned( FRelFunc) then
+      if assigned( @FRelFunc) then
         begin
         // Check for the Maximum Population restriction. Enforce it.
+        MinIdx := -1;
         if (LiveCount > FMaxPop) and (FFreePool.Count > 0) then
           begin
           MinIdx := NextToMatureAny;
@@ -426,7 +430,7 @@ begin
 
         // Check for the Maxiumum Age restriction. Retire items that are stale (too old).
         dNow := Now;
-        if not didAnAction then
+        if (not didAnAction) and (MinIdx >= 0) then
           for i := FFreePool.Count - 1 downto 0 do
             begin
               if FFreePool[ i].FMaturity < dNow then
