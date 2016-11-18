@@ -35,10 +35,11 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2015-10-04
-///   Version           : 1.08
+///   Last modification : dt
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2016-11-18
 ///     1.08: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.07a: 2015-02-04
@@ -132,6 +133,7 @@ type
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
+    function  IsEmpty: boolean;
     ///	<summary>Collection is finalized when it is both completed (i.e. CompleteAdding
     ///	was called) and empty (TryTake would fail).</summary>
     function  IsFinalized: boolean;
@@ -198,6 +200,7 @@ type
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
+    function  IsEmpty: boolean; inline;
     function  IsFinalized: boolean;
     function  Next: TOmniValue;
     procedure ReraiseExceptions(enable: boolean = true);
@@ -373,6 +376,11 @@ function TOmniBlockingCollection.IsCompleted: boolean;
 begin
   Result := (obcAddCountAndCompleted.Value AND CCompletedFlag) = CCompletedFlag;
 end; { TOmniBlockingCollection.IsCompleted }
+
+function TOmniBlockingCollection.IsEmpty: boolean;
+begin
+  Result := obcCollection.IsEmpty;
+end; { TOmniBlockingCollection }
 
 function TOmniBlockingCollection.IsFinalized: boolean;
 begin
