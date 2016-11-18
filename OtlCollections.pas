@@ -35,11 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : dt
+///   Last modification : 2016-11-18
 ///   Version           : 1.09
 ///</para><para>
 ///   History:
 ///     1.09: 2016-11-18
+///       - Implemented IOmniBlockingCollection.IsEmpty.
 ///     1.08: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.07a: 2015-02-04
