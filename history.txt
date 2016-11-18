@@ -3,6 +3,7 @@
   - Added function IOmniPipeline.NoThrottle which disables throttling 
     on an entire pipeline or one of its stages.
   - Added function IOmniBlockingCollection.IsFinalized.
+  - Added function IOmniBlockingCollection.Count.
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.

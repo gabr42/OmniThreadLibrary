@@ -41,6 +41,7 @@
 ///   History:
 ///     1.09: 2016-11-18
 ///       - Implemented IOmniBlockingCollection.IsEmpty.
+///       - Implemented IOmniBlockingCollection.Count.
 ///     1.08: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.07a: 2015-02-04
@@ -186,6 +187,7 @@ type
     {$ENDIF}
   protected
     function  GetContainerSubject: TOmniContainerSubject;
+    function  GetApproxCount: integer; inline;
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -211,6 +213,7 @@ type
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
     property CompletedSignal: TOmniTransitionEvent read obcCompletedSignal;
     property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
+    property Count: integer read GetApproxCount;
   end; { TOmniBlockingCollection }
 
   TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
@@ -288,8 +291,8 @@ begin
   //  1. obcResourceCount needs to be constructed with ShareLock
   //  2. Find out what is the interaction with obcObserver. Does it block taking?
   ShareLock := CreateOmniCriticalSection;
-  obcAddCountAndCompleted.Initialize;
-  obcApproxCount.Initialize;
+  obcAddCountAndCompleted.Value := 0;
+  obcApproxCount.Value := 0;
   if numProducersConsumers > 0 then
     obcResourceCount := CreateResourceCount(numProducersConsumers);
   obcCollection := TOmniQueue.Create;
@@ -432,6 +435,11 @@ begin
     Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
 end; { Clamp }
 
+function TOmniBlockingCollection.GetApproxCount: integer;
+begin
+  Result := obcApproxCount.Value;
+end; { TOmniBlockingCollection.GetApproxCount }
+
 class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
   TArray<T>;
 var
@@ -524,8 +532,7 @@ begin
         end;
       end;
       obcCollection.Enqueue(value);
-      if obcThrottling then
-        obcApproxCount.Increment;
+      obcApproxCount.Increment;
     end;
   finally obcAddCountAndCompleted.Decrement; end;
 end; { TOmniBlockingCollection.TryAdd }
@@ -593,9 +600,9 @@ begin { TOmniBlockingCollection.TryTake }
         obcResourceCount.Release;
     end;
   end;
-  if obcThrottling and Result then begin
+  if Result then begin
     obcApproxCount.Decrement;
-    if obcApproxCount.Value <= obcLowWaterMark then
+    if obcThrottling and (obcApproxCount.Value <= obcLowWaterMark) then
       SetEvent(obcNotOverflow);
   end;
   if Result and obcReraiseExceptions and value.IsException then
@@ -659,9 +666,9 @@ begin
         obcResourceCount.Release;
     end;
   end;
-  if obcThrottling and Result then begin
+  if Result then begin
     obcApproxCount.Decrement;
-    if obcApproxCount.Value <= obcLowWaterMark then
+    if obcThrottling and (obcApproxCount.Value <= obcLowWaterMark) then
       obcNotOverflow.SetEvent
   end;
   if Result and obcReraiseExceptions and value.IsException then
