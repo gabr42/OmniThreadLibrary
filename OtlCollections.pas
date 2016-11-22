@@ -186,8 +186,8 @@ type
     FTakableWaiter         : TSynchroWaitFor;
     {$ENDIF}
   protected
-    function  GetContainerSubject: TOmniContainerSubject;
     function  GetApproxCount: integer; inline;
+    function  GetContainerSubject: TOmniContainerSubject;
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -366,6 +366,11 @@ begin
   until false;
 end; { TOmniBlockingCollection.CompleteAdding }
 
+function TOmniBlockingCollection.GetApproxCount: integer;
+begin
+  Result := obcApproxCount.Value;
+end; { TOmniBlockingCollection.GetApproxCount }
+
 function TOmniBlockingCollection.GetContainerSubject: TOmniContainerSubject;
 begin
   Result := obcCollection.ContainerSubject;
@@ -434,11 +439,6 @@ begin
   else
     Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
 end; { Clamp }
-
-function TOmniBlockingCollection.GetApproxCount: integer;
-begin
-  Result := obcApproxCount.Value;
-end; { TOmniBlockingCollection.GetApproxCount }
 
 class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
   TArray<T>;
