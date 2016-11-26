@@ -22,7 +22,7 @@ type
     inpNumScanners: TSpinEdit;
     lblFolder     : TLabel;
     lblNumScanners: TLabel;
-    lbLog: TListBox;
+    lbLog         : TListBox;
     procedure actStartExecute(Sender: TObject);
     procedure actStartUpdate(Sender: TObject);
     procedure actStopExecute(Sender: TObject);
@@ -150,9 +150,9 @@ begin
       repeat
         if (faDirectory AND SR.Attr) <> 0 then begin
           if (SR.Name <> '.') and (SR.Name <> '..') then begin
+            FNumFoldersInPipeline.Increment;
             if not FFolderScanner.Input.TryAdd(inValue.AsString + SR.Name) then
               break; //external stop request
-            FNumFoldersInPipeline.Increment;
           end;
         end
         else begin
