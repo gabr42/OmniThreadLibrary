@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-10-04
-///   Version           : 1.12
+///   Last modification : 2016-12-07
+///   Version           : 1.13
 ///</para><para>
 ///   History:
+///     1.13: 2016-12-07
+///       - Default queue size bumped to 10000 messages.
 ///     1.12: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.11: 2015-07-28
@@ -110,7 +112,7 @@ const
   //Max send wait time
   CMaxSendWaitTime_ms = 100;
 
-  CDefaultQueueSize = 1000;
+  CDefaultQueueSize = 10000;
 
 type
   {$A4}
