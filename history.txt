@@ -4,6 +4,16 @@
     on an entire pipeline or one of its stages.
   - Added function IOmniBlockingCollection.IsFinalized.
   - Added function IOmniBlockingCollection.Count.
+  - Added readonly property IOmniThreadPool.NumCores which returns 
+    number of cores this pool uses for running tasks. Changing Affinity, 
+    ProcessorGroups, or NUMANodes properties may modify this value.
+- Bug fixes:
+  - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups, 
+    or NUMANodes properties will reset the MaxExecuting property."
+    - New behaviour is compatible with the pre-3.06 code: Initially, 
+      MaxExecuting is set to Environment.Process.Affinity.Count. 
+      This value can only be changed by the external code, not inside the 
+      OtlThreadPool unit.
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.

@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2016, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,18 +35,27 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-09-05
-///   Version           : 2.15a
+///   Last modification : 2017-01-16
+///   Version           : 2.16
 /// </para><para>
 ///   History:
+///     2.16: 2017-01-16
+///       - Reverted [2.14]: Any change to Affinity, ProcessorGroups, or NUMANodes
+///         properties will reset the MaxExecuting.
+///       - New behaviour is compatible with the pre-2.14 code: Initially, MaxExecuting is
+///         set to Environment.Process.Affinity.Count. This value can only be changed by
+///         the external code, not inside the OtlThreadPool unit.
+///       - Added readonly property IOmniThreadPool.NumCores which returns number of cores
+///         this pool uses for running tasks. This value can be changed after Affinity,
+///         ProcessorGroups, or NUMANodes properties are modified.
 ///     2.15a: 2016-09-05
 ///       - TOmniThreadPool.Create no longer waits on thread to be initialized. This
 ///         allows a thread pool to be created inside DLL initialization code.
 ///         [https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453(v=vs.85).aspx]
 ///     2.15: 2016-08-31
-///       - In the past, unhandled exceptions in the code handling the task execution 
-///         were lost. Now, they are passed up to the IOmniThreadPool. If its property 
-///         Asy_OnUnhandledWorkerException is set, exception will be passed to the event 
+///       - In the past, unhandled exceptions in the code handling the task execution
+///         were lost. Now, they are passed up to the IOmniThreadPool. If its property
+///         Asy_OnUnhandledWorkerException is set, exception will be passed to the event
 ///         handler and application should react to it. The only safe way at that point
 ///         is to log the error (and stack trace for the current thread) and terminate
 ///         the application.
@@ -195,6 +204,7 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
+    function  GetNumCores: integer;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure SetAsy_OnUnhandledWorkerException(const Value: TOTPUnhandledWorkerException);
@@ -234,6 +244,7 @@ type
       SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property NumCores: integer read GetNumCores;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec
       write SetWaitOnTerminate_sec;
@@ -466,16 +477,12 @@ type
     MaxQueued                  : TOmniAlignedInt32;
     MaxQueuedTime_sec          : TOmniAlignedInt32;
     MinWorkers                 : TOmniAlignedInt32;
+    NumCores                   : TOmniAlignedInt32;
     WaitOnTerminate_sec        : TOmniAlignedInt32;
     constructor Create(const name: string; uniqueID: int64);
     property Asy_OnUnhandledWorkerException: TOTPUnhandledWorkerException read
       GetAsy_OnUnhandledWorkerException write SetAsy_OnUnhandledWorkerException;
-  published
-    // invoked from TOmniThreadPool
-    procedure Cancel(const params: TOmniValue);
-    procedure CancelAll(var doneSignal: TOmniWaitableValue);
-    procedure MaintainanceTimer;
-    // invoked from TOTPWorkerThreads
+  // invoked from TOTPWorkerThreads
     procedure CheckIdleQueue;
     procedure MsgCompleted(var msg: TOmniMessage); {$IFDEF MSWINDOWS}message MSG_COMPLETED;{$ENDIF}
     procedure MsgThreadCreated(var msg: TOmniMessage); {$IFDEF MSWINDOWS}message MSG_THREAD_CREATED;{$ENDIF}
@@ -489,6 +496,10 @@ type
     procedure SetProcessorGroups(const value: TOmniValue);
     procedure SetName(const name: TOmniValue);
     procedure SetThreadDataFactory(const threadDataFactory: TOmniValue);
+  // invoked from TOmniThreadPool
+    procedure Cancel(const params: TOmniValue);
+    procedure CancelAll(var doneSignal: TOmniWaitableValue);
+    procedure MaintainanceTimer;
   end; { TOTPWorker }
 
   TOTPThreadDataFactoryData = class
@@ -513,6 +524,8 @@ type
     otpNUMANodes                     : IOmniIntegerSet;
     otpProcessorGroups               : IOmniIntegerSet;
   {$ENDIF OTL_NUMASupport}
+  strict protected
+    function GetNumCores: integer;
   protected
     procedure Asy_ForwardUnhandledWorkerException(thread: TThread; E: Exception);
     function  GetAffinity: IOmniIntegerSet;
@@ -569,6 +582,7 @@ type
       write SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property NumCores: integer read GetNumCores;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
@@ -907,6 +921,8 @@ begin
   inherited Create;
   owName := name;
   owUniqueID := uniqueID;
+  MaxExecuting.Value := Environment.Process.Affinity.Count;
+  NumCores.Value := MaxExecuting.Value;
 end; { TOTPWorker.Create }
 
 function TOTPWorker.ActiveWorkItemDescriptions: string;
@@ -1523,7 +1539,7 @@ end; { TOTPWorker.StopThread }
 procedure TOTPWorker.UpdateScheduler;
 begin
   owScheduler.Update(owAffinity, owProcessorGroups, owNUMANodes);
-  MaxExecuting.Value := owScheduler.Count;
+  NumCores.Value := owScheduler.Count;
 end; { TOTPWorker.UpdateScheduler }
 
 { TOTPThreadDataFactoryData }
@@ -1670,6 +1686,11 @@ begin
   Result := otpProcessorGroups;
 end; { TOmniThreadPool.GetProcessorGroups }
 {$ENDIF OTL_NUMASupport}
+
+function TOmniThreadPool.GetNumCores: integer;
+begin
+  Result := WorkerObj.NumCores.Value;
+end; { TOmniThreadPool.GetNumCores }
 
 function TOmniThreadPool.GetUniqueID: int64;
 begin
