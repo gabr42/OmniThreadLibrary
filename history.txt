@@ -14,6 +14,8 @@
       MaxExecuting is set to Environment.Process.Affinity.Count. 
       This value can only be changed by the external code, not inside the 
       OtlThreadPool unit.
+  - In threadpool, IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec 
+    were initialized too late.
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.
