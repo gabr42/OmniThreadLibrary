@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-01-16
-///   Version           : 2.16
+///   Last modification : 2017-01-17
+///   Version           : 2.16a
 /// </para><para>
 ///   History:
+///     2.16a: 2017-01-17
+///       - Fix: IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec were initialized
+///         too late.
 ///     2.16: 2017-01-16
 ///       - Reverted [2.14]: Any change to Affinity, ProcessorGroups, or NUMANodes
 ///         properties will reset the MaxExecuting.
@@ -923,6 +926,8 @@ begin
   owUniqueID := uniqueID;
   MaxExecuting.Value := Environment.Process.Affinity.Count;
   NumCores.Value := MaxExecuting.Value;
+  IdleWorkerThreadTimeout_sec.Value := CDefaultIdleWorkerThreadTimeout_sec;
+  WaitOnTerminate_sec.Value := CDefaultWaitOnTerminate_sec;
 end; { TOTPWorker.Create }
 
 function TOTPWorker.ActiveWorkItemDescriptions: string;
@@ -1074,8 +1079,6 @@ begin
   owStoppingWorkers := TObjectList.Create(false);
   owWorkItemQueue := TObjectList.Create(false);
   CountQueued.Value := 0;
-  IdleWorkerThreadTimeout_sec.Value := CDefaultIdleWorkerThreadTimeout_sec;
-  WaitOnTerminate_sec.Value := CDefaultWaitOnTerminate_sec;
   Task.SetTimer(1, 1000, @TOTPWorker.MaintainanceTimer);
   UpdateScheduler;
   Result := true;
