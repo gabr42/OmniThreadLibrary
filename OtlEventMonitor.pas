@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2012, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2015-10-04
-///   Version           : 1.08
+///   Last modification : 2017-01-22
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2017-01-22
+///       - ERROR_NOT_ENOUGH_QUOTA (1816) is handled in TOmniEventMonitor.WndProc.
 ///     1.08: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.07e: 2012-10-02
@@ -302,6 +304,7 @@ end; { TOmniEventMonitor.ProcessMessages }
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   endpoint     : IOmniCommunicationEndpoint;
+  lasterr      : integer;
   pool         : IOmniThreadPool;
   task         : IOmniTaskControl;
   timeStart    : int64;
@@ -317,8 +320,13 @@ var
       then
         emOnTaskMessage(task, emCurrentMsg);
       if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
-        if rearmSelf then
-          Win32Check(PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam));
+        if rearmSelf
+          and (not PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam)) then
+        begin
+          lasterr := GetLastError;
+          if lasterr <> ERROR_NOT_ENOUGH_QUOTA then
+            RaiseLastOSError(lasterr);
+        end;
         Result := false;
         break; //while
       end;
