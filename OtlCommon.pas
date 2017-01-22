@@ -3702,7 +3702,6 @@ function TOmniAffinity.GetCount: integer;
 var
   affMask: DWORD;
 begin
-// TODO 1 -oPrimoz Gabrijelcic : Did System.CPUCount exist in D2009?
   Result := 0;
   affMask := Mask;
   while affMask <> 0 do begin
