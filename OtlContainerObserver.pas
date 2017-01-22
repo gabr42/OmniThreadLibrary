@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-02-19
-///   Last modification : 2015-10-03
-///   Version           : 1.05
+///   Last modification : 2017-01-22
+///   Version           : 1.06
 ///</para><para>
 ///   History:
+///     1.06: 2017-01-22
+///        - TOmniContainerWindowsMessageObserverImpl.Notify and .Send handle
+///          ERROR_NOT_ENOUGH_QUOTA (1816) error.
 ///     1.05: 2015-10-03
 ///       - Imported mobile support by [Sean].
 ///     1.04: 2010-07-01
@@ -188,6 +191,7 @@ type
     cwmoWParam  : integer;
   strict protected
     function  GetHandle: THandle; override;
+    procedure PostWithRetry(msg: UINT; wParam: WPARAM; lParam: LPARAM);
   public
     constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
     procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
@@ -318,13 +322,38 @@ end; { TOmniContainerWindowsMessageObserverImpl.GetHandle }
 
 procedure TOmniContainerWindowsMessageObserverImpl.Notify;
 begin
-  Win32Check(PostMessage(cwmoHandle, cwmoMessage, cwmoWParam, cwmoLParam));
+  PostWithRetry(cwmoMessage, cwmoWParam, cwmoLParam);
 end; { TOmniContainerWindowsMessageObserver.Notify }
+
+procedure TOmniContainerWindowsMessageObserverImpl.PostWithRetry(msg: UINT;
+  wParam: WPARAM; lParam: LPARAM);
+const
+  CInitialSleep = 1 {ms};
+  CSecondSleep  = 5 {ms};
+  CMaxTries     = 1000;
+var
+  lasterr: cardinal;
+  retry  : integer;
+  wait   : integer;
+begin
+  retry := 0;
+  wait := CInitialSleep;
+  while not PostMessage(cwmoHandle, msg, wParam, lParam) do begin
+    Inc(retry);
+    lasterr := GetLastError;
+    if (lasterr = ERROR_NOT_ENOUGH_QUOTA) and (retry < CMaxTries) then begin
+      Sleep(wait);
+      wait := CSecondSleep;
+    end
+    else
+      RaiseLastOSError(lasterr);
+  end;
+end; { TOmniContainerWindowsMessageObserverImpl.PostWithRetry }
 
 procedure TOmniContainerWindowsMessageObserverImpl.Send(aMessage: cardinal;
   wParam, lParam: integer);
 begin
-  Win32Check(PostMessage(cwmoHandle, aMessage, wParam, lParam));
+  PostWithRetry(aMessage, wParam, lParam);
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
 
 {$ENDIF MSWINDOWS}
