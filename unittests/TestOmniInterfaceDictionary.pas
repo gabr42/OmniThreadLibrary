@@ -82,16 +82,22 @@ begin
 end;
 
 procedure TestIOmniInterfaceDictionary.TestClear;
+var
+  intf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   FIOmniInterfaceDictionary.Clear;
   CheckEquals(0, FIOmniInterfaceDictionary.Count);
 end;
 
 procedure TestIOmniInterfaceDictionary.TestCount;
+var
+  intf: ITestValue;
 begin
   CheckEquals(0, FIOmniInterfaceDictionary.Count);
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   CheckEquals(1, FIOmniInterfaceDictionary.Count);
   FIOmniInterfaceDictionary.Clear;
   CheckEquals(0, FIOmniInterfaceDictionary.Count);
@@ -101,24 +107,33 @@ procedure TestIOmniInterfaceDictionary.TestEnumerate;
 const
   CNumElements = 3 ;
 var
-  i: integer;
+  i   : integer;
+  intf: ITestValue;
 begin
-  for i := 1 to CNumElements do
-    FIOmniInterfaceDictionary.Add(i, TTestValue.Create(i));
+  for i := 1 to CNumElements do begin
+    intf := TTestValue.Create(i);
+    FIOmniInterfaceDictionary.Add(i, intf);
+  end;
   CheckContainsRange(1, CNumElements);
 end;
 
 procedure TestIOmniInterfaceDictionary.TestRemove1;
+var
+  intf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   FIOmniInterfaceDictionary.Remove(1);
   CheckNull(FIOmniInterfaceDictionary.ValueOf(1));
   CheckEquals(0, FIOmniInterfaceDictionary.Count);
 end;
 
 procedure TestIOmniInterfaceDictionary.TestRemove2;
+var
+  intf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   FIOmniInterfaceDictionary.Remove(2);
   CheckNotNull(FIOmniInterfaceDictionary.ValueOf(1));
   CheckEquals(1, FIOmniInterfaceDictionary.Count);
@@ -127,19 +142,24 @@ end;
 procedure TestIOmniInterfaceDictionary.TestResize;
 var
   i          : integer;
+  intf: ITestValue;
   numElements: integer;
 begin
   numElements := GetGoodHashSize(1) * 2;
-  for i := 1 to numElements do
-    FIOmniInterfaceDictionary.Add(i, TTestValue.Create(i));
+  for i := 1 to numElements do begin
+    intf := TTestValue.Create(i);
+    FIOmniInterfaceDictionary.Add(i, intf);
+  end;
   CheckContainsRange(1, numElements);
 end;
 
 procedure TestIOmniInterfaceDictionary.TestRetrieve1;
 var
+  intf   : ITestValue;
   retIntf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   retIntf := FIOmniInterfaceDictionary.ValueOf(1) as ITestValue;
   CheckNotNull(retIntf);
   CheckEquals(1, retIntf.Value);
@@ -147,19 +167,24 @@ end;
 
 procedure TestIOmniInterfaceDictionary.TestRetrieve2;
 var
+  intf   : ITestValue;
   retIntf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   retIntf := FIOmniInterfaceDictionary.ValueOf(2) as ITestValue;
   CheckNull(retIntf);
 end;
 
 procedure TestIOmniInterfaceDictionary.TestRetrieve3;
 var
+  intf   : ITestValue;
   retIntf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
-  FIOmniInterfaceDictionary.Add(2, TTestValue.Create(2));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
+  intf := TTestValue.Create(2);
+  FIOmniInterfaceDictionary.Add(2, intf);
   retIntf := FIOmniInterfaceDictionary.ValueOf(1) as ITestValue;
   CheckNotNull(retIntf);
   CheckEquals(1, retIntf.Value);
@@ -167,10 +192,13 @@ end;
 
 procedure TestIOmniInterfaceDictionary.TestRetrieve4;
 var
+  intf   : ITestValue;
   retIntf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(2, TTestValue.Create(2));
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
+  intf := TTestValue.Create(2);
+  FIOmniInterfaceDictionary.Add(2, intf);
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
   retIntf := FIOmniInterfaceDictionary.ValueOf(1) as ITestValue;
   CheckNotNull(retIntf);
   CheckEquals(1, retIntf.Value);
@@ -178,10 +206,13 @@ end;
 
 procedure TestIOmniInterfaceDictionary.TestRetrieve5;
 var
+  intf   : ITestValue;
   retIntf: ITestValue;
 begin
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(1));
-  FIOmniInterfaceDictionary.Add(1, TTestValue.Create(2));
+  intf := TTestValue.Create(1);
+  FIOmniInterfaceDictionary.Add(1, intf);
+  intf := TTestValue.Create(2);
+  FIOmniInterfaceDictionary.Add(1, intf);
   retIntf := FIOmniInterfaceDictionary.ValueOf(1) as ITestValue;
   CheckNotNull(retIntf);
   CheckEquals(2, retIntf.Value);

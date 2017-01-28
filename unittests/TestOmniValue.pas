@@ -80,8 +80,11 @@ var
   ov: TOmniValue;
 
   procedure TestInterface;
+  var
+    intf: ITestValue;
   begin
-    ov.AsInterface := TTestValue.Create(42);
+    intf := TTestValue.Create(42);
+    ov.AsInterface := intf;
     CheckTrue(ov.IsInterface); CheckSimpleType(ov, [false, false, false, false]); CheckWrappedType(ov, [false, false, false, false]);
     CheckEquals(42, (ov.AsInterface as ITestValue).Value);
   end;
