@@ -1,3 +1,13 @@
+4.0: <<work in progress>>
+
+- TODO:
+  - Remove support for 2007-2010.
+  - IDataFlow
+  - TOmniQueue<T>
+    - Check compilation with DEBUG_OMNI_QUEUE
+  - TOmniBlockingCollection<T>  
+  - force UNDEF OTL_OLDCPU and check for SSE2 support 
+
 3.07: <<unreleased>>
 - New features:
   - Added function IOmniPipeline.NoThrottle which disables throttling 

@@ -114,6 +114,9 @@ unit OtlContainers;
 interface
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  {$ENDIF MSWINDOWS}
   Classes,
   OtlCommon,
   OtlSync,
@@ -293,17 +296,28 @@ type
   TOmniQueueTag = (tagFree, tagAllocating, tagAllocated, tagRemoving,
     tagEndOfList, tagExtending, tagBlockPointer, tagDestroying, tagHeader,
     tagSentinel);
+  POmniQueueTag = ^TOmniQueueTag;
 
-  TOmniTaggedValue = packed record
-    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be pointer-aligned
-    Tag     : TOmniQueueTag;
-    Offset  : word;
-    {$IFDEF CPUX64}
-    Stuffing: array[1..4] of byte; // make TOmniTaggedValue 3 pointers big
-    {$ENDIF CPUX64}
-    function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;            // atomic on Windows, composite on other platforms
-  end; { TOmniTaggedValue }
-  POmniTaggedValue = ^TOmniTaggedValue;
+//  TOmniTaggedValue = packed record
+//    Value   : TOmniValue;    //aligned for faster data access; overlaps with header's unreleased slot count, which must be pointer-aligned
+//    Tag     : TOmniQueueTag;
+//    Offset  : word;
+//    {$IFDEF CPUX64}
+//    Stuffing: array[1..4] of byte; // make TOmniTaggedValue 3 pointers big
+//    {$ENDIF CPUX64}
+//    function CASTag(oldTag, newTag: TOmniQueueTag): boolean; inline;            // atomic on Windows, composite on other platforms
+//  end; { TOmniTaggedValue }
+///  POmniTaggedValue = ^TOmniTaggedValue;
+
+  //POmniTaggedValue points to a
+  //  record
+  //    Value   : T;
+  //    Tag     : TOmniQueueTag;
+  //    Offset  : word;
+  //    Stuffing: variable size;
+  //  end;
+  POmniTaggedValue = pointer;
+  PPOmniTaggedValue = ^POmniTaggedValue;
 
   TOmniTaggedPointer = packed record
     Slot    : POmniTaggedValue;
@@ -321,15 +335,21 @@ type
   POmniTaggedPointer = ^TOmniTaggedPointer;
 
   ///<summary>Dynamically allocated, O(1) enqueue and dequeue, threadsafe, microlocking queue.</summary>
-  TOmniBaseQueue = class
+  TOmniBaseQueue<T> = class
+  public type
+    TClearValueProc = reference to procedure (var value: T);
   strict private // keep 4-aligned
     obcCachedBlock: POmniTaggedValue;
   strict private
-    obcBlockSize  : integer;
-    obcHeadPointer: POmniTaggedPointer;
-    obcMemStack   : TOmniBaseBoundedStack;
-    obcNumSlots   : integer;
-    obcTailPointer: POmniTaggedPointer;
+    obcBlockSize      : integer;
+    obcClearValueProc : TClearValueProc;
+    obcHeadPointer    : POmniTaggedPointer;
+    obcMemStack       : TOmniBaseBoundedStack;
+    obcNumSlots       : integer;
+    obcTaggedValueSize: integer;
+    obcTagOffset      : integer;
+    obcOffsetOffset   : integer;
+    obcTailPointer    : POmniTaggedPointer;
     {$IFNDEF OTL_HaveCmpx16b}
     obcLock       : IOmniCriticalSection;
     {$ENDIF ~OTL_HaveCmpx16b}
@@ -340,24 +360,33 @@ type
   strict protected
     procedure Acquire; inline;
     function  AllocateBlock: POmniTaggedValue;
+    function  CASTag(slot: POmniTaggedValue; oldTag, newTag: TOmniQueueTag): boolean; inline;
     procedure Cleanup; virtual;
     procedure Initialize; virtual;
     function  NextSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
+    function  Offset(slot: POmniTaggedValue): PWord; inline;
     procedure PartitionMemory(memory: POmniTaggedValue);
     procedure PreallocateMemory;
     function  PrevSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
     procedure Release; inline;
     procedure ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean = false);
+    function  Tag(slot: POmniTaggedValue): POmniQueueTag; inline;
   public
-    constructor Create(blockSize: integer = 65536; numCachedBlocks: integer = 4);
+    constructor Create(clearValueProc: TClearValueProc;
+      blockSize: integer = 65536; numCachedBlocks: integer = 4);
     destructor  Destroy; override;
     function  Dequeue: TOmniValue;
-    procedure Enqueue(const value: TOmniValue);
+    procedure Enqueue(const value: T);
     function  IsEmpty: boolean;
-    function  TryDequeue(var value: TOmniValue): boolean;
+    function  TryDequeue(var value: T): boolean;
+  end; { TOmniBaseQueue<T> }
+
+  TOmniBaseQueue = class(TOmniBaseQueue<TOmniValue>)
+  public
+    constructor Create(blockSize: integer = 65536; numCachedBlocks: integer = 4);
   end; { TOmniBaseQueue }
 
-  TOmniQueue = class(TOmniBaseQueue)
+  TOmniQueue<T> = class(TOmniBaseQueue<T>)
   strict private
     ocContainerSubject: TOmniContainerSubject;
   strict protected
@@ -365,9 +394,14 @@ type
     procedure Initialize; override;
   public
     function  Dequeue: TOmniValue;
-    procedure Enqueue(const value: TOmniValue);
-    function  TryDequeue(var value: TOmniValue): boolean;
+    procedure Enqueue(const value: T);
+    function  TryDequeue(var value: T): boolean;
     property ContainerSubject: TOmniContainerSubject read ocContainerSubject;
+  end; { TOmniQueue<T> }
+
+  TOmniQueue = class(TOmniQueue<TOmniValue>)
+  public
+    constructor Create(blockSize: integer = 65536; numCachedBlocks: integer = 4);
   end; { TOmniQueue }
 
 {$IFDEF OTL_MobileSupport}
@@ -377,12 +411,13 @@ type
 function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer = -1): IOmniValueQueue;
 {$ENDIF OTL_MobileSupport}
 
+//Internal method, which must be present in the interface section due to the limitations
+//of the compiler.
+procedure Yield;
+
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  {$ENDIF MSWINDOWS}
   {$IFDEF OTL_MobileSupport}
   Generics.Collections,
   {$ENDIF OTL_MobileSupport}
@@ -463,10 +498,20 @@ end; { AsmPause }
 {$ENDIF CPUX64}
 {$ENDIF MSWINDOWS}
 
+function OffsetPtr(ptr: pointer; offset: integer): pointer; inline;
+begin
+  Result := pointer(NativeUInt(int64(ptr) + offset));
+end; { OffsetPtr }
+
 function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
-  Result := pointer((((NativeInt(value) - 1) div granularity) + 1) * granularity);
+  Result := pointer((((NativeUInt(value) - 1) div granularity) + 1) * granularity);
 end; { RoundUpTo }
+
+procedure Yield;
+begin
+  {$IFNDEF OTL_HaveCmpx16b}TThread.Yield;{$ELSE}{$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF}{$ENDIF}
+end; { Yield }
 
 { TOmniBaseBoundedStack }
 
@@ -1235,16 +1280,16 @@ Dequeue:
 
 { TOmniTaggedValue }
 
-function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniQueueTag): boolean;
-begin
-  {$IFDEF OTL_HaveCmpx16b}
-  Result := CAS8(Ord(oldTag), Ord(newTag), Tag);
-  {$ELSE}
-  Result := (Tag = oldTag);
-  if Result then
-    Tag := newTag;
-  {$ENDIF ~OTL_HaveCmpx16b}
-end; { TOmniTaggedValue.CASTag }
+//function TOmniTaggedValue.CASTag(oldTag, newTag: TOmniQueueTag): boolean;
+//begin
+//  {$IFDEF OTL_HaveCmpx16b}
+//  Result := CAS8(Ord(oldTag), Ord(newTag), Tag);
+//  {$ELSE}
+//  Result := (Tag = oldTag);
+//  if Result then
+//    Tag := newTag;
+//  {$ENDIF ~OTL_HaveCmpx16b}
+//end; { TOmniTaggedValue.CASTag }
 
 { TOmniTaggedPointer }
 
@@ -1275,17 +1320,22 @@ end; { TOmniTaggedPointer.Move }
 
 { TOmniBaseQueue }
 
-constructor TOmniBaseQueue.Create(blockSize: integer; numCachedBlocks: integer);
+constructor TOmniBaseQueue<T>.Create(clearValueProc: TClearValueProc;
+  blockSize, numCachedBlocks: integer);
 var
   iMem  : integer;
   memory: POmniTaggedValue;
 begin
   inherited Create;
-  obcBlockSize := (((blockSize-1) div SizeOf(TOmniTaggedValue)) + 1) * SizeOf(TOmniTaggedValue);
-  obcNumSlots := obcBlockSize div SizeOf(TOmniTaggedValue);
+  obcClearValueProc := clearValueProc;
+  obcTagOffset := SizeOf(T);
+  obcOffsetOffset := obcTagOffset + 1;
+  obcTaggedValueSize := GpStuff.RoundUpTo(SizeOf(T) + 1 {Tag} + 2 {Offset}, SizeOf(pointer));
+  obcBlockSize := (((blockSize-1) div obcTaggedValueSize) + 1) * obcTaggedValueSize;
+  obcNumSlots := obcBlockSize div obcTaggedValueSize;
   if obcNumSlots > 65536 then
-    raise Exception.CreateFmt('TOmniBaseQueue.Create: Maximum block size is %d',
-            [65536 * SizeOf(TOmniTaggedValue)]);
+    raise Exception.CreateFmt('TOmniBaseQueue<T>.Create: Maximum block size is %d',
+            [65536 * obcTaggedValueSize]);
   obcMemStack := TOmniBaseBoundedStack.Create;
   obcMemStack.Initialize(numCachedBlocks, SizeOf(pointer));
   for iMem := 1 to numCachedBlocks do begin
@@ -1294,15 +1344,15 @@ begin
     Assert(obcMemStack.Push(memory));
   end;
   Initialize;
-end; { TOmniBaseQueue.Create }
+end; { TOmniBaseQueue<T>.Create }
 
-function TOmniBaseQueue.Dequeue: TOmniValue;
+function TOmniBaseQueue<T>.Dequeue: TOmniValue;
 begin
   if not TryDequeue(Result) then
-    raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
-end; { TOmniBaseQueue.Dequeue }
+    raise Exception.Create('TOmniBaseQueue<T>.Dequeue: Message queue is empty');
+end; { TOmniBaseQueue<T>.Dequeue }
 
-destructor TOmniBaseQueue.Destroy;
+destructor TOmniBaseQueue<T>.Destroy;
 var
   memory: pointer;
 begin
@@ -1311,57 +1361,73 @@ begin
     FreeMem(memory);
   FreeAndNil(obcMemStack);
   inherited;
-end; { TOmniBaseQueue.Destroy }
+end; { TOmniBaseQueue<T>.Destroy }
 
-procedure TOmniBaseQueue.Acquire;
+procedure TOmniBaseQueue<T>.Acquire;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
   obcLock.Acquire;
   {$ENDIF OTL_HaveCmpx16b}
-end; { TOmniBaseQueue.Acquire }
+end; { TOmniBaseQueue<T>.Acquire }
 
-function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
+function TOmniBaseQueue<T>.AllocateBlock: POmniTaggedValue;
 begin
   if not obcMemStack.Pop(Result) then begin
     Result := AllocMem(obcBlockSize);
     PartitionMemory(Result);
   end;
-end; { TOmniBaseQueue.AllocateBlock }
+end; { TOmniBaseQueue<T>.AllocateBlock }
 
 {$IFDEF DEBUG_OMNI_QUEUE}
-procedure TOmniBaseQueue.Assert(condition: boolean);
+procedure TOmniBaseQueue<T>.Assert(condition: boolean);
 begin
   if not condition then
     {$IFDEF CPUX64}AsmInt3;{$ELSE}asm int 3; end;{$ENDIF CPUX64}
-end; { TOmniBaseQueue.Assert }
+end; { TOmniBaseQueue<T>.Assert }
 {$ENDIF DEBUG_OMNI_QUEUE}
 
-procedure TOmniBaseQueue.Cleanup;
+function TOmniBaseQueue<T>.CASTag(slot: POmniTaggedValue; oldTag, newTag: TOmniQueueTag):
+  boolean;
+begin
+  {$IFDEF OTL_HaveCmpx16b}
+  Result := CAS8(Ord(oldTag), Ord(newTag), Tag(slot)^);
+  {$ELSE}
+  Result := (Tag = oldTag);
+  if Result then
+    Tag := newTag;
+  {$ENDIF ~OTL_HaveCmpx16b}
+end; { TOmniBaseQueue<T>.CASTag }
+
+procedure TOmniBaseQueue<T>.Cleanup;
 var
-  pBlock: POmniTaggedValue;
-  pSlot : POmniTaggedValue;
+  pBlock : POmniTaggedValue;
+  pSlot  : POmniTaggedValue;
+  slotTag: TOmniQueueTag;
 begin
   pSlot := obcTailPointer.Slot;
   while assigned(pSlot) do begin
-    if pSlot.Tag in [tagBlockPointer, tagEndOfList] then begin
+    slotTag := Tag(pSlot)^;
+    if slotTag in [tagBlockPointer, tagEndOfList] then begin
       pBlock := pSlot;
-      pSlot := POmniTaggedValue(pSlot.Value.RawData^); //retrieveing Value.AsPointer raises exception
-      Dec(pBlock, pBlock.Offset);
+//      pSlot := POmniTaggedValue(pSlot.Value.RawData^); //retrieveing Value.AsPointer raises exception
+      pSlot := PPOmniTaggedValue(pSlot)^;
+      pBlock := OffsetPtr(pBlock, Offset(pBlock)^ * obcTaggedValueSize);
       ReleaseBlock(pBlock, true);
     end
     else begin
-      if (pSlot.Tag = tagAllocated) then
-        pSlot.Value._ReleaseAndClear;
-      Inc(pSlot);
+      if (slotTag = tagAllocated) then
+//        pSlot.Value._ReleaseAndClear;
+        obcClearValueProc(T(pSlot^));
+      pSlot := OffsetPtr(pSlot, obcTaggedValueSize);
     end;
   end;
   if assigned(obcCachedBlock) then
     FreeMem(obcCachedBlock);
   FreeMem(obcTailPointer);
   FreeMem(obcHeadPointer);
-end; { TOmniBaseQueue.Cleanup }
+end; { TOmniBaseQueue<T>.Cleanup }
 
-procedure TOmniBaseQueue.Enqueue(const value: TOmniValue);
+procedure TOmniBaseQueue<T>.Enqueue(const value: T);
 var
   extension: POmniTaggedValue;
   next     : POmniTaggedValue;
@@ -1380,41 +1446,45 @@ begin
       then
         break //repeat
       else // very temporary condition, retry quickly
-        {$IFNDEF OTL_HaveCmpx16b}TThread.Yield;{$ELSE}{$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF}{$ENDIF}
+        Yield;
     until false;
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
     if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
       next := NextSlot(head);
-      head.Value := value; // this works because the slot was initialized to zero when allocating
+//      head.Value := value; // this works because the slot was initialized to zero when allocating
+      T(head^) := value;
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      head.Tag := tagAllocated; {$ELSE} Assert(head.CASTag(tagFree, tagAllocated)); {$ENDIF}
+      Tag(head)^ := tagAllocated; {$ELSE} Assert(CASTag(head, tagFree, tagAllocated)); {$ENDIF}
       {$IFDEF USE_MOVEDPTR} // release the lock
       obcHeadPointer.Move(next, next.Tag);
       {$ELSE}
-      Assert(obcHeadPointer.CAS(head, tagAllocating, next, next.Tag));
+      Assert(obcHeadPointer.CAS(head, tagAllocating, next, Tag(next)^));
       {$ENDIF}
     end
     else begin // allocating memory
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(obcHeadPointer.Tag = tagExtending); {$ENDIF}
       extension := AllocateBlock; // returns pointer to the header
-      Inc(extension, 2);          // move over header and sentinel to the first data slot
+//      Inc(extension, 2);          // move over header and sentinel to the first data slot
+      extension := OffsetPtr(extension, 2 * obcTaggedValueSize);
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      extension.Tag := tagAllocated; {$ELSE} Assert(extension.CASTag(tagFree, tagAllocated)); {$ENDIF}
-      extension.Value := value;   // this works because the slot was initialized to zero when allocating
-      Dec(extension);             // forward reference points to the sentinel
-      head.Value := extension;
+      Tag(extension)^ := tagAllocated; {$ELSE} Assert(extension.CASTag(tagFree, tagAllocated)); {$ENDIF}
+      T(extension^) := value;   // this works because the slot was initialized to zero when allocating
+//      Dec(extension);             // forward reference points to the sentinel
+      extension := OffsetPtr(extension, - obcTaggedValueSize);
+      PPOmniTaggedValue(head)^ := extension;
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      head.Tag := tagBlockPointer; {$ELSE} Assert(head.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
-      Inc(extension, 2); // get to the first free slot
+      Tag(head)^ := tagBlockPointer; {$ELSE} Assert(head.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
+//      Inc(extension, 2); // get to the first free slot
+      extension := OffsetPtr(extension, 2 * obcTaggedValueSize);
       {$IFDEF USE_MOVEDPTR} // release the lock
       obcHeadPointer.Move(extension, extension.Tag);
-      {$ELSE} Assert(obcHeadPointer.CAS(head, tagExtending, extension, extension.Tag)); {$ENDIF}
+      {$ELSE} Assert(obcHeadPointer.CAS(head, tagExtending, extension, Tag(extension)^)); {$ENDIF}
       PreallocateMemory;
     end;
   finally Release; end;
-end; { TOmniBaseQueue.Enqueue }
+end; { TOmniBaseQueue<T>.Enqueue }
 
-procedure TOmniBaseQueue.Initialize;
+procedure TOmniBaseQueue<T>.Initialize;
 begin
   if assigned(obcTailPointer) then
     FreeMem(obcTailPointer);
@@ -1426,20 +1496,20 @@ begin
   Assert(NativeInt(obcHeadPointer) mod (2*SizeOf(pointer)) = 0);
   Assert(NativeInt(@obcCachedBlock) mod SizeOf(pointer) = 0);
   obcTailPointer.Slot := NextSlot(AllocateBlock); // point to the sentinel
-  obcTailPointer.Tag := obcTailPointer.Slot.Tag;
+  obcTailPointer.Tag := Tag(obcTailPointer.Slot)^;
   {$IFDEF DEBUG_OMNI_QUEUE}
   Assert(obcTailPointer.Tag = tagSentinel);
   Assert(PrevSlot(obcTailPointer.Slot).Tag = tagHeader);
   {$ENDIF DEBUG_OMNI_QUEUE}
   obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
-  obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
+  obcHeadPointer.Tag := Tag(obcHeadPointer.Slot)^;
   {$IFDEF DEBUG_OMNI_QUEUE}
   Assert(obcHeadPointer.Tag = tagFree);
   {$ENDIF DEBUG_OMNI_QUEUE}
   obcCachedBlock := AllocateBlock; // pre-allocate memory
-end; { TOmniBaseQueue.Initialize }
+end; { TOmniBaseQueue<T>.Initialize }
 
-function TOmniBaseQueue.IsEmpty: boolean;
+function TOmniBaseQueue<T>.IsEmpty: boolean;
 var
   caughtTheHead: boolean;
   header       : POmniTaggedValue;
@@ -1477,11 +1547,12 @@ begin
           break; //repeat
         end
         else
-          {$IFNDEF OTL_HaveCmpx16b}TThread.Yield;{$ELSE}{$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF}{$ENDIF}
+          Yield;
       until false;
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
       header := tail;
-      Dec(header, header.Offset);
+//      Dec(header, header.Offset);
+      header := OffsetPtr(header, Offset(header)^);
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag <> tagAllocated); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(not caughtTheHead); {$ENDIF}
@@ -1490,12 +1561,12 @@ begin
         {$IFDEF USE_MOVEDPTR} // release the lock
         obcTailPointer.Move(next, next.Tag);
         {$ELSE}
-        Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag));
+        Assert(obcTailPointer.CAS(tail, tagRemoving, next, Self.Tag(next)^));
         {$ENDIF}
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
-        next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
+        next := PPOmniTaggedValue(tail)^; // next points to the sentinel
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
         {$IFDEF USE_MOVEDPTR} // release the lock
         obcTailPointer.Move(next, tagSentinel);
@@ -1508,34 +1579,38 @@ begin
         ReleaseBlock(header);
     end; //while tag = tagSentinel
   finally Release; end;
-end; { TOmniBaseQueue.IsEmpty }
+end; { TOmniBaseQueue<T>.IsEmpty }
 
-function TOmniBaseQueue.NextSlot(slot: POmniTaggedValue): POmniTaggedValue;
+function TOmniBaseQueue<T>.NextSlot(slot: POmniTaggedValue): POmniTaggedValue;
 begin
-  Result := slot;
-  Inc(Result);
-end; { TOmniBaseQueue.NextSlot }
+  Result := OffsetPtr(slot, obcTaggedValueSize);
+end; { TOmniBaseQueue<T>.NextSlot }
 
-procedure TOmniBaseQueue.PartitionMemory(memory: POmniTaggedValue);
+function TOmniBaseQueue<T>.Offset(slot: POmniTaggedValue): PWord;
+begin
+  Result := PWord(NativeUInt(slot) + obcOffsetOffset);
+end; { TOmniBaseQueue<T>.Offset }
+
+procedure TOmniBaseQueue<T>.PartitionMemory(memory: POmniTaggedValue);
 var
   iSlot: integer;
 begin
   Assert(Ord(tagFree) = 0);
-  memory.Tag := tagHeader;
+  Tag(memory)^ := tagHeader;
   PInteger(memory)^ := obcNumSlots - 1; // don't count the header
-  Inc(memory);
-  memory.Tag := tagSentinel;
-  memory.Offset := 1;
-  Inc(memory);
+  memory := OffsetPtr(memory, obcTaggedValueSize);
+  Tag(memory)^ := tagSentinel;
+  Offset(memory)^ := 1;
+  memory := OffsetPtr(memory, obcTaggedValueSize);
   for iSlot := 2 to obcNumSlots - 2 do begin
-    memory.Offset := iSlot;
-    Inc(memory);
+    Offset(memory)^ := iSlot;
+    memory := OffsetPtr(memory, obcTaggedValueSize);
   end;
-  memory.Tag := tagEndOfList;
-  memory.Offset := obcNumSlots - 1;
-end; { TOmniBaseQueue.PartitionMemory }
+  Tag(memory)^ := tagEndOfList;
+  Offset(memory)^ := obcNumSlots - 1;
+end; { TOmniBaseQueue<T>.PartitionMemory }
 
-procedure TOmniBaseQueue.PreallocateMemory;
+procedure TOmniBaseQueue<T>.PreallocateMemory;
 var
   memory: POmniTaggedValue;
 begin
@@ -1545,22 +1620,21 @@ begin
     if not obcMemStack.Push(memory) then
       FreeMem(memory);
   end;
-end; { TOmniBaseQueue.PreallocateMemory }
+end; { TOmniBaseQueue<T>.PreallocateMemory }
 
-function TOmniBaseQueue.PrevSlot(slot: POmniTaggedValue): POmniTaggedValue;
+function TOmniBaseQueue<T>.PrevSlot(slot: POmniTaggedValue): POmniTaggedValue;
 begin
-  Result := slot;
-  Dec(Result);
-end; { TOmniBaseQueue.PrevSlot }
+  Result := OffsetPtr(slot, obcTaggedValueSize);
+end; { TOmniBaseQueue<T>.PrevSlot }
 
-procedure TOmniBaseQueue.Release;
+procedure TOmniBaseQueue<T>.Release;
 begin
   {$IFNDEF OTL_HaveCmpx16b}
   obcLock.Release;
   {$ENDIF OTL_HaveCmpx16b}
-end; { TOmniBaseQueue.Release }
+end; { TOmniBaseQueue<T>.Release }
 
-procedure TOmniBaseQueue.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
+procedure TOmniBaseQueue<T>.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
 begin
   {$IFDEF DEBUG_OMNI_QUEUE}Assert(firstSlot.Tag = tagHeader);{$ENDIF DEBUG_OMNI_QUEUE}
   if forceFree or obcMemStack.IsFull then
@@ -1571,9 +1645,14 @@ begin
     if not obcMemStack.Push(firstSlot) then
       FreeMem(firstSlot);
   end;
-end; { TOmniBaseQueue.ReleaseBlock }
+end; { TOmniBaseQueue<T>.ReleaseBlock }
 
-function TOmniBaseQueue.TryDequeue(var value: TOmniValue): boolean;
+function TOmniBaseQueue<T>.Tag(slot: POmniTaggedValue): POmniQueueTag;
+begin
+  Result := POmniQueueTag(NativeUInt(slot) + obcTagOffset);
+end; { TOmniBaseQueue<T>.Tag }
+
+function TOmniBaseQueue<T>.TryDequeue(var value: T): boolean;
 var
   caughtTheHead: boolean;
   tail         : POmniTaggedValue;
@@ -1612,18 +1691,20 @@ begin
           break; //repeat
         end
         else
-          {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+          Yield;
       until false;
       if Result then begin // dequeueing
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
         header := tail;
-        Dec(header, header.Offset);
+//        Dec(header, header.Offset);
+        header := OffsetPtr(header, - Offset(header)^ * obcTaggedValueSize);
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
         if tag in [tagSentinel, tagAllocated] then begin
           next := NextSlot(tail);
           if tag = tagAllocated then begin // sentinel doesn't contain any useful value
-            value := tail.Value;
-            tail.Value._ReleaseAndClear;
+            value := T(tail^);
+//            tail.Value._ReleaseAndClear;
+            obcClearValueProc(T(tail^));
           end;
           if caughtTheHead then begin
             {$IFDEF USE_MOVEDPTR} // release the lock; as this is the last element, don't move forward
@@ -1636,12 +1717,12 @@ begin
           else
             {$IFDEF USE_MOVEDPTR} // release the lock
             obcTailPointer.Move(next, next.Tag);
-            {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, next.Tag));
+            {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, Self.Tag(next)^));
             {$ENDIF}
         end
         else begin // releasing memory
           {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
-          next := POmniTaggedValue(tail.Value.AsPointer); // next points to the sentinel
+          next := POmniTaggedValue(tail^); // next points to the sentinel
           {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
           {$IFDEF USE_MOVEDPTR} // release the lock
           obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
@@ -1652,7 +1733,19 @@ begin
       end;
     end; //while Result and (tag = tagSentinel)
   finally Release; end;
-end; { TOmniBaseQueue.TryDequeue }
+end; { TOmniBaseQueue<T>.TryDequeue }
+
+{ TOmniBaseQueue }
+
+constructor TOmniBaseQueue.Create(blockSize, numCachedBlocks: integer);
+begin
+  inherited Create(
+    procedure (var value: TOmniValue)
+    begin
+      value._ReleaseAndClear;
+    end,
+    blockSize, numCachedBlocks);
+end; { TOmniBaseQueue.Create }
 
 { initialization }
 
@@ -1669,36 +1762,46 @@ begin
   FreeAndNil(queue);
 end; { InitializeTimingInfo }
 
-procedure TOmniQueue.Cleanup;
+procedure TOmniQueue<T>.Cleanup;
 begin
   FreeAndNil(ocContainerSubject);
   inherited;
-end; { TOmniQueue.Cleanup }
+end; { TOmniQueue<T>.Cleanup }
 
-function TOmniQueue.Dequeue: TOmniValue;
+function TOmniQueue<T>.Dequeue: TOmniValue;
 begin
   Result := inherited Dequeue;
   ContainerSubject.Notify(coiNotifyOnAllRemoves);
-end; { TOmniQueue.Dequeue }
+end; { TOmniQueue<T>.Dequeue }
 
-procedure TOmniQueue.Enqueue(const value: TOmniValue);
+procedure TOmniQueue<T>.Enqueue(const value: T);
 begin
   inherited Enqueue(value);
   ContainerSubject.Notify(coiNotifyOnAllInserts);
-end; { TOmniQueue.Enqueue }
+end; { TOmniQueue<T>.Enqueue }
 
-procedure TOmniQueue.Initialize;
+procedure TOmniQueue<T>.Initialize;
 begin
   inherited;
   ocContainerSubject := TOmniContainerSubject.Create;
-end; { TOmniQueue.Initialize }
+end; { TOmniQueue<T>.Initialize }
 
-function TOmniQueue.TryDequeue(var value: TOmniValue): boolean;
+function TOmniQueue<T>.TryDequeue(var value: T): boolean;
 begin
   Result := inherited TryDequeue(value);
   if Result then
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
-end; { TOmniQueue.TryDequeue }
+end; { TOmniQueue<T>.TryDequeue }
+
+constructor TOmniQueue.Create(blockSize, numCachedBlocks: integer);
+begin
+  inherited Create(
+    procedure (var value: TOmniValue)
+    begin
+      value._ReleaseAndClear;
+    end,
+    blockSize, numCachedBlocks);
+end; { TOmniQueue.Create }
 
 {$IFDEF OTL_MobileSupport}
 
@@ -1778,7 +1881,7 @@ begin
       if FInnerQueue.Count > 0 then
         EnclosedResult := FInnerQueue.Dequeue
       else
-        raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
+        raise Exception.Create('TOmniBaseQueue<T>.Dequeue: Message queue is empty');
     end);
   Result := EnclosedResult;
 end; { TOmniValueQueue.Dequeue }
@@ -1874,13 +1977,12 @@ procedure TOmniValueQueueCS.LeaveCriticalSection;
 begin
   FCritSect.Leave;
 end; { TOmniValueQueueCS.LeaveCriticalSection }
-
 {$ENDIF OTL_MobileSupport}
 
 initialization
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   {$IFDEF OTL_HaveCmpx16b}
-  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
+//  Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
   Assert(SizeOf(TOmniTaggedPointer) = 2*SizeOf(pointer));
   InitializeTimingInfo;
   {$ENDIF OTL_HaveCmpx16b}
