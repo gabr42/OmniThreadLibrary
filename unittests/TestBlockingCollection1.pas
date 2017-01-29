@@ -19,6 +19,14 @@ type
     procedure TestInterfaceLeak;
     procedure TestIsEmpty;
   end;
+
+  TestCollectionOf = class(TTestCase)
+  published
+    procedure TestIntegerData;
+    procedure TestIntegerDataEnumerator;
+    procedure TestInterfaceData;
+    procedure TestInterfaceDataEnumerator;
+  end;
 {$ENDIF}
 
 implementation
@@ -194,9 +202,92 @@ begin
   CheckEquals(0, vMemLeakCheckObjCount);
 end;
 
+{ TestCollectionOf }
+
+procedure TestCollectionOf.TestIntegerData;
+var
+  coll : TOmniBlockingCollection<integer>;
+  i    : integer;
+  value: integer;
+begin
+  coll := TOmniBlockingCollection<integer>.Create;
+  try
+    for i := 1 to 65536 do
+      coll.Add(i);
+    coll.CompleteAdding;
+    for i := 1 to 65536 do begin
+      CheckTrue(coll.Take(value));
+      CheckEquals(i, value);
+    end;
+    CheckTrue(coll.IsEmpty);
+    CheckFalse(coll.Take(value));
+  finally FreeAndNil(coll); end;
+end;
+
+procedure TestCollectionOf.TestIntegerDataEnumerator;
+var
+  coll : TOmniBlockingCollection<integer>;
+  i    : integer;
+  value: integer;
+begin
+  coll := TOmniBlockingCollection<integer>.Create;
+  try
+    for i := 1 to 65536 do
+      coll.Add(i);
+    coll.CompleteAdding;
+    i := 0;
+    for value in coll do begin
+      Inc(i);
+      CheckEquals(value, i);
+    end;
+    CheckEquals(i, 65536);
+  finally FreeAndNil(coll); end;
+end;
+
+procedure TestCollectionOf.TestInterfaceData;
+var
+  coll : TOmniBlockingCollection<IOmniCounter>;
+  i    : integer;
+  value: IOmniCounter;
+begin
+  coll := TOmniBlockingCollection<IOmniCounter>.Create;
+  try
+    for i := 1 to 65536 do
+      coll.Add(CreateCounter(i));
+    coll.CompleteAdding;
+    for i := 1 to 65536 do begin
+      CheckTrue(coll.Take(value));
+      CheckEquals(i, value.Value);
+    end;
+    CheckTrue(coll.IsEmpty);
+    CheckFalse(coll.Take(value));
+  finally FreeAndNil(coll); end;
+end;
+
+procedure TestCollectionOf.TestInterfaceDataEnumerator;
+var
+  coll : TOmniBlockingCollection<IOmniCounter>;
+  i    : integer;
+  value: IOmniCounter;
+begin
+  coll := TOmniBlockingCollection<IOmniCounter>.Create;
+  try
+    for i := 1 to 65536 do
+      coll.Add(CreateCounter(i));
+    coll.CompleteAdding;
+    i := 0;
+    for value in coll do begin
+      Inc(i);
+      CheckEquals(value.Value, i);
+    end;
+    CheckEquals(i, 65536);
+  finally FreeAndNil(coll); end;
+end;
+
 initialization
   // Register any test cases with the test runner
   RegisterTest(TestIOmniBlockingCollection.Suite);
+  RegisterTest(TestCollectionOf.Suite);
 {$ENDIF}
 end.
 
