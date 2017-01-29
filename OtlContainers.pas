@@ -394,9 +394,11 @@ type
 function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer = -1): IOmniValueQueue;
 {$ENDIF OTL_MobileSupport}
 
-//Internal method, which must be present in the interface section due to the limitations
+{$IFDEF DEBUG_OMNI_QUEUE}
+//Internal methods which must be present in the interface section due to the limitations
 //of the compiler.
-procedure Yield;
+procedure OtlContainers_AsmInt3;
+{$ENDIF DEBUG_OMNI_QUEUE}
 
 implementation
 
@@ -466,13 +468,15 @@ end; { CreateOmniValueQueue }
 {$ENDIF OTL_MobileSupport}
 
 {$IFDEF MSWINDOWS}
-{$IFDEF CPUX64}
-procedure AsmInt3;
+procedure OtlContainers_AsmInt3;
 asm
+  {$IFDEF CPUX64}
   .noframe
+  {$ENDIF}
   int 3
-end; { AsmInt3 }
+end; { OtlContainers_AsmInt3 }
 
+{$IFDEF CPUX64}
 procedure AsmPause;
 asm
   .noframe
@@ -490,11 +494,6 @@ function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
   Result := pointer((((NativeUInt(value) - 1) div NativeUInt(granularity)) + 1) * NativeUInt(granularity));
 end; { RoundUpTo }
-
-procedure Yield;
-begin
-  {$IFNDEF OTL_HaveCmpx16b}TThread.Yield;{$ELSE}{$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF}{$ENDIF}
-end; { Yield }
 
 { TOmniBaseBoundedStack }
 
@@ -624,7 +623,7 @@ begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
       obsTaskPopLoops := 1;
       obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
-        {$IFDEF OTL_HasTThreadYield}TThread.Yield;{$ELSE}DSiYield;{$ENDIF}
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := PopLink(obsRecycleChainP^);
@@ -1021,7 +1020,7 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
-        {$IFDEF OTL_HasTThreadYield}TThread.Yield;{$ELSE}DSiYield;{$ENDIF}
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := RemoveLink(obqRecycleRingBuffer);
@@ -1201,7 +1200,7 @@ Enqueue:
       else if header.head.CAS(head, tagEndOfList, head, tagExtending) then
           break
       else
-          yield
+          OtlContainers_Yield
   forever
   if header.head.tag = tagAllocating then
       store <value, tagAllocated> into slot
@@ -1233,7 +1232,7 @@ Dequeue:
           tail.tag = tagDestroying
           break
       else
-          yield
+          OtlContainers_Yield
   forever
   firstSlot = tail - tail.Offset // point to first slot
   if old_tag in [tagSentinel, tagAllocated] then
@@ -1363,7 +1362,11 @@ end; { TOmniBaseQueue<T>.AllocateBlock }
 procedure TOmniBaseQueue<T>.Assert(condition: boolean);
 begin
   if not condition then
-    {$IFDEF CPUX64}AsmInt3;{$ELSE}asm int 3; end;{$ENDIF CPUX64}
+    {$IFDEF MSWINDOWS}
+    OtlContainers_AsmInt3;
+    {$ELSE}
+    raise Exception.Create('TOmniBaseQueue<T>: Assertion failed');
+    {$ENDIF}
 end; { TOmniBaseQueue<T>.Assert }
 {$ENDIF DEBUG_OMNI_QUEUE}
 
@@ -1425,7 +1428,7 @@ begin
       then
         break //repeat
       else // very temporary condition, retry quickly
-        Yield;
+        TThread.Yield;
     until false;
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
     if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
@@ -1443,12 +1446,12 @@ begin
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(obcHeadPointer.Tag = tagExtending); {$ENDIF}
       extension := OffsetPtr(AllocateBlock, 2 * obcTaggedValueSize);
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      Tag(extension)^ := tagAllocated; {$ELSE} Assert(extension.CASTag(tagFree, tagAllocated)); {$ENDIF}
+      Tag(extension)^ := tagAllocated; {$ELSE} Assert(CASTag(extension, tagFree, tagAllocated)); {$ENDIF}
       T(extension^) := value;   // this works because the slot was initialized to zero when allocating
       extension := OffsetPtr(extension, - obcTaggedValueSize);
       PPOmniTaggedValue(head)^ := extension;
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      Tag(head)^ := tagBlockPointer; {$ELSE} Assert(head.CASTag(tagEndOfList, tagBlockPointer)); {$ENDIF}
+      Tag(head)^ := tagBlockPointer; {$ELSE} Assert(CASTag(head, tagEndOfList, tagBlockPointer)); {$ENDIF}
       extension := OffsetPtr(extension, 2 * obcTaggedValueSize);
       {$IFDEF USE_MOVEDPTR} // release the lock
       obcHeadPointer.Move(extension, extension.Tag);
@@ -1473,7 +1476,7 @@ begin
   obcTailPointer.Tag := Tag(obcTailPointer.Slot)^;
   {$IFDEF DEBUG_OMNI_QUEUE}
   Assert(obcTailPointer.Tag = tagSentinel);
-  Assert(PrevSlot(obcTailPointer.Slot).Tag = tagHeader);
+  Assert(Tag(PrevSlot(obcTailPointer.Slot))^ = tagHeader);
   {$ENDIF DEBUG_OMNI_QUEUE}
   obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
   obcHeadPointer.Tag := Tag(obcHeadPointer.Slot)^;
@@ -1521,11 +1524,11 @@ begin
           break; //repeat
         end
         else
-          Yield;
+          TThread.Yield;
       until false;
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
       header := OffsetPtr(tail, - Offset(tail)^ * obcTaggedValueSize);
-      {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
+      {$IFDEF DEBUG_OMNI_QUEUE} Assert(Self.Tag(header)^ = tagHeader); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag <> tagAllocated); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(not caughtTheHead); {$ENDIF}
       if tag = tagSentinel then begin
@@ -1539,7 +1542,7 @@ begin
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
         next := PPOmniTaggedValue(tail)^; // next points to the sentinel
-        {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
+        {$IFDEF DEBUG_OMNI_QUEUE} Assert(Self.Tag(next)^ = tagSentinel); {$ENDIF}
         {$IFDEF USE_MOVEDPTR} // release the lock
         obcTailPointer.Move(next, tagSentinel);
         {$ELSE}
@@ -1596,7 +1599,7 @@ end; { TOmniBaseQueue<T>.PreallocateMemory }
 
 function TOmniBaseQueue<T>.PrevSlot(slot: POmniTaggedValue): POmniTaggedValue;
 begin
-  Result := OffsetPtr(slot, obcTaggedValueSize);
+  Result := OffsetPtr(slot, - obcTaggedValueSize);
 end; { TOmniBaseQueue<T>.PrevSlot }
 
 procedure TOmniBaseQueue<T>.Release;
@@ -1608,7 +1611,7 @@ end; { TOmniBaseQueue<T>.Release }
 
 procedure TOmniBaseQueue<T>.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
 begin
-  {$IFDEF DEBUG_OMNI_QUEUE}Assert(firstSlot.Tag = tagHeader);{$ENDIF DEBUG_OMNI_QUEUE}
+  {$IFDEF DEBUG_OMNI_QUEUE}Assert(Tag(firstSlot)^ = tagHeader);{$ENDIF DEBUG_OMNI_QUEUE}
   if forceFree or obcMemStack.IsFull then
     FreeMem(firstSlot)
   else begin
@@ -1663,12 +1666,12 @@ begin
           break; //repeat
         end
         else
-          Yield;
+          TThread.Yield;
       until false;
       if Result then begin // dequeueing
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
         header := OffsetPtr(tail, - Offset(tail)^ * obcTaggedValueSize);
-        {$IFDEF DEBUG_OMNI_QUEUE} Assert(header.Tag = tagHeader); {$ENDIF}
+        {$IFDEF DEBUG_OMNI_QUEUE} Assert(Self.Tag(header)^ = tagHeader); {$ENDIF}
         if tag in [tagSentinel, tagAllocated] then begin
           next := NextSlot(tail);
           if tag = tagAllocated then begin // sentinel doesn't contain any useful value
@@ -1692,7 +1695,7 @@ begin
         else begin // releasing memory
           {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
           next := POmniTaggedValue(tail^); // next points to the sentinel
-          {$IFDEF DEBUG_OMNI_QUEUE} Assert(next.Tag = tagSentinel); {$ENDIF}
+          {$IFDEF DEBUG_OMNI_QUEUE} Assert(Self.Tag(next)^ = tagSentinel); {$ENDIF}
           {$IFDEF USE_MOVEDPTR} // release the lock
           obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
           tag := tagSentinel; // retry

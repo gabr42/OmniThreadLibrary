@@ -390,11 +390,7 @@ begin
       {$ENDIF ~MSWINDOWS}
       Exit;
     end;
-    {$IFDEF MSWINDOWS}
-    Yield;
-    {$ELSE}
     TThread.Yield;
-    {$ENDIF}
   until false;
 end; { TOmniBlockingCollection<T>.CompleteAdding }
 
