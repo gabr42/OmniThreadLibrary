@@ -346,6 +346,7 @@ type
     procedure Acquire; inline;
     function  AllocateBlock: POmniTaggedValue;
     function  CASTag(slot: POmniTaggedValue; oldTag, newTag: TOmniQueueTag): boolean; inline;
+    procedure CheckCPU;
     procedure Cleanup; virtual;
     procedure Initialize; virtual;
     function  NextSlot(slot: POmniTaggedValue): POmniTaggedValue; inline;
@@ -396,6 +397,11 @@ function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer 
 //of the compiler.
 procedure OtlContainers_AsmInt3;
 {$ENDIF DEBUG_OMNI_QUEUE}
+
+{$IFDEF MSWINDOWS}
+function IsProcessorFeaturePresent(ProcessorFeature: DWORD): BOOL; stdcall;
+  external kernel32 name 'IsProcessorFeaturePresent';
+{$ENDIF MSWINDOWS}
 
 implementation
 
@@ -1304,6 +1310,7 @@ var
   memory: POmniTaggedValue;
 begin
   inherited Create;
+  CheckCPU;
   obcTagOffset := SizeOf(T);
   obcOffsetOffset := obcTagOffset + 1;
   obcTaggedValueSize := GpStuff.RoundUpTo(SizeOf(T) + 1 {Tag} + 2 {Offset}, SizeOf(pointer));
@@ -1377,6 +1384,16 @@ begin
     Tag := newTag;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseQueue<T>.CASTag }
+
+procedure TOmniBaseQueue<T>.CheckCPU;
+const
+  PF_XMMI64_INSTRUCTIONS_AVAILABLE = 10;
+begin
+  {$IFDEF MSWINDOWS}
+  if not IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE) then
+    raise Exception.Create('TOmniBaseQueue requires SSE2 instruction set.');
+  {$ENDIF MSWINDOWS}
+end; { TOmniBaseQueue }
 
 procedure TOmniBaseQueue<T>.Cleanup;
 var

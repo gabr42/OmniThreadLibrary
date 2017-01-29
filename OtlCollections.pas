@@ -217,7 +217,7 @@ type
     function  GetEnumerator: TOmniBlockingCollectionEnumerator<T>; inline;
     function  IsCompleted: boolean; inline;
     function  IsEmpty: boolean; inline;
-    function  IsFinalized: boolean;
+    function  IsFinalized: boolean; inline;
     function  Next: T;
     procedure SetThrottling(highWaterMark, lowWaterMark: integer);
     function  Take(var value: T): boolean; inline;
