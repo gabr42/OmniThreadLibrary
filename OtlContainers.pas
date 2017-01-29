@@ -37,10 +37,10 @@
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
 ///   Last modification : 2017-01-29
-///   Version           : 3.03
+///   Version           : 4.0
 ///</para><para>
 ///   History:
-///     3.03: 2017-01-29
+///     4.0: 2017-01-29
 ///       - Implemented TOmni[Base]Queue<T>. T must be simple or managed type.
 ///     3.02: 2015-10-03
 ///       - Imported mobile support by [Sean].
@@ -335,7 +335,7 @@ type
     obcMemStack       : TOmniBaseBoundedStack;
     obcNumSlots       : integer;
     obcTaggedValueSize: integer;
-    obcTagOffset      : integer;
+                        obcTagOffset      : integer;
     obcOffsetOffset   : integer;
     obcTailPointer    : POmniTaggedPointer;
     {$IFNDEF OTL_HaveCmpx16b}

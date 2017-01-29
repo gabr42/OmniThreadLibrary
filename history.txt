@@ -1,12 +1,20 @@
 4.0: <<work in progress>>
+- New features:
+  - Implemented TOmni[Base]Queue<T>. T must be simple or managed type.
+  - Implemented TOmniBlockingCollection<T>. T must be simple or managed type.
 
 - TODO:
   - Remove support for 2007-2010.
   - IDataFlow
   - TOmniQueue<T>
     - Check compilation with DEBUG_OMNI_QUEUE
+    - Write unit test.
   - TOmniBlockingCollection<T>  
+    - Write unit test.
   - force UNDEF OTL_OLDCPU and check for SSE2 support 
+  - remove OTL_Generics from code
+  - remove OTL_HasArrayOfT from code
+  - remove OTL_ERTTI from code
 
 3.07: <<unreleased>>
 - New features:

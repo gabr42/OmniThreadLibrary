@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2016-11-18
-///   Version           : 1.09
+///   Last modification : 2017-01-29
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2017-01-29
+///       - Implemented TOmniBlockingCollection<T>. T must be simple or managed type.
 ///     1.09: 2016-11-18
 ///       - Implemented IOmniBlockingCollection.IsEmpty.
 ///       - Implemented IOmniBlockingCollection.Count.
@@ -158,9 +160,21 @@ type
     property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
   end; { IOmniBlockingCollection }
 
-  TOmniBlockingCollection = class(TInterfacedObject,
-                                  IOmniBlockingCollection,
-                                  IOmniValueEnumerable)
+  TOmniBlockingCollection<T> = class;
+
+  TOmniBlockingCollectionEnumerator<T> = class(TInterfacedObject)
+  strict private
+    obceCollection_ref: TOmniBlockingCollection<T>;
+    obceValue         : T;
+  public
+    constructor Create(collection: TOmniBlockingCollection<T>);
+    function  GetCurrent: T; inline;
+    function  MoveNext: boolean; inline;
+    function  TryTake(var value: T; timeout_ms: cardinal): boolean;
+    property Current: T read GetCurrent;
+  end; { TOmniBlockingCollectionEnumerator<T> }
+
+  TOmniBlockingCollection<T> = class(TInterfacedObject)
   const
     CCompletedFlag = $40000000; // 30-bit so we don't have cardinal/integer problems
   strict private
@@ -172,13 +186,12 @@ type
     {$ENDREGION}
     obcAddCountAndCompleted: TOmniAlignedInt32;
     obcApproxCount         : TOmniAlignedInt32;
-    obcCollection          : TOmniQueue;
+    obcCollection          : TOmniQueue<T>;
     obcCompletedSignal     : TOmniTransitionEvent;
     obcHighWaterMark       : integer;
     obcLowWaterMark        : integer;
     obcNotOverflow         : TOmniTransitionEvent;
     obcObserver            : {$IFDEF MSWINDOWS}TOmniContainerWindowsEventObserver{$ELSE}TOmniContainerEventObserver{$ENDIF};
-    obcReraiseExceptions   : boolean;
     obcResourceCount       : IOmniResourceCount;
     obcThrottling          : boolean;
     {$IFNDEF MSWINDOWS}
@@ -186,46 +199,51 @@ type
     FTakableWaiter         : TSynchroWaitFor;
     {$ENDIF}
   protected
+    function  Elapsed(startTime: int64; timeout_ms: cardinal): boolean;
     function  GetApproxCount: integer; inline;
     function  GetContainerSubject: TOmniContainerSubject;
+    function  TimeLeft_ms(startTime: int64; timeout_ms: cardinal): DWORD;
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
     ///	enter 'completed' state when this number of .Take calls is
     ///	simultaneously blocked because the collection is empty.</remarks>
     {$ENDREGION}
-    constructor Create(numProducersConsumers: integer = 0);
+    constructor Create(numProducersConsumers: integer = 0; blockSize: integer = 65536;
+      numCachedBlocks: integer = 4);
     destructor  Destroy; override;
-    {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
-    class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
-    {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
-    procedure Add(const value: TOmniValue); inline;
+    procedure Add(const value: T); inline;
     procedure CompleteAdding;
-    function  GetEnumerator: IOmniValueEnumerator; inline;
+    function  GetEnumerator: TOmniBlockingCollectionEnumerator<T>; inline;
     function  IsCompleted: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFinalized: boolean;
-    function  Next: TOmniValue;
-    procedure ReraiseExceptions(enable: boolean = true);
+    function  Next: T;
     procedure SetThrottling(highWaterMark, lowWaterMark: integer);
-    function  Take(var value: TOmniValue): boolean; inline;
-    function  TryAdd(const value: TOmniValue): boolean; inline;
-    function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
+    function  Take(var value: T): boolean; inline;
+    function  ToArray: TArray<T>;
+    function  TryAdd(const value: T): boolean; inline;
+    function  TryTake(var value: T; timeout_ms: cardinal = 0): boolean;
     property CompletedSignal: TOmniTransitionEvent read obcCompletedSignal;
     property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
     property Count: integer read GetApproxCount;
+  end; { TOmniBlockingCollection<T> }
+
+  TOmniBlockingCollection = class(TOmniBlockingCollection<TOmniValue>,
+                                  IOmniBlockingCollection,
+                                  IOmniValueEnumerable)
+  strict private
+    obcReraiseExceptions: boolean;
+  public
+    class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
+    function  GetEnumerator: IOmniValueEnumerator; inline;
+    procedure ReraiseExceptions(enable: boolean = true);
+    function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
   end; { TOmniBlockingCollection }
 
-  TOmniBlockingCollectionEnumerator = class(TInterfacedObject, IOmniValueEnumerator)
-  strict private
-    obceCollection_ref: TOmniBlockingCollection;
-    obceValue         : TOmniValue;
+  TOmniBlockingCollectionEnumerator = class(TOmniBlockingCollectionEnumerator<TOmniValue>,
+                                            IOmniValueEnumerator)
   public
-    constructor Create(collection: TOmniBlockingCollection);
-    function  GetCurrent: TOmniValue; inline;
-    function  MoveNext: boolean; inline;
-    function  TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
-    property Current: TOmniValue read GetCurrent;
   end; { TOmniBlockingCollectionEnumerator }
 
   PInterface = ^IInterface;
@@ -254,35 +272,49 @@ end; { AsmPause }
 {$ENDIF CPUX64}
 {$ENDIF}
 
-{ TOmniBlockingCollectionEnumerator }
+function Clamp(value: integer): integer; inline;
+const
+  CMinIncrement = 1024;
+  CMaxIncrement = 65536;
+begin
+  if value < CMinIncrement then
+    Result := CMinIncrement
+  else if value > CMaxIncrement then
+    Result := CMaxIncrement
+  else
+    Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
+end; { Clamp }
 
-constructor TOmniBlockingCollectionEnumerator.Create(collection: TOmniBlockingCollection);
+{ TOmniBlockingCollectionEnumerator<T> }
+
+constructor TOmniBlockingCollectionEnumerator<T>.Create(collection: TOmniBlockingCollection<T>);
 begin
   obceCollection_ref := collection;
-end; { TOmniBlockingCollectionEnumerator.Create }
+end; { TOmniBlockingCollectionEnumerator<T>.Create }
 
-function TOmniBlockingCollectionEnumerator.GetCurrent: TOmniValue;
+function TOmniBlockingCollectionEnumerator<T>.GetCurrent: T;
 begin
   Result := obceValue;
-end; { TOmniBlockingCollectionEnumerator.GetCurrent }
+end; { TOmniBlockingCollectionEnumerator<T>.GetCurrent }
 
-function TOmniBlockingCollectionEnumerator.MoveNext: boolean;
+function TOmniBlockingCollectionEnumerator<T>.MoveNext: boolean;
 begin
   Result := obceCollection_ref.Take(obceValue);
-end; { TOmniBlockingCollectionEnumerator.MoveNext }
+end; { TOmniBlockingCollectionEnumerator<T>.MoveNext }
 
-function TOmniBlockingCollectionEnumerator.TryTake(var value: TOmniValue;
+function TOmniBlockingCollectionEnumerator<T>.TryTake(var value: T;
   timeout_ms: cardinal): boolean;
 begin
   Result := obceCollection_ref.TryTake(value, timeout_ms);
-end; { TOmniBlockingCollectionEnumerator.TryTake }
+end; { TOmniBlockingCollectionEnumerator<T>.TryTake }
 
-{ TOmniBlockingCollection }
+{ TOmniBlockingCollection<T> }
 
 ///If numProducersConsumers > 0, collection will automatically enter 'completed' state
 ///when this number of .Take calls is simultaneously blocked because the collection is
 ///empty.
-constructor TOmniBlockingCollection.Create(numProducersConsumers: integer);
+constructor TOmniBlockingCollection<T>.Create(numProducersConsumers, blockSize,
+  numCachedBlocks: integer);
 var
   ShareLock: IOmniCriticalSection;
 begin
@@ -295,7 +327,7 @@ begin
   obcApproxCount.Value := 0;
   if numProducersConsumers > 0 then
     obcResourceCount := CreateResourceCount(numProducersConsumers);
-  obcCollection := TOmniQueue.Create;
+  obcCollection := TOmniQueue<T>.Create(blockSize, numCachedBlocks);
   obcCompletedSignal := {$IFDEF MSWINDOWS}CreateEvent(nil, true, false, nil);
                         {$ELSE}CreateOmniEvent(true, false, ShareLock);{$ENDIF}
   obcObserver := {$IFDEF MSWINDOWS}CreateContainerWindowsEventObserver;
@@ -313,9 +345,9 @@ begin
       // FTakableWaiter := TSynchroWaitFor.Create([obcCompletedSignal, obcObserver], ShareLock);
       FTakableWaiter := nil
   {$ENDIF}
-end; { TOmniBlockingCollection.Create }
+end; { TOmniBlockingCollection<T>.Create }
 
-destructor TOmniBlockingCollection.Destroy;
+destructor TOmniBlockingCollection<T>.Destroy;
 begin
   {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(obcNotOverflow);
@@ -337,15 +369,15 @@ begin
   FTakableWaiter.Free;
   {$ENDIF}
   inherited Destroy;
-end; { TOmniBlockingCollection.Destroy }
+end; { TOmniBlockingCollection<T>.Destroy }
 
-procedure TOmniBlockingCollection.Add(const value: TOmniValue);
+procedure TOmniBlockingCollection<T>.Add(const value: T);
 begin
   if not TryAdd(value) then
     raise ECollectionCompleted.Create('Adding to completed collection');
-end; { TOmniBlockingCollection.Add }
+end; { TOmniBlockingCollection<T>.Add }
 
-procedure TOmniBlockingCollection.CompleteAdding;
+procedure TOmniBlockingCollection<T>.CompleteAdding;
 begin
   repeat
     if IsCompleted then // CompleteAdding was already called
@@ -359,57 +391,61 @@ begin
       Exit;
     end;
     {$IFDEF MSWINDOWS}
-    {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF CPUX64}
+    Yield;
     {$ELSE}
     TThread.Yield;
     {$ENDIF}
   until false;
-end; { TOmniBlockingCollection.CompleteAdding }
+end; { TOmniBlockingCollection<T>.CompleteAdding }
 
-function TOmniBlockingCollection.GetApproxCount: integer;
+function TOmniBlockingCollection<T>.Elapsed(startTime: int64; timeout_ms: cardinal):
+  boolean;
+begin
+  if timeout_ms = INFINITE then
+    Result := false
+  else
+    Result := (startTime + timeout_ms) < DSiTimeGetTime64;
+end; { TOmniBlockingCollection<T>.Elapsed }
+
+function TOmniBlockingCollection<T>.GetApproxCount: integer;
 begin
   Result := obcApproxCount.Value;
-end; { TOmniBlockingCollection.GetApproxCount }
+end; { TOmniBlockingCollection<T>.GetApproxCount }
 
-function TOmniBlockingCollection.GetContainerSubject: TOmniContainerSubject;
+function TOmniBlockingCollection<T>.GetContainerSubject: TOmniContainerSubject;
 begin
   Result := obcCollection.ContainerSubject;
-end; { TOmniBlockingCollection.GetContainerSubject }
+end; { TOmniBlockingCollection<T>.GetContainerSubject }
 
-function TOmniBlockingCollection.GetEnumerator: IOmniValueEnumerator;
+function TOmniBlockingCollection<T>.GetEnumerator: TOmniBlockingCollectionEnumerator<T>;
 begin
-  Result := TOmniBlockingCollectionEnumerator.Create(Self);
-end; { TOmniBlockingCollection.GetEnumerator }
+  Result := TOmniBlockingCollectionEnumerator<T>.Create(Self);
+end; { TOmniBlockingCollection<T>.GetEnumerator }
 
-function TOmniBlockingCollection.IsCompleted: boolean;
+function TOmniBlockingCollection<T>.IsCompleted: boolean;
 begin
   Result := (obcAddCountAndCompleted.Value AND CCompletedFlag) = CCompletedFlag;
-end; { TOmniBlockingCollection.IsCompleted }
+end; { TOmniBlockingCollection<T>.IsCompleted }
 
-function TOmniBlockingCollection.IsEmpty: boolean;
+function TOmniBlockingCollection<T>.IsEmpty: boolean;
 begin
   Result := obcCollection.IsEmpty;
 end; { TOmniBlockingCollection }
 
-function TOmniBlockingCollection.IsFinalized: boolean;
+function TOmniBlockingCollection<T>.IsFinalized: boolean;
 begin
   Result := IsCompleted and obcCollection.IsEmpty;
-end; { TOmniBlockingCollection.IsFinalized }
+end; { TOmniBlockingCollection<T>.IsFinalized }
 
-function TOmniBlockingCollection.Next: TOmniValue;
+function TOmniBlockingCollection<T>.Next: T;
 begin
   if not Take(Result) then
     raise ECollectionCompleted.Create('Collection is empty');
-end; { TOmniBlockingCollection.Next }
-
-procedure TOmniBlockingCollection.ReraiseExceptions(enable: boolean);
-begin
-  obcReraiseExceptions := enable;
-end; { TOmniBlockingCollection.ReraiseExceptions }
+end; { TOmniBlockingCollection<T>.Next }
 
 ///<summary>When throttling is set, Add will block if there is >= highWaterMark elements
 ///  in the queue. It will only unblock when number of elements drops below lowWaterMark.</summary>
-procedure TOmniBlockingCollection.SetThrottling(highWaterMark, lowWaterMark: integer);
+procedure TOmniBlockingCollection<T>.SetThrottling(highWaterMark, lowWaterMark: integer);
 begin
   if obcAccessed then
     raise Exception.Create('Throttling cannot be set once the blocking collection has been used');
@@ -417,82 +453,53 @@ begin
   obcHighWaterMark := highWaterMark;
   obcLowWaterMark := lowWaterMark;
   obcThrottling := true;
-end; { TOmniBlockingCollection.SetThrottling }
+end; { TOmniBlockingCollection<T>.SetThrottling }
 
-function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
+function TOmniBlockingCollection<T>.Take(var value: T): boolean;
 begin
   Result := TryTake(value, INFINITE);
-end; { TOmniBlockingCollection.Take }
+end; { TOmniBlockingCollection<T>.Take }
 
-{$IFDEF OTL_Generics}
-{$IFDEF OTL_HasArrayOfT}
-{$IFDEF OTL_ERTTI}
-function Clamp(value: integer): integer; inline;
-const
-  CMinIncrement = 1024;
-  CMaxIncrement = 65536;
+function TOmniBlockingCollection<T>.TimeLeft_ms(startTime: int64; timeout_ms: cardinal):
+  DWORD;
+var
+  intTime: integer;
 begin
-  if value < CMinIncrement then
-    Result := CMinIncrement
-  else if value > CMaxIncrement then
-    Result := CMaxIncrement
-  else
-    Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
-end; { Clamp }
+  if timeout_ms = INFINITE then
+    Result := INFINITE
+  else begin
+    intTime := startTime + timeout_ms - DSiTimeGetTime64;
+    if intTime < 0 then
+      Result := 0
+    else
+      Result := intTime;
+  end;
+end; { TOmniBlockingCollection<T>.TimeLeft_ms }
 
-class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
-  TArray<T>;
+function TOmniBlockingCollection<T>.ToArray: TArray<T>;
 var
   ds      : integer;
   lenArr  : integer;
   maxValue: uint64;
   numEl   : integer;
   ti      : PTypeInfo;
-  value   : TOmniValue;
+  value   : T;
 begin
-  ds := 0;
-  ti := System.TypeInfo(T);
-  if assigned(ti) then
-    if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
-      ds := 1
-    else if (ti = System.TypeInfo(word)) or (ti = System.TypeInfo(smallint)) then
-      ds := 2
-    else
-      ds := TOmniValue_DataSize[ti^.Kind];
-
-  maxValue := High(uint64);
-  if ds > 0 then
-    maxValue := uint64($FF) SHL ((ds-1) * 8);
-
   lenArr := Clamp(0);
   SetLength(Result, lenArr);
   numEl := 0;
-  for value in coll do begin
+  while TryTake(value, INFINITE) do begin
     if numEl >= lenArr then begin
       lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
       SetLength(Result, lenArr);
     end;
-    if ds = 0 then begin
-      case value.DataType of
-        ovtInterface: PInterface(@Result[numEl])^ := value.AsInterface;
-        ovtRecord:    Result[numEl] := value.ToRecord<T>;
-        else          Result[numEl] := value.AsTValue.AsType<T>;
-      end;
-    end
-    else begin
-      if value.RawData^ > maxValue then
-        raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [value.RawData^, ti^.Name]);
-      Move(value.RawData^, Result[numEl], ds);
-    end;
+    Result[numEl] := value;
     Inc(numEl);
   end;
   SetLength(Result, numEl);
-end; { TOmniBlockingCollection.ToArray<T> }
-{$ENDIF OTL_ERTTI}
-{$ENDIF OTL_HasArrayOfT}
-{$ENDIF OTL_Generics}
+end; { TOmniBlockingCollection<T>.ToArray<T> }
 
-function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
+function TOmniBlockingCollection<T>.TryAdd(const value: T): boolean;
 var
   {$IFDEF MSWINDOWS}
   awaited: cardinal;
@@ -535,40 +542,15 @@ begin
       obcApproxCount.Increment;
     end;
   finally obcAddCountAndCompleted.Decrement; end;
-end; { TOmniBlockingCollection.TryAdd }
+end; { TOmniBlockingCollection<T>.TryAdd }
 
 {$IFDEF MSWINDOWS}
-function TOmniBlockingCollection.TryTake(var value: TOmniValue;
-  timeout_ms: cardinal): boolean;
+function TOmniBlockingCollection<T>.TryTake(var value: T; timeout_ms: cardinal): boolean;
 var
   awaited    : DWORD;
   startTime  : int64;
   waitHandles: array [0..2] of THandle;
-
-  function Elapsed: boolean;
-  begin
-    if timeout_ms = INFINITE then
-      Result := false
-    else
-      Result := (startTime + timeout_ms) < DSiTimeGetTime64;
-  end; { Elapsed }
-
-  function TimeLeft_ms: DWORD;
-  var
-    intTime: integer;
-  begin
-    if timeout_ms = INFINITE then
-      Result := INFINITE
-    else begin
-      intTime := startTime + timeout_ms - DSiTimeGetTime64;
-      if intTime < 0 then
-        Result := 0
-      else
-        Result := intTime;
-    end;
-  end; { TimeLeft }
-
-begin { TOmniBlockingCollection.TryTake }
+begin
   if obcCollection.TryDequeue(value) then
     Result := true
   else begin // must be executed even if timeout_ms = 0 or the algorithm will break
@@ -583,7 +565,7 @@ begin { TOmniBlockingCollection.TryTake }
       Result := false;
       repeat
         awaited := WaitForMultipleObjects(2 + Ord(assigned(obcResourceCount)),
-                     @waitHandles, false, TimeLeft_ms);
+                     @waitHandles, false, TimeLeft_ms(startTime, timeout_ms));
         if obcCollection.TryDequeue(value) then begin // there may still be data in completed queue
           Result := true;
           break; //repeat
@@ -594,7 +576,7 @@ begin { TOmniBlockingCollection.TryTake }
           Result := false;
           break; //while
         end;
-      until Elapsed;
+      until Elapsed(startTime, timeout_ms);
     finally
       if assigned(obcResourceCount) then
         obcResourceCount.Release;
@@ -605,15 +587,12 @@ begin { TOmniBlockingCollection.TryTake }
     if obcThrottling and (obcApproxCount.Value <= obcLowWaterMark) then
       SetEvent(obcNotOverflow);
   end;
-  if Result and obcReraiseExceptions and value.IsException then
-    raise value.AsException;
-end; { TOmniBlockingCollection.TryTake }
+end; { TOmniBlockingCollection<T>.TryTake }
 
 {$ELSE}
 
 // Non-windows version of TryTake().
-function TOmniBlockingCollection.TryTake(
-  var value: TOmniValue; timeout_ms: cardinal): boolean;
+function TOmniBlockingCollection<T>.TryTake(var value: T; timeout_ms: cardinal): boolean;
 var
   StopWatch: TStopWatch;
   awaited: TWaitResult;
@@ -671,10 +650,76 @@ begin
     if obcThrottling and (obcApproxCount.Value <= obcLowWaterMark) then
       obcNotOverflow.SetEvent
   end;
-  if Result and obcReraiseExceptions and value.IsException then
-    raise value.AsException;
 end;
 {$ENDIF}
+
+{ TOmniBlockingCollection }
+
+function TOmniBlockingCollection.GetEnumerator: IOmniValueEnumerator;
+begin
+  Result := TOmniBlockingCollectionEnumerator.Create(Self);
+end; { TOmniBlockingCollection.GetEnumerator }
+
+procedure TOmniBlockingCollection.ReraiseExceptions(enable: boolean = true);
+begin
+  obcReraiseExceptions := enable;
+end; { TOmniBlockingCollection.ReraiseExceptions }
+
+class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
+  TArray<T>;
+var
+  ds      : integer;
+  lenArr  : integer;
+  maxValue: uint64;
+  numEl   : integer;
+  ti      : PTypeInfo;
+  value   : TOmniValue;
+begin
+  ds := 0;
+  ti := System.TypeInfo(T);
+  if assigned(ti) then
+    if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
+      ds := 1
+    else if (ti = System.TypeInfo(word)) or (ti = System.TypeInfo(smallint)) then
+      ds := 2
+    else
+      ds := TOmniValue_DataSize[ti^.Kind];
+
+  maxValue := High(uint64);
+  if ds > 0 then
+    maxValue := uint64($FF) SHL ((ds-1) * 8);
+
+  lenArr := Clamp(0);
+  SetLength(Result, lenArr);
+  numEl := 0;
+  while coll.TryTake(value, INFINITE) do begin
+    if numEl >= lenArr then begin
+      lenArr := lenArr + Clamp(Round(Length(Result)*0.5));
+      SetLength(Result, lenArr);
+    end;
+    if ds = 0 then begin
+      case value.DataType of
+        ovtInterface: PInterface(@Result[numEl])^ := value.AsInterface;
+        ovtRecord:    Result[numEl] := value.ToRecord<T>;
+        else          Result[numEl] := value.AsTValue.AsType<T>;
+      end;
+    end
+    else begin
+      if value.RawData^ > maxValue then
+        raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [value.RawData^, ti^.Name]);
+      Move(value.RawData^, Result[numEl], ds);
+    end;
+    Inc(numEl);
+  end;
+  SetLength(Result, numEl);
+end; { TOmniBlockingCollection.ToArray }
+
+function TOmniBlockingCollection.TryTake(var value: TOmniValue; timeout_ms: cardinal): boolean;
+begin
+  Result := inherited TryTake(value, timeout_ms);
+  if Result and obcReraiseExceptions and value.IsException then
+    raise value.AsException;
+end; { TOmniBlockingCollection.TryTake }
 
 end.
 
