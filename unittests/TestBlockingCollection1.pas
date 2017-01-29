@@ -17,6 +17,7 @@ type
     procedure TestOwnedObjectleak;
     procedure TestOmniValueObjectleak;
     procedure TestInterfaceLeak;
+    procedure TestIsEmpty;
   end;
 {$ENDIF}
 
@@ -120,6 +121,34 @@ end;
 procedure TestIOmniBlockingCollection.FillOmniValueWithOwnedObject(var lValue: TOmniValue);
 begin
   lValue.AsOwnedObject := TMemLeakCheckObj.Create;
+end;
+
+procedure TestIOmniBlockingCollection.TestIsEmpty;
+const
+  CNumSlots = 4096; //initialized in TOmniBaseQueue<T>.Create [obcNumSlots]
+var
+  coll: IOmniBlockingCollection;
+  i   : integer;
+  val : TOmniValue;
+begin
+  coll := TOmniBlockingCollection.Create;
+  CheckTrue(coll.IsEmpty);
+  coll.Add(1);
+  CheckFalse(coll.IsEmpty);
+  coll.Take(val);
+  CheckTrue(coll.IsEmpty);
+  for i := 2 to CNumSlots - 3 do // one value was already added, three slots are used for internal purposes
+    coll.Add(1);
+  CheckFalse(coll.IsEmpty);
+  //Next Add will trigger memory allocation
+  coll.Add(1);
+  CheckFalse(coll.IsEmpty);
+  for i := 2 to CNumSlots - 3 do
+    coll.Take(val);
+  CheckFalse(coll.IsEmpty);
+  //Next Take will follow block pointer
+  coll.Take(val);
+  CheckTrue(coll.IsEmpty);
 end;
 
 procedure TestIOmniBlockingCollection.TestOmniValueObjectleak;
