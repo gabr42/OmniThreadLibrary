@@ -1,5 +1,5 @@
 ﻿///<summary>Microlocking containers. Part of the OmniThreadLibrary project.</summary>
-///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer) unless OTL_OLDCPU is defined.</remarks>
+///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer).</remarks>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -100,9 +100,6 @@ unit OtlContainers;
 
 {$OPTIMIZATION ON}
 {$WARN SYMBOL_PLATFORM OFF}
-{$IFNDEF CPUX64}
-  {$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
-{$ENDIF ~CPUX64}
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
 //We don't have a platform-independant way of using cmpx8b/cmpx16b
@@ -1257,7 +1254,6 @@ Dequeue:
 
 {$DEFINE USE_MOVEDPTR}
 {$IFDEF DEBUG_OMNI_QUEUE}{$UNDEF USE_MOVEDPTR}{$ENDIF}
-{$IFDEF OTL_OLDCPU}{$UNDEF USE_MOVEDPTR}{$ENDIF}
 {$IFNDEF OTL_HaveCmpx16b}{$DEFINE USE_MOVEDPTR}{$ENDIF} //bus locking not supported, Move is just a move, so use it
 
 { TOmniTaggedValue }
@@ -1432,15 +1428,18 @@ begin
     until false;
     {$IFDEF DEBUG_OMNI_QUEUE} Assert(head = obcHeadPointer.Slot); {$ENDIF}
     if obcHeadPointer.Tag = tagAllocating then begin // enqueueing
-      next := NextSlot(head);
+      next := OffsetPtr(head, obcTaggedValueSize); // next := NextSlot(head); optimization for better asm code
       T(head^) := value;
       {$IFNDEF DEBUG_OMNI_QUEUE}
-      Tag(head)^ := tagAllocated; {$ELSE} Assert(CASTag(head, tagFree, tagAllocated)); {$ENDIF}
-      {$IFDEF USE_MOVEDPTR} // release the lock
-      obcHeadPointer.Move(next, next.Tag);
+      POmniQueueTag(NativeUInt(head) + NativeUInt(obcTagOffset))^ := tagAllocated; // Tag(head)^ := tagAllocated; optimization for better asm code
+      {$ELSE} Assert(CASTag(head, tagFree, tagAllocated)); {$ENDIF}
+//      obcHeadPointer.Move(next, POmniQueueTag(NativeUInt(next) + NativeUInt(obcTagOffset))^);
+      {$IFDEF OTL_HaveCmpx16b}
+      MoveDPtr(next, ord(POmniQueueTag(NativeUInt(next) + NativeUInt(obcTagOffset))^), obcHeadPointer^);
       {$ELSE}
-      Assert(obcHeadPointer.CAS(head, tagAllocating, next, Tag(next)^));
-      {$ENDIF}
+      Slot := next;
+      Tag := POmniQueueTag(NativeUInt(next) + NativeUInt(obcTagOffset))^;
+      {$ENDIF OTL_HaveCmpx16b}
     end
     else begin // allocating memory
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(obcHeadPointer.Tag = tagExtending); {$ENDIF}
@@ -1453,9 +1452,7 @@ begin
       {$IFNDEF DEBUG_OMNI_QUEUE}
       Tag(head)^ := tagBlockPointer; {$ELSE} Assert(CASTag(head, tagEndOfList, tagBlockPointer)); {$ENDIF}
       extension := OffsetPtr(extension, 2 * obcTaggedValueSize);
-      {$IFDEF USE_MOVEDPTR} // release the lock
-      obcHeadPointer.Move(extension, extension.Tag);
-      {$ELSE} Assert(obcHeadPointer.CAS(head, tagExtending, extension, Tag(extension)^)); {$ENDIF}
+      obcHeadPointer.Move(extension, Tag(extension)^);
       PreallocateMemory;
     end;
   finally Release; end;
@@ -1490,7 +1487,9 @@ function TOmniBaseQueue<T>.IsEmpty: boolean;
 var
   caughtTheHead: boolean;
   header       : POmniTaggedValue;
+  newTag       : TOmniQueueTag;
   next         : POmniTaggedValue;
+  ofsTail      : word;
   tag          : TOmniQueueTag;
   tail         : POmniTaggedValue;
 begin
@@ -1502,7 +1501,9 @@ begin
     while tag = tagSentinel do begin
       repeat
         tail := obcTailPointer.Slot;
-        caughtTheHead := NextSlot(obcTailPointer.Slot) = obcHeadPointer.Slot; // an approximation; we don't care if in a moment this won't be true anymore
+        next := OffsetPtr(tail, obcTaggedValueSize); // NextSlot(obcTailPointer.Slot); optimization for better asm code
+        // an approximation; we don't care if in a moment this won't be true anymore
+        caughtTheHead := (next = obcHeadPointer.Slot);
         if (obcTailPointer.Tag = tagAllocated) then begin
           Result := false;
           Exit;
@@ -1527,17 +1528,15 @@ begin
           TThread.Yield;
       until false;
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}
-      header := OffsetPtr(tail, - Offset(tail)^ * obcTaggedValueSize);
+      ofsTail := PWord(NativeUInt(tail) + NativeUInt(obcOffsetOffset))^; // ofsTail := Offset(tail)^; optimization for better asm code
+      header := OffsetPtr(tail, - ofsTail * obcTaggedValueSize);
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(Self.Tag(header)^ = tagHeader); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag <> tagAllocated); {$ENDIF}
       {$IFDEF DEBUG_OMNI_QUEUE} Assert(not caughtTheHead); {$ENDIF}
       if tag = tagSentinel then begin
-        next := NextSlot(tail);
-        {$IFDEF USE_MOVEDPTR} // release the lock
-        obcTailPointer.Move(next, next.Tag);
-        {$ELSE}
-        Assert(obcTailPointer.CAS(tail, tagRemoving, next, Self.Tag(next)^));
-        {$ENDIF}
+         next := NextSlot(tail);
+         newTag := Self.Tag(next)^;
+         obcTailPointer.Move(next, newTag);
       end
       else begin // releasing memory
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
@@ -1687,10 +1686,7 @@ begin
             header := nil; // do NOT decrement the counter; this slot will be retagged again
           end
           else
-            {$IFDEF USE_MOVEDPTR} // release the lock
-            obcTailPointer.Move(next, next.Tag);
-            {$ELSE} Assert(obcTailPointer.CAS(tail, tagRemoving, next, Self.Tag(next)^));
-            {$ENDIF}
+            obcTailPointer.Move(next, Self.Tag(next)^);
         end
         else begin // releasing memory
           {$IFDEF DEBUG_OMNI_QUEUE} Assert(tag = tagBlockPointer); {$ENDIF}
