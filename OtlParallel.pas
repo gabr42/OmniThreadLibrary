@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2016 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2016-11-08
-///   Version           : 1.47
+///   Last modification : 2017-01-31
+///   Version           : 1.48
 ///</para><para>
 ///   History:
+///     1.48: 2017-01-31
+///       - Implemented IOmniBackgroundWorker.OnStop.
 ///     1.47: 2016-11-08
 ///       - Added function IOmniPipeline.NoThrottling which disables throttling on an
 ///         entire pipeline or one of its stages.
@@ -1079,6 +1081,8 @@ type
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    function  OnStop(stopCode: TProc): IOmniBackgroundWorker; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniBackgroundWorker; overload;
     procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil); overload;
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
@@ -1641,6 +1645,7 @@ type
     {$IFDEF MSWINDOWS}
     FObserver         : TOmniContainerObserver;
     {$ENDIF MSWINDOWS}
+    FOnStop           : TOmniTaskStopDelegate;
     FStopOn           : IOmniCancellationToken;
     FTaskConfig       : IOmniTaskConfig;
     FTaskFinalizer    : TOmniTaskFinalizerDelegate;
@@ -1669,6 +1674,8 @@ type
     function  NumTasks(numTasks: integer): IOmniBackgroundWorker;
     function  OnRequestDone(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
+    function  OnStop(stopCode: TProc): IOmniBackgroundWorker; overload;
+    function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniBackgroundWorker; overload;
     procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil);
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
@@ -4645,7 +4652,17 @@ function TOmniBackgroundWorker.Execute(const aTask: TOmniBackgroundWorkerDelegat
 begin
   Assert(FNumTasks > 0);
   FDefaultConfig.OnExecute(aTask);
-  FWorker := Parallel.Pipeline.NumTasks(FNumTasks).Stage(BackgroundWorker, FTaskConfig);
+
+  FWorker := Parallel.Pipeline
+               .NumTasks(FNumTasks)
+               .Stage(BackgroundWorker, FTaskConfig)
+               .OnStop(
+                 procedure (const task: IOmniTask)
+                 begin
+                   if assigned(FOnStop) then
+                     FOnStop(task);
+                 end);
+
   {$IFDEF MSWINDOWS}
   FWindow := DSiAllocateHWnd(ObserverWndProc);
   FObserver := CreateContainerWindowsMessageObserver(FWindow, MSG_WORK_ITEM_DONE, 0, 0);
@@ -4708,6 +4725,21 @@ begin
   FDefaultConfig.OnRequestDone_Asy(aTask);
   Result := Self;
 end; { TOmniBackgroundWorker.OnRequestDone_Asy }
+
+function TOmniBackgroundWorker.OnStop(stopCode: TProc): IOmniBackgroundWorker;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      stopCode();
+    end);
+end; { TOmniBackgroundWorker.OnStop }
+
+function TOmniBackgroundWorker.OnStop(stopCode: TOmniTaskStopDelegate): IOmniBackgroundWorker;
+begin
+  FOnStop := stopCode;
+  Result := Self;
+end; { TOmniBackgroundWorker.OnStop }
 
 procedure TOmniBackgroundWorker.Schedule(const workItem: IOmniWorkItem;
   const workItemConfig: IOmniWorkItemConfig);
