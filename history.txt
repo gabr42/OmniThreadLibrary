@@ -4,6 +4,7 @@
   - Implemented TOmniBlockingCollection<T>. T must be simple or managed type.
 
 - TODO:
+  - Test TOmniBlockingCollection<T> in 64-bit mode.
   - Remove support for 2007-2010.
   - IDataFlow
   - remove OTL_Generics from code
