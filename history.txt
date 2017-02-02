@@ -21,6 +21,11 @@
     ProcessorGroups, or NUMANodes properties may modify this value.
   - Communication subsystem handles ERROR_NOT_ENOUGH_QUOTA (1816) error.
   - Added function IOmniBackgroundWorker.OnStop.
+  - Added property IOmniWorkItem.SkipCompletionHandler.
+    If it is set to True when work item is created or during its execution,
+    request handlers for that work item won't be called.
+    If it is set to True in the OnRequestDone_Asy handler, then only
+    OnRequestDone handler won't be called.
 - Bug fixes:
   - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups, 
     or NUMANodes properties will reset the MaxExecuting property."
