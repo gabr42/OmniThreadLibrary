@@ -36,10 +36,16 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-01-31
-///   Version           : 1.48
+///   Last modification : 2017-02-02
+///   Version           : 1.49
 ///</para><para>
 ///   History:
+///     1.49: 2017-02-02
+///       - Added property IOmniWorkItem.SkipCompletionHandler.
+///         If it is set to True when work item is created or during its execution,
+///         request handlers for that work item won't be called.
+///         If it is set to True in the OnRequestDone_Asy handler, then only
+///         OnRequestDone handler won't be called.
 ///     1.48: 2017-01-31
 ///       - Implemented IOmniBackgroundWorker.OnStop.
 ///     1.47: 2016-11-08
@@ -1042,10 +1048,12 @@ type
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue;
     function  GetResult: TOmniValue;
+    function  GetSkipCompletionHandler: boolean;
     function  GetTask: IOmniTask;
     function  GetTaskState: TOmniValue;
     function  GetUniqueID: int64;
     procedure SetResult(const value: TOmniValue);
+    procedure SetSkipCompletionHandler(const value: boolean);
   //
     function  DetachException: Exception;
     function  FatalException: Exception;
@@ -1053,6 +1061,8 @@ type
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
+    property SkipCompletionHandler: boolean read GetSkipCompletionHandler write
+      SetSkipCompletionHandler;
     property Task: IOmniTask read GetTask;
     property TaskState: TOmniValue read GetTaskState;
     property UniqueID: int64 read GetUniqueID;
@@ -1582,24 +1592,27 @@ type
 
   TOmniWorkItem = class(TInterfacedObject, IOmniWorkItem, IOmniWorkItemEx)
   strict private
-    FCancelAllUpToID_ref: ^TOmniAlignedInt64;
-    FCancellationToken  : IOmniCancellationToken;
-    FConfig             : IOmniWorkItemConfig;
-    FData               : TOmniValue;
-    FResult             : TOmniValue;
-    FTask               : IOmniTask;
-    FTaskState          : TOmniValue;
-    FUniqueID           : int64;
+    FCancelAllUpToID_ref  : ^TOmniAlignedInt64;
+    FCancellationToken    : IOmniCancellationToken;
+    FConfig               : IOmniWorkItemConfig;
+    FData                 : TOmniValue;
+    FResult               : TOmniValue;
+    FSkipCompletionHandler: boolean;
+    FTask                 : IOmniTask;
+    FTaskState            : TOmniValue;
+    FUniqueID             : int64;
   strict protected
     procedure FreeException;
   protected //IOmniWorkItem
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetData: TOmniValue; inline;
     function  GetResult: TOmniValue; inline;
+    function  GetSkipCompletionHandler: boolean;
     function  GetTask: IOmniTask; inline;
     function  GetTaskState: TOmniValue; inline;
     function  GetUniqueID: int64; inline;
     procedure SetResult(const value: TOmniValue); inline;
+    procedure SetSkipCompletionHandler(const value: boolean);
   protected //IOmniWorkItemEx
     function  GetConfig: IOmniWorkItemConfig; inline;
     procedure SetConfig(const value: IOmniWorkItemConfig); inline;
@@ -1614,6 +1627,8 @@ type
     function  IsExceptional: boolean; inline;
     property Data: TOmniValue read GetData;
     property Result: TOmniValue read GetResult write SetResult;
+    property SkipCompletionHandler: boolean read GetSkipCompletionHandler write
+      SetSkipCompletionHandler;
     property UniqueID: int64 read GetUniqueID;
   public //IOmniWorkItemEx
     property Config: IOmniWorkItemConfig read GetConfig write SetConfig;
@@ -4488,6 +4503,11 @@ begin
     raise DetachException;
 end; { TOmniWorkItem.GetResult }
 
+function TOmniWorkItem.GetSkipCompletionHandler: boolean;
+begin
+  Result := FSkipCompletionHandler;
+end; { TOmniWorkItem.GetSkipCompletionHandler }
+
 function TOmniWorkItem.GetTask: IOmniTask;
 begin
   Result := FTask;
@@ -4517,6 +4537,11 @@ procedure TOmniWorkItem.SetResult(const value: TOmniValue);
 begin
   FResult := value;
 end; { TOmniWorkItem.SetResult }
+
+procedure TOmniWorkItem.SetSkipCompletionHandler(const value: boolean);
+begin
+  FSkipCompletionHandler := value;
+end; { TOmniWorkItem.SetSkipCompletionHandler }
 
 procedure TOmniWorkItem.SetTask(const task: IOmniTask; const taskState: TOmniValue);
 begin
@@ -4621,9 +4646,9 @@ begin
           workItem.Result := Exception(AcquireExceptionObject);
         end;
       end;
-      if assigned(configEx.GetOnRequestDone_Asy()) then
+      if (not workItem.SkipCompletionHandler) and assigned(configEx.GetOnRequestDone_Asy()) then
         configEx.GetOnRequestDone_Asy()(Self, workItem);
-      if assigned(configEx.GetOnRequestDone()) then
+      if (not workItem.SkipCompletionHandler) and assigned(configEx.GetOnRequestDone()) then
         output.TryAdd(workItem);
     end;
   finally
