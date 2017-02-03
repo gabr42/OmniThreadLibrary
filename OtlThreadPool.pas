@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-01-17
-///   Version           : 2.16a
+///   Last modification : 2017-02-03
+///   Version           : 2.17
 /// </para><para>
 ///   History:
+///     2.17: 2017-02-03
+///       - If ThreadDataFactory.Execute throws an exception, that exception is caught,
+///         ignored and ThreadData is set to nil. [issue #88]
 ///     2.16a: 2017-01-17
 ///       - Fix: IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec were initialized
 ///         too late.
@@ -527,6 +530,8 @@ type
     otpNUMANodes                     : IOmniIntegerSet;
     otpProcessorGroups               : IOmniIntegerSet;
   {$ENDIF OTL_NUMASupport}
+  strict protected
+    function GetNumCores: integer;
   protected
     procedure Asy_ForwardUnhandledWorkerException(thread: TThread; E: Exception);
     function  GetAffinity: IOmniIntegerSet;
@@ -537,7 +542,6 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
-    function  GetNumCores: integer;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure Log(const msg: string; const params: array of const);
@@ -790,8 +794,11 @@ begin
       try
         if owtThreadDataFactory.IsEmpty then
           owtThreadData := nil
-        else
+        else try
           owtThreadData := owtThreadDataFactory.Execute;
+        except
+          owtThreadData := nil;
+        end;
         while true do begin
           if Comm.ReceiveWait(msg, INFINITE) then begin
             case msg.MsgID of
