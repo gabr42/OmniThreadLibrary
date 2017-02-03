@@ -36,6 +36,7 @@
       OtlThreadPool unit.
   - In threadpool, IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec 
     were initialized too late.
+  - Fixed TOmniValue.CastTo<TArray<Int64>>.
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.

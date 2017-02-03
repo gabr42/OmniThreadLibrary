@@ -10,9 +10,15 @@ type
   TSmokeTest = class(TTestCase)
   published
     procedure TestDSiClassWndProcParamSize;
+  {$IFDEF Unicode}
+    procedure TestTOmniValueArrayInt64Cast;
+  {$ENDIF}
   end;
 
 implementation
+
+uses
+  OtlCommon;
 
 type
   TDSiWParam = {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
@@ -30,6 +36,29 @@ begin
   CheckEquals(4, SizeOf(TDSiLParam));
   {$ENDIF}
 end;
+
+{$IFDEF Unicode}
+procedure TSmokeTest.TestTOmniValueArrayInt64Cast;
+var
+  arrIn : TArray<int64>;
+  arrOut: TArray<int64>;
+  i     : Integer;
+  ov    : TOmniValue;
+begin
+  // Issue #89
+
+  arrIn := [1,2, $FFFFFFFF, $100000000, $FFFFFFFFFFFFFF];
+
+  ov := TOmniValue.CastFrom<TArray<Int64>>(arrIn);
+
+  arrOut := ov.CastTo<TArray<Int64>>;
+
+  CheckEquals(Length(arrIn), Length(arrOut));
+
+  for i := Low(arrIn) to High(arrIn) do
+    CheckEquals(arrIn[i], arrOut[i]);
+end;
+{$ENDIF Unicode}
 
 initialization
   RegisterTest(TSmokeTest.Suite);
