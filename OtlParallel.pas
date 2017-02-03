@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-02-02
-///   Version           : 1.49
+///   Last modification : 2017-02-03
+///   Version           : 1.49a
 ///</para><para>
 ///   History:
+///     1.49a: 2017-02-03
+///       - If a future's cancellation token is signalled before the future is even
+///         created, the future worker is not started at all. [issue #85]
 ///     1.49: 2017-02-02
 ///       - Added property IOmniWorkItem.SkipCompletionHandler.
 ///         If it is set to True when work item is created or during its execution,
@@ -3661,7 +3664,12 @@ procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTas
 begin
   FTask := CreateTask(action, 'TOmniFuture action');
   Parallel.ApplyConfig(taskConfig, FTask);
-  FTask.Schedule(Parallel.GetPool(taskConfig));
+  if assigned(FTask.CancellationToken) and FTask.CancellationToken.IsSignalled then begin
+    FCancelled := true;
+    FreeAndNil(FTask);
+  end
+  else
+    FTask.Schedule(Parallel.GetPool(taskConfig));
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.FatalException: Exception;

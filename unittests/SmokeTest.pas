@@ -12,19 +12,24 @@ type
     procedure TestDSiClassWndProcParamSize;
   {$IFDEF Unicode}
     procedure TestTOmniValueArrayInt64Cast;
+    procedure TestCancelledFuture;
   {$ENDIF}
   end;
 
 implementation
 
 uses
-  OtlCommon;
+{$IFDEF Unicode}
+  OtlParallel,
+{$ENDIF}
+  OtlCommon,
+  OtlSync;
 
 type
   TDSiWParam = {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
   TDSiLParam = {$IFDEF Unicode}LPARAM{$ELSE}longint{$ENDIF};
 
-{ TestIOmniBlockingCollection }
+{ TSmokeTest }
 
 procedure TSmokeTest.TestDSiClassWndProcParamSize;
 begin
@@ -57,6 +62,30 @@ begin
 
   for i := Low(arrIn) to High(arrIn) do
     CheckEquals(arrIn[i], arrOut[i]);
+end;
+
+procedure TSmokeTest.TestCancelledFuture;
+var
+  executed: boolean;
+  future  : IOmniFuture<Integer>;
+  token   : IOmniCancellationToken;
+begin
+  token := CreateOmniCancellationToken;
+  token.Signal;
+
+  executed := false;
+
+  future := Parallel.Future<Integer>(
+    function: Integer
+    begin
+      executed := true;
+      Result := 100;
+    end,
+    Parallel.TaskConfig.CancelWith(token)
+  );
+
+  CheckTrue(future.IsCancelled);
+  CheckFalse(executed);
 end;
 {$ENDIF Unicode}
 
