@@ -30,10 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2016-05-03
-   Version           : 1.72
+   Last modification : 2016-08-30
+   Version           : 1.72a
 </pre>*)(*
    History:
+     1.72a: 2016-08-30
+       - TGpInt64ObjectList<T> methods had 'item' incorrectly defined as 'integer'
+         instead of 'int64'.
      1.72: 2016-05-03
        - Implemented IGpInt64ObjectList<T> and TGpInt64ObjectList<T>.
      1.71: 2016-03-05
@@ -1113,12 +1116,12 @@ type
     function  GetObject(idxObject: integer): T;
     procedure SetObject(idxObject: integer; const value: T);
     //
-    function  AddObject(item: integer; obj: T): integer;
-    function  EnsureObject(item: integer): integer; overload;
-    function  EnsureObject(item: integer; obj: T): integer; overload;
+    function  AddObject(item: int64; obj: T): integer;
+    function  EnsureObject(item: int64): integer; overload;
+    function  EnsureObject(item: int64; obj: T): integer; overload;
     function  ExtractObject(idxObject: integer): T;
-    function  FetchObject(item: integer): T;
-    procedure InsertObject(idx: integer; item: integer; obj: T);
+    function  FetchObject(item: int64): T;
+    procedure InsertObject(idx: integer; item: int64; obj: T);
     property Objects[idxObject: integer]: T read GetObject write SetObject;
   end; { IGpInt64ObjectList<T> }
 
@@ -1131,12 +1134,12 @@ type
     procedure SetObject(idxObject: integer; const value: T); reintroduce;
   public
     class function CreateInterface(ownsObjects: boolean = true): IGpInt64ObjectList<T>;
-    function  AddObject(item: integer; obj: T): integer; reintroduce; inline;
-    function  EnsureObject(item: integer): integer; overload; inline;
-    function  EnsureObject(item: integer; obj: T): integer; reintroduce; overload; inline;
+    function  AddObject(item: int64; obj: T): integer; reintroduce; inline;
+    function  EnsureObject(item: int64): integer; overload; inline;
+    function  EnsureObject(item: int64; obj: T): integer; reintroduce; overload; inline;
     function  ExtractObject(idxObject: integer): T; reintroduce; inline;
-    function  FetchObject(item: integer): T; reintroduce; inline;
-    procedure InsertObject(idx: integer; item: integer; obj: T); reintroduce; inline;
+    function  FetchObject(item: int64): T; reintroduce; inline;
+    procedure InsertObject(idx: integer; item: int64; obj: T); reintroduce; inline;
     property Objects[idxObject: integer]: T read GetObject write SetObject;
   end; { TGpInt64ObjectList<T> }
   {$ENDIF GpLists_LimitedGenerics}
@@ -4525,17 +4528,17 @@ begin
   Result := TGpInt64ObjectList<T>.Create(ownsObjects);
 end; { TGpInt64ObjectList<T>.CreateInterface }
 
-function TGpInt64ObjectList<T>.AddObject(item: integer; obj: T): integer;
+function TGpInt64ObjectList<T>.AddObject(item: int64; obj: T): integer;
 begin
   Result := inherited AddObject(item, obj);
 end; { TGpInt64ObjectList<T>.AddObject }
 
-function TGpInt64ObjectList<T>.EnsureObject(item: integer; obj: T): integer;
+function TGpInt64ObjectList<T>.EnsureObject(item: int64; obj: T): integer;
 begin
   Result := inherited EnsureObject(item, TObject(PPointer(@obj)^));
 end; { TGpInt64ObjectList<T>.EnsureObject }
 
-function TGpInt64ObjectList<T>.EnsureObject(item: integer): integer;
+function TGpInt64ObjectList<T>.EnsureObject(item: int64): integer;
 begin
   Result := inherited EnsureObject(item, TClass(T));
 end; { TGpInt64ObjectList<T>.EnsureObject }
@@ -4545,7 +4548,7 @@ begin
   Result := T(inherited ExtractObject(idxObject));
 end; { TGpInt64ObjectList<T>.ExtractObject }
 
-function TGpInt64ObjectList<T>.FetchObject(item: integer): T;
+function TGpInt64ObjectList<T>.FetchObject(item: int64): T;
 begin
   Result := T(inherited FetchObject(item));
 end; { TGpInt64ObjectList<T>.FetchObject }
@@ -4555,7 +4558,7 @@ begin
   Result := T(inherited GetObject(idxObject));
 end; { TGpInt64ObjectList<T>.GetObject }
 
-procedure TGpInt64ObjectList<T>.InsertObject(idx, item: integer; obj: T);
+procedure TGpInt64ObjectList<T>.InsertObject(idx: integer; item: int64; obj: T);
 begin
   inherited InsertObject(idx, item, obj);
 end; { TGpInt64ObjectList<T>.InsertObject }
