@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2016, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,11 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-10-24
-///   Version           : 1.46a
+///   Last modification : 2017-02-03
+///   Version           : 1.47
 ///</para><para>
 ///   History:
-///     1.46: 2016-10-24
+///     1.47: 2017-02-03
+///       - AsInt64 now marks TOmniValue as a type ovtInt64 so that 
+///         ov.CastTo<TArray<Int64>> can work. [issue #89]
+///     1.46a: 2016-10-24
 ///       - Corrected Environment.GroupAffinity and Environment.LoadNUMAInfo to work
 ///         on Windows XP.
 ///     1.46: 2016-10-19
@@ -308,7 +311,7 @@ type
 
   //Update IsInterfacedType function when changing this enum!
   TOmniValueDataType = (ovtNull,
-           {ovData} ovtBoolean, ovtInteger, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
+           {ovData} ovtBoolean, ovtInteger, ovtInt64, ovtDouble, ovtObject, ovtPointer, ovtDateTime, ovtException,
            {ovIntf} ovtExtended, ovtString, ovtInterface, ovtVariant, ovtArray, ovtRecord, ovtOwnedObject
 {$IFDEF MSWINDOWS}
            , ovtWideString, ovtAnsiString
@@ -2706,7 +2709,7 @@ begin
   case a[0].ovType of
     ovtBoolean: typInfo := TypeInfo(TArray<Boolean>);
     ovtInteger: typInfo := TypeInfo(TArray<Integer>);
-    ovtDouble: typInfo := TypeInfo(TArray<Double>);
+    ovtInt64: typInfo := TypeInfo(TArray<int64>);
     ovtObject: typInfo := TypeInfo(TArray<TObject>);
     ovtPointer: typInfo := TypeInfo(TArray<Pointer>);
     ovtDateTime: typInfo := TypeInfo(TArray<TDateTime>);
@@ -2735,6 +2738,8 @@ begin
       Result := AsBoolean;
     ovtInteger:
       Result := AsInteger;
+    ovtInt64: 
+      Result := AsInt64;
     ovtDouble,
     ovtExtended:
       Result := AsExtended;
@@ -2827,7 +2832,7 @@ end; { TOmniValue.IsException }
 
 function TOmniValue.IsInteger: boolean;
 begin
-  Result := (ovType = ovtInteger);
+  Result := (ovType in [ovtInteger, ovtInt64]);
 end; { TOmniValue.IsInteger }
 
 function TOmniValue.IsInterface: boolean;
@@ -3014,12 +3019,14 @@ procedure TOmniValue.SetAsInt64(const value: int64);
 begin
   ClearIntf;
   ovData := value;
-  ovType := ovtInteger;
+  ovType := ovtInt64;
 end; { TOmniValue.SetAsInt64 }
 
 procedure TOmniValue.SetAsInteger(const value: integer);
 begin
-  AsInt64 := value;
+  ClearIntf;
+  ovData := value;
+  ovType := ovtInteger;
 end; { TOmniValue.SetAsInteger }
 
 procedure TOmniValue.SetAsInterface(const value: IInterface);
@@ -3135,7 +3142,8 @@ begin
   case ovType of
     ovtNull:       value := '';
     ovtBoolean:    value := AnsiString(BoolToStr(AsBoolean, true));
-    ovtInteger:    value := AnsiString(IntToStr(ovData));
+    ovtInteger,
+    ovtInt64:      value := AnsiString(IntToStr(ovData));
     ovtDouble,
     ovtDateTime,
     ovtExtended:   value := AnsiString(FloatToStr(AsExtended));
@@ -3184,6 +3192,7 @@ begin
   Result := true;
   case ovType of
     ovtInteger,
+    ovtInt64,
     ovtNull:     value := AsInt64;
     ovtDouble,
     ovtDateTime: value := PDouble(@ovData)^;
@@ -3210,6 +3219,7 @@ begin
   Result := true;
   case ovType of
     ovtInteger,
+    ovtInt64,
     ovtNull:     value := AsInt64;
     ovtDouble,
     ovtDateTime: value := PDouble(@ovData)^;
@@ -3222,7 +3232,8 @@ function TOmniValue.TryCastToInt64(var value: int64): boolean;
 begin
   Result := true;
   case ovType of
-    ovtInteger: value := ovData;
+    ovtInteger,
+    ovtInt64:   value := ovData;
     ovtNull:    value := 0;
     ovtVariant: value := integer(AsVariant);
     else Result := false;
@@ -3279,7 +3290,8 @@ begin
   case ovType of
     ovtNull:       value := '';
     ovtBoolean:    value := BoolToStr(AsBoolean, true);
-    ovtInteger:    value := IntToStr(ovData);
+    ovtInteger,
+    ovtInt64:      value := IntToStr(ovData);
     ovtDouble,
     ovtDateTime,
     ovtExtended:   value := FloatToStr(AsExtended);

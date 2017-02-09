@@ -15,7 +15,7 @@ program TestRunner;
 {$ENDIF}
 
 uses
-  FastMM4,
+//  FastMM4,
   Forms,
   TestFramework,
   GUITestRunner,

@@ -11,18 +11,24 @@
   - Added function IOmniBackgroundWorker.OnStop.
   - Added property IOmniWorkItem.SkipCompletionHandler.
     If it is set to True when work item is created or during its execution,
-    request handlers for that work item won't be called.
+    request ha
+    ndlers for that work item won't be called.
     If it is set to True in the OnRequestDone_Asy handler, then only
     OnRequestDone handler won't be called.
+  - If ThreadDataFactory.Execute throws an exception, that exception is caught,
+    ignored and ThreadData is set to nil. [issue #88]
 - Bug fixes:
-  - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups, 
+  - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups,
     or NUMANodes properties will reset the MaxExecuting property."
-    - New behaviour is compatible with the pre-3.06 code: Initially, 
-      MaxExecuting is set to Environment.Process.Affinity.Count. 
-      This value can only be changed by the external code, not inside the 
+    - New behaviour is compatible with the pre-3.06 code: Initially,
+      MaxExecuting is set to Environment.Process.Affinity.Count.
+      This value can only be changed by the external code, not inside the
       OtlThreadPool unit.
-  - In threadpool, IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec 
+  - In threadpool, IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec
     were initialized too late.
+  - Fixed TOmniValue.CastTo<TArray<Int64>>. [issue #89]
+  - If a future's cancellation token is signalled before the future is even
+    created, the future worker is not started at all. [issue #85]
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.
