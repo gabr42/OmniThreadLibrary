@@ -14,7 +14,7 @@
   - remove legacy ifdef?
   - import mobile support
     - whatis: ISynchro.IsSignalled_IsSupported
-    - next: OtlPlatform.*
+    - next: OtlPlatform.Sync.Modular line 573
     - rename OtlPlatform.Atomic/TSBDSpinLock to ???
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY

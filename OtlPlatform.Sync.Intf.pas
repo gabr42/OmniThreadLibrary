@@ -58,6 +58,10 @@ uses
   System.SysUtils,
   OtlPlatform.Atomic;
 
+const
+  FOREVER = INFINITE;
+  MaxCardinal: cardinal = cardinal(-1);
+
 type
   TEventFunction = reference to procedure(doAcquire: boolean;
     var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
@@ -161,6 +165,44 @@ type
     function  AsReadLock: ILock;
     function  AsWriteLock: ILock;
   end; { IOtlMREW }
+
+  ISimpleConditionEvent = interface ['{1EAEEE8F-54E1-44B5-BE3C-AFC14A465F74}']
+    procedure Pulse;
+    function  WaitFor: TWaitResult;
+  end; { ISimpleConditionEvent }
+
+  ICompositeSynchro = interface ['{3796D8C1-AA28-44A7-836E-F1045AFBF616}']
+    function WaitFor(var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
+    function Factors: TSynchroArray;
+    function Datum: TObject;
+    function IsSignalled: boolean;
+  end; { ICompositeSynchro }
+
+  ISynchroExInternal = interface;
+
+  ISynchroObserver = interface ['{C1EBE331-613F-4D0F-B645-CF2925F55B22}']
+    procedure PossibleStateChange(const Source: ISynchroExInternal; Token: TObject);
+  end; { ISynchroObserver }
+
+  ISynchroExInternal = interface(ISynchro) ['{A3D01DFF-CF6A-4913-8A34-E46C4C0FCF5F}']
+    function  ConsumeResource: TWaitResult;
+    procedure Enrol(const Observer: ISynchroObserver; Token: TObject);
+    function  IsCompatibleNativeMWObject( Reference, Peer: TObject): boolean;
+    function  IsResourceCounting: boolean;
+    function  LockingMechanism: TLockingMechanism;
+    function  NativeMultiwait(const Synchros: array of TObject;
+                              Timeout: cardinal; AAll: boolean;
+                              var SignallerIndex: integer): TWaitResult;
+    function  NativeMultiwaitObject: TObject;
+    function  PermitsDedicatedSoleIndirectClient: boolean;
+    function  PermitsDirectClients: boolean;
+    function  PermitsIndirectClients: boolean;
+    procedure RegisterDedicatedSoleIndirectClient( Delta: integer);
+    procedure RegisterDirectClient( Delta: integer);
+    procedure RegisterIndirectClient( Delta: integer);
+    procedure Unenrol(ObserverToken: TObject);
+    function  UnionLock: ILock;
+  end; { ISynchroExInternal }
 
 implementation
 
