@@ -1,7 +1,52 @@
+///<summary>Basic platform independant synchronization primitives.
+///    Part of the OmniThreadLibrary project. Requires Delphi XE7.</summary>
+///<author>Sean B. Durkin</author>
+///<author>Primoz Gabrijelcic</author>
+///<license>
+///This software is distributed under the BSD license.
+///
+///Copyright (c) 2017 Sean B. Durkin, Primoz Gabrijelcic
+///All rights reserved.
+///
+///Redistribution and use in source and binary forms, with or without modification,
+///are permitted provided that the following conditions are met:
+///- Redistributions of source code must retain the above copyright notice, this
+///  list of conditions and the following disclaimer.
+///- Redistributions in binary form must reproduce the above copyright notice,
+///  this list of conditions and the following disclaimer in the documentation
+///  and/or other materials provided with the distribution.
+///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
+///  products derived from this software without specific prior written permission.
+///
+///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+///WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+///DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+///ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+///(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+///LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+///ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+///(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+///</license>
+///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Authors           : Seam B. Durkin, Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///   Creation date     : 2017-02-11
+///   Last modification : 2017-02-11
+///   Version           : 1.0
+///</para><para>
+///   History:
+///     1.0: 2017-02-11
+///       - Imported from mobile/Otl.Parallel.SynchroPrimitives.BasicLevel.pas.
+
 unit OtlPlatform.Sync.Basic;
 
 // IMPORTANT!
-//  READ THE COMMENTS IN UNIT OtlPlatform.SynchroPrimitives .
+//  READ THE COMMENTS IN UNIT OtlPlatform.Sync.
 
 {$I OtlOptions.inc}
 
@@ -15,113 +60,92 @@ uses
   OtlPlatform.Sync.Intf;
 
 type
-
   /// <remarks>Base class for low-level synchronisation primitives
   //   at the basic level.</remarks>
   TOtlSynchro = class abstract
-    {$IFDEF MSWINDOWS}
-    protected
-      function GetHandle: THandle; virtual;
-    {$ENDIF}
+  {$IFDEF MSWINDOWS}
+  protected
+    function GetHandle: THandle; virtual;
+  {$ENDIF}
+  public
+    function  AsMWObject: TObject; virtual; abstract;
+    function  IsSignalled: boolean; virtual; abstract;
+    procedure Signal; virtual;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; virtual; abstract;
+  {$IFDEF MSWINDOWS}
+    property Handle: THandle read GetHandle;
+  {$ENDIF}
+  end; { TOtlSynchro }
 
-    public
-      procedure Signal;               virtual;
-      function  isSignalled: boolean; virtual; abstract;
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; virtual; abstract;
-      function  AsMWObject: TObject;  virtual; abstract;
+  TOtlEvent = class abstract(TOtlSynchro)
+  public
+    procedure SetEvent; virtual; abstract;
+    procedure ResetEvent; virtual; abstract;
+  end; { TOtlEvent }
 
-    {$IFDEF MSWINDOWS}
-      property Handle: THandle   read GetHandle;
-    {$ENDIF}
-    end;
+  TKernelEvent = class(TOtlEvent)
+  strict private
+    FEvent: System.SyncObjs.TEvent;
+  {$IFDEF MSWINDOWS}
+  protected
+    function GetHandle: THandle; override;
+  {$ENDIF}
+  public
+    /// <remarks> DO NOT USE. This constructor is for internal use only.
+    ///  Use instead either TSBDParallel.CreateKernelEventObj. </remarks>
+    constructor Create(AManual, AInitialState: boolean);
+    destructor  Destroy; override;
+    function  AsMWObject: TObject; override;
+    /// <remarks>TOtlEvent.IsSignalled() is not supported .</remarks>
+    function  IsSignalled: boolean; override;
+    procedure ResetEvent; override;
+    procedure SetEvent; override;
+    procedure Signal; override;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+  end; { TKernelEvent }
 
-  TOtlEvent = class abstract( TOtlSynchro)
-    public
-      procedure SetEvent;       virtual; abstract;
-      procedure ResetEvent;     virtual; abstract;
-    end;
+  TLightEvent = class(TOtlEvent)
+  strict private
+    FIsSignalled    : boolean;
+    FKernelUsers    : cardinal;
+    [Volatile] FLock: TSBDSpinLock;
+    FManual         : boolean;
+    FPulsar         : System.SyncObjs.TEvent; // Auto-reset
+    FSpinMax        : cardinal;
+  protected
+    procedure Reconfigure( Manual: boolean; Value: cardinal); virtual;
+  public
+    class constructor Create;
+    /// <remarks> DO NOT USE. This constructor is for internal use only.
+    ///  Use instead either TSBDParallel.CreateLightEventObj. </remarks>
+    constructor Create(AManual, AInitialState: boolean; ASpinMax: cardinal = 100);
+    destructor  Destroy; override;
+    function  AsMWObject: TObject;  override;
+    function  IsSignalled: boolean; override;
+    procedure ResetEvent; override;
+    procedure SetEvent; override;
+    procedure Signal; override;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+  end; { TLightEvent }
 
-  TKernelEvent = class( TOtlEvent)
-    public
-      procedure SetEvent;             override;
-      procedure ResetEvent;           override;
-      procedure Signal;               override;
-
-      /// <remarks>TOtlEvent.isSignalled() is not supported .</remarks>
-      function  isSignalled: boolean; override;
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-
-    public
-      /// <remarks> DO NOT USE. This constructor is for internal use only.
-      ///  Use instead either TSBDParallel.CreateKernelEventObj. </remarks>
-      constructor Create( AManual, AInitialState: boolean);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
-    {$IFDEF MSWINDOWS}
-    protected
-      function GetHandle: THandle; override;
-    {$ENDIF}
-
-    private
-      FEvent: System.SyncObjs.TEvent;
-    end;
-
-
-  TLightEvent = class( TOtlEvent)
-    public
-      procedure SetEvent;             override;
-      procedure ResetEvent;           override;
-      procedure Signal;               override;
-      function  isSignalled: boolean; override;
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-
-    public
-      class constructor Create;
-      /// <remarks> DO NOT USE. This constructor is for internal use only.
-      ///  Use instead either TSBDParallel.CreateLightEventObj. </remarks>
-      constructor Create( AManual, AInitialState: boolean; ASpinMax: cardinal = 100);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
-    private
-      [Volatile] FLock: TSBDSpinLock;
-      FPulsar: System.SyncObjs.TEvent; // Auto-reset
-      FKernelUsers: cardinal;
-      FIsSignalled: boolean;
-      FManual: boolean;
-      FSpinMax: cardinal;
-
-    public
-      /// <remarks>Although syntactically "public", semantically this is "private"
-      ///  and for internal use only. Please do not use. </remarks>
-      procedure Reconfigure( Manual: boolean; Value: cardinal);        virtual;
-    end;
-
-
-
-  TOtlSemaphore = class( TOtlSynchro)
-    public
-      procedure Signal;               override;
-      /// <remarks>TOtlSemaphore.isSignalled() is not supported .</remarks>
-      function  isSignalled: boolean; override;
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-
-    public
-      /// <remarks> DO NOT USE. This constructor is for internal use only.
-      ///  Use instead either TSBDParallel.CreateSemaphoreObj. </remarks>
-      constructor Create( AInitialCount: cardinal);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
-    {$IFDEF MSWINDOWS}
-    protected
-      function GetHandle: THandle; override;
-    {$ENDIF}
-
-    private
-      FSem: System.SyncObjs.TSemaphore;
-    end;
+  TOtlSemaphore = class(TOtlSynchro)
+  strict private
+    FSem: System.SyncObjs.TSemaphore;
+  {$IFDEF MSWINDOWS}
+  protected
+    function GetHandle: THandle; override;
+  {$ENDIF}
+  public
+    /// <remarks> DO NOT USE. This constructor is for internal use only.
+    ///  Use instead either TSBDParallel.CreateSemaphoreObj. </remarks>
+    constructor Create( AInitialCount: cardinal);
+    destructor  Destroy; override;
+    function  AsMWObject: TObject;  override;
+    function  IsSignalled: boolean; override;
+    procedure Signal; override;
+    /// <remarks>TOtlSemaphore.IsSignalled() is not supported .</remarks>
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+  end; { TOtlSemaphore }
 
   /// <remarks>
   ///  The TFixedCriticalSection declaration was copied from the OmniThread Library.
@@ -130,312 +154,259 @@ type
   ///   however at the time of writing of this remark, this url appears broken.
   ///   For an explanation of the fix, see http://grandruru.blogspot.com.au/2012/04/fixing-tcriticalsection.html
   /// </remarks>
-  TFixedCriticalSection = class( TCriticalSection)
+  TFixedCriticalSection = class(TCriticalSection)
   strict protected
     FDummy: array [0..95] of byte;
-  end;
+  end; { TFixedCriticalSection }
 
-  // Spin Lock
-  // ====================
-  //  Please find TSBDSpinLock in unit SBD.Parallel.Atomic
+  TFunctionalEvent = class(TOtlSynchro)
+  strict protected
+    [Volatile] FLock  : TSBDSpinLock;
+    FPLock            : PSBDSpinLock;
+    FPulsar           : TEvent; // Manual reset
+    FPulsarIsSignalled: boolean;
+    FSignalTest       : TEventFunction;
+  protected
+    procedure Reconfigure( ASignalTest: TEventFunction; APLock: PSBDSpinLock); virtual;
+    procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); virtual;
+  public
+    class constructor Create;
+    constructor Create( ASignalTest: TEventFunction; APLock: PSBDSpinLock);
+    destructor Destroy; override;
+    function  AsMWObject: TObject;  override;
+    function  IsSignalled: boolean; override;
+    procedure Pulse;
+    procedure Signal; override;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+  end; { TFunctionalEvent }
 
-  TFunctionalEvent = class( TOtlSynchro)
-    public
-      procedure Signal;               override;
-      function  isSignalled: boolean; override;
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-      procedure Pulse;
-
-    public
-      class constructor Create;
-      constructor Create( ASignalTest: TEventFunction; APLock: PSBDSpinLock);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
+  TCountDown = class(TOtlSynchro)
+  strict private type
+    TCountDownFunction = class(TFunctionalEvent)
+    strict private
+      FOwner: TCountDown;
     protected
-      FSignalTest: TEventFunction;
-      FPulsar: TEvent; // Manual reset.
-      FPulsarIsSignalled: boolean;
-      [Volatile] FLock: TSBDSpinLock;
-      FPLock: PSBDSpinLock;
-
-      procedure SignalTest( doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);   virtual;
-
+      procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); override;
     public
-      /// <remarks>Although syntactically "public", semantically this is "private"
-      ///  and for internal use only. Please do not use. </remarks>
-      procedure Reconfigure( ASignalTest: TEventFunction; APLock: PSBDSpinLock);        virtual;
-    end;
+      constructor Create(AOwner: TCountDown);
+    end; { TCountDownFunction }
+  var
+    FCountDownFunc   : TCountDownFunction;
+    [Volatile] FValue: TVolatileUInt32;
+    FInitialValue    : cardinal;
+    FLock            : TSBDSpinLock;
+  protected
+    procedure Reconfigure(AInitial: cardinal);
+  public
+    /// <remarks> DO NOT USE. This constructor is for internal use only.
+    ///  Use instead either TSBDParallel..CreateCountDownObj. </remarks>
+    constructor Create( AInitial: cardinal);
+    destructor Destroy; override;
+    function  AsMWObject: TObject;  override;
+    /// <remarks>Like Signal(), but returns the value.</remarks>
+    function  Allocate: cardinal;
+    /// <remarks>CounterSignal() increments the count. Raises exception if was MaxCardinal. Does not effect FullCount.</remarks>
+    procedure CounterSignal;
+    /// <remarks>Returns the initial value.</remarks>
+    function  FullCount: cardinal;
+    /// <remarks>True iff the count is zero.</remarks>
+    function  IsSignalled: boolean; override;
+    /// <remarks>Signal() decrements the count. Raises exception if was zero.</remarks>
+    procedure Signal; override;
+    /// <remarks>Like Signal(), but if this call was responsible for the count going to zero, then return True.</remarks>
+    function  SignalHit: boolean;
+    function  Value: cardinal;
+    /// <remarks>Blocks until count is zero.</remarks>
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+    /// <remarks>Resets the count to the initial value.</remarks>
+    procedure Reset;
+  end; { TCountDown }
 
-  TCountDown = class( TOtlSynchro)
-    public
-      /// <remarks>Signal() decrements the count. Raises exception if was zero.</remarks>
-      procedure Signal;               override;
-
-      /// <remarks>CounterSignal() increments the count. Raises exception if was MaxCardinal. Does not effect FullCount.</remarks>
-      procedure CounterSignal;
-
-      /// <remarks>Like Signal(), but if this call was responsible for the count going to zero, then return True.</remarks>
-      function  SignalHit: boolean;
-
-      /// <remarks>Like Signal(), but returns the value.</remarks>
-      function  Allocate: cardinal;
-
-      /// <remarks>True iff the count is zero.</remarks>
-      function  isSignalled: boolean; override;
-
-      function  Value: cardinal;
-
-      /// <remarks>Blocks until count is zero.</remarks>
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-
-      /// <remarks>Resets the count to the initial value.</remarks>
-      procedure Reset;
-
-      /// <remarks>Returns the initial value.</remarks>
-      function  FullCount: cardinal;
-
-    public
-      /// <remarks> DO NOT USE. This constructor is for internal use only.
-      ///  Use instead either TSBDParallel..CreateCountDownObj. </remarks>
-      constructor Create( AInitial: cardinal);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
-    private
-      FInitialValue: cardinal;
-      [Volatile] FValue: TVolatileUInt32;
-
-    private type
-      TCountDownFunction = class( TFunctionalEvent)
-      protected
-        procedure SignalTest( doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); override;
-      private
-        FOwner: TCountDown;
-        constructor Create( AOwner: TCountDown);
-      end;
-
-    private
-      FLock: TSBDSpinLock;
-      FCountDownFunc: TCountDownFunction;
-
-    public
-      /// <remarks>Although syntactically "public", semantically this is "private"
-      ///  and for internal use only. Please do not use. </remarks>
-      procedure Reconfigure( AInitial: cardinal);
-    end;
-
-  TCountUp = class( TOtlSynchro)
-    public
-      /// <remarks>Signal() increments the count. Raises exception if the max was breached.</remarks>
-      procedure Signal;               override;
-
-      /// <remarks>Like Signal(), but if this call was responsible for the count going hitting the max, then return True.</remarks>
-      function  SignalHit: boolean;
-
-      /// <remarks>True iff the count is at the max.</remarks>
-      function  isSignalled: boolean; override;
-
-      function  Value: cardinal;
-
-      /// <remarks>Blocks until count is zero.</remarks>
-      function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-
-      /// <remarks>Resets the count to the initial value.</remarks>
-      procedure Reset;
-
-      /// <remarks>Returns the initial value.</remarks>
-      function  InitialValue: cardinal;
-
-      /// <remarks>Returns the max value.</remarks>
-      function  MaxValue: cardinal;
-
-    public
-      constructor Create( AInitial, AMaxValue: cardinal);
-      destructor Destroy; override;
-      function  AsMWObject: TObject;  override;
-
-    private
-      FInitialValue: cardinal;
-      FMaxValue: cardinal;
-      FCountDown: TCountDown;
-
-    public
-      /// <remarks>Although syntactically "public", semantically this is "private"
-      ///  and for internal use only. Please do not use. </remarks>
-      procedure Reconfigure( AInitial, AMaxValue: cardinal);
-    end;
-
+  TCountUp = class(TOtlSynchro)
+  strict private
+    FCountDown   : TCountDown;
+    FInitialValue: cardinal;
+    FMaxValue    : cardinal;
+  protected
+    procedure Reconfigure(AInitial, AMaxValue: cardinal);
+  public
+    constructor Create(AInitial, AMaxValue: cardinal);
+    destructor  Destroy; override;
+    function  AsMWObject: TObject;  override;
+    /// <remarks>Returns the initial value.</remarks>
+    function  InitialValue: cardinal;
+    /// <remarks>True iff the count is at the max.</remarks>
+    function  IsSignalled: boolean; override;
+    /// <remarks>Returns the max value.</remarks>
+    function  MaxValue: cardinal;
+    /// <remarks>Resets the count to the initial value.</remarks>
+    procedure Reset;
+    /// <remarks>Signal() increments the count. Raises exception if the max was breached.</remarks>
+    procedure Signal; override;
+    /// <remarks>Like Signal(), but if this call was responsible for the count going hitting the max, then return True.</remarks>
+    function  SignalHit: boolean;
+    function  Value: cardinal;
+    /// <remarks>Blocks until count is zero.</remarks>
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
+  end; { TCountUp }
 
   TOtlMREW = class // Multi-read, exclusive write
-  public
-    function  EnterRead( Timeout: cardinal = INFINITE): TWaitResult;
-    procedure ExitRead;
-    function  EnterWrite( Timeout: cardinal = INFINITE): TWaitResult;
-    procedure ExitWrite;
-    function  ReaderCount: integer; // if +ve, this is the number of entered readers,
-                                    // if -ve, there is an entered writer.
-
-  private
+  strict private
+    FGate              : TCriticalSection;
     [Volatile] FReaders: TVolatileInt32;
-    FZeroOrAbove: System.SyncObjs.TEvent;
-    FZero       : System.SyncObjs.TEvent;
-    FWriterThread: TThreadId;
-    FGate: TCriticalSection;
-
+    FWriterThread      : TThreadId;
+    FZero              : System.SyncObjs.TEvent;
+    FZeroOrAbove       : System.SyncObjs.TEvent;
   public
     constructor Create;
     destructor Destroy; override;
-  end;
-
+    function  EnterRead(timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitRead;
+    function  EnterWrite(timeout: cardinal = INFINITE): TWaitResult;
+    procedure ExitWrite;
+    function  ReaderCount: integer; // if +ve, this is the number of entered readers,
+                                    // if -ve, there is an entered writer.
+  end; { TOtlMREW }
 
 implementation
 
+uses
+  System.Diagnostics,
+  OtlPlatform.Errors;
 
+const
+  MaxCardinal      : cardinal = Cardinal($FFFFFFFF);
+  MaxFiniteCardinal: cardinal = Cardinal($FFFFFFFE);
 
-
-
-
-
-
-
-
-
-
-uses OtlPlatform.Errors, System.Diagnostics;
+{ TOtlSynchro }
 
 {$IFDEF MSWINDOWS}
 function TOtlSynchro.GetHandle: THandle;
 begin
-  result := 0
-end;
+  Result := 0;
+end; { TOtlSynchro.GetHandle }
 {$ENDIF}
-
 
 procedure TOtlSynchro.Signal;
 begin
-end;
+  // do nothing
+end; { TOtlSynchro.Signal }
 
+{ TKernelEvent }
 
 function TKernelEvent.AsMWObject: TObject;
 begin
-  result := FEvent
-end;
+  Result := FEvent;
+end; { TKernelEvent.AsMWObject }
 
-constructor TKernelEvent.Create( AManual, AInitialState: boolean);
+constructor TKernelEvent.Create(AManual, AInitialState: boolean);
 begin
-  FEvent := System.SyncObjs.TEvent.Create( nil, AManual, AInitialState, '', False)
-end;
+  FEvent := System.SyncObjs.TEvent.Create( nil, AManual, AInitialState, '', False);
+end; { TKernelEvent.Create }
 
 destructor TKernelEvent.Destroy;
 begin
   FEvent.Free;
-  inherited
-end;
+  inherited;
+end; { TKernelEvent.Destroy }
 
 {$IFDEF MSWINDOWS}
 function TKernelEvent.GetHandle: THandle;
 begin
-  result := FEvent.Handle
-end;
+  Result := FEvent.Handle;
+end; { TKernelEvent.GetHandle }
 {$ENDIF}
 
-function TKernelEvent.isSignalled: boolean;
+function TKernelEvent.IsSignalled: boolean;
 begin
   raise TParallelException.Create( EIsSignalledNotSupported);
-end;
+end; { TKernelEvent.IsSignalled }
 
 procedure TKernelEvent.ResetEvent;
 begin
-  FEvent.ResetEvent
-end;
+  FEvent.ResetEvent;
+end; { TKernelEvent.ResetEvent }
 
 procedure TKernelEvent.SetEvent;
 begin
-  FEvent.SetEvent
-end;
+  FEvent.SetEvent;
+end; { TKernelEvent.SetEvent}
 
 procedure TKernelEvent.Signal;
 begin
-  FEvent.SetEvent
-end;
+  FEvent.SetEvent;
+end; { TKernelEvent.Signal }
 
-function TKernelEvent.WaitFor( Timeout: cardinal): TWaitResult;
-begin
-  result := FEvent.WaitFor( Timeout)
-end;
+function TKernelEvent.WaitFor(timeout: cardinal): TWaitResult;
+begin;
+  Result := FEvent.WaitFor(timeout);
+end; { TKernelEvent.WaitFor }
 
-
+{ TLightEvent }
 
 class constructor TLightEvent.Create;
 begin
-  TStopwatch.Create
-end;
+  TStopwatch.Create;
+end; { TLightEvent.Create }
 
 function TLightEvent.AsMWObject: TObject;
 begin
-  result := nil
-end;
+  Result := nil;
+end; { TLightEvent.AsMWObject }
 
 constructor TLightEvent.Create(
   AManual, AInitialState: boolean; ASpinMax: cardinal);
 begin
   FLock.Initialize;
   FIsSignalled := AInitialState;
-  FPulsar      := System.SyncObjs.TEvent.Create( nil, False, FIsSignalled, '', False);
+  FPulsar      := System.SyncObjs.TEvent.Create(nil, False, FIsSignalled, '', False);
   FKernelUsers := 0;
   FManual      := AManual;
-  FSpinMax     := ASpinMax
-end;
-
-procedure TLightEvent.Reconfigure( Manual: boolean; Value: cardinal);
-begin
-  FSpinMax := Value;
-  FManual  := Manual
-end;
-
-
+  FSpinMax     := ASpinMax;
+end; { TLightEvent.Create }
 
 destructor TLightEvent.Destroy;
 begin
   FLock.Finalize;
   FPulsar.Free;
-  inherited
-end;
+  inherited;
+end; { TLightEvent.Destroy }
 
-function TLightEvent.isSignalled: boolean;
+procedure TLightEvent.Reconfigure(Manual: boolean; Value: cardinal);
+begin
+  FSpinMax := Value;
+  FManual  := Manual;
+end; { TLightEvent.Reconfigure }
+
+function TLightEvent.IsSignalled: boolean;
 begin
   FLock.Enter;
-  result := FIsSignalled;
-  FLock.Leave
-end;
+  Result := FIsSignalled;
+  FLock.Leave;
+end; { TLightEvent.IsSignalled }
 
 procedure TLightEvent.ResetEvent;
 begin
   FLock.Enter;
-  FisSignalled := False;
-  FLock.Leave
-end;
+  FIsSignalled := False;
+  FLock.Leave;
+end; { TLightEvent.ResetEvent }
 
 procedure TLightEvent.SetEvent;
 begin
   FLock.Enter;
-  FisSignalled := True;
+  FIsSignalled := True;
   if FKernelUsers > 0 then
     FPulsar.SetEvent;
-  FLock.Leave
-end;
+  FLock.Leave;
+end; { TLightEvent.SetEvent }
 
 procedure TLightEvent.Signal;
 begin
-  SetEvent
-end;
+  SetEvent;
+end; { TLightEvent.Signal }
 
-const
-  MaxCardinal      : cardinal = Cardinal( $FFFFFFFF);
-  MaxFiniteCardinal: cardinal = Cardinal( $FFFFFFFE);
-
-function TLightEvent.WaitFor( Timeout: cardinal): TWaitResult;
+function TLightEvent.WaitFor(timeout: cardinal): TWaitResult;
 var
   Timer: TStopWatch;
   TimeOutRemaining: cardinal;
@@ -444,480 +415,454 @@ var
   hasBumpedEntryCount: boolean;
   doPulse: boolean;
 begin
-  if (TimeOut <> INFINITE) and (TimeOut <> 0) then
-    begin
+  if (timeout <> INFINITE) and (timeout <> 0) then begin
     Timer.Reset;
-    Timer.Start
-    end;
-  TimeOutRemaining    := TimeOut;
+    Timer.Start;
+  end;
+  TimeOutRemaining    := timeout;
   SpinCount           := 0;
   hasBumpedEntryCount := False;
-  result              := wrIOCompletion;
+  Result              := wrIOCompletion;
   doPulse             := False;
   repeat
-    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-      begin
+    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then begin
       Elapsed := Timer.ElapsedMilliseconds;
       if Elapsed > MaxCardinal then
         Elapsed := MaxCardinal;
-      if TimeOut > Elapsed then
-          TimeOutRemaining := TimeOut - cardinal( Elapsed)
+      if timeout > Elapsed then
+          TimeOutRemaining := timeout - cardinal(Elapsed)
         else
-          TimeOutRemaining := 0
-      end;
+          TimeOutRemaining := 0;
+    end;
+
     FLock.Enter;
 
-    if (TimeOutRemaining = 0) or FisSignalled then
-        begin
-        if FisSignalled then
-            begin
-            result := wrSignaled;
-            if not FManual then
-              FisSignalled := False
-            end
-          else
-            result := wrTimeOut;
-        if hasBumpedEntryCount then
-          Dec( FKernelUsers);
-        if FisSignalled and (FKernelUsers > 0) then
-          doPulse := True;
-        FLock.Leave
-        end
-
-      else if (FKernelUsers > 0) or (cardinal( SpinCount) >= FSpinMax) then    // Warning, XE7: widen
-        begin
-        if not hasBumpedEntryCount then
-          begin
-          hasBumpedEntryCount := True;
-          Inc( FKernelUsers)
-          end;
-        FLock.Leave;
-        FPulsar.WaitFor( TimeOutRemaining)
-        end
-
+    if (TimeOutRemaining = 0) or FIsSignalled then begin
+      if FIsSignalled then begin
+        Result := wrSignaled;
+        if not FManual then
+          FIsSignalled := False;
+      end
       else
-        begin
-        FLock.Leave;
-        Inc( SpinCount);
-        TThread.Yield;
-        end
-  until result <> wrIOCompletion;
+        Result := wrTimeOut;
+      if hasBumpedEntryCount then
+        Dec(FKernelUsers);
+      if FIsSignalled and (FKernelUsers > 0) then
+        doPulse := True;
+      FLock.Leave;
+    end
+
+    else if (FKernelUsers > 0) or (cardinal(SpinCount) >= FSpinMax) then begin   // Warning, XE7: widen
+      if not hasBumpedEntryCount then begin
+        hasBumpedEntryCount := True;
+        Inc(FKernelUsers);
+      end;
+      FLock.Leave;
+      FPulsar.WaitFor(TimeOutRemaining);
+    end
+
+    else begin
+      FLock.Leave;
+      Inc(SpinCount);
+      TThread.Yield;
+    end;
+  until Result <> wrIOCompletion;
   if doPulse then
-    FPulsar.SetEvent
-end;
+    FPulsar.SetEvent;
+end; { TLightEvent.WaitFor }
 
+{ TOtlSemaphore }
 
-function TOtlSemaphore.AsMWObject: TObject;
+constructor TOtlSemaphore.Create(AInitialCount: cardinal);
 begin
-  result := FSem
-end;
-
-constructor TOtlSemaphore.Create( AInitialCount: cardinal);
-begin
-  FSem := System.SyncObjs.TSemaphore.Create( nil, AInitialCount, MaxInt, '', False)
-end;
+  FSem := System.SyncObjs.TSemaphore.Create(nil, AInitialCount, MaxInt, '', False);
+end; { TOtlSemaphore.Create }
 
 destructor TOtlSemaphore.Destroy;
 begin
   FSem.Free;
-  inherited
-end;
+  inherited;
+end; { TOtlSemaphore.Destroy }
+
+function TOtlSemaphore.AsMWObject: TObject;
+begin
+  Result := FSem;
+end; { TOtlSemaphore.AsMWObject }
 
 {$IFDEF MSWINDOWS}
 function TOtlSemaphore.GetHandle: THandle;
 begin
-  result := FSem.Handle
-end;
+  Result := FSem.Handle;
+end; { TOtlSemaphore.GetHandle }
 {$ENDIF}
 
-function TOtlSemaphore.isSignalled: boolean;
+function TOtlSemaphore.IsSignalled: boolean;
 begin
-  raise TParallelException.Create( EIsSignalledNotSupported);
-end;
+  raise TParallelException.Create(EIsSignalledNotSupported);
+end; { TOtlSemaphore.IsSignalled }
 
 procedure TOtlSemaphore.Signal;
 begin
-  FSem.Release
-end;
+  FSem.Release;
+end; { TOtlSemaphore.Signal }
 
-function TOtlSemaphore.WaitFor( Timeout: cardinal): TWaitResult;
+function TOtlSemaphore.WaitFor(timeout: cardinal): TWaitResult;
 begin
-  result := FSem.WaitFor( Timeout)
-end;
+  Result := FSem.WaitFor(timeout);
+end; { TOtlSemaphore.WaitFor }
 
+{ TFunctionalEvent }
 
-
-function TFunctionalEvent.AsMWObject: TObject;
+constructor TFunctionalEvent.Create(ASignalTest: TEventFunction; APLock: PSBDSpinLock);
 begin
-  result := nil
-end;
-
-constructor TFunctionalEvent.Create( ASignalTest: TEventFunction; APLock: PSBDSpinLock);
-begin
-  if assigned( APLock) then
-      FPLock := APLock
-    else
-      begin
-      FLock.Initialize;
-      FPLock := @FLock
-      end;
+  if assigned(APLock) then
+    FPLock := APLock
+  else begin
+    FLock.Initialize;
+    FPLock := @FLock;
+  end;
   FSignalTest        := ASignalTest;
   FPulsarIsSignalled := True;
-  FPulsar            := TEvent.Create( nil, True, FPulsarIsSignalled, '', False)
-end;
+  FPulsar            := TEvent.Create(nil, True, FPulsarIsSignalled, '', False);
+end; { TFunctionalEvent.Create }
 
 class constructor TFunctionalEvent.Create;
 begin
-  TStopwatch.Create
-end;
+  TStopwatch.Create;
+end; { TFunctionalEvent.Create }
 
 destructor TFunctionalEvent.Destroy;
 begin
   if FPLock = @FLock then
     FLock.Finalize;
   FPulsar.Free;
-  inherited
-end;
+  inherited;
+end; { TFunctionalEvent.Destroy }
+
+function TFunctionalEvent.AsMWObject: TObject;
+begin
+  Result := nil;
+end; { TFunctionalEvent.AsMWObject }
 
 procedure TFunctionalEvent.Reconfigure(
   ASignalTest: TEventFunction; APLock: PSBDSpinLock);
 begin
-  if not assigned( ASignalTest) then
-      begin
-      // Deconfigure in preparation for return to the object pool
-      if FPLock = @FLock then
-        FLock.Finalize;
-      FPLock := nil
-      end
-    else
-      begin
-      // Refurbishing for re-use.
-      if assigned( APLock) then
-          FPLock := APLock
-        else
-          begin
-          FLock.Initialize;
-          FPLock := @FLock
-          end
-      end;
-  FSignalTest := ASignalTest
-end;
+  if not assigned(ASignalTest) then begin
+    // Deconfigure in preparation for return to the object pool
+    if FPLock = @FLock then
+      FLock.Finalize;
+    FPLock := nil;
+  end
+  else begin
+    // Refurbishing for re-use.
+    if assigned(APLock) then
+      FPLock := APLock
+    else begin
+      FLock.Initialize;
+      FPLock := @FLock;
+    end
+  end;
+  FSignalTest := ASignalTest;
+end; { TFunctionalEvent.Reconfigure }
 
-
-function TFunctionalEvent.isSignalled: boolean;
+function TFunctionalEvent.IsSignalled: boolean;
 var
   LocalIsSig: boolean;
 begin
-  FPLock^.WithinLock( procedure
+  FPLock^.WithinLock(
+    procedure
     var
       Dummy: boolean;
     begin
-     SignalTest( False, Dummy, LocalIsSig)
+      SignalTest(False, Dummy, LocalIsSig);
     end);
-  result := LocalIsSig
-end;
+  Result := LocalIsSig;
+end; { TFunctionalEvent.IsSignalled }
 
 procedure TFunctionalEvent.Signal;
 begin
-  Pulse
-end;
+  Pulse;
+end; { TFunctionalEvent.Signal }
 
-
-procedure TFunctionalEvent.SignalTest( doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
+procedure TFunctionalEvent.SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 begin
-  FSignalTest( doAcquire, wasSuccessfullyAcquired, isInSignalledState)
-end;
-
+  FSignalTest(doAcquire, wasSuccessfullyAcquired, isInSignalledState);
+end; { TFunctionalEvent.SignalTest }
 
 procedure TFunctionalEvent.Pulse;
 begin
-  FPLock^.WithinLock( procedure
+  FPLock^.WithinLock(
+    procedure
     begin
-    if not FPulsarIsSignalled then
-      begin
-      FPulsarIsSignalled := True;
-      FPulsar.SetEvent
+      if not FPulsarIsSignalled then begin
+        FPulsarIsSignalled := True;
+        FPulsar.SetEvent
       end
-    end)
-end;
+    end);
+end; { TFunctionalEvent.Pulse }
 
-function TFunctionalEvent.WaitFor( Timeout: cardinal): TWaitResult;
+function TFunctionalEvent.WaitFor(timeout: cardinal): TWaitResult;
 var
-  Timer: TStopWatch;
+  Acquired        : boolean;
+  Clipped         : boolean;
+  Elapsed         : int64;
   TimeOutRemaining: cardinal;
-  Elapsed: int64;
-  Clipped: boolean;
-  Acquired: boolean;
+  Timer           : TStopWatch;
 begin
-  if (TimeOut <> INFINITE) and (TimeOut <> 0) then
-    begin
+  if (timeout <> INFINITE) and (timeout <> 0) then begin
     Timer.Reset;
     Timer.Start
-    end;
-  TimeOutRemaining    := TimeOut;
+  end;
+  TimeOutRemaining := timeout;
   repeat
     Clipped := False;
-    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-      begin
+    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then begin
       Elapsed := Timer.ElapsedMilliseconds;
-      if Elapsed > MaxCardinal then
-        begin
+      if Elapsed > MaxCardinal then begin
         Elapsed := MaxCardinal;
         Clipped := True
-        end;
-      if TimeOut > Elapsed then
-          TimeOutRemaining := TimeOut - cardinal( Elapsed)
-        else
-          TimeOutRemaining := 0
       end;
-    if TimeOutRemaining = 0 then
-        result := wrSignaled
+      if timeout > Elapsed then
+        TimeOutRemaining := timeout - cardinal(Elapsed)
       else
-        result := FPulsar.WaitFor( TimeOutRemaining);
-    if (result = wrTimeOut) and Clipped then
-      result := wrIOCompletion;
-    if result = wrSignaled then
-      begin
+        TimeOutRemaining := 0;
+    end;
+    if TimeOutRemaining = 0 then
+      Result := wrSignaled
+    else
+      Result := FPulsar.WaitFor(TimeOutRemaining);
+    if (Result = wrTimeOut) and Clipped then
+      Result := wrIOCompletion;
+    if Result = wrSignaled then begin
       Acquired := False;
-      FPLock^.WithinLock( procedure
+      FPLock^.WithinLock(
+        procedure
         var
           NewValue: boolean;
         begin
-        SignalTest( True, Acquired, NewValue);
-        if NewValue <> FPulsarIsSignalled then
-          begin
-          FPulsarIsSignalled := NewValue;
-          if FPulsarIsSignalled then
-              FPulsar.SetEvent
-            else
-              FPulsar.ResetEvent
+          SignalTest(True, Acquired, NewValue);
+          if NewValue <> FPulsarIsSignalled then begin
+            FPulsarIsSignalled := NewValue;
+            if FPulsarIsSignalled then
+                FPulsar.SetEvent
+              else
+                FPulsar.ResetEvent
           end
         end);
       if Acquired then
-          result := wrSignaled
-        else if TimeOutRemaining = 0 then
-          result := wrTimeOut
-        else
-          result := wrIOCompletion
-      end
-  until result <> wrIOCompletion
-end;
+        Result := wrSignaled
+      else if TimeOutRemaining = 0 then
+        Result := wrTimeOut
+      else
+        Result := wrIOCompletion
+    end;
+  until Result <> wrIOCompletion;
+end; { TFunctionalEvent.WaitFor }
 
+{ TCountDown.TCountDownFunction }
 
-
-constructor TCountDown.Create( AInitial: cardinal);
-begin
-  FLock.Initialize;
-  FInitialValue := AInitial;
-  FValue.Initialize( FInitialValue);
-  FCountDownFunc := TCountDownFunction.Create( self);
-  if FInitialValue = 0 then
-    FCountDownFunc.Pulse
-end;
-
-destructor TCountDown.Destroy;
-begin
-  FCountDownFunc.Free;
-  FValue.Finalize;
-  inherited
-end;
-
-function TCountDown.FullCount: cardinal;
-begin
-  result := FInitialValue
-end;
-
-function TCountDown.isSignalled: boolean;
-begin
-  result := FValue.Read = 0
-end;
-
-procedure TCountDown.Reconfigure( AInitial: cardinal);
-begin
-  FInitialValue := AInitial;
-  FValue.Write( FInitialValue);
-  if FInitialValue = 0 then
-    FCountDownFunc.Pulse
-end;
-
-procedure TCountDown.Reset;
-begin
-  FLock.WithinLock( procedure
-    begin
-    FValue.Write( FInitialValue)
-    end);
-  FCountDownFunc.Pulse
-end;
-
-procedure TCountDown.Signal;
-begin
-  Allocate
-end;
-
-function TCountDown.Allocate: cardinal;
-var
-  Bonkers: boolean;
-begin
-  FLock.Enter;
-  Bonkers := FValue.Read = 0;
-  if not Bonkers then
-      result := FValue.Decrement
-    else
-      result := 0;
-  FLock.Leave;
-  if Bonkers then
-      raise TParallelException.Create( ESignalCountUpDownRange)
-    else
-      FCountDownFunc.Pulse
-end;
-
-function TCountDown.SignalHit: boolean;
-begin
-  result := Allocate = 0
-end;
-
-function TCountDown.AsMWObject: TObject;
-begin
-  result := nil
-end;
-
-procedure TCountDown.CounterSignal;
-var
-  Bonkers: boolean;
-  Val: cardinal;
-begin
-  FLock.Enter;
-  Val := FValue.Read;
-  Bonkers := Val = MaxCardinal;
-  if not Bonkers then
-    Val := FValue.Increment;
-  FLock.Leave;
-  if Bonkers then
-      raise TParallelException.Create( ESignalCountUpDownRange)
-    else if Val = 1 then
-      FCountDownFunc.Pulse
-end;
-
-
-function TCountDown.Value: cardinal;
-begin
-  result := FValue.Read
-end;
-
-function TCountDown.WaitFor( Timeout: cardinal): TWaitResult;
-begin
-  result := FCountDownFunc.WaitFor( Timeout)
-end;
-
-
-constructor TCountDown.TCountDownFunction.Create( AOwner: TCountDown);
+constructor TCountDown.TCountDownFunction.Create(AOwner: TCountDown);
 begin
   FOwner := AOwner;
-  inherited Create( nil, @FOwner.FLock)
-end;
+  inherited Create(nil, @FOwner.FLock);
+end; { TCountDown.TCountDownFunction.Create }
 
 procedure TCountDown.TCountDownFunction.SignalTest(
   doAcquire: boolean; var wasSuccessfullyAcquired, isInSignalledState: boolean);
 begin
   isInSignalledState := FOwner.FValue.Read = 0;
-  wasSuccessfullyAcquired := doAcquire and isInSignalledState
-end;
+  wasSuccessfullyAcquired := doAcquire and isInSignalledState;
+end; { TCountDown.TCountDownFunction.SignalTest }
 
+{ TCountDown }
 
-function TCountUp.AsMWObject: TObject;
+constructor TCountDown.Create(AInitial: cardinal);
 begin
-  result := nil
-end;
+  FLock.Initialize;
+  FInitialValue := AInitial;
+  FValue.Initialize(FInitialValue);
+  FCountDownFunc := TCountDownFunction.Create(self);
+  if FInitialValue = 0 then
+    FCountDownFunc.Pulse;
+end; { TCountDown.Create }
 
-constructor TCountUp.Create( AInitial, AMaxValue: cardinal);
+destructor TCountDown.Destroy;
+begin
+  FCountDownFunc.Free;
+  FValue.Finalize;
+  inherited;
+end; { TCountDown.Destroy }
+
+function TCountDown.FullCount: cardinal;
+begin
+  Result := FInitialValue;
+end; { TCountDown.FullCount }
+
+function TCountDown.IsSignalled: boolean;
+begin
+  Result := FValue.Read = 0;
+end; { TCountDown.IsSignalled }
+
+procedure TCountDown.Reconfigure(AInitial: cardinal);
+begin
+  FInitialValue := AInitial;
+  FValue.Write(FInitialValue);
+  if FInitialValue = 0 then
+    FCountDownFunc.Pulse;
+end; { TCountDown.Reconfigure }
+
+procedure TCountDown.Reset;
+begin
+  FLock.WithinLock(
+    procedure
+    begin
+      FValue.Write(FInitialValue)
+    end);
+  FCountDownFunc.Pulse;
+end; { TCountDown.Reset }
+
+procedure TCountDown.Signal;
+begin
+  Allocate;
+end; { TCountDown.Signal }
+
+function TCountDown.Allocate: cardinal;
+var
+  bonkers: boolean;
+begin
+  FLock.Enter;
+  bonkers := FValue.Read = 0;
+  if not bonkers then
+    Result := FValue.Decrement
+  else
+    Result := 0;
+  FLock.Leave;
+  if bonkers then
+    raise TParallelException.Create(ESignalCountUpDownRange)
+  else
+    FCountDownFunc.Pulse;
+end; { TCountDown.Allocate }
+
+function TCountDown.SignalHit: boolean;
+begin
+  Result := Allocate = 0;
+end; { TCountDown.SignalHit }
+
+function TCountDown.AsMWObject: TObject;
+begin
+  Result := nil;
+end; { TCountDown.AsMWObject }
+
+procedure TCountDown.CounterSignal;
+var
+  bonkers: boolean;
+  val    : cardinal;
+begin
+  FLock.Enter;
+  val := FValue.Read;
+  bonkers := val = MaxCardinal;
+  if not bonkers then
+    val := FValue.Increment;
+  FLock.Leave;
+  if bonkers then
+    raise TParallelException.Create(ESignalCountUpDownRange)
+  else if val = 1 then
+    FCountDownFunc.Pulse;
+end; { TCountDown.CounterSignal }
+
+function TCountDown.Value: cardinal;
+begin
+  Result := FValue.Read;
+end; { TCountDown.Value }
+
+function TCountDown.WaitFor(timeout: cardinal): TWaitResult;
+begin
+  Result := FCountDownFunc.WaitFor(timeout);
+end; { TCountDown.WaitFor }
+
+{ TCountUp }
+
+constructor TCountUp.Create(AInitial, AMaxValue: cardinal);
 begin
   FInitialValue := AInitial;
   FMaxValue     := AMaxValue;
   if FMaxValue > FInitialValue then
-      FCountDown := TCountDown.Create( FMaxValue - FInitialValue)
-    else
-      begin
-      FCountDown := nil;
-      raise TParallelException.Create( ESignalCountUpDownRange)
-      end
-end;
+    FCountDown := TCountDown.Create(FMaxValue - FInitialValue)
+  else begin
+    FCountDown := nil;
+    raise TParallelException.Create(ESignalCountUpDownRange)
+  end;
+end; { TCountUp.Create }
 
 destructor TCountUp.Destroy;
 begin
   FCountDown.Free;
-  inherited
-end;
+  inherited;
+end; { TCountUp.Destroy }
+
+function TCountUp.AsMWObject: TObject;
+begin
+  Result := nil;
+end; { TCountUp.AsMWObject }
 
 function TCountUp.InitialValue: cardinal;
 begin
-  result := FInitialValue
-end;
+  Result := FInitialValue;
+end; { TCountUp.InitialValue }
 
-function TCountUp.isSignalled: boolean;
+function TCountUp.IsSignalled: boolean;
 begin
-  result := FCountDown.isSignalled
-end;
+  Result := FCountDown.IsSignalled;
+end; { TCountUp.IsSignalled }
 
 function TCountUp.MaxValue: cardinal;
 begin
-  result := FMaxValue
-end;
+  Result := FMaxValue;
+end; { TCountUp.MaxValue }
 
-procedure TCountUp.Reconfigure( AInitial, AMaxValue: cardinal);
+procedure TCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
 begin
   FInitialValue := AInitial;
   FMaxValue     := AMaxValue;
-  Reset
-end;
+  Reset;
+end; { TCountUp.Reconfigure }
 
 procedure TCountUp.Reset;
 begin
-  FCountDown.Reset
-end;
+  FCountDown.Reset;
+end; { TCountUp.Reset }
 
 procedure TCountUp.Signal;
 begin
-  FCountDown.Signal
-end;
+  FCountDown.Signal;
+end; { TCountUp.Signal }
 
 function TCountUp.SignalHit: boolean;
 begin
-  result := FCountDown.SignalHit
-end;
+  Result := FCountDown.SignalHit;
+end; { TCountUp.SignalHit }
 
 function TCountUp.Value: cardinal;
 begin
-  result := FMaxValue - FCountDown.Value
-end;
+  Result := FMaxValue - FCountDown.Value;
+end; { TCountUp.Value }
 
-function TCountUp.WaitFor( Timeout: cardinal): TWaitResult;
+function TCountUp.WaitFor(timeout: cardinal): TWaitResult;
 begin
-  result := FCountDown.WaitFor( Timeout)
-end;
+  Result := FCountDown.WaitFor(timeout);
+end; { TCountUp.WaitFor }
 
-procedure InitUnit_BasicLevel;
-begin
-  TStopWatch.Create
-end;
-
-
-procedure DoneUnit_BasicLevel;
-begin
-end;
-
-
-
-
+{ TOtlMREW }
 
 constructor TOtlMREW.Create;
 begin
-  FReaders.Initialize( 0);
-  FZeroOrAbove  := System.SyncObjs.TEvent.Create( nil, False, False, '');
-  FZero         := System.SyncObjs.TEvent.Create( nil, False, False, '');
+  FReaders.Initialize(0);
+  FZeroOrAbove  := System.SyncObjs.TEvent.Create(nil, False, False, '');
+  FZero         := System.SyncObjs.TEvent.Create(nil, False, False, '');
   FWriterThread := 0;
   // This is an auto-reset event.
-  FGate := TFixedCriticalSection.Create
-end;
+  FGate := TFixedCriticalSection.Create;
+end; { TOtlMREW.Create }
 
 destructor TOtlMREW.Destroy;
 begin
@@ -925,187 +870,190 @@ begin
   FZeroOrAbove.Free;
   FZero.Free;
   FGate.Free;
-  inherited
-end;
+  inherited;
+end; { TOtlMREW.Destroy }
 
-function TOtlMREW.EnterRead( Timeout: cardinal): TWaitResult;
+function TOtlMREW.EnterRead(timeout: cardinal): TWaitResult;
 var
-  Watch: TStopWatch;
-  Elapsed: int64;
-  TimeoutRemaining: cardinal;
-  Readers: integer;
-  isStable: boolean;
+  elapsed         : int64;
+  isStable        : boolean;
+  readers         : integer;
+  timeoutRemaining: cardinal;
+  watch           : TStopWatch;
 begin
-  Readers := FReaders.Read;
-  if (Readers >= 0) and
-     (FReaders.CompareAndExchange( Readers, Readers + 1)) then
-      result := wrSignaled
-      // It is possible that FZero will now be in a false positive state.
-      // If this is the case, it will be corrected on the next EnterWrite()
-    else
-      result := wrIOCompletion;
-  if result <> wrIOCompletion then exit;
-  TimeoutRemaining := Timeout;
-  if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-    begin
-    Watch.Reset;
-    Watch.Start
-    end;
+  readers := FReaders.Read;
+  if (readers >= 0)
+     and (FReaders.CompareAndExchange(readers, readers + 1))
+  then
+    Result := wrSignaled
+    // It is possible that FZero will now be in a false positive state.
+    // If this is the case, it will be corrected on the next EnterWrite()
+  else
+    Result := wrIOCompletion;
+  if Result <> wrIOCompletion then
+    Exit;
+  timeoutRemaining := timeout;
+  if (timeoutRemaining <> INFINITE) and (timeoutRemaining <> 0) then begin
+    watch.Reset;
+    watch.Start
+  end;
   repeat
-    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-      begin
-      Elapsed := Watch.ElapsedMilliseconds;
-      if Elapsed > MaxCardinal then
-        Elapsed := MaxCardinal;
-      if TimeOut > Elapsed then
-          TimeOutRemaining := TimeOut - cardinal( Elapsed)
-        else
-          TimeOutRemaining := 0
-      end;
-    if (TimeOutRemaining > 0) and (FReaders.Read < 0) then
-      FZeroOrAbove.WaitFor( TimeOutRemaining);
+    if (timeoutRemaining <> INFINITE) and (timeoutRemaining <> 0) then begin
+      elapsed := watch.ElapsedMilliseconds;
+      if elapsed > MaxCardinal then
+        elapsed := MaxCardinal;
+      if timeout > elapsed then
+        timeoutRemaining := timeout - cardinal(elapsed)
+      else
+        timeoutRemaining := 0;
+    end;
+    if (timeoutRemaining > 0) and (FReaders.Read < 0) then
+      FZeroOrAbove.WaitFor(timeoutRemaining);
     FGate.Enter;
     isStable := False;
     repeat
-      Readers := FReaders.Read;
-      if Readers >= 0 then
-          begin
-          if FReaders.CompareAndExchange( Readers, Readers + 1) then
-              begin
-              isStable := True;
-              Inc( Readers)
-              end
-          end
-        else
-          isStable := True
-    until isStable;
-    if Readers >= 1 then
-        begin
-        result := wrSignaled;
-        FZeroOrAbove.SetEvent
+      readers := FReaders.Read;
+      if readers >= 0 then begin
+        if FReaders.CompareAndExchange(readers, readers + 1) then begin
+          isStable := True;
+          Inc(readers);
         end
-      else if Readers < 0 then
-        FZeroOrAbove.ResetEvent;
+      end
+      else
+        isStable := True;
+    until isStable;
+    if readers >= 1 then begin
+      Result := wrSignaled;
+      FZeroOrAbove.SetEvent
+    end
+    else if readers < 0 then
+      FZeroOrAbove.ResetEvent;
     FGate.Leave;
-    if (result = wrIOCompletion) and (TimeOutRemaining = 0) then
-      result := wrTimeout
-  until result <> wrIOCompletion
-end;
-
-
+    if (Result = wrIOCompletion) and (timeoutRemaining = 0) then
+      Result := wrTimeout;
+  until Result <> wrIOCompletion;
+end; { TOtlMREW.EnterRead }
 
 procedure TOtlMREW.ExitRead;
 var
-  Readers: integer;
+  readers: integer;
 begin
-  Readers := FReaders.Decrement;
-  if Readers >= 0 then
+  readers := FReaders.Decrement;
+  if readers >= 0 then
     FZeroOrAbove.SetEvent;
-  if Readers = 0 then
-    FZero.SetEvent
-end;
+  if readers = 0 then
+    FZero.SetEvent;
+end; { TOtlMREW.ExitRead }
 
-
-function TOtlMREW.EnterWrite( Timeout: cardinal): TWaitResult;
+function TOtlMREW.EnterWrite(timeout: cardinal): TWaitResult;
 var
-  Watch: TStopWatch;
-  Elapsed: int64;
-  TimeoutRemaining: cardinal;
-  Readers: integer;
-  isStable: boolean;
-  This: TThreadId;
-  doWait: boolean;
-  Hit: boolean;
+  doWait          : boolean;
+  elapsed         : int64;
+  hit             : boolean;
+  isStable        : boolean;
+  readers         : integer;
+  this            : TThreadId;
+  timeoutRemaining: cardinal;
+  watch           : TStopWatch;
 begin
-  This := TThread.CurrentThread.ThreadID;
+  this := TThread.CurrentThread.ThreadID;
   FGate.Enter;
-  Readers := FReaders.Read;
-  if (Readers < 0) and (This = FWriterThread) and
-     (FReaders.CompareAndExchange( Readers, Readers - 1)) then
-      result := wrSignaled
-    else
-      result := wrIOCompletion;
+  readers := FReaders.Read;
+  if (readers < 0) and (this = FWriterThread)
+     and (FReaders.CompareAndExchange(readers, readers - 1))
+  then
+    Result := wrSignaled
+  else
+    Result := wrIOCompletion;
   FGate.Leave;
-  if result <> wrIOCompletion then exit;
-  TimeoutRemaining := Timeout;
-  Watch.Reset;
-  Watch.Start;
+  if Result <> wrIOCompletion then
+    Exit;
+  timeoutRemaining := timeout;
+  watch.Reset;
+  watch.Start;
   repeat
-    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-      begin
-      Elapsed := Watch.ElapsedMilliseconds;
-      if Elapsed > MaxCardinal then
-        Elapsed := MaxCardinal;
-      if TimeOut > Elapsed then
-          TimeOutRemaining := TimeOut - cardinal( Elapsed)
-        else
-          TimeOutRemaining := 0
-      end;
+    if (timeoutRemaining <> INFINITE) and (timeoutRemaining <> 0) then begin
+      elapsed := watch.ElapsedMilliseconds;
+      if elapsed > MaxCardinal then
+        elapsed := MaxCardinal;
+      if timeout > elapsed then
+        timeoutRemaining := timeout - cardinal(elapsed)
+      else
+        timeoutRemaining := 0;
+    end;
     FGate.Enter;
-    Readers := FReaders.Read;
-    doWait := (TimeOutRemaining > 0) and
-              (Readers <> 0) and
-              ((Readers >= 0) or (FWriterThread <> This));
+    readers := FReaders.Read;
+    doWait := (timeoutRemaining > 0)
+              and (readers <> 0)
+              and ((readers >= 0) or (FWriterThread <> this));
     FGate.Leave;
     if doWait then
-      FZero.WaitFor( TimeOutRemaining);
+      FZero.WaitFor(timeoutRemaining);
     FGate.Enter;
-    Hit := False;
+    hit := False;
     isStable := False;
     repeat
-      Readers := FReaders.Read;
-      if (Readers = 0) or ((Readers < 0) and (FWriterThread = This)) then
-          begin
-          if FReaders.CompareAndExchange( Readers, Readers - 1) then
-              begin
-              Hit := True;
-              isStable := True;
-              Dec( Readers);
-              if Readers = -1 then
-                FWriterThread := This
-              end
-          end
-        else
-          isStable := True
-    until isStable;
-    if Hit then
-      result := wrSignaled;
-    if Readers = 0 then
-        FZero.SetEvent
+      readers := FReaders.Read;
+      if (readers = 0) or ((readers < 0) and (FWriterThread = this)) then begin
+        if FReaders.CompareAndExchange(readers, readers - 1) then begin
+          hit := True;
+          isStable := True;
+          Dec(readers);
+          if readers = -1 then
+            FWriterThread := this;
+        end
+      end
       else
-        FZero.ResetEvent;
+        isStable := True;
+    until isStable;
+    if hit then
+      Result := wrSignaled;
+    if readers = 0 then
+      FZero.SetEvent
+    else
+      FZero.ResetEvent;
     FGate.Leave;
-    if (result = wrIOCompletion) and (TimeOutRemaining = 0) then
-      result := wrTimeout
-  until result <> wrIOCompletion
-end;
+    if (Result = wrIOCompletion) and (timeoutRemaining = 0) then
+      Result := wrTimeout;
+  until Result <> wrIOCompletion;
+end; { TOtlMREW.EnterWrite }
 
 procedure TOtlMREW.ExitWrite;
 var
-  Readers: integer;
+  readers: integer;
 begin
   FGate.Enter;
-  Readers := FReaders.Increment;
-  if Readers >= 0 then
+  readers := FReaders.Increment;
+  if readers >= 0 then
     FZeroOrAbove.SetEvent;
-  if Readers = 0 then
-    begin
+  if readers = 0 then begin
     FWriterThread := 0;
-    FZero.SetEvent
-    end;
-  FGate.Leave
-end;
+    FZero.SetEvent;
+  end;
+  FGate.Leave;
+end; { TOtlMREW.ExitWrite }
 
 function TOtlMREW.ReaderCount: integer;
 begin
-  result := FReaders.Read;
-  if result < -1 then
-    result := -1
-end;
+  Result := FReaders.Read;
+  if Result < -1 then
+    Result := -1;
+end; { TOtlMREW.ReaderCount }
+
+{ initialization }
+
+procedure InitUnit_BasicLevel;
+begin
+  TStopWatch.Create;
+end; { InitUnit_BasicLevel }
+
+procedure DoneUnit_BasicLevel;
+begin
+  // do nothing
+end; { DoneUnit_BasicLevel }
 
 initialization
-InitUnit_BasicLevel;
-
+  InitUnit_BasicLevel;
 finalization
-DoneUnit_BasicLevel;
+  DoneUnit_BasicLevel;
 end.

@@ -219,6 +219,18 @@ uses
   OtlPlatform.Sync.Basic;
 
 type
+  TLightEventFriend = class(TLightEvent)
+  end;
+
+  TCountDownFriend = class(TCountDown)
+  end;
+
+  TCountUpFriend = class(TCountUp)
+  end;
+
+  TFunctionalEventFriend = class(TFunctionalEvent)
+  end;
+
   TRecycleObject = class abstract(TObject, IInterface)
   private const
     CObjPooledFlag = integer($80000000);
@@ -292,12 +304,10 @@ type
   TRecycleSemaphore = class(TRecycleSynchro, ISemaphore)
   private type
     TSimulatedSemaphore = class(TFunctionalEvent)
-    strict private
-      [Volatile] FLock: TSBDSpinLock;
     protected
-      [Volatile]
-      FCurrentValue: TVolatileUint32;
-      FInitialValue: cardinal;
+      [Volatile] FCurrentValue: TVolatileUint32;
+      FInitialValue           : cardinal;
+      [Volatile] FLock        : TSBDSpinLock;
       procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean;
         var isInSignalledState: boolean); override;
     public
@@ -1083,7 +1093,7 @@ end; { TRecycleEvent.SetEvent }
 procedure TRecycleEvent.Reconfigure(manual: boolean; value: cardinal);
 begin
   if FBase is TLightEvent then
-    TLightEvent(FBase).Reconfigure(Manual, Value);
+    TLightEventFriend(FBase).Reconfigure(Manual, Value);
 end; { TRecycleEvent.Reconfigure }
 
 procedure TRecycleEvent.Signal;
@@ -1529,7 +1539,7 @@ end; { TRecycleCountDown.Pool }
 
 procedure TRecycleCountDown.Reconfigure(AInitial: cardinal);
 begin
-  FBase.Reconfigure(AInitial);
+  TCountDownFriend(FBase).Reconfigure(AInitial);
 end; { TRecycleCountDown.Reconfigure }
 
 procedure TRecycleCountDown.Signal;
@@ -1598,7 +1608,7 @@ end; { TRecycleCountUp.Pool }
 
 procedure TRecycleCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
 begin
-  FBase.Reconfigure(AInitial, AMaxValue);
+  TCountUpFriend(FBase).Reconfigure(AInitial, AMaxValue);
 end; { TRecycleCountUp.Reconfigure }
 
 procedure TRecycleCountUp.Signal;
@@ -1658,12 +1668,12 @@ end; { TRecycleFunctional.Pool }
 procedure TRecycleFunctional.Reconfigure(
   ASignalTest: TEventFunction; APLock: PSBDSpinLock);
 begin
-  FBase.Reconfigure(ASignalTest, APLock);
+  TFunctionalEventFriend(FBase).Reconfigure(ASignalTest, APLock);
 end; { TRecycleFunctional.Reconfigure }
 
 procedure TRecycleFunctional.ReleaseConfiguration;
 begin
-  FBase.Reconfigure(nil, nil);
+  TFunctionalEventFriend(FBase).Reconfigure(nil, nil);
 end; { TRecycleFunctional.ReleaseConfiguration }
 
 procedure TRecycleFunctional.Signal;
