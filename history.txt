@@ -10,6 +10,12 @@
   - remove OTL_Generics from code
   - remove OTL_HasArrayOfT from code
   - remove OTL_ERTTI from code
+  - $I -> $INCLUDE
+  - remove legacy ifdef?
+  - import mobile support
+    - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
+  - add build tests for mobile
+  - add build tests for all OtlAdditionalSymbols options (probably not for all combinations)
 
 3.07: <<unreleased>>
 - New features:

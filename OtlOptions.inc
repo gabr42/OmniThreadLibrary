@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -31,9 +31,12 @@
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
 ///   Last modification : 2012-09-23
-///   Version           : 1.04
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2017-02-11
+///       - Platform independant support is enabled in XE7.
+///       - Includes OtlAdditionalSymbols.inc.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
@@ -46,7 +49,7 @@
 ///       - Released.
 ///</para></remarks>
 
-// See the Configuration block below to configure your build process.
+// See the Configuration block in the OtlAddionalSymbols.inc file to configure your build process.
 
 {$ALIGN 8}
 {$BOOLEVAL OFF}
@@ -103,13 +106,14 @@
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
-{$IF CompilerVersion >= 29} //DXE8
+{$IF CompilerVersion >= 28} //DXE7
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
 {$IFNDEF MSWINDOWS}
 {$IFNDEF OTL_MobileSupport}
-{$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE8 is required for non-Windows platforms.'}
+{$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE7 is required for non-Windows platforms.'}
 {$ENDIF ~OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
 
+{$I OtlAdditionalSymbols.inc}
