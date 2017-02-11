@@ -4,8 +4,9 @@ interface
 uses OtlPlatform.Extras, System.Classes, OtlPlatform.Pipe,
      System.Generics.Collections,
      System.SysUtils, System.SyncObjs,
-     OtlPlatform.SynchroPrimitives.InterfaceLevel,
-     OtlPlatform.SynchroPrimitives.ModularLevel
+     OtlPlatform.Sync,
+     OtlPlatform.Sync.Intf,
+     OtlPlatform.Sync.Modular
      // Ensure that Atomic is last in the uses list, so that its record
      //  helpers (in the case of NDEF USE_SLACKSPACE_ALIGNMENT) are in scope.
      , OtlPlatform.Atomic
@@ -859,7 +860,7 @@ begin
   FIsThreadSafe := CollectionCursorIsThreadSafe;
   FProc         := Proc;
   if not FIsThreadSafe then
-    FCursorLock := WF.NewLock( KernalLocking);
+    FCursorLock := WF.NewLock( KernelLocking);
   inherited Create( WF, ThreadCount)
 end;
 
@@ -1163,7 +1164,7 @@ end;
 function TWorkFactory.NewLock( Locking: TLockingMechanism): ILock;
 begin
   case Locking of
-    KernalLocking: result := FSynchroPool.AcquireCriticalSection( True); //  _CreateCritLockIntf( FSynchroPool);
+    KernelLocking: result := FSynchroPool.AcquireCriticalSection( True); //  _CreateCritLockIntf( FSynchroPool);
     BusLocking   : result := FSynchroPool.AcquireSpinLock;               // _CreateSpinLockIntf;
   end
 end;

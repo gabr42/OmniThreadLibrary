@@ -1,13 +1,14 @@
-unit OtlPlatform.SynchroPrimitives.ModularLevel;
+unit OtlPlatform.Sync.Modular;
 // IMPORTANT!
 //  READ THE COMMENTS IN UNIT Otl.Parallel.SynchroPrimitives .
 
 {$I OtlOptions.inc}
 
 interface
-uses OtlPlatform.SynchroPrimitives.InterfaceLevel, System.SyncObjs
+uses OtlPlatform.Sync.Intf, System.SyncObjs
    , System.Classes, System.SysUtils, System.Generics.Collections
-   , OtlPlatform.SynchroPrimitives.ConditionVariables
+   , OtlPlatform.Sync
+   , OtlPlatform.Sync.ConditionVariables
  {$IFDEF MSWINDOWS}
    , Winapi.Windows
  {$ENDIF}
@@ -64,7 +65,7 @@ type
     const Peers: TSynchroArray; Datum: TObject): boolean;
   TTestClass = (TestAny, TestAll, TestCustom);
 
-  TCompositeSynchro = class( TInterfacedObject, ICompositeSynchro, ISynchro, ISynchroExInternal)
+  TCompositeSynchro = class(TInterfacedObject, ICompositeSynchro, ISynchro, ISynchroExInternal)
   private type
     TImplementation = ({$IFDEF MSWINDOWS}Direct, {$ENDIF} Indirect, Solo);
 
@@ -74,14 +75,12 @@ type
     {$ENDIF}
 
     procedure Signal;
+    function  GetCapabilities: TSynchroCapabilities; virtual;
     function  isSignalled: boolean;
-    function  isSignalled_IsSupported: boolean;
-    function  SignalState: OtlPlatform.SynchroPrimitives.InterfaceLevel.TSignalState;
+    function  SignalState: OtlPlatform.Sync.Intf.TSignalState;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;                              overload;
     function  WaitFor( var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;    overload;
     function  AsObject: TObject;
-    function  IsPoolManaged: boolean;
-    function  IsModular: boolean;
     function  LockingMechanism: TLockingMechanism;
 
     function  Factors: TSynchroArray;
@@ -123,7 +122,7 @@ type
     FEventFactory: TSynchroFactory;
     FLock: ILock;
     FDatum: TObject;
-    FCondVar: OtlPlatform.SynchroPrimitives.ConditionVariables.TSBDConditionVariable;
+    FCondVar: OtlPlatform.Sync.ConditionVariables.TSBDConditionVariable;
     FImplementation: TImplementation;
     FPropagation: TWaitPropagation;
     FTest: TConditionTest;
@@ -159,10 +158,10 @@ type
       function GetHandle: THandle;
     {$ENDIF}
 
+    function  GetCapabilities: TSynchroCapabilities; virtual;
     procedure Signal;                                    virtual;
     function  isSignalled: boolean;
-    function  isSignalled_IsSupported: boolean;
-    function  SignalState: OtlPlatform.SynchroPrimitives.InterfaceLevel.TSignalState;
+    function  SignalState: OtlPlatform.Sync.Intf.TSignalState;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult;     virtual;
     function  AsObject: TObject;
     function  IsPoolManaged: boolean;
@@ -205,10 +204,9 @@ type
 
   TModularEvent = class( TModularSynchro, IEvent)
   protected
+    function GetCapabilities: TSynchroCapabilities; override;
     procedure SetEvent;
     procedure ResetEvent;
-    function  isManualEvent: boolean;
-    function  isLight: boolean;
     procedure Signal;                                                  override;
     function  IsResourceCounting: boolean;                             override;
     function  ConsumeResource: TWaitResult;                            override;
@@ -221,10 +219,10 @@ type
 
  TModularSemaphore = class( TModularSynchro, ISemaphore)
   protected
+    function  GetCapabilities: TSynchroCapabilities; override;
     function  InitialValue: cardinal;
     function  Value: cardinal;
     procedure Reset;
-    function  isValueTesting_IsSupported: boolean;
     procedure Signal;                                                  override;
     function  IsResourceCounting: boolean;                             override;
     function  ConsumeResource: TWaitResult;                            override;
@@ -295,7 +293,7 @@ begin
   for i := 1 to FMemberCount - 1 do
     begin
     FFactors[ i] := AFactors[i];
-    if not FFactors[ i].IsModular then
+    if not (scModular in FFactors[ i].Capabilities) then
       raise TParallelException.Create( EOnlyModularCombinable);
     end;
 
@@ -571,16 +569,6 @@ begin
   result := False
 end;
 
-function TCompositeSynchro.IsModular: boolean;
-begin
-  result := True
-end;
-
-function TCompositeSynchro.IsPoolManaged: boolean;
-begin
-  result := False
-end;
-
 function TCompositeSynchro.IsResourceCounting: boolean;
 begin
   result := False
@@ -591,29 +579,24 @@ begin
   result := FIsSignalled
 end;
 
-function TCompositeSynchro.isSignalled_IsSupported: boolean;
-begin
-  result := True
-end;
-
 function TCompositeSynchro.LockingMechanism: TLockingMechanism;
 var
-  isKernal: boolean;
+  isKernel: boolean;
   {$IFDEF MSWINDOW}
   Memb: ISynchroExInternal;
   {$ENDIF}
 begin
-  isKernal := False;
+  isKernel := False;
   case self.FImplementation of
     {$IFDEF MSWINDOW}
-    Direct: isKernal := (Length( FFactors) > 0) and
+    Direct: isKernel := (Length( FFactors) > 0) and
                          Supports( FFactors[0], ISynchroExInternal, Memb) and
-                         (Memb.LockingMechanism = KernalLocking);
+                         (Memb.LockingMechanism = KernelLocking);
     {$ENDIF}
-    Indirect, Solo: isKernal := assigned( FLock) and FLock.IsKernalMode
+    Indirect, Solo: isKernel := assigned( FLock) and (scKernelMode in FLock.Capabilities);
   end;
-  if isKernal then
-      result := KernalLocking
+  if isKernel then
+      result := KernelLocking
     else
       result := BusLocking
 end;
@@ -662,7 +645,7 @@ begin
     FCondVar.Pulse
 end;
 
-function TCompositeSynchro.SignalState: OtlPlatform.SynchroPrimitives.InterfaceLevel.TSignalState;
+function TCompositeSynchro.SignalState: OtlPlatform.Sync.Intf.TSignalState;
 begin
   if FisSignalled then
       result := esSignalled
@@ -697,6 +680,11 @@ begin
         Obs.Value.PossibleStateChange( Me, Obs.Key)
       end
     end
+end;
+
+function TCompositeSynchro.GetCapabilities: TSynchroCapabilities;
+begin
+  Result := [scSupportsSignalled, scModular];
 end;
 
 
@@ -853,6 +841,13 @@ begin
   FObservers.AddOrSetValue( Token, Observer)
 end;
 
+function TModularSynchro.GetCapabilities: TSynchroCapabilities;
+begin
+  Result := [];
+  if scSupportsSignalled in FBase.Capabilities then
+    Include(Result, scSupportsSignalled);
+end;
+
 {$IFDEF MSWINDOWS}
 function TModularSynchro.GetHandle: THandle;
 begin
@@ -896,14 +891,9 @@ begin
   result := FBase.isSignalled
 end;
 
-function TModularSynchro.isSignalled_IsSupported: boolean;
-begin
-  result := FBase.isSignalled_IsSupported
-end;
-
 function TModularSynchro.LockingMechanism: TLockingMechanism;
 begin
-  result := KernalLocking
+  result := KernelLocking
 end;
 
 function TModularSynchro.NativeMultiwait(
@@ -1018,7 +1008,7 @@ procedure TModularSynchro.Signal;
 begin
 end;
 
-function TModularSynchro.SignalState: OtlPlatform.SynchroPrimitives.InterfaceLevel.TSignalState;
+function TModularSynchro.SignalState: OtlPlatform.Sync.Intf.TSignalState;
 begin
   result := FBase.SignalState
 end;
@@ -1088,26 +1078,23 @@ end;
 
 function TModularEvent.ConsumeResource: TWaitResult;
 begin
-  if not FBaseEvent.isManualEvent then
+  if not (scManualEvent in FBaseEvent.Capabilities) then
       result := FBaseEvent.WaitFor( 0) // Equivalent to ResetEvent()
     else
       result := wrSignaled
 end;
 
-
-function TModularEvent.isLight: boolean;
+function TModularEvent.GetCapabilities: TSynchroCapabilities;
 begin
-  result := False
-end;
-
-function TModularEvent.isManualEvent: boolean;
-begin
-  result := FBaseEvent.isManualEvent
+  Result := inherited GetCapabilities;
+  if scManualEvent in FBaseEvent.Capabilities then
+    Include(Result, scManualEvent);
+  Exclude(Result, scLight);
 end;
 
 function TModularEvent.IsResourceCounting: boolean;
 begin
-  result := not FBaseEvent.isManualEvent
+  result := not (scManualEvent in FBaseEvent.Capabilities);
 end;
 
 procedure TModularEvent.ResetEvent;
@@ -1145,6 +1132,12 @@ begin
   result := FBaseSem.WaitFor( 0)
 end;
 
+function TModularSemaphore.GetCapabilities: TSynchroCapabilities;
+begin
+  Result := inherited GetCapabilities;
+  Include(Result, scSupportsSignalled);
+end;
+
 
 function TModularSemaphore.InitialValue: cardinal;
 begin
@@ -1154,11 +1147,6 @@ end;
 function TModularSemaphore.IsResourceCounting: boolean;
 begin
   result := True
-end;
-
-function TModularSemaphore.isValueTesting_IsSupported: boolean;
-begin
-  result := FBaseSem.isValueTesting_IsSupported
 end;
 
 procedure TModularSemaphore.Reset;

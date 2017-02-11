@@ -1,11 +1,18 @@
-unit OtlPlatform.SynchroPrimitives.BasicLevel;
+unit OtlPlatform.Sync.Basic;
+
 // IMPORTANT!
-//  READ THE COMMENTS IN UNIT Otl.Parallel.SynchroPrimitives .
+//  READ THE COMMENTS IN UNIT OtlPlatform.SynchroPrimitives .
 
 {$I OtlOptions.inc}
 
 interface
-uses System.SyncObjs, System.Classes, System.SysUtils, OtlPlatform.Atomic;
+
+uses
+  System.SyncObjs,
+  System.Classes,
+  System.SysUtils,
+  OtlPlatform.Atomic,
+  OtlPlatform.Sync.Intf;
 
 type
 
@@ -131,9 +138,6 @@ type
   // Spin Lock
   // ====================
   //  Please find TSBDSpinLock in unit SBD.Parallel.Atomic
-
-
-  TEventFunction = reference to procedure( doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 
   TFunctionalEvent = class( TOtlSynchro)
     public

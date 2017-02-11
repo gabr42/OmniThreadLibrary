@@ -6,9 +6,10 @@ interface
 
 
 uses System.SyncObjs, System.Classes, System.SysUtils, System.Generics.Collections
-   , OtlPlatform.SynchroPrimitives.InterfaceLevel
-   , OtlPlatform.SynchroPrimitives.BasicLevel
-   , OtlPlatform.SynchroPrimitives.ModularLevel
+   , OtlPlatform.Sync
+   , OtlPlatform.Sync.Intf
+   , OtlPlatform.Sync.Basic
+   , OtlPlatform.Sync.Modular
  {$IFDEF MSWINDOWS}
    , Winapi.Windows
  {$ENDIF}
@@ -421,7 +422,7 @@ end;
 class function TSBDParallel.Event(
   ManualReset, InitialState: boolean): IEvent;
 begin
-  result := _CreateKernalEventIntf( nil, ManualReset, InitialState)
+  result := _CreateKernelEventIntf( nil, ManualReset, InitialState)
 end;
 
 
@@ -476,7 +477,7 @@ end;
 class function TSBDParallel.NewLock( Locking: TLockingMechanism): ILock;
 begin
   case Locking of
-    KernalLocking: result := _CreateCritLockIntf( nil);
+    KernelLocking: result := _CreateCritLockIntf( nil);
     BusLocking   : result := _CreateSpinLockIntf;
   end;
 end;

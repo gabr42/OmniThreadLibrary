@@ -2,7 +2,7 @@ unit OtlPlatform.Pipe;
 {$I OtlOptions.inc}
 interface
 uses SysUtils, OtlPlatform.Extras, System.SyncObjs, Generics.Collections,
-     OtlPlatform.SynchroPrimitives.InterfaceLevel,
+     OtlPlatform.Sync.Intf,
      OtlPlatform.Atomic;
 type
 
@@ -174,14 +174,14 @@ begin
   FisComplete := False;
   if assigned( WorkFactory) then
       begin
-      FSlowLock   := WorkFactory.NewLock( KernalLocking);
+      FSlowLock   := WorkFactory.NewLock( KernelLocking);
       FEnqueuable := WorkFactory.ModularEvent( True, FCanEnqueue);
       FDequeuable := WorkFactory.ModularEvent( True, FCanDequeue);
       FCompleted  := WorkFactory.ModularEvent( True, False      )
       end
     else
       begin
-      FSlowLock   := TSBDParallel.NewLock( KernalLocking);
+      FSlowLock   := TSBDParallel.NewLock( KernelLocking);
       FEnqueuable := TSBDParallel.Event( True, FCanEnqueue);
       FDequeuable := TSBDParallel.Event( True, FCanDequeue);
       FCompleted  := TSBDParallel.Event( True, False      )

@@ -1,9 +1,9 @@
-unit OtlPlatform.SynchroPrimitives.ConditionVariables;
+unit OtlPlatform.Sync.ConditionVariables;
 
 {$I OtlOptions.inc}
 
 interface
-uses OtlPlatform.SynchroPrimitives.InterfaceLevel, System.SyncObjs
+uses OtlPlatform.Sync.Intf, System.SyncObjs
    , System.Classes, System.SysUtils, System.Generics.Collections
  {$IFDEF MSWINDOWS}
    , Winapi.Windows

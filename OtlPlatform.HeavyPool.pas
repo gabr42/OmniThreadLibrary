@@ -3,7 +3,7 @@ unit OtlPlatform.HeavyPool;
 
 interface
 uses OtlPlatform.Extras, System.SysUtils, Generics.Collections,
-     OtlPlatform.SynchroPrimitives.InterfaceLevel, System.Classes,
+     OtlPlatform.Sync.Intf, System.Classes,
      OtlPlatform.Atomic;
 
 //Heavy Pool
@@ -129,7 +129,7 @@ implementation
 
 
 
-uses System.SyncObjs;
+uses System.SyncObjs, OtlPlatform.Sync;
 
 constructor THeavyPoolEx<T>.CreateHeavyEx(
   ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
@@ -159,7 +159,7 @@ begin
   FDestroyCount  := 0;
   FAcquireCount  := 0;
   FReleaseCount  := 0;
-  FWakeHouseKeeper  := _CreateKernalEventIntf( nil, False, True); // Auto-reset. Starts set.
+  FWakeHouseKeeper  := _CreateKernelEventIntf( nil, False, True); // Auto-reset. Starts set.
   FIsShutdown.Initialize( 0);
   FHouseKeeperThread := THouseKeeperThread<T>.CreateHouseKeeper( self);
   FWakeHouseKeeper.SetEvent
