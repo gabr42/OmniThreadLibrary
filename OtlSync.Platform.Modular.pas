@@ -189,8 +189,8 @@ type
   TModularSynchro = class abstract(TInterfacedObject, ISynchro, ISynchroExInternal)
   private
     FDedicatedToOneIndirectWaiter: boolean;
-    [Volatile] FDirectWaiters    : TVolatileInt32;
-    [Volatile] FIndirectWaiters  : TVolatileInt32;
+    [Volatile] FDirectWaiters    : TOmniVolatileInt32;
+    [Volatile] FIndirectWaiters  : TOmniVolatileInt32;
     FObservers                   : TDictionary<TObject,ISynchroObserver>;
   protected
     FUnionLock: ILock;

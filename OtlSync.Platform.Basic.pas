@@ -108,7 +108,7 @@ type
   strict private
     FIsSignalled    : boolean;
     FKernelUsers    : cardinal;
-    [Volatile] FLock: TAtomicSpinLock;
+    [Volatile] FLock: TOmniAtomicSpinLock;
     FManual         : boolean;
     FPulsar         : System.SyncObjs.TEvent; // Auto-reset
     FSpinMax        : cardinal;
@@ -161,17 +161,17 @@ type
 
   TFunctionalEvent = class(TOtlSynchro)
   strict protected
-    [Volatile] FLock  : TAtomicSpinLock;
-    FPLock            : PAtomicSpinLock;
+    [Volatile] FLock  : TOmniAtomicSpinLock;
+    FPLock            : POmniAtomicSpinLock;
     FPulsar           : TEvent; // Manual reset
     FPulsarIsSignalled: boolean;
     FSignalTest       : TOmniEventFunction;
   protected
-    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock); virtual;
+    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock); virtual;
     procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); virtual;
   public
     class constructor Create;
-    constructor Create(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+    constructor Create(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
     destructor Destroy; override;
     function  AsMWObject: TObject;  override;
     function  IsSignalled: boolean; override;
@@ -192,9 +192,9 @@ type
     end; { TCountDownFunction }
   var
     FCountDownFunc   : TCountDownFunction;
-    [Volatile] FValue: TVolatileUInt32;
+    [Volatile] FValue: TOmniVolatileUInt32;
     FInitialValue    : cardinal;
-    FLock            : TAtomicSpinLock;
+    FLock            : TOmniAtomicSpinLock;
   protected
     procedure Reconfigure(AInitial: cardinal);
   public
@@ -253,7 +253,7 @@ type
   TOtlMREW = class // Multi-read, exclusive write
   strict private
     FGate              : TCriticalSection;
-    [Volatile] FReaders: TVolatileInt32;
+    [Volatile] FReaders: TOmniVolatileInt32;
     FWriterThread      : TThreadId;
     FZero              : System.SyncObjs.TEvent;
     FZeroOrAbove       : System.SyncObjs.TEvent;
@@ -512,7 +512,7 @@ end; { TOtlSemaphore.WaitFor }
 
 { TFunctionalEvent }
 
-constructor TFunctionalEvent.Create(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+constructor TFunctionalEvent.Create(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   if assigned(APLock) then
     FPLock := APLock
@@ -544,7 +544,7 @@ begin
 end; { TFunctionalEvent.AsMWObject }
 
 procedure TFunctionalEvent.Reconfigure(
-  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+  ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   if not assigned(ASignalTest) then begin
     // Deconfigure in preparation for return to the object pool

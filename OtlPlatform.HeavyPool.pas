@@ -43,7 +43,7 @@ type
     FHouseKeeperThread: TThread;
     FWakeHouseKeeper: IEvent;
     FDefaultFlavour: IResourceFlavour;
-    [Volatile] FIsShutdown: TVolatileInt32;
+    [Volatile] FIsShutdown: TOmniVolatileInt32;
     FVanillaGenFunc: TGenerate<T>;
     FGenFunc       : TGenerateEx<T>;
     FRelFunc       : TDestroy<T>;

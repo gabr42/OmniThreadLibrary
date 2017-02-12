@@ -41,8 +41,8 @@ type
   protected
     FWorkFactory: TWorkFactory;
     FLock: ILock;
-    [Volatile] FStatus: TVolatileUint32; // (TTaskThreadStatus
-    [Volatile] FisTerminated: TVolatileUint32;
+    [Volatile] FStatus: TOmniVolatileUint32; // (TTaskThreadStatus
+    [Volatile] FisTerminated: TOmniVolatileUint32;
     FHouseKeeperAlert: IEvent; // Shared. Auto-reset.
     FWorkAlert: IEvent;        // Shared. Auto-reset
 
@@ -81,7 +81,7 @@ type
     FLock: ILock;
     FHouseKeeperAlert: IEvent; // Shared. Auto-reset.
     FWorkAlert: IEvent;        // Shared. Auto-reset
-    [Volatile] FisTerminated: TVolatileUint32;
+    [Volatile] FisTerminated: TOmniVolatileUint32;
     FAllThreadsDone: ICountDown;
     FMaxThreadCount: cardinal;     // Maximum allowable count of threads.
     FMinIdleCount: cardinal;       // Minimum count of idle threads that the house-keeper is to maintain, if permitted by Max properties.
@@ -121,14 +121,14 @@ type
 
   private
     FLock: ILock;
-    [Volatile] FThreadCount: TVolatileUint32; // Total number of threads either in-work, terminated or idle.
-    [Volatile] FIdleCount: TVolatileUint32;   // Count of idle threads available for tasking.
+    [Volatile] FThreadCount: TOmniVolatileUint32; // Total number of threads either in-work, terminated or idle.
+    [Volatile] FIdleCount: TOmniVolatileUint32;   // Count of idle threads available for tasking.
     FMaxThreadCount: cardinal;     // Maximum allowable count of threads.
     FMinIdleCount: cardinal;       // Minimum count of idle threads that the house-keeper is to maintain, if permitted by Max properties.
     FMaxIdleCount: cardinal;       // Maximum count of idle threads that  the house-keeper is to maintain.
-    [Volatile] FisTerminated: TVolatileUint32;
-    [Volatile] FWorkEnqueued: TVolatileUint32;
-    [Volatile] FWorkCapacity: TVolatileUint32;
+    [Volatile] FisTerminated: TOmniVolatileUint32;
+    [Volatile] FWorkEnqueued: TOmniVolatileUint32;
+    [Volatile] FWorkCapacity: TOmniVolatileUint32;
     FTaskQueue: TJobPipe;
     FReturnQueue: TJobPipe;
     FTaskThreads: TObjectList<TTaskThread>;
@@ -215,15 +215,15 @@ type
 
   TTask = class( TInterfacedObject, ITask, ITaskEx)
   private
-    [Volatile] FStatus: TVolatileUint32;
-    [Volatile] FDatum: TVolatileObject;
-    [Volatile] FAttachedThread: TVolatileObject;
+    [Volatile] FStatus: TOmniVolatileUint32;
+    [Volatile] FDatum: TOmniVolatileObject;
+    [Volatile] FAttachedThread: TOmniVolatileObject;
     FWorkFactory: TWorkFactory;
     FJob: TTaskProc;
     FReturnJob: TTaskProc;
     FhasThrownException: boolean;
     FParent: TTask;
-    FParentLock: TAtomicSpinLock;
+    FParentLock: TOmniAtomicSpinLock;
     FChildrenTasks: TArray<ITaskEx>;
     FTermination: ICountDown;
 
@@ -307,7 +307,7 @@ type
   TBaseFuture = class abstract( TTask)
   protected
     FCapturedException: Exception;
-    FReturnLock: TAtomicSpinLock;
+    FReturnLock: TOmniAtomicSpinLock;
 
     function AsIFuture: IInterface;   virtual; abstract;
 
@@ -360,7 +360,7 @@ type
 
   TJoinIntegerTask = class( TJoinTask)
   public
-    [Volatile] FValue: TVolatileInt32;
+    [Volatile] FValue: TOmniVolatileInt32;
     constructor CreateIntegerJoin( AWorkFactory: TWorkFactory; const ATasks: array of ITask; InitialValue: integer);
   protected
     procedure CleanUpAfterDoneOrCancelled; override;
@@ -392,7 +392,7 @@ type
       FStagerTasks: TList<ITask>;
       FInData: IPipe<U>;
       FOutData: IPipe<U>;
-      [Volatile] FIncompleteCount: TVolatileUint32;
+      [Volatile] FIncompleteCount: TOmniVolatileUint32;
 
       procedure Start;
       constructor CreateStage( AOwner: TValuePipeline<U>; StageTaskFactory: TStageTaskFactory; Capacity, LowWaterMark, HighWaterMark, ThreadCount: cardinal);
@@ -505,12 +505,12 @@ type
     FTestStack: TProblemStack;
 
     FhasCancelled: boolean;
-    [Volatile] FCapturedException: TVolatileObject; // Exception
+    [Volatile] FCapturedException: TOmniVolatileObject; // Exception
     FActionable: TEvent; // manual-reset event.
     FUnfinishedChildTasks: ICountDown;
     FIsActionable: boolean;
     FCountOfProblemsInWork: integer;
-    FQueueLock: TAtomicSpinLock;
+    FQueueLock: TOmniAtomicSpinLock;
 
     function  Act( Action: TForkJoinerAction; Problem: TForkJoinProblem; EnterLockProc: TProc_Bool): boolean;
     function  Test( Problem: TForkJoinProblem; EnterLockProc: TProc_Bool): boolean;
@@ -565,7 +565,7 @@ TCoForEachEnumerableIntfTaskFactory<T> = class sealed( TCoForEachEnumerableTaskF
     FCursor: IEnumerator<T>;
   end;
 
-procedure EnterLock( var SpinLock: TAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
+procedure EnterLock( var SpinLock: TOmniAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
 {$ENDREGION}
 
 implementation
@@ -2609,7 +2609,7 @@ begin
   inherited Create( FOwner.FWorkFactory, nil, FOwner)
 end;
 
-procedure EnterLock( var SpinLock: TAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
+procedure EnterLock( var SpinLock: TOmniAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
 begin
   if EnteredFlag = Value then exit;
   if Value then
@@ -2723,7 +2723,7 @@ begin
           begin
           result := False;
           EnterLockProc( True);
-          TAtomic.InitializeVolatile( FCapturedException,
+          TOmniAtomic.InitializeVolatile( FCapturedException,
             function: TObject
             begin
               result := TObject( AcquireExceptionObject)
@@ -2781,7 +2781,7 @@ begin
           begin
           result := False;
           EnterLockProc( True);
-          TAtomic.InitializeVolatile( FCapturedException,
+          TOmniAtomic.InitializeVolatile( FCapturedException,
             function: TObject
             begin
               result := TObject( AcquireExceptionObject)
@@ -2830,7 +2830,7 @@ begin
       except
         result := False;
         EnterLockProc( True);
-        TAtomic.InitializeVolatile( FCapturedException,
+        TOmniAtomic.InitializeVolatile( FCapturedException,
           function: TObject
           begin
             result := TObject( AcquireExceptionObject)

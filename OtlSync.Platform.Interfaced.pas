@@ -133,7 +133,7 @@ type
     procedure Leave;
     function  LockCount: integer;
     function  AsObject: TObject;
-    function  AsSpinLock: PAtomicSpinLock;
+    function  AsSpinLock: POmniAtomicSpinLock;
     function  AsCriticalSection: TCriticalSection;
     property Capabilities: TSynchroCapabilities read GetCapabilities;
   end;
@@ -181,11 +181,11 @@ type
     FCountUps          : TObjectQueue;
     FFunctionals       : TObjectQueue;
     [Volatile]
-    FAquisitionCount   : TVolatileUint32;
+    FAquisitionCount   : TOmniVolatileUint32;
     FPoolMax           : cardinal;
     //FSemaphoreCount    : cardinal;
   private
-    [Volatile] FLock: TAtomicSpinLock;
+    [Volatile] FLock: TOmniAtomicSpinLock;
     function Queues: TArray<TObjectQueue>;
   public
     constructor Create( APoolMax: cardinal);
@@ -201,7 +201,7 @@ type
     function  AcquireCountDown(InitialValue: cardinal; AReUse: boolean): ICountDown;
     function  AcquireCountUp(InitialValue, MaxValue: cardinal; AReUse: boolean): ICountUp;
     /// <remarks> To pulse a functional event, call Signal() on it. </remarks>
-    function  AcquireFunctionalEvent(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
+    function  AcquireFunctionalEvent(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): ISynchro;
     procedure PurgeAllPools;
     function  CanDestroy: boolean;
   end; { TSynchroFactory }
@@ -256,7 +256,7 @@ type
   var
     {$IFDEF AUTOREFCOUNT}[Weak]{$ENDIF}
     FPool: TSynchroFactory;
-    [Volatile] FRefCount: TVolatileInt32;
+    [Volatile] FRefCount: TOmniVolatileInt32;
     FAcquired: boolean;
   strict protected
     function  QueryInterface( const IID: TGUID; out Obj): HResult; stdcall;
@@ -300,7 +300,7 @@ type
     FAsyncClear     : boolean;
     FBase           : TOtlEvent;
     FIsLight        : boolean;
-    [Volatile] FLock: TAtomicSpinLock; // Only used for manual events.
+    [Volatile] FLock: TOmniAtomicSpinLock; // Only used for manual events.
     FManual         : boolean;
     FShadow         : TSignalState;
     FWaiters        : cardinal;
@@ -324,9 +324,9 @@ type
   private type
     TSimulatedSemaphore = class(TFunctionalEvent)
     protected
-      [Volatile] FCurrentValue: TVolatileUint32;
+      [Volatile] FCurrentValue: TOmniVolatileUint32;
       FInitialValue           : cardinal;
-      [Volatile] FLock        : TAtomicSpinLock;
+      [Volatile] FLock        : TOmniAtomicSpinLock;
       procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean;
         var isInSignalledState: boolean); override;
     public
@@ -362,7 +362,7 @@ type
   private
     FBase           : TOtlSemaphore;
     FInitial        : cardinal;
-    [Volatile] FLock: TAtomicSpinLock;
+    [Volatile] FLock: TOmniAtomicSpinLock;
     FShadow         : cardinal;
     FWaiters        : cardinal;
   protected
@@ -387,7 +387,7 @@ type
   TRecycleCrit = class(TRecycleObject, ILock)
   strict private
     FCrit                : TCriticalSection;
-    [Volatile] FLockCount: TVolatileInt32;
+    [Volatile] FLockCount: TOmniVolatileInt32;
   strict protected
     procedure Enter;
     procedure Leave;
@@ -397,14 +397,14 @@ type
     constructor Create(const APool: TSynchroFactory);
     destructor  Destroy; override;
     function  AsCriticalSection: TCriticalSection;
-    function  AsSpinLock: PAtomicSpinLock;
+    function  AsSpinLock: POmniAtomicSpinLock;
     function  GetCapabilities: TSynchroCapabilities; override;
     function  SignalState: TSignalState; override;
   end; { TRecycleCrit }
 
   TSpinIntf = class(TInterfacedObject, ILock)
   strict private
-    [Volatile] FLock: TAtomicSpinLock;
+    [Volatile] FLock: TOmniAtomicSpinLock;
   strict protected
     procedure Enter;
     procedure Leave;
@@ -413,7 +413,7 @@ type
     destructor  Destroy; override;
     function  AsCriticalSection: TCriticalSection;
     function  AsObject: TObject;
-    function  AsSpinLock: PAtomicSpinLock;
+    function  AsSpinLock: POmniAtomicSpinLock;
     function  GetCapabilities: TSynchroCapabilities; virtual;
     function  LockCount: integer;
   end; { TSpinIntf }
@@ -462,10 +462,10 @@ type
     FBase: TFunctionalEvent;
   protected
     function  Pool: TSynchroFactory.TObjectQueue; override;
-    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
     procedure ReleaseConfiguration; override;
   public
-    constructor Create(const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+    constructor Create(const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
     destructor  Destroy; override;
     function  GetCapabilities: TSynchroCapabilities; override;
     function  IsSignalled: boolean; override;
@@ -487,7 +487,7 @@ type
     public
       function  AsCriticalSection: TCriticalSection;
       function  AsObject: TObject;
-      function  AsSpinLock: PAtomicSpinLock;
+      function  AsSpinLock: POmniAtomicSpinLock;
       function  GetCapabilities: TSynchroCapabilities; virtual;
     end; { TFacade }
 
@@ -695,7 +695,7 @@ begin
 end; { TSynchroFactory.AcquireCriticalSection }
 
 function TSynchroFactory.AcquireFunctionalEvent(
-  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
+  ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): ISynchro;
 var
   Addend : TRecycleFunctional;
   DoPulse: boolean;
@@ -1419,7 +1419,7 @@ begin
   Result := FCrit;
 end; { TRecycleCrit.AsCriticalSection }
 
-function TRecycleCrit.AsSpinLock: PAtomicSpinLock;
+function TRecycleCrit.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := nil;
 end; { TRecycleCrit.AsSpinLock }
@@ -1483,7 +1483,7 @@ begin
   Result := Self;
 end; { TSpinIntf.AsObject }
 
-function TSpinIntf.AsSpinLock: PAtomicSpinLock;
+function TSpinIntf.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := @FLock;
 end; { TSpinIntf.AsSpinLock }
@@ -1653,7 +1653,7 @@ end; { TRecycleCountUp.WaitFor }
 { TRecycleFunctional }
 
 constructor TRecycleFunctional.Create(
-  const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+  const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   inherited Create(APool);
   FBase := TFunctionalEvent.Create(ASignalTest, APLock);
@@ -1685,7 +1685,7 @@ begin
 end; { TRecycleFunctional.Pool }
 
 procedure TRecycleFunctional.Reconfigure(
-  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
+  ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   TFunctionalEventFriend(FBase).Reconfigure(ASignalTest, APLock);
 end; { TRecycleFunctional.Reconfigure }
@@ -1717,7 +1717,7 @@ begin
   Result := Self;
 end; { TIntfMREW.TFacade.AsObject }
 
-function TIntfMREW.TFacade.AsSpinLock: PAtomicSpinLock;
+function TIntfMREW.TFacade.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := nil;
 end; { TIntfMREW.TFacade.AsSpinLock }

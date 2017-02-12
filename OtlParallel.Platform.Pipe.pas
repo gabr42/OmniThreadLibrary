@@ -105,7 +105,7 @@ type
     FSlowLock: ILock;
 
     // FQuickLock MUST be aligned to SizeOf( TThreadId). This could be 4 or 8 depending on platform.
-    [Volatile] FQuickLock: TAtomicSpinLock;
+    [Volatile] FQuickLock : TOmniAtomicSpinLock;
     [Volatile] FCanDequeue: boolean;
     [Volatile] FCanEnqueue: boolean;
     [Volatile] FisComplete: boolean;
