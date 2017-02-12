@@ -46,7 +46,7 @@
 unit OtlSync.Platform.Basic;
 
 // IMPORTANT!
-//  READ THE COMMENTS IN UNIT OtlPlatform.Sync.
+//  READ THE COMMENTS IN UNIT OtlSync.Platform.
 
 {$I OtlOptions.inc}
 
@@ -271,8 +271,7 @@ type
 implementation
 
 uses
-  System.Diagnostics,
-  OtlSync.Platform.Errors;
+  System.Diagnostics;
 
 const
   MaxCardinal      : cardinal = Cardinal($FFFFFFFF);
@@ -319,7 +318,7 @@ end; { TKernelEvent.GetHandle }
 
 function TKernelEvent.IsSignalled: boolean;
 begin
-  raise TParallelException.Create( EIsSignalledNotSupported);
+  raise TSynchroException.Create( EIsSignalledNotSupported);
 end; { TKernelEvent.IsSignalled }
 
 procedure TKernelEvent.ResetEvent;
@@ -498,7 +497,7 @@ end; { TOtlSemaphore.GetHandle }
 
 function TOtlSemaphore.IsSignalled: boolean;
 begin
-  raise TParallelException.Create(EIsSignalledNotSupported);
+  raise TSynchroException.Create(EIsSignalledNotSupported);
 end; { TOtlSemaphore.IsSignalled }
 
 procedure TOtlSemaphore.Signal;
@@ -738,7 +737,7 @@ begin
     Result := 0;
   FLock.Leave;
   if bonkers then
-    raise TParallelException.Create(ESignalCountUpDownRange)
+    raise TSynchroException.Create(ESignalCountUpDownRange)
   else
     FCountDownFunc.Pulse;
 end; { TCountDown.Allocate }
@@ -765,7 +764,7 @@ begin
     val := FValue.Increment;
   FLock.Leave;
   if bonkers then
-    raise TParallelException.Create(ESignalCountUpDownRange)
+    raise TSynchroException.Create(ESignalCountUpDownRange)
   else if val = 1 then
     FCountDownFunc.Pulse;
 end; { TCountDown.CounterSignal }
@@ -790,7 +789,7 @@ begin
     FCountDown := TCountDown.Create(FMaxValue - FInitialValue)
   else begin
     FCountDown := nil;
-    raise TParallelException.Create(ESignalCountUpDownRange)
+    raise TSynchroException.Create(ESignalCountUpDownRange)
   end;
 end; { TCountUp.Create }
 

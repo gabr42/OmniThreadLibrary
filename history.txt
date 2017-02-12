@@ -5,6 +5,11 @@
 
 - TODO:
   - Test TOmniBlockingCollection<T> in 64-bit mode.
+  - import mobile support
+    - rename OtlPlatform.Atomic/TSBDSpinLock to ???
+    - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
+    - next: OtlSync
+    - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
   - Remove support for 2007-2010.
   - IDataFlow
   - remove OTL_Generics from code
@@ -12,11 +17,6 @@
   - remove OTL_ERTTI from code
   - $I -> $INCLUDE
   - remove legacy ifdef?
-  - import mobile support
-    - rename OtlPlatform.Atomic/TSBDSpinLock to ???
-    - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
-    - next: OtlSync
-    - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
   - add build tests for mobile
   - add build tests for all OtlAdditionalSymbols options (probably not for all combinations)
 

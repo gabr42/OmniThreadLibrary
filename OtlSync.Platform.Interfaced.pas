@@ -46,7 +46,7 @@
 unit OtlSync.Platform.Interfaced;
 
 // IMPORTANT!
-//  READ THE COMMENTS IN UNIT OtlPlatform.SynchroPrimitives.
+//  READ THE COMMENTS IN UNIT OtlSync.Platform.
 
 {$I OtlOptions.inc}
 
@@ -235,7 +235,6 @@ function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): ISemaphore;
 implementation
 
 uses
-  OtlSync.Platform.Errors,
   OtlSync.Platform.Basic;
 
 type
@@ -595,7 +594,7 @@ var
 {$ENDIF}
 begin
   if FAquisitionCount.Read <> 0 then
-    raise TParallelException.Create(ECannotDestroySynchroFactory);
+    raise TSynchroException.Create(ECannotDestroySynchroFactory);
   PurgeAllPools;
   {$IFNDEF AUTOREFCOUNT}
   for Queue in Queues do
@@ -1066,7 +1065,7 @@ begin
     Result := FShadow = esSignalled;
     FLock.Leave;
     if not ok then
-      raise TParallelException.Create(EIsSignalledNotSupported);
+      raise TSynchroException.Create(EIsSignalledNotSupported);
   end
 end; { TRecycleEvent.IsSignalled }
 
@@ -1342,7 +1341,7 @@ begin
   state := SignalState;
   Result := state = esSignalled;
   if state = esUnknown then
-    raise TParallelException.Create(EIsSignalledNotSupported);
+    raise TSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.IsSignalled }
 
 function TNativeSemaphore.SignalState: TSignalState;
@@ -1361,7 +1360,7 @@ end; { TNativeSemaphore.SignalState }
 
 procedure TNativeSemaphore.Reset;
 begin
-  raise TParallelException.Create(EIsSignalledNotSupported);
+  raise TSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.Reset }
 
 procedure TNativeSemaphore.Signal;
@@ -1383,7 +1382,7 @@ begin
     Result := FShadow;
   FLock.Leave;
   if not ok then
-    raise TParallelException.Create(EIsSignalledNotSupported);
+    raise TSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.Value }
 
 function TNativeSemaphore.WaitFor(Timeout: cardinal): TWaitResult;

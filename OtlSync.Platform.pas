@@ -1,4 +1,5 @@
-///<summary>Common documentation for platform independant synchronization primitives.
+///<summary>Documentation for platform independant synchronization primitives.
+///    Also contains some commonly used type.
 ///    Part of the OmniThreadLibrary project. Requires Delphi XE7.</summary>
 ///<author>Sean B. Durkin</author>
 ///<author>Primoz Gabrijelcic</author>
@@ -141,10 +142,72 @@ unit OtlSync.Platform;
 
 interface
 
+uses
+  System.SysUtils;
+
 type
   TEventFunction = reference to procedure(doAcquire: boolean;
     var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 
+type
+  TSynchroException = class(Exception)
+  public
+    FErrCode: integer;
+    constructor Create(ErrCode: integer; const Args: array of const); overload;
+    constructor Create(ErrCode: integer); overload;
+  end; { TSynchroException }
+
+  TSynchroExceptionMessage = record
+    ErrCode: integer;
+    MsgFmt: string;
+  end; { TSynchroExceptionMessage }
+
+const
+  ESynchroIDFirst = 1;
+  EIsSignalledNotSupported     = 1;
+  ESignalCountUpDownRange      = 2;
+  ECannotDestroySynchroFactory = 3;
+  ECompositeNeedsOneFactor     = 4;
+  EOnlyModularCombinable       = 5;
+  ECompositeSynchroMixedBag    = 6;
+  ESynchroIDLast = 6;
+
+  SynchroExceptionMessages: array [ESynchroIDFirst..ESynchroIDLast] of TSynchroExceptionMessage = (
+    (ErrCode: EIsSignalledNotSupported;     MsgFmt: 'IsSignalled() not supported on this class.'),
+    (ErrCode: ESignalCountUpDownRange;      MsgFmt: 'Signal() out of range for TCountUp/Down'),
+    (ErrCode: ECannotDestroySynchroFactory; MsgFmt: 'Cannot destroy TSynchroFactory while there are still allocated synchros.'),
+    (ErrCode: ECompositeNeedsOneFactor;     MsgFmt: 'TCompositeSynchro needs at least one factor.'),
+    (ErrCode: EOnlyModularCombinable;       MsgFmt: 'TCompositeSynchro - all factors must be modular sychros.'),
+    (ErrCode: ECompositeSynchroMixedBag;    MsgFmt: 'TConditionEvent created with invalid mixed bag of direct and indirect members.')
+  );
+
 implementation
+
+{ TSynchroException }
+
+constructor TSynchroException.Create(
+  ErrCode: integer; const Args: array of const);
+var
+  i     : integer;
+  msgFmt: string;
+begin
+  msgFmt := '';
+  for i := Low(SynchroExceptionMessages) to High(SynchroExceptionMessages) do
+    if SynchroExceptionMessages[i].ErrCode = ErrCode then begin
+      msgFmt := SynchroExceptionMessages[i].msgFmt;
+      break;
+    end;
+  if msgFmt = '' then
+    msgFmt := Format('Unknown error (%d)', [ErrCode])
+  else if msgFmt.Contains('%') and (Length(Args) > 0) then
+    msgFmt := Format(msgFmt, Args);
+  FErrCode := ErrCode;
+  inherited Create(msgFmt);
+end; { TSynchroException.Create }
+
+constructor TSynchroException.Create(ErrCode: integer);
+begin
+  Create(ErrCode, []);
+end; { TSynchroException.Create }
 
 end.
