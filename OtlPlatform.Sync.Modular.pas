@@ -194,10 +194,10 @@ type
   TModularEvent = class(TModularSynchro, IEvent)
   protected
     FBaseEvent: IEvent;
-    function  GetCapabilities: TSynchroCapabilities; override;
   public
     constructor Create(const ABase: IEvent; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
     function  ConsumeResource: TWaitResult; override;
+    function  GetCapabilities: TSynchroCapabilities; override;
     function  IsResourceCounting: boolean; override;
     procedure ResetEvent;
     procedure SetEvent;
@@ -238,6 +238,20 @@ implementation
 uses
   System.Diagnostics,
   OtlPlatform.Errors;
+
+{ TCompositeSynchro.TMemberObserver }
+
+constructor TCompositeSynchro.TMemberObserver.Create(AOwner: TCompositeSynchro);
+begin
+  FOwner := AOwner;
+end; { TCompositeSynchro.TMemberObserver.Create }
+
+procedure TCompositeSynchro.TMemberObserver.PossibleStateChange(
+  const Source: ISynchroExInternal; Token: TObject);
+begin
+  // Index of signaller is integer(Token)
+  FOwner.Signal;
+end; { TCompositeSynchro.TMemberObserver.PossibleStateChange }
 
 { TCompositeSynchro }
 
@@ -573,199 +587,184 @@ end; { TCompositeSynchro.LockingMechanism }
 function TCompositeSynchro.NativeMultiwait(
   const Synchros: array of TObject; Timeout: cardinal; AAll: boolean; var SignallerIndex: integer): TWaitResult;
 begin
-  Result := wrError
-end;
+  Result := wrError;
+end; { TCompositeSynchro.NativeMultiwait }
 
 function TCompositeSynchro.NativeMultiwaitObject: TObject;
 begin
-  Result := nil
-end;
+  Result := nil;
+end; { TCompositeSynchro.NativeMultiwaitObject }
 
 function TCompositeSynchro.PermitsDedicatedSoleIndirectClient: boolean;
 begin
-  Result := False
-end;
+  Result := False;
+end; { TCompositeSynchro.PermitsDedicatedSoleIndirectClient }
 
 function TCompositeSynchro.PermitsDirectClients: boolean;
 begin
-  Result := False
-end;
+  Result := False;
+end; { TCompositeSynchro.PermitsDirectClients }
 
 function TCompositeSynchro.PermitsIndirectClients: boolean;
 begin
-  Result := True
-end;
+  Result := True;
+end; { TCompositeSynchro.PermitsIndirectClients }
 
 procedure TCompositeSynchro.RegisterDedicatedSoleIndirectClient(Delta: integer);
 begin
-end;
+  // do nothing
+end; { TCompositeSynchro.RegisterDedicatedSoleIndirectClient }
 
 procedure TCompositeSynchro.RegisterDirectClient(Delta: integer);
 begin
-end;
+  // do nothing
+end; { TCompositeSynchro.RegisterDirectClient }
 
 procedure TCompositeSynchro.RegisterIndirectClient(Delta: integer);
 begin
-end;
+  // do nothing
+end; { TCompositeSynchro.RegisterIndirectClient }
 
 procedure TCompositeSynchro.Signal;
 begin
   if (FImplementation in [Indirect, Solo]) and assigned(FCondVar) then
-    FCondVar.Pulse
-end;
+    FCondVar.Pulse;
+end; { TCompositeSynchro.Signal }
 
 function TCompositeSynchro.SignalState: OtlPlatform.Sync.Intf.TSignalState;
 begin
   if FIsSignalled then
       Result := esSignalled
     else
-      Result := esNotSignalled
-end;
+      Result := esNotSignalled;
+end; { TCompositeSynchro.SignalState }
 
 procedure TCompositeSynchro.Unenrol(ObserverToken: TObject);
 begin
-  FObservers.Remove(ObserverToken)
-end;
+  FObservers.Remove(ObserverToken);
+end; { TCompositeSynchro.Unenrol }
 
 function TCompositeSynchro.UnionLock: ILock;
 begin
-  Result := FLock
-end;
-
+  Result := FLock;
+end; { TCompositeSynchro.UnionLock }
 
 procedure TCompositeSynchro.BubbleUp(var Me: ISynchroExInternal);
 var
-  Obs: TPair<TObject,ISynchroObserver>;
-  Dummy: integer;
+  fummy   : integer;
+  observer: TPair<TObject,ISynchroObserver>;
 begin
-  if FTest(Dummy, FFactors, FDatum) <> FIsSignalled  then
-    begin
+  if FTest(fummy, FFactors, FDatum) <> FIsSignalled then begin
     FIsSignalled := not FIsSignalled;
-    if assigned(FObservers) then
-      begin
+    if assigned(FObservers) then begin
       if not assigned(Me) then
         Me := Self;
-      for Obs in FObservers do
-        Obs.Value.PossibleStateChange(Me, Obs.Key)
-      end
-    end
-end;
+      for observer in FObservers do
+        observer.Value.PossibleStateChange(Me, observer.Key);
+    end;
+  end;
+end; { TCompositeSynchro.BubbleUp }
 
 function TCompositeSynchro.GetCapabilities: TSynchroCapabilities;
 begin
   Result := [scSupportsSignalled, scModular];
-end;
-
+end; { TCompositeSynchro.GetCapabilities }
 
 function TCompositeSynchro.WaitFor(
   var SignallerIdx: integer; TimeOut: cardinal): TWaitResult;
 var
-  Me: ISynchroExInternal;
-  Idx: integer;
-  ImproperConstructionDetected: boolean;
+  idx                 : integer;
+  improperConstruction: boolean;
+  me                  : ISynchroExInternal;
 begin
-  Idx := -1;
+  idx := -1;
   Result := wrError;
-  ImproperConstructionDetected := False;
+  improperConstruction := False;
   case FImplementation of
     Indirect, Solo:
       begin
       Result := FCondVar.WaitFor(TimeOut,
 
         function(doAquireResource: boolean): boolean
-          var
-            ConsumedMembers, i: integer;
-            Synchro: ISynchroExInternal;
-            Confirmed: boolean;
+        var
+          confirmed      : boolean;
+          consumedMembers: integer;
+          i              : integer;
+          synchro        : ISynchroExInternal;
+        begin
+          Result := FTest(idx, FFactors, FDatum);
+          if Result 
+             and doAquireResource 
+             and (FPropagation <> NoConsume) 
+             and FHasAtLeastOneResourceCounter then
           begin
-            Result := FTest(Idx, FFactors, FDatum);
-            if Result and doAquireResource and
-               (FPropagation <> NoConsume) and FHasAtLeastOneResourceCounter then
+            ConsumedMembers := 0;
+            for i := 0 to FMemberCount - 1 do begin
+              if (((FPropagation = ConsumeOneSignalled) and (i = idx)) 
+                   or (FPropagation = ConsumeAllSignalled)) 
+                 and Supports(FFactors[i], ISynchroExInternal, Synchro) 
+                 and Synchro.IsSignalled 
+                 and Synchro.IsResourceCounting then
               begin
-              ConsumedMembers := 0;
-              for i := 0 to FMemberCount - 1 do
+                Confirmed := Synchro.ConsumeResource = wrSignaled;
+                Inc(ConsumedMembers);
+                if Confirmed then 
+                  continue;
+                Result := False;
+                if (FPropagation = ConsumeOneSignalled) 
+                   or ((FPropagation = ConsumeAllSignalled) and (ConsumedMembers = 1)) then
                 begin
-                if (((FPropagation = ConsumeOneSignalled) and (i = Idx)) or
-                     (FPropagation = ConsumeAllSignalled)) and
-                  Supports(FFactors[i], ISynchroExInternal, Synchro) and
-                  Synchro.IsSignalled and Synchro.IsResourceCounting then
-                    begin
-                    Confirmed := Synchro.ConsumeResource = wrSignaled;
-                    Inc(ConsumedMembers);
-                    if Confirmed then continue;
-                    Result := False;
-                    if (FPropagation = ConsumeOneSignalled) or
-                      ((FPropagation = ConsumeAllSignalled) and (ConsumedMembers = 1)) then
-                        begin
-                        // We have a competitor waiter on one of the members and the competitor
-                        //  slipped in ahead of us, so loop back and try again.
-                        end
-                      else
-                        begin
-                        // This is an error. We should never get here if TConditionEvent is properly constructed.
-                        // To prevent the possibility of this condition, we disallow members which have
-                        //  multiple waiters (including TConditionEvent) and where the propagation is ConsumeAllSignalled
-                        //  and at least one of the members are resource-counting synchros.
-                        ImproperConstructionDetected := True;
-                        Result := True
-                        end;
-                    break
-                    end
+                  // We have a competitor waiter on one of the members and the competitor
+                  //  slipped in ahead of us, so loop back and try again.
                 end
-             end
-          end,
+                else begin
+                  // This is an error. We should never get here if TConditionEvent is properly constructed.
+                  // To prevent the possibility of this condition, we disallow members which have
+                  //  multiple waiters (including TConditionEvent) and where the propagation is ConsumeAllSignalled
+                  //  and at least one of the members are resource-counting synchros.
+                  improperConstruction := True;
+                  Result := True
+                end;
+                break;
+              end;
+            end;
+          end;
+        end,
 
         procedure
-          begin
-            BubbleUp(Me)
-          end);
+        begin
+          BubbleUp(me);
+        end);
 
-      if ImproperConstructionDetected then
+      if improperConstruction then
         Result := wrError;
 
       if Result = wrSignaled then
-        SignallerIdx := Idx
+        SignallerIdx := idx;
       end;
 
     {$IFDEF MSWINDOWS}
     Direct:
       begin
-      Result := (FFactors[0] as ISynchroExInternal).NativeMultiwait(FSynchroObjs, TimeOut, FTestClass = TestAll, SignallerIdx);
-      if Result in [wrSignaled, wrTimeOut] then
-        begin
-        FLock.Enter;
-        BubbleUp(Me);
-        FLock.Leave
-        end
-      end
+        Result := (FFactors[0] as ISynchroExInternal).NativeMultiwait(FSynchroObjs, TimeOut, FTestClass = TestAll, SignallerIdx);
+        if Result in [wrSignaled, wrTimeOut] then begin
+          FLock.Enter;
+          BubbleUp(me);
+          FLock.Leave;
+        end;
+      end;
     {$ENDIF}
     end;
-end;
+end; { TCompositeSynchro.WaitFor }
 
-
-
-function TCompositeSynchro.WaitFor(Timeout: cardinal): TWaitResult;
+function TCompositeSynchro.WaitFor(timeout: cardinal): TWaitResult;
 var
-  Dummy: integer;
+  dummy: integer;
 begin
-  Result := WaitFor(Dummy, TimeOut)
-end;
+  Result := WaitFor(dummy, timeout);
+end; { TCompositeSynchro.WaitFor }
 
-
-constructor TCompositeSynchro.TMemberObserver.Create(AOwner: TCompositeSynchro);
-begin
-  FOwner := AOwner
-end;
-
-procedure TCompositeSynchro.TMemberObserver.PossibleStateChange(
-  const Source: ISynchroExInternal; Token: TObject);
-begin
-  // Index of signaller is integer(Token)
-  FOwner.Signal
-end;
-
-
-
+{ TModularSynchro }
 
 constructor TModularSynchro.Create(
   const ABase: ISynchro; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
@@ -777,54 +776,53 @@ begin
   FIndirectWaiters.Initialize(0);
   FObservers := TDictionary<TObject,ISynchroObserver>.Create;
   FDedicatedToOneIndirectWaiter := False;
-  FEventFactory := AEventFactory
-end;
+  FEventFactory := AEventFactory;
+end; { TModularSynchro.Create }
 
 destructor TModularSynchro.Destroy;
 begin
   FDirectWaiters.Finalize;
   FIndirectWaiters.Finalize;
   FObservers.Free;
-  inherited
-end;
-
+  inherited;
+end; { TModularSynchro.Destroy }
 
 function TModularSynchro.AsMWObject: TObject;
 begin
-  Result := FBase.AsMWObject
-end;
+  Result := FBase.AsMWObject;
+end; { TModularSynchro.AsMWObject }
 
 function TModularSynchro.AsObject: TObject;
 begin
-  Result := Self
-end;
+  Result := Self;
+end; { TModularSynchro.AsObject }
 
 function TModularSynchro.ConsumeResource: TWaitResult;
 begin
-  Result := FBase.WaitFor(0)
-end;
+  Result := FBase.WaitFor(0);
+end; { TModularSynchro.ConsumeResource }
 
 procedure TModularSynchro.Enrol(
   const Observer: ISynchroObserver; Token: TObject);
 begin
-  FObservers.AddOrSetValue(Token, Observer)
-end;
+  FObservers.AddOrSetValue(Token, Observer);
+end; { TModularSynchro.Enrol }
 
 function TModularSynchro.GetCapabilities: TSynchroCapabilities;
 begin
   Result := [];
   if scSupportsSignalled in FBase.Capabilities then
     Include(Result, scSupportsSignalled);
-end;
+end; { TModularSynchro.GetCapabilities }
 
 {$IFDEF MSWINDOWS}
 function TModularSynchro.GetHandle: THandle;
 begin
   if assigned(FBase) then
-      Result := FBase.Handle
-    else
-      Result := 0
-end;
+    Result := FBase.Handle
+  else
+    Result := 0;
+end; { TModularSynchro.GetHandle }
 {$ENDIF}
 
 function TModularSynchro.IsCompatibleNativeMWObject(
@@ -834,125 +832,122 @@ begin
   Result := assigned(Reference) and assigned(Peer) and
             (Reference.ClassType = Peer.ClassType) and
             (Reference <> Peer) and
-            (Reference is THandleObject) and (Peer is THandleObject)
+            (Reference is THandleObject) and (Peer is THandleObject);
   {$ELSE}
-  Result := False
+  Result := False;
   {$ENDIF}
-end;
+end; { TModularSynchro.IsCompatibleNativeMWObject }
 
 function TModularSynchro.IsModular: boolean;
 begin
-  Result := True
-end;
+  Result := True;
+end; { TModularSynchro.IsModular }
 
 function TModularSynchro.IsPoolManaged: boolean;
 begin
-  Result := False
-end;
+  Result := False;
+end; { TModularSynchro.IsPoolManaged }
 
 function TModularSynchro.IsResourceCounting: boolean;
 begin
-  Result := False
-end;
+  Result := False;
+end; { TModularSynchro.IsResourceCounting }
 
 function TModularSynchro.IsSignalled: boolean;
 begin
-  Result := FBase.IsSignalled
-end;
+  Result := FBase.IsSignalled;
+end; { TModularSynchro.IsSignalled }
 
 function TModularSynchro.LockingMechanism: TLockingMechanism;
 begin
-  Result := KernelLocking
-end;
+  Result := KernelLocking;
+end; { TModularSynchro.LockingMechanism }
 
 function TModularSynchro.NativeMultiwait(
   const Synchros: array of TObject; Timeout: cardinal; AAll: boolean; var SignallerIndex: integer): TWaitResult;
 {$IFDEF MSWINDOWS}
 var
-  HandleObjs: THandleObjectArray;
-  L, i: integer;
-  Obj: TObject;
-  Ok: boolean;
-  SignaledObj: THandleObject;
+  handleObjs : THandleObjectArray;
+  i          : integer;
+  l          : integer;
+  obj        : TObject;
+  ok         : boolean;
+  signaledObj: THandleObject;
 {$ENDIF}
 begin
   SignallerIndex := -1;
   {$IFDEF MSWINDOWS}
-  L  := Length(Synchros);
-  Ok := False;
-  SetLength(HandleObjs, L);
-  for i := 0 to L - 1 do
-    begin
-    Obj := Synchros[i];
-    Ok  := assigned(Obj) and (Obj is THandleObject);
-    if not Ok then break;
-    HandleObjs[i] := THandleObject(Obj)
-    end;
-  if Ok and (L >= 2) then
-      begin
-      Result := THandleObject.WaitForMultiple(HandleObjs, Timeout, AAll, SignaledObj, False, 0);
-      if (Result = wrSignaled) and (not AAll) then
-        for i := 0 to L - 1 do
-          begin
-          if HandleObjs[i] <> SignaledObj then continue;
-          SignallerIndex := i;
-          break
-          end
+  l  := Length(Synchros);
+  ok := False;
+  SetLength(handleObjs, l);
+  for i := 0 to l - 1 do begin
+    obj := Synchros[i];
+    ok  := assigned(obj) and (obj is THandleObject);
+    if not ok then 
+      break;
+    handleObjs[i] := THandleObject(obj)
+  end;
+  if ok and (l >= 2) then begin
+    Result := THandleObject.WaitForMultiple(handleObjs, Timeout, AAll, signaledObj, False, 0);
+    if (Result = wrSignaled) and (not AAll) then
+      for i := 0 to l - 1 do begin
+        if handleObjs[i] <> signaledObj then 
+          continue;
+        SignallerIndex := i;
+        break;
       end
-    else
+    end
+  else
   {$ENDIF}
-      Result := wrError
-end;
+    Result := wrError;
+end; { TModularSynchro.NativeMultiwait }
 
 function TModularSynchro.NativeMultiwaitObject: TObject;
 begin
-  Result := nil
-end;
+  Result := nil;
+end; { TModularSynchro.NativeMultiwaitObject }
 
 procedure TModularSynchro.ObserverProc(Proc: TProc);
 // This method assumes that RefCount > 0, so don't call from destructor.
 var
-  Obs: TPair<TObject,ISynchroObserver>;
-  Me : ISynchroExInternal;
+  me      : ISynchroExInternal;
+  observer: TPair<TObject,ISynchroObserver>;
 begin
-  Me := Self as ISynchroExInternal;
+  me := Self as ISynchroExInternal;
   FUnionLock.Enter;
   try
     Proc;
-    for Obs in FObservers do
-      Obs.Value.PossibleStateChange(Me, Obs.Key)
-  finally
-    FUnionLock.Leave
-    end
-end;
+    for observer in FObservers do
+      observer.Value.PossibleStateChange(me, observer.Key);
+  finally FUnionLock.Leave; end;
+end; { TModularSynchro.ObserverProc }
 
 function TModularSynchro.PermitsDedicatedSoleIndirectClient: boolean;
 begin
-  Result := (FIndirectWaiters.Read = 0) and (FDirectWaiters.Read = 0)
-end;
+  Result := (FIndirectWaiters.Read = 0) and (FDirectWaiters.Read = 0);
+end; { TModularSynchro.PermitsDedicatedSoleIndirectClient }
 
 function TModularSynchro.PermitsDirectClients: boolean;
 {$IFDEF MSWINDOWS}
 var
-  Obj: TObject;
+  obj: TObject;
 {$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
   Result := (FIndirectWaiters = 0) and (not FDedicatedToOneIndirectWaiter);
-  if Result then
-    begin
-    Obj := FBase.AsMWObject;
-    Result := assigned(Obj) and (Obj is THandleObject)
-    end
+  if Result then begin
+    obj := FBase.AsMWObject;
+    Result := assigned(obj) and (obj is THandleObject);
+  end
   {$ELSE}
-  Result := False
+    Result := False;
   {$ENDIF}
-end;
+end; { TModularSynchro.PermitsDirectClients }
 
 function TModularSynchro.PermitsIndirectClients: boolean;
 begin
-  Result := FDirectWaiters.Read = 0
-end;
+  Result := FDirectWaiters.Read = 0;
+end; { TModularSynchro.PermitsIndirectClients }
 
 procedure TModularSynchro.RegisterDedicatedSoleIndirectClient(Delta: integer);
 begin
@@ -960,98 +955,93 @@ begin
       FDedicatedToOneIndirectWaiter := True
     else if Delta < 0 then
       FDedicatedToOneIndirectWaiter := False;
-  RegisterIndirectClient(Delta)
-end;
+  RegisterIndirectClient(Delta);
+end; { TModularSynchro.RegisterDedicatedSoleIndirectClient }
 
 procedure TModularSynchro.RegisterDirectClient(Delta: integer);
 begin
-  FDirectWaiters.Add(Delta)
-end;
+  FDirectWaiters.Add(Delta);
+end; { TModularSynchro.RegisterDirectClient }
 
 procedure TModularSynchro.RegisterIndirectClient(Delta: integer);
 begin
-  FInDirectWaiters.Add(Delta)
-end;
+  FInDirectWaiters.Add(Delta);
+end; { TModularSynchro.RegisterIndirectClient }
 
 procedure TModularSynchro.Signal;
 begin
-end;
+  // do nothing
+end; { TModularSynchro.Signal }
 
 function TModularSynchro.SignalState: OtlPlatform.Sync.Intf.TSignalState;
 begin
-  Result := FBase.SignalState
-end;
+  Result := FBase.SignalState;
+end; { TModularSynchro.SignalState }
 
 procedure TModularSynchro.Unenrol(ObserverToken: TObject);
 begin
-  FObservers.Remove(ObserverToken)
-end;
+  FObservers.Remove(ObserverToken);
+end; { TModularSynchro.Unenrol }
 
 function TModularSynchro.UnionLock: ILock;
 begin
-  Result := FUnionLock
-end;
+  Result := FUnionLock;
+end; { TModularSynchro.UnionLock }
 
-function TModularSynchro.WaitFor(Timeout: cardinal): TWaitResult;
+function TModularSynchro.WaitFor(timeout: cardinal): TWaitResult;
 var
-  Wrap: ISynchro;
-  MeAsFactors: TSynchroArray;
-  WR: TWaitResult;
-  AnyTest: TConditionTest;
+  anyTest    : TConditionTest;
+  meAsFactors: TSynchroArray;
+  waitRes    : TWaitResult;
+  wrap       : ISynchro;
 begin
-  WR := wrIOCompletion;
-  AnyTest := TCompositeSynchro.AnyTest();
-  ObserverProc(procedure begin
-    if FIndirectWaiters.Read > 0 then
-        begin
+  waitRes := wrIOCompletion;
+  anyTest := TCompositeSynchro.anyTest();
+  ObserverProc(
+    procedure 
+    begin
+      if FIndirectWaiters.Read > 0 then begin
         if FDedicatedToOneIndirectWaiter then
-            WR := wrError
-          else
-            begin
-            SetLength(MeAsFactors, 1);
-            MeAsFactors[0] := Self as ISynchro;
-            Wrap := TCompositeSynchro.Create(MeAsFactors, FEventFactory, ConsumeOneSignalled,
-                          AnyTest, TestAny, True);
-            WR   := wrSignaled
-            end
-        end
-      else
-        begin
+          waitRes := wrError
+        else begin
+          SetLength(meAsFactors, 1);
+          meAsFactors[0] := Self as ISynchro;
+          wrap := TCompositeSynchro.Create(meAsFactors, FEventFactory, ConsumeOneSignalled,
+                    anyTest, TestAny, True);
+          waitRes := wrSignaled;
+        end;
+      end
+      else begin
         FDirectWaiters.Increment;
-        WR := wrSignaled
-        end
+        waitRes := wrSignaled;
+      end;
     end);
-  case WR of
+  case waitRes of
     wrSignaled:
       begin
-      if assigned(Wrap) then
-          Result := Wrap.WaitFor(Timeout)
+        if assigned(wrap) then
+          Result := wrap.WaitFor(timeout)
         else
-          Result := FBase.WaitFor(Timeout)
+          Result := FBase.WaitFor(timeout);
       end;
-
     else // wrTimeout, wrAbandoned, wrError, wrIOCompletion:
-      Result := wrError
-    end
-end;
-
-
-
+      Result := wrError;
+  end;
+end; { TModularSynchro.WaitFor }
 
 constructor TModularEvent.Create(const ABase: IEvent; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
 begin
   FBaseEvent := ABase;
-  inherited Create(FBaseEvent, AUnionLock, AEventFactory)
-end;
-
+  inherited Create(FBaseEvent, AUnionLock, AEventFactory);
+end; { TModularEvent.Create }
 
 function TModularEvent.ConsumeResource: TWaitResult;
 begin
   if not (scManualEvent in FBaseEvent.Capabilities) then
-      Result := FBaseEvent.WaitFor(0) // Equivalent to ResetEvent()
-    else
-      Result := wrSignaled
-end;
+    Result := FBaseEvent.WaitFor(0) // Equivalent to ResetEvent()
+  else
+    Result := wrSignaled;
+end; { TModularEvent.ConsumeResource }
 
 function TModularEvent.GetCapabilities: TSynchroCapabilities;
 begin
@@ -1059,147 +1049,158 @@ begin
   if scManualEvent in FBaseEvent.Capabilities then
     Include(Result, scManualEvent);
   Exclude(Result, scLight);
-end;
+end; { TModularEvent.GetCapabilities }
 
 function TModularEvent.IsResourceCounting: boolean;
 begin
   Result := not (scManualEvent in FBaseEvent.Capabilities);
-end;
+end; { TModularEvent.IsResourceCounting }
 
 procedure TModularEvent.ResetEvent;
 begin
-  ObserverProc(procedure begin
-    FBaseEvent.ResetEvent
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseEvent.ResetEvent;
+    end);
+end; { TModularEvent.ResetEvent }
 
 procedure TModularEvent.SetEvent;
 begin
-  ObserverProc(procedure begin
-    FBaseEvent.SetEvent
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseEvent.SetEvent;
+    end);
+end; { TModularEvent.SetEvent }
 
 procedure TModularEvent.Signal;
 begin
-  SetEvent
-end;
+  SetEvent;
+end; { TModularEvent.Signal }
 
-
-
-
+{ TModularSemaphore }
 
 constructor TModularSemaphore.Create(
   const ABase: ISemaphore; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
 begin
   FBaseSem := ABase;
-  inherited Create(FBaseSem, AUnionLock, AEventFactory)
-end;
+  inherited Create(FBaseSem, AUnionLock, AEventFactory);
+end; { TModularSemaphore.Create }
 
 function TModularSemaphore.ConsumeResource: TWaitResult;
 begin
-  Result := FBaseSem.WaitFor(0)
-end;
+  Result := FBaseSem.WaitFor(0);
+end; { TModularSemaphore.ConsumeResource }
 
 function TModularSemaphore.GetCapabilities: TSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
-end;
-
+end; { TModularSemaphore.GetCapabilities }
 
 function TModularSemaphore.InitialValue: cardinal;
 begin
-  Result := FBaseSem.InitialValue
-end;
+  Result := FBaseSem.InitialValue;
+end; { TModularSemaphore.InitialValue }
 
 function TModularSemaphore.IsResourceCounting: boolean;
 begin
-  Result := True
-end;
+  Result := True;
+end; { TModularSemaphore.IsResourceCounting }
 
 procedure TModularSemaphore.Reset;
 begin
-  ObserverProc(procedure begin
-    FBaseSem.Reset
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseSem.Reset;
+    end);
+end; { TModularSemaphore.Reset }
 
 procedure TModularSemaphore.Signal;
 begin
-  ObserverProc(procedure begin
-    FBaseSem.Signal
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseSem.Signal;
+    end);
+end;  { TModularSemaphore.Signal }
 
 function TModularSemaphore.Value: cardinal;
 begin
-  Result := FBaseSem.Value
-end;
+  Result := FBaseSem.Value;
+end; { TModularSemaphore.Value }
 
+{ TModularCountDown }
 
 constructor TModularCountDown.Create(
   const ABase: ICountDown; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
 begin
   FBaseCountDown := ABase;
-  inherited Create(FBaseCountDown, AUnionLock, AEventFactory)
-end;
-
+  inherited Create(FBaseCountDown, AUnionLock, AEventFactory);
+end; { TModularCountDown.Create }
 
 function TModularCountDown.ConsumeResource: TWaitResult;
 begin
-  Result := wrSignaled
-end;
+  Result := wrSignaled;
+end; { TModularCountDown.ConsumeResource }
 
 procedure TModularCountDown.CounterSignal;
 begin
-  ObserverProc(procedure begin
-    FBaseCountDown.CounterSignal
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseCountDown.CounterSignal;
+    end);
+end; { TModularCountDown.CounterSignal }
 
 function TModularCountDown.InitialValue: cardinal;
 begin
-  Result := FBaseCountDown.InitialValue
-end;
+  Result := FBaseCountDown.InitialValue;
+end; { TModularCountDown.InitialValue }
 
 function TModularCountDown.IsResourceCounting: boolean;
 begin
-  Result := False
-end;
+  Result := False;
+end; { TModularCountDown.IsResourceCounting }
 
 procedure TModularCountDown.Signal;
 begin
-  ObserverProc(procedure begin
-    FBaseCountDown.Signal
-    end)
-end;
+  ObserverProc(
+    procedure 
+    begin
+      FBaseCountDown.Signal;
+    end);
+end;  { TModularCountDown.Signal }
 
 function TModularCountDown.SignalHit: boolean;
 var
-  Res: boolean;
+  res: boolean;
 begin
-  ObserverProc(procedure begin
-    res := FBaseCountDown.SignalHit
+  ObserverProc(
+    procedure 
+    begin
+      res := FBaseCountDown.SignalHit;
     end);
-  Result := Res
-end;
-
+  Result := res;
+end; { TModularCountDown.SignalHit }
 
 function TModularCountDown.Allocate: cardinal;
 var
-  Res: cardinal;
+  res: cardinal;
 begin
-  ObserverProc(procedure begin
-    res := FBaseCountDown.Allocate
+  ObserverProc(
+    procedure 
+    begin
+      res := FBaseCountDown.Allocate;
     end);
-  Result := Res
-end;
-
+  Result := res;
+end; { TModularCountDown.Allocate }
 
 function TModularCountDown.Value: cardinal;
 begin
-  Result := FBaseCountDown.Value
-end;
+  Result := FBaseCountDown.Value;
+end; { TModularCountDown.Value }
 
 end.

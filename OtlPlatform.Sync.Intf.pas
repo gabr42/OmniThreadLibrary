@@ -108,7 +108,7 @@ type
       ///  Basically, it is only available for heavy events and native semaphores,
       ///  all on a Windows platform.
       /// </remarks>
-      property Handle: THandle   read GetHandle;
+      property Handle: THandle read GetHandle;
     {$ENDIF}
     property Capabilities: TSynchroCapabilities read GetCapabilities;
   end; { ISynchro }
