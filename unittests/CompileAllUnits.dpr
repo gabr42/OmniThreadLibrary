@@ -33,10 +33,10 @@ uses
   OtlHooks,
   OtlLogger,
   OtlRegister,
-//  OtlSuperObject,
   OtlTask,
   OtlTaskControl,
-  OtlThreadPool;
+  OtlThreadPool,
+  OtlParallel.DataFlow;
 
 begin
   try
