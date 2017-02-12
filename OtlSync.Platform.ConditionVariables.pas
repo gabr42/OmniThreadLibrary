@@ -197,7 +197,7 @@ var
   event           : IEvent;
   {$ENDIF} {$ENDIF}
 begin
-  Result := wrError;
+//  Result := wrError;
   if (timeout <> INFINITE) and (timeout <> 0) then begin
     timer.Reset;
     timer.Start

@@ -310,7 +310,8 @@ uses
   OtlTask,
   OtlContainers,
   OtlThreadPool,
-  OtlContainerObserver;
+  OtlContainerObserver,
+  OtlSync.Platform.Interfaced;
 
 type
   IOmniTaskControl = interface;
@@ -1522,7 +1523,7 @@ begin
         sync := nil; // to remove the warning in the 'finally' clause below
         otSharedInfo_ref.MonitorLock.Acquire;
         try
-          sync := otSharedInfo_ref.MonitorLock.SyncObj;
+          sync := otSharedInfo_ref.MonitorLock.SyncObj as TSynchroObject;
           {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
@@ -3648,7 +3649,7 @@ end; { TOmniTaskControl.WithLock }
 
 function TOmniTaskControl.WithLock(const lock: IOmniCriticalSection): IOmniTaskControl;
 begin
-  Result := WithLock(lock.GetSyncObj, false);
+  Result := WithLock(lock.AsCriticalSection, false);
 end; { TOmniTaskControl.WithLock }
 
 { TOmniThread }

@@ -61,7 +61,8 @@ interface
 uses
   OtlCommon,
   OtlContainers,
-  OtlCollections;
+  OtlCollections,
+  OtlSync.Platform.Interfaced;
 
 type
   ///<summary>Source provider capabilities.</summary>

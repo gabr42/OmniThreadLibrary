@@ -104,7 +104,8 @@ uses
   OtlCommon,
   OtlSync,
   OtlContainerObserver,
-  OtlContainers;
+  OtlContainers,
+  OtlSync.Platform.Interfaced;
 
 const
   //reserved for internal OTL messaging

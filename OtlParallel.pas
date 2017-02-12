@@ -341,7 +341,8 @@ uses
   OtlTaskControl,
   OtlDataManager,
   OtlEventMonitor,
-  OtlThreadPool;
+  OtlThreadPool,
+  OtlSync.Platform.Interfaced;
 
 const
   CDefaultPipelineThrottle = 10240;

@@ -109,7 +109,8 @@ uses
   OtlComm,
   OtlSync,
   OtlTaskControl,
-  OtlThreadPool;
+  OtlThreadPool,
+  OtlSync.Platform.Interfaced;
 
 type
   TOmniMonitorTaskEvent = procedure(const task: IOmniTaskControl) of object;

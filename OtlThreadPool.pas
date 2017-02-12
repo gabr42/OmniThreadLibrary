@@ -156,7 +156,8 @@ uses
   Classes,
   SysUtils,
   OtlCommon,
-  OtlTask;
+  OtlTask,
+  OtlSync.Platform.Interfaced;
 
 const
   CDefaultIdleWorkerThreadTimeout_sec = 10;
@@ -733,14 +734,14 @@ var
 begin
   {$IFDEF LogThreadPool}Log('Stop thread %s', [Description]);{$ENDIF LogThreadPool}
   if assigned(owtWorkItemLock) then begin // Stop may be called during Cancel[All] and owtWorkItemLock may already be destroyed
-    owtWorkItemLock.Acquire;
+    owtWorkItemLock.Enter;
     try
       if assigned(WorkItem_ref) then begin
         task := WorkItem_ref.task;
         if assigned(task) then
           task.Terminate;
       end;
-    finally owtWorkItemLock.Release end;
+    finally owtWorkItemLock.Leave; end;
   end;
 end; { TOTPWorkerThread.Asy_Stop }
 
@@ -751,7 +752,7 @@ function TOTPWorkerThread.Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boo
 begin
   {$IFDEF LogThreadPool}Log('Asy_TerminateWorkItem thread %s', [Description]);{$ENDIF LogThreadPool}
   Result := false;
-  owtWorkItemLock.Acquire;
+  owtWorkItemLock.Enter;
   try
     if assigned(WorkItem_ref) then begin
       {$IFDEF LogThreadPool}Log('Thread %s has work item', [Description]);{$ENDIF LogThreadPool}
@@ -766,7 +767,7 @@ begin
       else if assigned(workItem) then
         Result := false;
     end;
-  finally owtWorkItemLock.Release; end;
+  finally owtWorkItemLock.Leave; end;
 end; { TOTPWorkerThread.Asy_TerminateWorkItem }
 
 function TOTPWorkerThread.Comm: IOmniCommunicationEndpoint;
@@ -852,7 +853,7 @@ begin
         ((stopUserTime - startUserTime) / 10000), Round
         ((stopKernelTime - startKernelTime) / 10000)]); {$ENDIF LogThreadPool}
   finally task := nil; end;
-  if assigned(owtWorkItemLock) then owtWorkItemLock.Acquire;
+  if assigned(owtWorkItemLock) then owtWorkItemLock.Enter;
   try
     workItem := WorkItem_ref;
     WorkItem_ref := nil;
@@ -862,7 +863,7 @@ begin
         [Description, workItem.Description]); {$ENDIF LogThreadPool}
       Comm.Send(MSG_COMPLETED, workItem);
     end;
-  finally if assigned(owtWorkItemLock) then owtWorkItemLock.Release; end;
+  finally if assigned(owtWorkItemLock) then owtWorkItemLock.Leave; end;
   SetThreadName('Idle thread worker');
 end; { TOTPWorkerThread.ExecuteWorkItem }
 
@@ -874,7 +875,7 @@ end; { TOTPWorkerThread.GetOwnerCommEndpoint }
 function TOTPWorkerThread.GetWorkItemInfo(var scheduledAt, startedAt: TDateTime;
   var description: string): boolean;
 begin
-  owtWorkItemLock.Acquire;
+  owtWorkItemLock.Enter;
   try
     if not assigned(WorkItem_ref) then
       Result := false
@@ -885,15 +886,15 @@ begin
       UniqueString(description);
       Result := true;
     end;
-  finally owtWorkItemLock.Release; end;
+  finally owtWorkItemLock.Leave; end;
 end; { TOTPWorkerThread.GetWorkItemInfo }
 
 function TOTPWorkerThread.IsExecuting(taskID: int64): boolean;
 begin
-  owtWorkItemLock.Acquire;
+  owtWorkItemLock.Enter;
   try
     Result := assigned(WorkItem_ref) and (WorkItem_ref.UniqueID = taskID);
-  finally owtWorkItemLock.Release; end;
+  finally owtWorkItemLock.Leave; end;
 end; { TOTPWorkerThread.IsExecuting }
 
 procedure TOTPWorkerThread.Log(const msg: string; const params: array of const);
@@ -914,13 +915,13 @@ end; { TOTPWorkerThread.Start }
 
 function TOTPWorkerThread.WorkItemDescription: string;
 begin
-  owtWorkItemLock.Acquire;
+  owtWorkItemLock.Enter;
   try
     if assigned(WorkItem_ref) then
       Result := WorkItem_ref.Description
     else
       Result := '';
-  finally owtWorkItemLock.Release; end;
+  finally owtWorkItemLock.Leave; end;
 end; { TOTPWorkerThread.WorkItemDescription }
 
 { TOTPWorker }

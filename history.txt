@@ -10,8 +10,8 @@
     - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
-    - TFixedCriticalSection is duplicated in OtlSync.Platform.Basic and OtlSync
     - merge basic platform synchronisation primitives to OtlSync?
+    - is TOmniTransitionEvent still needed?
   - Remove support for 2007-2010.
   - IDataFlow
   - remove OTL_Generics from code
@@ -20,11 +20,13 @@
   - rename OtlAdditionalSymbols conditionals into OTL_ form
     - maybe include that unit into OtlOptions.inc?
     - maybe include only non-configurable part into OtlOptions.inc?
+  - can I remove $IFDEF MSWINDOWS in OtlSync/TOmniMREW?
   - $I -> $INCLUDE
   - remove legacy ifdef?
   - add build tests for mobile
   - add build tests for all OtlAdditionalSymbols options (probably not for all combinations)
   - add conditional to call Assert_IsXXX methods in OtlSync.Platform.Atomic
+    - also in OtlSync
     - use it in unit testing
 
 3.07: <<unreleased>>
