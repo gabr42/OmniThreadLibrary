@@ -62,6 +62,8 @@ uses
  OtlSync.Platform.Interfaced;
 
 type
+  TOmniConditionVariable = OtlSync.Platform.ConditionVariables.TOmniConditionVariable;
+
   ISimpleConditionEvent = interface ['{1EAEEE8F-54E1-44B5-BE3C-AFC14A465F74}']
     procedure Pulse;
     function  WaitFor: TWaitResult;
@@ -123,7 +125,7 @@ type
     end; { TMemberObserver }
   var
     FAllowSolo                   : boolean;
-    FCondVar                     : OtlSync.Platform.ConditionVariables.TSBDConditionVariable;
+    FCondVar                     : TOmniConditionVariable;
     FDatum                       : TObject;
     FEventFactory                : TSynchroFactory;
     FFactors                     : TSynchroArray;
@@ -352,7 +354,7 @@ begin
     {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
       and assigned(FEventFactory)
     {$ENDIF} {$ENDIF}  then
-      FCondVar := TSBDConditionVariable.Create(
+      FCondVar := TOmniConditionVariable.Create(
           {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
             AEventFactory, True,
           {$ENDIF} {$ENDIF}

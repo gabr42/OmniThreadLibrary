@@ -1,98 +1,132 @@
+///<summary>Platform independent condition variables.
+///    Part of the OmniThreadLibrary project. Requires Delphi XE7.</summary>
+///<author>Sean B. Durkin</author>
+///<author>Primoz Gabrijelcic</author>
+///<license>
+///This software is distributed under the BSD license.
+///
+///Copyright (c) 2017 Sean B. Durkin, Primoz Gabrijelcic
+///All rights reserved.
+///
+///Redistribution and use in source and binary forms, with or without modification,
+///are permitted provided that the following conditions are met:
+///- Redistributions of source code must retain the above copyright notice, this
+///  list of conditions and the following disclaimer.
+///- Redistributions in binary form must reproduce the above copyright notice,
+///  this list of conditions and the following disclaimer in the documentation
+///  and/or other materials provided with the distribution.
+///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
+///  products derived from this software without specific prior written permission.
+///
+///THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+///ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+///WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+///DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+///ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+///(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+///LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+///ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+///(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+///SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+///</license>
+///<remarks><para>
+///   Home              : http://www.omnithreadlibrary.com
+///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Authors           : Seam B. Durkin, Primoz Gabrijelcic
+///     E-Mail          : primoz@gabrijelcic.org
+///     Blog            : http://thedelphigeek.com
+///   Creation date     : 2017-02-12
+///   Last modification : 2017-02-12
+///   Version           : 1.0
+///</para><para>
+///   History:
+///     1.0: 2017-02-12
+///       - Imported from mobile/Otl.Parallel.ConditionVariables.pas.
+
 unit OtlSync.Platform.ConditionVariables;
 
 {$I OtlOptions.inc}
 
 interface
-uses System.SyncObjs
-   , System.Classes, System.SysUtils, System.Generics.Collections
- {$IFDEF MSWINDOWS}
-   , Winapi.Windows
- {$ENDIF}
-   , OtlSync.Platform.Atomic,
-   OtlSync.Platform.Interfaced;
+
+uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
+  System.SyncObjs, System.Classes, System.SysUtils, System.Generics.Collections,
+  OtlSync.Platform.Atomic,
+  OtlSync.Platform.Interfaced;
 
 const
   FOREVER = INFINITE;
-  MaxCardinal: cardinal = cardinal( -1);
 
 type
-  TSBDConditionVariable = class
-  public
-    FLock: ILock;
+  TOmniConditionVariable = class
+  strict private
+    {$IFDEF USE_EMBARCADERO_TConditionVariableCS}
+    FCritSect         : TCriticalSection;
+    FCondVar          : TConditionVariableCS;
+    {$ELSEIF defined(MSWINDOWS)}
+    FCritSect         : TRTLCriticalSection;
+    FCondVar          : RTL_CONDITION_VARIABLE;
+    {$ELSE}
+    FWaiters          : TList<IEvent>;
+    FDoSerializePulses: boolean;
+    {$ENDIF}
+  protected
+    FLock        : ILock;
     {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
-      FEventFactory: TSynchroFactory;
+    FEventFactory: TSynchroFactory;
     {$ENDIF} {$ENDIF}
-
+  public
+    class constructor Create;
+    constructor Create(
+      {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
+      AEventFactory: TSynchroFactory; AdoSerializePulses: boolean;
+      {$ENDIF} {$ENDIF}
+      const ALock: ILock);
+    destructor  Destroy; override;
     procedure Pulse;
-
     /// <remarks>Call from within lock. Sleeps outside of the lock.</remarks>
-    function  WaitUntilPulse( TimeOut: cardinal = FOREVER): TWaitResult;
-
+    function  WaitUntilPulse(timeout: cardinal = FOREVER): TWaitResult;
     /// <remarks>Call outside of lock. Condition is tested within the lock, but it sleeps outside of the lock.</remarks>
     /// <param name="Condition">The condition to wait for. Must not raise an exception.</param>
     /// <param name="UpdateStateBasedOnConditionChange">If the condition test fails, but it detects a state change, and we are about to enter a sleep state, call this procedure. May be nil. Must not raise an exception..</param>
     /// <param name="CommitAcceptanceOfCondition">If the condition test passes, but it requires a commital step, call this function. If it returns wrSignaled, the commit was successful.
     ///   If unsuccesful, but could roll back, then return wrAbandoned, otherwise return wrError. May be nil. Must not raise an exception..</param>
     function  WaitFor(
-                TimeOut: cardinal;
-                Condition                        : System.SysUtils.TFunc<boolean,boolean>;
-                UpdateStateBasedOnConditionChange: System.SysUtils.TProc)
-                  : TWaitResult;
-
-    class constructor Create;
-    constructor Create(
-      {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
-        AEventFactory: TSynchroFactory; AdoSerializePulses: boolean;
-      {$ENDIF} {$ENDIF}
-        const ALock: ILock);
-    destructor  Destroy; override;
-
-  private
-    {$IFDEF USE_EMBARCADERO_TConditionVariableCS}
-    FCritSect: TCriticalSection;
-    FCondVar: TConditionVariableCS;
-    {$ELSE}
-
-    {$IFDEF MSWINDOWS}
-    FCritSect: TRTLCriticalSection;
-    FCondVar : RTL_CONDITION_VARIABLE;
-
-    {$ELSE}
-  private
-    FWaiters: TList<IEvent>;
-    FdoSerializePulses: boolean;
-    {$ENDIF}
-    {$ENDIF}
-  end;
-
+                timeout                          : cardinal;
+                condition                        : System.SysUtils.TFunc<boolean,boolean>;
+                updateStateBasedOnConditionChange: System.SysUtils.TProc)
+                : TWaitResult;
+  end; { TOmniConditionVariable }
 
 implementation
 
-
-
-
-
-
-
-
-uses Diagnostics;
-
+uses
+  System.Diagnostics;
 
 {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFDEF MSWINDOWS}
-  type TCriticalSection_AccessProtected = class( TCriticalSection) end;
+type
+  TCriticalSection_AccessProtected = class(TCriticalSection) end;
 {$ENDIF} {$ENDIF}
 
-class constructor TSBDConditionVariable.Create;
-begin
-  TStopwatch.Create
-end;
+const
+  MaxCardinal: cardinal = cardinal(-1);
 
-constructor TSBDConditionVariable.Create(
-      {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
-        AEventFactory: TSynchroFactory;
-        AdoSerializePulses: boolean;
-      {$ENDIF} {$ENDIF}
-      const ALock: ILock);
+{ TOmniConditionVariable }
+
+class constructor TOmniConditionVariable.Create;
+begin
+  TStopwatch.Create;
+end; { TOmniConditionVariable.Create }
+
+constructor TOmniConditionVariable.Create(
+  {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
+  AEventFactory: TSynchroFactory;
+  AdoSerializePulses: boolean;
+  {$ENDIF} {$ENDIF}
+  const ALock: ILock);
 begin
   FLock := ALock;
 
@@ -100,184 +134,154 @@ begin
   FCritSect := FLock.AsCriticalSection;
   FCondVar  := TConditionVariableCS.Create;
   Assert( assigned( FCritSect));
-  {$ELSE}
-
-  {$IFDEF MSWINDOWS}
+  {$ELSEIF defined(MSWINDOWS)}
   Assert( assigned( FLock.AsCriticalSection));
   FCritSect := TCriticalSection_AccessProtected( FLock.AsCriticalSection).FSection;
   WinApi.Windows.InitializeConditionVariable( FCondVar);
-
   {$ELSE}
   FWaiters      := TList<IEvent>.Create;
   FEventFactory := AEventFactory;
-  FdoSerializePulses := AdoSerializePulses
+  FDoSerializePulses := AdoSerializePulses;
   {$ENDIF}
-  {$ENDIF}
-end;
+end; { TOmniConditionVariable.Create }
 
-
-destructor TSBDConditionVariable.Destroy;
+destructor TOmniConditionVariable.Destroy;
 begin
   FLock.Enter;
 
   {$IFDEF USE_EMBARCADERO_TConditionVariableCS}
   FCondVar.Free;
-  {$ELSE}
-
-  {$IFDEF MSWINDOWS}
-  // NOP
-
-  {$ELSE}
+  {$ELSEIF not defined(MSWINDOWS)}
   FWaiters.Free;
-  {$ENDIF}
   {$ENDIF}
 
   FLock.Leave;
   FLock := nil;
   inherited;
-end;
+end; { TOmniConditionVariable.Destroy }
 
-
-procedure TSBDConditionVariable.Pulse;
+procedure TOmniConditionVariable.Pulse;
 {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
 var
-  Ev: IEvent;
+  event: IEvent;
 {$ENDIF} {$ENDIF}
 begin
   {$IFDEF USE_EMBARCADERO_TConditionVariableCS}
-  FCondVar.ReleaseAll
-  {$ELSE}
-
-  {$IFDEF MSWINDOWS}
-  WinApi.Windows.WakeAllConditionVariable( FCondVar);
-
+  FCondVar.ReleaseAll;
+  {$ELSEIF defined(MSWINDOWS)}
+  WinApi.Windows.WakeAllConditionVariable(FCondVar);
   {$ELSE}
   FLock.Enter;
-  for Ev in FWaiters do
-    begin
-    Ev.Signal;
-    if FdoSerializePulses then
-      break
-    end;
-  FLock.Leave
+  for event in FWaiters do begin
+    event.Signal;
+    if FDoSerializePulses then
+      break;
+  end;
+  FLock.Leave;
   {$ENDIF}
-  {$ENDIF}
-end;
+end; { TOmniConditionVariable.Pulse }
 
-function TSBDConditionVariable.WaitFor(
-                TimeOut: cardinal;
-                Condition                        : System.SysUtils.TFunc<boolean,boolean>;
-                UpdateStateBasedOnConditionChange: System.SysUtils.TProc)
-                  : TWaitResult;
+function TOmniConditionVariable.WaitFor(
+           timeout                          : cardinal;
+           condition                        : System.SysUtils.TFunc<boolean,boolean>;
+           updateStateBasedOnConditionChange: System.SysUtils.TProc)
+           : TWaitResult;
 var
-  TimeOutRemaining: cardinal;
-  WR: TWaitResult;
-  Timer: TStopWatch;
-  Elapsed: cardinal;
+  timeoutremaining: cardinal;
+  wr              : TWaitResult;
+  timer           : TStopWatch;
+  elapsed         : cardinal;
   {$IFNDEF USE_EMBARCADERO_TConditionVariableCS}
   {$IFNDEF MSWINDOWS}
-  doSignalNext: boolean;
-  Ev: IEvent;
+  doSignalNext    : boolean;
+  event           : IEvent;
   {$ENDIF} {$ENDIF}
 begin
-  result := wrError;
-  if (TimeOut <> INFINITE) and (TimeOut <> 0) then
-    begin
-    Timer.Reset;
-    Timer.Start
-    end;
-  TimeOutRemaining := TimeOut;
+  Result := wrError;
+  if (timeout <> INFINITE) and (timeout <> 0) then begin
+    timer.Reset;
+    timer.Start
+  end;
+  timeoutremaining := timeout;
   FLock.Enter;
   repeat
-    if (TimeOutRemaining <> INFINITE) and (TimeOutRemaining <> 0) then
-      begin
-      Elapsed := Timer.ElapsedMilliseconds;
-      if Elapsed > MaxCardinal then
-        Elapsed := MaxCardinal;
-      if TimeOut > Elapsed then
-          TimeOutRemaining := TimeOut - cardinal( Elapsed)
-        else
-          TimeOutRemaining := 0
-      end;
-    if Condition( True) then
-        WR := wrSignaled
-      else if TimeOutRemaining = 0 then
-        WR := wrTimeOut
+    if (timeoutremaining <> INFINITE) and (timeoutremaining <> 0) then begin
+      elapsed := timer.ElapsedMilliseconds;
+      if elapsed > MaxCardinal then
+        elapsed := MaxCardinal;
+      if timeout > elapsed then
+        timeoutremaining := timeout - cardinal( elapsed)
       else
-        begin
-          if assigned( UpdateStateBasedOnConditionChange) then
-            UpdateStateBasedOnConditionChange;
-          case WaitUntilPulse( TimeOutRemaining) of
-            wrSignaled: begin
-                        if Condition( True) then
-                            WR := wrSignaled
-                          else
-                            WR := wrAbandoned
-                            // Meaning: this was a spurious wake-up, so loop back.
-                        end;
-            wrTimeOut : WR := wrTimeOut;
-            else        WR := wrError
-            end
-        end
-  until (WR in [wrSignaled, wrError]) or ((WR = wrTimeOut) and (TimeOutRemaining = 0));
-  if assigned( UpdateStateBasedOnConditionChange) then
-    UpdateStateBasedOnConditionChange;
+        timeoutremaining := 0;
+    end;
+    if condition(True) then
+      wr := wrSignaled
+    else if timeoutremaining = 0 then
+      wr := wrTimeOut
+    else begin
+      if assigned(updateStateBasedOnConditionChange) then
+        updateStateBasedOnConditionChange;
+      case WaitUntilPulse(timeoutremaining) of
+        wrSignaled:
+          begin
+            if condition(True) then
+              wr := wrSignaled
+            else
+              wr := wrAbandoned
+              // Meaning: this was a spurious wake-up, so loop back.
+          end;
+        wrTimeOut : wr := wrTimeOut;
+        else        wr := wrError
+      end;
+    end;
+  until (wr in [wrSignaled, wrError]) or ((wr = wrTimeOut) and (timeoutremaining = 0));
+  if assigned(updateStateBasedOnConditionChange) then
+    updateStateBasedOnConditionChange;
   {$IFNDEF USE_EMBARCADERO_TConditionVariableCS}
   {$IFNDEF MSWINDOWS}
-  doSignalNext := (result = wrSignaled) and FdoSerializePulses and Condition( False);
+  doSignalNext := (Result = wrSignaled) and FDoSerializePulses and condition(False);
   {$ENDIF} {$ENDIF}
   FLock.Leave;
-  result := WR;
+  Result := wr;
   {$IFNDEF USE_EMBARCADERO_TConditionVariableCS}
   {$IFNDEF MSWINDOWS}
-  if doSignalNext then
-    begin
+  if doSignalNext then begin
     FLock.Enter;
-    for Ev in FWaiters do
-      begin
-      Ev.Signal;
-      break
-      end;
-    FLock.Leave
-    end
+    for event in FWaiters do begin
+      event.Signal;
+      break;
+    end;
+    FLock.Leave;
+  end;
   {$ENDIF} {$ENDIF}
-end;
+end; { TOmniConditionVariable.WaitFor }
 
-
-
-function TSBDConditionVariable.WaitUntilPulse( TimeOut: cardinal): TWaitResult;
+function TOmniConditionVariable.WaitUntilPulse(timeout: cardinal): TWaitResult;
 {$IFNDEF USE_EMBARCADERO_TConditionVariableCS}
 {$IFNDEF MSWINDOWS}
 var
-  Ev: IEvent;
+  event: IEvent;
 {$ENDIF}
 {$ENDIF}
 begin
   {$IFDEF USE_EMBARCADERO_TConditionVariableCS}
-  result := FCondVar.WaitFor( TimeOut)
+  Result := FCondVar.WaitFor(timeout);
+  {$ELSEIF defined(MSWINDOWS)}
+  if WinApi.Windows.SleepConditionVariableCS(FCondVar, FCritSect, timeout) then
+    Result := wrSignaled
+  else case GetLastError of
+    ERROR_TIMEOUT : Result := wrTimeout;
+    WAIT_ABANDONED: Result := wrAbandoned;
+    else            Result := wrError;
+  end;
   {$ELSE}
-
-  {$IFDEF MSWINDOWS}
-  if WinApi.Windows.SleepConditionVariableCS( FCondVar, FCritSect, TimeOut) then
-      result := wrSignaled
-    else
-      case GetLastError of
-        ERROR_TIMEOUT : result := wrTimeout;
-        WAIT_ABANDONED: result := wrAbandoned;
-        else            result := wrError;
-        end;
-
-  {$ELSE}
-  Ev := FEventFactory.AcquireKernelEvent( True, False, True);  // Manual. Starts clear. Re-use.
-  FWaiters.Add( Ev);
+  event := FEventFactory.AcquireKernelEvent(True, False, True);  // Manual. Starts clear. Re-use.
+  FWaiters.Add(event);
   FLock.Leave;
-  result := Ev.WaitFor( TimeOut);
+  Result := event.WaitFor(timeout);
   FLock.Enter;
-  FWaiters.Remove( Ev)
+  FWaiters.Remove(event);
   {$ENDIF}
-  {$ENDIF}
-end;
-
-
+end; { TOmniConditionVariable.WaitUntilPulse }
 
 end.

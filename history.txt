@@ -6,6 +6,7 @@
 - TODO:
   - Test TOmniBlockingCollection<T> in 64-bit mode.
   - import mobile support
+    - rename OtlSync.Platform.* symbols to I/TOmniXXX
     - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
