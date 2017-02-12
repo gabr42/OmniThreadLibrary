@@ -311,7 +311,7 @@ begin
   // Test for the direct solution
   FMemberCount := Length(AFactors);
   if FMemberCount = 0 then
-    raise TSynchroException.Create(ECompositeNeedsOneFactor);
+    raise TOmniSynchroException.Create(ECompositeNeedsOneFactor);
   FPropagation := APropagation;
   FDatum       := Datum;
   FTest        := ATest;
@@ -329,7 +329,7 @@ begin
   for i := 1 to FMemberCount - 1 do begin
     FFactors[ i] := AFactors[i];
     if not (scModular in FFactors[ i].Capabilities) then
-      raise TSynchroException.Create(EOnlyModularCombinable);
+      raise TOmniSynchroException.Create(EOnlyModularCombinable);
   end;
 
   if Supports(FFactors[0], ISynchroExInternal, memb) then begin
@@ -407,7 +407,7 @@ begin
     ok := False;
 
   if not ok then
-    raise TSynchroException.Create(ECompositeSynchroMixedBag);
+    raise TOmniSynchroException.Create(ECompositeSynchroMixedBag);
 
   case FTestClass of
     TestAny   : FIsSignalled := IsAny(dummy, FFactors, nil);

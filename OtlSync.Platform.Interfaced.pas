@@ -201,7 +201,7 @@ type
     function  AcquireCountDown(InitialValue: cardinal; AReUse: boolean): ICountDown;
     function  AcquireCountUp(InitialValue, MaxValue: cardinal; AReUse: boolean): ICountUp;
     /// <remarks> To pulse a functional event, call Signal() on it. </remarks>
-    function  AcquireFunctionalEvent(ASignalTest: TEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
+    function  AcquireFunctionalEvent(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
     procedure PurgeAllPools;
     function  CanDestroy: boolean;
   end; { TSynchroFactory }
@@ -462,10 +462,10 @@ type
     FBase: TFunctionalEvent;
   protected
     function  Pool: TSynchroFactory.TObjectQueue; override;
-    procedure Reconfigure(ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
     procedure ReleaseConfiguration; override;
   public
-    constructor Create(const APool: TSynchroFactory; ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+    constructor Create(const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
     destructor  Destroy; override;
     function  GetCapabilities: TSynchroCapabilities; override;
     function  IsSignalled: boolean; override;
@@ -594,7 +594,7 @@ var
 {$ENDIF}
 begin
   if FAquisitionCount.Read <> 0 then
-    raise TSynchroException.Create(ECannotDestroySynchroFactory);
+    raise TOmniSynchroException.Create(ECannotDestroySynchroFactory);
   PurgeAllPools;
   {$IFNDEF AUTOREFCOUNT}
   for Queue in Queues do
@@ -695,7 +695,7 @@ begin
 end; { TSynchroFactory.AcquireCriticalSection }
 
 function TSynchroFactory.AcquireFunctionalEvent(
-  ASignalTest: TEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
+  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock; AReUse: boolean): ISynchro;
 var
   Addend : TRecycleFunctional;
   DoPulse: boolean;
@@ -1065,7 +1065,7 @@ begin
     Result := FShadow = esSignalled;
     FLock.Leave;
     if not ok then
-      raise TSynchroException.Create(EIsSignalledNotSupported);
+      raise TOmniSynchroException.Create(EIsSignalledNotSupported);
   end
 end; { TRecycleEvent.IsSignalled }
 
@@ -1341,7 +1341,7 @@ begin
   state := SignalState;
   Result := state = esSignalled;
   if state = esUnknown then
-    raise TSynchroException.Create(EIsSignalledNotSupported);
+    raise TOmniSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.IsSignalled }
 
 function TNativeSemaphore.SignalState: TSignalState;
@@ -1360,7 +1360,7 @@ end; { TNativeSemaphore.SignalState }
 
 procedure TNativeSemaphore.Reset;
 begin
-  raise TSynchroException.Create(EIsSignalledNotSupported);
+  raise TOmniSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.Reset }
 
 procedure TNativeSemaphore.Signal;
@@ -1382,7 +1382,7 @@ begin
     Result := FShadow;
   FLock.Leave;
   if not ok then
-    raise TSynchroException.Create(EIsSignalledNotSupported);
+    raise TOmniSynchroException.Create(EIsSignalledNotSupported);
 end; { TNativeSemaphore.Value }
 
 function TNativeSemaphore.WaitFor(Timeout: cardinal): TWaitResult;
@@ -1653,7 +1653,7 @@ end; { TRecycleCountUp.WaitFor }
 { TRecycleFunctional }
 
 constructor TRecycleFunctional.Create(
-  const APool: TSynchroFactory; ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+  const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
 begin
   inherited Create(APool);
   FBase := TFunctionalEvent.Create(ASignalTest, APLock);
@@ -1685,7 +1685,7 @@ begin
 end; { TRecycleFunctional.Pool }
 
 procedure TRecycleFunctional.Reconfigure(
-  ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
 begin
   TFunctionalEventFriend(FBase).Reconfigure(ASignalTest, APLock);
 end; { TRecycleFunctional.Reconfigure }

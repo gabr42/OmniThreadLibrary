@@ -165,13 +165,13 @@ type
     FPLock            : PAtomicSpinLock;
     FPulsar           : TEvent; // Manual reset
     FPulsarIsSignalled: boolean;
-    FSignalTest       : TEventFunction;
+    FSignalTest       : TOmniEventFunction;
   protected
-    procedure Reconfigure(ASignalTest: TEventFunction; APLock: PAtomicSpinLock); virtual;
+    procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock); virtual;
     procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); virtual;
   public
     class constructor Create;
-    constructor Create(ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+    constructor Create(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
     destructor Destroy; override;
     function  AsMWObject: TObject;  override;
     function  IsSignalled: boolean; override;
@@ -318,7 +318,7 @@ end; { TKernelEvent.GetHandle }
 
 function TKernelEvent.IsSignalled: boolean;
 begin
-  raise TSynchroException.Create( EIsSignalledNotSupported);
+  raise TOmniSynchroException.Create( EIsSignalledNotSupported);
 end; { TKernelEvent.IsSignalled }
 
 procedure TKernelEvent.ResetEvent;
@@ -497,7 +497,7 @@ end; { TOtlSemaphore.GetHandle }
 
 function TOtlSemaphore.IsSignalled: boolean;
 begin
-  raise TSynchroException.Create(EIsSignalledNotSupported);
+  raise TOmniSynchroException.Create(EIsSignalledNotSupported);
 end; { TOtlSemaphore.IsSignalled }
 
 procedure TOtlSemaphore.Signal;
@@ -512,7 +512,7 @@ end; { TOtlSemaphore.WaitFor }
 
 { TFunctionalEvent }
 
-constructor TFunctionalEvent.Create(ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+constructor TFunctionalEvent.Create(ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
 begin
   if assigned(APLock) then
     FPLock := APLock
@@ -544,7 +544,7 @@ begin
 end; { TFunctionalEvent.AsMWObject }
 
 procedure TFunctionalEvent.Reconfigure(
-  ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
+  ASignalTest: TOmniEventFunction; APLock: PAtomicSpinLock);
 begin
   if not assigned(ASignalTest) then begin
     // Deconfigure in preparation for return to the object pool
@@ -737,7 +737,7 @@ begin
     Result := 0;
   FLock.Leave;
   if bonkers then
-    raise TSynchroException.Create(ESignalCountUpDownRange)
+    raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   else
     FCountDownFunc.Pulse;
 end; { TCountDown.Allocate }
@@ -764,7 +764,7 @@ begin
     val := FValue.Increment;
   FLock.Leave;
   if bonkers then
-    raise TSynchroException.Create(ESignalCountUpDownRange)
+    raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   else if val = 1 then
     FCountDownFunc.Pulse;
 end; { TCountDown.CounterSignal }
@@ -789,7 +789,7 @@ begin
     FCountDown := TCountDown.Create(FMaxValue - FInitialValue)
   else begin
     FCountDown := nil;
-    raise TSynchroException.Create(ESignalCountUpDownRange)
+    raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   end;
 end; { TCountUp.Create }
 

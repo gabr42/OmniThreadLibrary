@@ -146,21 +146,20 @@ uses
   System.SysUtils;
 
 type
-  TEventFunction = reference to procedure(doAcquire: boolean;
-    var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
+  TOmniEventFunction = reference to procedure(doAcquire: boolean; var
+    wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 
-type
-  TSynchroException = class(Exception)
+  TOmniSynchroException = class(Exception)
   public
     FErrCode: integer;
     constructor Create(ErrCode: integer; const Args: array of const); overload;
     constructor Create(ErrCode: integer); overload;
-  end; { TSynchroException }
+  end; { TOmniSynchroException }
 
-  TSynchroExceptionMessage = record
+  TOmniSynchroExceptionMessage = record
     ErrCode: integer;
     MsgFmt: string;
-  end; { TSynchroExceptionMessage }
+  end; { TOmniSynchroExceptionMessage }
 
 const
   ESynchroIDFirst = 1;
@@ -172,7 +171,7 @@ const
   ECompositeSynchroMixedBag    = 6;
   ESynchroIDLast = 6;
 
-  SynchroExceptionMessages: array [ESynchroIDFirst..ESynchroIDLast] of TSynchroExceptionMessage = (
+  OmniSynchroExceptionMessages: array [ESynchroIDFirst..ESynchroIDLast] of TOmniSynchroExceptionMessage = (
     (ErrCode: EIsSignalledNotSupported;     MsgFmt: 'IsSignalled() not supported on this class.'),
     (ErrCode: ESignalCountUpDownRange;      MsgFmt: 'Signal() out of range for TCountUp/Down'),
     (ErrCode: ECannotDestroySynchroFactory; MsgFmt: 'Cannot destroy TSynchroFactory while there are still allocated synchros.'),
@@ -183,18 +182,18 @@ const
 
 implementation
 
-{ TSynchroException }
+{ TOmniSynchroException }
 
-constructor TSynchroException.Create(
+constructor TOmniSynchroException.Create(
   ErrCode: integer; const Args: array of const);
 var
   i     : integer;
   msgFmt: string;
 begin
   msgFmt := '';
-  for i := Low(SynchroExceptionMessages) to High(SynchroExceptionMessages) do
-    if SynchroExceptionMessages[i].ErrCode = ErrCode then begin
-      msgFmt := SynchroExceptionMessages[i].msgFmt;
+  for i := Low(OmniSynchroExceptionMessages) to High(OmniSynchroExceptionMessages) do
+    if OmniSynchroExceptionMessages[i].ErrCode = ErrCode then begin
+      msgFmt := OmniSynchroExceptionMessages[i].msgFmt;
       break;
     end;
   if msgFmt = '' then
@@ -203,11 +202,11 @@ begin
     msgFmt := Format(msgFmt, Args);
   FErrCode := ErrCode;
   inherited Create(msgFmt);
-end; { TSynchroException.Create }
+end; { TOmniSynchroException.Create }
 
-constructor TSynchroException.Create(ErrCode: integer);
+constructor TOmniSynchroException.Create(ErrCode: integer);
 begin
   Create(ErrCode, []);
-end; { TSynchroException.Create }
+end; { TOmniSynchroException.Create }
 
 end.
