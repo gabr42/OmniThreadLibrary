@@ -148,12 +148,12 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
+  Winapi.Windows,
   {$ELSE}
-  Diagnostics,
+  System.Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  Contnrs,
-  Classes,
+  System.Contnrs,
+  System.Classes,
   SysUtils,
   OtlCommon,
   OtlTask,
@@ -275,18 +275,15 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}
-  Messages,
+  Winapi.Messages,
   DSiWin32,
   GpStuff,
   {$ENDIF}
-  Math,
-  SyncObjs,
-  TypInfo,
+  System.Math,
+  System.SyncObjs,
+  System.TypInfo,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
-  {$ENDIF}
-  {$IFNDEF Unicode} // D2009+ provides own TStringBuilder class
-  HVStringBuilder,
   {$ENDIF}
   OtlHooks,
   OtlSync,
