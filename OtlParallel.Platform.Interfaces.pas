@@ -137,8 +137,8 @@ type
     function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;     // Interface level, Reusable.
     function CountDown( InitialValue: cardinal): IOmniCountDown;                                        // Interface level, Reusable.
     function AsObject: TObject;
-    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
+    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
     function ModularEvent    ( ManualReset, InitialState: boolean): IOmniEvent;        overload;
     function ModularEvent    ( const ABase: IOmniEvent               ): IOmniEvent;        overload;
     function ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;    overload;
@@ -154,8 +154,8 @@ type
     function CoBeginTask( Proc: TTaskProc            ): ITask;  overload;
 
     // <ist be at least 2 factors. Each factor must support ISynchroExInternal, such as Modular synchronisation primitives
-    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
-    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
 
     function CoForEach( LowIdx, HighIdx, StepIdx: integer; ThreadCount: integer; Proc: TForEachProc): ITask;
     function Abandonable( const BaseTask: ITask; Timeout: integer): IFuture<boolean>;

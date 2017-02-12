@@ -152,8 +152,8 @@ type
     function Event            ( ManualReset, InitialState: boolean): IOmniEvent;                        // Interface level, Reusable.
     function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;     // Interface level, Reusable.
     function CountDown( InitialValue: cardinal): IOmniCountDown;                                        // Interface level, Reusable.
-    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
+    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
     function ModularEvent    ( ManualReset, InitialState: boolean): IOmniEvent;        overload;
     function ModularEvent    ( const ABase: IOmniEvent               ): IOmniEvent;        overload;
     function ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;    overload;
@@ -163,8 +163,8 @@ type
     function Join( const Tasks: array of ITask                ): ITask;                         overload;
     function Join( const Procs: array of System.SysUtils.TProc): ITask;                         overload;
     function Join( const Procs: array of TTaskProc            ): ITask;                         overload;
-    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
-    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
     function CoForEach( LowIdx, HighIdx, StepIdx: integer; ThreadCount: integer; Proc: TForEachProc): ITask;                                      overload;
     function CoForEachBase( ThreadCount: integer; TaskFact: TTaskFactFunc): ITask;
     function Abandonable( const BaseTask: ITask; Timeout: integer): IFuture<boolean>;
@@ -1171,21 +1171,21 @@ end;
 
 
 function TWorkFactory.CompositeSynchro_WaitAll(
-  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+  const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
 begin
-  result := TCompositeSynchro.Create(
-    AFactors, FSynchroPool, APropagation, TCompositeSynchro.AllTest(), TestAll, False)
+  result := TOmniCompositeSynchro.Create(
+    AFactors, FSynchroPool, APropagation, TOmniCompositeSynchro.AllTest(), TestAll, False)
 end;
 
 function TWorkFactory.CompositeSynchro_WaitAny(
-  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+  const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation): IOmniCompositeSynchro;
 begin
-  result := TCompositeSynchro.Create(
-    AFactors, FSynchroPool, APropagation, TCompositeSynchro.AnyTest(), TestAny, False)
+  result := TOmniCompositeSynchro.Create(
+    AFactors, FSynchroPool, APropagation, TOmniCompositeSynchro.AnyTest(), TestAny, False)
 end;
 
 function TWorkFactory.WaitForAll(
-  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; TimeOut: cardinal): TWaitResult;
+  const AFactors: TOmniSynchroArray; APropagation: TOmniWaitPropagation; TimeOut: cardinal): TWaitResult;
 var
   Dummy: integer;
 begin
@@ -1193,7 +1193,7 @@ begin
 end;
 
 function TWorkFactory.WaitForAny(const AFactors: TOmniSynchroArray;
-  APropagation: TWaitPropagation; var SignallerIdx: integer;
+  APropagation: TOmniWaitPropagation; var SignallerIdx: integer;
   TimeOut: cardinal): TWaitResult;
 begin
   result := CompositeSynchro_WaitAny( AFactors, APropagation).WaitFor( SignallerIdx, Timeout)
@@ -1261,12 +1261,12 @@ end;
 
 function TWorkFactory.ModularCountDown( const ABase: IOmniCountDown): IOmniCountDown;
 begin
-  result := TModularCountDown.Create( ABase, FShareLock, FSynchroPool)
+  result := TOmniModularCountDown.Create( ABase, FShareLock, FSynchroPool)
 end;
 
 function TWorkFactory.ModularEvent( const ABase: IOmniEvent): IOmniEvent;
 begin
-  result := TModularEvent.Create( ABase, FShareLock, FSynchroPool)
+  result := TOmniModularEvent.Create( ABase, FShareLock, FSynchroPool)
 end;
 
 function TWorkFactory.ModularEvent( ManualReset, InitialState: boolean): IOmniEvent;
@@ -1276,7 +1276,7 @@ end;
 
 function TWorkFactory.ModularSemaphore( const ABase: IOmniSemaphore): IOmniSemaphore;
 begin
-  result := TModularSemaphore.Create( ABase, FShareLock, FSynchroPool)
+  result := TOmniModularSemaphore.Create( ABase, FShareLock, FSynchroPool)
 end;
 
 function TWorkFactory.ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;
