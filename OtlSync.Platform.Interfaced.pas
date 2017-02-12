@@ -64,40 +64,40 @@ const
   MaxCardinal: cardinal = cardinal(-1);
 
 type
-  TLockingMechanism = (KernelLocking, BusLocking);
+  TOmniLockingMechanism = (KernelLocking, BusLocking);
 
-  TSignalState = (esSignalled, esNotSignalled, esUnknown);
+  TOmniSignalState = (esSignalled, esNotSignalled, esUnknown);
 
-  TSynchroCapability = (
+  TOmniSynchroCapability = (
     //ISynchro
     scModular, scSupportsSignalled,
-    //ISynchrom, ILock
+    //ISynchrom, IOmniLock
     scPoolManaged,
     //IEvent
     scManualEvent, scLight,
-    //ISemaphore
+    //IOmniSemaphore
     scSupportsValueTesting,
-    //ILock
+    //IOmniLock
     scKernelMode
   );
-  TSynchroCapabilities = set of TSynchroCapability;
+  TOmniSynchroCapabilities = set of TOmniSynchroCapability;
 
-  ISynchro = interface ['{EF480FC2-7BBB-40B9-A9F7-246A7834CFA9}']
-    function GetCapabilities: TSynchroCapabilities;
+  IOmniSynchro = interface ['{EF480FC2-7BBB-40B9-A9F7-246A7834CFA9}']
+    function GetCapabilities: TOmniSynchroCapabilities;
   {$IFDEF MSWINDOWS}
     function GetHandle: THandle;
   {$ENDIF}
   //
     procedure Signal;
-    /// <remarks> ISynchro.isSignalled() is not supported for auto-reset events and semaphores.</remarks>
-    function  SignalState: TSignalState;
+    /// <remarks> IOmniSynchro.isSignalled() is not supported for auto-reset events and semaphores.</remarks>
+    function  SignalState: TOmniSignalState;
     function  WaitFor(Timeout: cardinal = INFINITE): TWaitResult;
     function  AsObject: TObject;
     function  AsMWObject: TObject;
     function  IsSignalled: boolean;
 
     {$IFDEF MSWINDOWS}
-      /// <remarks> ISynchro.Handle is not supported for:
+      /// <remarks> IOmniSynchro.Handle is not supported for:
       ///   Non-windows platforms;
       ///   Light events;
       ///   Testable semaphores;
@@ -108,26 +108,28 @@ type
       /// </remarks>
       property Handle: THandle read GetHandle;
     {$ENDIF}
-    property Capabilities: TSynchroCapabilities read GetCapabilities;
-  end; { ISynchro }
+    property Capabilities: TOmniSynchroCapabilities read GetCapabilities;
+  end; { IOmniSynchro }
 
-  TSynchroArray = TArray<ISynchro>;
+  TOmniSynchroArray = TArray<IOmniSynchro>;
 
-  IEvent = interface(ISynchro) ['{3E6E1606-88E5-4898-9F79-613085CAE090}']
+  IOmniEvent = interface(IOmniSynchro) ['{3E6E1606-88E5-4898-9F79-613085CAE090}']
     procedure SetEvent;
     procedure ResetEvent;
-  end; { IEvent }
+  end; { IOmniEvent }
 
-  ISemaphore = interface(ISynchro) ['{4ACCD111-3E22-4902-B397-3309D84BBDD9}']
+  IOmniSemaphore = interface(IOmniSynchro)
+  ['{4ACCD111-3E22-4902-B397-3309D84BBDD9}']
     function InitialValue: cardinal;
-    /// <remarks> ISemaphore.Value() is not supported for native semaphores.</remarks>
+    /// <remarks> IOmniSemaphore.Value() is not supported for native semaphores.</remarks>
     function Value: cardinal;
-    /// <remarks> ISemaphore.Reset() is not supported for native semaphores.</remarks>
+    /// <remarks> IOmniSemaphore.Reset() is not supported for native semaphores.</remarks>
     procedure Reset;
-  end; { ISemaphore }
+  end; { IOmniSemaphore }
 
-  ILock = interface ['{38665699-5A91-4930-8AB8-AC4AD36B7182}']
-    function GetCapabilities: TSynchroCapabilities;
+  IOmniLock = interface
+  ['{38665699-5A91-4930-8AB8-AC4AD36B7182}']
+    function GetCapabilities: TOmniSynchroCapabilities;
   //
     procedure Enter;
     procedure Leave;
@@ -135,39 +137,42 @@ type
     function  AsObject: TObject;
     function  AsSpinLock: POmniAtomicSpinLock;
     function  AsCriticalSection: TCriticalSection;
-    property Capabilities: TSynchroCapabilities read GetCapabilities;
-  end;
+    property Capabilities: TOmniSynchroCapabilities read GetCapabilities;
+  end; { IOmniLock }
 
-  ICountDown = interface(ISynchro) ['{23D82B7E-9670-4B24-835C-D1E879CF36C9}']
+  IOmniCountDown = interface(IOmniSynchro)
+  ['{23D82B7E-9670-4B24-835C-D1E879CF36C9}']
     function  Allocate: cardinal; // Signal and return the value.
     procedure CounterSignal;
     function  InitialValue: cardinal;
     function  Value: cardinal;
     function  SignalHit: boolean;
-  end; { ICountDown }
+  end; { IOmniCountDown }
 
-  ICountUp = interface(ISynchro) ['{C3AD39CC-7918-44E3-AE08-B5E8F2F9EDB5}']
+  IOmniCountUp = interface(IOmniSynchro)
+  ['{C3AD39CC-7918-44E3-AE08-B5E8F2F9EDB5}']
     function  InitialValue: cardinal;
     function  MaxValue: cardinal;
     function  Value: cardinal;
     function  SignalHit: boolean;
-  end; { ICountUp }
+  end; { IOmniCountUp }
 
-  IOtlMREW = interface ['{4929F170-F5DC-41F8-852E-400D99B441BC}']
+  IOmniPlatformMREW = interface
+  ['{4929F170-F5DC-41F8-852E-400D99B441BC}']
     function  EnterRead(timeout: cardinal = INFINITE): TWaitResult;
     procedure ExitRead;
     function  EnterWrite(timeout: cardinal = INFINITE): TWaitResult;
     procedure ExitWrite;
     function  ReaderCount: integer; // if +ve, this is the number of entered readers,
                                     // if -ve, there is an entered writer.
-    function  AsReadLock: ILock;
-    function  AsWriteLock: ILock;
-  end; { IOtlMREW }
+    function  AsReadLock: IOmniLock;
+    function  AsWriteLock: IOmniLock;
+  end; { IOmniPlatformMREW }
 
-function CreateMREW: IOtlMREW;
+function CreateOmniPlatformMREW: IOmniPlatformMREW;
 
 type
-  TSynchroFactory = class
+  TOmniSynchroFactory = class
   public type
     TObjectList = class(TObjectList<TObject>) end;
     TObjectQueue = class(TQueue<TObject>) end;
@@ -190,46 +195,46 @@ type
   public
     constructor Create( APoolMax: cardinal);
     destructor  Destroy; override;
-    function  AcquireKernelEvent(AManual, AInitialState, AReUse: boolean): IEvent;
-    function  AcquireLightEvent(AManual, AInitialState: boolean; SpinMax: integer; AReUse: boolean): IEvent;
-    function  AcquireNativeSemaphore(AInitialCount: cardinal): ISemaphore; // Native semaphores are never pooled.
-    function  AcquireTestableSemaphore(AInitialCount: cardinal; AReUse: boolean): ISemaphore;
+    function  AcquireKernelEvent(AManual, AInitialState, AReUse: boolean): IOmniEvent;
+    function  AcquireLightEvent(AManual, AInitialState: boolean; SpinMax: integer; AReUse: boolean): IOmniEvent;
+    function  AcquireNativeSemaphore(AInitialCount: cardinal): IOmniSemaphore; // Native semaphores are never pooled.
+    function  AcquireTestableSemaphore(AInitialCount: cardinal; AReUse: boolean): IOmniSemaphore;
     /// <remarks> When re-using critical sections, Enter/Leave calls must be balanced before releasing the last reference. </remarks>
-    function  AcquireCriticalSection(AReUse: boolean): ILock;  overload;
-    class function AcquireCriticalSection: ILock; overload;
-    function  AcquireSpinLock: ILock; // Spinlocks are never pooled.
-    function  AcquireCountDown(InitialValue: cardinal; AReUse: boolean): ICountDown;
-    function  AcquireCountUp(InitialValue, MaxValue: cardinal; AReUse: boolean): ICountUp;
+    function  AcquireCriticalSection(AReUse: boolean): IOmniLock;  overload;
+    class function AcquireCriticalSection: IOmniLock; overload;
+    function  AcquireSpinLock: IOmniLock; // Spinlocks are never pooled.
+    function  AcquireCountDown(InitialValue: cardinal; AReUse: boolean): IOmniCountDown;
+    function  AcquireCountUp(InitialValue, MaxValue: cardinal; AReUse: boolean): IOmniCountUp;
     /// <remarks> To pulse a functional event, call Signal() on it. </remarks>
-    function  AcquireFunctionalEvent(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): ISynchro;
+    function  AcquireFunctionalEvent(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): IOmniSynchro;
     procedure PurgeAllPools;
     function  CanDestroy: boolean;
-  end; { TSynchroFactory }
+  end; { TOmniSynchroFactory }
 
 {$REGION 'For internal use only.'}
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateCountDownIntf(const APool: TSynchroFactory; InitialValue: cardinal): ICountDown;
+function _CreateCountDownIntf(const APool: TOmniSynchroFactory; InitialValue: cardinal): IOmniCountDown;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateCountUpIntf(const APool: TSynchroFactory; InitialValue, MaxValue: cardinal): ICountUp;
+function _CreateCountUpIntf(const APool: TOmniSynchroFactory; InitialValue, MaxValue: cardinal): IOmniCountUp;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateKernelEventIntf(const APool: TSynchroFactory; ManualReset, InitialState: boolean): IEvent;
+function _CreateKernelEventIntf(const APool: TOmniSynchroFactory; ManualReset, InitialState: boolean): IOmniEvent;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateLightEventIntf(const APool: TSynchroFactory; ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
+function _CreateLightEventIntf(const APool: TOmniSynchroFactory; ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateCritLockIntf(const APool: TSynchroFactory): ILock;
+function _CreateCritLockIntf(const APool: TOmniSynchroFactory): IOmniLock;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateSpinLockIntf: ILock;
+function _CreateSpinLockIntf: IOmniLock;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateTestableSemaphoreIntf(const APool: TSynchroFactory; AInitialCount: cardinal): ISemaphore;
+function _CreateTestableSemaphoreIntf(const APool: TOmniSynchroFactory; AInitialCount: cardinal): IOmniSemaphore;
 
 /// <remarks>DO NOT USE. For internal use only.</remarks>
-function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): ISemaphore;
+function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): IOmniSemaphore;
 {$ENDREGION}
 
 implementation
@@ -238,24 +243,24 @@ uses
   OtlSync.Platform.Basic;
 
 type
-  TLightEventFriend = class(TLightEvent)
+  TOmniLightEventFriend = class(TLightEvent)
   end;
 
-  TCountDownFriend = class(TCountDown)
+  TOmniCountDownFriend = class(TCountDown)
   end;
 
-  TCountUpFriend = class(TCountUp)
+  TOmniCountUpFriend = class(TCountUp)
   end;
 
-  TFunctionalEventFriend = class(TFunctionalEvent)
+  TOmniFunctionalEventFriend = class(TFunctionalEvent)
   end;
 
-  TRecycleObject = class abstract(TObject, IInterface)
+  TOmniRecycleObject = class abstract(TObject, IInterface)
   private const
     CObjPooledFlag = integer($80000000);
   var
     {$IFDEF AUTOREFCOUNT}[Weak]{$ENDIF}
-    FPool: TSynchroFactory;
+    FPool: TOmniSynchroFactory;
     [Volatile] FRefCount: TOmniVolatileInt32;
     FAcquired: boolean;
   strict protected
@@ -265,62 +270,62 @@ type
     function  AsObject: TObject;
     function  GetRefCount: integer; inline;
   protected
-    function  Pool: TSynchroFactory.TObjectQueue; virtual; abstract;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; virtual; abstract;
     procedure ReleaseConfiguration; virtual;
   public
-    constructor Create(const APool: TSynchroFactory);
+    constructor Create(const APool: TOmniSynchroFactory);
     procedure AfterConstruction; override;
-    function  GetCapabilities: TSynchroCapabilities; virtual;
+    function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     class function NewInstance: TObject; override;
-    function  SignalState: TSignalState; virtual; abstract;
+    function  SignalState: TOmniSignalState; virtual; abstract;
     property RefCount: integer read GetRefCount;
-  end; { TRecycleObject }
+  end; { TOmniRecycleObject }
 
-  TRecycleSynchro = class(TRecycleObject, ISynchro)
+  TOmniRecycleSynchro = class(TOmniRecycleObject, IOmniSynchro)
   protected
     {$IFDEF MSWINDOWS}
       function GetHandle: THandle; virtual;
     {$ENDIF}
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
   public
     function  AsMWObject: TObject; virtual;
     function  IsSignalled: boolean; virtual; abstract;
     procedure Signal; virtual; abstract;
-    function  SignalState: TSignalState; override;
+    function  SignalState: TOmniSignalState; override;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; virtual; abstract;
-  end; { TRecycleSynchro }
+  end; { TOmniRecycleSynchro }
 
-  TRecycleEvent = class(TRecycleSynchro, IEvent)
+  TOmniRecycleEvent = class(TOmniRecycleSynchro, IOmniEvent)
   protected
     {$IFDEF MSWINDOWS}
       function GetHandle: THandle; override;
     {$ENDIF}
-    function  Pool: TSynchroFactory.TObjectQueue; override;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; override;
   private
     FAsyncClear     : boolean;
     FBase           : TOtlEvent;
     FIsLight        : boolean;
     [Volatile] FLock: TOmniAtomicSpinLock; // Only used for manual events.
     FManual         : boolean;
-    FShadow         : TSignalState;
+    FShadow         : TOmniSignalState;
     FWaiters        : cardinal;
   protected
     procedure Reconfigure(manual: boolean; value: cardinal); virtual;
   public
-    constructor CreateAsKernel(const APool: TSynchroFactory; AManual, AInitialState: boolean);
-    constructor CreateAsLight(const APool: TSynchroFactory; AManual, AInitialState: boolean; SpinMax: cardinal);
+    constructor CreateAsKernel(const APool: TOmniSynchroFactory; AManual, AInitialState: boolean);
+    constructor CreateAsLight(const APool: TOmniSynchroFactory; AManual, AInitialState: boolean; SpinMax: cardinal);
     destructor  Destroy; override;
     function  AsMWObject: TObject; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  IsSignalled: boolean; override;
     procedure ResetEvent;
     procedure Signal; override;
-    function  SignalState: TSignalState; override;
+    function  SignalState: TOmniSignalState; override;
     procedure SetEvent;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TRecycleEvent }
+  end; { TOmniRecycleEvent }
 
-  TRecycleSemaphore = class(TRecycleSynchro, ISemaphore)
+  TOmniRecycleSemaphore = class(TOmniRecycleSynchro, IOmniSemaphore)
   private type
     TSimulatedSemaphore = class(TFunctionalEvent)
     protected
@@ -334,7 +339,7 @@ type
       destructor  Destroy; override;
       procedure Reset;
       procedure ReconfigureInitial(value: cardinal);
-      function  SignalState: TSignalState;
+      function  SignalState: TOmniSignalState;
     end; { TSimulatedSemaphore }
   var
     FBase: TSimulatedSemaphore;
@@ -342,23 +347,23 @@ type
     {$IFDEF MSWINDOWS}
       function GetHandle: THandle; override;
     {$ENDIF}
-    function  Pool: TSynchroFactory.TObjectQueue; override;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(value: cardinal); virtual;
   public
-    constructor Create(const APool: TSynchroFactory; AInitialCount: cardinal);
+    constructor Create(const APool: TOmniSynchroFactory; AInitialCount: cardinal);
     destructor  Destroy; override;
     function  AsMWObject: TObject; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  InitialValue: cardinal;
     function  IsSignalled: boolean; override;
     procedure Reset;
     procedure Signal; override;
-    function  SignalState: TSignalState;override;
+    function  SignalState: TOmniSignalState;override;
     function  Value: cardinal;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TRecycleSemaphore }
+  end; { TOmniRecycleSemaphore }
 
-  TNativeSemaphore = class(TInterfacedObject, ISemaphore)
+  TOmniNativeSemaphore = class(TInterfacedObject, IOmniSemaphore)
   private
     FBase           : TOtlSemaphore;
     FInitial        : cardinal;
@@ -374,17 +379,17 @@ type
     destructor Destroy; override;
     function  AsObject: TObject;
     function  AsMWObject: TObject;
-    function  GetCapabilities: TSynchroCapabilities; virtual;
+    function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     function  InitialValue: cardinal;
     function  IsSignalled: boolean;
     procedure Reset;
     procedure Signal;
-    function  SignalState: TSignalState;
+    function  SignalState: TOmniSignalState;
     function  Value: cardinal;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult;
-  end; { TNativeSemaphore }
+  end; { TOmniNativeSemaphore }
 
-  TRecycleCrit = class(TRecycleObject, ILock)
+  TOmniRecycleCriticalSection = class(TOmniRecycleObject, IOmniLock)
   strict private
     FCrit                : TCriticalSection;
     [Volatile] FLockCount: TOmniVolatileInt32;
@@ -392,17 +397,17 @@ type
     procedure Enter;
     procedure Leave;
     function  LockCount: integer;
-    function Pool: TSynchroFactory.TObjectQueue; override;
+    function Pool: TOmniSynchroFactory.TObjectQueue; override;
   public
-    constructor Create(const APool: TSynchroFactory);
+    constructor Create(const APool: TOmniSynchroFactory);
     destructor  Destroy; override;
     function  AsCriticalSection: TCriticalSection;
     function  AsSpinLock: POmniAtomicSpinLock;
-    function  GetCapabilities: TSynchroCapabilities; override;
-    function  SignalState: TSignalState; override;
-  end; { TRecycleCrit }
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
+    function  SignalState: TOmniSignalState; override;
+  end; { TOmniRecycleCriticalSection }
 
-  TSpinIntf = class(TInterfacedObject, ILock)
+  TOmniSpinLock = class(TInterfacedObject, IOmniLock)
   strict private
     [Volatile] FLock: TOmniAtomicSpinLock;
   strict protected
@@ -414,40 +419,40 @@ type
     function  AsCriticalSection: TCriticalSection;
     function  AsObject: TObject;
     function  AsSpinLock: POmniAtomicSpinLock;
-    function  GetCapabilities: TSynchroCapabilities; virtual;
+    function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     function  LockCount: integer;
-  end; { TSpinIntf }
+  end; { TOmniSpinLock }
 
-  TRecycleCountDown = class(TRecycleSynchro, ICountDown)
+  TOmniRecycleCountDown = class(TOmniRecycleSynchro, IOmniCountDown)
   strict private
     FBase: TCountDown;
   protected
-    function  Pool: TSynchroFactory.TObjectQueue; override;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(AInitial: cardinal);
   public
-    constructor Create( const APool: TSynchroFactory; AInitialValue: cardinal);
+    constructor Create( const APool: TOmniSynchroFactory; AInitialValue: cardinal);
     destructor  Destroy; override;
     function  Allocate: cardinal; // Signal and return the value.
     procedure CounterSignal;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  InitialValue: cardinal;
     function  IsSignalled: boolean; override;
     procedure Signal; override;
     function  SignalHit: boolean;
     function  Value: cardinal;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TRecycleCountDown }
+  end; { TOmniRecycleCountDown }
 
-  TRecycleCountUp = class(TRecycleSynchro, ICountUp)
+  TOmniRecycleCountUp = class(TOmniRecycleSynchro, IOmniCountUp)
   strict private
     FBase: TCountUp;
   protected
-    function  Pool: TSynchroFactory.TObjectQueue; override;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(AInitial, AMaxValue: cardinal);
   public
-    constructor Create( const APool: TSynchroFactory; AInitial, AMaxValue: cardinal);
+    constructor Create( const APool: TOmniSynchroFactory; AInitial, AMaxValue: cardinal);
     destructor  Destroy; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  InitialValue: cardinal;
     function  IsSignalled: boolean; override;
     function  MaxValue: cardinal;
@@ -455,27 +460,27 @@ type
     function  SignalHit: boolean;
     function  Value: cardinal;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TRecycleCountUp }
+  end; { TOmniRecycleCountUp }
 
-  TRecycleFunctional = class(TRecycleSynchro)
+  TOmniRecycleFunctional = class(TOmniRecycleSynchro)
   strict private
     FBase: TFunctionalEvent;
   protected
-    function  Pool: TSynchroFactory.TObjectQueue; override;
+    function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
     procedure ReleaseConfiguration; override;
   public
-    constructor Create(const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
+    constructor Create(const APool: TOmniSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
     destructor  Destroy; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  IsSignalled: boolean; override;
     procedure Signal; override;
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TRecycleFunctional }
+  end; { TOmniRecycleFunctional }
 
-  TIntfMREW = class(TInterfacedObject, IOtlMREW)
+  TOmniPlatformMREW = class(TInterfacedObject, IOmniPlatformMREW)
   strict private type
-    TFacade = class(TInterfacedObject, IInterface, ILock)
+    TFacade = class(TInterfacedObject, IInterface, IOmniLock)
     strict protected
       procedure Enter; virtual; abstract;
       procedure Leave; virtual; abstract;
@@ -483,12 +488,12 @@ type
       function _Release: Integer; stdcall;
       function  LockCount: integer; virtual;
     protected
-      FController: TIntfMREW;
+      FController: TOmniPlatformMREW;
     public
       function  AsCriticalSection: TCriticalSection;
       function  AsObject: TObject;
       function  AsSpinLock: POmniAtomicSpinLock;
-      function  GetCapabilities: TSynchroCapabilities; virtual;
+      function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     end; { TFacade }
 
     TReaderLock = class(TFacade)
@@ -518,62 +523,62 @@ type
     function  EnterWrite(timeout: cardinal = INFINITE): TWaitResult;
     procedure ExitWrite;
     function  ReaderCount: integer;
-    function  AsReadLock: ILock;
-    function  AsWriteLock: ILock;
-  end; { TIntfMREW }
+    function  AsReadLock: IOmniLock;
+    function  AsWriteLock: IOmniLock;
+  end; { TOmniPlatformMREW }
 
 { exports }
 
-function CreateMREW: IOtlMREW;
+function CreateOmniPlatformMREW: IOmniPlatformMREW;
 begin
-  Result := TIntfMREW.Create;
-end; { CreateMREW }
+  Result := TOmniPlatformMREW.Create;
+end; { CreateOmniPlatformMREW }
 
 { internal exports }
 
-function _CreateCountDownIntf(const APool: TSynchroFactory; InitialValue: cardinal): ICountDown;
+function _CreateCountDownIntf(const APool: TOmniSynchroFactory; InitialValue: cardinal): IOmniCountDown;
 begin
-  Result := TRecycleCountDown.Create(APool, InitialValue);
+  Result := TOmniRecycleCountDown.Create(APool, InitialValue);
 end; { _CreateCountDownIntf }
 
-function _CreateCountUpIntf(const APool: TSynchroFactory; InitialValue, MaxValue: cardinal): ICountUp;
+function _CreateCountUpIntf(const APool: TOmniSynchroFactory; InitialValue, MaxValue: cardinal): IOmniCountUp;
 begin
-  Result := TRecycleCountUp.Create(APool, InitialValue, MaxValue);
+  Result := TOmniRecycleCountUp.Create(APool, InitialValue, MaxValue);
 end; { _CreateCountUpIntf }
 
-function _CreateKernelEventIntf(const APool: TSynchroFactory; ManualReset, InitialState: boolean): IEvent;
+function _CreateKernelEventIntf(const APool: TOmniSynchroFactory; ManualReset, InitialState: boolean): IOmniEvent;
 begin
-  Result := TRecycleEvent.CreateAsKernel(APool, ManualReset, InitialState);
+  Result := TOmniRecycleEvent.CreateAsKernel(APool, ManualReset, InitialState);
 end; { _CreateKernelEventIntf }
 
-function _CreateLightEventIntf(const APool: TSynchroFactory; ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
+function _CreateLightEventIntf(const APool: TOmniSynchroFactory; ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;
 begin
-  Result := TRecycleEvent.CreateAsLight(APool, ManualReset, InitialState, SpinMax);
+  Result := TOmniRecycleEvent.CreateAsLight(APool, ManualReset, InitialState, SpinMax);
 end; { _CreateLightEventIntf }
 
-function _CreateCritLockIntf(const APool: TSynchroFactory): ILock;
+function _CreateCritLockIntf(const APool: TOmniSynchroFactory): IOmniLock;
 begin
-  Result := TRecycleCrit.Create(APool);
+  Result := TOmniRecycleCriticalSection.Create(APool);
 end; { _CreateCritLockIntf }
 
-function _CreateSpinLockIntf: ILock;
+function _CreateSpinLockIntf: IOmniLock;
 begin
-  Result := TSpinIntf.Create;
+  Result := TOmniSpinLock.Create;
 end; { _CreateSpinLockIntf }
 
-function _CreateTestableSemaphoreIntf(const APool: TSynchroFactory; AInitialCount: cardinal): ISemaphore;
+function _CreateTestableSemaphoreIntf(const APool: TOmniSynchroFactory; AInitialCount: cardinal): IOmniSemaphore;
 begin
-  Result := TRecycleSemaphore.Create(APool, AInitialCount);
+  Result := TOmniRecycleSemaphore.Create(APool, AInitialCount);
 end; { _CreateTestableSemaphoreIntf }
 
-function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): ISemaphore;
+function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): IOmniSemaphore;
 begin
-  Result := TNativeSemaphore.Create(AInitialCount);
+  Result := TOmniNativeSemaphore.Create(AInitialCount);
 end; { _CreateNativeSemaphoreIntf }
 
-{ TSynchroFactory }
+{ TOmniSynchroFactory }
 
-constructor TSynchroFactory.Create(APoolMax: cardinal);
+constructor TOmniSynchroFactory.Create(APoolMax: cardinal);
 begin
   FLock.Initialize;
   FPoolMax := APoolMax;
@@ -585,9 +590,9 @@ begin
   FCountDowns         := TObjectQueue.Create;
   FCountUps           := TObjectQueue.Create;
   FFunctionals        := TObjectQueue.Create;
-end; { TSynchroFactory.Create }
+end; { TOmniSynchroFactory.Create }
 
-destructor TSynchroFactory.Destroy;
+destructor TOmniSynchroFactory.Destroy;
 {$IFNDEF AUTOREFCOUNT}
 var
   Queue: TObjectQueue;
@@ -602,19 +607,19 @@ begin
   {$ENDIF}
   inherited;
   FLock.Finalize;
-end; { TSynchroFactory.Destroy }
+end; { TOmniSynchroFactory.Destroy }
 
-function TSynchroFactory.AcquireCountDown(
-  InitialValue: cardinal; AReUse: boolean): ICountDown;
+function TOmniSynchroFactory.AcquireCountDown(
+  InitialValue: cardinal; AReUse: boolean): IOmniCountDown;
 var
-  Addend: TRecycleCountDown;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleCountDown;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   Queue  := FCountDowns;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleCountDown;
+    Addend := Queue.Dequeue as TOmniRecycleCountDown;
     Addend.FRefCount.Write(0);
     Addend.Reconfigure(InitialValue);
   end
@@ -623,7 +628,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleCountDown.Create(Pool, InitialValue);
+    Addend := TOmniRecycleCountDown.Create(Pool, InitialValue);
   end;
   Result := Addend;
   if AReUse then begin
@@ -631,19 +636,19 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave;
-end; { TSynchroFactory.AcquireCountDown }
+end; { TOmniSynchroFactory.AcquireCountDown }
 
-function TSynchroFactory.AcquireCountUp(
-  InitialValue, MaxValue: cardinal; AReUse: boolean): ICountUp;
+function TOmniSynchroFactory.AcquireCountUp(
+  InitialValue, MaxValue: cardinal; AReUse: boolean): IOmniCountUp;
 var
-  Addend: TRecycleCountUp;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleCountUp;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   Queue  := FCountUps;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleCountUp;
+    Addend := Queue.Dequeue as TOmniRecycleCountUp;
     Addend.FRefCount.Write(0);
     Addend.Reconfigure(InitialValue, MaxValue);
   end
@@ -652,7 +657,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleCountUp.Create(Pool, InitialValue, MaxValue);
+    Addend := TOmniRecycleCountUp.Create(Pool, InitialValue, MaxValue);
   end;
   Result := Addend;
   if AReUse then begin
@@ -660,23 +665,23 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave;
-end; { TSynchroFactory.AcquireCountUp }
+end; { TOmniSynchroFactory.AcquireCountUp }
 
-class function TSynchroFactory.AcquireCriticalSection: ILock;
+class function TOmniSynchroFactory.AcquireCriticalSection: IOmniLock;
 begin
-  Result := TRecycleCrit.Create(nil);
-end; { TSynchroFactory.AcquireCriticalSection }
+  Result := TOmniRecycleCriticalSection.Create(nil);
+end; { TOmniSynchroFactory.AcquireCriticalSection }
 
-function TSynchroFactory.AcquireCriticalSection(AReUse: boolean): ILock;
+function TOmniSynchroFactory.AcquireCriticalSection(AReUse: boolean): IOmniLock;
 var
-  Addend: TRecycleCrit;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleCriticalSection;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   Queue := FCrits;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleCrit;
+    Addend := Queue.Dequeue as TOmniRecycleCriticalSection;
     Addend.FRefCount.Write(0);
   end
   else begin
@@ -684,7 +689,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleCrit.Create(Pool);
+    Addend := TOmniRecycleCriticalSection.Create(Pool);
   end;
   Result := Addend;
   if AReUse then begin
@@ -692,21 +697,21 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave;
-end; { TSynchroFactory.AcquireCriticalSection }
+end; { TOmniSynchroFactory.AcquireCriticalSection }
 
-function TSynchroFactory.AcquireFunctionalEvent(
-  ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): ISynchro;
+function TOmniSynchroFactory.AcquireFunctionalEvent(
+  ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock; AReUse: boolean): IOmniSynchro;
 var
-  Addend : TRecycleFunctional;
+  Addend : TOmniRecycleFunctional;
   DoPulse: boolean;
-  Pool   : TSynchroFactory;
+  Pool   : TOmniSynchroFactory;
   Queue  : TObjectQueue;
 begin
   DoPulse := False;
   Queue := FFunctionals;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleFunctional;
+    Addend := Queue.Dequeue as TOmniRecycleFunctional;
     Addend.FRefCount.Write(0);
     Addend.Reconfigure(ASignalTest, APlock);
     DoPulse := True;
@@ -716,7 +721,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleFunctional.Create(Pool, ASignalTest, APLock);
+    Addend := TOmniRecycleFunctional.Create(Pool, ASignalTest, APLock);
   end;
   Result := Addend;
   if AReUse then begin
@@ -726,13 +731,13 @@ begin
   FLock.Leave;
   if DoPulse then
     Addend.Signal;
-end; { TSynchroFactory.AcquireFunctionalEvent }
+end; { TOmniSynchroFactory.AcquireFunctionalEvent }
 
-function TSynchroFactory.AcquireKernelEvent(
-  AManual, AInitialState, AReUse: boolean): IEvent;
+function TOmniSynchroFactory.AcquireKernelEvent(
+  AManual, AInitialState, AReUse: boolean): IOmniEvent;
 var
-  Addend: TRecycleEvent;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleEvent;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   if AManual then
@@ -741,7 +746,7 @@ begin
     Queue := FAutoKernelEvents;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleEvent;
+    Addend := Queue.Dequeue as TOmniRecycleEvent;
     Addend.FRefCount.Write(0);
     if (not (scSupportsSignalled in Addend.GetCapabilities))
        or (Addend.IsSignalled <> AInitialState) then
@@ -757,7 +762,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleEvent.CreateAsKernel(Pool, AManual, AInitialState);
+    Addend := TOmniRecycleEvent.CreateAsKernel(Pool, AManual, AInitialState);
   end;
   Result := Addend;
   if AReUse then begin
@@ -765,19 +770,19 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave;
-end; { TSynchroFactory.AcquireKernelEvent }
+end; { TOmniSynchroFactory.AcquireKernelEvent }
 
-function TSynchroFactory.AcquireLightEvent(
-  AManual, AInitialState: boolean; SpinMax: integer; AReUse: boolean): IEvent;
+function TOmniSynchroFactory.AcquireLightEvent(
+  AManual, AInitialState: boolean; SpinMax: integer; AReUse: boolean): IOmniEvent;
 var
-  Addend: TRecycleEvent;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleEvent;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   Queue := FLightEvents;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleEvent;
+    Addend := Queue.Dequeue as TOmniRecycleEvent;
     Addend.Reconfigure(AManual, SpinMax);
     Addend.FRefCount.Write(0);
     if (not (scSupportsSignalled in Addend.GetCapabilities))
@@ -794,7 +799,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleEvent.CreateAsLight(Pool, AManual, AInitialState, SpinMax);
+    Addend := TOmniRecycleEvent.CreateAsLight(Pool, AManual, AInitialState, SpinMax);
   end;
   Result := Addend;
   if AReUse then begin
@@ -802,23 +807,23 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave
-end; { TSynchroFactory.AcquireLightEvent }
+end; { TOmniSynchroFactory.AcquireLightEvent }
 
-function TSynchroFactory.AcquireNativeSemaphore(AInitialCount: cardinal): ISemaphore;
+function TOmniSynchroFactory.AcquireNativeSemaphore(AInitialCount: cardinal): IOmniSemaphore;
 begin
-  Result := TNativeSemaphore.Create(AInitialCount);
-end; { TSynchroFactory.AcquireNativeSemaphore }
+  Result := TOmniNativeSemaphore.Create(AInitialCount);
+end; { TOmniSynchroFactory.AcquireNativeSemaphore }
 
-function TSynchroFactory.AcquireTestableSemaphore(AInitialCount: cardinal; AReUse: boolean): ISemaphore;
+function TOmniSynchroFactory.AcquireTestableSemaphore(AInitialCount: cardinal; AReUse: boolean): IOmniSemaphore;
 var
-  Addend: TRecycleSemaphore;
-  Pool  : TSynchroFactory;
+  Addend: TOmniRecycleSemaphore;
+  Pool  : TOmniSynchroFactory;
   Queue : TObjectQueue;
 begin
   Queue := FSemaphores;
   FLock.Enter;
   if AReUse and (Queue.Count > 0) then begin
-    Addend := Queue.Dequeue as TRecycleSemaphore;
+    Addend := Queue.Dequeue as TOmniRecycleSemaphore;
     Addend.Reconfigure(AInitialCount);
     Addend.FRefCount.Write(0);
   end
@@ -827,7 +832,7 @@ begin
       Pool := self
     else
       Pool := nil;
-    Addend := TRecycleSemaphore.Create(Pool, AInitialCount);
+    Addend := TOmniRecycleSemaphore.Create(Pool, AInitialCount);
   end;
   Result := Addend;
   if AReUse then begin
@@ -835,19 +840,19 @@ begin
     FAquisitionCount.Increment;
   end;
   FLock.Leave;
-end; { TSynchroFactory.AcquireTestableSemaphore }
+end; { TOmniSynchroFactory.AcquireTestableSemaphore }
 
-function TSynchroFactory.AcquireSpinLock: ILock;
+function TOmniSynchroFactory.AcquireSpinLock: IOmniLock;
 begin
-  Result := TSpinIntf.Create;
-end; { TSynchroFactory.AcquireSpinLock }
+  Result := TOmniSpinLock.Create;
+end; { TOmniSynchroFactory.AcquireSpinLock }
 
-function TSynchroFactory.CanDestroy: boolean;
+function TOmniSynchroFactory.CanDestroy: boolean;
 begin
   Result := FAquisitionCount.Read = 0;
-end; { TSynchroFactory.CanDestroy }
+end; { TOmniSynchroFactory.CanDestroy }
 
-procedure TSynchroFactory.PurgeAllPools;
+procedure TOmniSynchroFactory.PurgeAllPools;
 begin
   FLock.WithinLock(
     procedure
@@ -864,70 +869,70 @@ begin
     end);
 end; {  }
 
-function TSynchroFactory.Queues: TArray<TObjectQueue>;
+function TOmniSynchroFactory.Queues: TArray<TObjectQueue>;
 begin
   Result := [FManualKernelEvents, FAutoKernelEvents, FLightEvents, FSemaphores, FCrits, FCountDowns, FCountUps, FFunctionals];
-end; { TSynchroFactory.Queues }
+end; { TOmniSynchroFactory.Queues }
 
-{ TRecycleObject }
+{ TOmniRecycleObject }
 
-constructor TRecycleObject.Create(const APool: TSynchroFactory);
+constructor TOmniRecycleObject.Create(const APool: TOmniSynchroFactory);
 begin
   FPool := APool;
-end; { TRecycleObject.Create }
+end; { TOmniRecycleObject.Create }
 
-procedure TRecycleObject.AfterConstruction;
+procedure TOmniRecycleObject.AfterConstruction;
 begin
   FRefCount.Decrement;
-end; { TRecycleObject.AfterConstruction }
+end; { TOmniRecycleObject.AfterConstruction }
 
-function TRecycleObject.AsObject: TObject;
+function TOmniRecycleObject.AsObject: TObject;
 begin
   Result := Self;
-end; { TRecycleObject.AsObject }
+end; { TOmniRecycleObject.AsObject }
 
-function TRecycleObject.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleObject.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
   if assigned(FPool) then
     Include(Result, scPoolManaged);
-end; { TRecycleObject.GetCapabilities }
+end; { TOmniRecycleObject.GetCapabilities }
 
-function TRecycleObject.GetRefCount: integer;
+function TOmniRecycleObject.GetRefCount: integer;
 begin
   Result := FRefCount.Read;
   if ((Result and CObjPooledFlag) <> 0) or (Result <= -2) then
     Result := -1;
-end; { TRecycleObject.GetRefCount }
+end; { TOmniRecycleObject.GetRefCount }
 
-class function TRecycleObject.NewInstance: TObject;
+class function TOmniRecycleObject.NewInstance: TObject;
 begin
   Result := inherited NewInstance;
-  TRecycleObject(Result).FRefCount.Initialize(1);
-end; { TRecycleObject.NewInstance }
+  TOmniRecycleObject(Result).FRefCount.Initialize(1);
+end; { TOmniRecycleObject.NewInstance }
 
-function TRecycleObject.QueryInterface(const IID: TGUID; out Obj): HResult;
+function TOmniRecycleObject.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
   if GetInterface(IID, Obj) then
     Result := 0
   else
     Result := E_NOINTERFACE;
-end; { TRecycleObject.QueryInterface }
+end; { TOmniRecycleObject.QueryInterface }
 
-procedure TRecycleObject.ReleaseConfiguration;
+procedure TOmniRecycleObject.ReleaseConfiguration;
 begin
   // do nothing
-end; { TRecycleObject.ReleaseConfiguration }
+end; { TOmniRecycleObject.ReleaseConfiguration }
 
-function TRecycleObject._AddRef: integer;
+function TOmniRecycleObject._AddRef: integer;
 begin
   Result := FRefCount.Increment;
-end; { TRecycleObject._AddRef }
+end; { TOmniRecycleObject._AddRef }
 
-function TRecycleObject._Release: integer;
+function TOmniRecycleObject._Release: integer;
 var
   OldValue     : integer;
-  Pl           : TSynchroFactory.TObjectQueue;
+  Pl           : TOmniSynchroFactory.TObjectQueue;
   PooledByOther: boolean;
 begin
   Result := FRefCount.Decrement;
@@ -955,39 +960,39 @@ begin
   end
   else
     Destroy;
-end; { TRecycleObject._Release }
+end; { TOmniRecycleObject._Release }
 
-{ TRecycleSynchro }
+{ TOmniRecycleSynchro }
 
-function TRecycleSynchro.AsMWObject: TObject;
+function TOmniRecycleSynchro.AsMWObject: TObject;
 begin
   Result := nil
-end; { TRecycleSynchro.AsMWObject }
+end; { TOmniRecycleSynchro.AsMWObject }
 
-function TRecycleSynchro.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleSynchro.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
-end; { TRecycleSynchro.GetCapabilities }
+end; { TOmniRecycleSynchro.GetCapabilities }
 
 {$IFDEF MSWINDOWS}
-function TRecycleSynchro.GetHandle: THandle;
+function TOmniRecycleSynchro.GetHandle: THandle;
 begin
   Result := 0;
-end; { TRecycleSynchro.GetHandle }
+end; { TOmniRecycleSynchro.GetHandle }
 {$ENDIF}
 
-function TRecycleSynchro.SignalState: TSignalState;
+function TOmniRecycleSynchro.SignalState: TOmniSignalState;
 begin
   if IsSignalled then
     Result := esSignalled
   else
     Result := esNotSignalled;
-end; { TRecycleSynchro.SignalState }
+end; { TOmniRecycleSynchro.SignalState }
 
-{ TRecycleEvent }
+{ TOmniRecycleEvent }
 
-constructor TRecycleEvent.CreateAsKernel(const APool: TSynchroFactory; AManual, AInitialState: boolean);
+constructor TOmniRecycleEvent.CreateAsKernel(const APool: TOmniSynchroFactory; AManual, AInitialState: boolean);
 begin
   FLock.Initialize;
   inherited Create(APool);
@@ -1000,10 +1005,10 @@ begin
   FWaiters := 0;
   FAsyncClear := False;
   FBase := TKernelEvent.Create(AManual, AInitialState);
-end; { TRecycleEvent.CreateAsKernel }
+end; { TOmniRecycleEvent.CreateAsKernel }
 
-constructor TRecycleEvent.CreateAsLight(
-  const APool: TSynchroFactory; AManual, AInitialState: boolean; SpinMax: cardinal);
+constructor TOmniRecycleEvent.CreateAsLight(
+  const APool: TOmniSynchroFactory; AManual, AInitialState: boolean; SpinMax: cardinal);
 begin
   FLock.Initialize;
   inherited Create(APool);
@@ -1016,21 +1021,21 @@ begin
   FWaiters := 0;
   FAsyncClear := False;
   FBase  := TLightEvent.Create(AManual, AInitialState, SpinMax);
-end; { TRecycleEvent.CreateAsLight }
+end; { TOmniRecycleEvent.CreateAsLight }
 
-destructor TRecycleEvent.Destroy;
+destructor TOmniRecycleEvent.Destroy;
 begin
   FBase.Free;
   FLock.Finalize;
   inherited;
-end; { TRecycleEvent.Destroy }
+end; { TOmniRecycleEvent.Destroy }
 
-function TRecycleEvent.AsMWObject: TObject;
+function TOmniRecycleEvent.AsMWObject: TObject;
 begin
   Result := FBase.AsMWObject;
-end; { TRecycleEvent.AsMWObject }
+end; { TOmniRecycleEvent.AsMWObject }
 
-function TRecycleEvent.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleEvent.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   if FIsLight then
@@ -1039,19 +1044,19 @@ begin
     Include(Result, scManualEvent);
   if FIsLight or FManual then
     Include(Result, scSupportsSignalled);
-end; { TRecycleEvent.GetCapabilities }
+end; { TOmniRecycleEvent.GetCapabilities }
 
 {$IFDEF MSWINDOWS}
-function TRecycleEvent.GetHandle: THandle;
+function TOmniRecycleEvent.GetHandle: THandle;
 begin
   if FisLight then
       Result := 0
     else
       Result := FBase.Handle;
-end; { TRecycleEvent.GetHandle }
+end; { TOmniRecycleEvent.GetHandle }
 {$ENDIF}
 
-function TRecycleEvent.IsSignalled: boolean;
+function TOmniRecycleEvent.IsSignalled: boolean;
 var
   ok: boolean;
 begin
@@ -1067,9 +1072,9 @@ begin
     if not ok then
       raise TOmniSynchroException.Create(EIsSignalledNotSupported);
   end
-end; { TRecycleEvent.IsSignalled }
+end; { TOmniRecycleEvent.IsSignalled }
 
-function TRecycleEvent.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleEvent.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if not assigned(FPool) then
     Result := nil
@@ -1079,9 +1084,9 @@ begin
     Result := FPool.FManualKernelEvents
   else
     Result := FPool.FAutoKernelEvents;
-end; { TRecycleEvent.Pool }
+end; { TOmniRecycleEvent.Pool }
 
-procedure TRecycleEvent.ResetEvent;
+procedure TOmniRecycleEvent.ResetEvent;
 begin
   if not FIsLight then
     FLock.Enter;
@@ -1093,9 +1098,9 @@ begin
       FAsyncClear := True;
     FLock.Leave
   end;
-end; { TRecycleEvent.ResetEvent }
+end; { TOmniRecycleEvent.ResetEvent }
 
-procedure TRecycleEvent.SetEvent;
+procedure TOmniRecycleEvent.SetEvent;
 begin
   if not FisLight then
     FLock.Enter;
@@ -1107,28 +1112,28 @@ begin
       FAsyncClear := False;
     FLock.Leave;
   end
-end; { TRecycleEvent.SetEvent }
+end; { TOmniRecycleEvent.SetEvent }
 
-procedure TRecycleEvent.Reconfigure(manual: boolean; value: cardinal);
+procedure TOmniRecycleEvent.Reconfigure(manual: boolean; value: cardinal);
 begin
   if FBase is TLightEvent then
-    TLightEventFriend(FBase).Reconfigure(Manual, Value);
-end; { TRecycleEvent.Reconfigure }
+    TOmniLightEventFriend(FBase).Reconfigure(Manual, Value);
+end; { TOmniRecycleEvent.Reconfigure }
 
-procedure TRecycleEvent.Signal;
+procedure TOmniRecycleEvent.Signal;
 begin
   SetEvent;
-end; { TRecycleEvent.Signal }
+end; { TOmniRecycleEvent.Signal }
 
-function TRecycleEvent.SignalState: TSignalState;
+function TOmniRecycleEvent.SignalState: TOmniSignalState;
 begin
   if IsSignalled then
     Result := esSignalled
   else
     Result := esNotSignalled;
-end; { TRecycleEvent.SignalState }
+end; { TOmniRecycleEvent.SignalState }
 
-function TRecycleEvent.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniRecycleEvent.WaitFor(timeout: cardinal): TWaitResult;
 begin
   if (not FIsLight) and (not FManual) then begin
     FLock.Enter;
@@ -1148,32 +1153,32 @@ begin
     end;
     FLock.Leave;
   end
-end; { TRecycleEvent.WaitFor }
+end; { TOmniRecycleEvent.WaitFor }
 
-{ TRecycleSemaphore.TSimulatedSemaphore }
+{ TOmniRecycleSemaphore.TSimulatedSemaphore }
 
-constructor TRecycleSemaphore.TSimulatedSemaphore.Create(AInitialValue: cardinal);
+constructor TOmniRecycleSemaphore.TSimulatedSemaphore.Create(AInitialValue: cardinal);
 begin
   FLock.Initialize;
   FInitialValue := AInitialValue;
   FCurrentValue.Initialize(FInitialValue);
   inherited Create(nil, @FLock);
-end; { TRecycleSemaphore.TSimulatedSemaphore.Create }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.Create }
 
-destructor TRecycleSemaphore.TSimulatedSemaphore.Destroy;
+destructor TOmniRecycleSemaphore.TSimulatedSemaphore.Destroy;
 begin
   FLock.Finalize;
   FCurrentValue.Finalize;
   inherited;
-end; { TRecycleSemaphore.TSimulatedSemaphore.Destroy }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.Destroy }
 
-procedure TRecycleSemaphore.TSimulatedSemaphore.ReconfigureInitial(value: cardinal);
+procedure TOmniRecycleSemaphore.TSimulatedSemaphore.ReconfigureInitial(value: cardinal);
 begin
   FInitialValue := value;
   Reset;
-end; { TRecycleSemaphore.TSimulatedSemaphore.ReconfigureInitial }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.ReconfigureInitial }
 
-procedure TRecycleSemaphore.TSimulatedSemaphore.Reset;
+procedure TOmniRecycleSemaphore.TSimulatedSemaphore.Reset;
 begin
   FLock.WithinLock(
     procedure
@@ -1182,169 +1187,169 @@ begin
       if FInitialValue > 0 then
         Pulse;
     end)
-end; { TRecycleSemaphore.TSimulatedSemaphore.Reset }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.Reset }
 
-function TRecycleSemaphore.TSimulatedSemaphore.SignalState: TSignalState;
+function TOmniRecycleSemaphore.TSimulatedSemaphore.SignalState: TOmniSignalState;
 begin
   if FCurrentValue.Read > 0 then
     Result := esSignalled
   else
     Result := esNotSignalled;
-end; { TRecycleSemaphore.TSimulatedSemaphore.SignalState }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.SignalState }
 
-procedure TRecycleSemaphore.TSimulatedSemaphore.SignalTest(
+procedure TOmniRecycleSemaphore.TSimulatedSemaphore.SignalTest(
   doAcquire: boolean; var wasSuccessfullyAcquired, isInSignalledState: boolean);
 begin
   wasSuccessfullyAcquired := doAcquire and FCurrentValue.DecrementIfAboveZero;
   isInSignalledState := FCurrentValue.Read > 0;
-end; { TRecycleSemaphore.TSimulatedSemaphore.SignalTest }
+end; { TOmniRecycleSemaphore.TSimulatedSemaphore.SignalTest }
 
-{ TRecycleSemaphore }
+{ TOmniRecycleSemaphore }
 
-constructor TRecycleSemaphore.Create(
-  const APool: TSynchroFactory; AInitialCount: cardinal);
+constructor TOmniRecycleSemaphore.Create(
+  const APool: TOmniSynchroFactory; AInitialCount: cardinal);
 begin
   inherited Create(APool);
   FBase := TSimulatedSemaphore.Create(AInitialCount);
-end; { TRecycleSemaphore.Create }
+end; { TOmniRecycleSemaphore.Create }
 
-destructor TRecycleSemaphore.Destroy;
+destructor TOmniRecycleSemaphore.Destroy;
 begin
   FBase.Free;
   inherited;
-end; { TRecycleSemaphore.Destroy }
+end; { TOmniRecycleSemaphore.Destroy }
 
-function TRecycleSemaphore.AsMWObject: TObject;
+function TOmniRecycleSemaphore.AsMWObject: TObject;
 begin
   Result := nil;
-end; { TRecycleSemaphore.AsMWObject }
+end; { TOmniRecycleSemaphore.AsMWObject }
 
-function TRecycleSemaphore.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleSemaphore.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
   Include(Result, scSupportsValueTesting);
-end; { TRecycleSemaphore.GetCapabilities }
+end; { TOmniRecycleSemaphore.GetCapabilities }
 
 {$IFDEF MSWINDOWS}
-function TRecycleSemaphore.GetHandle: THandle;
+function TOmniRecycleSemaphore.GetHandle: THandle;
 begin
   Result := 0;
-end; { TRecycleSemaphore.GetHandle }
+end; { TOmniRecycleSemaphore.GetHandle }
 {$ENDIF}
 
-function TRecycleSemaphore.InitialValue: cardinal;
+function TOmniRecycleSemaphore.InitialValue: cardinal;
 begin
   Result := FBase.FInitialValue;
-end; { TRecycleSemaphore.InitialValue }
+end; { TOmniRecycleSemaphore.InitialValue }
 
-function TRecycleSemaphore.IsSignalled: boolean;
+function TOmniRecycleSemaphore.IsSignalled: boolean;
 begin
   Result := FBase.IsSignalled;
-end; { TRecycleSemaphore.IsSignalled }
+end; { TOmniRecycleSemaphore.IsSignalled }
 
-function TRecycleSemaphore.SignalState: TSignalState;
+function TOmniRecycleSemaphore.SignalState: TOmniSignalState;
 begin
   Result := FBase.SignalState;
-end; { TRecycleSemaphore.SignalState }
+end; { TOmniRecycleSemaphore.SignalState }
 
-function TRecycleSemaphore.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleSemaphore.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if not assigned(FPool) then
     Result := nil
   else
     Result := FPool.FSemaphores;
-end; { TRecycleSemaphore.Pool }
+end; { TOmniRecycleSemaphore.Pool }
 
-procedure TRecycleSemaphore.Reconfigure(value: cardinal);
+procedure TOmniRecycleSemaphore.Reconfigure(value: cardinal);
 begin
   FBase.ReconfigureInitial(value);
-end; { TRecycleSemaphore.Reconfigure }
+end; { TOmniRecycleSemaphore.Reconfigure }
 
-procedure TRecycleSemaphore.Reset;
+procedure TOmniRecycleSemaphore.Reset;
 begin
   FBase.Reset;
-end; { TRecycleSemaphore.Reset }
+end; { TOmniRecycleSemaphore.Reset }
 
-procedure TRecycleSemaphore.Signal;
+procedure TOmniRecycleSemaphore.Signal;
 begin
   FBase.FLock.Enter;
   FBase.FCurrentValue.Increment;
   FBase.FLock.Leave;
   FBase.Pulse;
-end; { TRecycleSemaphore.Signal }
+end; { TOmniRecycleSemaphore.Signal }
 
-function TRecycleSemaphore.Value: cardinal;
+function TOmniRecycleSemaphore.Value: cardinal;
 begin
   FBase.FLock.Enter;
   Result := FBase.FCurrentValue.Read;
   FBase.FLock.Leave;
-end; { TRecycleSemaphore.Value }
+end; { TOmniRecycleSemaphore.Value }
 
-function TRecycleSemaphore.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniRecycleSemaphore.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FBase.WaitFor(timeout);
-end; { TRecycleSemaphore.WaitFor }
+end; { TOmniRecycleSemaphore.WaitFor }
 
-{ TNativeSemaphore }
+{ TOmniNativeSemaphore }
 
-constructor TNativeSemaphore.Create(AInitialCount: cardinal);
+constructor TOmniNativeSemaphore.Create(AInitialCount: cardinal);
 begin
   FInitial := AInitialCount;
   FBase    := TOtlSemaphore.Create(FInitial);
   FWaiters := 0;
   FShadow  := FInitial;
   FLock.Initialize;
-end; { TNativeSemaphore.Create }
+end; { TOmniNativeSemaphore.Create }
 
-destructor TNativeSemaphore.Destroy;
+destructor TOmniNativeSemaphore.Destroy;
 begin
   FLock.Finalize;
   FBase.Free;
   inherited;
-end; { TNativeSemaphore.Destroy }
+end; { TOmniNativeSemaphore.Destroy }
 
-function TNativeSemaphore.AsMWObject: TObject;
+function TOmniNativeSemaphore.AsMWObject: TObject;
 begin
   Result := FBase.AsMWObject;
-end; { TNativeSemaphore.AsMWObject }
+end; { TOmniNativeSemaphore.AsMWObject }
 
-function TNativeSemaphore.AsObject: TObject;
+function TOmniNativeSemaphore.AsObject: TObject;
 begin
   Result := Self;
-end; { TNativeSemaphore.AsObject }
+end; { TOmniNativeSemaphore.AsObject }
 
-function TNativeSemaphore.GetCapabilities: TSynchroCapabilities;
+function TOmniNativeSemaphore.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
 {$IFDEF MSWINDOWS}
   Include(Result, scModular);
 {$ENDIF}
-end; { TNativeSemaphore.GetCapabilities }
+end; { TOmniNativeSemaphore.GetCapabilities }
 
 {$IFDEF MSWINDOWS}
-function TNativeSemaphore.GetHandle: THandle;
+function TOmniNativeSemaphore.GetHandle: THandle;
 begin
   Result := FBase.Handle;
-end; { TNativeSemaphore.GetHandle }
+end; { TOmniNativeSemaphore.GetHandle }
 {$ENDIF}
 
-function TNativeSemaphore.InitialValue: cardinal;
+function TOmniNativeSemaphore.InitialValue: cardinal;
 begin
   Result := FInitial;
-end; { TNativeSemaphore.InitialValue }
+end; { TOmniNativeSemaphore.InitialValue }
 
-function TNativeSemaphore.IsSignalled: boolean;
+function TOmniNativeSemaphore.IsSignalled: boolean;
 var
-  state: TSignalState;
+  state: TOmniSignalState;
 begin
   state := SignalState;
   Result := state = esSignalled;
   if state = esUnknown then
     raise TOmniSynchroException.Create(EIsSignalledNotSupported);
-end; { TNativeSemaphore.IsSignalled }
+end; { TOmniNativeSemaphore.IsSignalled }
 
-function TNativeSemaphore.SignalState: TSignalState;
+function TOmniNativeSemaphore.SignalState: TOmniSignalState;
 begin
   FLock.Enter;
   if (FWaiters = 0) or (FShadow = 0) then begin
@@ -1356,22 +1361,22 @@ begin
   else
     Result := esUnknown;
   FLock.Leave;
-end; { TNativeSemaphore.SignalState }
+end; { TOmniNativeSemaphore.SignalState }
 
-procedure TNativeSemaphore.Reset;
+procedure TOmniNativeSemaphore.Reset;
 begin
   raise TOmniSynchroException.Create(EIsSignalledNotSupported);
-end; { TNativeSemaphore.Reset }
+end; { TOmniNativeSemaphore.Reset }
 
-procedure TNativeSemaphore.Signal;
+procedure TOmniNativeSemaphore.Signal;
 begin
   FLock.Enter;
   FBase.Signal;
   Inc(FShadow);
   FLock.Leave;
-end; { TNativeSemaphore.Signal }
+end; { TOmniNativeSemaphore.Signal }
 
-function TNativeSemaphore.Value: cardinal;
+function TOmniNativeSemaphore.Value: cardinal;
 var
   ok: boolean;
 begin
@@ -1383,9 +1388,9 @@ begin
   FLock.Leave;
   if not ok then
     raise TOmniSynchroException.Create(EIsSignalledNotSupported);
-end; { TNativeSemaphore.Value }
+end; { TOmniNativeSemaphore.Value }
 
-function TNativeSemaphore.WaitFor(Timeout: cardinal): TWaitResult;
+function TOmniNativeSemaphore.WaitFor(Timeout: cardinal): TWaitResult;
 begin
   FLock.Enter;
   Inc(FWaiters);
@@ -1396,443 +1401,443 @@ begin
     Dec(FShadow);
   Dec(FWaiters);
   FLock.Leave;
-end; { TNativeSemaphore.WaitFor }
+end; { TOmniNativeSemaphore.WaitFor }
 
-{ TRecycleCrit }
+{ TOmniRecycleCriticalSection }
 
-constructor TRecycleCrit.Create(const APool: TSynchroFactory);
+constructor TOmniRecycleCriticalSection.Create(const APool: TOmniSynchroFactory);
 begin
   inherited Create(APool);
   FCrit := TFixedCriticalSection.Create;
   FLockCount.Initialize(0);
-end; { TRecycleCrit.Create }
+end; { TOmniRecycleCriticalSection.Create }
 
-destructor TRecycleCrit.Destroy;
+destructor TOmniRecycleCriticalSection.Destroy;
 begin
   FCrit.Free;
   FLockCount.Finalize;
   inherited;
-end; { TRecycleCrit.Destroy }
+end; { TOmniRecycleCriticalSection.Destroy }
 
-function TRecycleCrit.AsCriticalSection: TCriticalSection;
+function TOmniRecycleCriticalSection.AsCriticalSection: TCriticalSection;
 begin
   Result := FCrit;
-end; { TRecycleCrit.AsCriticalSection }
+end; { TOmniRecycleCriticalSection.AsCriticalSection }
 
-function TRecycleCrit.AsSpinLock: POmniAtomicSpinLock;
+function TOmniRecycleCriticalSection.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := nil;
-end; { TRecycleCrit.AsSpinLock }
+end; { TOmniRecycleCriticalSection.AsSpinLock }
 
-procedure TRecycleCrit.Enter;
+procedure TOmniRecycleCriticalSection.Enter;
 begin
   FCrit.Enter;
   FLockCount.Increment;
-end; { TRecycleCrit.Enter }
+end; { TOmniRecycleCriticalSection.Enter }
 
-function TRecycleCrit.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleCriticalSection.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scKernelMode);
-end; { TRecycleCrit.GetCapabilities }
+end; { TOmniRecycleCriticalSection.GetCapabilities }
 
-procedure TRecycleCrit.Leave;
+procedure TOmniRecycleCriticalSection.Leave;
 begin
   FLockCount.Decrement;
   FCrit.Leave;
-end; { TRecycleCrit.Leave }
+end; { TOmniRecycleCriticalSection.Leave }
 
-function TRecycleCrit.LockCount: integer;
+function TOmniRecycleCriticalSection.LockCount: integer;
 begin
   Result := FLockCount.Read;
-end; { TRecycleCrit.LockCount }
+end; { TOmniRecycleCriticalSection.LockCount }
 
-function TRecycleCrit.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleCriticalSection.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if assigned(FPool) then
     Result := FPool.FCrits
   else
     Result := nil;
-end; { TRecycleCrit.Pool }
+end; { TOmniRecycleCriticalSection.Pool }
 
-function TRecycleCrit.SignalState: TSignalState;
+function TOmniRecycleCriticalSection.SignalState: TOmniSignalState;
 begin
   Result := esUnknown;
-end; { TRecycleCrit.SignalState }
+end; { TOmniRecycleCriticalSection.SignalState }
 
-{ TSpinIntf }
+{ TOmniSpinLock }
 
-constructor TSpinIntf.Create;
+constructor TOmniSpinLock.Create;
 begin
   FLock.Initialize;
-end; { TSpinIntf.Create }
+end; { TOmniSpinLock.Create }
 
-destructor TSpinIntf.Destroy;
+destructor TOmniSpinLock.Destroy;
 begin
   FLock.Finalize;
   inherited;
-end; { TSpinIntf.Destroy }
+end; { TOmniSpinLock.Destroy }
 
-function TSpinIntf.AsCriticalSection: TCriticalSection;
+function TOmniSpinLock.AsCriticalSection: TCriticalSection;
 begin
   Result := nil;
-end; { TSpinIntf.AsCriticalSection }
+end; { TOmniSpinLock.AsCriticalSection }
 
-function TSpinIntf.AsObject: TObject;
+function TOmniSpinLock.AsObject: TObject;
 begin
   Result := Self;
-end; { TSpinIntf.AsObject }
+end; { TOmniSpinLock.AsObject }
 
-function TSpinIntf.AsSpinLock: POmniAtomicSpinLock;
+function TOmniSpinLock.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := @FLock;
-end; { TSpinIntf.AsSpinLock }
+end; { TOmniSpinLock.AsSpinLock }
 
-function TSpinIntf.GetCapabilities: TSynchroCapabilities;
+function TOmniSpinLock.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
-end; { TSpinIntf.GetCapabilities }
+end; { TOmniSpinLock.GetCapabilities }
 
-procedure TSpinIntf.Enter;
+procedure TOmniSpinLock.Enter;
 begin
   FLock.Enter;
-end; { TSpinIntf.Enter }
+end; { TOmniSpinLock.Enter }
 
-procedure TSpinIntf.Leave;
+procedure TOmniSpinLock.Leave;
 begin
   FLock.Leave;
-end; { TSpinIntf.Leave }
+end; { TOmniSpinLock.Leave }
 
-function TSpinIntf.LockCount: integer;
+function TOmniSpinLock.LockCount: integer;
 begin
   Result := FLock.FEntryCount.Read;
-end; { TSpinIntf.LockCount }
+end; { TOmniSpinLock.LockCount }
 
-{ TRecycleCountDown }
+{ TOmniRecycleCountDown }
 
-constructor TRecycleCountDown.Create(const APool: TSynchroFactory; AInitialValue: cardinal);
+constructor TOmniRecycleCountDown.Create(const APool: TOmniSynchroFactory; AInitialValue: cardinal);
 begin
   inherited Create(APool);
   FBase := TCountDown.Create(AInitialValue);
-end; { TRecycleCountDown.Create }
+end; { TOmniRecycleCountDown.Create }
 
-destructor TRecycleCountDown.Destroy;
+destructor TOmniRecycleCountDown.Destroy;
 begin
   FBase.Free;
   inherited;
-end; { TRecycleCountDown.Destroy }
+end; { TOmniRecycleCountDown.Destroy }
 
-function TRecycleCountDown.Allocate: cardinal;
+function TOmniRecycleCountDown.Allocate: cardinal;
 begin
   Result := FBase.Allocate;
-end; { TRecycleCountDown.Allocate }
+end; { TOmniRecycleCountDown.Allocate }
 
-procedure TRecycleCountDown.CounterSignal;
+procedure TOmniRecycleCountDown.CounterSignal;
 begin
   FBase.CounterSignal;
-end; { TRecycleCountDown.CounterSignal }
+end; { TOmniRecycleCountDown.CounterSignal }
 
-function TRecycleCountDown.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleCountDown.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
-end; { TRecycleCountDown.GetCapabilities }
+end; { TOmniRecycleCountDown.GetCapabilities }
 
-function TRecycleCountDown.InitialValue: cardinal;
+function TOmniRecycleCountDown.InitialValue: cardinal;
 begin
   Result := FBase.FullCount;
-end; { TRecycleCountDown.InitialValue }
+end; { TOmniRecycleCountDown.InitialValue }
 
-function TRecycleCountDown.IsSignalled: boolean;
+function TOmniRecycleCountDown.IsSignalled: boolean;
 begin
   Result := FBase.IsSignalled;
-end; { TRecycleCountDown.IsSignalled }
+end; { TOmniRecycleCountDown.IsSignalled }
 
-function TRecycleCountDown.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleCountDown.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if assigned(FPool) then
     Result := FPool.FCountDowns
   else
     Result := nil;
-end; { TRecycleCountDown.Pool }
+end; { TOmniRecycleCountDown.Pool }
 
-procedure TRecycleCountDown.Reconfigure(AInitial: cardinal);
+procedure TOmniRecycleCountDown.Reconfigure(AInitial: cardinal);
 begin
-  TCountDownFriend(FBase).Reconfigure(AInitial);
-end; { TRecycleCountDown.Reconfigure }
+  TOmniCountDownFriend(FBase).Reconfigure(AInitial);
+end; { TOmniRecycleCountDown.Reconfigure }
 
-procedure TRecycleCountDown.Signal;
+procedure TOmniRecycleCountDown.Signal;
 begin
   FBase.Signal;
-end; { TRecycleCountDown.Signal }
+end; { TOmniRecycleCountDown.Signal }
 
-function TRecycleCountDown.SignalHit: boolean;
+function TOmniRecycleCountDown.SignalHit: boolean;
 begin
   Result := FBase.SignalHit;
-end; { TRecycleCountDown.SignalHit }
+end; { TOmniRecycleCountDown.SignalHit }
 
-function TRecycleCountDown.Value: cardinal;
+function TOmniRecycleCountDown.Value: cardinal;
 begin
   Result := FBase.Value;
-end; { TRecycleCountDown.Value }
+end; { TOmniRecycleCountDown.Value }
 
-function TRecycleCountDown.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniRecycleCountDown.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FBase.WaitFor(timeout);
-end; { TRecycleCountDown.WaitFor }
+end; { TOmniRecycleCountDown.WaitFor }
 
-{ TRecycleCountUp }
+{ TOmniRecycleCountUp }
 
-constructor TRecycleCountUp.Create(
-  const APool: TSynchroFactory; AInitial, AMaxValue: cardinal);
+constructor TOmniRecycleCountUp.Create(
+  const APool: TOmniSynchroFactory; AInitial, AMaxValue: cardinal);
 begin
   inherited Create(APool);
   FBase := TCountUp.Create(AInitial, AMaxValue);
-end; { TRecycleCountUp.Create }
+end; { TOmniRecycleCountUp.Create }
 
-destructor TRecycleCountUp.Destroy;
+destructor TOmniRecycleCountUp.Destroy;
 begin
   FBase.Free;
   inherited;
-end; { TRecycleCountUp.Destroy }
+end; { TOmniRecycleCountUp.Destroy }
 
-function TRecycleCountUp.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleCountUp.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
-end; { TRecycleCountUp.GetCapabilities }
+end; { TOmniRecycleCountUp.GetCapabilities }
 
-function TRecycleCountUp.InitialValue: cardinal;
+function TOmniRecycleCountUp.InitialValue: cardinal;
 begin
   Result := FBase.InitialValue;
-end; { TRecycleCountUp.InitialValue }
+end; { TOmniRecycleCountUp.InitialValue }
 
-function TRecycleCountUp.IsSignalled: boolean;
+function TOmniRecycleCountUp.IsSignalled: boolean;
 begin
   Result := FBase.IsSignalled;
-end; { TRecycleCountUp.IsSignalled }
+end; { TOmniRecycleCountUp.IsSignalled }
 
-function TRecycleCountUp.MaxValue: cardinal;
+function TOmniRecycleCountUp.MaxValue: cardinal;
 begin
   Result := FBase.MaxValue;
-end; { TRecycleCountUp.MaxValue }
+end; { TOmniRecycleCountUp.MaxValue }
 
-function TRecycleCountUp.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleCountUp.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if assigned(FPool) then
     Result := FPool.FCountUps
   else
     Result := nil;
-end; { TRecycleCountUp.Pool }
+end; { TOmniRecycleCountUp.Pool }
 
-procedure TRecycleCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
+procedure TOmniRecycleCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
 begin
-  TCountUpFriend(FBase).Reconfigure(AInitial, AMaxValue);
-end; { TRecycleCountUp.Reconfigure }
+  TOmniCountUpFriend(FBase).Reconfigure(AInitial, AMaxValue);
+end; { TOmniRecycleCountUp.Reconfigure }
 
-procedure TRecycleCountUp.Signal;
+procedure TOmniRecycleCountUp.Signal;
 begin
   FBase.Signal;
-end; { TRecycleCountUp.Signal }
+end; { TOmniRecycleCountUp.Signal }
 
-function TRecycleCountUp.SignalHit: boolean;
+function TOmniRecycleCountUp.SignalHit: boolean;
 begin
   Result := FBase.SignalHit;
-end; { TRecycleCountUp.SignalHit }
+end; { TOmniRecycleCountUp.SignalHit }
 
-function TRecycleCountUp.Value: cardinal;
+function TOmniRecycleCountUp.Value: cardinal;
 begin
   Result := FBase.Value;
-end; { TRecycleCountUp.Value }
+end; { TOmniRecycleCountUp.Value }
 
-function TRecycleCountUp.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniRecycleCountUp.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FBase.WaitFor(timeout);
-end; { TRecycleCountUp.WaitFor }
+end; { TOmniRecycleCountUp.WaitFor }
 
-{ TRecycleFunctional }
+{ TOmniRecycleFunctional }
 
-constructor TRecycleFunctional.Create(
-  const APool: TSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
+constructor TOmniRecycleFunctional.Create(
+  const APool: TOmniSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   inherited Create(APool);
   FBase := TFunctionalEvent.Create(ASignalTest, APLock);
-end; { TRecycleFunctional.Create }
+end; { TOmniRecycleFunctional.Create }
 
-destructor TRecycleFunctional.Destroy;
+destructor TOmniRecycleFunctional.Destroy;
 begin
   FBase.Free;
   inherited
-end; { TRecycleFunctional.Destroy }
+end; { TOmniRecycleFunctional.Destroy }
 
-function TRecycleFunctional.GetCapabilities: TSynchroCapabilities;
+function TOmniRecycleFunctional.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
-end; { TRecycleFunctional.GetCapabilities }
+end; { TOmniRecycleFunctional.GetCapabilities }
 
-function TRecycleFunctional.IsSignalled: boolean;
+function TOmniRecycleFunctional.IsSignalled: boolean;
 begin
   Result := FBase.IsSignalled;
-end; { TRecycleFunctional.IsSignalled }
+end; { TOmniRecycleFunctional.IsSignalled }
 
-function TRecycleFunctional.Pool: TSynchroFactory.TObjectQueue;
+function TOmniRecycleFunctional.Pool: TOmniSynchroFactory.TObjectQueue;
 begin
   if assigned(FPool) then
     Result := FPool.FFunctionals
   else
     Result := nil;
-end; { TRecycleFunctional.Pool }
+end; { TOmniRecycleFunctional.Pool }
 
-procedure TRecycleFunctional.Reconfigure(
+procedure TOmniRecycleFunctional.Reconfigure(
   ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
-  TFunctionalEventFriend(FBase).Reconfigure(ASignalTest, APLock);
-end; { TRecycleFunctional.Reconfigure }
+  TOmniFunctionalEventFriend(FBase).Reconfigure(ASignalTest, APLock);
+end; { TOmniRecycleFunctional.Reconfigure }
 
-procedure TRecycleFunctional.ReleaseConfiguration;
+procedure TOmniRecycleFunctional.ReleaseConfiguration;
 begin
-  TFunctionalEventFriend(FBase).Reconfigure(nil, nil);
-end; { TRecycleFunctional.ReleaseConfiguration }
+  TOmniFunctionalEventFriend(FBase).Reconfigure(nil, nil);
+end; { TOmniRecycleFunctional.ReleaseConfiguration }
 
-procedure TRecycleFunctional.Signal;
+procedure TOmniRecycleFunctional.Signal;
 begin
   FBase.Pulse;
-end; { TRecycleFunctional.Signal }
+end; { TOmniRecycleFunctional.Signal }
 
-function TRecycleFunctional.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniRecycleFunctional.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FBase.WaitFor(timeout);
-end; { TRecycleFunctional.WaitFor }
+end; { TOmniRecycleFunctional.WaitFor }
 
-{ TIntfMREW.TFacade }
+{ TOmniPlatformMREW.TFacade }
 
-function TIntfMREW.TFacade.AsCriticalSection: TCriticalSection;
+function TOmniPlatformMREW.TFacade.AsCriticalSection: TCriticalSection;
 begin
   Result := nil;
-end; { TIntfMREW.TFacade.AsCriticalSection }
+end; { TOmniPlatformMREW.TFacade.AsCriticalSection }
 
-function TIntfMREW.TFacade.AsObject: TObject;
+function TOmniPlatformMREW.TFacade.AsObject: TObject;
 begin
   Result := Self;
-end; { TIntfMREW.TFacade.AsObject }
+end; { TOmniPlatformMREW.TFacade.AsObject }
 
-function TIntfMREW.TFacade.AsSpinLock: POmniAtomicSpinLock;
+function TOmniPlatformMREW.TFacade.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := nil;
-end; { TIntfMREW.TFacade.AsSpinLock }
+end; { TOmniPlatformMREW.TFacade.AsSpinLock }
 
-function TIntfMREW.TFacade.GetCapabilities: TSynchroCapabilities;
+function TOmniPlatformMREW.TFacade.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
-end; { TIntfMREW.TFacade.GetCapabilities }
+end; { TOmniPlatformMREW.TFacade.GetCapabilities }
 
-function TIntfMREW.TFacade.LockCount: integer;
+function TOmniPlatformMREW.TFacade.LockCount: integer;
 begin
   Result := FController.FMREW.ReaderCount;
-end; { TIntfMREW.TFacade.LockCount }
+end; { TOmniPlatformMREW.TFacade.LockCount }
 
-function TIntfMREW.TFacade._AddRef: Integer;
+function TOmniPlatformMREW.TFacade._AddRef: Integer;
 begin
   Result := FController._AddRef;
-end; { TIntfMREW.TFacade._AddRef }
+end; { TOmniPlatformMREW.TFacade._AddRef }
 
-function TIntfMREW.TFacade._Release: Integer;
+function TOmniPlatformMREW.TFacade._Release: Integer;
 begin
   Result := FController._Release
-end; { TIntfMREW.TFacade._Release }
+end; { TOmniPlatformMREW.TFacade._Release }
 
-{ TIntfMREW.TReaderLock }
+{ TOmniPlatformMREW.TReaderLock }
 
-procedure TIntfMREW.TReaderLock.Enter;
+procedure TOmniPlatformMREW.TReaderLock.Enter;
 begin
   FController.FMREW.EnterRead(INFINITE);
-end; { TIntfMREW.TReaderLock.Enter }
+end; { TOmniPlatformMREW.TReaderLock.Enter }
 
-procedure TIntfMREW.TReaderLock.Leave;
+procedure TOmniPlatformMREW.TReaderLock.Leave;
 begin
   FController.FMREW.ExitRead;
-end; { TIntfMREW.TReaderLock.Leave }
+end; { TOmniPlatformMREW.TReaderLock.Leave }
 
-function TIntfMREW.TReaderLock.LockCount: integer;
+function TOmniPlatformMREW.TReaderLock.LockCount: integer;
 begin
   Result := inherited LockCount;
   if result < 0 then
     Result := 1;
-end; { TIntfMREW.TReaderLock.LockCount }
+end; { TOmniPlatformMREW.TReaderLock.LockCount }
 
-{ TIntfMREW.TWriterLock }
+{ TOmniPlatformMREW.TWriterLock }
 
-procedure TIntfMREW.TWriterLock.Enter;
+procedure TOmniPlatformMREW.TWriterLock.Enter;
 begin
   FController.FMREW.EnterWrite(INFINITE);
 end; { TWriterLock.Enter }
 
-procedure TIntfMREW.TWriterLock.Leave;
+procedure TOmniPlatformMREW.TWriterLock.Leave;
 begin
   FController.FMREW.ExitWrite;
 end; { TWriterLock.Leave }
 
-function TIntfMREW.TWriterLock.LockCount: integer;
+function TOmniPlatformMREW.TWriterLock.LockCount: integer;
 begin
   Result := - inherited LockCount;
   if result < 0 then
     Result := 1;
 end; { TWriterLock.LockCount }
 
-{ TIntfMREW }
+{ TOmniPlatformMREW }
 
-constructor TIntfMREW.Create;
+constructor TOmniPlatformMREW.Create;
 begin
   FMREW := TOtlMREW.Create;
-  FReadFacade := TIntfMREW.TReaderLock.Create;
+  FReadFacade := TOmniPlatformMREW.TReaderLock.Create;
   FReadFacade.FController := Self;
-  FWriteFacade := TIntfMREW.TWriterLock.Create;
+  FWriteFacade := TOmniPlatformMREW.TWriterLock.Create;
   FWriteFacade.FController := Self;
-end; { TIntfMREW.Create }
+end; { TOmniPlatformMREW.Create }
 
-destructor TIntfMREW.Destroy;
+destructor TOmniPlatformMREW.Destroy;
 begin
   FReadFacade.FController := nil;
   FreeAndNil(FReadFacade);
   FreeAndNil(FWriteFacade);
   FreeAndNil(FMREW);
   inherited;
-end; { TIntfMREW.Destroy }
+end; { TOmniPlatformMREW.Destroy }
 
-function TIntfMREW.AsReadLock: ILock;
+function TOmniPlatformMREW.AsReadLock: IOmniLock;
 begin
-  Result := FReadFacade as ILock;
-end; { TIntfMREW.AsReadLock }
+  Result := FReadFacade as IOmniLock;
+end; { TOmniPlatformMREW.AsReadLock }
 
-function TIntfMREW.AsWriteLock: ILock;
+function TOmniPlatformMREW.AsWriteLock: IOmniLock;
 begin
-  Result := FWriteFacade as ILock;
-end; { TIntfMREW.AsWriteLock }
+  Result := FWriteFacade as IOmniLock;
+end; { TOmniPlatformMREW.AsWriteLock }
 
-function TIntfMREW.EnterRead(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREW.EnterRead(timeout: cardinal): TWaitResult;
 begin
   Result := FMREW.EnterRead(timeout);
-end; { TIntfMREW.EnterRead }
+end; { TOmniPlatformMREW.EnterRead }
 
-function TIntfMREW.EnterWrite(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREW.EnterWrite(timeout: cardinal): TWaitResult;
 begin
   Result := FMREW.EnterWrite(timeout);
-end; { TIntfMREW.EnterWrite }
+end; { TOmniPlatformMREW.EnterWrite }
 
-procedure TIntfMREW.ExitRead;
+procedure TOmniPlatformMREW.ExitRead;
 begin
   FMREW.ExitRead;
-end; { TIntfMREW.ExitRead }
+end; { TOmniPlatformMREW.ExitRead }
 
-procedure TIntfMREW.ExitWrite;
+procedure TOmniPlatformMREW.ExitWrite;
 begin
   FMREW.ExitWrite;
-end; { TIntfMREW.ExitWrite }
+end; { TOmniPlatformMREW.ExitWrite }
 
-function TIntfMREW.ReaderCount: integer;
+function TOmniPlatformMREW.ReaderCount: integer;
 begin
   Result := FMREW.ReaderCount;
-end; { TIntfMREW.ReaderCount }
+end; { TOmniPlatformMREW.ReaderCount }
 
 end.

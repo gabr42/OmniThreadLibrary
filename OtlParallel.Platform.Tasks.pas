@@ -18,7 +18,7 @@ type
   TTasking = class
     class function CreateWorkFactory(
       MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventPool: integer;
-      const SharedLock: ILock = nil): IWorkFactory;
+      const SharedLock: IOmniLock = nil): IWorkFactory;
 
     class function CreateFuture<T>( const AFactory: IWorkFactory; Func: TFutureFunc<T>): IFuture<T>;
     class function Join( const WorkFactory: IWorkFactory; const Tasks: array of ITask): ITask;
@@ -40,11 +40,11 @@ type
 
   protected
     FWorkFactory: TWorkFactory;
-    FLock: ILock;
+    FLock: IOmniLock;
     [Volatile] FStatus: TOmniVolatileUint32; // (TTaskThreadStatus
     [Volatile] FisTerminated: TOmniVolatileUint32;
-    FHouseKeeperAlert: IEvent; // Shared. Auto-reset.
-    FWorkAlert: IEvent;        // Shared. Auto-reset
+    FHouseKeeperAlert: IOmniEvent; // Shared. Auto-reset.
+    FWorkAlert: IOmniEvent;        // Shared. Auto-reset
 
     procedure Execute; override;
 
@@ -78,11 +78,11 @@ type
 
   private
     FWorkFactory: TWorkFactory;
-    FLock: ILock;
-    FHouseKeeperAlert: IEvent; // Shared. Auto-reset.
-    FWorkAlert: IEvent;        // Shared. Auto-reset
+    FLock: IOmniLock;
+    FHouseKeeperAlert: IOmniEvent; // Shared. Auto-reset.
+    FWorkAlert: IOmniEvent;        // Shared. Auto-reset
     [Volatile] FisTerminated: TOmniVolatileUint32;
-    FAllThreadsDone: ICountDown;
+    FAllThreadsDone: IOmniCountDown;
     FMaxThreadCount: cardinal;     // Maximum allowable count of threads.
     FMinIdleCount: cardinal;       // Minimum count of idle threads that the house-keeper is to maintain, if permitted by Max properties.
     FMaxIdleCount: cardinal;       // Maximum count of idle threads that  the house-keeper is to maintain.
@@ -120,7 +120,7 @@ type
     MaxCoForEachThreadCount = 10;
 
   private
-    FLock: ILock;
+    FLock: IOmniLock;
     [Volatile] FThreadCount: TOmniVolatileUint32; // Total number of threads either in-work, terminated or idle.
     [Volatile] FIdleCount: TOmniVolatileUint32;   // Count of idle threads available for tasking.
     FMaxThreadCount: cardinal;     // Maximum allowable count of threads.
@@ -132,15 +132,15 @@ type
     FTaskQueue: TJobPipe;
     FReturnQueue: TJobPipe;
     FTaskThreads: TObjectList<TTaskThread>;
-    FHouseKeepAlert: IEvent;  // Auto-reset
-    FWorkAlert: IEvent;       // Auto-reset
+    FHouseKeepAlert: IOmniEvent;  // Auto-reset
+    FWorkAlert: IOmniEvent;       // Auto-reset
     FHouseKeeper: THouseKeeperThread;
-    FShareLock: ILock;
-    FSynchroPool: TSynchroFactory;
-    FAllThreadsDone: ICountDown;
+    FShareLock: IOmniLock;
+    FSynchroPool: TOmniSynchroFactory;
+    FAllThreadsDone: IOmniCountDown;
     FSchedQueue:   TSchedQueue;
 
-    function  FactoryLock: ILock;
+    function  FactoryLock: IOmniLock;
     function  AsObject: TObject;
     function  ProcessJobReturn( TimeOut: cardinal): boolean;
     function  QueueJob( const Task: ITask): boolean;
@@ -148,23 +148,23 @@ type
     procedure StartTask( const TaskIntf: ITask);
     function  CanStart( TaskObj: TTask): boolean;
 
-    function NewLock( Locking: TLockingMechanism): ILock;
-    function Event            ( ManualReset, InitialState: boolean): IEvent;                        // Interface level, Reusable.
-    function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;     // Interface level, Reusable.
-    function CountDown( InitialValue: cardinal): ICountDown;                                        // Interface level, Reusable.
-    function CompositeSynchro_WaitAll( const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function CompositeSynchro_WaitAny( const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function ModularEvent    ( ManualReset, InitialState: boolean): IEvent;        overload;
-    function ModularEvent    ( const ABase: IEvent               ): IEvent;        overload;
-    function ModularSemaphore( AInitialCount: cardinal): ISemaphore;    overload;
-    function ModularSemaphore( const ABase: ISemaphore): ISemaphore;    overload;
-    function ModularCountDown( AInitialValue: cardinal): ICountDown;    overload;
-    function ModularCountDown( const ABase: ICountDown): ICountDown;    overload;
+    function NewLock( Locking: TOmniLockingMechanism): IOmniLock;
+    function Event            ( ManualReset, InitialState: boolean): IOmniEvent;                        // Interface level, Reusable.
+    function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;     // Interface level, Reusable.
+    function CountDown( InitialValue: cardinal): IOmniCountDown;                                        // Interface level, Reusable.
+    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function ModularEvent    ( ManualReset, InitialState: boolean): IOmniEvent;        overload;
+    function ModularEvent    ( const ABase: IOmniEvent               ): IOmniEvent;        overload;
+    function ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;    overload;
+    function ModularSemaphore( const ABase: IOmniSemaphore): IOmniSemaphore;    overload;
+    function ModularCountDown( AInitialValue: cardinal): IOmniCountDown;    overload;
+    function ModularCountDown( const ABase: IOmniCountDown): IOmniCountDown;    overload;
     function Join( const Tasks: array of ITask                ): ITask;                         overload;
     function Join( const Procs: array of System.SysUtils.TProc): ITask;                         overload;
     function Join( const Procs: array of TTaskProc            ): ITask;                         overload;
-    function WaitForAny( const AFactors: TSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
-    function WaitForAll( const AFactors: TSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
     function CoForEach( LowIdx, HighIdx, StepIdx: integer; ThreadCount: integer; Proc: TForEachProc): ITask;                                      overload;
     function CoForEachBase( ThreadCount: integer; TaskFact: TTaskFactFunc): ITask;
     function Abandonable( const BaseTask: ITask; Timeout: integer): IFuture<boolean>;
@@ -175,14 +175,14 @@ type
   public
     /// <remarks> DO NOT USE. This constructor is for internal use only.
     ///  Use instead either TSBDParallel.CreateWorkFactory. </remarks>
-    constructor CreateWorkFactory( MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventCount1: integer; const SharedLock: ILock = nil);
+    constructor CreateWorkFactory( MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventCount1: integer; const SharedLock: IOmniLock = nil);
     destructor Destroy; override;
     function CoBeginTask( Proc: System.SysUtils.TProc): ITask;  overload;
     function CoBeginTask( Proc: TTaskProc            ): ITask;  overload;
     function CoForEach<T>( Collection: IEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;     overload;
     function CoForEach<T>( Collection: TEnumerable<T>; CollectionCursorIsThreadSafe: boolean; ThreadCount: integer; Proc: TForEachItemProc<T>): ITask;     overload;
-    function ShareLock: ILock;
-    function SynchroPool: TSynchroFactory;
+    function ShareLock: IOmniLock;
+    function SynchroPool: TOmniSynchroFactory;
   end;
 
 
@@ -225,7 +225,7 @@ type
     FParent: TTask;
     FParentLock: TOmniAtomicSpinLock;
     FChildrenTasks: TArray<ITaskEx>;
-    FTermination: ICountDown;
+    FTermination: IOmniCountDown;
 
     function  AsObject: TObject;
     function  Queue: ITask;
@@ -261,7 +261,7 @@ type
     function  DoCaptureException: boolean;            virtual;
     procedure Clear;                                  virtual;
     procedure Cancel;                                 virtual;
-    function  TerminationSynchro: ISynchro;           virtual;
+    function  TerminationSynchro: IOmniSynchro;           virtual;
     procedure QueueChildren;                          virtual;
     procedure CleanUpAfterDoneOrCancelled;            virtual;
     function  TaskLoad: integer;                      virtual;
@@ -296,7 +296,7 @@ type
     function  DoCaptureException: boolean;            override;
     procedure Clear;                                  override;
     procedure Cancel;                                 override;
-    function  TerminationSynchro: ISynchro;           override;
+    function  TerminationSynchro: IOmniSynchro;           override;
     procedure CleanUpAfterDoneOrCancelled;            override;
 
   public
@@ -507,7 +507,7 @@ type
     FhasCancelled: boolean;
     [Volatile] FCapturedException: TOmniVolatileObject; // Exception
     FActionable: TEvent; // manual-reset event.
-    FUnfinishedChildTasks: ICountDown;
+    FUnfinishedChildTasks: IOmniCountDown;
     FIsActionable: boolean;
     FCountOfProblemsInWork: integer;
     FQueueLock: TOmniAtomicSpinLock;
@@ -545,7 +545,7 @@ TCoForEachEnumerableTaskFactory<T> = class abstract( TCoForEachTaskFactory)
   protected
     FIsThreadSafe: boolean;
     FProc        : TForEachItemProc<T>;
-    FCursorLock  : ILock;
+    FCursorLock  : IOmniLock;
   end;
 
 TCoForEachEnumerableObjTaskFactory<T> = class sealed( TCoForEachEnumerableTaskFactory<T>)
@@ -608,16 +608,16 @@ type
 
 
 constructor TWorkFactory.CreateWorkFactory(
-  MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventCount1: integer; const SharedLock: ILock);
+  MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventCount1: integer; const SharedLock: IOmniLock);
 var
   Capacity: integer;
 begin
    //SiAuto.SiMain
-   FSynchroPool      := TSynchroFactory.Create( MaxEventCount1);
-   FLock             := TSynchroFactory.AcquireCriticalSection;
+   FSynchroPool      := TOmniSynchroFactory.Create( MaxEventCount1);
+   FLock             := TOmniSynchroFactory.AcquireCriticalSection;
    FShareLock := SharedLock;
    if not assigned( FShareLock) then
-     FShareLock := TSynchroFactory.AcquireCriticalSection;
+     FShareLock := TOmniSynchroFactory.AcquireCriticalSection;
    FThreadCount .Initialize(0);
    FIdleCount   .Initialize(0);
    FisTerminated.Initialize( 0);
@@ -700,18 +700,18 @@ begin
   result := self
 end;
 
-function TWorkFactory.CountDown( InitialValue: cardinal): ICountDown;
+function TWorkFactory.CountDown( InitialValue: cardinal): IOmniCountDown;
 begin
   result := FSynchroPool.AcquireCountDown( InitialValue, True)
 end;
 
-function TWorkFactory.Event( ManualReset, InitialState: boolean): IEvent;
+function TWorkFactory.Event( ManualReset, InitialState: boolean): IOmniEvent;
 begin
   result := FSynchroPool.AcquireKernelEvent( ManualReset, InitialState, True)
 end;
 
 function TWorkFactory.LightEvent(
-  ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
+  ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;
 begin
   result := FSynchroPool.AcquireLightEvent( ManualReset, InitialState, SpinMax, True)
 end;
@@ -1033,7 +1033,7 @@ begin
 end;
 
 
-function TWorkFactory.SynchroPool: TSynchroFactory;
+function TWorkFactory.SynchroPool: TOmniSynchroFactory;
 begin
   result := FSynchroPool
 end;
@@ -1051,7 +1051,7 @@ begin
      end
 end;
 
-function TWorkFactory.FactoryLock: ILock;
+function TWorkFactory.FactoryLock: IOmniLock;
 begin
   result := FLock
 end;
@@ -1161,7 +1161,7 @@ end;
 
 
 
-function TWorkFactory.NewLock( Locking: TLockingMechanism): ILock;
+function TWorkFactory.NewLock( Locking: TOmniLockingMechanism): IOmniLock;
 begin
   case Locking of
     KernelLocking: result := FSynchroPool.AcquireCriticalSection( True); //  _CreateCritLockIntf( FSynchroPool);
@@ -1171,28 +1171,28 @@ end;
 
 
 function TWorkFactory.CompositeSynchro_WaitAll(
-  const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
 begin
   result := TCompositeSynchro.Create(
     AFactors, FSynchroPool, APropagation, TCompositeSynchro.AllTest(), TestAll, False)
 end;
 
 function TWorkFactory.CompositeSynchro_WaitAny(
-  const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
 begin
   result := TCompositeSynchro.Create(
     AFactors, FSynchroPool, APropagation, TCompositeSynchro.AnyTest(), TestAny, False)
 end;
 
 function TWorkFactory.WaitForAll(
-  const AFactors: TSynchroArray; APropagation: TWaitPropagation; TimeOut: cardinal): TWaitResult;
+  const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; TimeOut: cardinal): TWaitResult;
 var
   Dummy: integer;
 begin
   result := CompositeSynchro_WaitAll( AFactors, APropagation).WaitFor( Dummy, Timeout)
 end;
 
-function TWorkFactory.WaitForAny(const AFactors: TSynchroArray;
+function TWorkFactory.WaitForAny(const AFactors: TOmniSynchroArray;
   APropagation: TWaitPropagation; var SignallerIdx: integer;
   TimeOut: cardinal): TWaitResult;
 begin
@@ -1249,37 +1249,37 @@ begin
 end;
 
 
-function TWorkFactory.ShareLock: ILock;
+function TWorkFactory.ShareLock: IOmniLock;
 begin
 
 end;
 
-function TWorkFactory.ModularCountDown( AInitialValue: cardinal): ICountDown;
+function TWorkFactory.ModularCountDown( AInitialValue: cardinal): IOmniCountDown;
 begin
   result := ModularCountDown( CountDown( AInitialValue))
 end;
 
-function TWorkFactory.ModularCountDown( const ABase: ICountDown): ICountDown;
+function TWorkFactory.ModularCountDown( const ABase: IOmniCountDown): IOmniCountDown;
 begin
   result := TModularCountDown.Create( ABase, FShareLock, FSynchroPool)
 end;
 
-function TWorkFactory.ModularEvent( const ABase: IEvent): IEvent;
+function TWorkFactory.ModularEvent( const ABase: IOmniEvent): IOmniEvent;
 begin
   result := TModularEvent.Create( ABase, FShareLock, FSynchroPool)
 end;
 
-function TWorkFactory.ModularEvent( ManualReset, InitialState: boolean): IEvent;
+function TWorkFactory.ModularEvent( ManualReset, InitialState: boolean): IOmniEvent;
 begin
   result := ModularEvent( Event( ManualReset, InitialState))
 end;
 
-function TWorkFactory.ModularSemaphore( const ABase: ISemaphore): ISemaphore;
+function TWorkFactory.ModularSemaphore( const ABase: IOmniSemaphore): IOmniSemaphore;
 begin
   result := TModularSemaphore.Create( ABase, FShareLock, FSynchroPool)
 end;
 
-function TWorkFactory.ModularSemaphore( AInitialCount: cardinal): ISemaphore;
+function TWorkFactory.ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;
 begin
   result := ModularSemaphore( _CreateTestableSemaphoreIntf( nil, AInitialCount))
 end;
@@ -1824,9 +1824,9 @@ begin
 end;
 
 
-function TTask.TerminationSynchro: ISynchro;
+function TTask.TerminationSynchro: IOmniSynchro;
 begin
-  result := FTermination as ISynchro
+  result := FTermination as IOmniSynchro
 end;
 
 
@@ -1983,7 +1983,7 @@ end;
 
 
 class function TTasking.CreateWorkFactory( MaxThreadCount1, MinIdleCount1,
-  MaxIdleCount1, MaxEventPool: integer; const SharedLock: ILock): IWorkFactory;
+  MaxIdleCount1, MaxEventPool: integer; const SharedLock: IOmniLock): IWorkFactory;
 begin
   result := TWorkFactory.CreateWorkFactory( MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventPool, SharedLock);
 end;
@@ -2281,7 +2281,7 @@ begin
   FBase.Signal
 end;
 
-function TDecoratedTask.TerminationSynchro: ISynchro;
+function TDecoratedTask.TerminationSynchro: IOmniSynchro;
 begin
   result := (FBase as ITask).TerminationSynchro
 end;

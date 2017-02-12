@@ -74,7 +74,7 @@ type
     FDoSerializePulses: boolean;
     {$ENDIF}
   protected
-    FLock        : ILock;
+    FLock        : IOmniLock;
     {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
     FEventFactory: TSynchroFactory;
     {$ENDIF} {$ENDIF}
@@ -84,7 +84,7 @@ type
       {$IFNDEF USE_EMBARCADERO_TConditionVariableCS} {$IFNDEF MSWINDOWS}
       AEventFactory: TSynchroFactory; AdoSerializePulses: boolean;
       {$ENDIF} {$ENDIF}
-      const ALock: ILock);
+      const ALock: IOmniLock);
     destructor  Destroy; override;
     procedure Pulse;
     /// <remarks>Call from within lock. Sleeps outside of the lock.</remarks>
@@ -126,7 +126,7 @@ constructor TOmniConditionVariable.Create(
   AEventFactory: TSynchroFactory;
   AdoSerializePulses: boolean;
   {$ENDIF} {$ENDIF}
-  const ALock: ILock);
+  const ALock: IOmniLock);
 begin
   FLock := ALock;
 

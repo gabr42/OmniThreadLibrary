@@ -14,8 +14,8 @@ type
     function  isCompleted: boolean;
     procedure ClearAndReset;
     function  Count: cardinal;
-    function  EnqueueSynchro: ISynchro;
-    function  DequeueSynchro: ISynchro;
+    function  EnqueueSynchro: IOmniSynchro;
+    function  DequeueSynchro: IOmniSynchro;
     function  CanEnqueue: boolean;
     function  CanDequeue: boolean;
     function  Status: TPipeStatus;
@@ -33,8 +33,8 @@ type
     function  isFinished: boolean;                   virtual; abstract;
     procedure ClearAndReset;                         virtual; abstract;
     function  Count: cardinal;                       virtual; abstract;
-    function  EnqueueSynchro: ISynchro;              virtual; abstract;
-    function  DequeueSynchro: ISynchro;              virtual; abstract;
+    function  EnqueueSynchro: IOmniSynchro;              virtual; abstract;
+    function  DequeueSynchro: IOmniSynchro;              virtual; abstract;
     function  CanEnqueue: boolean;                   virtual; abstract;
     function  CanDequeue: boolean;                   virtual; abstract;
     function  Status: TPipeStatus;                   virtual; abstract;
@@ -88,32 +88,32 @@ type
     function  Count: cardinal;                        override;
     function  CanEnqueue: boolean;                    override;
     function  CanDequeue: boolean;                    override;
-    function  EnqueueSynchro: ISynchro;               override;
-    function  DequeueSynchro: ISynchro;               override;
+    function  EnqueueSynchro: IOmniSynchro;               override;
+    function  DequeueSynchro: IOmniSynchro;               override;
     function  Enumerable( Timeout: cardinal): IEnumerable<RWaitItem<T>>;
     function  Status: TPipeStatus;                     override;
     function  LowWaterMark: cardinal;                  override;
     function  HighWaterMark: cardinal;                 override;
     function  MaximumCapacity: cardinal;               override;
     function  PeekDequeue( var Obj: T; var Finished: boolean): boolean;
-    function  CompletedSynchro: ISynchro;
+    function  CompletedSynchro: IOmniSynchro;
     // FInished means completed and empty
 
   private
     FQueue: TQueue<RPipeItem<T>>;
     FLowwater, FHighWater, FCapacity: cardinal;
-    FSlowLock: ILock;
+    FSlowLock: IOmniLock;
 
     // FQuickLock MUST be aligned to SizeOf( TThreadId). This could be 4 or 8 depending on platform.
     [Volatile] FQuickLock : TOmniAtomicSpinLock;
     [Volatile] FCanDequeue: boolean;
     [Volatile] FCanEnqueue: boolean;
     [Volatile] FisComplete: boolean;
-    FEnqueuable: IEvent;
-    FDequeuable: IEvent;
+    FEnqueuable: IOmniEvent;
+    FDequeuable: IOmniEvent;
     [Volatile] FUseSlowLock: boolean;
     FLastOpWasPop: boolean;
-    FCompleted: IEvent;
+    FCompleted: IOmniEvent;
 
   public type
     // Read this as strict private. It only marked as public in order to
@@ -130,7 +130,7 @@ type
     function  ShieldedOperation(
                 const InDatum: RPipeItem<T>;
                 var   EventMirrorFlag: boolean;
-                const ControllingEvent: IEvent;
+                const ControllingEvent: IOmniEvent;
                       TimeOut: cardinal;
                       Operation: TShieldedFunc2;
                 var   OutDatum: RPipeItem<T>)
@@ -356,7 +356,7 @@ begin
 end;
 
 
-function TPipe<T>.CompletedSynchro: ISynchro;
+function TPipe<T>.CompletedSynchro: IOmniSynchro;
 begin
   result := FCompleted
 end;
@@ -434,7 +434,7 @@ end;
 function TPipe<T>.ShieldedOperation(
   const InDatum: RPipeItem<T>;
   var   EventMirrorFlag: boolean;
-  const ControllingEvent: IEvent;
+  const ControllingEvent: IOmniEvent;
         TimeOut: cardinal;
         Operation: TShieldedFunc2;
   var   OutDatum: RPipeItem<T>)
@@ -631,7 +631,7 @@ end;
 
 
 
-function TPipe<T>.DequeueSynchro: ISynchro;
+function TPipe<T>.DequeueSynchro: IOmniSynchro;
 begin
   result := FDequeuable
 end;
@@ -699,7 +699,7 @@ end;
 
 
 
-function TPipe<T>.EnqueueSynchro: ISynchro;
+function TPipe<T>.EnqueueSynchro: IOmniSynchro;
 begin
   result := FEnqueuable
 end;

@@ -71,7 +71,7 @@ type
 
   ICompositeSynchro = interface ['{3796D8C1-AA28-44A7-836E-F1045AFBF616}']
     function WaitFor(var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
-    function Factors: TSynchroArray;
+    function Factors: TOmniSynchroArray;
     function Datum: TObject;
     function IsSignalled: boolean;
   end; { ICompositeSynchro }
@@ -82,12 +82,12 @@ type
     procedure PossibleStateChange(const Source: ISynchroExInternal; Token: TObject);
   end; { ISynchroObserver }
 
-  ISynchroExInternal = interface(ISynchro) ['{A3D01DFF-CF6A-4913-8A34-E46C4C0FCF5F}']
+  ISynchroExInternal = interface(IOmniSynchro) ['{A3D01DFF-CF6A-4913-8A34-E46C4C0FCF5F}']
     function  ConsumeResource: TWaitResult;
     procedure Enrol(const Observer: ISynchroObserver; Token: TObject);
     function  IsCompatibleNativeMWObject( Reference, Peer: TObject): boolean;
     function  IsResourceCounting: boolean;
-    function  LockingMechanism: TLockingMechanism;
+    function  LockingMechanism: TOmniLockingMechanism;
     function  NativeMultiwait(const Synchros: array of TObject;
                               Timeout: cardinal; AAll: boolean;
                               var SignallerIndex: integer): TWaitResult;
@@ -99,20 +99,20 @@ type
     procedure RegisterDirectClient( Delta: integer);
     procedure RegisterIndirectClient( Delta: integer);
     procedure Unenrol(ObserverToken: TObject);
-    function  UnionLock: ILock;
+    function  UnionLock: IOmniLock;
   end; { ISynchroExInternal }
 
   TWaitPropagation = (NoConsume, ConsumeOneSignalled, ConsumeAllSignalled);
 
   TConditionTest = reference to function(
     var   SignallerIdx: integer;
-    const Peers: TSynchroArray; Datum: TObject): boolean;
+    const Peers: TOmniSynchroArray; Datum: TObject): boolean;
 
   TTestClass = (TestAny, TestAll, TestCustom);
 
-  TSignalState = OtlSync.Platform.Interfaced.TSignalState;
+  TSignalState = OtlSync.Platform.Interfaced.TOmniSignalState;
 
-  TCompositeSynchro = class(TInterfacedObject, ICompositeSynchro, ISynchro, ISynchroExInternal)
+  TCompositeSynchro = class(TInterfacedObject, ICompositeSynchro, IOmniSynchro, ISynchroExInternal)
   strict private type
     TImplementation = ({$IFDEF MSWINDOWS}Direct, {$ENDIF} Indirect, Solo);
     TMemberObserver = class(TInterfacedObject, ISynchroObserver)
@@ -127,12 +127,12 @@ type
     FAllowSolo                   : boolean;
     FCondVar                     : TOmniConditionVariable;
     FDatum                       : TObject;
-    FEventFactory                : TSynchroFactory;
-    FFactors                     : TSynchroArray;
+    FEventFactory                : TOmniSynchroFactory;
+    FFactors                     : TOmniSynchroArray;
     FHasAtLeastOneResourceCounter: boolean;
     FImplementation              : TImplementation;
     [Volatile] FIsSignalled      : boolean;
-    FLock                        : ILock;
+    FLock                        : IOmniLock;
     FMemberCount                 : integer;
     FMemberObserver              : TMemberObserver;
     FObservers                   : TDictionary<TObject,ISynchroObserver>;
@@ -148,24 +148,24 @@ type
     function GetHandle: THandle;
     {$ENDIF}
   public
-    constructor Create(const AFactors: TSynchroArray; AEventFactory: TSynchroFactory;
+    constructor Create(const AFactors: TOmniSynchroArray; AEventFactory: TOmniSynchroFactory;
                        APropagation: TWaitPropagation; ATest: TConditionTest;
                        ATestClass: TTestClass; AAllowSolo: boolean);
     destructor  Destroy; override;
-    class function IsAll(var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean;
-    class function IsAny(var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean;
+    class function IsAll(var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean;
+    class function IsAny(var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean;
     class function AnyTest: TConditionTest;
     class function AllTest: TConditionTest;
     function  AsMWObject: TObject;
     function  AsObject: TObject;
     function  ConsumeResource: TWaitResult;
     function  Datum: TObject;
-    function  Factors: TSynchroArray;
-    function  GetCapabilities: TSynchroCapabilities; virtual;
+    function  Factors: TOmniSynchroArray;
+    function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     function  IsCompatibleNativeMWObject( Reference, Peer: TObject): boolean;
     function  IsResourceCounting: boolean;
     function  IsSignalled: boolean;
-    function  LockingMechanism: TLockingMechanism;
+    function  LockingMechanism: TOmniLockingMechanism;
     function  NativeMultiwait(const Synchros: array of TObject;
                               Timeout: cardinal; AAll: boolean;
                               var SignallerIndex: integer): TWaitResult;
@@ -173,8 +173,8 @@ type
     function  PermitsDedicatedSoleIndirectClient: boolean;
     function  PermitsDirectClients: boolean;
     function  PermitsIndirectClients: boolean;
-    function  SignalState: TSignalState;
-    function  UnionLock: ILock;
+    function  SignalState: TOmniSignalState;
+    function  UnionLock: IOmniLock;
     function  WaitFor(Timeout: cardinal = INFINITE): TWaitResult; overload;
     function  WaitFor(var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult; overload;
     procedure BubbleUp( var Me: ISynchroExInternal);
@@ -186,33 +186,33 @@ type
     procedure Unenrol(ObserverToken: TObject);
   end; { TCompositeSynchro }
 
-  TModularSynchro = class abstract(TInterfacedObject, ISynchro, ISynchroExInternal)
+  TModularSynchro = class abstract(TInterfacedObject, IOmniSynchro, ISynchroExInternal)
   private
     FDedicatedToOneIndirectWaiter: boolean;
     [Volatile] FDirectWaiters    : TOmniVolatileInt32;
     [Volatile] FIndirectWaiters  : TOmniVolatileInt32;
     FObservers                   : TDictionary<TObject,ISynchroObserver>;
   protected
-    FUnionLock: ILock;
-    FBase  : ISynchro;
+    FUnionLock: IOmniLock;
+    FBase  : IOmniSynchro;
     FBaseEx: ISynchroExInternal;
-    FEventFactory: TSynchroFactory;
+    FEventFactory: TOmniSynchroFactory;
     {$IFDEF MSWINDOWS}
       function GetHandle: THandle;
     {$ENDIF}
   public
-    constructor Create( const ABase: ISynchro; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+    constructor Create( const ABase: IOmniSynchro; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
     destructor  Destroy; override;
     function  AsMWObject: TObject;
     function  AsObject: TObject;
     function  ConsumeResource: TWaitResult; virtual;
-    function  GetCapabilities: TSynchroCapabilities; virtual;
+    function  GetCapabilities: TOmniSynchroCapabilities; virtual;
     function  IsCompatibleNativeMWObject( Reference, Peer: TObject): boolean;
     function  IsModular: boolean;
     function  IsPoolManaged: boolean;
     function  IsResourceCounting: boolean; virtual;
     function  IsSignalled: boolean;
-    function  LockingMechanism: TLockingMechanism;
+    function  LockingMechanism: TOmniLockingMechanism;
     function  NativeMultiwait(const Synchros: array of TObject;
                               Timeout: cardinal; AAll: boolean;
                               var SignallerIndex: integer): TWaitResult;
@@ -220,8 +220,8 @@ type
     function  PermitsDedicatedSoleIndirectClient: boolean;
     function  PermitsDirectClients: boolean;
     function  PermitsIndirectClients: boolean;
-    function  SignalState: TSignalState;
-    function  UnionLock: ILock;
+    function  SignalState: TOmniSignalState;
+    function  UnionLock: IOmniLock;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; virtual;
     procedure Enrol(const Observer: ISynchroObserver; Token: TObject);
     procedure ObserverProc(Proc: TProc);
@@ -232,26 +232,26 @@ type
     procedure Unenrol(ObserverToken: TObject);
   end; { TModularSynchro }
 
-  TModularEvent = class(TModularSynchro, IEvent)
+  TModularEvent = class(TModularSynchro, IOmniEvent)
   protected
-    FBaseEvent: IEvent;
+    FBaseEvent: IOmniEvent;
   public
-    constructor Create(const ABase: IEvent; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+    constructor Create(const ABase: IOmniEvent; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
     function  ConsumeResource: TWaitResult; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  IsResourceCounting: boolean; override;
     procedure ResetEvent;
     procedure SetEvent;
     procedure Signal; override;
   end; { TModularEvent }
 
-  TModularSemaphore = class(TModularSynchro, ISemaphore)
+  TModularSemaphore = class(TModularSynchro, IOmniSemaphore)
   protected
-    FBaseSem: ISemaphore;
+    FBaseSem: IOmniSemaphore;
   public
-    constructor Create(const ABase: ISemaphore; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+    constructor Create(const ABase: IOmniSemaphore; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
     function  ConsumeResource: TWaitResult; override;
-    function  GetCapabilities: TSynchroCapabilities; override;
+    function  GetCapabilities: TOmniSynchroCapabilities; override;
     function  InitialValue: cardinal;
     function  IsResourceCounting: boolean; override;
     procedure Reset;
@@ -259,11 +259,11 @@ type
     function  Value: cardinal;
   end; { TModularSemaphore }
 
-  TModularCountDown = class(TModularSynchro, ICountDown)
+  TModularCountDown = class(TModularSynchro, IOmniCountDown)
   protected
-    FBaseCountDown: ICountDown;
+    FBaseCountDown: IOmniCountDown;
   public
-    constructor Create( const ABase: ICountDown; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+    constructor Create( const ABase: IOmniCountDown; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
     function  Allocate: cardinal;
     function  ConsumeResource: TWaitResult; override;
     procedure CounterSignal;
@@ -297,7 +297,7 @@ end; { TCompositeSynchro.TMemberObserver.PossibleStateChange }
 { TCompositeSynchro }
 
 constructor TCompositeSynchro.Create(
-  const AFactors: TSynchroArray; AEventFactory: TSynchroFactory;
+  const AFactors: TOmniSynchroArray; AEventFactory: TOmniSynchroFactory;
   APropagation: TWaitPropagation; ATest: TConditionTest;
   ATestClass: TTestClass; AAllowSolo: boolean);
 var
@@ -449,7 +449,7 @@ begin
           if assigned(FEventFactory) then
             FLock := FEventFactory.AcquireCriticalSection(True)
           else
-            FLock := TSynchroFactory.AcquireCriticalSection;
+            FLock := TOmniSynchroFactory.AcquireCriticalSection;
         end;
       end;
   end;
@@ -506,7 +506,7 @@ end; { TCompositeSynchro.Destroy }
 
 class function TCompositeSynchro.AllTest: TConditionTest;
 begin
-  Result := function(var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean
+  Result := function(var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean
     begin
       Result := IsAll(SignallerIdx, Peers, Datum);
     end;
@@ -514,7 +514,7 @@ end; { TCompositeSynchro.AllTest }
 
 class function TCompositeSynchro.AnyTest: TConditionTest;
 begin
-  Result := function(var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean
+  Result := function(var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean
     begin
       Result := IsAny(SignallerIdx, Peers, Datum);
     end;
@@ -546,7 +546,7 @@ begin
   FObservers.AddOrSetValue(Token, Observer);
 end; { TCompositeSynchro.Enrol }
 
-function TCompositeSynchro.Factors: TSynchroArray;
+function TCompositeSynchro.Factors: TOmniSynchroArray;
 begin
   Result := FFactors;
 end; { TCompositeSynchro.Factors }
@@ -559,9 +559,9 @@ end; { TCompositeSynchro.GetHandle }
 {$ENDIF}
 
 class function TCompositeSynchro.IsAll(
-  var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean;
+  var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean;
 var
-  member: ISynchro;
+  member: IOmniSynchro;
 begin
   Result := True;
   for member in Peers do begin
@@ -572,7 +572,7 @@ begin
 end; { TCompositeSynchro.IsAll }
 
 class function TCompositeSynchro.IsAny(
-  var SignallerIdx: integer; const Peers: TSynchroArray; Datum: TObject): boolean;
+  var SignallerIdx: integer; const Peers: TOmniSynchroArray; Datum: TObject): boolean;
 var
   idx: integer;
 begin
@@ -603,7 +603,7 @@ begin
   Result := FIsSignalled;
 end; { TCompositeSynchro.IsSignalled }
 
-function TCompositeSynchro.LockingMechanism: TLockingMechanism;
+function TCompositeSynchro.LockingMechanism: TOmniLockingMechanism;
 var
   isKernel: boolean;
   {$IFDEF MSWINDOW}
@@ -672,7 +672,7 @@ begin
     FCondVar.Pulse;
 end; { TCompositeSynchro.Signal }
 
-function TCompositeSynchro.SignalState: TSignalState;
+function TCompositeSynchro.SignalState: TOmniSignalState;
 begin
   if FIsSignalled then
       Result := esSignalled
@@ -685,7 +685,7 @@ begin
   FObservers.Remove(ObserverToken);
 end; { TCompositeSynchro.Unenrol }
 
-function TCompositeSynchro.UnionLock: ILock;
+function TCompositeSynchro.UnionLock: IOmniLock;
 begin
   Result := FLock;
 end; { TCompositeSynchro.UnionLock }
@@ -706,7 +706,7 @@ begin
   end;
 end; { TCompositeSynchro.BubbleUp }
 
-function TCompositeSynchro.GetCapabilities: TSynchroCapabilities;
+function TCompositeSynchro.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [scSupportsSignalled, scModular];
 end; { TCompositeSynchro.GetCapabilities }
@@ -808,7 +808,7 @@ end; { TCompositeSynchro.WaitFor }
 { TModularSynchro }
 
 constructor TModularSynchro.Create(
-  const ABase: ISynchro; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+  const ABase: IOmniSynchro; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
 begin
   FUnionLock := AUnionLock;
   FBase      := ABase;
@@ -849,7 +849,7 @@ begin
   FObservers.AddOrSetValue(Token, Observer);
 end; { TModularSynchro.Enrol }
 
-function TModularSynchro.GetCapabilities: TSynchroCapabilities;
+function TModularSynchro.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
   if scSupportsSignalled in FBase.Capabilities then
@@ -899,7 +899,7 @@ begin
   Result := FBase.IsSignalled;
 end; { TModularSynchro.IsSignalled }
 
-function TModularSynchro.LockingMechanism: TLockingMechanism;
+function TModularSynchro.LockingMechanism: TOmniLockingMechanism;
 begin
   Result := KernelLocking;
 end; { TModularSynchro.LockingMechanism }
@@ -1014,7 +1014,7 @@ begin
   // do nothing
 end; { TModularSynchro.Signal }
 
-function TModularSynchro.SignalState: TSignalState;
+function TModularSynchro.SignalState: TOmniSignalState;
 begin
   Result := FBase.SignalState;
 end; { TModularSynchro.SignalState }
@@ -1024,7 +1024,7 @@ begin
   FObservers.Remove(ObserverToken);
 end; { TModularSynchro.Unenrol }
 
-function TModularSynchro.UnionLock: ILock;
+function TModularSynchro.UnionLock: IOmniLock;
 begin
   Result := FUnionLock;
 end; { TModularSynchro.UnionLock }
@@ -1032,9 +1032,9 @@ end; { TModularSynchro.UnionLock }
 function TModularSynchro.WaitFor(timeout: cardinal): TWaitResult;
 var
   anyTest    : TConditionTest;
-  meAsFactors: TSynchroArray;
+  meAsFactors: TOmniSynchroArray;
   waitRes    : TWaitResult;
-  wrap       : ISynchro;
+  wrap       : IOmniSynchro;
 begin
   waitRes := wrIOCompletion;
   anyTest := TCompositeSynchro.anyTest();
@@ -1046,7 +1046,7 @@ begin
           waitRes := wrError
         else begin
           SetLength(meAsFactors, 1);
-          meAsFactors[0] := Self as ISynchro;
+          meAsFactors[0] := Self as IOmniSynchro;
           wrap := TCompositeSynchro.Create(meAsFactors, FEventFactory, ConsumeOneSignalled,
                     anyTest, TestAny, True);
           waitRes := wrSignaled;
@@ -1070,7 +1070,7 @@ begin
   end;
 end; { TModularSynchro.WaitFor }
 
-constructor TModularEvent.Create(const ABase: IEvent; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+constructor TModularEvent.Create(const ABase: IOmniEvent; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
 begin
   FBaseEvent := ABase;
   inherited Create(FBaseEvent, AUnionLock, AEventFactory);
@@ -1084,7 +1084,7 @@ begin
     Result := wrSignaled;
 end; { TModularEvent.ConsumeResource }
 
-function TModularEvent.GetCapabilities: TSynchroCapabilities;
+function TModularEvent.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   if scManualEvent in FBaseEvent.Capabilities then
@@ -1123,7 +1123,7 @@ end; { TModularEvent.Signal }
 { TModularSemaphore }
 
 constructor TModularSemaphore.Create(
-  const ABase: ISemaphore; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+  const ABase: IOmniSemaphore; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
 begin
   FBaseSem := ABase;
   inherited Create(FBaseSem, AUnionLock, AEventFactory);
@@ -1134,7 +1134,7 @@ begin
   Result := FBaseSem.WaitFor(0);
 end; { TModularSemaphore.ConsumeResource }
 
-function TModularSemaphore.GetCapabilities: TSynchroCapabilities;
+function TModularSemaphore.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := inherited GetCapabilities;
   Include(Result, scSupportsSignalled);
@@ -1176,7 +1176,7 @@ end; { TModularSemaphore.Value }
 { TModularCountDown }
 
 constructor TModularCountDown.Create(
-  const ABase: ICountDown; const AUnionLock: ILock; AEventFactory: TSynchroFactory);
+  const ABase: IOmniCountDown; const AUnionLock: IOmniLock; AEventFactory: TOmniSynchroFactory);
 begin
   FBaseCountDown := ABase;
   inherited Create(FBaseCountDown, AUnionLock, AEventFactory);

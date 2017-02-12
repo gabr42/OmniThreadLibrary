@@ -39,9 +39,9 @@ type
     FMaxAge: TDateTime;
     FFreePool: TBasketList;
     FAcquired: TList<T>;
-    FGate: ILock;
+    FGate: IOmniLock;
     FHouseKeeperThread: TThread;
-    FWakeHouseKeeper: IEvent;
+    FWakeHouseKeeper: IOmniEvent;
     FDefaultFlavour: IResourceFlavour;
     [Volatile] FIsShutdown: TOmniVolatileInt32;
     FVanillaGenFunc: TGenerate<T>;
@@ -107,7 +107,7 @@ type
   THouseKeeperThread<T> = class( TThread)
   private
     FOwner: THeavyPoolEx<T>;
-    FGate: ILock;
+    FGate: IOmniLock;
 
     procedure HouseKeepProper;
 

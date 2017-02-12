@@ -34,7 +34,7 @@ type
     procedure Cancel;
     function  Status: TTaskStatus;
     function  IsDone: boolean;
-    function  TerminationSynchro: ISynchro;
+    function  TerminationSynchro: IOmniSynchro;
     function  Queue: ITask;
     function  SetOnDone( Proc: TTaskProc): ITask;
     function  Clone: ITask;
@@ -85,9 +85,9 @@ type
     function  Dequeue( var Obj: T; TimeOut: cardinal = FOREVER): TWaitResult;  overload;
     function  Dequeue: T;                                                      overload;
     function  PeekDequeue( var Obj: T; var Completed: boolean): boolean;
-    function  EnqueueSynchro: ISynchro;
-    function  DequeueSynchro: ISynchro;
-    function  CompletedSynchro: ISynchro;
+    function  EnqueueSynchro: IOmniSynchro;
+    function  DequeueSynchro: IOmniSynchro;
+    function  CompletedSynchro: IOmniSynchro;
     function  CanEnqueue: boolean;
     /// <remarks> CanDequeue returns True iff dequeuing will not block AND
     ///              (the queue is not both complete and empty).</remarks>
@@ -127,24 +127,24 @@ type
   TForEachProc = reference to procedure( Idx: integer; const Task: ITask);
   TForEachItemProc<T> = reference to procedure( const Item: T; const Task: ITask);
   IWorkFactory = interface ['{86D1CAD6-8756-47D3-9286-F6186B46AE16}']
-    function  FactoryLock: ILock;
+    function  FactoryLock: IOmniLock;
     function  ProcessJobReturn( TimeOut: cardinal): boolean;
     function  QueueJob( const Task: ITask): boolean;
     procedure StartTask( const TaskIntf: ITask);
 
-    function NewLock( Locking: TLockingMechanism): ILock;
-    function Event            ( ManualReset, InitialState: boolean): IEvent;                        // Interface level, Reusable.
-    function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;     // Interface level, Reusable.
-    function CountDown( InitialValue: cardinal): ICountDown;                                        // Interface level, Reusable.
+    function NewLock( Locking: TOmniLockingMechanism): IOmniLock;
+    function Event            ( ManualReset, InitialState: boolean): IOmniEvent;                        // Interface level, Reusable.
+    function LightEvent       ( ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;     // Interface level, Reusable.
+    function CountDown( InitialValue: cardinal): IOmniCountDown;                                        // Interface level, Reusable.
     function AsObject: TObject;
-    function CompositeSynchro_WaitAll( const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function CompositeSynchro_WaitAny( const AFactors: TSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
-    function ModularEvent    ( ManualReset, InitialState: boolean): IEvent;        overload;
-    function ModularEvent    ( const ABase: IEvent               ): IEvent;        overload;
-    function ModularSemaphore( AInitialCount: cardinal): ISemaphore;    overload;
-    function ModularSemaphore( const ABase: ISemaphore): ISemaphore;    overload;
-    function ModularCountDown( AInitialValue: cardinal): ICountDown;    overload;
-    function ModularCountDown( const ABase: ICountDown): ICountDown;    overload;
+    function CompositeSynchro_WaitAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function CompositeSynchro_WaitAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation): ICompositeSynchro;
+    function ModularEvent    ( ManualReset, InitialState: boolean): IOmniEvent;        overload;
+    function ModularEvent    ( const ABase: IOmniEvent               ): IOmniEvent;        overload;
+    function ModularSemaphore( AInitialCount: cardinal): IOmniSemaphore;    overload;
+    function ModularSemaphore( const ABase: IOmniSemaphore): IOmniSemaphore;    overload;
+    function ModularCountDown( AInitialValue: cardinal): IOmniCountDown;    overload;
+    function ModularCountDown( const ABase: IOmniCountDown): IOmniCountDown;    overload;
     function Join( const Tasks: array of ITask                ): ITask;                         overload;
     function Join( const Procs: array of System.SysUtils.TProc): ITask;                         overload;
     function Join( const Procs: array of TTaskProc            ): ITask;                         overload;
@@ -154,14 +154,14 @@ type
     function CoBeginTask( Proc: TTaskProc            ): ITask;  overload;
 
     // <ist be at least 2 factors. Each factor must support ISynchroExInternal, such as Modular synchronisation primitives
-    function WaitForAny( const AFactors: TSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
-    function WaitForAll( const AFactors: TSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAny( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation; var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult;
+    function WaitForAll( const AFactors: TOmniSynchroArray; APropagation: TWaitPropagation;                            TimeOut: cardinal = FOREVER): TWaitResult;
 
     function CoForEach( LowIdx, HighIdx, StepIdx: integer; ThreadCount: integer; Proc: TForEachProc): ITask;
     function Abandonable( const BaseTask: ITask; Timeout: integer): IFuture<boolean>;
     function GeometricRetry( BaseFunc: TFutureFunc<boolean>; InitialRetryPause: integer; PauseGrowth: double; MaxRetryPause: integer; MaxTryCount: integer): IFuture<boolean>;
-    function ShareLock: ILock;
-    function SynchroPool: TSynchroFactory;
+    function ShareLock: IOmniLock;
+    function SynchroPool: TOmniSynchroFactory;
   end;
 
   /// <remarks>TForkJoinerAction is a private type. Do not use.</remarks>
@@ -258,13 +258,13 @@ type
 
   public
      // Interface level constructors. Non-reusable.
-     // For re-usable interface level synchronisation primitives, see the TSynchroFactory public methods.
-    class function NewLock( Locking: TLockingMechanism): ILock;
-    class function Semaphore    ( AInitialCount: cardinal): ISemaphore;
-    class function Event        ( ManualReset, InitialState: boolean): IEvent;
-    class function LightEvent   ( ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
-    class function CountDown    ( InitialValue: cardinal): ICountDown;
-    class function CountUp      ( InitialValue, AMaxValue: cardinal): ICountUp;
+     // For re-usable interface level synchronisation primitives, see the TOmniSynchroFactory public methods.
+    class function NewLock( Locking: TOmniLockingMechanism): IOmniLock;
+    class function Semaphore    ( AInitialCount: cardinal): IOmniSemaphore;
+    class function Event        ( ManualReset, InitialState: boolean): IOmniEvent;
+    class function LightEvent   ( ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;
+    class function CountDown    ( InitialValue: cardinal): IOmniCountDown;
+    class function CountUp      ( InitialValue, AMaxValue: cardinal): IOmniCountUp;
 
   public
     // Pipes
@@ -288,7 +288,7 @@ type
     // work factory
     class function WorkFactory(
       MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventPool: integer;
-      const SharedLock: ILock = nil): IWorkFactory;
+      const SharedLock: IOmniLock = nil): IWorkFactory;
 
   public
     // Generic class methods to support tasking.
@@ -392,7 +392,7 @@ begin
   result := (WF.AsObject as TWorkFactory).CoForEach<T>( Collection, CollectionCursorIsThreadSafe, ThreadCount, Proc)
 end;
 
-class function TSBDParallel.CountDown( InitialValue: cardinal): ICountDown;
+class function TSBDParallel.CountDown( InitialValue: cardinal): IOmniCountDown;
 begin
   result := _CreateCountDownIntf( nil, InitialValue)
 end;
@@ -404,7 +404,7 @@ begin
 end;
 
 
-class function TSBDParallel.CountUp( InitialValue, AMaxValue: cardinal): ICountUp;
+class function TSBDParallel.CountUp( InitialValue, AMaxValue: cardinal): IOmniCountUp;
 begin
   result := _CreateCountUpIntf( nil, InitialValue, AMaxValue)
 end;
@@ -420,7 +420,7 @@ begin
 end;
 
 class function TSBDParallel.Event(
-  ManualReset, InitialState: boolean): IEvent;
+  ManualReset, InitialState: boolean): IOmniEvent;
 begin
   result := _CreateKernelEventIntf( nil, ManualReset, InitialState)
 end;
@@ -454,7 +454,7 @@ begin
 end;
 
 class function TSBDParallel.LightEvent(
-  ManualReset, InitialState: boolean; SpinMax: cardinal): IEvent;
+  ManualReset, InitialState: boolean; SpinMax: cardinal): IOmniEvent;
 begin
   result := _CreateLightEventIntf( nil, ManualReset, InitialState, SpinMax)
 end;
@@ -469,12 +469,12 @@ end;
 
 class function TSBDParallel.WorkFactory(
   MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventPool: integer;
-  const SharedLock: ILock): IWorkFactory;
+  const SharedLock: IOmniLock): IWorkFactory;
 begin
   result := TWorkFactory.CreateWorkFactory( MaxThreadCount1, MinIdleCount1, MaxIdleCount1, MaxEventPool, SharedLock)
 end;
 
-class function TSBDParallel.NewLock( Locking: TLockingMechanism): ILock;
+class function TSBDParallel.NewLock( Locking: TOmniLockingMechanism): IOmniLock;
 begin
   case Locking of
     KernelLocking: result := _CreateCritLockIntf( nil);
@@ -497,7 +497,7 @@ begin
   result := TPipe<T>.Create( WorkFactory, ALowwater, AHighWater, ACapacity)
 end;
 
-class function TSBDParallel.Semaphore( AInitialCount: cardinal): ISemaphore;
+class function TSBDParallel.Semaphore( AInitialCount: cardinal): IOmniSemaphore;
 begin
   result := _CreateNativeSemaphoreIntf( AInitialCount)
 end;
