@@ -2,7 +2,7 @@ unit OtlPlatform.Pipe;
 {$I OtlOptions.inc}
 interface
 uses SysUtils, OtlPlatform.Extras, System.SyncObjs, Generics.Collections,
-     OtlPlatform.Sync.Intf,
+     OtlPlatform.Sync.Interfaced,
      OtlPlatform.Atomic;
 type
 

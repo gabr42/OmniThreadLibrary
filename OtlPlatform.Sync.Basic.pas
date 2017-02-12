@@ -57,7 +57,7 @@ uses
   System.Classes,
   System.SysUtils,
   OtlPlatform.Atomic,
-  OtlPlatform.Sync.Intf;
+  OtlPlatform.Sync;
 
 type
   /// <remarks>Base class for low-level synchronisation primitives
@@ -167,11 +167,11 @@ type
     FPulsarIsSignalled: boolean;
     FSignalTest       : TEventFunction;
   protected
-    procedure Reconfigure( ASignalTest: TEventFunction; APLock: PSBDSpinLock); virtual;
+    procedure Reconfigure(ASignalTest: TEventFunction; APLock: PSBDSpinLock); virtual;
     procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); virtual;
   public
     class constructor Create;
-    constructor Create( ASignalTest: TEventFunction; APLock: PSBDSpinLock);
+    constructor Create(ASignalTest: TEventFunction; APLock: PSBDSpinLock);
     destructor Destroy; override;
     function  AsMWObject: TObject;  override;
     function  IsSignalled: boolean; override;

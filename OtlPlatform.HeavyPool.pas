@@ -3,7 +3,7 @@ unit OtlPlatform.HeavyPool;
 
 interface
 uses OtlPlatform.Extras, System.SysUtils, Generics.Collections,
-     OtlPlatform.Sync.Intf, System.Classes,
+     OtlPlatform.Sync.Interfaced, System.Classes,
      OtlPlatform.Atomic;
 
 //Heavy Pool

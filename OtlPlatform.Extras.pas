@@ -7,7 +7,7 @@ interface
 
 uses System.SyncObjs, System.Classes, System.SysUtils, System.Generics.Collections
    , OtlPlatform.Sync
-   , OtlPlatform.Sync.Intf
+   , OtlPlatform.Sync.Interfaced
    , OtlPlatform.Sync.Basic
    , OtlPlatform.Sync.Modular
  {$IFDEF MSWINDOWS}

@@ -5,7 +5,7 @@ uses OtlPlatform.Extras, System.Classes, OtlPlatform.Pipe,
      System.Generics.Collections,
      System.SysUtils, System.SyncObjs,
      OtlPlatform.Sync,
-     OtlPlatform.Sync.Intf,
+     OtlPlatform.Sync.Interfaced,
      OtlPlatform.Sync.Modular
      // Ensure that Atomic is last in the uses list, so that its record
      //  helpers (in the case of NDEF USE_SLACKSPACE_ALIGNMENT) are in scope.

@@ -3,12 +3,13 @@ unit OtlPlatform.Sync.ConditionVariables;
 {$I OtlOptions.inc}
 
 interface
-uses OtlPlatform.Sync.Intf, System.SyncObjs
+uses System.SyncObjs
    , System.Classes, System.SysUtils, System.Generics.Collections
  {$IFDEF MSWINDOWS}
    , Winapi.Windows
  {$ENDIF}
-   , OtlPlatform.Atomic;
+   , OtlPlatform.Atomic,
+   OtlPlatform.Sync.Interfaced;
 
 const
   FOREVER = INFINITE;
