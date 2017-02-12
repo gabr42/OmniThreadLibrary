@@ -62,7 +62,7 @@ uses
 type
   /// <remarks>Base class for low-level synchronisation primitives
   //   at the basic level.</remarks>
-  TOtlSynchro = class abstract
+  TOmniPlatformSynchro = class abstract
   {$IFDEF MSWINDOWS}
   protected
     function GetHandle: THandle; virtual;
@@ -75,15 +75,15 @@ type
   {$IFDEF MSWINDOWS}
     property Handle: THandle read GetHandle;
   {$ENDIF}
-  end; { TOtlSynchro }
+  end; { TOmniPlatformSynchro }
 
-  TOtlEvent = class abstract(TOtlSynchro)
+  TOmniPlatformEvent = class abstract(TOmniPlatformSynchro)
   public
     procedure SetEvent; virtual; abstract;
     procedure ResetEvent; virtual; abstract;
-  end; { TOtlEvent }
+  end; { TOmniPlatformEvent }
 
-  TKernelEvent = class(TOtlEvent)
+  TOmniKernelEvent = class(TOmniPlatformEvent)
   strict private
     FEvent: System.SyncObjs.TEvent;
   {$IFDEF MSWINDOWS}
@@ -96,15 +96,15 @@ type
     constructor Create(AManual, AInitialState: boolean);
     destructor  Destroy; override;
     function  AsMWObject: TObject; override;
-    /// <remarks>TOtlEvent.IsSignalled() is not supported .</remarks>
+    /// <remarks>TOmniPlatformEvent.IsSignalled() is not supported .</remarks>
     function  IsSignalled: boolean; override;
     procedure ResetEvent; override;
     procedure SetEvent; override;
     procedure Signal; override;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TKernelEvent }
+  end; { TOmniKernelEvent }
 
-  TLightEvent = class(TOtlEvent)
+  TOmniLightEvent = class(TOmniPlatformEvent)
   strict private
     FIsSignalled    : boolean;
     FKernelUsers    : cardinal;
@@ -126,9 +126,9 @@ type
     procedure SetEvent; override;
     procedure Signal; override;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TLightEvent }
+  end; { TOmniLightEvent }
 
-  TOtlSemaphore = class(TOtlSynchro)
+  TOmniPlatformSemaphore = class(TOmniPlatformSynchro)
   strict private
     FSem: System.SyncObjs.TSemaphore;
   {$IFDEF MSWINDOWS}
@@ -143,9 +143,9 @@ type
     function  AsMWObject: TObject;  override;
     function  IsSignalled: boolean; override;
     procedure Signal; override;
-    /// <remarks>TOtlSemaphore.IsSignalled() is not supported .</remarks>
+    /// <remarks>TOmniPlatformSemaphore.IsSignalled() is not supported .</remarks>
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TOtlSemaphore }
+  end; { TOmniPlatformSemaphore }
 
   /// <remarks>
   ///  The TFixedCriticalSection declaration was copied from the OmniThread Library.
@@ -159,7 +159,7 @@ type
     FDummy: array [0..95] of byte;
   end; { TFixedCriticalSection }
 
-  TFunctionalEvent = class(TOtlSynchro)
+  TOmniFunctionalEvent = class(TOmniPlatformSynchro)
   strict protected
     [Volatile] FLock  : TOmniAtomicSpinLock;
     FPLock            : POmniAtomicSpinLock;
@@ -178,17 +178,17 @@ type
     procedure Pulse;
     procedure Signal; override;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TFunctionalEvent }
+  end; { TOmniFunctionalEvent }
 
-  TCountDown = class(TOtlSynchro)
+  TOmniCountDown = class(TOmniPlatformSynchro)
   strict private type
-    TCountDownFunction = class(TFunctionalEvent)
+    TCountDownFunction = class(TOmniFunctionalEvent)
     strict private
-      FOwner: TCountDown;
+      FOwner: TOmniCountDown;
     protected
       procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); override;
     public
-      constructor Create(AOwner: TCountDown);
+      constructor Create(AOwner: TOmniCountDown);
     end; { TCountDownFunction }
   var
     FCountDownFunc   : TCountDownFunction;
@@ -220,11 +220,11 @@ type
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
     /// <remarks>Resets the count to the initial value.</remarks>
     procedure Reset;
-  end; { TCountDown }
+  end; { TOmniCountDown }
 
-  TCountUp = class(TOtlSynchro)
+  TOmniCountUp = class(TOmniPlatformSynchro)
   strict private
-    FCountDown   : TCountDown;
+    FCountDown   : TOmniCountDown;
     FInitialValue: cardinal;
     FMaxValue    : cardinal;
   protected
@@ -248,9 +248,9 @@ type
     function  Value: cardinal;
     /// <remarks>Blocks until count is zero.</remarks>
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
-  end; { TCountUp }
+  end; { TOmniCountUp }
 
-  TOtlMREW = class // Multi-read, exclusive write
+  TOmniPlatformMREW = class
   strict private
     FGate              : TCriticalSection;
     [Volatile] FReaders: TOmniVolatileInt32;
@@ -266,7 +266,7 @@ type
     procedure ExitWrite;
     function  ReaderCount: integer; // if +ve, this is the number of entered readers,
                                     // if -ve, there is an entered writer.
-  end; { TOtlMREW }
+  end; { TOmniPlatformMREW }
 
 implementation
 
@@ -277,83 +277,83 @@ const
   MaxCardinal      : cardinal = Cardinal($FFFFFFFF);
   MaxFiniteCardinal: cardinal = Cardinal($FFFFFFFE);
 
-{ TOtlSynchro }
+{ TOmniPlatformSynchro }
 
 {$IFDEF MSWINDOWS}
-function TOtlSynchro.GetHandle: THandle;
+function TOmniPlatformSynchro.GetHandle: THandle;
 begin
   Result := 0;
-end; { TOtlSynchro.GetHandle }
+end; { TOmniPlatformSynchro.GetHandle }
 {$ENDIF}
 
-procedure TOtlSynchro.Signal;
+procedure TOmniPlatformSynchro.Signal;
 begin
   // do nothing
-end; { TOtlSynchro.Signal }
+end; { TOmniPlatformSynchro.Signal }
 
-{ TKernelEvent }
+{ TOmniKernelEvent }
 
-function TKernelEvent.AsMWObject: TObject;
+function TOmniKernelEvent.AsMWObject: TObject;
 begin
   Result := FEvent;
-end; { TKernelEvent.AsMWObject }
+end; { TOmniKernelEvent.AsMWObject }
 
-constructor TKernelEvent.Create(AManual, AInitialState: boolean);
+constructor TOmniKernelEvent.Create(AManual, AInitialState: boolean);
 begin
   FEvent := System.SyncObjs.TEvent.Create( nil, AManual, AInitialState, '', False);
-end; { TKernelEvent.Create }
+end; { TOmniKernelEvent.Create }
 
-destructor TKernelEvent.Destroy;
+destructor TOmniKernelEvent.Destroy;
 begin
   FEvent.Free;
   inherited;
-end; { TKernelEvent.Destroy }
+end; { TOmniKernelEvent.Destroy }
 
 {$IFDEF MSWINDOWS}
-function TKernelEvent.GetHandle: THandle;
+function TOmniKernelEvent.GetHandle: THandle;
 begin
   Result := FEvent.Handle;
-end; { TKernelEvent.GetHandle }
+end; { TOmniKernelEvent.GetHandle }
 {$ENDIF}
 
-function TKernelEvent.IsSignalled: boolean;
+function TOmniKernelEvent.IsSignalled: boolean;
 begin
   raise TOmniSynchroException.Create( EIsSignalledNotSupported);
-end; { TKernelEvent.IsSignalled }
+end; { TOmniKernelEvent.IsSignalled }
 
-procedure TKernelEvent.ResetEvent;
+procedure TOmniKernelEvent.ResetEvent;
 begin
   FEvent.ResetEvent;
-end; { TKernelEvent.ResetEvent }
+end; { TOmniKernelEvent.ResetEvent }
 
-procedure TKernelEvent.SetEvent;
+procedure TOmniKernelEvent.SetEvent;
 begin
   FEvent.SetEvent;
-end; { TKernelEvent.SetEvent}
+end; { TOmniKernelEvent.SetEvent}
 
-procedure TKernelEvent.Signal;
+procedure TOmniKernelEvent.Signal;
 begin
   FEvent.SetEvent;
-end; { TKernelEvent.Signal }
+end; { TOmniKernelEvent.Signal }
 
-function TKernelEvent.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniKernelEvent.WaitFor(timeout: cardinal): TWaitResult;
 begin;
   Result := FEvent.WaitFor(timeout);
-end; { TKernelEvent.WaitFor }
+end; { TOmniKernelEvent.WaitFor }
 
-{ TLightEvent }
+{ TOmniLightEvent }
 
-class constructor TLightEvent.Create;
+class constructor TOmniLightEvent.Create;
 begin
   TStopwatch.Create;
-end; { TLightEvent.Create }
+end; { TOmniLightEvent.Create }
 
-function TLightEvent.AsMWObject: TObject;
+function TOmniLightEvent.AsMWObject: TObject;
 begin
   Result := nil;
-end; { TLightEvent.AsMWObject }
+end; { TOmniLightEvent.AsMWObject }
 
-constructor TLightEvent.Create(
+constructor TOmniLightEvent.Create(
   AManual, AInitialState: boolean; ASpinMax: cardinal);
 begin
   FLock.Initialize;
@@ -362,50 +362,50 @@ begin
   FKernelUsers := 0;
   FManual      := AManual;
   FSpinMax     := ASpinMax;
-end; { TLightEvent.Create }
+end; { TOmniLightEvent.Create }
 
-destructor TLightEvent.Destroy;
+destructor TOmniLightEvent.Destroy;
 begin
   FLock.Finalize;
   FPulsar.Free;
   inherited;
-end; { TLightEvent.Destroy }
+end; { TOmniLightEvent.Destroy }
 
-procedure TLightEvent.Reconfigure(Manual: boolean; Value: cardinal);
+procedure TOmniLightEvent.Reconfigure(Manual: boolean; Value: cardinal);
 begin
   FSpinMax := Value;
   FManual  := Manual;
-end; { TLightEvent.Reconfigure }
+end; { TOmniLightEvent.Reconfigure }
 
-function TLightEvent.IsSignalled: boolean;
+function TOmniLightEvent.IsSignalled: boolean;
 begin
   FLock.Enter;
   Result := FIsSignalled;
   FLock.Leave;
-end; { TLightEvent.IsSignalled }
+end; { TOmniLightEvent.IsSignalled }
 
-procedure TLightEvent.ResetEvent;
+procedure TOmniLightEvent.ResetEvent;
 begin
   FLock.Enter;
   FIsSignalled := False;
   FLock.Leave;
-end; { TLightEvent.ResetEvent }
+end; { TOmniLightEvent.ResetEvent }
 
-procedure TLightEvent.SetEvent;
+procedure TOmniLightEvent.SetEvent;
 begin
   FLock.Enter;
   FIsSignalled := True;
   if FKernelUsers > 0 then
     FPulsar.SetEvent;
   FLock.Leave;
-end; { TLightEvent.SetEvent }
+end; { TOmniLightEvent.SetEvent }
 
-procedure TLightEvent.Signal;
+procedure TOmniLightEvent.Signal;
 begin
   SetEvent;
-end; { TLightEvent.Signal }
+end; { TOmniLightEvent.Signal }
 
-function TLightEvent.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniLightEvent.WaitFor(timeout: cardinal): TWaitResult;
 var
   Timer: TStopWatch;
   TimeOutRemaining: cardinal;
@@ -468,51 +468,51 @@ begin
   until Result <> wrIOCompletion;
   if doPulse then
     FPulsar.SetEvent;
-end; { TLightEvent.WaitFor }
+end; { TOmniLightEvent.WaitFor }
 
-{ TOtlSemaphore }
+{ TOmniPlatformSemaphore }
 
-constructor TOtlSemaphore.Create(AInitialCount: cardinal);
+constructor TOmniPlatformSemaphore.Create(AInitialCount: cardinal);
 begin
   FSem := System.SyncObjs.TSemaphore.Create(nil, AInitialCount, MaxInt, '', False);
-end; { TOtlSemaphore.Create }
+end; { TOmniPlatformSemaphore.Create }
 
-destructor TOtlSemaphore.Destroy;
+destructor TOmniPlatformSemaphore.Destroy;
 begin
   FSem.Free;
   inherited;
-end; { TOtlSemaphore.Destroy }
+end; { TOmniPlatformSemaphore.Destroy }
 
-function TOtlSemaphore.AsMWObject: TObject;
+function TOmniPlatformSemaphore.AsMWObject: TObject;
 begin
   Result := FSem;
-end; { TOtlSemaphore.AsMWObject }
+end; { TOmniPlatformSemaphore.AsMWObject }
 
 {$IFDEF MSWINDOWS}
-function TOtlSemaphore.GetHandle: THandle;
+function TOmniPlatformSemaphore.GetHandle: THandle;
 begin
   Result := FSem.Handle;
-end; { TOtlSemaphore.GetHandle }
+end; { TOmniPlatformSemaphore.GetHandle }
 {$ENDIF}
 
-function TOtlSemaphore.IsSignalled: boolean;
+function TOmniPlatformSemaphore.IsSignalled: boolean;
 begin
   raise TOmniSynchroException.Create(EIsSignalledNotSupported);
-end; { TOtlSemaphore.IsSignalled }
+end; { TOmniPlatformSemaphore.IsSignalled }
 
-procedure TOtlSemaphore.Signal;
+procedure TOmniPlatformSemaphore.Signal;
 begin
   FSem.Release;
-end; { TOtlSemaphore.Signal }
+end; { TOmniPlatformSemaphore.Signal }
 
-function TOtlSemaphore.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniPlatformSemaphore.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FSem.WaitFor(timeout);
-end; { TOtlSemaphore.WaitFor }
+end; { TOmniPlatformSemaphore.WaitFor }
 
-{ TFunctionalEvent }
+{ TOmniFunctionalEvent }
 
-constructor TFunctionalEvent.Create(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
+constructor TOmniFunctionalEvent.Create(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   if assigned(APLock) then
     FPLock := APLock
@@ -523,27 +523,27 @@ begin
   FSignalTest        := ASignalTest;
   FPulsarIsSignalled := True;
   FPulsar            := TEvent.Create(nil, True, FPulsarIsSignalled, '', False);
-end; { TFunctionalEvent.Create }
+end; { TOmniFunctionalEvent.Create }
 
-class constructor TFunctionalEvent.Create;
+class constructor TOmniFunctionalEvent.Create;
 begin
   TStopwatch.Create;
-end; { TFunctionalEvent.Create }
+end; { TOmniFunctionalEvent.Create }
 
-destructor TFunctionalEvent.Destroy;
+destructor TOmniFunctionalEvent.Destroy;
 begin
   if FPLock = @FLock then
     FLock.Finalize;
   FPulsar.Free;
   inherited;
-end; { TFunctionalEvent.Destroy }
+end; { TOmniFunctionalEvent.Destroy }
 
-function TFunctionalEvent.AsMWObject: TObject;
+function TOmniFunctionalEvent.AsMWObject: TObject;
 begin
   Result := nil;
-end; { TFunctionalEvent.AsMWObject }
+end; { TOmniFunctionalEvent.AsMWObject }
 
-procedure TFunctionalEvent.Reconfigure(
+procedure TOmniFunctionalEvent.Reconfigure(
   ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   if not assigned(ASignalTest) then begin
@@ -562,9 +562,9 @@ begin
     end
   end;
   FSignalTest := ASignalTest;
-end; { TFunctionalEvent.Reconfigure }
+end; { TOmniFunctionalEvent.Reconfigure }
 
-function TFunctionalEvent.IsSignalled: boolean;
+function TOmniFunctionalEvent.IsSignalled: boolean;
 var
   LocalIsSig: boolean;
 begin
@@ -576,19 +576,19 @@ begin
       SignalTest(False, Dummy, LocalIsSig);
     end);
   Result := LocalIsSig;
-end; { TFunctionalEvent.IsSignalled }
+end; { TOmniFunctionalEvent.IsSignalled }
 
-procedure TFunctionalEvent.Signal;
+procedure TOmniFunctionalEvent.Signal;
 begin
   Pulse;
-end; { TFunctionalEvent.Signal }
+end; { TOmniFunctionalEvent.Signal }
 
-procedure TFunctionalEvent.SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
+procedure TOmniFunctionalEvent.SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean);
 begin
   FSignalTest(doAcquire, wasSuccessfullyAcquired, isInSignalledState);
-end; { TFunctionalEvent.SignalTest }
+end; { TOmniFunctionalEvent.SignalTest }
 
-procedure TFunctionalEvent.Pulse;
+procedure TOmniFunctionalEvent.Pulse;
 begin
   FPLock^.WithinLock(
     procedure
@@ -598,9 +598,9 @@ begin
         FPulsar.SetEvent
       end
     end);
-end; { TFunctionalEvent.Pulse }
+end; { TOmniFunctionalEvent.Pulse }
 
-function TFunctionalEvent.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniFunctionalEvent.WaitFor(timeout: cardinal): TWaitResult;
 var
   Acquired        : boolean;
   Clipped         : boolean;
@@ -656,26 +656,26 @@ begin
         Result := wrIOCompletion
     end;
   until Result <> wrIOCompletion;
-end; { TFunctionalEvent.WaitFor }
+end; { TOmniFunctionalEvent.WaitFor }
 
-{ TCountDown.TCountDownFunction }
+{ TOmniCountDown.TCountDownFunction }
 
-constructor TCountDown.TCountDownFunction.Create(AOwner: TCountDown);
+constructor TOmniCountDown.TCountDownFunction.Create(AOwner: TOmniCountDown);
 begin
   FOwner := AOwner;
   inherited Create(nil, @FOwner.FLock);
-end; { TCountDown.TCountDownFunction.Create }
+end; { TOmniCountDown.TCountDownFunction.Create }
 
-procedure TCountDown.TCountDownFunction.SignalTest(
+procedure TOmniCountDown.TCountDownFunction.SignalTest(
   doAcquire: boolean; var wasSuccessfullyAcquired, isInSignalledState: boolean);
 begin
   isInSignalledState := FOwner.FValue.Read = 0;
   wasSuccessfullyAcquired := doAcquire and isInSignalledState;
-end; { TCountDown.TCountDownFunction.SignalTest }
+end; { TOmniCountDown.TCountDownFunction.SignalTest }
 
-{ TCountDown }
+{ TOmniCountDown }
 
-constructor TCountDown.Create(AInitial: cardinal);
+constructor TOmniCountDown.Create(AInitial: cardinal);
 begin
   FLock.Initialize;
   FInitialValue := AInitial;
@@ -683,34 +683,34 @@ begin
   FCountDownFunc := TCountDownFunction.Create(self);
   if FInitialValue = 0 then
     FCountDownFunc.Pulse;
-end; { TCountDown.Create }
+end; { TOmniCountDown.Create }
 
-destructor TCountDown.Destroy;
+destructor TOmniCountDown.Destroy;
 begin
   FCountDownFunc.Free;
   FValue.Finalize;
   inherited;
-end; { TCountDown.Destroy }
+end; { TOmniCountDown.Destroy }
 
-function TCountDown.FullCount: cardinal;
+function TOmniCountDown.FullCount: cardinal;
 begin
   Result := FInitialValue;
-end; { TCountDown.FullCount }
+end; { TOmniCountDown.FullCount }
 
-function TCountDown.IsSignalled: boolean;
+function TOmniCountDown.IsSignalled: boolean;
 begin
   Result := FValue.Read = 0;
-end; { TCountDown.IsSignalled }
+end; { TOmniCountDown.IsSignalled }
 
-procedure TCountDown.Reconfigure(AInitial: cardinal);
+procedure TOmniCountDown.Reconfigure(AInitial: cardinal);
 begin
   FInitialValue := AInitial;
   FValue.Write(FInitialValue);
   if FInitialValue = 0 then
     FCountDownFunc.Pulse;
-end; { TCountDown.Reconfigure }
+end; { TOmniCountDown.Reconfigure }
 
-procedure TCountDown.Reset;
+procedure TOmniCountDown.Reset;
 begin
   FLock.WithinLock(
     procedure
@@ -718,14 +718,14 @@ begin
       FValue.Write(FInitialValue)
     end);
   FCountDownFunc.Pulse;
-end; { TCountDown.Reset }
+end; { TOmniCountDown.Reset }
 
-procedure TCountDown.Signal;
+procedure TOmniCountDown.Signal;
 begin
   Allocate;
-end; { TCountDown.Signal }
+end; { TOmniCountDown.Signal }
 
-function TCountDown.Allocate: cardinal;
+function TOmniCountDown.Allocate: cardinal;
 var
   bonkers: boolean;
 begin
@@ -740,19 +740,19 @@ begin
     raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   else
     FCountDownFunc.Pulse;
-end; { TCountDown.Allocate }
+end; { TOmniCountDown.Allocate }
 
-function TCountDown.SignalHit: boolean;
+function TOmniCountDown.SignalHit: boolean;
 begin
   Result := Allocate = 0;
-end; { TCountDown.SignalHit }
+end; { TOmniCountDown.SignalHit }
 
-function TCountDown.AsMWObject: TObject;
+function TOmniCountDown.AsMWObject: TObject;
 begin
   Result := nil;
-end; { TCountDown.AsMWObject }
+end; { TOmniCountDown.AsMWObject }
 
-procedure TCountDown.CounterSignal;
+procedure TOmniCountDown.CounterSignal;
 var
   bonkers: boolean;
   val    : cardinal;
@@ -767,93 +767,93 @@ begin
     raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   else if val = 1 then
     FCountDownFunc.Pulse;
-end; { TCountDown.CounterSignal }
+end; { TOmniCountDown.CounterSignal }
 
-function TCountDown.Value: cardinal;
+function TOmniCountDown.Value: cardinal;
 begin
   Result := FValue.Read;
-end; { TCountDown.Value }
+end; { TOmniCountDown.Value }
 
-function TCountDown.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniCountDown.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FCountDownFunc.WaitFor(timeout);
-end; { TCountDown.WaitFor }
+end; { TOmniCountDown.WaitFor }
 
-{ TCountUp }
+{ TOmniCountUp }
 
-constructor TCountUp.Create(AInitial, AMaxValue: cardinal);
+constructor TOmniCountUp.Create(AInitial, AMaxValue: cardinal);
 begin
   FInitialValue := AInitial;
   FMaxValue     := AMaxValue;
   if FMaxValue > FInitialValue then
-    FCountDown := TCountDown.Create(FMaxValue - FInitialValue)
+    FCountDown := TOmniCountDown.Create(FMaxValue - FInitialValue)
   else begin
     FCountDown := nil;
     raise TOmniSynchroException.Create(ESignalCountUpDownRange)
   end;
-end; { TCountUp.Create }
+end; { TOmniCountUp.Create }
 
-destructor TCountUp.Destroy;
+destructor TOmniCountUp.Destroy;
 begin
   FCountDown.Free;
   inherited;
-end; { TCountUp.Destroy }
+end; { TOmniCountUp.Destroy }
 
-function TCountUp.AsMWObject: TObject;
+function TOmniCountUp.AsMWObject: TObject;
 begin
   Result := nil;
-end; { TCountUp.AsMWObject }
+end; { TOmniCountUp.AsMWObject }
 
-function TCountUp.InitialValue: cardinal;
+function TOmniCountUp.InitialValue: cardinal;
 begin
   Result := FInitialValue;
-end; { TCountUp.InitialValue }
+end; { TOmniCountUp.InitialValue }
 
-function TCountUp.IsSignalled: boolean;
+function TOmniCountUp.IsSignalled: boolean;
 begin
   Result := FCountDown.IsSignalled;
-end; { TCountUp.IsSignalled }
+end; { TOmniCountUp.IsSignalled }
 
-function TCountUp.MaxValue: cardinal;
+function TOmniCountUp.MaxValue: cardinal;
 begin
   Result := FMaxValue;
-end; { TCountUp.MaxValue }
+end; { TOmniCountUp.MaxValue }
 
-procedure TCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
+procedure TOmniCountUp.Reconfigure(AInitial, AMaxValue: cardinal);
 begin
   FInitialValue := AInitial;
   FMaxValue     := AMaxValue;
   Reset;
-end; { TCountUp.Reconfigure }
+end; { TOmniCountUp.Reconfigure }
 
-procedure TCountUp.Reset;
+procedure TOmniCountUp.Reset;
 begin
   FCountDown.Reset;
-end; { TCountUp.Reset }
+end; { TOmniCountUp.Reset }
 
-procedure TCountUp.Signal;
+procedure TOmniCountUp.Signal;
 begin
   FCountDown.Signal;
-end; { TCountUp.Signal }
+end; { TOmniCountUp.Signal }
 
-function TCountUp.SignalHit: boolean;
+function TOmniCountUp.SignalHit: boolean;
 begin
   Result := FCountDown.SignalHit;
-end; { TCountUp.SignalHit }
+end; { TOmniCountUp.SignalHit }
 
-function TCountUp.Value: cardinal;
+function TOmniCountUp.Value: cardinal;
 begin
   Result := FMaxValue - FCountDown.Value;
-end; { TCountUp.Value }
+end; { TOmniCountUp.Value }
 
-function TCountUp.WaitFor(timeout: cardinal): TWaitResult;
+function TOmniCountUp.WaitFor(timeout: cardinal): TWaitResult;
 begin
   Result := FCountDown.WaitFor(timeout);
-end; { TCountUp.WaitFor }
+end; { TOmniCountUp.WaitFor }
 
-{ TOtlMREW }
+{ TOmniPlatformMREW }
 
-constructor TOtlMREW.Create;
+constructor TOmniPlatformMREW.Create;
 begin
   FReaders.Initialize(0);
   FZeroOrAbove  := System.SyncObjs.TEvent.Create(nil, False, False, '');
@@ -861,18 +861,18 @@ begin
   FWriterThread := 0;
   // This is an auto-reset event.
   FGate := TFixedCriticalSection.Create;
-end; { TOtlMREW.Create }
+end; { TOmniPlatformMREW.Create }
 
-destructor TOtlMREW.Destroy;
+destructor TOmniPlatformMREW.Destroy;
 begin
   FReaders.Finalize;
   FZeroOrAbove.Free;
   FZero.Free;
   FGate.Free;
   inherited;
-end; { TOtlMREW.Destroy }
+end; { TOmniPlatformMREW.Destroy }
 
-function TOtlMREW.EnterRead(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREW.EnterRead(timeout: cardinal): TWaitResult;
 var
   elapsed         : int64;
   isStable        : boolean;
@@ -931,9 +931,9 @@ begin
     if (Result = wrIOCompletion) and (timeoutRemaining = 0) then
       Result := wrTimeout;
   until Result <> wrIOCompletion;
-end; { TOtlMREW.EnterRead }
+end; { TOmniPlatformMREW.EnterRead }
 
-procedure TOtlMREW.ExitRead;
+procedure TOmniPlatformMREW.ExitRead;
 var
   readers: integer;
 begin
@@ -942,9 +942,9 @@ begin
     FZeroOrAbove.SetEvent;
   if readers = 0 then
     FZero.SetEvent;
-end; { TOtlMREW.ExitRead }
+end; { TOmniPlatformMREW.ExitRead }
 
-function TOtlMREW.EnterWrite(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREW.EnterWrite(timeout: cardinal): TWaitResult;
 var
   doWait          : boolean;
   elapsed         : int64;
@@ -1015,9 +1015,9 @@ begin
     if (Result = wrIOCompletion) and (timeoutRemaining = 0) then
       Result := wrTimeout;
   until Result <> wrIOCompletion;
-end; { TOtlMREW.EnterWrite }
+end; { TOmniPlatformMREW.EnterWrite }
 
-procedure TOtlMREW.ExitWrite;
+procedure TOmniPlatformMREW.ExitWrite;
 var
   readers: integer;
 begin
@@ -1030,14 +1030,14 @@ begin
     FZero.SetEvent;
   end;
   FGate.Leave;
-end; { TOtlMREW.ExitWrite }
+end; { TOmniPlatformMREW.ExitWrite }
 
-function TOtlMREW.ReaderCount: integer;
+function TOmniPlatformMREW.ReaderCount: integer;
 begin
   Result := FReaders.Read;
   if Result < -1 then
     Result := -1;
-end; { TOtlMREW.ReaderCount }
+end; { TOmniPlatformMREW.ReaderCount }
 
 { initialization }
 

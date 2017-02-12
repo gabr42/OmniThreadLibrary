@@ -10,6 +10,8 @@
     - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
+    - TFixedCriticalSection is duplicated in OtlSync.Platform.Basic and OtlSync
+    - merge basic platform synchronisation primitives to OtlSync?
   - Remove support for 2007-2010.
   - IDataFlow
   - remove OTL_Generics from code

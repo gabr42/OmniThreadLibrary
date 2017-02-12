@@ -243,16 +243,16 @@ uses
   OtlSync.Platform.Basic;
 
 type
-  TOmniLightEventFriend = class(TLightEvent)
+  TOmniLightEventFriend = class(TOmniLightEvent)
   end;
 
-  TOmniCountDownFriend = class(TCountDown)
+  TOmniCountDownFriend = class(TOmniCountDown)
   end;
 
-  TOmniCountUpFriend = class(TCountUp)
+  TOmniCountUpFriend = class(TOmniCountUp)
   end;
 
-  TOmniFunctionalEventFriend = class(TFunctionalEvent)
+  TOmniFunctionalEventFriend = class(TOmniFunctionalEvent)
   end;
 
   TOmniRecycleObject = class abstract(TObject, IInterface)
@@ -303,7 +303,7 @@ type
     function  Pool: TOmniSynchroFactory.TObjectQueue; override;
   private
     FAsyncClear     : boolean;
-    FBase           : TOtlEvent;
+    FBase           : TOmniPlatformEvent;
     FIsLight        : boolean;
     [Volatile] FLock: TOmniAtomicSpinLock; // Only used for manual events.
     FManual         : boolean;
@@ -327,7 +327,7 @@ type
 
   TOmniRecycleSemaphore = class(TOmniRecycleSynchro, IOmniSemaphore)
   private type
-    TSimulatedSemaphore = class(TFunctionalEvent)
+    TSimulatedSemaphore = class(TOmniFunctionalEvent)
     protected
       [Volatile] FCurrentValue: TOmniVolatileUint32;
       FInitialValue           : cardinal;
@@ -365,7 +365,7 @@ type
 
   TOmniNativeSemaphore = class(TInterfacedObject, IOmniSemaphore)
   private
-    FBase           : TOtlSemaphore;
+    FBase           : TOmniPlatformSemaphore;
     FInitial        : cardinal;
     [Volatile] FLock: TOmniAtomicSpinLock;
     FShadow         : cardinal;
@@ -425,7 +425,7 @@ type
 
   TOmniRecycleCountDown = class(TOmniRecycleSynchro, IOmniCountDown)
   strict private
-    FBase: TCountDown;
+    FBase: TOmniCountDown;
   protected
     function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(AInitial: cardinal);
@@ -445,7 +445,7 @@ type
 
   TOmniRecycleCountUp = class(TOmniRecycleSynchro, IOmniCountUp)
   strict private
-    FBase: TCountUp;
+    FBase: TOmniCountUp;
   protected
     function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(AInitial, AMaxValue: cardinal);
@@ -464,7 +464,7 @@ type
 
   TOmniRecycleFunctional = class(TOmniRecycleSynchro)
   strict private
-    FBase: TFunctionalEvent;
+    FBase: TOmniFunctionalEvent;
   protected
     function  Pool: TOmniSynchroFactory.TObjectQueue; override;
     procedure Reconfigure(ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
@@ -478,7 +478,7 @@ type
     function  WaitFor( Timeout: cardinal = INFINITE): TWaitResult; override;
   end; { TOmniRecycleFunctional }
 
-  TOmniPlatformMREW = class(TInterfacedObject, IOmniPlatformMREW)
+  TOmniPlatformMREWIntf = class(TInterfacedObject, IOmniPlatformMREW)
   strict private type
     TFacade = class(TInterfacedObject, IInterface, IOmniLock)
     strict protected
@@ -488,7 +488,7 @@ type
       function _Release: Integer; stdcall;
       function  LockCount: integer; virtual;
     protected
-      FController: TOmniPlatformMREW;
+      FController: TOmniPlatformMREWIntf;
     public
       function  AsCriticalSection: TCriticalSection;
       function  AsObject: TObject;
@@ -512,9 +512,10 @@ type
     end; { TWriterLock }
 
   var
-    FMREW       : TOtlMREW;
+    FMREW       : TOmniPlatformMREW;
     FReadFacade : TReaderLock;
     FWriteFacade: TWriterLock;
+
   public
     constructor Create;
     destructor  Destroy; override;
@@ -525,13 +526,13 @@ type
     function  ReaderCount: integer;
     function  AsReadLock: IOmniLock;
     function  AsWriteLock: IOmniLock;
-  end; { TOmniPlatformMREW }
+  end; { TOmniPlatformMREWIntf }
 
 { exports }
 
 function CreateOmniPlatformMREW: IOmniPlatformMREW;
 begin
-  Result := TOmniPlatformMREW.Create;
+  Result := TOmniPlatformMREWIntf.Create;
 end; { CreateOmniPlatformMREW }
 
 { internal exports }
@@ -1004,7 +1005,7 @@ begin
     FShadow := esNotSignalled;
   FWaiters := 0;
   FAsyncClear := False;
-  FBase := TKernelEvent.Create(AManual, AInitialState);
+  FBase := TOmniKernelEvent.Create(AManual, AInitialState);
 end; { TOmniRecycleEvent.CreateAsKernel }
 
 constructor TOmniRecycleEvent.CreateAsLight(
@@ -1020,7 +1021,7 @@ begin
     FShadow := esNotSignalled;
   FWaiters := 0;
   FAsyncClear := False;
-  FBase  := TLightEvent.Create(AManual, AInitialState, SpinMax);
+  FBase  := TOmniLightEvent.Create(AManual, AInitialState, SpinMax);
 end; { TOmniRecycleEvent.CreateAsLight }
 
 destructor TOmniRecycleEvent.Destroy;
@@ -1116,7 +1117,7 @@ end; { TOmniRecycleEvent.SetEvent }
 
 procedure TOmniRecycleEvent.Reconfigure(manual: boolean; value: cardinal);
 begin
-  if FBase is TLightEvent then
+  if FBase is TOmniLightEvent then
     TOmniLightEventFriend(FBase).Reconfigure(Manual, Value);
 end; { TOmniRecycleEvent.Reconfigure }
 
@@ -1296,7 +1297,7 @@ end; { TOmniRecycleSemaphore.WaitFor }
 constructor TOmniNativeSemaphore.Create(AInitialCount: cardinal);
 begin
   FInitial := AInitialCount;
-  FBase    := TOtlSemaphore.Create(FInitial);
+  FBase    := TOmniPlatformSemaphore.Create(FInitial);
   FWaiters := 0;
   FShadow  := FInitial;
   FLock.Initialize;
@@ -1518,7 +1519,7 @@ end; { TOmniSpinLock.LockCount }
 constructor TOmniRecycleCountDown.Create(const APool: TOmniSynchroFactory; AInitialValue: cardinal);
 begin
   inherited Create(APool);
-  FBase := TCountDown.Create(AInitialValue);
+  FBase := TOmniCountDown.Create(AInitialValue);
 end; { TOmniRecycleCountDown.Create }
 
 destructor TOmniRecycleCountDown.Destroy;
@@ -1592,7 +1593,7 @@ constructor TOmniRecycleCountUp.Create(
   const APool: TOmniSynchroFactory; AInitial, AMaxValue: cardinal);
 begin
   inherited Create(APool);
-  FBase := TCountUp.Create(AInitial, AMaxValue);
+  FBase := TOmniCountUp.Create(AInitial, AMaxValue);
 end; { TOmniRecycleCountUp.Create }
 
 destructor TOmniRecycleCountUp.Destroy;
@@ -1661,7 +1662,7 @@ constructor TOmniRecycleFunctional.Create(
   const APool: TOmniSynchroFactory; ASignalTest: TOmniEventFunction; APLock: POmniAtomicSpinLock);
 begin
   inherited Create(APool);
-  FBase := TFunctionalEvent.Create(ASignalTest, APLock);
+  FBase := TOmniFunctionalEvent.Create(ASignalTest, APLock);
 end; { TOmniRecycleFunctional.Create }
 
 destructor TOmniRecycleFunctional.Destroy;
@@ -1710,134 +1711,134 @@ begin
   Result := FBase.WaitFor(timeout);
 end; { TOmniRecycleFunctional.WaitFor }
 
-{ TOmniPlatformMREW.TFacade }
+{ TOmniPlatformMREWIntf.TFacade }
 
-function TOmniPlatformMREW.TFacade.AsCriticalSection: TCriticalSection;
+function TOmniPlatformMREWIntf.TFacade.AsCriticalSection: TCriticalSection;
 begin
   Result := nil;
-end; { TOmniPlatformMREW.TFacade.AsCriticalSection }
+end; { TOmniPlatformMREWIntf.TFacade.AsCriticalSection }
 
-function TOmniPlatformMREW.TFacade.AsObject: TObject;
+function TOmniPlatformMREWIntf.TFacade.AsObject: TObject;
 begin
   Result := Self;
-end; { TOmniPlatformMREW.TFacade.AsObject }
+end; { TOmniPlatformMREWIntf.TFacade.AsObject }
 
-function TOmniPlatformMREW.TFacade.AsSpinLock: POmniAtomicSpinLock;
+function TOmniPlatformMREWIntf.TFacade.AsSpinLock: POmniAtomicSpinLock;
 begin
   Result := nil;
-end; { TOmniPlatformMREW.TFacade.AsSpinLock }
+end; { TOmniPlatformMREWIntf.TFacade.AsSpinLock }
 
-function TOmniPlatformMREW.TFacade.GetCapabilities: TOmniSynchroCapabilities;
+function TOmniPlatformMREWIntf.TFacade.GetCapabilities: TOmniSynchroCapabilities;
 begin
   Result := [];
-end; { TOmniPlatformMREW.TFacade.GetCapabilities }
+end; { TOmniPlatformMREWIntf.TFacade.GetCapabilities }
 
-function TOmniPlatformMREW.TFacade.LockCount: integer;
+function TOmniPlatformMREWIntf.TFacade.LockCount: integer;
 begin
   Result := FController.FMREW.ReaderCount;
-end; { TOmniPlatformMREW.TFacade.LockCount }
+end; { TOmniPlatformMREWIntf.TFacade.LockCount }
 
-function TOmniPlatformMREW.TFacade._AddRef: Integer;
+function TOmniPlatformMREWIntf.TFacade._AddRef: Integer;
 begin
   Result := FController._AddRef;
-end; { TOmniPlatformMREW.TFacade._AddRef }
+end; { TOmniPlatformMREWIntf.TFacade._AddRef }
 
-function TOmniPlatformMREW.TFacade._Release: Integer;
+function TOmniPlatformMREWIntf.TFacade._Release: Integer;
 begin
   Result := FController._Release
-end; { TOmniPlatformMREW.TFacade._Release }
+end; { TOmniPlatformMREWIntf.TFacade._Release }
 
-{ TOmniPlatformMREW.TReaderLock }
+{ TOmniPlatformMREWIntf.TReaderLock }
 
-procedure TOmniPlatformMREW.TReaderLock.Enter;
+procedure TOmniPlatformMREWIntf.TReaderLock.Enter;
 begin
   FController.FMREW.EnterRead(INFINITE);
-end; { TOmniPlatformMREW.TReaderLock.Enter }
+end; { TOmniPlatformMREWIntf.TReaderLock.Enter }
 
-procedure TOmniPlatformMREW.TReaderLock.Leave;
+procedure TOmniPlatformMREWIntf.TReaderLock.Leave;
 begin
   FController.FMREW.ExitRead;
-end; { TOmniPlatformMREW.TReaderLock.Leave }
+end; { TOmniPlatformMREWIntf.TReaderLock.Leave }
 
-function TOmniPlatformMREW.TReaderLock.LockCount: integer;
+function TOmniPlatformMREWIntf.TReaderLock.LockCount: integer;
 begin
   Result := inherited LockCount;
   if result < 0 then
     Result := 1;
-end; { TOmniPlatformMREW.TReaderLock.LockCount }
+end; { TOmniPlatformMREWIntf.TReaderLock.LockCount }
 
-{ TOmniPlatformMREW.TWriterLock }
+{ TOmniPlatformMREWIntf.TWriterLock }
 
-procedure TOmniPlatformMREW.TWriterLock.Enter;
+procedure TOmniPlatformMREWIntf.TWriterLock.Enter;
 begin
   FController.FMREW.EnterWrite(INFINITE);
 end; { TWriterLock.Enter }
 
-procedure TOmniPlatformMREW.TWriterLock.Leave;
+procedure TOmniPlatformMREWIntf.TWriterLock.Leave;
 begin
   FController.FMREW.ExitWrite;
 end; { TWriterLock.Leave }
 
-function TOmniPlatformMREW.TWriterLock.LockCount: integer;
+function TOmniPlatformMREWIntf.TWriterLock.LockCount: integer;
 begin
   Result := - inherited LockCount;
   if result < 0 then
     Result := 1;
 end; { TWriterLock.LockCount }
 
-{ TOmniPlatformMREW }
+{ TOmniPlatformMREWIntf }
 
-constructor TOmniPlatformMREW.Create;
+constructor TOmniPlatformMREWIntf.Create;
 begin
-  FMREW := TOtlMREW.Create;
-  FReadFacade := TOmniPlatformMREW.TReaderLock.Create;
+  FMREW := TOmniPlatformMREW.Create;
+  FReadFacade := TOmniPlatformMREWIntf.TReaderLock.Create;
   FReadFacade.FController := Self;
-  FWriteFacade := TOmniPlatformMREW.TWriterLock.Create;
+  FWriteFacade := TOmniPlatformMREWIntf.TWriterLock.Create;
   FWriteFacade.FController := Self;
-end; { TOmniPlatformMREW.Create }
+end; { TOmniPlatformMREWIntf.Create }
 
-destructor TOmniPlatformMREW.Destroy;
+destructor TOmniPlatformMREWIntf.Destroy;
 begin
   FReadFacade.FController := nil;
   FreeAndNil(FReadFacade);
   FreeAndNil(FWriteFacade);
   FreeAndNil(FMREW);
   inherited;
-end; { TOmniPlatformMREW.Destroy }
+end; { TOmniPlatformMREWIntf.Destroy }
 
-function TOmniPlatformMREW.AsReadLock: IOmniLock;
+function TOmniPlatformMREWIntf.AsReadLock: IOmniLock;
 begin
   Result := FReadFacade as IOmniLock;
-end; { TOmniPlatformMREW.AsReadLock }
+end; { TOmniPlatformMREWIntf.AsReadLock }
 
-function TOmniPlatformMREW.AsWriteLock: IOmniLock;
+function TOmniPlatformMREWIntf.AsWriteLock: IOmniLock;
 begin
   Result := FWriteFacade as IOmniLock;
-end; { TOmniPlatformMREW.AsWriteLock }
+end; { TOmniPlatformMREWIntf.AsWriteLock }
 
-function TOmniPlatformMREW.EnterRead(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREWIntf.EnterRead(timeout: cardinal): TWaitResult;
 begin
   Result := FMREW.EnterRead(timeout);
-end; { TOmniPlatformMREW.EnterRead }
+end; { TOmniPlatformMREWIntf.EnterRead }
 
-function TOmniPlatformMREW.EnterWrite(timeout: cardinal): TWaitResult;
+function TOmniPlatformMREWIntf.EnterWrite(timeout: cardinal): TWaitResult;
 begin
   Result := FMREW.EnterWrite(timeout);
-end; { TOmniPlatformMREW.EnterWrite }
+end; { TOmniPlatformMREWIntf.EnterWrite }
 
-procedure TOmniPlatformMREW.ExitRead;
+procedure TOmniPlatformMREWIntf.ExitRead;
 begin
   FMREW.ExitRead;
-end; { TOmniPlatformMREW.ExitRead }
+end; { TOmniPlatformMREWIntf.ExitRead }
 
-procedure TOmniPlatformMREW.ExitWrite;
+procedure TOmniPlatformMREWIntf.ExitWrite;
 begin
   FMREW.ExitWrite;
-end; { TOmniPlatformMREW.ExitWrite }
+end; { TOmniPlatformMREWIntf.ExitWrite }
 
-function TOmniPlatformMREW.ReaderCount: integer;
+function TOmniPlatformMREWIntf.ReaderCount: integer;
 begin
   Result := FMREW.ReaderCount;
-end; { TOmniPlatformMREW.ReaderCount }
+end; { TOmniPlatformMREWIntf.ReaderCount }
 
 end.

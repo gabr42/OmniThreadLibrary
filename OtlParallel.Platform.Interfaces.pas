@@ -249,11 +249,11 @@ type
   TSBDParallel = class
   public
      // Basic level constructors
-    class function EventObj     ( ManualReset, InitialState: boolean): TOtlEvent;
-    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
-    class function SemaphoreObj ( AInitialCount: cardinal): TOtlSemaphore;
-    class function CountDownObj ( AInitialValue: cardinal): TCountDown;
-    class function CountUpObj   ( AInitialValue, AMaxValue: cardinal): TCountUp;
+    class function EventObj     ( ManualReset, InitialState: boolean): TOmniPlatformEvent;
+    class function LightEventObj( ManualReset, InitialState: boolean; SpinMax: cardinal): TOmniPlatformEvent;
+    class function SemaphoreObj ( AInitialCount: cardinal): TOmniPlatformSemaphore;
+    class function CountDownObj ( AInitialValue: cardinal): TOmniCountDown;
+    class function CountUpObj   ( AInitialValue, AMaxValue: cardinal): TOmniCountUp;
     class function CritSect: TCriticalSection;
 
   public
@@ -398,9 +398,9 @@ begin
 end;
 
 
-class function TSBDParallel.CountDownObj( AInitialValue: cardinal): TCountDown;
+class function TSBDParallel.CountDownObj( AInitialValue: cardinal): TOmniCountDown;
 begin
-  result := TCountDown.Create( AInitialValue)
+  result := TOmniCountDown.Create( AInitialValue)
 end;
 
 
@@ -409,9 +409,9 @@ begin
   result := _CreateCountUpIntf( nil, InitialValue, AMaxValue)
 end;
 
-class function TSBDParallel.CountUpObj( AInitialValue, AMaxValue: cardinal): TCountUp;
+class function TSBDParallel.CountUpObj( AInitialValue, AMaxValue: cardinal): TOmniCountUp;
 begin
-  result := TCountUp.Create( AInitialValue, AMaxValue)
+  result := TOmniCountUp.Create( AInitialValue, AMaxValue)
 end;
 
 class function TSBDParallel.CritSect: TCriticalSection;
@@ -427,9 +427,9 @@ end;
 
 
 class function TSBDParallel.EventObj(
-  ManualReset, InitialState: boolean): TOtlEvent;
+  ManualReset, InitialState: boolean): TOmniPlatformEvent;
 begin
-  result := TKernelEvent.Create( ManualReset, InitialState)
+  result := TOmniKernelEvent.Create( ManualReset, InitialState)
 end;
 
 
@@ -461,9 +461,9 @@ end;
 
 
 class function TSBDParallel.LightEventObj(
-  ManualReset, InitialState: boolean; SpinMax: cardinal): TOtlEvent;
+  ManualReset, InitialState: boolean; SpinMax: cardinal): TOmniPlatformEvent;
 begin
-  result := TLightEvent.Create( ManualReset, InitialState, SpinMax)
+  result := TOmniLightEvent.Create( ManualReset, InitialState, SpinMax)
 end;
 
 
@@ -502,9 +502,9 @@ begin
   result := _CreateNativeSemaphoreIntf( AInitialCount)
 end;
 
-class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TOtlSemaphore;
+class function TSBDParallel.SemaphoreObj( AInitialCount: cardinal): TOmniPlatformSemaphore;
 begin
-  result := TOtlSemaphore.Create( AInitialCount);
+  result := TOmniPlatformSemaphore.Create( AInitialCount);
 end;
 
 class function TSBDParallel.UnboundedObjectPipe( const WorkFactory: IWorkFactory): IObjectPipe;
