@@ -108,7 +108,7 @@ type
   strict private
     FIsSignalled    : boolean;
     FKernelUsers    : cardinal;
-    [Volatile] FLock: TSBDSpinLock;
+    [Volatile] FLock: TAtomicSpinLock;
     FManual         : boolean;
     FPulsar         : System.SyncObjs.TEvent; // Auto-reset
     FSpinMax        : cardinal;
@@ -161,17 +161,17 @@ type
 
   TFunctionalEvent = class(TOtlSynchro)
   strict protected
-    [Volatile] FLock  : TSBDSpinLock;
-    FPLock            : PSBDSpinLock;
+    [Volatile] FLock  : TAtomicSpinLock;
+    FPLock            : PAtomicSpinLock;
     FPulsar           : TEvent; // Manual reset
     FPulsarIsSignalled: boolean;
     FSignalTest       : TEventFunction;
   protected
-    procedure Reconfigure(ASignalTest: TEventFunction; APLock: PSBDSpinLock); virtual;
+    procedure Reconfigure(ASignalTest: TEventFunction; APLock: PAtomicSpinLock); virtual;
     procedure SignalTest(doAcquire: boolean; var wasSuccessfullyAcquired: boolean; var isInSignalledState: boolean); virtual;
   public
     class constructor Create;
-    constructor Create(ASignalTest: TEventFunction; APLock: PSBDSpinLock);
+    constructor Create(ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
     destructor Destroy; override;
     function  AsMWObject: TObject;  override;
     function  IsSignalled: boolean; override;
@@ -194,7 +194,7 @@ type
     FCountDownFunc   : TCountDownFunction;
     [Volatile] FValue: TVolatileUInt32;
     FInitialValue    : cardinal;
-    FLock            : TSBDSpinLock;
+    FLock            : TAtomicSpinLock;
   protected
     procedure Reconfigure(AInitial: cardinal);
   public
@@ -512,7 +512,7 @@ end; { TOtlSemaphore.WaitFor }
 
 { TFunctionalEvent }
 
-constructor TFunctionalEvent.Create(ASignalTest: TEventFunction; APLock: PSBDSpinLock);
+constructor TFunctionalEvent.Create(ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
 begin
   if assigned(APLock) then
     FPLock := APLock
@@ -544,7 +544,7 @@ begin
 end; { TFunctionalEvent.AsMWObject }
 
 procedure TFunctionalEvent.Reconfigure(
-  ASignalTest: TEventFunction; APLock: PSBDSpinLock);
+  ASignalTest: TEventFunction; APLock: PAtomicSpinLock);
 begin
   if not assigned(ASignalTest) then begin
     // Deconfigure in preparation for return to the object pool

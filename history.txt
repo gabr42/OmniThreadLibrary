@@ -6,7 +6,6 @@
 - TODO:
   - Test TOmniBlockingCollection<T> in 64-bit mode.
   - import mobile support
-    - rename OtlPlatform.Atomic/TSBDSpinLock to ???
     - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
@@ -15,10 +14,15 @@
   - remove OTL_Generics from code
   - remove OTL_HasArrayOfT from code
   - remove OTL_ERTTI from code
+  - rename OtlAdditionalSymbols conditionals into OTL_ form
+    - maybe include that unit into OtlOptions.inc?
+    - maybe include only non-configurable part into OtlOptions.inc?
   - $I -> $INCLUDE
   - remove legacy ifdef?
   - add build tests for mobile
   - add build tests for all OtlAdditionalSymbols options (probably not for all combinations)
+  - add conditional to call Assert_IsXXX methods in OtlSync.Platform.Atomic
+    - use it in unit testing
 
 3.07: <<unreleased>>
 - New features:

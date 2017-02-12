@@ -223,7 +223,7 @@ type
     FReturnJob: TTaskProc;
     FhasThrownException: boolean;
     FParent: TTask;
-    FParentLock: TSBDSpinLock;
+    FParentLock: TAtomicSpinLock;
     FChildrenTasks: TArray<ITaskEx>;
     FTermination: ICountDown;
 
@@ -307,7 +307,7 @@ type
   TBaseFuture = class abstract( TTask)
   protected
     FCapturedException: Exception;
-    FReturnLock: TSBDSpinLock;
+    FReturnLock: TAtomicSpinLock;
 
     function AsIFuture: IInterface;   virtual; abstract;
 
@@ -510,7 +510,7 @@ type
     FUnfinishedChildTasks: ICountDown;
     FIsActionable: boolean;
     FCountOfProblemsInWork: integer;
-    FQueueLock: TSBDSpinLock;
+    FQueueLock: TAtomicSpinLock;
 
     function  Act( Action: TForkJoinerAction; Problem: TForkJoinProblem; EnterLockProc: TProc_Bool): boolean;
     function  Test( Problem: TForkJoinProblem; EnterLockProc: TProc_Bool): boolean;
@@ -565,7 +565,7 @@ TCoForEachEnumerableIntfTaskFactory<T> = class sealed( TCoForEachEnumerableTaskF
     FCursor: IEnumerator<T>;
   end;
 
-procedure EnterLock( var SpinLock: TSBDSpinLock; var EnteredFlag: boolean; Value: boolean);
+procedure EnterLock( var SpinLock: TAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
 {$ENDREGION}
 
 implementation
@@ -2609,7 +2609,7 @@ begin
   inherited Create( FOwner.FWorkFactory, nil, FOwner)
 end;
 
-procedure EnterLock( var SpinLock: TSBDSpinLock; var EnteredFlag: boolean; Value: boolean);
+procedure EnterLock( var SpinLock: TAtomicSpinLock; var EnteredFlag: boolean; Value: boolean);
 begin
   if EnteredFlag = Value then exit;
   if Value then
