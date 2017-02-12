@@ -1,4 +1,4 @@
-unit OtlPlatform.Errors;
+unit OtlSync.Platform.Errors;
 
 {$I OtlOptions.inc}
 

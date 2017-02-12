@@ -1,15 +1,15 @@
-unit OtlPlatform.Tasks;
+unit OtlParallel.Platform.Tasks;
 {$I OtlOptions.inc}
 interface
-uses OtlPlatform.Extras, System.Classes, OtlPlatform.Pipe,
+uses OtlParallel.Platform.Interfaces, System.Classes, OtlParallel.Platform.Pipe,
      System.Generics.Collections,
      System.SysUtils, System.SyncObjs,
-     OtlPlatform.Sync,
-     OtlPlatform.Sync.Interfaced,
-     OtlPlatform.Sync.Modular
+     OtlSync.Platform,
+     OtlSync.Platform.Interfaced,
+     OtlSync.Platform.Modular
      // Ensure that Atomic is last in the uses list, so that its record
      //  helpers (in the case of NDEF USE_SLACKSPACE_ALIGNMENT) are in scope.
-     , OtlPlatform.Atomic
+     , OtlSync.Platform.Atomic
      ;
 
 type

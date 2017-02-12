@@ -43,7 +43,7 @@
 ///     1.0: 2017-02-11
 ///       - Imported from mobile/Otl.Parallel.SynchroPrimitives.pas.
 
-unit OtlPlatform.Sync;
+unit OtlSync.Platform;
 
 {
   Synchronisation Primitives are classes, interfaces and solutions for

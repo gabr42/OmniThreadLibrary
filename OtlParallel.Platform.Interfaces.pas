@@ -1,4 +1,4 @@
-﻿unit OtlPlatform.Extras;
+﻿unit OtlParallel.Platform.Interfaces;
 {$I OtlOptions.inc}
 
 interface
@@ -6,14 +6,14 @@ interface
 
 
 uses System.SyncObjs, System.Classes, System.SysUtils, System.Generics.Collections
-   , OtlPlatform.Sync
-   , OtlPlatform.Sync.Interfaced
-   , OtlPlatform.Sync.Basic
-   , OtlPlatform.Sync.Modular
+   , OtlSync.Platform
+   , OtlSync.Platform.Interfaced
+   , OtlSync.Platform.Basic
+   , OtlSync.Platform.Modular
  {$IFDEF MSWINDOWS}
    , Winapi.Windows
  {$ENDIF}
-   , OtlPlatform.Atomic;
+   , OtlSync.Platform.Atomic;
 
 const
   FOREVER = INFINITE;
@@ -343,8 +343,8 @@ implementation
 
 
 
-uses System.Diagnostics, OtlPlatform.Pipe, System.RTLConsts, TypInfo,
-     OtlPlatform.Tasks, OtlPlatform.HeavyPool;
+uses System.Diagnostics, OtlParallel.Platform.Pipe, System.RTLConsts, TypInfo,
+     OtlParallel.Platform.Tasks, OtlPlatform.HeavyPool;
 
 
 

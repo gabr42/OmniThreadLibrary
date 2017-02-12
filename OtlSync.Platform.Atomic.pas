@@ -1,4 +1,4 @@
-unit OtlPlatform.Atomic;
+unit OtlSync.Platform.Atomic;
 
 {$I OtlOptions.inc}
 

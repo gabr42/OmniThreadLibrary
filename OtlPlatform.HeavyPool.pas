@@ -2,9 +2,9 @@ unit OtlPlatform.HeavyPool;
 {$I OtlOptions.inc}
 
 interface
-uses OtlPlatform.Extras, System.SysUtils, Generics.Collections,
-     OtlPlatform.Sync.Interfaced, System.Classes,
-     OtlPlatform.Atomic;
+uses OtlParallel.Platform.Interfaces, System.SysUtils, Generics.Collections,
+     OtlSync.Platform.Interfaced, System.Classes,
+     OtlSync.Platform.Atomic;
 
 //Heavy Pool
 //===============
@@ -129,7 +129,7 @@ implementation
 
 
 
-uses System.SyncObjs, OtlPlatform.Sync;
+uses System.SyncObjs;
 
 constructor THeavyPoolEx<T>.CreateHeavyEx(
   ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;

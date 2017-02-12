@@ -13,9 +13,8 @@
   - $I -> $INCLUDE
   - remove legacy ifdef?
   - import mobile support
-    - whatis: ISynchro.IsSignalled_IsSupported
-    - next: OtlPlatform.Sync.Modular line 573
     - rename OtlPlatform.Atomic/TSBDSpinLock to ???
+    - move OtlPlatform.HeavyPool stuff to ?OtlContainers? [uses OtlParallel.Platform.Interfaces - investigate!]
     - next: OtlSync
     - does not compile without DONT_TRUST_EMBARCADERO_THREADING_LIBRARY
   - add build tests for mobile

@@ -43,7 +43,7 @@
 ///     1.0: 2017-02-11
 ///       - Imported from mobile/Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas.
 
-unit OtlPlatform.Sync.Interfaced;
+unit OtlSync.Platform.Interfaced;
 
 // IMPORTANT!
 //  READ THE COMMENTS IN UNIT OtlPlatform.SynchroPrimitives.
@@ -56,8 +56,8 @@ uses
   System.SyncObjs,
   System.Generics.Collections,
   System.SysUtils,
-  OtlPlatform.Atomic,
-  OtlPlatform.Sync;
+  OtlSync.Platform,
+  OtlSync.Platform.Atomic;
 
 const
   FOREVER = INFINITE;
@@ -235,8 +235,8 @@ function _CreateNativeSemaphoreIntf(AInitialCount: cardinal): ISemaphore;
 implementation
 
 uses
-  OtlPlatform.Errors,
-  OtlPlatform.Sync.Basic;
+  OtlSync.Platform.Errors,
+  OtlSync.Platform.Basic;
 
 type
   TLightEventFriend = class(TLightEvent)

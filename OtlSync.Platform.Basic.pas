@@ -43,7 +43,7 @@
 ///     1.0: 2017-02-11
 ///       - Imported from mobile/Otl.Parallel.SynchroPrimitives.BasicLevel.pas.
 
-unit OtlPlatform.Sync.Basic;
+unit OtlSync.Platform.Basic;
 
 // IMPORTANT!
 //  READ THE COMMENTS IN UNIT OtlPlatform.Sync.
@@ -56,8 +56,8 @@ uses
   System.SyncObjs,
   System.Classes,
   System.SysUtils,
-  OtlPlatform.Atomic,
-  OtlPlatform.Sync;
+  OtlSync.Platform,
+  OtlSync.Platform.Atomic;
 
 type
   /// <remarks>Base class for low-level synchronisation primitives
@@ -272,7 +272,7 @@ implementation
 
 uses
   System.Diagnostics,
-  OtlPlatform.Errors;
+  OtlSync.Platform.Errors;
 
 const
   MaxCardinal      : cardinal = Cardinal($FFFFFFFF);

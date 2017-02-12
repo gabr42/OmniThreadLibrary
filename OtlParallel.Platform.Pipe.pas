@@ -1,9 +1,11 @@
-unit OtlPlatform.Pipe;
+unit OtlParallel.Platform.Pipe;
 {$I OtlOptions.inc}
 interface
-uses SysUtils, OtlPlatform.Extras, System.SyncObjs, Generics.Collections,
-     OtlPlatform.Sync.Interfaced,
-     OtlPlatform.Atomic;
+uses SysUtils, System.SyncObjs, Generics.Collections,
+     OtlSync.Platform.Interfaced,
+     OtlSync.Platform.Atomic,
+     OtlParallel.Platform.Interfaces;
+
 type
 
   IPipeBase_Internal = interface ['{4278834F-E84E-4EA8-B124-2475225B5C8A}']

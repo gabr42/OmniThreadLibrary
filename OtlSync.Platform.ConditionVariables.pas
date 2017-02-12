@@ -1,4 +1,4 @@
-unit OtlPlatform.Sync.ConditionVariables;
+unit OtlSync.Platform.ConditionVariables;
 
 {$I OtlOptions.inc}
 
@@ -8,8 +8,8 @@ uses System.SyncObjs
  {$IFDEF MSWINDOWS}
    , Winapi.Windows
  {$ENDIF}
-   , OtlPlatform.Atomic,
-   OtlPlatform.Sync.Interfaced;
+   , OtlSync.Platform.Atomic,
+   OtlSync.Platform.Interfaced;
 
 const
   FOREVER = INFINITE;

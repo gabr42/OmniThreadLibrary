@@ -43,7 +43,7 @@
 ///     1.0: 2017-02-11
 ///       - Imported from mobile/Otl.Parallel.SynchroPrimitives.ModularLevel.pas.
 
-unit OtlPlatform.Sync.Modular;
+unit OtlSync.Platform.Modular;
 
 // IMPORTANT!
 //  READ THE COMMENTS IN UNIT OtlPlatform.Sync.
@@ -57,9 +57,9 @@ uses
    Winapi.Windows,
  {$ENDIF}
  System.SyncObjs, System.Classes, System.SysUtils, System.Generics.Collections,
- OtlPlatform.Atomic,
- OtlPlatform.Sync.ConditionVariables,
- OtlPlatform.Sync.Interfaced;
+ OtlSync.Platform.Atomic,
+ OtlSync.Platform.ConditionVariables,
+ OtlSync.Platform.Interfaced;
 
 type
   ISimpleConditionEvent = interface ['{1EAEEE8F-54E1-44B5-BE3C-AFC14A465F74}']
@@ -108,6 +108,8 @@ type
 
   TTestClass = (TestAny, TestAll, TestCustom);
 
+  TSignalState = OtlSync.Platform.Interfaced.TSignalState;
+
   TCompositeSynchro = class(TInterfacedObject, ICompositeSynchro, ISynchro, ISynchroExInternal)
   strict private type
     TImplementation = ({$IFDEF MSWINDOWS}Direct, {$ENDIF} Indirect, Solo);
@@ -121,7 +123,7 @@ type
     end; { TMemberObserver }
   var
     FAllowSolo                   : boolean;
-    FCondVar                     : OtlPlatform.Sync.ConditionVariables.TSBDConditionVariable;
+    FCondVar                     : OtlSync.Platform.ConditionVariables.TSBDConditionVariable;
     FDatum                       : TObject;
     FEventFactory                : TSynchroFactory;
     FFactors                     : TSynchroArray;
@@ -169,7 +171,7 @@ type
     function  PermitsDedicatedSoleIndirectClient: boolean;
     function  PermitsDirectClients: boolean;
     function  PermitsIndirectClients: boolean;
-    function  SignalState: OtlPlatform.Sync.Interfaced.TSignalState;
+    function  SignalState: TSignalState;
     function  UnionLock: ILock;
     function  WaitFor(Timeout: cardinal = INFINITE): TWaitResult; overload;
     function  WaitFor(var SignallerIdx: integer; TimeOut: cardinal = FOREVER): TWaitResult; overload;
@@ -216,7 +218,7 @@ type
     function  PermitsDedicatedSoleIndirectClient: boolean;
     function  PermitsDirectClients: boolean;
     function  PermitsIndirectClients: boolean;
-    function  SignalState: OtlPlatform.Sync.Interfaced.TSignalState;
+    function  SignalState: TSignalState;
     function  UnionLock: ILock;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; virtual;
     procedure Enrol(const Observer: ISynchroObserver; Token: TObject);
@@ -274,7 +276,7 @@ implementation
 
 uses
   System.Diagnostics,
-  OtlPlatform.Errors;
+  OtlSync.Platform.Errors;
 
 { TCompositeSynchro.TMemberObserver }
 
@@ -668,7 +670,7 @@ begin
     FCondVar.Pulse;
 end; { TCompositeSynchro.Signal }
 
-function TCompositeSynchro.SignalState: OtlPlatform.Sync.Interfaced.TSignalState;
+function TCompositeSynchro.SignalState: TSignalState;
 begin
   if FIsSignalled then
       Result := esSignalled
@@ -1010,7 +1012,7 @@ begin
   // do nothing
 end; { TModularSynchro.Signal }
 
-function TModularSynchro.SignalState: OtlPlatform.Sync.Interfaced.TSignalState;
+function TModularSynchro.SignalState: TSignalState;
 begin
   Result := FBase.SignalState;
 end; { TModularSynchro.SignalState }
