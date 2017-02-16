@@ -1,0 +1,783 @@
+﻿<html >
+<head ><STYLE TYPE="text/css">@import "../stylesheet.css";</STYLE><title ></title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><script  language='JavaScript'>
+			function doClick(imageHref) {
+			if (parent.imageFrame != null)
+				parent.imageFrame.location.href = imageHref;
+			}
+		</script></head><table  border='0' width='100%' cellpadding='1' cellspacing='0'>
+<tr >
+<td  colspan='2' class='NavBarCellCommon'>
+<table  border='0' cellpadding='0' cellspacing='3'>
+<tr  align='center' valign='top'>
+<td  class='NavBarCellCommon'>
+<a  href='../overview-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Overview</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='package-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Namespace</b></font></a>&nbsp;</td><td  class='NavBarCellCommonRev'>
+<font  size='+1' class='NavBarFont1'>
+<b >Classifier</b></font>&nbsp;</td><td  class='NavBarCellCommon'>
+<font  size='+1' class='NavBarFont1'>Tree</font>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../index-all.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Index</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../help-doc.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Help</b></font></a>&nbsp;</td></tr></table><td  align='right' valign='top' rowspan='3'>
+<em ></em></td></td></tr><tr >
+<td  class='NavBarCellPrevNext'>
+<font  size='-2'><a href="../OtlParallel/TPipelineStageDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">PREV </a> &nbsp;&nbsp;<a href="../OtlParallel/TOmniTaskFinalizerDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">NEXT </a> </font></td><td  class='NavBarCellPrevNext'>
+<font  size='-2'>
+<a  href='../index.html' target='_top'>
+<b >FRAMES</b></a>&nbsp;<a  href='../OtlParallel/Parallel.html' target='_top'>
+<b >NO FRAMES</b></a></font></td></tr><tr >
+<td  valign='top' class='NavBarCell3'>
+<font  size='-2'>SUMMARY:&nbsp;INNER&nbsp;|&nbsp;FIELD&nbsp;|&nbsp;CONSTR&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_summary'>METHOD</a></font></td><td  valign='top' class='NavBarCell3'>
+<font  size='-2'>DETAIL:&nbsp;FIELD&nbsp;|&nbsp;CONSTR&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_detail'>METHOD</a></font></td></tr></table><hr /><h2 >
+<font  size='-1'>
+<i >Namespace: </i>OtlParallel<br /></font><br />Class Parallel</h2><pre >
+OtlParallel.Parallel
+</pre><hr /><dl >
+<dt />public&nbsp;class <b >Parallel</b></dl><p /><dl >
+<dt /><b >Sealed</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Persistent</b><dd >False</dd></dl><hr /><p /><a  name='method_summary'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Method Summary</b></font></td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ApplyConfig(IOmniTaskConfig/IOmniTaskControl)'>ApplyConfig</a></b>(taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> ; task: <a href="../OtlTaskControl/IOmniTaskControl.html" target="classFrame" onclick="doClick('../OtlTaskControl/doc-files/default.txvpck.html')">OtlTaskControl.IOmniTaskControl</a> )</code><br />	Applies task configuration to a task. TaskConfig may be nil - in this case<br />	nothing is done.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Async(TProc/IOmniTaskConfig)'>Async</a></b>(task: TProc; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</code><br />	Creates an Async task.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Async(TOmniTaskDelegate/IOmniTaskConfig)'>Async</a></b>(task: <a href="../OtlTask/TOmniTaskDelegate.html" target="classFrame" onclick="doClick('../OtlTask/doc-files/default.txvpck.html')">OtlTask.TOmniTaskDelegate</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</code><br />	Creates an Async task.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniBackgroundWorker.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniBackgroundWorker</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#BackgroundWorker()'>BackgroundWorker</a></b>()</code><br />	Creates a Background worker.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function TProc</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#CompleteQueue(IOmniBlockingCollection)'>CompleteQueue</a></b>(queue: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	Creates an anonymous method which calls CompleteAdding on a queue.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelSimpleLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelSimpleLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#For(Integer/Integer/Integer)'>For</a></b>(first: integer; last: integer; step: integer)</code><br />	Creates fast parallel loop without support for work stealing which<br /> only enumerates integer ranges.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelSimpleLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelSimpleLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#For_T_(T)(TArray)'>For</a></b>&lt;T&gt;(arr: TArray&lt;T&gt;)</code><br />	Creates fast parallel loop without support for work stealing which<br />   only enumerates dynamic arrays.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(IOmniValueEnumerable)'>ForEach</a></b>(enumerable: <a href="../OtlCommon/IOmniValueEnumerable.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerable</a> )</code><br />	Creates parallel loop that iterates over an IOmniValueEnumerable.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(IOmniValueEnumerator)'>ForEach</a></b>(enum: <a href="../OtlCommon/IOmniValueEnumerator.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerator</a> )</code><br />	Creates parallel loop that iterates over an IOmniEnumerator.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(IEnumerable)'>ForEach</a></b>(enumerable: IEnumerable)</code><br />	Creates parallel loop that iterates over an IEnumerable.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(IEnumerator)'>ForEach</a></b>(enum: IEnumerator)</code><br />	Creates parallel loop that iterates with an IEnumerator.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(IOmniBlockingCollection)'>ForEach</a></b>(source: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	Creates parallel loop that iterates over an IOmniBlockingCollection.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(TOmniSourceProvider)'>ForEach</a></b>(sourceProvider: <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">OtlDataManager.TOmniSourceProvider</a> )</code><br />	Creates parallel loop that iterates over a TOmniSourceProvider.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(TEnumeratorDelegate)'>ForEach</a></b>(enumerator: <a href="../OtlParallel/TEnumeratorDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TEnumeratorDelegate</a> )</code><br />	Creates parallel loop that uses a TEnumeratorDelegate to produce elements.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function IOmniParallelLoop&lt;integer&gt;</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(Integer/Integer/Integer)'>ForEach</a></b>(first: integer; last: integer; step: integer)</code><br />	Creates parallel loop that iterates over an integer range.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach(TObject)'>ForEach</a></b>(enumerable: TObject)</code><br />	Creates parallel loop that iterates over a GetEnumerator implemented in the object.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(IOmniValueEnumerable)'>ForEach</a></b>&lt;T&gt;(enumerable: <a href="../OtlCommon/IOmniValueEnumerable.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerable</a> )</code><br />	Creates parallel loop that iterates over elements of type T returned from an IOmniValueEnumerable.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(IOmniValueEnumerator)'>ForEach</a></b>&lt;T&gt;(enum: <a href="../OtlCommon/IOmniValueEnumerator.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerator</a> )</code><br />	Creates parallel loop that iterates over elements of type T returned from an IOmniEnumerator.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(IEnumerable)'>ForEach</a></b>&lt;T&gt;(enumerable: IEnumerable)</code><br />	Creates parallel loop that iterates over elements of type T returned from an IEnumerable.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(IEnumerator)'>ForEach</a></b>&lt;T&gt;(enum: IEnumerator)</code><br />	Creates parallel loop that iterates over elements of type T returned from an IEnumerator.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(TEnumerable)'>ForEach</a></b>&lt;T&gt;(enumerable: TEnumerable&lt;T&gt;)</code><br />	Creates parallel loop that iterates over elements of type T returned from an IEnumerable&lt;T&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(TEnumerator)'>ForEach</a></b>&lt;T&gt;(enum: TEnumerator&lt;T&gt;)</code><br />	Creates parallel loop that iterates over elements of type T returned from an IEnumerator&lt;T&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(IOmniBlockingCollection)'>ForEach</a></b>&lt;T&gt;(source: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	Creates parallel loop that iterates over elements of type T returned from an IOmniBlockingCollection.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(TEnumeratorDelegate_T_)'>ForEach</a></b>&lt;T&gt;(enumerator: <a href="../OtlParallel/TEnumeratorDelegate_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TEnumeratorDelegate&lt;T&gt;</a> )</code><br />	Creates parallel loop that iterates over elements of type T returned from a TEnumeratorDelegate.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForEach_T_(T)(TObject)'>ForEach</a></b>&lt;T&gt;(enumerable: TObject)</code><br />	Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniForkJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniForkJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForkJoin()'>ForkJoin</a></b>()</code><br />	Creates a Fork/Join interface.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniForkJoin_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniForkJoin&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ForkJoin_T_(T)()'>ForkJoin</a></b>&lt;T&gt;()</code><br />	Creates a Fork/Join&lt;T&gt; interface.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniFuture_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniFuture&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Future_T_(T)(TOmniFutureDelegate_T_/IOmniTaskConfig)'>Future</a></b>&lt;T&gt;(action: <a href="../OtlParallel/TOmniFutureDelegate_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniFutureDelegate&lt;T&gt;</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</code><br />	Creates a Future returning &lt;T&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniFuture_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniFuture&lt;T&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Future_T_(T)(TOmniFutureDelegateEx_T_/IOmniTaskConfig)'>Future</a></b>&lt;T&gt;(action: <a href="../OtlParallel/TOmniFutureDelegateEx_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniFutureDelegateEx&lt;T&gt;</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</code><br />	Creates a Future returning &lt;T&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlThreadPool/IOmniThreadPool.html" target="classFrame" onclick="doClick('../OtlThreadPool/doc-files/default.txvpck.html')">OtlThreadPool.IOmniThreadPool</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#GetPool(IOmniTaskConfig)'>GetPool</a></b>(taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</code><br />	Returns the thread pool specified in the taskConfig parameter or<br />   a global parallel pool if taskConfig is nil or it doesn't specify a pool.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Join()'>Join</a></b>()</code><br />	Creates a Join interface.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Join(TProc/TProc)'>Join</a></b>(task1: TProc; task2: TProc)</code><br />	Creates Join of two tasks.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Join(TOmniJoinDelegate/TOmniJoinDelegate)'>Join</a></b>(task1: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> ; task2: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> )</code><br />	Creates Join of two tasks.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Join(TProc)'>Join</a></b>(tasks: array of TProc)</code><br />	Creates Join of any number of tasks.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Join(TOmniJoinDelegate)'>Join</a></b>(tasks: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> )</code><br />	Creates Join of any number of tasks.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelMapper_T1,T2_(T1@T2).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelMapper&lt;T1,T2&gt;</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Map_T1,T2_(T1@T2)()'>Map</a></b>&lt;T1,T2&gt;()</code><br />	Creates a parallel Map mapping &lt;T1&gt; to &lt;T2&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function TArray&lt;T2&gt;</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Map_T1,T2_(T1@T2)(TArray_T1_/TMapProc_T1,T2_)'>Map</a></b>&lt;T1,T2&gt;(source: TArray&lt;T1&gt;; mapper: <a href="../OtlParallel/TMapProc_T1,T2_(T1@T2).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TMapProc&lt;T1,T2&gt;</a> )</code><br />	Maps and array of &lt;T1&gt; to an array of &lt;T2&gt;.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniParallelTask.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelTask</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#ParallelTask()'>ParallelTask</a></b>()</code><br />	Creates a Parallel task.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Pipeline()'>Pipeline</a></b>()</code><br />	Creates a Pipeline interface.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Pipeline(TPipelineStageDelegate/IOmniBlockingCollection)'>Pipeline</a></b>(stages: <a href="../OtlParallel/TPipelineStageDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TPipelineStageDelegate</a> ; input: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	Creates a Pipeline from given stage delegates.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#Pipeline(TPipelineStageDelegateEx/IOmniBlockingCollection)'>Pipeline</a></b>(stages: <a href="../OtlParallel/TPipelineStageDelegateEx.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TPipelineStageDelegateEx</a> ; input: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	Creates a Pipeline from given stage delegates.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#TaskConfig()'>TaskConfig</a></b>()</code><br />	Creates Task configuration block.</td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlParallel/IOmniTimedTask.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTimedTask</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlParallel/Parallel.html#TimedTask()'>TimedTask</a></b>()</code><br />	Creates a Timed task.</td></tr></table> <p /><p /><a  name='method_detail'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Method Detail</b></font></td></tr></table><br /><a  name='ApplyConfig(IOmniTaskConfig/IOmniTaskControl)'>
+<h3 >ApplyConfig</h3></a><pre >public&nbsp;procedure ApplyConfig(taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> ; task: <a href="../OtlTaskControl/IOmniTaskControl.html" target="classFrame" onclick="doClick('../OtlTaskControl/doc-files/default.txvpck.html')">OtlTaskControl.IOmniTaskControl</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Applies task configuration to a task. TaskConfig may be nil - in this case<br />	nothing is done.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Async(TProc/IOmniTaskConfig)'>
+<h3 >Async</h3></a><pre >public&nbsp;procedure Async(task: TProc; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates an Async task.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Async(TOmniTaskDelegate/IOmniTaskConfig)'>
+<h3 >Async</h3></a><pre >public&nbsp;procedure Async(task: <a href="../OtlTask/TOmniTaskDelegate.html" target="classFrame" onclick="doClick('../OtlTask/doc-files/default.txvpck.html')">OtlTask.TOmniTaskDelegate</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates an Async task.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='BackgroundWorker()'>
+<h3 >BackgroundWorker</h3></a><pre >public&nbsp;function BackgroundWorker(): <a href="../OtlParallel/IOmniBackgroundWorker.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniBackgroundWorker</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Background worker.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniBackgroundWorker</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='CompleteQueue(IOmniBlockingCollection)'>
+<h3 >CompleteQueue</h3></a><pre >public&nbsp;function CompleteQueue(queue: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> ): TProc</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates an anonymous method which calls CompleteAdding on a queue.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >TProc</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='For(Integer/Integer/Integer)'>
+<h3 >For</h3></a><pre >public&nbsp;function For(first: integer; last: integer; step: integer): <a href="../OtlParallel/IOmniParallelSimpleLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelSimpleLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates fast parallel loop without support for work stealing which<br /> only enumerates integer ranges.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelSimpleLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='For_T_(T)(TArray)'>
+<h3 >For</h3></a><pre >public&nbsp;function For&lt;T&gt;(arr: TArray&lt;T&gt;): <a href="../OtlParallel/IOmniParallelSimpleLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelSimpleLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates fast parallel loop without support for work stealing which<br />   only enumerates dynamic arrays.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelSimpleLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(IOmniValueEnumerable)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enumerable: <a href="../OtlCommon/IOmniValueEnumerable.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerable</a> ): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over an IOmniValueEnumerable.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(IOmniValueEnumerator)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enum: <a href="../OtlCommon/IOmniValueEnumerator.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerator</a> ): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over an IOmniEnumerator.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(IEnumerable)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enumerable: IEnumerable): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over an IEnumerable.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(IEnumerator)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enum: IEnumerator): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates with an IEnumerator.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(IOmniBlockingCollection)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(source: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> ): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over an IOmniBlockingCollection.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(TOmniSourceProvider)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(sourceProvider: <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">OtlDataManager.TOmniSourceProvider</a> ): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over a TOmniSourceProvider.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(TEnumeratorDelegate)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enumerator: <a href="../OtlParallel/TEnumeratorDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TEnumeratorDelegate</a> ): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that uses a TEnumeratorDelegate to produce elements.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(Integer/Integer/Integer)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(first: integer; last: integer; step: integer): IOmniParallelLoop&lt;integer&gt;</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over an integer range.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;integer&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach(TObject)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach(enumerable: TObject): <a href="../OtlParallel/IOmniParallelLoop.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over a GetEnumerator implemented in the object.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(IOmniValueEnumerable)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enumerable: <a href="../OtlCommon/IOmniValueEnumerable.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerable</a> ): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IOmniValueEnumerable.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(IOmniValueEnumerator)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enum: <a href="../OtlCommon/IOmniValueEnumerator.html" target="classFrame" onclick="doClick('../OtlCommon/doc-files/default.txvpck.html')">OtlCommon.IOmniValueEnumerator</a> ): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IOmniEnumerator.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(IEnumerable)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enumerable: IEnumerable): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IEnumerable.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(IEnumerator)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enum: IEnumerator): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IEnumerator.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(TEnumerable)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enumerable: TEnumerable&lt;T&gt;): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IEnumerable&lt;T&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(TEnumerator)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enum: TEnumerator&lt;T&gt;): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IEnumerator&lt;T&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(IOmniBlockingCollection)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(source: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> ): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from an IOmniBlockingCollection.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(TEnumeratorDelegate_T_)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enumerator: <a href="../OtlParallel/TEnumeratorDelegate_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TEnumeratorDelegate&lt;T&gt;</a> ): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from a TEnumeratorDelegate.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForEach_T_(T)(TObject)'>
+<h3 >ForEach</h3></a><pre >public&nbsp;function ForEach&lt;T&gt;(enumerable: TObject): <a href="../OtlParallel/IOmniParallelLoop_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelLoop&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelLoop&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForkJoin()'>
+<h3 >ForkJoin</h3></a><pre >public&nbsp;function ForkJoin(): <a href="../OtlParallel/IOmniForkJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniForkJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Fork/Join interface.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniForkJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ForkJoin_T_(T)()'>
+<h3 >ForkJoin</h3></a><pre >public&nbsp;function ForkJoin&lt;T&gt;(): <a href="../OtlParallel/IOmniForkJoin_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniForkJoin&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Fork/Join&lt;T&gt; interface.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniForkJoin&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Future_T_(T)(TOmniFutureDelegate_T_/IOmniTaskConfig)'>
+<h3 >Future</h3></a><pre >public&nbsp;function Future&lt;T&gt;(action: <a href="../OtlParallel/TOmniFutureDelegate_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniFutureDelegate&lt;T&gt;</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> ): <a href="../OtlParallel/IOmniFuture_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniFuture&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Future returning &lt;T&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniFuture&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Future_T_(T)(TOmniFutureDelegateEx_T_/IOmniTaskConfig)'>
+<h3 >Future</h3></a><pre >public&nbsp;function Future&lt;T&gt;(action: <a href="../OtlParallel/TOmniFutureDelegateEx_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniFutureDelegateEx&lt;T&gt;</a> ; taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> ): <a href="../OtlParallel/IOmniFuture_T_(T).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniFuture&lt;T&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Future returning &lt;T&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniFuture&lt;T&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='GetPool(IOmniTaskConfig)'>
+<h3 >GetPool</h3></a><pre >public&nbsp;function GetPool(taskConfig: <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> ): <a href="../OtlThreadPool/IOmniThreadPool.html" target="classFrame" onclick="doClick('../OtlThreadPool/doc-files/default.txvpck.html')">OtlThreadPool.IOmniThreadPool</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Returns the thread pool specified in the taskConfig parameter or<br />   a global parallel pool if taskConfig is nil or it doesn't specify a pool.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniThreadPool</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Join()'>
+<h3 >Join</h3></a><pre >public&nbsp;function Join(): <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Join interface.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Join(TProc/TProc)'>
+<h3 >Join</h3></a><pre >public&nbsp;function Join(task1: TProc; task2: TProc): <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates Join of two tasks.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Join(TOmniJoinDelegate/TOmniJoinDelegate)'>
+<h3 >Join</h3></a><pre >public&nbsp;function Join(task1: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> ; task2: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> ): <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates Join of two tasks.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Join(TProc)'>
+<h3 >Join</h3></a><pre >public&nbsp;function Join(tasks: array of TProc): <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates Join of any number of tasks.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Join(TOmniJoinDelegate)'>
+<h3 >Join</h3></a><pre >public&nbsp;function Join(tasks: <a href="../OtlParallel/TOmniJoinDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TOmniJoinDelegate</a> ): <a href="../OtlParallel/IOmniParallelJoin.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelJoin</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates Join of any number of tasks.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelJoin</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Map_T1,T2_(T1@T2)()'>
+<h3 >Map</h3></a><pre >public&nbsp;function Map&lt;T1,T2&gt;(): <a href="../OtlParallel/IOmniParallelMapper_T1,T2_(T1@T2).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelMapper&lt;T1,T2&gt;</a> </pre><dl >
+<dt /><b >Generic Parameters</b><dd >T1,T2</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a parallel Map mapping &lt;T1&gt; to &lt;T2&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelMapper&lt;T1,T2&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Map_T1,T2_(T1@T2)(TArray_T1_/TMapProc_T1,T2_)'>
+<h3 >Map</h3></a><pre >public&nbsp;function Map&lt;T1,T2&gt;(source: TArray&lt;T1&gt;; mapper: <a href="../OtlParallel/TMapProc_T1,T2_(T1@T2).html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TMapProc&lt;T1,T2&gt;</a> ): TArray&lt;T2&gt;</pre><dl >
+<dt /><b >Generic Parameters</b><dd >T1,T2</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Maps and array of &lt;T1&gt; to an array of &lt;T2&gt;.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >TArray&lt;T2&gt;</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='ParallelTask()'>
+<h3 >ParallelTask</h3></a><pre >public&nbsp;function ParallelTask(): <a href="../OtlParallel/IOmniParallelTask.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniParallelTask</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Parallel task.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniParallelTask</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Pipeline()'>
+<h3 >Pipeline</h3></a><pre >public&nbsp;function Pipeline(): <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Pipeline interface.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniPipeline</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Pipeline(TPipelineStageDelegate/IOmniBlockingCollection)'>
+<h3 >Pipeline</h3></a><pre >public&nbsp;function Pipeline(stages: <a href="../OtlParallel/TPipelineStageDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TPipelineStageDelegate</a> ; input: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> ): <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Pipeline from given stage delegates.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniPipeline</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='Pipeline(TPipelineStageDelegateEx/IOmniBlockingCollection)'>
+<h3 >Pipeline</h3></a><pre >public&nbsp;function Pipeline(stages: <a href="../OtlParallel/TPipelineStageDelegateEx.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">TPipelineStageDelegateEx</a> ; input: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> ): <a href="../OtlParallel/IOmniPipeline.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniPipeline</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Pipeline from given stage delegates.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniPipeline</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='TaskConfig()'>
+<h3 >TaskConfig</h3></a><pre >public&nbsp;function TaskConfig(): <a href="../OtlParallel/IOmniTaskConfig.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTaskConfig</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates Task configuration block.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniTaskConfig</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><a  name='TimedTask()'>
+<h3 >TimedTask</h3></a><pre >public&nbsp;function TimedTask(): <a href="../OtlParallel/IOmniTimedTask.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">IOmniTimedTask</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Creates a Timed task.</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >IOmniTimedTask</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >True</dd></dl><hr /><hr /><table  border='0' width='100%' cellpadding='1' cellspacing='0'>
+<tr >
+<td  colspan='2' class='NavBarCellCommon'>
+<table  border='0' cellpadding='0' cellspacing='3'>
+<tr  align='center' valign='top'>
+<td  class='NavBarCellCommon'>
+<a  href='../overview-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Overview</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='package-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Namespace</b></font></a>&nbsp;</td><td  class='NavBarCellCommonRev'>
+<font  size='+1' class='NavBarFont1'>
+<b >Classifier</b></font>&nbsp;</td><td  class='NavBarCellCommon'>
+<font  size='+1' class='NavBarFont1'>Tree</font>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../index-all.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Index</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../help-doc.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Help</b></font></a>&nbsp;</td></tr></table><td  align='right' valign='top' rowspan='3'>
+<em ></em></td></td></tr><tr >
+<td  class='NavBarCellPrevNext'>
+<font  size='-2'><a href="../OtlParallel/TPipelineStageDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">PREV </a> &nbsp;&nbsp;<a href="../OtlParallel/TOmniTaskFinalizerDelegate.html" target="classFrame" onclick="doClick('../OtlParallel/doc-files/default.txvpck.html')">NEXT </a> </font></td><td  class='NavBarCellPrevNext'>
+<font  size='-2'>
+<a  href='../index.html' target='_top'>
+<b >FRAMES</b></a>&nbsp;<a  href='../OtlParallel/Parallel.html' target='_top'>
+<b >NO FRAMES</b></a></font></td></tr><tr >
+<td  valign='top' class='NavBarCell3'>
+<font  size='-2'>SUMMARY:&nbsp;INNER&nbsp;|&nbsp;FIELD&nbsp;|&nbsp;CONSTR&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_summary'>METHOD</a></font></td><td  valign='top' class='NavBarCell3'>
+<font  size='-2'>DETAIL:&nbsp;FIELD&nbsp;|&nbsp;CONSTR&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_detail'>METHOD</a></font></td></tr></table><br /><p /></html>

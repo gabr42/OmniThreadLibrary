@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nodeSet version="1.0">
-  <view uin="hen51xkfj8svsvg4q_v">
+  <view uin="myz077kp7smcshtem_v">
     <property name="$defaultDiagram" value="true" />
     <property name="$metaclass" value="Package Diagram" />
     <property name="$name" value="default" />
@@ -627,7 +627,7 @@
       <reference referencedUin="delphi:e_method:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.MoveNext()" />
       <reference referencedUin="delphi:e_property:src:OmniThreadLibrary_UML:OtlCommon.TOmniValueEnumerator.Current" />
     </reference>
-    <reference referencedUin="design:view:::0kjfxvon6ttnetbdt_v">
+    <reference referencedUin="uml:package:OmniThreadLibrary_UML:src:OtlCommon.Utils">
       <property name="$shortcutReference" value="true" />
       <reference referencedUin="delphi:e_class:src:OmniThreadLibrary_UML:OtlCommon.Utils.@unitclass" />
     </reference>

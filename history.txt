@@ -1,4 +1,4 @@
-3.07: <<unreleased>>
+3.07: 2017-02-16
 - New features:
   - Added function IOmniPipeline.NoThrottle which disables throttling 
     on an entire pipeline or one of its stages.

@@ -1,0 +1,36 @@
+body
+{
+	background-image: none;
+	background-color: #FFFFFF;
+}
+.TableHeaderStyle
+{
+	background-image: none;
+	background-color: #CCCCFF;
+}
+.NavigationTable
+{
+	background-color: #FFFFFF;
+	border: 0;
+	width: 100%;
+}
+.NavBarCellCommon
+{
+	background-color: #EEEEFF;
+}
+.NavBarCellCommonRev
+{
+	background-color: #FFFFFF;
+}
+.NavBarCellPrevNext
+{
+	background-color: #FFFFFF;
+}
+.TableRow
+{
+	background-color: #FFFFFF;
+}
+.TableSubHeader
+{
+	background-color: #EEEEFF;
+}

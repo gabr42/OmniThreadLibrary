@@ -1,0 +1,85 @@
+OmniThreadLibrary 3.07 has just been released. It is available via
+SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07)
+or as a ZIP archive
+(https://drive.google.com/file/d/0BwqVlLNTK4OxVlFuWDh5c1FQZDA/view?usp=sharing).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, and 10.1 Berlin on the 
+Win32 and Win64 platforms. 
+
+Currently, there are no plans to support older Delphi compilers and .NET. 
+XE2+ support is limited to Windows targets. Firemonkey is currently not 
+supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Google+ Community: https://plus.google.com/communities/112307748950248514961
+Downloads: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list
+Repository: https://github.com/gabr42/OmniThreadLibrary
+Issue tracker: https://github.com/gabr42/OmniThreadLibrary/issues
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation wiki: http://otl.17slon.com/book/
+Documentation book: http://leanpub.com/omnithreadlibrary
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
+
+Changes since version 3.07
+============================
+
+- New features:
+  - Added function IOmniPipeline.NoThrottle which disables throttling 
+    on an entire pipeline or one of its stages.
+  - Added function IOmniBlockingCollection.IsFinalized.
+  - Added function IOmniBlockingCollection.Count.
+  - Added readonly property IOmniThreadPool.NumCores which returns 
+    number of cores this pool uses for running tasks. Changing Affinity, 
+    ProcessorGroups, or NUMANodes properties may modify this value.
+  - Communication subsystem handles ERROR_NOT_ENOUGH_QUOTA (1816) error.
+  - Added function IOmniBackgroundWorker.OnStop.
+  - Added property IOmniWorkItem.SkipCompletionHandler.
+    If it is set to True when work item is created or during its execution,
+    request handlers for that work item won't be called.
+    If it is set to True in the OnRequestDone_Asy handler, then only
+    OnRequestDone handler won't be called.
+  - If ThreadDataFactory.Execute throws an exception, that exception is caught,
+    ignored and ThreadData is set to nil. [issue #88]
+    
+- Bug fixes:
+  - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups,
+    or NUMANodes properties will reset the MaxExecuting property."
+    - New behaviour is compatible with the pre-3.06 code: Initially,
+      MaxExecuting is set to Environment.Process.Affinity.Count.
+      This value can only be changed by the external code, not inside the
+      OtlThreadPool unit.
+  - In threadpool, IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec
+    were initialized too late.
+  - Fixed TOmniValue.CastTo<TArray<Int64>>. [issue #89]
+  - If a future's cancellation token is signalled before the future is even
+    created, the future worker is not started at all. [issue #85]
+    
+- New demos:
+  - examples\folder scanner: File scanning example implemented 
+    with a Pipeline.
+
+--
+Primoz
+[http://thedelphigeek.com]
