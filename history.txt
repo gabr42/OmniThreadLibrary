@@ -11,8 +11,7 @@
   - Added function IOmniBackgroundWorker.OnStop.
   - Added property IOmniWorkItem.SkipCompletionHandler.
     If it is set to True when work item is created or during its execution,
-    request ha
-    ndlers for that work item won't be called.
+    request handlers for that work item won't be called.
     If it is set to True in the OnRequestDone_Asy handler, then only
     OnRequestDone handler won't be called.
   - If ThreadDataFactory.Execute throws an exception, that exception is caught,
