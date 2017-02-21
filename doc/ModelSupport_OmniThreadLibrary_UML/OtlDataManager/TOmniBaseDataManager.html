@@ -1,0 +1,340 @@
+﻿<html >
+<head ><STYLE TYPE="text/css">@import "../stylesheet.css";</STYLE><title ></title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><script  language='JavaScript'>
+			function doClick(imageHref) {
+			if (parent.imageFrame != null)
+				parent.imageFrame.location.href = imageHref;
+			}
+		</script></head><table  border='0' width='100%' cellpadding='1' cellspacing='0'>
+<tr >
+<td  colspan='2' class='NavBarCellCommon'>
+<table  border='0' cellpadding='0' cellspacing='3'>
+<tr  align='center' valign='top'>
+<td  class='NavBarCellCommon'>
+<a  href='../overview-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Overview</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='package-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Namespace</b></font></a>&nbsp;</td><td  class='NavBarCellCommonRev'>
+<font  size='+1' class='NavBarFont1'>
+<b >Classifier</b></font>&nbsp;</td><td  class='NavBarCellCommon'>
+<font  size='+1' class='NavBarFont1'>Tree</font>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../index-all.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Index</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../help-doc.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Help</b></font></a>&nbsp;</td></tr></table><td  align='right' valign='top' rowspan='3'>
+<em ></em></td></td></tr><tr >
+<td  class='NavBarCellPrevNext'>
+<font  size='-2'><a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">PREV </a> &nbsp;&nbsp;<a href="../OtlDataManager/TOmniHeuristicDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">NEXT </a> </font></td><td  class='NavBarCellPrevNext'>
+<font  size='-2'>
+<a  href='../index.html' target='_top'>
+<b >FRAMES</b></a>&nbsp;<a  href='../OtlDataManager/TOmniBaseDataManager.html' target='_top'>
+<b >NO FRAMES</b></a></font></td></tr><tr >
+<td  valign='top' class='NavBarCell3'>
+<font  size='-2'>SUMMARY:&nbsp;INNER&nbsp;|&nbsp;<a  href='#field_summary'>FIELD</a>&nbsp;|&nbsp;<a  href='#constructor_summary'>CONSTR</a>&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_summary'>METHOD</a></font></td><td  valign='top' class='NavBarCell3'>
+<font  size='-2'>DETAIL:&nbsp;<a  href='#field_detail'>FIELD</a>&nbsp;|&nbsp;<a  href='#constructor_detail'>CONSTR</a>&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_detail'>METHOD</a></font></td></tr></table><hr /><h2 >
+<font  size='-1'>
+<i >Namespace: </i>OtlDataManager<br /></font><br />Class TOmniBaseDataManager</h2><pre >
+<a href="../OtlDataManager/TOmniDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">OtlDataManager.TOmniDataManager</a> 
+  |
+  +-- OtlDataManager.TOmniBaseDataManager
+</pre><dl >
+<dt /><b >Direct Known Subclasses: </b><dd ><a href="../OtlDataManager/TOmniHeuristicDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniHeuristicDataManager</a>    , <a href="../OtlDataManager/TOmniCountableDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniCountableDataManager</a>   </dd></dl><hr /><dl >
+<dt />public&nbsp;class <b >TOmniBaseDataManager</b> ( <a href="../OtlDataManager/TOmniDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataManager</a>    ) </dl><p /><dl >
+<dt /><b >Sealed</b><dd >False</dd></dl><dl >
+<dt /><b >summary</b><dd >Base data manager class.</dd></dl><dl >
+<dt /><b >Abstract</b><dd >True</dd></dl><dl >
+<dt /><b >Persistent</b><dd >False</dd></dl><hr /><p /><a  name='field_summary'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Property Summary</b></font></td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+						&nbsp; public&nbsp; 
+							<b ><a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProvider</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#SourceProvider'>SourceProvider</a></b></code><br />	 </td></tr></table> <p /><a  name='constructor_summary'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Constructor Summary</b></font></td></tr><tr  class='TableRow'>
+<td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#Create(TOmniSourceProvider/Integer/TOmniDataManagerOptions)'>Create</a></b>(sourceProvider: <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProvider</a> ; numWorkers: integer; options: <a href="../OtlDataManager/TOmniDataManagerOptions.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataManagerOptions</a> )</code><br />	 </td></tr></table> <p /><a  name='method_summary'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Method Summary</b></font></td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlDataManager/TOmniOutputBuffer.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBuffer</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#AllocateOutputBuffer()'>AllocateOutputBuffer</a></b>()</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function <a href="../OtlDataManager/TOmniLocalQueue.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniLocalQueue</a> </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#CreateLocalQueue()'>CreateLocalQueue</a></b>()</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#Destroy()'>Destroy</a></b>()</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function integer</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#GetDataCountForGeneration(Integer)'>GetDataCountForGeneration</a></b>(generation: integer)</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function boolean</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#GetNext(TOmniDataPackage)'>GetNext</a></b>(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function boolean</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#GetNextFromProvider(TOmniDataPackage/Integer)'>GetNextFromProvider</a></b>(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> ; generation: integer)</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#LocalQueueDestroyed(TOmniLocalQueue)'>LocalQueueDestroyed</a></b>(queue: <a href="../OtlDataManager/TOmniLocalQueue.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniLocalQueue</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#NotifyBufferFull(TOmniOutputBufferImpl)'>NotifyBufferFull</a></b>(buffer: <a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBufferImpl</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#NotifyBufferRangeChanged(TOmniOutputBufferImpl)'>NotifyBufferRangeChanged</a></b>(buffer: <a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBufferImpl</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#ReleaseOutputBuffer(TOmniOutputBuffer)'>ReleaseOutputBuffer</a></b>(buffer: <a href="../OtlDataManager/TOmniOutputBuffer.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBuffer</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >Sub </b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#SetOutput(IOmniBlockingCollection)'>SetOutput</a></b>(queue: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</code><br />	 </td></tr><tr  class='TableRow'>
+<td  align='right' valign='top' width='20%'>
+<font  size='-1'>
+<code >
+                                                &nbsp; public <b >function boolean</b></code></font></td><td >
+<code >
+<b >
+<a  href='../OtlDataManager/TOmniBaseDataManager.html#StealPackage(TOmniDataPackage)'>StealPackage</a></b>(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> )</code><br />	 </td></tr></table> <p /><p /><a  Name='field_detail'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Property Detail</b></font></td></tr></table><br /><a  name='SourceProvider'>
+<h3 >SourceProvider</h3></a><pre >public&nbsp;SourceProvider: <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProvider</a> </pre><dl >
+<dt /><b >Type</b><dd >TOmniSourceProvider</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><dl >
+<dt /><b >Access</b><dd >read</dd></dl><hr /><a  Name='constructor_detail'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Constructor Detail</b></font></td></tr></table><br /><a  name='Create(TOmniSourceProvider/Integer/TOmniDataManagerOptions)'>
+<h3 >Create</h3></a><pre >public&nbsp;constructor Create(sourceProvider: <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProvider</a> ; numWorkers: integer; options: <a href="../OtlDataManager/TOmniDataManagerOptions.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataManagerOptions</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><hr /><a  name='method_detail'/><table  border='1' cellpadding='3' cellspacing='0' width='100%'>
+<tr  class='TableHeaderStyle'>
+<td  colspan='2'>
+<font  size='+2'>
+<b >Method Detail</b></font></td></tr></table><br /><a  name='AllocateOutputBuffer()'>
+<h3 >AllocateOutputBuffer</h3></a><pre >public&nbsp;function AllocateOutputBuffer(): <a href="../OtlDataManager/TOmniOutputBuffer.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBuffer</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >TOmniOutputBuffer</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='CreateLocalQueue()'>
+<h3 >CreateLocalQueue</h3></a><pre >public&nbsp;function CreateLocalQueue(): <a href="../OtlDataManager/TOmniLocalQueue.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniLocalQueue</a> </pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >TOmniLocalQueue</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='Destroy()'>
+<h3 >Destroy</h3></a><pre >public&nbsp;procedure Destroy()</pre><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Final</b><dd >False</dd></dl><hr /><a  name='GetDataCountForGeneration(Integer)'>
+<h3 >GetDataCountForGeneration</h3></a><pre >public&nbsp;function GetDataCountForGeneration(generation: integer): integer</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >integer</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='GetNext(TOmniDataPackage)'>
+<h3 >GetNext</h3></a><pre >public&nbsp;function GetNext(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> ): boolean</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >boolean</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='GetNextFromProvider(TOmniDataPackage/Integer)'>
+<h3 >GetNextFromProvider</h3></a><pre >public&nbsp;function GetNextFromProvider(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> ; generation: integer): boolean</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >True</dd></dl><dl >
+<dt /><b >Returns</b><dd >boolean</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >True</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='LocalQueueDestroyed(TOmniLocalQueue)'>
+<h3 >LocalQueueDestroyed</h3></a><pre >public&nbsp;procedure LocalQueueDestroyed(queue: <a href="../OtlDataManager/TOmniLocalQueue.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniLocalQueue</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='NotifyBufferFull(TOmniOutputBufferImpl)'>
+<h3 >NotifyBufferFull</h3></a><pre >public&nbsp;procedure NotifyBufferFull(buffer: <a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBufferImpl</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='NotifyBufferRangeChanged(TOmniOutputBufferImpl)'>
+<h3 >NotifyBufferRangeChanged</h3></a><pre >public&nbsp;procedure NotifyBufferRangeChanged(buffer: <a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBufferImpl</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='ReleaseOutputBuffer(TOmniOutputBuffer)'>
+<h3 >ReleaseOutputBuffer</h3></a><pre >public&nbsp;procedure ReleaseOutputBuffer(buffer: <a href="../OtlDataManager/TOmniOutputBuffer.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBuffer</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='SetOutput(IOmniBlockingCollection)'>
+<h3 >SetOutput</h3></a><pre >public&nbsp;procedure SetOutput(queue: <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')">OtlCollections.IOmniBlockingCollection</a> )</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Override</b><dd >True</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><a  name='StealPackage(TOmniDataPackage)'>
+<h3 >StealPackage</h3></a><pre >public&nbsp;function StealPackage(package: <a href="../OtlDataManager/TOmniDataPackage.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataPackage</a> ): boolean</pre><dl >
+<dt /><b >Final</b><dd >False</dd></dl><dl >
+<dt /><b >Reintroduce</b><dd >False</dd></dl><dl >
+<dt /><b >Abstract</b><dd >False</dd></dl><dl >
+<dt /><b >Returns</b><dd >boolean</dd></dl><dl >
+<dt /><b >Override</b><dd >False</dd></dl><dl >
+<dt /><b >Virtual</b><dd >False</dd></dl><dl >
+<dt /><b >Class</b><dd >False</dd></dl><hr /><p /><table  border='0' cellpadding='0' cellspacing='0'>
+<tr  class='TableHeaderStyle'>
+<td >
+<font  size='+0'>
+<b >Generalization Link</b></font></td></tr></table><br />to Class  <a href="../OtlDataManager/TOmniDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataManager</a> <p /><dl >
+<dt /><b >Client</b><dd >TOmniBaseDataManager</dd></dl><dl >
+<dt /><b >Supplier</b><dd >TOmniDataManager</dd></dl><br /><p /><table  border='0' cellpadding='0' cellspacing='0'>
+<tr  class='TableHeaderStyle'>
+<td >
+<font  size='+0'>
+<b >Association Link</b></font></td></tr></table><br />to Struct  <a href="../OtlSync/TOmniCS.html" target="classFrame" onclick="doClick('../OtlSync/doc-files/default.txvpck.html')">TOmniCS</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniCS</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmBufferRangeLock</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Class  <a href="../OtlDataManager/TOmniDataManagerOptions.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniDataManagerOptions</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniDataManagerOptions</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmOptions</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Interface  <a href="../OtlCollections/IOmniBlockingCollection.html" target="classFrame" onclick="doClick('../OtlCollections/doc-files/default.txvpck.html')"><i>IOmniBlockingCollection</i></a> <p /><dl >
+<dt /><b >Supplier</b><dd >IOmniBlockingCollection</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmOutputIntf</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Struct  <a href="../OtlSync/TOmniCS.html" target="classFrame" onclick="doClick('../OtlSync/doc-files/default.txvpck.html')">TOmniCS</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniCS</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmQueueLock</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Class  <a href="../OtlDataManager/TOmniSourceProviderBase.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProviderBase</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniSourceProviderBase</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmSourceProvider_ref</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Struct  <a href="../OtlSync/TOmniCS.html" target="classFrame" onclick="doClick('../OtlSync/doc-files/default.txvpck.html')">TOmniCS</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniCS</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >dmUnusedBuffersLock</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Class  <a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniOutputBufferImpl</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniOutputBufferImpl</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >BufferList</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br />to Class  <a href="../OtlDataManager/TOmniSourceProvider.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">TOmniSourceProvider</a> <p /><dl >
+<dt /><b >Supplier</b><dd >TOmniSourceProvider</dd></dl><dl >
+<dt /><b >Directed</b><dd >False</dd></dl><dl >
+<dt /><b >Client</b><dd >SourceProvider</dd></dl><dl >
+<dt /><b >Type</b><dd >association</dd></dl><br /><hr /><table  border='0' width='100%' cellpadding='1' cellspacing='0'>
+<tr >
+<td  colspan='2' class='NavBarCellCommon'>
+<table  border='0' cellpadding='0' cellspacing='3'>
+<tr  align='center' valign='top'>
+<td  class='NavBarCellCommon'>
+<a  href='../overview-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Overview</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='package-summary.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Namespace</b></font></a>&nbsp;</td><td  class='NavBarCellCommonRev'>
+<font  size='+1' class='NavBarFont1'>
+<b >Classifier</b></font>&nbsp;</td><td  class='NavBarCellCommon'>
+<font  size='+1' class='NavBarFont1'>Tree</font>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../index-all.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Index</b></font></a>&nbsp;</td><td  class='NavBarCellCommon'>
+<a  href='../help-doc.html'>
+<font  size='+1' class='NavBarFont1'>
+<b >Help</b></font></a>&nbsp;</td></tr></table><td  align='right' valign='top' rowspan='3'>
+<em ></em></td></td></tr><tr >
+<td  class='NavBarCellPrevNext'>
+<font  size='-2'><a href="../OtlDataManager/TOmniOutputBufferImpl.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">PREV </a> &nbsp;&nbsp;<a href="../OtlDataManager/TOmniHeuristicDataManager.html" target="classFrame" onclick="doClick('../OtlDataManager/doc-files/default.txvpck.html')">NEXT </a> </font></td><td  class='NavBarCellPrevNext'>
+<font  size='-2'>
+<a  href='../index.html' target='_top'>
+<b >FRAMES</b></a>&nbsp;<a  href='../OtlDataManager/TOmniBaseDataManager.html' target='_top'>
+<b >NO FRAMES</b></a></font></td></tr><tr >
+<td  valign='top' class='NavBarCell3'>
+<font  size='-2'>SUMMARY:&nbsp;INNER&nbsp;|&nbsp;<a  href='#field_summary'>FIELD</a>&nbsp;|&nbsp;<a  href='#constructor_summary'>CONSTR</a>&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_summary'>METHOD</a></font></td><td  valign='top' class='NavBarCell3'>
+<font  size='-2'>DETAIL:&nbsp;<a  href='#field_detail'>FIELD</a>&nbsp;|&nbsp;<a  href='#constructor_detail'>CONSTR</a>&nbsp;|&nbsp;DESTR&nbsp;|&nbsp;<a  href='#method_detail'>METHOD</a></font></td></tr></table><br /><p /></html>

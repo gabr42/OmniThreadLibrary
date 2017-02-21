@@ -28,7 +28,7 @@
     - use it in unit testing
   - remove HVStringBuilder?
 
-3.07: <<unreleased>>
+3.07: 2017-02-16
 - New features:
   - Added function IOmniPipeline.NoThrottle which disables throttling 
     on an entire pipeline or one of its stages.
@@ -40,11 +40,10 @@
   - Communication subsystem handles ERROR_NOT_ENOUGH_QUOTA (1816) error.
   - Added function IOmniBackgroundWorker.OnStop.
   - Added property IOmniWorkItem.SkipCompletionHandler.
-    If it is set to True when work item is created or during its execution,
-    request ha
-    ndlers for that work item won't be called.
-    If it is set to True in the OnRequestDone_Asy handler, then only
-    OnRequestDone handler won't be called.
+    - If it is set to True when work item is created or during its execution,
+      request handlers for that work item won't be called.
+    - If it is set to True in the OnRequestDone_Asy handler, then only
+      OnRequestDone handler won't be called.
   - If ThreadDataFactory.Execute throws an exception, that exception is caught,
     ignored and ThreadData is set to nil. [issue #88]
 - Bug fixes:
