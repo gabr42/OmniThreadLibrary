@@ -139,8 +139,8 @@ uses
   System.Generics.Collections,
   System.Generics.Defaults,
   Otl.Parallel.Extras,
-  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
 {$ENDIF}
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
   SysUtils,
   Classes,
   {$IFDEF OTL_HasSystemTypes}

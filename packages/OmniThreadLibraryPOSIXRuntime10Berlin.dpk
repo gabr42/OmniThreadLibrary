@@ -1,0 +1,60 @@
+package OmniThreadLibraryPOSIXRuntimeXE7;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl;
+
+contains
+  OtlCommon in '..\OtlCommon.pas',
+  OtlCollections in '..\OtlCollections.pas',
+  OtlComm in '..\OtlComm.pas',
+  OtlContainerObserver in '..\OtlContainerObserver.pas',
+  OtlContainers in '..\OtlContainers.pas',
+  OtlDataManager in '..\OtlDataManager.pas',
+  OtlEventMonitor in '..\OtlEventMonitor.pas',
+  OtlHooks in '..\OtlHooks.pas',
+  OtlSync in '..\OtlSync.pas',
+  OtlTask in '..\OtlTask.pas',
+  OtlTaskControl in '..\OtlTaskControl.pas',
+  OtlThreadPool in '..\OtlThreadPool.pas',
+  OtlLogger in '..\OtlLogger.pas',
+  OtlParallel in '..\OtlParallel.pas',
+  Otl.Parallel.Atomic in '..\Otl.Parallel.Atomic.pas',
+  Otl.Parallel.Errors in '..\Otl.Parallel.Errors.pas',
+  Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas',
+  Otl.Parallel.SynchroPrimitives.BasicLevel in '..\Otl.Parallel.SynchroPrimitives.BasicLevel.pas',
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel in '..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas',
+  Otl.Parallel.SynchroPrimitives.ConditionVariables in '..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas',
+  Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
+  Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
+  Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas',
+  Otl.Parallel.HeavyPool in '..\Otl.Parallel.HeavyPool.pas';
+
+end.

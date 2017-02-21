@@ -1,0 +1,70 @@
+package OmniThreadLibraryRuntimeXE7;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'OmniThreadLibrary runtime'}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vclx,
+  vcl;
+
+contains
+  GpLists in '..\src\GpLists.pas',
+  GpStuff in '..\src\GpStuff.pas',
+  GpStringHash in '..\src\GpStringHash.pas',
+  DetailedRTTI in '..\src\DetailedRTTI.pas',
+  OtlCommon in '..\OtlCommon.pas',
+  OtlContainers in '..\OtlContainers.pas',
+  OtlCommBufferTest in '..\OtlCommBufferTest.pas',
+  OtlComm in '..\OtlComm.pas',
+  OtlTask in '..\OtlTask.pas',
+  OtlTaskControl in '..\OtlTaskControl.pas',
+  OtlThreadPool in '..\OtlThreadPool.pas',
+  OtlEventMonitor in '..\OtlEventMonitor.pas',
+  DSiWin32 in '..\src\DSiWin32.pas',
+  OtlContainerObserver in '..\OtlContainerObserver.pas',
+  OtlSync in '..\OtlSync.pas',
+  OtlHooks in '..\OtlHooks.pas',
+  OtlCollections in '..\OtlCollections.pas',
+  OtlCommon.Utils in '..\OtlCommon.Utils.pas',
+  OtlDataManager in '..\OtlDataManager.pas',
+  OtlParallel in '..\OtlParallel.pas',
+  Otl.Parallel.Atomic in '..\Otl.Parallel.Atomic.pas',
+  Otl.Parallel.Errors in '..\Otl.Parallel.Errors.pas',
+  Otl.Parallel.SynchroPrimitives.BasicLevel in '..\Otl.Parallel.SynchroPrimitives.BasicLevel.pas',
+  Otl.Parallel.SynchroPrimitives.ConditionVariables in '..\Otl.Parallel.SynchroPrimitives.ConditionVariables.pas',
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel in '..\Otl.Parallel.SynchroPrimitives.InterfaceLevel.pas',
+  Otl.Parallel.SynchroPrimitives.ModularLevel in '..\Otl.Parallel.SynchroPrimitives.ModularLevel.pas',
+  Otl.Parallel.SynchroPrimitives in '..\Otl.Parallel.SynchroPrimitives.pas',
+  Otl.Parallel.Extras in '..\Otl.Parallel.Extras.pas',
+  Otl.Parallel.Pipe in '..\Otl.Parallel.Pipe.pas',
+  Otl.Parallel.Tasks in '..\Otl.Parallel.Tasks.pas',
+  Otl.Parallel.HeavyPool in '..\Otl.Parallel.HeavyPool.pas';
+
+end.

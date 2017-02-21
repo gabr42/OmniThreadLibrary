@@ -224,6 +224,7 @@ unit OtlCommon;
 
 {$I OtlOptions.inc}
 {$WARN SYMBOL_PLATFORM OFF}
+{$LEGACYIFEND ON}
 
 interface
 

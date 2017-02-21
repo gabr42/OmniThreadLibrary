@@ -1385,11 +1385,7 @@ begin
       FisTerminated.Write( 1);
       FWorkFactory.FThreadCount.Decrement;
       FWorkFactory.FTaskThreads.Remove( self);
-      {$IFDEF DONT_TRUST_EMBARCADERO_THREADING_LIBRARY}
-        FWorkFactory.FAllThreadsDone.Signal;
-      {$ELSE}
-        FWorkFactory.FAllThreadsDone.AddResource( -1);
-      {$ENDIF}
+      FWorkFactory.FAllThreadsDone.Signal;
       FWorkFactory := nil
       end
   end
@@ -1654,11 +1650,7 @@ begin
      if doSignalWork then
        FWorkAlert.Signal;
    until (FisTerminated.Read = 1) or Terminated;
-   {$IFDEF DONT_TRUST_EMBARCADERO_THREADING_LIBRARY}
-     FAllThreadsDone.Signal;
-   {$ELSE}
-     FAllThreadsDone.AddResource( -1);
-   {$ENDIF}
+   FAllThreadsDone.Signal;
    FWorkFactory.FHouseKeeper := nil
 end;
 

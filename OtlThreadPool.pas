@@ -237,7 +237,8 @@ uses
   OtlComm,
   OtlContainerObserver,
   OtlTaskControl,
-  OtlEventMonitor;
+  OtlEventMonitor,
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel;
 
 const
   WM_REQUEST_COMPLETED = {$IFDEF MSWINDOWS}WM_USER{$ELSE}1000{$ENDIF};
