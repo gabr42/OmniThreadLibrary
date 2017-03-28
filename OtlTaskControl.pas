@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2016, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-07-01
-///   Version           : 1.38
+///   Last modification : 2017-03-28
+///   Version           : 1.38a
 ///</para><para>
 ///   History:
+///     1.38a: 2017-03-28
+///       - TOmniTaskExecutor now uses own 64-bit time function. DSiTimeGetTime64 cannot
+///         be used for this purpose as its results cannot be compared across threads.
 ///     1.38: 2016-07-01
 ///       - Defined IOmniTaskControl.ProcessorGroup and .NUMANode.
 ///       - Added support for executing a task in a specific processor group or NUMA node.
@@ -768,7 +771,9 @@ type
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
+    oteLastTimeGetTime64 : int64;
     oteTerminating       : boolean;
+    oteTimeGetTime64Base : int64;
     oteTimers            : TGpInt64ObjectList;
     {$IFDEF MSWINDOWS}
     oteWakeMask          : DWORD;
@@ -812,6 +817,7 @@ type
       TOmniMessageID);
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
+    function  TimeGetTime64: int64;
   protected
     function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask;
       var msgInfo: TOmniMessageInfo{$IFNDEF MSWINDOWS}; SignalEvent: IOmnIEvent{$ENDIF}): boolean; virtual;
@@ -1189,7 +1195,9 @@ uses
   {$ENDIF OTL_Generics}
   ObjAuto,
   OtlHooks,
-  {$IFNDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS}
+  MMSystem,
+  {$ELSE}
   Rtti,
   Diagnostics,
   {$ENDIF ~MSWINDOWS}
@@ -1939,8 +1947,8 @@ begin
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_SetExitStatus }
 
-procedure TOmniTaskExecutor.Asy_SetTimer(timerID: integer; interval_ms: cardinal; const
-  timerMessage: TOmniMessageID);
+procedure TOmniTaskExecutor.Asy_SetTimer(timerID: integer; interval_ms: cardinal;
+  const timerMessage: TOmniMessageID);
 begin
   oteTimerLock.Acquire;
   try
@@ -2426,7 +2434,7 @@ function TOmniTaskExecutor.HaveElapsedTimer: boolean;
 begin
   oteTimerLock.Acquire;
   try
-    Result := (oteTimers.Count > 0) and (oteTimers[0] <= {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopwatch.GetTimeStamp {$ENDIF});
+    Result := (oteTimers.Count > 0) and (oteTimers[0] <= TimeGetTime64);
   finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.HaveElapsedTimer }
 
@@ -2709,8 +2717,8 @@ begin
   {$ENDIF OTL_NUMASupport}
 end; { TOmniTaskExecutor.SetProcessorGroup }
 
-procedure TOmniTaskExecutor.SetTimer(timerID: integer; interval_ms: cardinal; const
-  timerMessage: TOmniMessageID);
+procedure TOmniTaskExecutor.SetTimer(timerID: integer; interval_ms: cardinal;
+  const timerMessage: TOmniMessageID);
 var
   idxTimer : integer;
   timerInfo: TOmniTaskTimerInfo;
@@ -2731,7 +2739,7 @@ begin
       timerInfo.Interval_ms := interval_ms;
       timerInfo.MessageID := timerMessage;
     end;
-    InsertTimer({$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF} + interval_ms, timerInfo);
+    InsertTimer(TimeGetTime64 + interval_ms, timerInfo);
   end;
 end; { TOmniTaskExecutor.SetTimer }
 
@@ -2764,6 +2772,24 @@ begin
   end;
 end; { TOmniTaskExecutor.TestForInternalRebuild }
 
+function TOmniTaskExecutor.TimeGetTime64: int64;
+begin
+  {$IFNDEF MSWINDOWS}
+  Result := TStopwatch.GetTimeStamp;
+  {$ELSE}
+
+  {$IFDEF DEBUG}
+  Assert(oteTimerLock.LockCount > 0);
+  {$ENDIF}
+
+  Result := timeGetTime;
+  if Result < oteLastTimeGetTime64 then
+    oteTimeGetTime64Base := oteTimeGetTime64Base + $100000000;
+  oteLastTimeGetTime64 := Result;
+  Result := Result + oteTimeGetTime64Base;
+  {$ENDIF}
+end; { TOmniTaskExecutor.TimeGetTime64 }
+
 function TOmniTaskExecutor.TimeUntilNextTimer_ms: cardinal;
 var
   timeout_ms: int64;
@@ -2773,7 +2799,7 @@ begin
     if oteTimers.Count = 0 then
       Result := INFINITE
     else begin
-      timeout_ms := oteTimers[0] - {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF};
+      timeout_ms := oteTimers[0] - TimeGetTime64;
       if timeout_ms < 0 then
         timeout_ms := 0;
       Result := timeout_ms;
