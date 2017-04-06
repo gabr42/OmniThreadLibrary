@@ -166,7 +166,7 @@ type
 
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
-    {$IFDEF OTL_MobileSupport}[Volatile]{$ENDIF}
+    {$IFNDEF OTL_HaveCmpx16b}[Volatile]{$ENDIF}
     PData    : pointer;
     {$IFDEF OTL_HaveCmpx16b} // references are only used in bus-locked implementation
     Reference: NativeInt;
