@@ -42,6 +42,8 @@
 ///   History:
 ///     1.49b: 2017-04-06
 ///       - Compiles with Delphi 10.2 Tokyo.
+///       - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
+///         instead of 60 seconds. [issue #93]
 ///     1.49a: 2017-02-03
 ///       - If a future's cancellation token is signalled before the future is even
 ///         created, the future worker is not started at all. [issue #85]
@@ -1732,7 +1734,7 @@ function GlobalParallelPool: IOmniThreadPool;
 begin
   if not assigned(GParallelPool) then begin
     GParallelPool := CreateThreadPool('OtlParallel pool');
-    GParallelPool.IdleWorkerThreadTimeout_sec := 60*1000; // 1 minute
+    GParallelPool.IdleWorkerThreadTimeout_sec := 60; // 1 minute
     GParallelPool.MaxExecuting := -1;
     GParallelPool.MaxQueuedTime_sec := 0;
   end;

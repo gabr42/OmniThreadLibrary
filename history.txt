@@ -7,6 +7,8 @@
     which could cause timers not to be triggered correctly and sometimes
     resulted in range check error.
   - Fixed potential problem in TOTPWorker.Cancel.
+  - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
+    instead of 60 seconds.
 
 3.07: 2017-02-16
 - New features:
