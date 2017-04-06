@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-02-03
-///   Version           : 1.49a
+///   Last modification : 2017-04-06
+///   Version           : 1.49b
 ///</para><para>
 ///   History:
+///     1.49b: 2017-04-06
+///       - Compiles with Delphi 10.2 Tokyo.
 ///     1.49a: 2017-02-03
 ///       - If a future's cancellation token is signalled before the future is even
 ///         created, the future worker is not started at all. [issue #85]
@@ -326,6 +328,10 @@ interface
 //   core and that 2*<number of cores> is a good number of threads for this particular task.
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  Messages,
+  {$ENDIF MSWINDOWS}
   SysUtils,
   {$IFDEF OTL_ERTTI}
   TypInfo,
@@ -1326,8 +1332,6 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
-  Messages,
   DSiWin32,
   {$ENDIF MSWINDOWS}
   Classes,
@@ -1906,7 +1910,7 @@ begin
                 try
                   if not assigned(FTaskException) then
                     FTaskException := EJoinException.Create;
-                  EJoinException(FTaskException).Add(procNum, AcquireExceptionObject);
+                  EJoinException(FTaskException).Add(procNum, Exception(AcquireExceptionObject));
                 finally FTaskExceptionLock.Release; end;
                 FGlobalExceptionFlag.Signal;
               end;
@@ -3780,7 +3784,7 @@ begin
     try
       stage(inValue, outValue);
     except
-      exc := AcquireExceptionObject;
+      exc := Exception(AcquireExceptionObject);
       if not output.TryAdd(exc) then begin
         // output collection is completed - pipeline is shutting down
         exc.Free;
@@ -4054,7 +4058,7 @@ begin
                 try
                   opStage.Execute(Task);
                 except
-                  exc := AcquireExceptionObject;
+                  exc := Exception(AcquireExceptionObject);
                   if not outQueue.TryAdd(exc) then
                     Exc.Free;
                 end;

@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-02-03
-///   Version           : 2.17
+///   Last modification : 2017-04-04
+///   Version           : 2.17a
 /// </para><para>
 ///   History:
+///     2.17a: 2017-04-04
+///       - TOTPWorker.Cancel must use `while`, not `for`, as owRunningWorkers.Count can
+///         change during the execution.
 ///     2.17: 2017-02-03
 ///       - If ThreadDataFactory.Execute throws an exception, that exception is caught,
 ///         ignored and ThreadData is set to nil. [issue #88]
@@ -979,7 +982,8 @@ var
 begin
   taskID := params[0];
   wasTerminated := true;
-  for iWorker := 0 to owRunningWorkers.Count - 1 do begin
+  iWorker := 0;
+  while iWorker < owRunningWorkers.Count do begin
     worker := TOTPWorkerThread(owRunningWorkers[iWorker]);
     if worker.IsExecuting(taskID) then begin
       {$IFDEF LogThreadPool}Log('Cancel request %d on thread %p:%d', [taskID, pointer(worker), worker.threadID]); {$ENDIF LogThreadPool}
@@ -1024,6 +1028,7 @@ begin
       end;
       break; // for 
     end;
+    Inc(iWorker);
   end; // for iWorker
   waitParam := params[1];
   (waitParam.AsObject as TOmniWaitableValue).Signal(wasTerminated);

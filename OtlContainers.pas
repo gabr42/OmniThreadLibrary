@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2015-10-03
-///   Version           : 3.02
+///   Last modification : 2017-04-06
+///   Version           : 3.02a
 ///</para><para>
 ///   History:
+///     3.02a: 2017-04-06
+///       - Compiles with Delphi 10.2 Tokyo.
 ///     3.02: 2015-10-03
 ///       - Imported mobile support by [Sean].
 ///     3.01a: 2012-12-05
@@ -644,7 +646,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  ThreadReference := GetThreadId + 1;                           //Reference.bit0 := 1
+  ThreadReference := OtlSync.GetThreadId + 1;                           //Reference.bit0 := 1
   with chain do begin
 TryAgain:
     TaskCounter := obsTaskPopLoops;
@@ -896,7 +898,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  ThreadReference := GetThreadId + 1;                           //Reference.bit0 := 1
+  ThreadReference := OtlSync.GetThreadId + 1;                           //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
     TaskCounter := obqTaskInsertLoops;
@@ -1031,7 +1033,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  Reference := GetThreadId + 1;                                 //Reference.bit0 := 1
+  Reference := OtlSync.GetThreadId + 1;                                 //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
     TaskCounter := obqTaskRemoveLoops;
