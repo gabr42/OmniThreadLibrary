@@ -1,15 +1,19 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2016 Primoz Gabrijelcic
+   (c) 2017 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2016-11-10
-   Version           : 1.63
+   Last modification : 2017-02-23
+   Version           : 1.64
 </pre>*)(*
    History:
+     1.64: 2017-02-23
+       - Added overloaded AddToList for ansi strings.
+     1.63a: 2017-01-28
+       - RoundUpTo was incorrectly casting pointer to NativeInt instead of NativeUInt.
      1.63: 2016-11-10
        - Added StoreValue<T>.
      1.62: 2016-09-07
@@ -590,7 +594,8 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
   enumSubfolders: boolean = false; maxEnumDepth: integer = 0;
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
 
-function AddToList(const aList, delim, newElement: string): string;
+function AddToList(const aList, delim, newElement: string): string; overload;
+function AddToList(const aList, delim, newElement: AnsiString): AnsiString; overload;
 function IsInList(const value: string; const values: array of string; caseSensitive: boolean = false): boolean;
 function IndexOfList(const value: string; const values: array of string; caseSensitive: boolean = false): integer;
 
@@ -1744,6 +1749,14 @@ begin
   Result := Result + newElement;
 end; { AddToList }
 
+function AddToList(const aList, delim, newElement: AnsiString): AnsiString;
+begin
+  Result := aList;
+  if Result <> '' then
+    Result := Result + delim;
+  Result := Result + newElement;
+end; { AddToList }
+
 {$IFDEF GpStuff_RegEx}
 function ParseURL(const url: string; var proto, host: string; var port: integer;
   var path: string): boolean;
@@ -1926,7 +1939,7 @@ end; { RoundUpTo }
 
 function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
-  Result := pointer((((NativeInt(value) - 1) div granularity) + 1) * granularity);
+  Result := pointer((((NativeUInt(value) - 1) div NativeUInt(granularity)) + 1) * NativeUInt(granularity));
 end; { RoundUpTo }
 
 function GetRefCount(const intf: IInterface): integer;

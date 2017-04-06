@@ -8,10 +8,16 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2016-10-19
-   Version           : 1.94
+   Last modification : 2017-04-06
+   Version           : 1.96
 </pre>*)(*
    History:
+     1.96: 2017-04-06
+       - Added DSiFileExtensionIs overload accepting TArray<string>.
+     1.95: 2017-03-28
+       - Changed DSiTimeGetTime64, DSiElapsedTime64, DSiHasElapsed64 to use locking instead
+         of a thread-local variable. This way timestamps can be safely used across the
+         thread boundary.
      1.94: 2016-10-19
        - Added DSiGetLogicalProcessorInformationEx.
        - Added some Winapi stuff needed in older Delphis.
@@ -519,7 +525,7 @@ interface
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
-  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$IFEND}
+  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND}
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
   {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
@@ -551,6 +557,7 @@ uses
   {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF}
   {$IFDEF DSiUseAnsiStrings}, System.AnsiStrings{$ENDIF}
+  {$IFDEF DSiHasGenerics}, System.Generics.Collections{$ENDIF}
   ;
 
 const
@@ -643,6 +650,9 @@ const
   CSIDL_SAMPLE_PICTURES         = $0042; //Vista; The file system directory that contains sample pictures.
   CSIDL_SAMPLE_PLAYLISTS        = $0041; //Vista; The file system directory that contains sample playlists.
   CSIDL_SAMPLE_VIDEOS           = $0043; //Vista; The file system directory that contains sample videos.
+
+  {$EXTERNALSYM CSIDL_RECENT}
+  CSIDL_RECENT                  = $0008; //Recent files
 
   {$EXTERNALSYM CSIDL_SYSTEM}
   CSIDL_SYSTEM                  = $0025; //v5.0; GetSystemDirectory()
@@ -1271,8 +1281,10 @@ type
     ignoreDottedFolders: boolean = false);
   function  DSiFileExistsW(const fileName: WideString): boolean;
   function  DSiFileExtensionIs(const fileName, extension: string): boolean; overload;
-  function  DSiFileExtensionIs(const fileName: string; extension: array of string):
-    boolean; overload;
+  function  DSiFileExtensionIs(const fileName: string; const extension: array of string): boolean; overload;
+  {$IFDEF DSiHasGenerics}
+  function  DSiFileExtensionIs(const fileName: string; const extension: TArray<string>): boolean; overload;
+  {$ENDIF DSiHasGenerics}
   function  DSiFileSize(const fileName: string): int64;
   function  DSiFileSizeAndTime(const fileName: string; var dtModified_UTC: TDateTime; var size: int64): boolean;
   function  DSiFileSizeW(const fileName: WideString): int64;
@@ -1991,8 +2003,10 @@ type
   //Following three functions are based on GetTickCount
   function  DSiElapsedSince(midTime, startTime: int64): int64;
   function  DSiElapsedTime(startTime: int64): int64;
-  function  DSiElapsedTime64(startTime: int64): int64;
   function  DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
+
+  function  DSiTimeGetTime64: int64;
+  function  DSiElapsedTime64(startTime: int64): int64;
   function  DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
 
   function  DSiFileTimeToDateTime(fileTime: TFileTime): TDateTime; overload;
@@ -2001,7 +2015,6 @@ type
   function  DSiPerfCounterToMS(perfCounter: int64): int64;
   function  DSiPerfCounterToUS(perfCounter: int64): int64;
   function  DSiQueryPerfCounterAsUS: int64;
-  function  DSiTimeGetTime64: int64;
   procedure DSiuSecDelay(delay: int64);
 
 { Interlocked }
@@ -3743,7 +3756,7 @@ const
     @author  gabr
     @since   2007-06-08
   }
-  function DSiFileExtensionIs(const fileName: string; extension: array of string):
+  function DSiFileExtensionIs(const fileName: string; const extension: array of string):
     boolean; overload;
   var
     fExtDot  : string;
@@ -3771,6 +3784,36 @@ const
     end;
     Result := false;
   end; { DSiFileExtensionIs }
+
+{$IFDEF DSiHasGenerics}
+  function  DSiFileExtensionIs(const fileName: string; const extension: TArray<string>): boolean; overload;
+  var
+    fExtDot  : string;
+    fExtNoDot: string;
+    iExt     : integer;
+    testExt  : string;
+  begin
+    Result := true;
+    fExtDot := ExtractFileExt(fileName);
+    fExtNoDot := fExtDot;
+    if (fExtDot = '') or (fExtDot[1] <> '.') then
+       fExtDot := '.' + fExtDot;
+    if (fExtNoDot <> '') and (fExtNoDot[1] = '.') then
+      Delete(fExtNoDot, 1, 1);
+    for iExt := Low(extension) to High(extension) do begin
+      testExt := extension[iExt];
+      if (Length(testExt) = 0) or (testExt[1] <> '.') then begin
+        if SameText(fExtNoDot, testExt) then
+          Exit;
+      end
+      else begin
+        if SameText(fExtDot, testExt) then
+          Exit;
+      end;
+    end;
+    Result := false;
+  end; { DSiFileExtensionIs }
+{$ENDIF DSiHasGenerics}
 
   {:Retrieves file size.
     @returns -1 for unexisting/unaccessible file or file size.
@@ -5948,6 +5991,11 @@ const //DSiAllocateHwnd window extra data offsets
 var
   //DSiAllocateHwnd lock
   GDSiWndHandlerCritSect: TRTLCriticalSection;
+  //DSiTimeGetTime64Safe lock & globals
+  GDSiTimeGetTime64Safe: TRTLCriticalSection;
+  GLastTimeGetTimeSafe : DWORD;
+  GTimeGetTimeBaseSafe : int64;
+
   //Count of registered windows in this instance
   GDSiWndHandlerCount: integer;
   GTerminateBackgroundTasks: THandle;
@@ -8087,10 +8135,6 @@ var
 
 { Time }
 
-threadvar
-  GLastTimeGetTime: DWORD;
-  GTimeGetTimeBase: int64;
-
 var
   GPerformanceFrequency: int64;
 
@@ -8185,6 +8229,9 @@ var
   end; { DSiElapsedTime }
 
   {:Returns time elapsed since startTime, which must be a result of the DSiTimeGetTime64.
+
+    WARNING: This function uses thread-local variables hence its results can only be
+             compared inside one thread!
   }
   function DSiElapsedTime64(startTime: int64): int64;
   begin
@@ -8242,8 +8289,24 @@ var
 
   {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
     returned from the DSiTimeGetTime64.
+
+    WARNING: This function uses thread-local variables hence its results can only be
+             compared inside one thread!
   }
   function DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
+  begin
+    if timeout_ms = 0 then
+      Result := true
+    else if timeout_ms = INFINITE then
+      Result := false
+    else
+      Result := (DSiElapsedTime64(startTime) > timeout_ms);
+  end; { DSiHasElapsed64 }
+
+  {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
+    returned from the DSiTimeGetTime64Safe.
+  }
+  function DSiHasElapsed64Safe(startTime: int64; timeout_ms: DWORD): boolean;
   begin
     if timeout_ms = 0 then
       Result := true
@@ -8289,16 +8352,18 @@ var
 
   {:64-bit extension of MM timeGetTime. Time units are milliseconds.
     @author  gabr
-    @since   2007-11-26
   }
   function DSiTimeGetTime64: int64;
   begin
     Result := timeGetTime;
-    if Result < GLastTimeGetTime then
-      GTimeGetTimeBase := GTimeGetTimeBase + $100000000;
-    GLastTimeGetTime := Result;
-    Result := Result + GTimeGetTimeBase;
-  end; { DSiTimeGetTime64 }
+    EnterCriticalSection(GDSiTimeGetTime64Safe);
+    try
+      if Result < GLastTimeGetTimeSafe then
+        GTimeGetTimeBaseSafe := GTimeGetTimeBaseSafe + $100000000;
+      GLastTimeGetTimeSafe := Result;
+      Result := Result + GTimeGetTimeBaseSafe;
+    finally LeaveCriticalSection(GDSiTimeGetTime64Safe); end;
+  end; { DSiTimeGetTime64Safe }
 
   {ales, Brdaws}
   //'delay' is in microseconds
@@ -9249,10 +9314,11 @@ end; { DynaLoadAPIs }
 procedure InitializeGlobals;
 begin
   InitializeCriticalSection(GDSiWndHandlerCritSect);
+  InitializeCriticalSection(GDSiTimeGetTime64Safe);
   GTerminateBackgroundTasks := CreateEvent(nil, false, false, nil);
   GDSiWndHandlerCount := 0;
-  GTimeGetTimeBase := 0;
-  GLastTimeGetTime := 0;
+  GLastTimeGetTimeSafe := 0;
+  GTimeGetTimeBaseSafe := 0;
   if not QueryPerformanceFrequency(GPerformanceFrequency) then
     GPerformanceFrequency := 0;
   GCF_HTML := RegisterClipboardFormat('HTML Format');
@@ -9266,6 +9332,7 @@ begin
   timeEndPeriod(1);
   DSiCloseHandleAndNull(GTerminateBackgroundTasks);
   DeleteCriticalSection(GDSiWndHandlerCritSect);
+  DeleteCriticalSection(GDSiTimeGetTime64Safe);
   DSiUnloadLibrary;
   FreeAndNil(_GLibraryList);
 end; { CleanupGlobals }
