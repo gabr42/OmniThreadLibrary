@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2016-08-30
-   Version           : 1.72a
+   Last modification : 2017-04-06
+   Version           : 1.72b
 </pre>*)(*
    History:
+     1.72b: 2017-04-06
+       - Removed (useless, duplicate) GUID from IGpRingBuffer<T>.
      1.72a: 2016-08-30
        - TGpInt64ObjectList<T> methods had 'item' incorrectly defined as 'integer'
          instead of 'int64'.
@@ -1809,7 +1811,7 @@ type
 
 {$IFDEF Unicode}
 {$IFNDEF GpLists_LimitedGenerics}
-  IGpRingBuffer<T> = interface ['{6DBFE065-87AF-47E5-AF03-92B07D5ACAC1}']
+  IGpRingBuffer<T> = interface
     function  GetBufferAlmostEmptyEvent: THandle;
     function  GetBufferAlmostEmptyThreshold: integer;
     function  GetBufferAlmostFullEvent: THandle;
