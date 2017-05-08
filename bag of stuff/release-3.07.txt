@@ -42,7 +42,7 @@ Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.07
+Changes since version 3.06.2
 ============================
 
 - New features:

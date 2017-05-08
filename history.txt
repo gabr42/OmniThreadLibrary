@@ -1,14 +1,14 @@
 3.07.1: <<unreleased>>
 
 - New features:
-  - Supports Delphi 10.2 Tokyo.
+  - Added support for Delphi 10.2 Tokyo.
 - Bug fixes:
   - Fixed long standing problem with timer processing in OtlTaskControl
     which could cause timers not to be triggered correctly and sometimes
     resulted in range check error.
   - Fixed potential problem in TOTPWorker.Cancel.
-  - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
-    instead of 60 seconds.
+  - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 
+    60.000 seconds instead of 60 seconds.
 
 3.07: 2017-02-16
 - New features:
