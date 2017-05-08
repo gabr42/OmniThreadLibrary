@@ -525,7 +525,7 @@ interface
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
-  {$IF CompilerVersion >= 20}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND}
+  {$IF CompilerVersion >= 22}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND} // only XE+ has 'good enough' generics
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
   {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
@@ -557,7 +557,7 @@ uses
   {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF}
   {$IFDEF DSiUseAnsiStrings}, System.AnsiStrings{$ENDIF}
-  {$IFDEF DSiHasGenerics}, System.Generics.Collections{$ENDIF}
+  {$IFDEF DSiHasGenerics}, {$IFDEF DSiScopedUnitNames}System.Generics.Collections{$ELSE}Generics.Collections{$ENDIF}{$ENDIF}
   ;
 
 const

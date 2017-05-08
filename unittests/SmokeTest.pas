@@ -1,5 +1,7 @@
 unit SmokeTest;
 
+{$I OtlOptions.inc}
+
 interface
 
 uses
@@ -11,7 +13,9 @@ type
   published
     procedure TestDSiClassWndProcParamSize;
   {$IFDEF Unicode}
+  {$IFDEF OTL_HasArrayOfT}
     procedure TestTOmniValueArrayInt64Cast;
+  {$ENDIF}
     procedure TestCancelledFuture;
   {$ENDIF}
   end;
@@ -43,6 +47,7 @@ begin
 end;
 
 {$IFDEF Unicode}
+{$IFDEF OTL_HasArrayOfT}
 procedure TSmokeTest.TestTOmniValueArrayInt64Cast;
 var
   arrIn : TArray<int64>;
@@ -52,7 +57,12 @@ var
 begin
   // Issue #89
 
-  arrIn := [1,2, $FFFFFFFF, $100000000, $FFFFFFFFFFFFFF];
+  SetLength(arrIn, 5);
+  arrIn[0] := 1;
+  arrIn[1] := 2;
+  arrIn[2] := $FFFFFFFF;
+  arrIn[3] := $100000000;
+  arrIn[4] := $FFFFFFFFFFFFFF;
 
   ov := TOmniValue.CastFrom<TArray<Int64>>(arrIn);
 
@@ -63,6 +73,7 @@ begin
   for i := Low(arrIn) to High(arrIn) do
     CheckEquals(arrIn[i], arrOut[i]);
 end;
+{$ENDIF}
 
 procedure TSmokeTest.TestCancelledFuture;
 var

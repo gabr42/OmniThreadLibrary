@@ -595,7 +595,9 @@ function EnumFiles(const fileMask: string; attr: integer; returnFullPath: boolea
   ignoreDottedFolders: boolean = false): IGpStringValueEnumeratorFactory;
 
 function AddToList(const aList, delim, newElement: string): string; overload;
+{$IFDEF Unicode}
 function AddToList(const aList, delim, newElement: AnsiString): AnsiString; overload;
+{$ENDIF}
 function IsInList(const value: string; const values: array of string; caseSensitive: boolean = false): boolean;
 function IndexOfList(const value: string; const values: array of string; caseSensitive: boolean = false): integer;
 
@@ -1749,6 +1751,7 @@ begin
   Result := Result + newElement;
 end; { AddToList }
 
+{$IFDEF Unicode}
 function AddToList(const aList, delim, newElement: AnsiString): AnsiString;
 begin
   Result := aList;
@@ -1756,6 +1759,7 @@ begin
     Result := Result + delim;
   Result := Result + newElement;
 end; { AddToList }
+{$ENDIF Unicode}
 
 {$IFDEF GpStuff_RegEx}
 function ParseURL(const url: string; var proto, host: string; var port: integer;

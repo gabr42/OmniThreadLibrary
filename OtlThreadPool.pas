@@ -533,8 +533,6 @@ type
     otpNUMANodes                     : IOmniIntegerSet;
     otpProcessorGroups               : IOmniIntegerSet;
   {$ENDIF OTL_NUMASupport}
-  strict protected
-    function GetNumCores: integer;
   protected
     procedure Asy_ForwardUnhandledWorkerException(thread: TThread; E: Exception);
     function  GetAffinity: IOmniIntegerSet;
@@ -545,6 +543,7 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
+    function  GetNumCores: integer;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure Log(const msg: string; const params: array of const);
