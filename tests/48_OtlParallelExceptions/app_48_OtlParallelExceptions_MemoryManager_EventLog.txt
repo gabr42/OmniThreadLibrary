@@ -1,0 +1,356 @@
+
+--------------------------------2016/1/14 9:09:15--------------------------------
+FastMM has detected an attempt to call a virtual method on a freed object. An access violation will now be raised in order to abort the current operation.
+
+Freed object class: Exception
+
+Virtual method: Destroy
+
+Virtual method address: 42B794
+
+The allocation number was: 2209
+
+The object was allocated by thread 0x520, and the stack trace (return addresses) at the time was:
+406C8A 
+6400A3 [test_48_OtlParallelExceptions.pas][test_48_OtlParallelExceptions][test_48_OtlParallelExceptions.TfrmOtlParallelExceptions.btnJoin2Click$10$ActRec.$1$Body][163]
+629AA0 [OtlParallel.pas][OtlParallel][OtlParallel.TOmniParallelJoin.Execute$22$ActRec.$0$Body][1758]
+60C7A2 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1849]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+60154A [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.ExecuteWorkItem][686]
+6011AD [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.Execute][652]
+4BF0C4 [System.Classes][System][System.Classes.ThreadProc]
+40990A 
+76A738F4 [BaseThreadInitThunk]
+
+The object was subsequently freed by thread 0x3E84, and the stack trace (return addresses) at the time was:
+406CA6 
+629374 [OtlParallel.pas][OtlParallel][OtlParallel.EJoinException.DetachInner][1630]
+640201 [test_48_OtlParallelExceptions.pas][test_48_OtlParallelExceptions][test_48_OtlParallelExceptions.TfrmOtlParallelExceptions.btnJoin2Click][169]
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+
+The current thread ID is 0x3E84, and the stack trace (return addresses) leading to this error is:
+407CA7 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+754584F3 [Unknown function at SetManipulationInputTarget]
+75436C40 [Unknown function at CallWindowProcW]
+
+Current memory dump of 256 bytes starting at pointer address 7FDF7E10:
+98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 EB B1 24 02
+80 80 80 80 80 80 80 80 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+AD 08 00 00 8A 6C 40 00 13 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00
+EA DD 60 00 AF C7 60 00 A3 BA 60 00 11 B8 60 00 D4 30 00 00 D4 30 00 00 A6 6C 40 00 D4 DE 60 00
+C6 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00 EA DD 60 00 AF C7 60 00
+A3 BA 60 00 20 00 00 00 2C 66 60 00 11 E1 51 88 98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 EE 1E AE 77 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Î  ±  $  .
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+≠  .  .  .  ä  l  @  .  .  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .
+Í  ›  `  .  Ø  «  `  .  £  ∫  `  .  .  ∏  `  .  ‘  0  .  .  ‘  0  .  .  ¶  l  @  .  ‘  ﬁ  `  .
+∆  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .  Í  ›  `  .  Ø  «  `  .
+£  ∫  `  .     .  .  .  ,  f  `  .  .  ·  Q  à  ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ó  .  Æ  w  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2016/1/14 9:10:49--------------------------------
+FastMM has detected an error during a GetMem operation. FastMM detected that a block has been modified after being freed. 
+
+Modified byte offsets (and lengths): 8(12)
+
+The previous block size was: 32
+
+This block was previously allocated by thread 0x39D0, and the stack trace (return addresses) at the time was:
+406C8A 
+60D513 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CallOmniTimer][1969]
+60D79F [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CheckTimers][1982]
+60D9E5 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchEvent][2033]
+60F0F6 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.MainMessageLoop][2440]
+60DDEA [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchMessages][2124]
+60C7AF [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1855]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+61323B [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniThread.Execute][3555]
+4BF0C4 [System.Classes][System][System.Classes.ThreadProc]
+
+The block was previously used for an object of class: TOmniInternalAddressMsg
+
+The allocation number was: 2221
+
+The block was previously freed by thread 0x47A8, and the stack trace (return addresses) at the time was:
+406CA6 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+754584F3 [Unknown function at SetManipulationInputTarget]
+75436C40 [Unknown function at CallWindowProcW]
+
+The current thread ID is 0x47A8, and the stack trace (return addresses) leading to this error is:
+415F25 [FastMM4][FastMM4][FastMM4.DebugGetMem]
+406C8A 
+5F6A57 [OtlSync.pas][OtlSync][OtlSync.CreateOmniCriticalSection][810]
+5F6BA8 [OtlSync.pas][OtlSync][OtlSync.TOmniCS.Initialize][1105]
+6184C2 [OtlComm.pas][OtlComm][OtlComm.TOmniTwoWayChannel.Endpoint1][746]
+610BDA [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskControl.GetComm][2962]
+612E31 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskControl.Terminate][3436]
+629693 [OtlParallel.pas][OtlParallel][OtlParallel.TOmniParallelJoin.Destroy][1701]
+40D445 
+40D31F 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+
+Current memory dump of 256 bytes starting at pointer address 7FDF1BC0:
+98 A2 65 00 80 80 80 80 01 00 00 00 00 00 00 00 00 00 00 00 80 80 80 80 80 80 80 80 80 80 80 80
+9E 04 6D 8E 80 80 80 80 00 00 00 00 E0 12 DF 7F 00 00 00 00 00 00 00 00 C4 5E 41 00 00 00 00 00
+61 05 00 00 8A 6C 40 00 2C E2 51 00 13 59 53 00 3C 60 4B 00 69 62 4B 00 3E 65 4B 00 7D 64 4B 00
+46 0B 4C 00 2E D1 5B 00 2C 74 4B 00 83 1A 4B 00 A8 47 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 24 00 00 00 00 00 00 00 2D 67 72 83 E4 D7 50 00 B0 A4 DF 7F 03 00 00 00 03 00 00 00
+03 00 00 00 03 00 00 00 60 E0 51 00 B0 A4 DF 7F 00 00 00 00 D2 98 8D 7C 00 00 00 00 E0 12 DF 7F
+00 00 00 00 00 00 00 00 C4 5E 41 00 00 00 00 00 62 05 00 00 8A 6C 40 00 85 D6 51 00 2C E2 51 00
+ò  ¢  e  .  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .  .  .  .  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+û  .  m  é  Ä  Ä  Ä  Ä  .  .  .  .  ‡  .  ﬂ    .  .  .  .  .  .  .  .  ƒ  ^  A  .  .  .  .  .
+a  .  .  .  ä  l  @  .  ,  ‚  Q  .  .  Y  S  .  <  `  K  .  i  b  K  .  >  e  K  .  }  d  K  .
+F  .  L  .  .  —  [  .  ,  t  K  .  É  .  K  .  ®  G  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  $  .  .  .  .  .  .  .  -  g  r  É  ‰  ◊  P  .  ∞  §  ﬂ    .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  `  ‡  Q  .  ∞  §  ﬂ    .  .  .  .  “  ò  ç  |  .  .  .  .  ‡  .  ﬂ  
+.  .  .  .  .  .  .  .  ƒ  ^  A  .  .  .  .  .  b  .  .  .  ä  l  @  .  Ö  ÷  Q  .  ,  ‚  Q  .
+
+--------------------------------2016/1/14 9:11:13--------------------------------
+FastMM has detected an attempt to call a virtual method on a freed object. An access violation will now be raised in order to abort the current operation.
+
+Freed object class: Exception
+
+Virtual method: Destroy
+
+Virtual method address: 42B794
+
+The allocation number was: 2221
+
+The object was allocated by thread 0x4284, and the stack trace (return addresses) at the time was:
+406C8A 
+60D513 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CallOmniTimer][1969]
+60D79F [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CheckTimers][1982]
+60D9E5 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchEvent][2033]
+60F0F6 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.MainMessageLoop][2440]
+60DDEA [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchMessages][2124]
+60C7AF [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1855]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+61323B [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniThread.Execute][3555]
+4BF0C4 [System.Classes][System][System.Classes.ThreadProc]
+
+The object was subsequently freed by thread 0x4284, and the stack trace (return addresses) at the time was:
+406CA6 
+60DED4 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchOmniMessage][2153]
+60D5C6 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CallOmniTimer][1973]
+60D79F [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.CheckTimers][1982]
+60D9E5 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchEvent][2033]
+60F0F6 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.MainMessageLoop][2440]
+60DDEA [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.DispatchMessages][2124]
+60C7AF [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1855]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+61323B [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniThread.Execute][3555]
+
+The current thread ID is 0x4528, and the stack trace (return addresses) leading to this error is:
+407CA7 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+754584F3 [Unknown function at SetManipulationInputTarget]
+75436C40 [Unknown function at CallWindowProcW]
+
+Current memory dump of 256 bytes starting at pointer address 7FDF7E10:
+98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+C9 60 C2 77 80 80 80 80 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+AA 08 00 00 8A 6C 40 00 13 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00
+EA DD 60 00 AF C7 60 00 A3 BA 60 00 11 B8 60 00 84 42 00 00 84 42 00 00 A6 6C 40 00 D4 DE 60 00
+C6 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00 EA DD 60 00 AF C7 60 00
+A3 BA 60 00 20 00 00 00 2C 66 60 00 6E 04 52 88 98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 91 FB AD 77 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+…  `  ¬  w  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+™  .  .  .  ä  l  @  .  .  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .
+Í  ›  `  .  Ø  «  `  .  £  ∫  `  .  .  ∏  `  .  Ñ  B  .  .  Ñ  B  .  .  ¶  l  @  .  ‘  ﬁ  `  .
+∆  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .  Í  ›  `  .  Ø  «  `  .
+£  ∫  `  .     .  .  .  ,  f  `  .  n  .  R  à  ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  ë  ˚  ≠  w  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2016/1/14 9:11:32--------------------------------
+FastMM has detected an attempt to call a virtual method on a freed object. An access violation will now be raised in order to abort the current operation.
+
+Freed object class: EJoinException
+
+Virtual method: Destroy
+
+Virtual method address: 62924C
+
+The allocation number was: 2192
+
+The object was allocated by thread 0x3224, and the stack trace (return addresses) at the time was:
+406C8A 
+629ABE [OtlParallel.pas][OtlParallel][OtlParallel.TOmniParallelJoin.Execute$22$ActRec.$0$Body][1763]
+60C7A2 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1849]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+60154A [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.ExecuteWorkItem][686]
+6011AD [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.Execute][652]
+4BF0C4 [System.Classes][System][System.Classes.ThreadProc]
+40990A 
+76A738F4 [BaseThreadInitThunk]
+773C56C3 [Unknown function at RtlUnicodeStringToInteger]
+
+The object was subsequently freed by thread 0x25E4, and the stack trace (return addresses) at the time was:
+406CA6 
+407CA7 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+754584F3 [Unknown function at SetManipulationInputTarget]
+
+The current thread ID is 0x25E4, and the stack trace (return addresses) leading to this error is:
+407CA7 
+51CC19 [Vcl.Controls][Vcl][Vcl.Controls.TControl.Click]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+535A31 [Vcl.StdCtrls][Vcl][Vcl.StdCtrls.TButtonControl.WndProc]
+521350 [Vcl.Controls][Vcl][Vcl.Controls.DoControlMsg]
+5211EA [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.WndProc]
+5BE149 [Vcl.Forms][Vcl][Vcl.Forms.TCustomForm.WndProc]
+520807 [Vcl.Controls][Vcl][Vcl.Controls.TWinControl.MainWndProc]
+4C2BB6 [System.Classes][System][System.Classes.StdWndProc]
+754584F3 [Unknown function at SetManipulationInputTarget]
+75436C40 [Unknown function at CallWindowProcW]
+
+Current memory dump of 256 bytes starting at pointer address 7FDF7730:
+98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80
+05 98 6C 16 80 80 80 80 00 00 00 00 E0 12 DF 7F 00 00 00 00 00 00 00 00 C4 5E 41 00 00 00 00 00
+D3 07 00 00 AE 61 41 00 C7 6C 40 00 36 BA 40 00 0B DC 60 00 F6 F0 60 00 EA DD 60 00 AF C7 60 00
+A3 BA 60 00 11 B8 60 00 3B 32 61 00 C4 F0 4B 00 E4 44 00 00 E4 44 00 00 25 62 41 00 C7 6C 40 00
+36 BA 40 00 E9 F5 60 00 0B DC 60 00 F6 F0 60 00 EA DD 60 00 AF C7 60 00 A3 BA 60 00 11 B8 60 00
+3B 32 61 00 1C 00 00 00 01 00 00 00 68 8F 9F 87 01 00 00 00 05 00 00 00 FC 02 00 00 F8 02 00 00
+0C 03 00 00 38 03 00 00 4C 03 00 00 97 70 60 78 80 80 80 80 80 80 80 80 00 00 00 00 E0 12 DF 7F
+00 00 00 00 00 00 00 00 C4 5E 41 00 00 00 00 00 D4 07 00 00 AE 61 41 00 C7 6C 40 00 36 BA 40 00
+ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+.  ò  l  .  Ä  Ä  Ä  Ä  .  .  .  .  ‡  .  ﬂ    .  .  .  .  .  .  .  .  ƒ  ^  A  .  .  .  .  .
+”  .  .  .  Æ  a  A  .  «  l  @  .  6  ∫  @  .  .  ‹  `  .  ˆ    `  .  Í  ›  `  .  Ø  «  `  .
+£  ∫  `  .  .  ∏  `  .  ;  2  a  .  ƒ    K  .  ‰  D  .  .  ‰  D  .  .  %  b  A  .  «  l  @  .
+6  ∫  @  .  È  ı  `  .  .  ‹  `  .  ˆ    `  .  Í  ›  `  .  Ø  «  `  .  £  ∫  `  .  .  ∏  `  .
+;  2  a  .  .  .  .  .  .  .  .  .  h  è  ü  á  .  .  .  .  .  .  .  .  ¸  .  .  .  ¯  .  .  .
+.  .  .  .  8  .  .  .  L  .  .  .  ó  p  `  x  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  ‡  .  ﬂ  
+.  .  .  .  .  .  .  .  ƒ  ^  A  .  .  .  .  .  ‘  .  .  .  Æ  a  A  .  «  l  @  .  6  ∫  @  .
+
+--------------------------------2016/1/14 10:26:12--------------------------------
+A memory block has been leaked. The size is: 36
+
+This block was allocated by thread 0x47F4, and the stack trace (return addresses) at the time was:
+406C8A 
+64007F [test_48_OtlParallelExceptions.pas][test_48_OtlParallelExceptions][test_48_OtlParallelExceptions.TfrmOtlParallelExceptions.btnJoin2Click$10$ActRec.$1$Body][163]
+629A7C [OtlParallel.pas][OtlParallel][OtlParallel.TOmniParallelJoin.Execute$22$ActRec.$0$Body][1756]
+60C7A2 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1849]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+60154A [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.ExecuteWorkItem][686]
+6011AD [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.Execute][652]
+4BF0C4 [System.Classes][System][System.Classes.ThreadProc]
+40990A 
+76A738F4 [BaseThreadInitThunk]
+
+The block is currently used for an object of class: Exception
+
+The allocation number is: 2209
+
+Current memory dump of 256 bytes starting at pointer address 7FDF7E10:
+B8 E3 41 00 CC 41 E9 7F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 66 A7 C1 05
+80 80 80 80 80 80 80 80 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+AB 08 00 00 8A 6C 40 00 13 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00
+EA DD 60 00 AF C7 60 00 A3 BA 60 00 11 B8 60 00 2C 45 00 00 2C 45 00 00 A6 6C 40 00 D4 DE 60 00
+C6 D5 60 00 9F D7 60 00 8E DE 60 00 2A D9 60 00 18 DB 60 00 F6 F0 60 00 EA DD 60 00 AF C7 60 00
+A3 BA 60 00 20 00 00 00 2C 66 60 00 BF 09 52 88 98 A2 65 00 80 80 80 80 80 80 80 80 80 80 80 80
+80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 80 40 F6 AD 77 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+∏  „  A  .  Ã  A  È    .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  f  ß  ¡  .
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+´  .  .  .  ä  l  @  .  .  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .
+Í  ›  `  .  Ø  «  `  .  £  ∫  `  .  .  ∏  `  .  ,  E  .  .  ,  E  .  .  ¶  l  @  .  ‘  ﬁ  `  .
+∆  ’  `  .  ü  ◊  `  .  é  ﬁ  `  .  *  Ÿ  `  .  .  €  `  .  ˆ    `  .  Í  ›  `  .  Ø  «  `  .
+£  ∫  `  .     .  .  .  ,  f  `  .  ø  .  R  à  ò  ¢  e  .  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä
+Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  @  ˆ  ≠  w  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2016/1/14 10:26:12--------------------------------
+A memory block has been leaked. The size is: 84
+
+This block was allocated by thread 0x47F4, and the stack trace (return addresses) at the time was:
+406C8A 
+4266D7 [System.SysUtils][System][System.SysUtils.Format]
+4266BC [System.SysUtils][System][System.SysUtils.Format]
+42B2A1 [System.SysUtils][System][System.SysUtils.Exception.CreateFmt]
+64007F [test_48_OtlParallelExceptions.pas][test_48_OtlParallelExceptions][test_48_OtlParallelExceptions.TfrmOtlParallelExceptions.btnJoin2Click$10$ActRec.$1$Body][163]
+629A7C [OtlParallel.pas][OtlParallel][OtlParallel.TOmniParallelJoin.Execute$22$ActRec.$0$Body][1756]
+60C7A2 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTaskExecutor.Asy_Execute][1849]
+60BAA3 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.InternalExecute][1476]
+60B811 [OtlTaskControl.pas][OtlTaskControl][OtlTaskControl.TOmniTask.Execute][1396]
+60154A [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.ExecuteWorkItem][686]
+6011AD [OtlThreadPool.pas][OtlThreadPool][OtlThreadPool.TOTPWorkerThread.Execute][652]
+
+The block is currently used for an object of class: UnicodeString
+
+The allocation number is: 2211
+
+Current memory dump of 256 bytes starting at pointer address 7FE941C0:
+B0 04 02 00 01 00 00 00 1F 00 00 00 45 00 78 00 63 00 65 00 70 00 74 00 69 00 6F 00 6E 00 20 00
+69 00 6E 00 20 00 73 00 65 00 63 00 6F 00 6E 00 64 00 20 00 74 00 61 00 73 00 6B 00 2C 00 20 00
+69 00 20 00 3D 00 20 00 36 00 00 00 12 26 24 7C 80 80 80 80 80 80 80 80 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+∞  .  .  .  .  .  .  .  .  .  .  .  E  .  x  .  c  .  e  .  p  .  t  .  i  .  o  .  n  .     .
+i  .  n  .     .  s  .  e  .  c  .  o  .  n  .  d  .     .  t  .  a  .  s  .  k  .  ,  .     .
+i  .     .  =  .     .  6  .  .  .  .  &  $  |  Ä  Ä  Ä  Ä  Ä  Ä  Ä  Ä  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+
+--------------------------------2016/1/14 10:26:12--------------------------------
+This application has leaked memory. The small block leaks are (excluding expected leaks registered by pointer):
+
+21 - 36 bytes: Exception x 1
+69 - 84 bytes: UnicodeString x 1
+
+Note: Memory leak detail is logged to a text file in the same folder as this application. To disable this memory leak check, undefine "EnableMemoryLeakReporting".
