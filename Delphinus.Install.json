@@ -102,6 +102,10 @@
         {
             "project": "Packages\\Delphi 10.1 Berlin\\OmniThreadLibraryPackages.groupproj",
             "compiler": 31
+        },
+        {
+            "project": "Packages\\Delphi 10.2 Tokyo\\OmniThreadLibraryPackages.groupproj",
+            "compiler": 32
         }
     ]    
 }
