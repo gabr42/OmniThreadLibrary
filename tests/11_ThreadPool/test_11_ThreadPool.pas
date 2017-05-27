@@ -35,6 +35,8 @@ type
     btnScheduleAndTerminate: TButton;
     btnTestZeroExecutorThreads: TButton;
     OmniTED: TOmniEventMonitor;
+    btnSchedule6Long: TButton;
+    cbSignalToken: TCheckBox;
     procedure btnCancelAllClick(Sender: TObject);
     procedure btnSaveLogClick(Sender: TObject);
     procedure btnSchedule6Click(Sender: TObject);
@@ -95,9 +97,7 @@ type
 
 procedure TfrmTestOtlThreadPool.btnCancelAllClick(Sender: TObject);
 begin
-//  btnScheduleTask.Click;
-  btnSchedule6.Click;
-  GlobalOmniThreadPool.CancelAll;
+  GlobalOmniThreadPool.CancelAll(cbSignalToken.Checked);
 end; { TfrmTestOtlThreadPool.btnCancelAllClick }
 
 procedure TfrmTestOtlThreadPool.btnSaveLogClick(Sender: TObject);
@@ -115,6 +115,10 @@ begin
   if Sender = btnSchedule6 then begin
     numTasks := 6;
     delay_ms := 1000;
+  end
+  else if Sender = btnSchedule6Long then begin
+    numTasks := 6;
+    delay_ms := 10000;
   end
   else begin
     numTasks := 80;
@@ -356,10 +360,19 @@ begin
 end;
 
 procedure THelloWorker.SleepTask(var msg: TMessage);
+var
+  i: integer;
 begin
   Task.ClearTimer(1);
-  Sleep(FDelay_ms);
-  Task.Terminate;
+  try
+    for i := 1 to FDelay_ms div 100 do begin
+      if Task.CancellationToken.IsSignalled then
+        Exit;
+      Sleep(100);
+    end;
+  finally
+    Task.Terminate;
+  end;
 end;
 
 end.

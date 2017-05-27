@@ -35,10 +35,19 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-04-04
-///   Version           : 2.17a
+///   Last modification : 2017-05-27
+///   Version           : 2.18
 /// </para><para>
 ///   History:
+///     2.18: 2017-05-27
+///       - Breaking change: Cancel(taskID) will signal task's cancellation token before
+///         calling task's Terminate method.
+///         CancelAll will signal cancellation token for all running
+///         tasks before calling their Terminate method.
+///         Old behaviour (no CancellationToken.Signal before Terminate) can be achieved
+///         by calling overloaded version of the functions accepting the
+///         `signalCancellationToken` parameter or by setting
+///         IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
 ///     2.17a: 2017-04-04
 ///       - TOTPWorker.Cancel must use `while`, not `for`, as owRunningWorkers.Count can
 ///         change during the execution.
@@ -204,6 +213,9 @@ type
   /// <summary>Worker thread lifetime reporting handler.</summary>
   TOTPWorkerThreadEvent = procedure(Sender: TObject; threadID: TThreadID) of object;
 
+  TOmniThreadPoolOption = (tpoPreventCancellationTokenOnCancel);
+  TOmniThreadPoolOptions = set of TOmniThreadPoolOption;
+
   IOmniThreadPool = interface
     ['{1FA74554-1866-46DD-AC50-F0403E378682}']
     function  GetAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
@@ -225,15 +237,19 @@ type
     procedure SetName(const value: string);
     procedure SetWaitOnTerminate_sec(value: integer);
     //
-    function  Cancel(taskID: int64): boolean;
-    procedure CancelAll;
+    function  Cancel(taskID: int64): boolean; overload;
+    function  Cancel(taskID: int64; signalCancellationToken: boolean): boolean; overload;
+    procedure CancelAll; overload;
+    procedure CancelAll(signalCancellationToken: boolean); overload;
     function  CountExecuting: integer;
     function  CountQueued: integer;
     function  GetAffinity: IOmniIntegerSet;
+    function  GetOptions: TOmniThreadPoolOptions;
     function  IsIdle: boolean;
     function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
     function  SetMonitor(hWindow: THandle): IOmniThreadPool;
+    procedure SetOptions(const value: TOmniThreadPoolOptions);
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod); overload;
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryFunction); overload;
   {$IFDEF OTL_NUMASupport}
@@ -254,6 +270,7 @@ type
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
     property NumCores: integer read GetNumCores;
+    property Options: TOmniThreadPoolOptions read GetOptions write SetOptions;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec
       write SetWaitOnTerminate_sec;
@@ -368,7 +385,7 @@ type
   public
     constructor Create(const ThreadDataFactory: TOTPThreadDataFactory);
     destructor  Destroy; override;
-    procedure Asy_Stop;
+    procedure Asy_Stop(signalCancellationToken: boolean = false);
     function  Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
     function  Description: string;
     procedure Execute; override;
@@ -463,14 +480,14 @@ type
     procedure ForwardThreadCreated(threadID: TThreadID);
     procedure ForwardThreadDestroying(threadID: TThreadID;
       threadPoolOperation: TThreadPoolOperation; worker: TOTPWorkerThread = nil);
-    procedure InternalStop;
+    procedure InternalStop(signalCancellationToken: boolean = false);
     function  LocateThread(threadID: DWORD): TOTPWorkerThread;
     procedure Log(const msg: string; const params: array of const);
     function  NumRunningStoppedThreads: integer;
     procedure ProcessCompletedWorkItem(workItem: TOTPWorkItem);
     procedure RequestCompleted(workItem: TOTPWorkItem; worker: TOTPWorkerThread);
     procedure ScheduleNext(workItem: TOTPWorkItem);
-    procedure StopThread(worker: TOTPWorkerThread);
+    procedure StopThread(worker: TOTPWorkerThread; signalCancellationToken: boolean = false);
     procedure UpdateScheduler;
   protected
     procedure Cleanup; override;
@@ -507,7 +524,7 @@ type
     procedure SetThreadDataFactory(const threadDataFactory: TOmniValue);
   // invoked from TOmniThreadPool
     procedure Cancel(const params: TOmniValue);
-    procedure CancelAll(var doneSignal: TOmniWaitableValue);
+    procedure CancelAll(const params: TOmniValue);
     procedure MaintainanceTimer;
   end; { TOTPWorker }
 
@@ -522,6 +539,7 @@ type
 
   TOmniThreadPool = class(TInterfacedObject, IOmniThreadPool, IOmniThreadPoolScheduler)
   strict private
+    FOptions: TOmniThreadPoolOptions;
     otpAffinity                      : IOmniIntegerSet;
     otpAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
     otpPoolName                      : string;
@@ -533,6 +551,10 @@ type
     otpNUMANodes                     : IOmniIntegerSet;
     otpProcessorGroups               : IOmniIntegerSet;
   {$ENDIF OTL_NUMASupport}
+  strict protected
+    function  GetNumCores: integer;
+    function  GetOptions: TOmniThreadPoolOptions;
+    procedure SetOptions(const value: TOmniThreadPoolOptions);
   protected
     procedure Asy_ForwardUnhandledWorkerException(thread: TThread; E: Exception);
     function  GetAffinity: IOmniIntegerSet;
@@ -543,7 +565,6 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
-    function  GetNumCores: integer;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure Log(const msg: string; const params: array of const);
@@ -568,8 +589,10 @@ type
   public
     constructor Create(const name: string);
     destructor  Destroy; override;
-    function  Cancel(taskID: int64): boolean;
-    procedure CancelAll;
+    function  Cancel(taskID: int64): boolean; overload;
+    function  Cancel(taskID: int64; signalCancellationToken: boolean): boolean; overload;
+    procedure CancelAll; overload;
+    procedure CancelAll(signalCancellationToken: boolean); overload;
     function  CountExecuting: integer;
     function  CountQueued: integer;
     function  IsIdle: boolean;
@@ -591,6 +614,7 @@ type
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
     property NumCores: integer read GetNumCores;
+    property Options: TOmniThreadPoolOptions read GetOptions write SetOptions;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
@@ -729,7 +753,7 @@ begin
 end; { TOTPWorkerThread.Destroy }
 
 /// <summary>Gently stop the worker thread.
-procedure TOTPWorkerThread.Asy_Stop;
+procedure TOTPWorkerThread.Asy_Stop(signalCancellationToken: boolean);
 var
   task: IOmniTask;
 begin
@@ -739,8 +763,11 @@ begin
     try
       if assigned(WorkItem_ref) then begin
         task := WorkItem_ref.task;
-        if assigned(task) then
+        if assigned(task) then begin
+          if signalCancellationToken then
+            task.CancellationToken.Signal;
           task.Terminate;
+        end;
       end;
     finally owtWorkItemLock.Release end;
   end;
@@ -973,6 +1000,7 @@ procedure TOTPWorker.Cancel(const params: TOmniValue);
 var
   endWait_ms   : int64;
   iWorker      : integer;
+  signalToken  : boolean;
   taskID       : int64;
   waitParam    : TOmniValue;
   wasTerminated: boolean;
@@ -980,6 +1008,7 @@ var
   workItem     : TOTPWorkItem;
 begin
   taskID := params[0];
+  signalToken := params[1];
   wasTerminated := true;
   iWorker := 0;
   while iWorker < owRunningWorkers.Count do begin
@@ -987,7 +1016,7 @@ begin
     if worker.IsExecuting(taskID) then begin
       {$IFDEF LogThreadPool}Log('Cancel request %d on thread %p:%d', [taskID, pointer(worker), worker.threadID]); {$ENDIF LogThreadPool}
       owRunningWorkers.Delete(iWorker);
-      worker.Asy_Stop;
+      worker.Asy_Stop(signalToken);
       endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
       while ({$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} < endWait_ms) and (not worker.Stopped) do begin
         ProcessMessages;
@@ -1029,14 +1058,17 @@ begin
     end;
     Inc(iWorker);
   end; // for iWorker
-  waitParam := params[1];
+  waitParam := params[2];
   (waitParam.AsObject as TOmniWaitableValue).Signal(wasTerminated);
 end; { TOTPWorker.Cancel }
 
-procedure TOTPWorker.CancelAll(var doneSignal: TOmniWaitableValue);
+procedure TOTPWorker.CancelAll(const params: TOmniValue);
+var
+  waitParam: TOmniValue;
 begin
-  InternalStop;
-  doneSignal.Signal;
+  InternalStop(params[0].AsBoolean);
+  waitParam := params[1];
+  (waitParam.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.CancelAll }
 
 procedure TOTPWorker.Cleanup;
@@ -1094,14 +1126,14 @@ begin
   Result := true;
 end; { TOTPWorker.Initialize }
 
-procedure TOTPWorker.InternalStop;
+procedure TOTPWorker.InternalStop(signalCancellationToken: boolean);
 var
-  endWait_ms: int64;
-  iWorker: integer;
-  iWorkItem: integer;
-  queuedItems: TObjectList { of TOTPWorkItem } ;
-  worker: TOTPWorkerThread;
-  workItem: TOTPWorkItem;
+  endWait_ms : int64;
+  iWorker    : integer;
+  iWorkItem  : integer;
+  queuedItems: TObjectList { of TOTPWorkItem };
+  worker     : TOTPWorkerThread;
+  workItem   : TOTPWorkItem;
 begin
   {$IFDEF LogThreadPool}Log('Terminating queued tasks', []);{$ENDIF LogThreadPool}
   queuedItems := TObjectList.Create(false);
@@ -1121,7 +1153,7 @@ begin
     StopThread(TOTPWorkerThread(owIdleWorkers[iWorker]));
   owIdleWorkers.Clear;
   for iWorker := 0 to owRunningWorkers.Count - 1 do
-    StopThread(TOTPWorkerThread(owRunningWorkers[iWorker]));
+    StopThread(TOTPWorkerThread(owRunningWorkers[iWorker]), signalCancellationToken);
   owRunningWorkers.Clear;
   CountRunning.Value := 0;
   endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
@@ -1539,12 +1571,12 @@ end; { TOTPWorker.SetThreadDataFactory }
 /// <summary>Move the thread to the 'stopping' list and tell it to CancelAll.<para> 
 /// Thread is guaranted not to be in 'idle' or 'working' list when StopThread is called.</para></summary> 
 /// <since>2007-07-10</since>
-procedure TOTPWorker.StopThread(worker: TOTPWorkerThread);
+procedure TOTPWorker.StopThread(worker: TOTPWorkerThread; signalCancellationToken: boolean);
 begin
   {$IFDEF LogThreadPool}Log('Stopping worker thread %s', [worker.Description]);{$ENDIF LogThreadPool}
   owStoppingWorkers.Add(worker);
   worker.StartStopping_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF};
-  worker.Asy_Stop; // have to force asynchronous stop as the worker thread may be stuck in the ExecuteWorkItem
+  worker.Asy_Stop(signalCancellationToken); // have to force asynchronous stop as the worker thread may be stuck in the ExecuteWorkItem
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [owStoppingWorkers.Count]);{$ENDIF LogThreadPool}
 end; { TOTPWorker.StopThread }
@@ -1611,28 +1643,38 @@ end; { TOmniThreadPool.Asy_ForwardUnhandledWorkerException }
 /// <returns>True: Normal exit, False: Thread was killed.</returns>
 {$WARN NO_RETVAL OFF}
 // starting with XE, Delphi complains that result is not always assigned
-function TOmniThreadPool.Cancel(taskID: int64): boolean;
+function TOmniThreadPool.Cancel(taskID: int64; signalCancellationToken: boolean): boolean;
 var
   res: TOmniWaitableValue;
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, res]);
+    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, signalCancellationToken, res]);
     res.WaitFor(INFINITE);
     Result := res.Value;
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.Cancel }
 {$WARN NO_RETVAL ON}
 
-procedure TOmniThreadPool.CancelAll;
+function TOmniThreadPool.Cancel(taskID: int64): boolean;
+begin
+  Result := Cancel(taskID, not (tpoPreventCancellationTokenOnCancel in Options));
+end; { TOmniThreadPool.Cancel }
+
+procedure TOmniThreadPool.CancelAll(signalCancellationToken: boolean);
 var
   res: TOmniWaitableValue;
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.CancelAll, res);
+    otpWorkerTask.Invoke(@TOTPWorker.CancelAll, [signalCancellationToken, res]);
     res.WaitFor(INFINITE);
   finally FreeAndNil(res); end;
+end; { TOmniThreadPool.CancelAll }
+
+procedure TOmniThreadPool.CancelAll;
+begin
+  CancelAll(not (tpoPreventCancellationTokenOnCancel in Options));
 end; { TOmniThreadPool.CancelAll }
 
 function TOmniThreadPool.CountExecuting: integer;
@@ -1704,6 +1746,11 @@ function TOmniThreadPool.GetNumCores: integer;
 begin
   Result := WorkerObj.NumCores.Value;
 end; { TOmniThreadPool.GetNumCores }
+
+function TOmniThreadPool.GetOptions: TOmniThreadPoolOptions;
+begin
+  Result := FOptions;
+end; { TOmniThreadPool.GetOptions }
 
 function TOmniThreadPool.GetUniqueID: int64;
 begin
@@ -1854,6 +1901,11 @@ procedure TOmniThreadPool.SetNUMANodes(const value: IOmniIntegerSet);
 begin
   otpNUMANodes.Assign(value);
 end; { TOmniThreadPool.SetNUMANodes }
+
+procedure TOmniThreadPool.SetOptions(const value: TOmniThreadPoolOptions);
+begin
+  FOptions := value;
+end; { TOmniThreadPool.SetOptions }
 
 procedure TOmniThreadPool.SetProcessorGroups(const value: IOmniIntegerSet);
 begin
