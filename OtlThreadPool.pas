@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-05-27
-///   Version           : 2.18
+///   Last modification : 2017-05-29
+///   Version           : 2.18a
 /// </para><para>
 ///   History:
+///     2.18a: 2017-05-29
+///       - Did not compile when NUMA support was enabled.
 ///     2.18: 2017-05-27
 ///       - Breaking change: Cancel(taskID) will signal task's cancellation token before
 ///         calling task's Terminate method.
@@ -1896,16 +1898,16 @@ begin
   otpWorkerTask.Invoke(@TOTPWorker.SetName, value);
 end; { TOmniThreadPool.SetName }
 
+procedure TOmniThreadPool.SetOptions(const value: TOmniThreadPoolOptions);
+begin
+  FOptions := value;
+end; { TOmniThreadPool.SetOptions }
+
 {$IFDEF OTL_NUMASupport}
 procedure TOmniThreadPool.SetNUMANodes(const value: IOmniIntegerSet);
 begin
   otpNUMANodes.Assign(value);
 end; { TOmniThreadPool.SetNUMANodes }
-
-procedure TOmniThreadPool.SetOptions(const value: TOmniThreadPoolOptions);
-begin
-  FOptions := value;
-end; { TOmniThreadPool.SetOptions }
 
 procedure TOmniThreadPool.SetProcessorGroups(const value: IOmniIntegerSet);
 begin
