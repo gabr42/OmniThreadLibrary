@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-04-06
-///   Version           : 1.49b
+///   Last modification : 2017-06-11
+///   Version           : 1.50
 ///</para><para>
 ///   History:
+///     1.50: 2017-06-11
+///       - Small tweaks in TOmniTimedTask implementation.
 ///     1.49b: 2017-04-06
 ///       - Compiles with Delphi 10.2 Tokyo.
 ///       - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
@@ -1337,6 +1339,7 @@ uses
   DSiWin32,
   {$ENDIF MSWINDOWS}
   Classes,
+  GpStuff,
   OtlComm,
   OtlContainerObserver;
 
@@ -1541,11 +1544,13 @@ type
   public const
     MsgSetTask    = 1;
     MsgExecuteNow = 2;
+    MsgApplyTimer = 3;
   strict private
     FTask: TOmniTaskDelegate;
   strict protected
     procedure DoExecute;
   public
+    procedure ApplyTimer(var msg: TOmniMessage); message MsgApplyTimer;
     procedure ExecuteNow(var msg: TOmniMessage); message MsgExecuteNow;
     procedure SetTask(var msg: TOmniMessage); message MsgSetTask;
   published
@@ -5167,6 +5172,17 @@ end; { TOmniParallelMapper<T1,T2> }
 
 { TOmniTimedTaskWorker }
 
+procedure TOmniTimedTaskWorker.ApplyTimer(var msg: TOmniMessage);
+var
+  interval: integer;
+begin
+  interval := msg.MsgData;
+  if interval > 0 then
+    Task.SetTimer(1, Interval, @TOmniTimedTaskWorker.TaskInterval)
+  else
+    Task.ClearTimer(1);
+end; { TOmniTimedTaskWorker.ApplyTimer }
+
 procedure TOmniTimedTaskWorker.DoExecute;
 begin
   if assigned(FTask) then
@@ -5205,10 +5221,7 @@ end; { TOmniTimedTask.Destroy }
 
 procedure TOmniTimedTask.ApplyTimer;
 begin
-  if FActive and (Interval >= 0) then
-    FWorker.SetTimer(1, Interval, @TOmniTimedTaskWorker.TaskInterval)
-  else
-    FWorker.ClearTimer(1);
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgApplyTimer, IFF(FActive and (Interval > 0), Interval, 0));
 end; { TOmniTimedTask.ApplyTimer }
 
 function TOmniTimedTask.Every(interval_ms: integer): IOmniTimedTask;
@@ -5232,8 +5245,8 @@ end; { TOmniTimedTask.Execute }
 
 procedure TOmniTimedTask.ExecuteNow;
 begin
-  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgExecuteNow);
   ApplyTimer;
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgExecuteNow);
 end; { TOmniTimedTask.ExecuteNow }
 
 function TOmniTimedTask.GetActive: boolean;
