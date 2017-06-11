@@ -7,6 +7,8 @@
     Old behaviour (no CancellationToken.Signal before Terminate) can be achieved by
     calling overloaded version of the functions accepting the `signalCancellationToken`
     parameter or by setting IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
+- New demos:
+  - 65_TimedTask: Demonstrates the Parallel.TimedTask asbstraction.
 
 3.07.1: 2017-05-19
 
@@ -51,8 +53,11 @@
   - If a future's cancellation token is signalled before the future is even
     created, the future worker is not started at all. [issue #85]
 - New demos:
-  - examples\folder scanner: File scanning example implemented 
+  - examples\folder scanner: File scanning example implemented
     with a Pipeline.
+  - 62_Console: Demonstrates how to use OmniThreadLibrary in a console application.
+  - 63_Service: Demonstrates how to use OmniThreadLibrary in a service application.
+  - 64_ProcessorGroups: Demonstrates processor groups and NUMA nodes support.
 
 3.06.2: 2016-10-24
 - New features:
@@ -171,7 +176,7 @@
     That enables support for >60 tasks in the OtlThreadPool. 
   - Implemented TOmniBlockingCollection.ToArray<T>.
   - NumTasks parameter (OtlParallel) can be negative. In that case, specified 
-    number of cores will be reserved for other purposes and all other will 
+    number of cores will be reserved for other purposes and all other will
     be used for processing.
     Example: If NumTasks(-2) is used when process has access to 8 cores,
     6 of them (8 - 2) will be used to run the task.  
