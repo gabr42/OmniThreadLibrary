@@ -60,6 +60,8 @@ end;
 procedure TfrmTimedTask.FormCreate(Sender: TObject);
 begin
   FTimedTask := Parallel.TimedTask.Every(inpInterval.Value * 1000).Execute(SendRequest_asy);
+  //Execute automatically activates the timer
+  FTimedTask.Stop;
   FTimedTask.TaskConfig(Parallel.TaskConfig.OnMessage(Self));
 end;
 
