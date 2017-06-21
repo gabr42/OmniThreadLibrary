@@ -43,7 +43,8 @@
 ///     1.51: 2017-06-21
 ///       - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
 ///         to Parallel.Join and Parallel.ParallelTask.
-///       - Added OnStopInvoke to Parallel.Join and Parallel.ParallelTask.
+///       - Added OnStopInvoke to all abstractions that implement OnStop method.
+///       - Fixed: Parallel.Future did not create task with the .Unobserved qualifier.
 ///     1.50: 2017-06-11
 ///       - Small tweaks in TOmniTimedTask implementation.
 ///     1.49b: 2017-04-06
@@ -456,6 +457,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { IOmniParallelLoop }
@@ -478,6 +480,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop<T>; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
@@ -496,6 +499,7 @@ type
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelSimpleLoop;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
     procedure Execute(loopBody: TOmniIteratorSimpleSimpleDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorSimpleDelegate); overload;
@@ -518,6 +522,7 @@ type
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop<T>;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop<T>; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelSimpleLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop<T>;
     procedure Execute(loopBody: TOmniIteratorSimpleSimpleDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorSimpleDelegate<T>); overload;
@@ -602,6 +607,7 @@ type
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniPipeline; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniPipeline;
     function  NoThrottling: IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -821,6 +827,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop;
     function  PreserveOrder: IOmniParallelLoop;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop;
   end; { TOmniParallelLoop }
@@ -863,6 +870,7 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop<T>; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
     function  PreserveOrder: IOmniParallelLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
@@ -901,6 +909,7 @@ type
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelSimpleLoop;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
     procedure Execute(loopBody: TOmniIteratorSimpleSimpleDelegate); overload;
     procedure Execute(loopBody: TOmniIteratorSimpleDelegate); overload;
@@ -924,6 +933,7 @@ type
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop<T>; inline;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop<T>; overload; inline;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop<T>; overload; inline;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelSimpleLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelSimpleLoop<T>; inline;
     procedure Execute(loopBody: TOmniIteratorSimpleSimpleDelegate<T>); overload;
     procedure Execute(loopBody: TOmniIteratorSimpleDelegate<T>); overload;
@@ -1116,6 +1126,7 @@ type
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnStop(stopCode: TProc): IOmniBackgroundWorker; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniBackgroundWorker; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniBackgroundWorker;
     procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil); overload;
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
@@ -1152,6 +1163,7 @@ type
     function  NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
     function  OnStop(stopCode: TProc): IOmniParallelMapper<T1,T2>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelMapper<T1,T2>; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelMapper<T1,T2>;
     function  Result: TArray<T2>;
     function  Source(const data: TArray<T1>; makeCopy: boolean = false): IOmniParallelMapper<T1,T2>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
@@ -1180,6 +1192,7 @@ type
     function  NumTasks(numTasks: integer): IOmniParallelMapper<T1,T2>;
     function  OnStop(stopCode: TProc): IOmniParallelMapper<T1,T2>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelMapper<T1,T2>; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniParallelMapper<T1,T2>;
     function  Result: TArray<T2>;
     function  Source(const data: TArray<T1>; makeCopy: boolean = false): IOmniParallelMapper<T1,T2>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
@@ -1465,6 +1478,7 @@ type
     function  NumTasks(numTasks: integer): IOmniPipeline;
     function  OnStop(stopCode: TProc): IOmniPipeline; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniPipeline; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniPipeline;
     function  Run: IOmniPipeline;
     function  Stage(pipelineStage: TPipelineSimpleStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
     function  Stage(pipelineStage: TPipelineStageDelegate; taskConfig: IOmniTaskConfig = nil): IOmniPipeline; overload;
@@ -1494,8 +1508,8 @@ type
     function  IsExceptional: boolean; inline;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
-    function  OnStop(const stopCode: TProc): IOmniParallelTask; overload;
-    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
+    function  OnStop(const stopCode: TProc): IOmniParallelTask; overload; inline;
+    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload; inline;
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
@@ -1717,6 +1731,7 @@ type
     function  OnRequestDone_Asy(const aTask: TOmniWorkItemDoneDelegate): IOmniBackgroundWorker;
     function  OnStop(stopCode: TProc): IOmniBackgroundWorker; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniBackgroundWorker; overload;
+    function  OnStopInvoke(stopCode: TProc): IOmniBackgroundWorker;
     procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil);
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
@@ -1943,9 +1958,9 @@ begin
           end;
         end,
         Format('Join worker #%d', [iProc + 1])
-      ).SetParameter('NumWorker', iProc)
-       .Unobserved;
+      ).SetParameter('NumWorker', iProc);
     Parallel.ApplyConfig(FTaskConfig, taskControl);
+    taskControl.Unobserved;
     (FJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
     taskControl.Schedule(Parallel.GetPool(FTaskConfig));
   end;
@@ -2916,6 +2931,19 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.OnStop }
 
+function TOmniParallelLoop.OnStopInvoke(stopCode: TProc): IOmniParallelLoop;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelLoop.OnStopInvoke }
+
 function TOmniParallelLoop.OnTaskCreate(
   taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop;
 begin
@@ -3123,13 +3151,12 @@ end; { TOmniParallelLoop.OnMessage<T> }
 
 function TOmniParallelLoop<T>.OnStop(stopCode: TProc): IOmniParallelLoop<T>;
 begin
-  SetOnStop(
+  Result := OnStop(
     procedure (const task: IOmniTask)
     begin
       stopCode();
     end
   );
-  Result := Self;
 end; { TOmniParallelLoop<T>.OnStop }
 
 function TOmniParallelLoop<T>.OnStop(stopCode: TOmniTaskStopDelegate):
@@ -3138,6 +3165,19 @@ begin
   SetOnStop(stopCode);
   Result := Self;
 end; { TOmniParallelLoop }
+
+function TOmniParallelLoop<T>.OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelLoop<T>.OnStopInvoke }
 
 function TOmniParallelLoop<T>.OnTaskCreate(
   taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>;
@@ -3502,6 +3542,19 @@ begin
     end);
 end; { TOmniParallelSimpleLoop.OnStop }
 
+function TOmniParallelSimpleLoop.OnStopInvoke(stopCode: TProc): IOmniParallelSimpleLoop;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelSimpleLoop.OnStopInvoke }
+
 function TOmniParallelSimpleLoop.TaskConfig(
   const config: IOmniTaskConfig): IOmniParallelSimpleLoop;
 begin
@@ -3617,6 +3670,20 @@ begin
   FIterator.OnStop(stopCode);
   Result := Self;
 end; { TOmniParallelSimpleLoop<T>.OnStop }
+
+function TOmniParallelSimpleLoop<T>.OnStopInvoke(stopCode: TProc):
+  IOmniParallelSimpleLoop<T>;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelSimpleLoop }
 
 function TOmniParallelSimpleLoop<T>.TaskConfig(
   const config: IOmniTaskConfig): IOmniParallelSimpleLoop<T>;
@@ -4052,6 +4119,19 @@ begin
   opOnStop := stopCode;
   Result := Self;
 end; { TOmniPipeline.OnStop }
+
+function TOmniPipeline.OnStopInvoke(stopCode: TProc): IOmniPipeline;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniPipeline.OnStopInvoke }
 
 function TOmniPipeline.Run: IOmniPipeline;
 var
@@ -4841,6 +4921,19 @@ begin
   Result := Self;
 end; { TOmniBackgroundWorker.OnStop }
 
+function TOmniBackgroundWorker.OnStopInvoke(stopCode: TProc): IOmniBackgroundWorker;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniBackgroundWorker.OnStopInvoke }
+
 procedure TOmniBackgroundWorker.Schedule(const workItem: IOmniWorkItem;
   const workItemConfig: IOmniWorkItemConfig);
 begin
@@ -5188,6 +5281,20 @@ begin
   FOnStop := stopCode;
   Result := Self;
 end; { TOmniParallelMapper<T1,T2 }
+
+function TOmniParallelMapper<T1, T2>.OnStopInvoke(stopCode: TProc):
+  IOmniParallelMapper<T1,T2>;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelMapper }
 
 function TOmniParallelMapper<T1,T2>.Result: TArray<T2>;
 begin

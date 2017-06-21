@@ -10,7 +10,7 @@
 - New features:
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
-  - Added OnStopInvoke to Parallel.Join and Parallel.ParallelTask.
+  - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
 
 3.07.1: 2017-05-19
 
