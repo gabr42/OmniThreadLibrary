@@ -36,10 +36,16 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-04-06
-///   Version           : 1.49b
+///   Last modification : 2017-06-21
+///   Version           : 1.51
 ///</para><para>
 ///   History:
+///     1.51: 2017-06-21
+///       - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
+///         to Parallel.Join and Parallel.ParallelTask.
+///       - Added OnStopInvoke to Parallel.Join and Parallel.ParallelTask.
+///     1.50: 2017-06-11
+///       - Small tweaks in TOmniTimedTask implementation.
 ///     1.49b: 2017-04-06
 ///       - Compiles with Delphi 10.2 Tokyo.
 ///       - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
@@ -998,7 +1004,9 @@ type
     function  IsExceptional: boolean;
     function  NoWait: IOmniParallelJoin;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
-    function  OnStop(const stopCode: TProc): IOmniParallelJoin;
+    function  OnStop(const stopCode: TProc): IOmniParallelJoin; overload;
+    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelJoin; overload;
+    function  OnStopInvoke(const stopCode: TProc): IOmniParallelJoin;
     function  Task(const task: TProc): IOmniParallelJoin; overload;
     function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
@@ -1014,13 +1022,13 @@ type
     FJoinStates            : array of IOmniJoinState;
     FNoWait                : boolean;
     FNumTasks              : integer;
-    FOnStop                : TProc;
+    FOnStop                : TOmniTaskStopDelegate;
     FTaskConfig            : IOmniTaskConfig;
     FTaskException         : Exception;
     FTaskExceptionLock     : TOmniCS;
     FTasks                 : TList<TOmniJoinDelegate>;
   strict protected
-    procedure DoOnStop;
+    procedure DoOnStop(const task: IOmniTask);
     function  InternalWaitFor(timeout_ms: cardinal): boolean;
   public
     constructor Create;
@@ -1033,7 +1041,9 @@ type
     function  IsExceptional: boolean;
     function  NoWait: IOmniParallelJoin;
     function  NumTasks(numTasks: integer): IOmniParallelJoin;
-    function  OnStop(const stopCode: TProc): IOmniParallelJoin;
+    function  OnStop(const stopCode: TProc): IOmniParallelJoin; overload;
+    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelJoin; overload;
+    function  OnStopInvoke(const stopCode: TProc): IOmniParallelJoin;
     function  Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  Task(const aTask: TProc): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
@@ -1050,7 +1060,9 @@ type
     function  IsExceptional: boolean;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
-    function  OnStop(const stopCode: TProc): IOmniParallelTask;
+    function  OnStop(const stopCode: TProc): IOmniParallelTask; overload;
+    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
+    function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
@@ -1337,6 +1349,7 @@ uses
   DSiWin32,
   {$ENDIF MSWINDOWS}
   Classes,
+  GpStuff,
   OtlComm,
   OtlContainerObserver;
 
@@ -1481,7 +1494,9 @@ type
     function  IsExceptional: boolean; inline;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
-    function  OnStop(const stopCode: TProc): IOmniParallelTask;
+    function  OnStop(const stopCode: TProc): IOmniParallelTask; overload;
+    function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
+    function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
@@ -1541,11 +1556,13 @@ type
   public const
     MsgSetTask    = 1;
     MsgExecuteNow = 2;
+    MsgApplyTimer = 3;
   strict private
     FTask: TOmniTaskDelegate;
   strict protected
     procedure DoExecute;
   public
+    procedure ApplyTimer(var msg: TOmniMessage); message MsgApplyTimer;
     procedure ExecuteNow(var msg: TOmniMessage); message MsgExecuteNow;
     procedure SetTask(var msg: TOmniMessage); message MsgSetTask;
   published
@@ -1868,10 +1885,10 @@ begin
   FTaskException := nil;
 end; { TOmniParallelJoin.DetachException }
 
-procedure TOmniParallelJoin.DoOnStop;
+procedure TOmniParallelJoin.DoOnStop(const task: IOmniTask);
 begin
   if assigned(FOnStop) then
-    FOnStop();
+    FOnStop(task);
 end; { TOmniParallelJoin.DoOnStop }
 
 function TOmniParallelJoin.Execute: IOmniParallelJoin;
@@ -1920,20 +1937,21 @@ begin
           finally
             if FCountStopped.Allocate = 1 then begin
               if FNoWait then
-                DoOnStop;
+                DoOnStop(task);
               FCountStopped.Allocate;
             end;
           end;
         end,
         Format('Join worker #%d', [iProc + 1])
-      ).SetParameter('NumWorker', iProc);
+      ).SetParameter('NumWorker', iProc)
+       .Unobserved;
     Parallel.ApplyConfig(FTaskConfig, taskControl);
     (FJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
     taskControl.Schedule(Parallel.GetPool(FTaskConfig));
   end;
   if not FNoWait then begin
     WaitFor(INFINITE);
-    DoOnStop;
+    DoOnStop(nil);
   end
   else
     Result := Self;
@@ -1982,9 +2000,32 @@ end; { TOmniParallelJoin.NumTasks }
 
 function TOmniParallelJoin.OnStop(const stopCode: TProc): IOmniParallelJoin;
 begin
-  FOnStop := stopCode;
-  Result := Self;
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      stopCode();
+    end);
 end; { TOmniParallelJoin.OnStop }
+
+function TOmniParallelJoin.OnStop(const stopCode: TOmniTaskStopDelegate):
+  IOmniParallelJoin;
+begin
+   FOnStop := stopCode;
+   Result := Self;
+end; { TOmniParallelJoin.OnStop }
+
+function TOmniParallelJoin.OnStopInvoke(const stopCode: TProc): IOmniParallelJoin;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelJoin.OnStopInvoke }
 
 function TOmniParallelJoin.Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin;
 begin
@@ -4441,6 +4482,26 @@ begin
   Result := Self;
 end; { TOmniParallelTask.OnStop }
 
+function TOmniParallelTask.OnStop(const stopCode: TOmniTaskStopDelegate):
+  IOmniParallelTask;
+begin
+  optJoin.OnStop(stopCode);
+  Result := Self;
+end; { TOmniParallelTask.OnStop }
+
+function TOmniParallelTask.OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
+begin
+  Result := OnStop(
+    procedure (const task: IOmniTask)
+    begin
+      task.Invoke(
+        procedure
+        begin
+          stopCode();
+        end);
+    end);
+end; { TOmniParallelTask.OnStopInvoke }
+
 function TOmniParallelTask.TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
 begin
   optJoin.TaskConfig(config);
@@ -5167,6 +5228,17 @@ end; { TOmniParallelMapper<T1,T2> }
 
 { TOmniTimedTaskWorker }
 
+procedure TOmniTimedTaskWorker.ApplyTimer(var msg: TOmniMessage);
+var
+  interval: integer;
+begin
+  interval := msg.MsgData;
+  if interval > 0 then
+    Task.SetTimer(1, Interval, @TOmniTimedTaskWorker.TaskInterval)
+  else
+    Task.ClearTimer(1);
+end; { TOmniTimedTaskWorker.ApplyTimer }
+
 procedure TOmniTimedTaskWorker.DoExecute;
 begin
   if assigned(FTask) then
@@ -5205,10 +5277,7 @@ end; { TOmniTimedTask.Destroy }
 
 procedure TOmniTimedTask.ApplyTimer;
 begin
-  if FActive and (Interval >= 0) then
-    FWorker.SetTimer(1, Interval, @TOmniTimedTaskWorker.TaskInterval)
-  else
-    FWorker.ClearTimer(1);
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgApplyTimer, IFF(FActive and (Interval > 0), Interval, 0));
 end; { TOmniTimedTask.ApplyTimer }
 
 function TOmniTimedTask.Every(interval_ms: integer): IOmniTimedTask;
@@ -5232,8 +5301,8 @@ end; { TOmniTimedTask.Execute }
 
 procedure TOmniTimedTask.ExecuteNow;
 begin
-  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgExecuteNow);
   ApplyTimer;
+  FWorker.Comm.Send(TOmniTimedTaskWorker.MsgExecuteNow);
 end; { TOmniTimedTask.ExecuteNow }
 
 function TOmniTimedTask.GetActive: boolean;

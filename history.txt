@@ -7,6 +7,10 @@
     Old behaviour (no CancellationToken.Signal before Terminate) can be achieved by
     calling overloaded version of the functions accepting the `signalCancellationToken`
     parameter or by setting IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
+- New features:
+  - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
+    to Parallel.Join and Parallel.ParallelTask.
+  - Added OnStopInvoke to Parallel.Join and Parallel.ParallelTask.
 
 3.07.1: 2017-05-19
 
