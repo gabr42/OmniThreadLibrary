@@ -3778,6 +3778,7 @@ procedure TOmniFuture<T>.Execute(action: TOmniTaskDelegate; taskConfig: IOmniTas
 begin
   FTask := CreateTask(action, 'TOmniFuture action');
   Parallel.ApplyConfig(taskConfig, FTask);
+  FTask.Unobserved;
   if assigned(FTask.CancellationToken) and FTask.CancellationToken.IsSignalled then begin
     FCancelled := true;
     FreeAndNil(FTask);
