@@ -13,6 +13,9 @@
   - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
 - Bug fixes:
   - Parallel.Future did not create task with the .Unobserved qualifier.
+- New demos:
+  - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads
+    and from TThread threads.
 
 3.07.1: 2017-05-19
 
