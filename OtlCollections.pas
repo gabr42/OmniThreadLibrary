@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015 Primoz Gabrijelcic
+///Copyright (c) 2017 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -39,9 +39,11 @@
 ///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.10: 2017-06-25
+///       - Defined IOmniBlockingCollection.Count.
 ///     1.09: 2016-11-18
 ///       - Implemented IOmniBlockingCollection.IsEmpty.
-///       - Implemented IOmniBlockingCollection.Count.
+///       - Implemented TOmniBlockingCollection.Count.
 ///     1.08: 2015-10-04
 ///       - Imported mobile support by [Sean].
 ///     1.07a: 2015-02-04
@@ -129,6 +131,7 @@ type
   ///	</summary>
   {$ENDREGION}
   IOmniBlockingCollection = interface ['{208EFA15-1F8F-4885-A509-B00191145D38}']
+    function  GetApproxCount: integer;
     function  GetContainerSubject: TOmniContainerSubject;
     //
     procedure Add(const value: TOmniValue);
@@ -156,6 +159,7 @@ type
     function  TryAdd(const value: TOmniValue): boolean;
     function  TryTake(var value: TOmniValue; timeout_ms: cardinal = 0): boolean;
     property ContainerSubject: TOmniContainerSubject read GetContainerSubject;
+    property Count: integer read GetApproxCount;
   end; { IOmniBlockingCollection }
 
   TOmniBlockingCollection = class(TInterfacedObject,

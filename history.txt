@@ -15,6 +15,9 @@
     bypass thread pool entirely and run in 'non-pooled' threads.
 - Bug fixes:
   - Parallel.Future did not create task with the .Unobserved qualifier.
+- New demos:
+  - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads
+    and from TThread threads.
 
 3.07.1: 2017-05-19
 
@@ -32,7 +35,7 @@
 - New features:
   - Added function IOmniPipeline.NoThrottle which disables throttling 
     on an entire pipeline or one of its stages.
-  - Added function IOmniBlockingCollection.IsFinalized.
+  - Added function IOmniBlockingCollection.IsEmpty.
   - Added function IOmniBlockingCollection.Count.
   - Added readonly property IOmniThreadPool.NumCores which returns 
     number of cores this pool uses for running tasks. Changing Affinity, 
