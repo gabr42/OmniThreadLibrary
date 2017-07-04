@@ -1,6 +1,6 @@
 3.07.2: <<unreleased>>
 
-- Breaking change:
+- Potentially breaking change:
   - Cancel(taskID) will signal task's cancellation token before calling task's Terminate
     method. CancelAll will signal cancellation token for all running tasks before calling
     their Terminate method.
@@ -11,6 +11,8 @@
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
   - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
+  - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
+    bypass thread pool entirely and run in 'non-pooled' threads.
 - Bug fixes:
   - Parallel.Future did not create task with the .Unobserved qualifier.
 

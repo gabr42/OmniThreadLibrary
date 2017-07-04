@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-06-21
-///   Version           : 1.51
+///   Last modification : 2017-07-04
+///   Version           : 1.52
 ///</para><para>
 ///   History:
+///     1.52: 2017-07-04
+///       - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
+///         bypass thread pool entirely and run in 'non-pooled' threads.
 ///     1.51: 2017-06-21
 ///       - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
 ///         to Parallel.Join and Parallel.ParallelTask.
@@ -366,6 +369,7 @@ type
     procedure Apply(const task: IOmniTaskControl);
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig;
+    function  NoThreadPool: IOmniTaskConfig;
     function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload;
@@ -1334,9 +1338,9 @@ type
     class procedure ApplyConfig(const taskConfig: IOmniTaskConfig; const task: IOmniTaskControl);
     /// <summary>Creates an anonymous method which calls CompleteAdding on a queue.</summary>
     class function CompleteQueue(const queue: IOmniBlockingCollection): TProc;
-    /// <summary>Returns the thread pool specified in the taskConfig parameter or
-    ///   a global parallel pool if taskConfig is nil or it doesn't specify a pool.</summary>
-    class function GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
+    /// <summary>Starts a worker task according to a specified configuration.</summary>
+    class procedure Start(const taskControl: IOmniTaskControl; const taskConfig:
+      IOmniTaskConfig);
   end; { Parallel }
 
   IOmniAwait = interface
@@ -1526,12 +1530,14 @@ type
   IOmniTaskConfigInternal = interface ['{8678C3A4-7825-4E7C-8FEF-4DD6CD3D3E29}']
     procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
     function  GetThreadPool: IOmniThreadPool;
+    function  RunDirectly: boolean;
   end; { IOmniTaskConfigInternal }
 
   TOmniTaskConfig = class(TInterfacedObject, IOmniTaskConfig, IOmniTaskConfigInternal)
   strict private
     otcCancelWithToken         : IOmniCancellationToken;
     otcMonitorWithMonitor      : IOmniTaskControlMonitor;
+    otcNoThreadPool            : boolean;
     otcOnMessageEventDispatcher: TObject;
     otcOnMessageEventHandler   : TOmniTaskMessageEvent;
     otcOnMessageList           : TGpIntegerObjectList;
@@ -1549,6 +1555,7 @@ type
     procedure Apply(const task: IOmniTaskControl);
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskConfig; inline;
     function  MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskConfig; inline;
+    function  NoThreadPool: IOmniTaskConfig;
     function  OnMessage(eventDispatcher: TObject): IOmniTaskConfig; overload; inline;
     function  OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
     function  OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig; overload; inline;
@@ -1564,6 +1571,7 @@ type
   public //IOmniTaskConfigInternal
     procedure DetachTerminated(var terminated: TOmniTaskConfigTerminated);
     function  GetThreadPool: IOmniThreadPool; inline;
+    function  RunDirectly: boolean; inline;
   end; { TOmniTaskConfig }
 
   TOmniTimedTaskWorker = class(TOmniWorker)
@@ -1962,7 +1970,7 @@ begin
     Parallel.ApplyConfig(FTaskConfig, taskControl);
     taskControl.Unobserved;
     (FJoinStates[iProc] as IOmniJoinStateEx).TaskControl := taskControl;
-    taskControl.Schedule(Parallel.GetPool(FTaskConfig));
+    Parallel.Start(taskControl, FTaskConfig);
   end;
   if not FNoWait then begin
     WaitFor(INFINITE);
@@ -2110,7 +2118,7 @@ begin
   );
   Parallel.ApplyConfig(taskConfig, omniTask);
   omniTask.Unobserved;
-  omniTask.Schedule(GetPool(taskConfig));
+  Parallel.Start(omniTask, taskConfig);
 end; { Parallel.Async }
 
 class function Parallel.BackgroundWorker: IOmniBackgroundWorker;
@@ -2268,15 +2276,6 @@ begin
   Result := TOmniFuture<T>.CreateEx(action, taskConfig);
 end; { Parallel.Future<T> }
 
-class function Parallel.GetPool(const taskConfig: IOmniTaskConfig): IOmniThreadPool;
-begin
-  Result := nil;
-  if assigned(taskConfig) then
-    Result := (taskConfig as IOmniTaskConfigInternal).GetThreadPool;
-  if not assigned(Result) then
-    Result := GlobalParallelPool;
-end; { Parallel.GetPool }
-
 class function Parallel.Join(const task1, task2: TProc): IOmniParallelJoin;
 begin
   Result := TOmniParallelJoin.Create.Task(task1).Task(task2);
@@ -2357,6 +2356,22 @@ begin
     Result.From(input);
   Result.Stages(stages);
 end; { Parallel.Pipeline }
+
+class procedure Parallel.Start(const taskControl: IOmniTaskControl; const taskConfig:
+  IOmniTaskConfig);
+var
+  taskCfg: IOmniTaskConfigInternal;
+begin
+  if not assigned(taskConfig) then
+    taskControl.Schedule(GlobalParallelPool)
+  else begin
+    taskCfg := (taskConfig as IOmniTaskConfigInternal);
+    if taskCfg.RunDirectly then
+      taskControl.Run
+    else
+      taskControl.Schedule(taskCfg.GetThreadPool);
+  end;
+end; { Parallel.Start }
 
 class function Parallel.TaskConfig: IOmniTaskConfig;
 begin
@@ -2682,7 +2697,7 @@ begin
       task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
     if assigned(FOnTaskControlCreate) then
       FOnTaskControlCreate(task);
-    task.Schedule(Parallel.GetPool(FTaskConfig));
+    Parallel.Start(task, FTaskConfig);
   end;
   if not (ploNoWait in Options) then begin
     {$IFDEF MSWINDOWS}
@@ -3493,7 +3508,7 @@ begin
     task.Unobserved;
     for kv in FOnMessageList.WalkKV do
       task.OnMessage(kv.Key, TOmniMessageExec.Clone(TOmniMessageExec(kv.Value)));
-    task.Schedule(Parallel.GetPool(FTaskConfig));
+    Parallel.Start(task, FTaskConfig);
   end;
   if not FNoWait then begin
     if numTasks = 0 then
@@ -3784,7 +3799,7 @@ begin
     FreeAndNil(FTask);
   end
   else
-    FTask.Schedule(Parallel.GetPool(taskConfig));
+    Parallel.Start(FTask, taskConfig);
 end; { TOmniFuture<T>.Execute }
 
 function TOmniFuture<T>.FatalException: Exception;
@@ -4212,7 +4227,7 @@ begin
         .SetParameter('ShutDownComplete', opShutDownComplete);
       Parallel.ApplyConfig((opStages[iStage] as IOmniPipelineStageEx).TaskConfig, task);
       task.Unobserved;
-      task.Schedule(Parallel.GetPool((opStages[iStage] as IOmniPipelineStageEx).TaskConfig));
+      Parallel.Start(task, (opStages[iStage] as IOmniPipelineStageEx).TaskConfig);
     end; //for iTask
   end; //for iStage
   opOutput.ReraiseExceptions(not opHandleExceptions);
@@ -5056,6 +5071,13 @@ begin
   Result := Self;
 end; { TOmniTaskConfig.MonitorWith }
 
+function TOmniTaskConfig.NoThreadPool: IOmniTaskConfig;
+begin
+  otcNoThreadPool := true;
+  otcThreadPool := nil;
+  Result := Self;
+end; { TOmniTaskConfig.NoThreadPool }
+
 function TOmniTaskConfig.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskConfig;
 begin
   otcOnMessageEventHandler := eventHandler;
@@ -5097,6 +5119,11 @@ begin
   Result := Self;
 end; { TOmniTaskConfig.OnTerminated }
 
+function TOmniTaskConfig.RunDirectly: boolean;
+begin
+  Result := otcNoThreadPool;
+end; { TOmniTaskConfig.RunDirectly }
+
 function TOmniTaskConfig.SetPriority(threadPriority: TOTLThreadPriority): IOmniTaskConfig;
 begin
   otcPriority := threadPriority;
@@ -5106,6 +5133,7 @@ end; { TOmniTaskConfig.SetPriority }
 function TOmniTaskConfig.ThreadPool(const threadPool: IOmniThreadPool): IOmniTaskConfig;
 begin
   otcThreadPool := threadPool;
+  otcNoThreadPool := false;
   Result := Self;
 end; { TOmniTaskConfig.ThreadPool }
 
