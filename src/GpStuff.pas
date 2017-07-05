@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2017-02-23
-   Version           : 1.64
+   Last modification : 2017-05-18
+   Version           : 1.65
 </pre>*)(*
    History:
+     1.65: 2017-05-18
+       - Implemented IGpBuffer.GetByteAddr.
      1.64: 2017-02-23
        - Added overloaded AddToList for ansi strings.
      1.63a: 2017-01-28
@@ -359,6 +361,7 @@ type
     function  GetAsAnsiString: AnsiString;
     function  GetAsStream: TStream;
     function  GetAsString: string;
+    function  GetByteAddr(idx: integer): pointer;
     function  GetByteVal(idx: integer): byte;
     function  GetSize: integer;
     function  GetValue: pointer;
@@ -377,6 +380,7 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
+    property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
@@ -389,6 +393,7 @@ type
     function  GetAsAnsiString: AnsiString; inline;
     function  GetAsStream: TStream; inline;
     function  GetAsString: string; inline;
+    function  GetByteAddr(idx: integer): pointer; inline;
     function  GetByteVal(idx: integer): byte; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
@@ -411,6 +416,7 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
+    property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
@@ -438,6 +444,13 @@ function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$
 {$IFDEF Unicode}
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
+
+function  AssignValue(var AssignTo: string; const AssignFrom: string): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var AssignTo: Byte; const AssignFrom: Byte): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var AssignTo: Word; const AssignFrom: Word): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var AssignTo: Longint; const AssignFrom: Longint): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var AssignTo: DWORD; const AssignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var AssignTo: Int64; const AssignFrom: Int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 {$IFDEF GpStuff_Generics}
 type
@@ -602,7 +615,7 @@ function IsInList(const value: string; const values: array of string; caseSensit
 function IndexOfList(const value: string; const values: array of string; caseSensitive: boolean = false): integer;
 
 {$IFDEF GpStuff_TArrayOfT}
-function SplitList(const aList: string; delim: char; const quoteChar: string = '';
+function SplitList(const aList: string; delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
 function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
@@ -805,19 +818,22 @@ end; { AutoExecute }
 {$ENDIF GpStuff_Anonymous}
 
 //copied from GpString unit
-procedure GetDelimiters(const list: string; delim: char; const quoteChar: string;
+procedure GetDelimiters(const list: string; delim: string; const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
-  chk  : boolean;
-  i    : integer;
-  idx  : integer;
-  quote: char;
-  skip : boolean;
+  chk   : boolean;
+  i     : integer;
+  idx   : integer;
+  lDelim: integer;
+  quote : char;
+  skip  : boolean;
 begin
   SetLength(delimiters, Length(list)+2); // leave place for terminators
   idx := 0;
+  lDelim := Length(delim);
+  Assert(lDelim > 0);
   if addTerminators then begin
-    delimiters[idx] := 0;
+    delimiters[idx] := 1 - lDelim;
     Inc(idx);
   end;
   skip := false;
@@ -833,7 +849,9 @@ begin
     if chk and (list[i] = quote) then
       skip := not skip
     else if not skip then begin
-      if list[i] = delim then begin
+      if ((lDelim = 1) and (list[i] = delim))
+         or ((lDelim > 1) and (Copy(list, i, lDelim) = delim)) then
+      begin
         delimiters[idx] := i;
         Inc(idx);
       end;
@@ -998,6 +1016,72 @@ begin
     Result := iffalse;
 end; { IFF }
 {$ENDIF Unicode}
+
+function  AssignValue(var AssignTo: string; const AssignFrom: string): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
+
+function  AssignValue(var AssignTo: Byte; const AssignFrom: Byte): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
+
+function  AssignValue(var AssignTo: Word; const AssignFrom: Word): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
+
+function  AssignValue(var AssignTo: Longint; const AssignFrom: Longint): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
+
+function  AssignValue(var AssignTo: DWORD; const AssignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
+
+function  AssignValue(var AssignTo: Int64; const AssignFrom: Int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+begin
+  if AssignFrom = AssignTo then
+    Result := false
+  else
+  begin
+    Result := true;
+    AssignTo := AssignFrom;
+  end;
+end;
 
 function OffsetPtr(ptr: pointer; offset: integer): pointer;
 begin
@@ -1615,11 +1699,12 @@ end; { EnumList }
 {$ENDIF}
 
 {$IFDEF GpStuff_TArrayOfT}
-function SplitList(const aList: string; delim: char; const quoteChar: string = '';
+function SplitList(const aList: string; delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
 var
   delimiters: TDelimiters;
   iDelim    : integer;
+  lDelim    : integer;
   quote     : char;
 begin
   if aList <> '' then begin
@@ -1629,16 +1714,17 @@ begin
       stripQuotes := false;
       quote := #0; //to keep compiler happy;
     end;
+    lDelim := Length(delim);
     GetDelimiters(aList, delim, quoteChar, true, delimiters);
     SetLength(Result, High(delimiters) - Low(delimiters));
     for iDelim := Low(delimiters) to High(delimiters) - 1 do begin
       if stripQuotes and
-         (aList[delimiters[iDelim  ] + 1] = quote) and
-         (aList[delimiters[iDelim+1] - 1] = quote)
+         (aList[delimiters[iDelim  ] + lDelim] = quote) and
+         (aList[delimiters[iDelim+1] - 1]      = quote)
       then
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 2, delimiters[iDelim+1] - delimiters[iDelim] - 3)
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + lDelim + 1, delimiters[iDelim+1] - delimiters[iDelim] - lDelim - 2)
       else
-        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + 1, delimiters[iDelim+1] - delimiters[iDelim] - 1);
+        Result[iDelim-Low(delimiters)] := Copy(aList, delimiters[iDelim] + lDelim, delimiters[iDelim+1] - delimiters[iDelim] - lDelim);
     end;
   end;
 end; { SplitList }
@@ -2170,10 +2256,15 @@ begin
     Move(Value^, Result[1], Size);
 end; { TGpBuffer.GetAsString }
 
-function TGpBuffer.GetByteVal(idx: integer): byte;
+function TGpBuffer.GetByteAddr(idx: integer): pointer;
 begin
   Assert((idx >= 0) and (idx < Size));
-  Result := PByte(NativeUInt(Value) + NativeUInt(idx))^;
+  Result := pointer(NativeUInt(Value) + NativeUInt(idx));
+end; { TGpBuffer.GetByteAddr }
+
+function TGpBuffer.GetByteVal(idx: integer): byte;
+begin
+  Result := PByte(ByteAddr[idx])^;
 end; { TGpBuffer.GetByteVal }
 
 function TGpBuffer.GetSize: integer;

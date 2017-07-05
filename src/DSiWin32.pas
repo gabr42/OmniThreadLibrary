@@ -8,10 +8,17 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2017-04-06
-   Version           : 1.96
+   Last modification : 2017-06-29
+   Version           : 1.99
 </pre>*)(*
    History:
+     1.99: 2017-06-29
+       - Addded dynamically loaded API DSiWTSQueryUserToken.
+       - Added DSiExecuteInSession which can start interactive process from session 0.
+     1.97: 2017-05-25
+       - Added parameters `parameters`, `directory`, and `wait` to DSiExecuteAsAdmin.
+       - Fixed: various functions declared file handle _not_ as THandle and would fail
+         in Win64 mode.
      1.96: 2017-04-06
        - Added DSiFileExtensionIs overload accepting TArray<string>.
      1.95: 2017-03-28
@@ -1334,8 +1341,9 @@ type
     var exitCode: longword; waitTimeout_sec: integer = 15;
     onNewLine: TDSiOnNewLineCallback = nil;
     creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal;
-  function  DSiExecuteAsAdmin(const path: string; parentWindow: THandle = 0;
-    showWindow: integer = SW_NORMAL): boolean;
+  function  DSiExecuteAsAdmin(const path: string; const parameters: string = '';
+    const directory: string = ''; parentWindow: THandle = 0;
+    showWindow: integer = SW_NORMAL; wait: boolean = false): boolean;
   function  DSiExecuteAsUser(const commandLine, username, password: string;
     var winErrorCode: cardinal; const domain: string = '.';
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
@@ -1345,6 +1353,8 @@ type
     const domain: string = '.'; visibility: integer = SW_SHOWDEFAULT;
     const workDir: string = ''; wait: boolean = false;
     startInfo: PStartupInfo = nil): cardinal; overload;
+  function  DSiExecuteInSession(sessionID: DWORD; const commandLine: string;
+    var processInfo: TProcessInformation; workDir: string = ''): boolean;
   function  DSiGetProcessAffinity: string;
   function  DSiGetProcessAffinityMask: DSiNativeUInt;
   function  DSiGetProcessID(const processName: string; var processID: DWORD): boolean;
@@ -2122,6 +2132,7 @@ type
     ActionData: Pointer): Longint; stdcall;
   function  DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
   function  DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
+  function  DSiWTSQueryUserToken(sessionId: ULONG; var phToken: THandle): BOOL; stdcall;
 
 { Helpers }
 
@@ -2287,6 +2298,7 @@ type
     ActionData: Pointer): Longint; stdcall;
   TWow64DisableWow64FsRedirection = function(var oldStatus: pointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = function(const oldStatus: pointer): BOOL; stdcall;
+  TWTSQueryUserToken = function(sessionId: ULONG; var phToken: THandle): BOOL; stdcall;
 
 const
   G9xNetShareAdd: T9xNetShareAdd = nil;
@@ -2335,6 +2347,7 @@ const
   GWinVerifyTrust: TWinVerifyTrust = nil;
   GWow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection = nil;
   GWow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection = nil;
+  GWTSQueryUserToken: TWTSQueryUserToken = nil;
 
 {$IFOPT R+} {$DEFINE RestoreR} {$ELSE} {$UNDEF RestoreR} {$ENDIF}
 
@@ -3822,7 +3835,7 @@ const
   }
   function DSiFileSize(const fileName: string): int64;
   var
-    fHandle: DWORD;
+    fHandle: THandle;
   begin
     fHandle := CreateFile(PChar(fileName), 0,
       FILE_SHARE_READ OR FILE_SHARE_WRITE OR FILE_SHARE_DELETE, nil, OPEN_EXISTING,
@@ -3863,7 +3876,7 @@ const
   }
   function DSiFileSizeW(const fileName: WideString): int64;
   var
-    fHandle: DWORD;
+    fHandle: THandle;
   begin
     fHandle := CreateFileW(PWideChar(fileName), 0, 0, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if fHandle = INVALID_HANDLE_VALUE then
@@ -3926,7 +3939,7 @@ const
   function  DSiGetFileTimes(const fileName: string; var creationTime, lastAccessTime,
     lastModificationTime: TDateTime): boolean;
   var
-    fileHandle            : cardinal;
+    fileHandle            : THandle;
     fsCreationTime        : TFileTime;
     fsLastAccessTime      : TFileTime;
     fsLastModificationTime: TFileTime;
@@ -4310,7 +4323,7 @@ const
   function  DSiSetFileTimes(const fileName: string; creationTime, lastAccessTime,
     lastModificationTime: TDateTime): boolean;
   var
-    fileHandle            : cardinal;
+    fileHandle            : THandle;
     fsCreationTime        : TFileTime;
     fsLastAccessTime      : TFileTime;
     fsLastModificationTime: TFileTime;
@@ -4745,17 +4758,26 @@ const
     @returns True if application was allowed to start.
     @since   2016-05-18
   }
-  function DSiExecuteAsAdmin(const path: string; parentWindow: THandle; showWindow: integer): boolean;
+  function DSiExecuteAsAdmin(const path, parameters, directory: string;
+    parentWindow: THandle; showWindow: integer; wait: boolean): boolean;
   var
     sei: TShellExecuteInfo;
   begin
     FillChar(sei, SizeOf(sei), 0);
     sei.cbSize := SizeOf(sei);
+    if wait then
+      sei.fMask := SEE_MASK_NOCLOSEPROCESS;
     sei.lpVerb := 'runas';
     sei.lpFile := PChar(path);
+    sei.lpParameters := PChar(parameters);
+    sei.lpDirectory := PChar(directory);
     sei.Wnd := parentWindow;
     sei.nShow := showWindow;
     Result := ShellExecuteEx(@sei);
+    if Result and wait and (sei.hProcess <> 0) then begin
+      WaitForSingleObject(sei.hProcess, INFINITE);
+      CloseHandle(sei.hProcess);
+    end;
   end; { DSiExecuteAsAdmin }
 
   {:Simplified DSiExecuteAsUser.
@@ -4965,6 +4987,47 @@ const
       end;
     finally winErrorCode := GetLastError; end;
   end; { DSiExecuteAsUser }
+
+  {:Executes a process in a different session. Useful for starting interactive
+    process from a service.
+    @author  gabr
+    @returns Returns MaxInt if any Win32 API fails or process exit code if wait is
+             specified or 0 in other cases.
+  }
+  function  DSiExecuteInSession(sessionID: DWORD; const commandLine: string;
+    var processInfo: TProcessInformation; workDir: string): boolean;
+  var
+    cmdLine : WideString;
+    hToken  : THandle;
+    pEnv    : pointer;
+    pWorkDir: PChar;
+    si      : TStartupInfo;
+  begin
+    Result := false;
+    if not DSiWTSQueryUserToken(sessionId, hToken) then
+      Exit;
+
+    FillChar(si, SizeOf(si), 0);
+    si.cb := SizeOf(TStartupInfo);
+    si.lpDesktop := 'winsta0\default';
+
+    FillChar(processInfo, SizeOf(processInfo), 0);
+
+    pEnv := nil;
+    if not DSiCreateEnvironmentBlock(pEnv, hToken, false) then
+      Exit;
+
+    cmdLine := commandLine;
+    if workDir = '' then
+      pWorkDir := nil
+    else
+      pWorkDir := @workDir[1];
+    Result := CreateProcessAsUser(hToken, pWorkDir, PChar(cmdLine), nil, nil, false,
+                NORMAL_PRIORITY_CLASS OR CREATE_UNICODE_ENVIRONMENT,
+                pEnv, nil, si, processInfo);
+
+    DSiDestroyEnvironmentBlock(pEnv);
+  end; { DSiExecuteInSession }
 
   {:Executes console process in a hidden window and captures its output in a TStrings
     object.
@@ -9163,8 +9226,10 @@ var
       GSetDllDirectory := DSiGetProcAddress('kernel32.dll', 'SetDllDirectory' + CAPISuffix);
     if assigned(GSetDllDirectory) then
       Result := GSetDllDirectory(path)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
+    end;
   end; { DSiSetDllDirectory }
 
   function DSiSetSuspendState(hibernate, forceCritical, disableWakeEvent: BOOL): BOOL; stdcall;
@@ -9173,8 +9238,10 @@ var
       GSetSuspendState := DSiGetProcAddress('PowrProf.dll', 'SetSuspendState');
     if assigned(GSetSuspendState) then
       Result := GSetSuspendState(hibernate, forceCritical, disableWakeEvent)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
+    end;
   end; { DSiSetSuspendState }
 
   function DSiSetThreadGroupAffinity(hThread: THandle; const GroupAffinity: TGroupAffinity;
@@ -9184,8 +9251,10 @@ var
       GSetThreadGroupAffinity := DSiGetProcAddress('kernel32.dll', 'SetThreadGroupAffinity');
     if assigned(GSetThreadGroupAffinity) then
       Result := GSetThreadGroupAffinity(hThread, GroupAffinity, PreviousGroupAffinity)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
+    end;
   end; { DSiSetThreadGroupAffinity }
 
   function DSiSHEmptyRecycleBin(Wnd: HWND; pszRootPath: PChar;
@@ -9195,8 +9264,10 @@ var
       GSHEmptyRecycleBin := DSiGetProcAddress('shell32.dll', 'SHEmptyRecycleBin' + CAPISuffix);
     if assigned(GSHEmptyRecycleBin) then
       Result := GSHEmptyRecycleBin(Wnd, pszRootPath, dwFlags)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := S_FALSE;
+    end;
   end; { DSiSHEmptyRecycleBin }
 
   function DSiWinVerifyTrust(hwnd: HWND; const ActionID: TGUID;
@@ -9206,8 +9277,10 @@ var
       GWinVerifyTrust := DSiGetProcAddress('wintrust.dll', 'WinVerifyTrust');
     if assigned(GWinVerifyTrust) then
       Result := GWinVerifyTrust(hwnd, ActionID, ActionData)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := TRUST_E_ACTION_UNKNOWN;
+    end;
   end; { DSiWinVerifyTrust }
 
   function DSiWow64DisableWow64FsRedirection(var oldStatus: pointer): BOOL; stdcall;
@@ -9216,8 +9289,10 @@ var
       GWow64DisableWow64FsRedirection := DSiGetProcAddress('kernel32.dll', 'Wow64DisableWow64FsRedirection');
     if assigned(GWow64DisableWow64FsRedirection) then
       Result := GWow64DisableWow64FsRedirection(oldStatus)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
+    end;
   end; { DSiWow64DisableWow64FsRedirection }
 
   function DSiWow64RevertWow64FsRedirection(const oldStatus: pointer): BOOL; stdcall;
@@ -9226,9 +9301,23 @@ var
       GWow64RevertWow64FsRedirection := DSiGetProcAddress('kernel32.dll', 'Wow64RevertWow64FsRedirection');
     if assigned(GWow64RevertWow64FsRedirection) then
       Result := GWow64RevertWow64FsRedirection(oldStatus)
-    else
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
       Result := false;
+    end;
   end; { DSiWow64RevertWow64FsRedirection }
+
+  function DSiWTSQueryUserToken(sessionId: ULONG; var phToken: THandle): BOOL; stdcall;
+  begin
+    if not assigned(GWTSQueryUserToken) then
+      GWTSQueryUserToken := DSiGetProcAddress('wtsapi32.dll', 'WTSQueryUserToken');
+    if assigned(GWTSQueryUserToken) then
+      Result := GWTSQueryUserToken(sessionId, phToken)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiWTSQueryUserToken }
 
 { TRestoreLastError }
 
