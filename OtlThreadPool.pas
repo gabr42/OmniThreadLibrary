@@ -1067,7 +1067,8 @@ procedure TOTPWorker.CancelAll(const params: TOmniValue);
 var
   waitParam: TOmniValue;
 begin
-  InternalStop(params[0].AsBoolean);
+  waitParam := params[0]; //this 2-step approach prevents internal error in D2007 compilation
+  InternalStop(waitParam.AsBoolean);
   waitParam := params[1];
   (waitParam.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.CancelAll }
