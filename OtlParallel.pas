@@ -3174,8 +3174,7 @@ begin
   );
 end; { TOmniParallelLoop<T>.OnStop }
 
-function TOmniParallelLoop<T>.OnStop(stopCode: TOmniTaskStopDelegate):
-  IOmniParallelLoop<T>;
+function TOmniParallelLoop<T>.OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop<T>;
 begin
   SetOnStop(stopCode);
   Result := Self;
@@ -3183,6 +3182,7 @@ end; { TOmniParallelLoop }
 
 function TOmniParallelLoop<T>.OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
 begin
+  {$IFDEF OTL_GoodGenerics}
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
@@ -3192,6 +3192,9 @@ begin
           stopCode();
         end);
     end);
+  {$ELSE}
+    raise Exception.Create('TOmniParallelLoop<T>.OnStopInvoke is not implemented in D2009 and D2010 due to compiler limitations');
+  {$ENDIF}
 end; { TOmniParallelLoop<T>.OnStopInvoke }
 
 function TOmniParallelLoop<T>.OnTaskCreate(

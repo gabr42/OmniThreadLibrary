@@ -1,7 +1,7 @@
 program app_66_threadsInThreads;
 
 uses
-  Vcl.Forms,
+  Forms,
   test_66_threadsInThreads in 'test_66_threadsInThreads.pas' {frmThreadInThreads};
 
 {$R *.res}
