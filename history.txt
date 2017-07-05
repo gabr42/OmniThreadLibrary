@@ -11,8 +11,8 @@
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
   - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
-    - TOmniParallelLoop<T>.OnStopInvoke is not available pre-XE6 compilers due to compiler
-      limitations.
+    - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> are only
+      available on XE7 and newer compilers.
   - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
     bypass thread pool entirely and run in 'non-pooled' threads.
 - Bug fixes:

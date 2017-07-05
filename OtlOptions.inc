@@ -103,7 +103,7 @@
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
-{$IF CompilerVersion >= 27} //DX6
+{$IF CompilerVersion >= 28} //DX7
   {$DEFINE OTL_FixedGenericIncompletelyDefined}
 {$IFEND}
 
