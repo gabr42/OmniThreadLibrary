@@ -15,7 +15,10 @@
       available on XE7 and newer compilers.
   - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
     bypass thread pool entirely and run in 'non-pooled' threads.
-- Bug fixes:
+  - TOmniCS.Initialize uses global lock to synchronize initialization instead of
+    a CAS operation. This fixes all reasons for the infamous error
+    "TOmniCS.Initialize: XXX is not properly aligned!".
+ - Bug fixes:
   - Parallel.Future did not create task with the .Unobserved qualifier.
 - New demos:
   - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads

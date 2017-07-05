@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin
 ///   Creation date     : 2009-03-30
-///   Last modification : 2016-10-24
-///   Version           : 1.23
+///   Last modification : 2017-06-14
+///   Version           : 1.24
 ///</para><para>
 ///   History:
+///     1.24: 2017-06-14
+///       - TOmniCS.Initialize uses global lock to synchronize initialization instead of
+///         a CAS operation. This fixes all reasons for the infamous error
+///         "TOmniCS.Initialize: XXX is not properly aligned!".
 ///     1.23: 2016-10-24
 ///       - Implemented two-parameter version of Atomic initializer which intializes
 ///         an interface type from a class type.
@@ -798,6 +802,9 @@ type
   {$ENDIF ~MSWINDOWS}
   {$ENDIF OTL_MobileSupport}
 
+var
+  GOmniCSInitializer: TOmniCriticalSection;
+
 { transitional }
 
 function SetEvent(event: TOmniTransitionEvent): boolean;
@@ -1105,19 +1112,13 @@ begin
 end; { TOmniCS.GetSyncObj }
 
 procedure TOmniCS.Initialize;
-var
-  syncIntf: IOmniCriticalSection;
 begin
-  Assert(NativeUInt(@ocsSync) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: ocsSync is not properly aligned!');
-  Assert(NativeUInt(@syncIntf) mod SizeOf(pointer) = 0, 'TOmniCS.Initialize: syncIntf is not properly aligned!');
   if not assigned(ocsSync) then begin
-    syncIntf := CreateOmniCriticalSection;
-    {$IFDEF MSWINDOWS}
-    if CAS(nil, pointer(syncIntf), ocsSync) then
-    {$ELSE}
-    if TInterlocked.CompareExchange(pointer(ocsSync), pointer(syncIntf), nil) = nil then
-    {$ENDIF}
-      pointer(syncIntf) := nil;
+    GOmniCSInitializer.Acquire;
+    try
+      if not assigned(ocsSync) then
+        ocsSync := CreateOmniCriticalSection;
+    finally GOmniCSInitializer.Release; end;
   end;
 end; { TOmniCS.Initialize }
 
@@ -2621,9 +2622,12 @@ end; { TInterlockedEx.Increment }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
+  GOmniCSInitializer := TOmniCriticalSection.Create;
   {$IFDEF CPUX64}
   CASAlignment := 16;
   {$ELSE}
   CASAlignment := 8;
   {$ENDIF CPUX64}
+finalization
+  FreeAndNil(GOmniCSInitializer);
 end.
