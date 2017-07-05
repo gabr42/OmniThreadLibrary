@@ -11,7 +11,7 @@
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
   - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
-    - TOmniParallelLoop<T>.OnStopInvoke is not available on D2009 and D2010 due to compiler
+    - TOmniParallelLoop<T>.OnStopInvoke is not available pre-XE6 compilers due to compiler
       limitations.
   - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
     bypass thread pool entirely and run in 'non-pooled' threads.

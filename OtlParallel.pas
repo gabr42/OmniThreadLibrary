@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-07-04
-///   Version           : 1.52
+///   Last modification : 2017-07-05
+///   Version           : 1.52a
 ///</para><para>
 ///   History:
+///     1.52a: 2017-07-05
+///       - IOmniParallelLoop<T>.OnStopInvoke is removed for pre-XE6 compilers because
+///         of compiler bugs.
 ///     1.52: 2017-07-04
 ///       - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
 ///         bypass thread pool entirely and run in 'non-pooled' threads.
@@ -484,7 +487,9 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop<T>; overload;
+    {$IFDEF OTL_FixedGenericIncompletelyDefined}
     function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
+    {$ENDIF OTL_FixedGenericIncompletelyDefined}
     function  PreserveOrder: IOmniParallelLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { IOmniParallelLoop<T> }
@@ -874,7 +879,9 @@ type
     function  OnTaskCreate(taskCreateDelegate: TOmniTaskControlCreateDelegate): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TProc): IOmniParallelLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelLoop<T>; overload;
+  {$IFDEF OTL_FixedGenericIncompletelyDefined}
     function  OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
+  {$ENDIF OTL_FixedGenericIncompletelyDefined}
     function  PreserveOrder: IOmniParallelLoop<T>;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelLoop<T>;
   end; { TOmniParallelLoop<T> }
@@ -3180,9 +3187,9 @@ begin
   Result := Self;
 end; { TOmniParallelLoop }
 
+{$IFDEF OTL_FixedGenericIncompletelyDefined}
 function TOmniParallelLoop<T>.OnStopInvoke(stopCode: TProc): IOmniParallelLoop<T>;
 begin
-  {$IFDEF OTL_GoodGenerics}
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
@@ -3192,10 +3199,8 @@ begin
           stopCode();
         end);
     end);
-  {$ELSE}
-    raise Exception.Create('TOmniParallelLoop<T>.OnStopInvoke is not implemented in D2009 and D2010 due to compiler limitations');
-  {$ENDIF}
 end; { TOmniParallelLoop<T>.OnStopInvoke }
+{$ENDIF OTL_FixedGenericIncompletelyDefined}
 
 function TOmniParallelLoop<T>.OnTaskCreate(
   taskCreateDelegate: TOmniTaskCreateDelegate): IOmniParallelLoop<T>;
