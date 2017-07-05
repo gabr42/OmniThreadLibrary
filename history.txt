@@ -1,4 +1,4 @@
-3.07.2: <<unreleased>>
+3.07.2: 2017-07-05
 
 - Potentially breaking change:
   - Cancel(taskID) will signal task's cancellation token before calling task's Terminate

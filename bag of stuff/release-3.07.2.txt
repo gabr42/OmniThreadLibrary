@@ -1,7 +1,7 @@
-OmniThreadLibrary 3.07.1 has just been released. It is available via
-SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.1)
+OmniThreadLibrary 3.07.2 has just been released. It is available via
+SVN (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.2)
 or as a ZIP archive
-(https://drive.google.com/file/d/0BwqVlLNTK4OxdFFIeS1pMVVQeU0/view?usp=sharing).
+(https://drive.google.com/file/d/0BwqVlLNTK4OxM2d1ckpzMlp2YW8/view?usp=sharing).
 
 What is OmniThreadLibrary?
 ==========================
@@ -42,19 +42,29 @@ Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.07
+Changes since version 3.07.1
 ============================
 
+- Potentially breaking change:
+  - Cancel(taskID) will signal task's cancellation token before calling task's Terminate
+    method. CancelAll will signal cancellation token for all running tasks before calling
+    their Terminate method.
+    Old behaviour (no CancellationToken.Signal before Terminate) can be achieved by
+    calling overloaded version of the functions accepting the `signalCancellationToken`
+    parameter or by setting IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
 - New features:
-  - Added support for Delphi 10.2 Tokyo.
-    
+  - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
+    to Parallel.Join and Parallel.ParallelTask.
+  - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
+    - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> are only
+      available on XE7 and newer compilers.
+  - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
+    bypass thread pool entirely and run in 'non-pooled' threads.
 - Bug fixes:
-  - Fixed long standing problem with timer processing in OtlTaskControl
-    which could cause timers not to be triggered correctly and sometimes
-    resulted in range check error.
-  - Fixed potential problem in TOTPWorker.Cancel.
-  - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 
-    60.000 seconds instead of 60 seconds.
+  - Parallel.Future did not create task with the .Unobserved qualifier.
+- New demos:
+  - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads
+    and from TThread threads.
 
 --
 Primoz
