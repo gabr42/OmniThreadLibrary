@@ -40,6 +40,9 @@
     set c=1
   )
 
+  for %%a in (*.%1.test) do (
+    set c=1
+  )
   if %c%.==1. (
     for %%b in (*.dpr) do (
       if %%~xb==.dpr (  

@@ -3,7 +3,8 @@
   call :build 5.0 2007
   call :build 9.0 XE2
   call :build 12.0 XE5
-  call :build 16.0 XE8
+  call :build 18.0 10_1Berlin
+  call :build 19.0 10_2Tokyo
 
   goto exit
 
