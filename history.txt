@@ -1,3 +1,6 @@
+- New features:
+  - SetTimer accepts TProc and TProc<integer> timer methods.
+
 3.07.2: 2017-07-05
 
 - Potentially breaking change:

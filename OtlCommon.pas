@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-02-03
-///   Version           : 1.47
+///   Last modification : 2017-07-26
+///   Version           : 1.48
 ///</para><para>
 ///   History:
+///     1.48: 2017-07-26
+///       - TOmniMessageID can now hold TProc<integer>.
 ///     1.47: 2017-02-03
 ///       - AsInt64 now marks TOmniValue as a type ovtInt64 so that 
 ///         ov.CastTo<TArray<Int64>> can work. [issue #89]
@@ -983,13 +985,16 @@ type
     {$ENDIF OTL_Anonymous}
   end; { TOmniExecutable }
 
-  TOmniMessageIDType = (mitInteger, mitString, mitPointer);
+  TOmniMessageIDType = (mitInteger, mitString, mitPointer {$IFDEF OTL_Anonymous}, mitAnon{$ENDIF});
 
   ///<summary>Describes 'smart' IOmniTaskControl message (either message ID, method name,
   ///    or method pointer.</summary>
   ///<since>2010-03-16</since>
   TOmniMessageID = record
   strict private
+  {$IFDEF OTL_Anonymous}
+    omidAnon       : TProc<integer>;
+  {$ENDIF OTL_Anonymous}
     omidInteger    : integer;
     omidMessageType: TOmniMessageIDType;
     omidPointer    : pointer;
@@ -1001,8 +1006,14 @@ type
     class operator Implicit(const a: TOmniMessageID): integer; inline;
     class operator Implicit(const a: TOmniMessageID): string; inline;
     class operator Implicit(const a: TOmniMessageID): pointer; inline;
+  {$IFDEF OTL_Anonymous}
+    constructor Create(const proc: TProc<integer>);
+  {$ENDIF OTL_Anonymous}
     function AsString: string;
     property MessageType: TOmniMessageIDType read omidMessageType;
+  {$IFDEF OTL_Anonymous}
+    property Proc: TProc<integer> read omidAnon;
+  {$ENDIF OTL_Anonymous}
   end; { TOmniMessageID }
 
 {$IFDEF OTL_Generics}
@@ -4422,6 +4433,14 @@ end; { TOmniExecutable.SetDelegate }
 
 { TOmniMessageID }
 
+{$IFDEF OTL_Anonymous}
+constructor TOmniMessageID.Create(const proc: TProc<integer>);
+begin
+  omidMessageType := mitAnon;
+  omidAnon := proc;
+end; { TOmniMessageID.Create }
+{$ENDIF OTL_Anonymous}
+
 function TOmniMessageID.AsString: string;
 begin
   case MessageType of
@@ -4468,6 +4487,9 @@ begin
   Assert(a.omidMessageType = mitPointer);
   Result := a.omidPointer;
 end; { TOmniMessageID.Implicit }
+
+{$IFDEF OTL_Anonymous}
+{$ENDIF OTL_Anonymous}
 
 function NextOid: int64;
 begin
