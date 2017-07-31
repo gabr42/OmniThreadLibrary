@@ -8,10 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2017-06-29
-   Version           : 1.99
+   Last modification : 2017-07-31
+   Version           : 1.100a
 </pre>*)(*
    History:
+     1.100a: 2017-07-31
+       - DSiTimeGetTime64 was not thread-safe.
+     1.100: 2017-07-26
+       - Added functions DSiGetProcessSID and DSiHasRoamingProfile.
      1.99: 2017-06-29
        - Addded dynamically loaded API DSiWTSQueryUserToken.
        - Added DSiExecuteInSession which can start interactive process from session 0.
@@ -1844,6 +1848,7 @@ type
   function  DSiGetUserNameEx: string;
   function  DSiGetWindowsFolder: string;
   function  DSiGetWindowsVersion: TDSiWindowsVersion;
+  function  DSiHasRoamingProfile(var userHasRoamingProfile: boolean): boolean;
   function  DSiInitFontToSystemDefault(aFont: TFont; aElement: TDSiUIElement): boolean;
   function  DSiIsAdmin: boolean;
   function  DSiIsAdminLoggedOn: boolean;
@@ -1958,6 +1963,7 @@ type // Firewall management types
   function  DSiFindApplicationInFirewallExceptionListXP(const entryName: string;
     var application: OleVariant; profile: TDSiFwIPProfile = fwProfileCurrent): boolean;
   function  DSiGetLogonSID(token: THandle; var logonSID: PSID): boolean;
+  function  DSiGetProcessSID(var sid: string): boolean;
   function  DSiGetShortcutInfo(const lnkName: string; var fileName, filePath, workDir,
     parameters: string): boolean;
   function  DSiGetUninstallInfo(const displayName: string;
@@ -7338,6 +7344,23 @@ var
       end; //versionInfo.dwPlatformID
   end; { DSiGetWindowsVersion }
 
+  {:Checks whether current user (user the current process is running under) is using
+    roaming profile.
+    Based on: https://superuser.com/a/1006358/960
+    @author gabr
+  }
+  function  DSiHasRoamingProfile(var userHasRoamingProfile: boolean): boolean;
+  var
+    sid: string;
+  begin
+    Result := false;
+    if not DSiGetProcessSID(sid) then
+      Exit;
+    userHasRoamingProfile := '' <> (DSiReadRegistry('\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + sid,
+                                      'CentralProfile', '', HKEY_LOCAL_MACHINE));
+    Result := true;
+  end; { DSiHasRoamingProfile }
+
   {:Initializes font to the metrics of a specific GUI element.
     @author  aoven
     @since   2007-11-13
@@ -7995,6 +8018,47 @@ var
   end; { DSiGetLogonSID }
   {$IFDEF RestoreR}{$R+}{$ENDIF}
 
+  {:Returns SID of the current process.
+    @author gabr
+  }
+  function DSiGetProcessSID(var sid: string): boolean;
+  var
+    dwLength : DWORD;
+    hProcess : THandle;
+    procToken: THandle;
+    tkUser   : ^TOKEN_USER;
+    wcSid    : PWideChar;
+  begin
+    Result := false;
+    hProcess := OpenProcess(STANDARD_RIGHTS_READ OR PROCESS_QUERY_INFORMATION, false, GetCurrentProcessID);
+    if hProcess = 0 then
+      Exit;
+    try
+      if not OpenProcessToken(hProcess, TOKEN_QUERY, procToken) then
+        Exit;
+      try
+        dwLength := 0;
+        tkUser := nil;
+        GetTokenInformation(procToken, TokenUser, tkUser, 0, dwLength);
+        if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
+          Exit;
+        tkUser := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, dwLength);
+        if tkUser = nil then
+          Exit;
+        try
+          if not GetTokenInformation(procToken, TokenUser, tkUser, dwLength, dwLength) then
+            Exit;
+          if not ConvertSidToStringSid(tkUser.User.Sid, wcSid) then
+            Exit;
+          try
+            sid := string(wcSid);
+            Result := true;
+          finally LocalFree(NativeUInt(wcSid)); end;
+        finally HeapFree(GetProcessHeap, 0, tkUser); end;
+      finally DSiCloseHandleAndNull(procToken); end;
+    finally DSiCloseHandleAndNull(hProcess); end;
+  end; { DSiGetProcessSID }
+
   {:Extracts executable path and work dir from the LNK file.
     @author  Cavlji
     @since   2006-06-20
@@ -8292,9 +8356,6 @@ var
   end; { DSiElapsedTime }
 
   {:Returns time elapsed since startTime, which must be a result of the DSiTimeGetTime64.
-
-    WARNING: This function uses thread-local variables hence its results can only be
-             compared inside one thread!
   }
   function DSiElapsedTime64(startTime: int64): int64;
   begin
@@ -8352,9 +8413,6 @@ var
 
   {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
     returned from the DSiTimeGetTime64.
-
-    WARNING: This function uses thread-local variables hence its results can only be
-             compared inside one thread!
   }
   function DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
   begin
@@ -8418,9 +8476,9 @@ var
   }
   function DSiTimeGetTime64: int64;
   begin
-    Result := timeGetTime;
     EnterCriticalSection(GDSiTimeGetTime64Safe);
     try
+      Result := timeGetTime;
       if Result < GLastTimeGetTimeSafe then
         GTimeGetTimeBaseSafe := GTimeGetTimeBaseSafe + $100000000;
       GLastTimeGetTimeSafe := Result;
