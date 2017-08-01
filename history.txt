@@ -1,5 +1,12 @@
+3.07.3: 2017-07-31
+
+- Bug fixes:
+  - Nasty thread-unsafe condition fixed in DSiWin32's DSiTimeGetTime64, which is
+    used all around OmniThreadLibrary to measure small time intervals. 
 - New features:
   - SetTimer accepts TProc and TProc<integer> timer methods.
+  - IOmniTask implements method InvokeOnSelf which can be used to schedule
+    anonymous function execution from a task back to self.  
 
 3.07.2: 2017-07-05
 

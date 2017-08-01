@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-07-01
-///   Version           : 1.15
+///   Last modification : 2017-08-01
+///   Version           : 1.16
 ///</para><para>
 ///   History:
+///     1.16: 2017-08-01
+///       - Defined IOmniTask.InvokeOnSelf method.
 ///     1.15: 2017-07-26
 ///       - Defined IOmniTask.SetTimer overloads accepting TProc and TProc<integer> timer method.
 ///     1.14: 2016-07-01
@@ -155,6 +157,7 @@ type
     procedure Enforced(forceExecution: boolean = true);
     {$IFDEF OTL_Anonymous}
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction); //overload;
+    procedure InvokeOnSelf(remoteFunc: TOmniTaskInvokeFunction);
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
