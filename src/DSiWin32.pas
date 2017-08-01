@@ -2357,6 +2357,20 @@ const
 
 {$IFOPT R+} {$DEFINE RestoreR} {$ELSE} {$UNDEF RestoreR} {$ENDIF}
 
+{ Missing imports }
+
+{$IF not Defined(ConvertSidToStringSid)}
+function ConvertSidToStringSid(Sid: PSID; var StringSid: LPWSTR): BOOL; stdcall; external 'advapi32.dll' name 'ConvertSidToStringSidW';
+{$IFEND}
+
+{$IF not Defined(TOKEN_USER)}
+type
+  TOKEN_USER = record
+    User : TSIDAndAttributes;
+  end;
+  PTokenUser = ^TOKEN_USER;
+{$IFEND}
+
 { Helpers }
 
   function StrPasA(const Str: PAnsiChar): AnsiString;

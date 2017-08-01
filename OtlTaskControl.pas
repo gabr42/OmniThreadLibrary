@@ -2098,8 +2098,10 @@ begin
         msg := TOmniInternalStringMsg.CreateMessage(timerInfo.MessageID, timerInfo.TimerID);
       mitPointer:
         msg := TOmniInternalAddressMsg.CreateMessage(timerInfo.MessageID, timerInfo.TimerID);
+      {$IFDEF OTL_Anonymous}
       mitAnon:
         msg := TOmniInternalAnonMsg.CreateMessage(timerInfo.MessageID.Proc, timerInfo.TimerID);
+      {$ENDIF OTL_Anonymous}
       else
         raise Exception.Create('TOmniTaskExecutor.CallOmniTimer: Invalid message type');
     end;
