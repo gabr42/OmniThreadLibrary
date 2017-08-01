@@ -1,7 +1,7 @@
-OmniThreadLibrary 3.07.2 has just been released. It is available via
-GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.2)
+OmniThreadLibrary 3.07.3 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.3)
 or as a ZIP archive
-(https://drive.google.com/file/d/0BwqVlLNTK4OxM2d1ckpzMlp2YW8/view?usp=sharing).
+(https://drive.google.com/open?id=0BwqVlLNTK4OxYVowYTliY1BxUUE).
 
 What is OmniThreadLibrary?
 ==========================
@@ -42,29 +42,16 @@ Documentation wiki: http://otl.17slon.com/book/
 Documentation book: http://leanpub.com/omnithreadlibrary
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.07.1
+Changes since version 3.07.2
 ============================
 
-- Potentially breaking change:
-  - Cancel(taskID) will signal task's cancellation token before calling task's Terminate
-    method. CancelAll will signal cancellation token for all running tasks before calling
-    their Terminate method.
-    Old behaviour (no CancellationToken.Signal before Terminate) can be achieved by
-    calling overloaded version of the functions accepting the `signalCancellationToken`
-    parameter or by setting IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
-- New features:
-  - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
-    to Parallel.Join and Parallel.ParallelTask.
-  - Added OnStopInvoke to all Parallel abstractions that implement OnStop method.
-    - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> are only
-      available on XE7 and newer compilers.
-  - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
-    bypass thread pool entirely and run in 'non-pooled' threads.
 - Bug fixes:
-  - Parallel.Future did not create task with the .Unobserved qualifier.
-- New demos:
-  - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads
-    and from TThread threads.
+  - Nasty thread-unsafe condition fixed in DSiWin32's DSiTimeGetTime64, which is
+    used all around OmniThreadLibrary to measure small time intervals. 
+- New features:
+  - SetTimer accepts TProc and TProc<integer> timer methods.
+  - IOmniTask implements method InvokeOnSelf which can be used to schedule
+    anonymous function execution from a task back to self.  
 
 --
 Primoz

@@ -1,4 +1,4 @@
-3.07.3: 2017-07-31
+3.07.3: 2017-08-01
 
 - Bug fixes:
   - Nasty thread-unsafe condition fixed in DSiWin32's DSiTimeGetTime64, which is
