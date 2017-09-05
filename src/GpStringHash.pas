@@ -1,7 +1,7 @@
 (*:Preallocated hasher.
    @author Primoz Gabrijelcic
    @desc <pre>
-Copyright (c) 2012, Primoz Gabrijelcic
+Copyright (c) 2017, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -29,10 +29,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2005-02-24
-   Last modification : 2015-10-04
-   Version           : 1.11a
+   Last modification : 2017-09-05
+   Version           : 2.0a
 </pre>*)(*
    History:
+     2.0a: 2017-09-05
+       - Fixed integer() casting in TGpStringObjectHash.
+     2.0: 2017-03-31
+       - Fixed pointer operations in 64-bit code.
      1.11a: 2015-10-04
        - Removed dependency on DSiWin32.
      1.11: 2012-02-06
@@ -134,7 +138,7 @@ type
 
   TGpStringHashEnumMethod = procedure(item: TGpStringHashKV) of object;
 
-  ///<summary>String-indexed hash of integer items.</summary>
+  ///<summary>String-indexed hash of int64 items.</summary>
   ///<since>2005-02-24</since>
   TGpStringHash = class
   private
@@ -456,9 +460,9 @@ begin
   while dataLength > 0 do
   begin
     inc(Result, PWord(data)^);
-    TempPart := (PWord(Pointer(NativeInt(data)+2))^ shl 11) xor Result;
+    TempPart := (PWord(Pointer(NativeUInt(data)+2))^ shl 11) xor Result;
     Result := (Result shl 16) xor TempPart;
-    data := Pointer(NativeInt(data) + 4);
+    data := Pointer(NativeUInt(data) + 4);
     inc(Result, Result shr 11);
     dec(dataLength);
   end;
@@ -467,7 +471,7 @@ begin
   begin
     inc(Result, PWord(data)^);
     Result := Result xor (Result shl 16);
-    Result := Result xor (PByte(Pointer(NativeInt(data)+2))^ shl 18);
+    Result := Result xor (PByte(Pointer(NativeUInt(data)+2))^ shl 18);
     inc(Result, Result shr 11);
   end
   else if RemainingBytes = 2 then
@@ -823,17 +827,17 @@ var
   item  : PGpHashItem;
 begin
   if not sohOwnsObjects then
-    sohHash.Update(key, integer(value))
+    sohHash.Update(key, int64(value))
   else begin
     bucket := sohHash.FindBucket(key);
     if bucket > 0 then begin
       item := sohHash.HashItems[bucket];
       if TObject(item.Value) <> value then
         TObject(item.Value).Free;
-      item.Value := integer(value);
+      item.Value := int64(value);
     end
     else
-      sohHash.Add(key, integer(value));
+      sohHash.Add(key, int64(value));
   end;
 end; { TGpStringObjectHash.Update }
 
@@ -1016,7 +1020,7 @@ end; { TGpStringTableEnumerator.GetCurrent }
 
 function TGpStringTableEnumerator.MoveNext: boolean;
 begin
-  Result := cardinal(steTable) < cardinal(steTail);
+  Result := NativeUInt(steTable) < NativeUInt(steTail);
 end; { TGpStringTableEnumerator.MoveNext }
 
 { TGpStringTable }
@@ -1042,7 +1046,7 @@ var
 begin
   if key = '' then
     raise Exception.Create('TGpStringTable.Add: Cannot store empty key');
-  Result := cardinal(stDataTail) - cardinal(stData);
+  Result := NativeUInt(stDataTail) - NativeUInt(stData);
   requiredSize := Result + SizeOf(cardinal) + cardinal(Length(key) * SizeOf(char)) + SizeOf(int64);
   if requiredSize > stDataSize then
     Grow(requiredSize);
@@ -1056,7 +1060,7 @@ end; { TGpStringTable.Add }
 
 procedure TGpStringTable.CheckPointer(pData: pointer; dataSize: cardinal);
 begin
-  if (cardinal(pData) + dataSize - cardinal(stData)) > stDataSize then
+  if (NativeUInt(pData) + dataSize - NativeUInt(stData)) > stDataSize then
     raise Exception.Create('TGpStringTable: Invalid index');
 end; { TGpStringTable.CheckPointer }
 
@@ -1081,7 +1085,7 @@ begin
   GetMem(pNewData, requiredSize);
   Move(stData^, pNewData^, stDataSize);
   stDataSize := requiredSize;
-  stDataTail := PByte(cardinal(stDataTail) - cardinal(stData) + cardinal(pNewData));
+  stDataTail := PByte(NativeUInt(stDataTail) - NativeUInt(stData) + NativeUInt(pNewData));
   FreeMem(stData);
   stData := pNewData;
 end; { TGpStringTable.Grow }
@@ -1091,7 +1095,7 @@ var
   lenStr: cardinal;
   pData : PByte;
 begin 
-  pData := pointer(cardinal(stData) + index);
+  pData := pointer(NativeUInt(stData) + index);
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
@@ -1115,7 +1119,7 @@ var
   lenStr: cardinal;
   pData : PByte;
 begin 
-  pData := pointer(cardinal(stData) + index);
+  pData := pointer(NativeUInt(stData) + index);
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
@@ -1130,7 +1134,7 @@ var
   lenStr: cardinal;
   pData : PByte;
 begin
-  pData := pointer(cardinal(stData) + index);
+  pData := pointer(NativeUInt(stData) + index);
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));
@@ -1145,7 +1149,7 @@ var
   lenStr: cardinal;
   pData: PByte;
 begin
-  pData := pointer(cardinal(stData) + index);
+  pData := pointer(NativeUInt(stData) + index);
   CheckPointer(pData, SizeOf(cardinal));
   lenStr := PCardinal(pData)^;
   Inc(pData, SizeOf(cardinal));

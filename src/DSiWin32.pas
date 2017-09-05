@@ -8,10 +8,13 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2017-07-31
-   Version           : 1.100a
+   Last modification : 2017-09-05
+   Version           : 1.100b
 </pre>*)(*
    History:
+     1.100b: 2017-09-05
+       - Fixed WideCharBufToUTF8Buf and UTF8BufToWideCharBuf which were casting pointers
+         to integer instead of NativeUInt.
      1.100a: 2017-07-31
        - DSiTimeGetTime64 was not thread-safe.
      1.100: 2017-07-26
@@ -2455,7 +2458,7 @@ type
         AddByte($80 OR (wc AND $3F));
       end;
     end; //for
-    Result := integer(pch)-integer(@utf8Buf);
+    Result := DSiNativeUInt(pch)-DSiNativeUInt(@utf8Buf);
   end; { WideCharBufToUTF8Buf }
 
   {:Converts UTF-8 encoded buffer into WideChars. Target buffer must be
@@ -2517,7 +2520,7 @@ type
         Dec(leftUTF8,3);
       end;
     end; //while
-    Result := integer(pwc)-integer(@unicodeBuf);
+    Result := DSiNativeUInt(pwc)-DSiNativeUInt(@unicodeBuf);
   end; { UTF8BufToWideCharBuf }
 
   function UTF8Encode(const ws: WideString): UTF8String;

@@ -6,10 +6,13 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2017-05-18
-   Version           : 1.65
+   Last modification : 2017-09-05
+   Version           : 1.65a
 </pre>*)(*
    History:
+     1.65a: 2017-09-05
+       - Fixed three occasions where pointer was incorrectly cast as integer instead of
+         NativeUInt and one where it was cast as NativeInt.
      1.65: 2017-05-18
        - Implemented IGpBuffer.GetByteAddr.
      1.64: 2017-02-23
@@ -1101,13 +1104,13 @@ begin
         vtChar:       Result[i] := VChar;
         vtExtended:   Result[i] := VExtended^;
         vtString:     Result[i] := VString^;
-        vtPointer:    Result[i] := integer(VPointer);
+        vtPointer:    Result[i] := NativeUInt(VPointer);
         vtPChar:      Result[i] := {$IFDEF GpStuff_AnsiStrings}System.AnsiStrings.{$ENDIF}StrPas(VPChar);
         vtAnsiString: Result[i] := string(VAnsiString);
         vtCurrency:   Result[i] := VCurrency^;
         vtVariant:    Result[i] := VVariant^;
-        vtObject:     Result[i] := integer(VObject);
-        vtInterface:  Result[i] := integer(VInterface);
+        vtObject:     Result[i] := NativeUInt(VObject);
+        vtInterface:  Result[i] := NativeUInt(VInterface);
         vtWideString: Result[i] := WideString(VWideString);
         vtInt64:      Result[i] := VInt64^;
         {$IFDEF UNICODE}
@@ -1236,7 +1239,7 @@ end; { TGp4AlignedInt.Add }
 
 function TGp4AlignedInt.Addr: PInteger;
 begin
-  Result := PInteger((NativeInt(@aiData) + 3) AND NOT 3);
+  Result := PInteger((NativeUInt(@aiData) + 3) AND NOT 3);
 end; { TGp4AlignedInt.Addr }
 
 function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;

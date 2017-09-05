@@ -30,10 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2017-04-06
-   Version           : 1.72b
+   Last modification : 2017-09-05
+   Version           : 1.72c
 </pre>*)(*
    History:
+     1.72c: 2017-09-05
+       - TGpObjectMap's internal storage change from TGpIntegerObjectList to
+         TGpInt64ObjectList so that it can correctly store pointers in 64-bit code.
      1.72b: 2017-04-06
        - Removed (useless, duplicate) GUID from IGpRingBuffer<T>.
      1.72a: 2016-08-30
@@ -1934,7 +1937,7 @@ type
   }
   TGpObjectMap = class(TInterfacedObject, IGpObjectMap)
   private
-    omList: TGpIntegerObjectList;
+    omList: TGpInt64ObjectList;
   protected
     function  GetIndexedItem(idxItem: integer): TObject;   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  GetIndexedValue(idxValue: integer): TObject; {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -2389,6 +2392,18 @@ type
   function Int64Compare(avalue1, avalue2: int64): integer; {$IFDEF GpLists_Inline}inline;{$ENDIF}
 
 implementation
+
+{$IFDEF ConditionalExpressions}
+{$IF CompilerVersion <= 20} //D2009 or older
+type
+  NativeInt  = integer;
+  NativeUInt = cardinal;
+{$IFEND}
+{$ELSE}
+type
+  NativeInt  = integer;
+  NativeUInt = cardinal;
+{$ENDIF}
 
 { publics }
 
@@ -6383,7 +6398,7 @@ end; { TGpRingBuffer<T>.Unlock }
 constructor TGpObjectMap.Create(ownsObjects: boolean);
 begin
   inherited Create;
-  omList := TGpIntegerObjectList.Create(ownsObjects);
+  omList := TGpInt64ObjectList.Create(ownsObjects);
 end; { TGpObjectMap.Create }
 
 destructor TGpObjectMap.Destroy;
@@ -6443,7 +6458,7 @@ function TGpObjectMap.GetItems(item: TObject): TObject;
 var
   idxItem: integer;
 begin
-  idxItem := omList.IndexOf(integer(item));
+  idxItem := omList.IndexOf(NativeUInt(item));
   if idxItem >= 0 then
     Result := omList.Objects[idxItem]
   else
@@ -6454,7 +6469,7 @@ procedure TGpObjectMap.SetItems(item: TObject; const value: TObject);
 var
   idxItem: integer;
 begin
-  idxItem := omList.IndexOf(integer(item));
+  idxItem := omList.IndexOf(NativeUint(item));
   if idxItem >= 0 then begin
     if assigned(value) then
       omList.Objects[idxItem] := value
@@ -6462,7 +6477,7 @@ begin
       omList.Delete(idxItem);
   end
   else
-    omList.AddObject(integer(item), value);
+    omList.AddObject(NativeUInt(item), value);
 end; { TGpObjectMap.SetItems }
 
 constructor TGpObjectObjectMap.Create(ownsObjects: boolean);
