@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2016-11-18
-///   Version           : 1.09
+///   Last modification : 2017-09-26
+///   Version           : 1.10a
 ///</para><para>
 ///   History:
+///     1.10a: 2017-09-26
+///       - Parameter to TOmniBlockingCollection.ToArray<T> marked 'const'.
 ///     1.10: 2017-06-25
 ///       - Defined IOmniBlockingCollection.Count.
 ///     1.09: 2016-11-18
@@ -201,7 +203,7 @@ type
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
     {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
-    class function ToArray<T>(coll: IOmniBlockingCollection): TArray<T>;
+    class function ToArray<T>(const coll: IOmniBlockingCollection): TArray<T>;
     {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
@@ -444,7 +446,7 @@ begin
     Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
 end; { Clamp }
 
-class function TOmniBlockingCollection.ToArray<T>(coll: IOmniBlockingCollection):
+class function TOmniBlockingCollection.ToArray<T>(const coll: IOmniBlockingCollection):
   TArray<T>;
 var
   ds      : integer;
