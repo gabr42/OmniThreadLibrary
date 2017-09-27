@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2016, Primoz Gabrijelcic
+///Copyright (c) 2017, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,13 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2016-06-30
-///   Version           : 1.01a
+///   Last modification : 2017-09-27
+///   Version           : 1.02
 ///</para><para>
 ///   History:
+///     1.02: 2017-09-27
+///       - TOmniEnumeratorProvider and TOmniValueEnumeratorProvider support
+///         dmoPreserveOrder option.
 ///     1.01a: 2016-06-30
 ///       - TOmniValueEnumeratorDataPackage.Add was incrementing refcount for refcounted
 ///         data one time too many. This caused memory leaks when iterating over
@@ -196,13 +199,15 @@ type
   strict private
     vedpApproxCount: TOmniAlignedInt32;
     vedpDataQueue  : TOmniBaseQueue; //TOmniBaseBoundedQueue;
+    vedpPosition   : int64;
   public
     constructor Create;
     destructor  Destroy; override;
     class function GetPackageSizeLimit: integer;
     procedure Add(const value: TOmniValue);
     function  GetNext(var value: TOmniValue): boolean; overload; override;
-    function  Prepare(dataCount: integer): integer;
+    function  GetNext(var position: int64; var value: TOmniValue): boolean; overload; override;
+    function  Prepare(dataCount: integer; position: int64): integer;
     function  Split(package: TOmniDataPackage): boolean; override;
   end; { TOmniValueEnumeratorDataPackage }
 
@@ -237,6 +242,8 @@ type
   TOmniValueEnumeratorProvider = class(TOmniSourceProviderBase)
   strict protected
     vepEnumerator: IOmniValueEnumerator;
+    vepEnumLock  : TOmniCS; // used only when StorePositions is used
+    vepPosition  : int64;
   public
     constructor Create(enumerator: IOmniValueEnumerator);
     function  Count: int64; override;
@@ -251,6 +258,7 @@ type
     epEnumeratorIntf: IEnumerator;
     epEnumeratorObj : TOmniValueEnumerator;
     epEnumLock      : TOmniCS;
+    epPosition      : int64;
   public
     constructor Create(enumerator: IEnumerator); overload;
     constructor Create(enumerator: TOmniValueEnumerator); overload;
@@ -620,12 +628,22 @@ begin
   vedpApproxCount.Decrement;
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
+function TOmniValueEnumeratorDataPackage.GetNext(var position: int64;
+  var value: TOmniValue): boolean;
+begin
+  Result := GetNext(value);
+  if Result then begin
+    position := vedpPosition;
+    Inc(vedpPosition);
+  end;
+end; { TOmniValueEnumeratorDataPackage.GetNext }
+
 class function TOmniValueEnumeratorDataPackage.GetPackageSizeLimit: integer;
 begin
   Result := CMaxValueEnumeratorDataPackageSize;
 end; { TOmniValueEnumeratorDataPackage.GetPackageSizeLimit }
 
-function TOmniValueEnumeratorDataPackage.Prepare(dataCount: integer): integer;
+function TOmniValueEnumeratorDataPackage.Prepare(dataCount: integer; position: int64): integer;
 begin
   // only called when the package is empty
   if dataCount <= CMaxValueEnumeratorDataPackageSize then
@@ -633,6 +651,7 @@ begin
   else
     Result := CMaxValueEnumeratorDataPackageSize;
   vedpApproxCount.Value := 0;
+  vedpPosition := position;
 end; { TOmniValueEnumeratorDataPackage.Prepare }
 
 function TOmniValueEnumeratorDataPackage.Split(package: TOmniDataPackage): boolean;
@@ -643,7 +662,7 @@ var
 begin
   {$IFDEF Debug} Assert(package is TOmniValueEnumeratorDataPackage); {$ENDIF}
   Result := false;
-  for iValue := 1 to intPackage.Prepare(vedpApproxCount.Value div 2) do begin
+  for iValue := 1 to intPackage.Prepare(vedpApproxCount.Value div 2, 0) do begin
     if not GetNext(value) then
       break; //for
     intPackage.Add(value);
@@ -677,21 +696,35 @@ end; { TOmniValueEnumeratorProvider.GetCapabilities }
 function TOmniValueEnumeratorProvider.GetPackage(dataCount: integer; package:
   TOmniDataPackage): boolean;
 var
+  firstPos  : int64;
   iData     : integer;
   intPackage: TOmniValueEnumeratorDataPackage absolute package;
   timeout   : cardinal;
   value     : TOmniValue;
 begin
-  Assert(not StorePositions);
+//  Assert(not StorePositions);
   Result := false;
-  dataCount := intPackage.Prepare(dataCount);
-  timeout := INFINITE;
-  for iData := 1 to dataCount do begin
-    if not vepEnumerator.TryTake(value, timeout) then
-      break; //for
-    intPackage.Add(value);
-    timeout := 0;
-    Result := true;
+  if StorePositions then
+    vepEnumLock.Acquire;
+  try
+    firstPos := vepPosition;
+    dataCount := intPackage.Prepare(dataCount, firstPos);
+    timeout := INFINITE;
+    for iData := 1 to dataCount do begin
+      if not vepEnumerator.TryTake(value, timeout) then
+        break; //for
+      intPackage.Add(value);
+      Inc(firstPos);
+      timeout := 0;
+      Result := true;
+    end;
+    if StorePositions then begin
+      vepPosition := firstPos;
+      intPackage.Range := TOmniPositionRange.Create(firstPos, vepPosition - 1);
+    end;
+  finally
+    if StorePositions then
+      vepEnumLock.Release;
   end;
 end; { TOmniValueEnumeratorProvider.GetPackage }
 
@@ -732,19 +765,22 @@ end; { TOmniEnumeratorProvider.GetCapabilities }
 function TOmniEnumeratorProvider.GetPackage(dataCount: integer;
   package: TOmniDataPackage): boolean;
 var
+  firstPos  : int64;
   iData     : integer;
   intPackage: TOmniValueEnumeratorDataPackage absolute package;
 begin
-  Assert(not StorePositions);
+//  Assert(not StorePositions);
   Result := false;
   epEnumLock.Acquire;
   try
-    dataCount := intPackage.Prepare(dataCount);
+    firstPos := epPosition;
+    dataCount := intPackage.Prepare(dataCount, firstPos);
     if assigned(epEnumeratorObj) then begin
       for iData := 1 to dataCount do begin
         if not epEnumeratorObj.MoveNext then
           break; //for iData
         intPackage.Add(epEnumeratorObj.Current);
+        Inc(firstPos);
         Result := true;
       end;
     end
@@ -753,8 +789,13 @@ begin
         if not epEnumeratorIntf.MoveNext then
           break; //for iData
         intPackage.Add(epEnumeratorIntf.Current);
+        Inc(firstPos);
         Result := true;
       end;
+    end;
+    if StorePositions then begin
+      epPosition := firstPos;
+      intPackage.Range := TOmniPositionRange.Create(firstPos, epPosition - 1);
     end;
   finally epEnumLock.Release; end;
 end; { TOmniEnumeratorProvider.GetPackage }
