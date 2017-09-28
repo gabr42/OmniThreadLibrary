@@ -67,7 +67,7 @@
     <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
     <VerInfo_Locale>1033</VerInfo_Locale>
     <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-    <DCC_UsePackage>vclx;vcl;OmniThreadLibraryRuntimeXE;OmniThreadLibraryRuntimeXE4;OmniThreadLibraryRuntimeXE6;OmniThreadLibraryRuntimeXE8;$(DCC_UsePackage)</DCC_UsePackage>
+    <DCC_UsePackage>vclx;vcl;$(DCC_UsePackage)</DCC_UsePackage>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Base_Win64)'!=''">
     <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
