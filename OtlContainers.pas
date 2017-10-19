@@ -486,12 +486,19 @@ begin
   inherited;
 end; { TOmniBaseBoundedStack.Destroy }
 
-procedure TOmniBaseBoundedStack.Acquire;
+procedure TOmniBaseBoundedStack.Acquire; //inline
 begin
   {$IFNDEF OTL_HaveCmpx16b}
   obsLock.Acquire;
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedStack.Acquire }
+
+procedure TOmniBaseBoundedStack.Release; //inline
+begin
+  {$IFNDEF OTL_HaveCmpx16b}
+  obsLock.Release;
+  {$ENDIF ~OTL_HaveCmpx16b}
+end; { TOmniBaseBoundedStack.Release }
 
 procedure TOmniBaseBoundedStack.Empty;
 var
@@ -709,13 +716,6 @@ begin
   {$ENDIF ~OTL_HaveCmpx16b}
 end; { TOmniBaseBoundedStack.PushLink }
 
-procedure TOmniBaseBoundedStack.Release;
-begin
-  {$IFNDEF OTL_HaveCmpx16b}
-  obsLock.Release;
-  {$ENDIF ~OTL_HaveCmpx16b}
-end; { TOmniBaseBoundedStack.Release }
-
 { TOmniBoundedStack }
 
 constructor TOmniBoundedStack.Create(numElements, elementSize: integer; partlyEmptyLoadFactor,
@@ -783,6 +783,20 @@ begin
   inherited;
 end; { TOmniBaseBoundedQueue.Destroy }
 
+procedure TOmniBaseBoundedQueue.Acquire; //inline
+begin
+  {$IFNDEF OTL_HaveCmpx16b}
+  obqLock.Acquire;
+  {$ENDIF ~OTL_HaveCmpx16b}
+end; { TOmniBaseBoundedQueue.Acquire }
+
+procedure TOmniBaseBoundedQueue.Release; //inline
+begin
+  {$IFNDEF OTL_HaveCmpx16b}
+  obqLock.Release;
+  {$ENDIF ~OTL_HaveCmpx16b}
+end; { TOmniBaseBoundedQueue.Release }
+
 function TOmniBaseBoundedQueue.Dequeue(var value): boolean;
 var
   Data: pointer;
@@ -797,13 +811,6 @@ begin
     InsertLink(Data, obqRecycleRingBuffer);
   finally Release; end;
 end; { TOmniBaseBoundedQueue.Dequeue }
-
-procedure TOmniBaseBoundedQueue.Acquire;
-begin
-  {$IFNDEF OTL_HaveCmpx16b}
-  obqLock.Acquire;
-  {$ENDIF ~OTL_HaveCmpx16b}
-end; { TOmniBaseBoundedQueue.Acquire }
 
 procedure TOmniBaseBoundedQueue.Empty;
 var
@@ -1013,13 +1020,6 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
     {$ENDIF MSWINDOWS}
   end;
 end; { TOmniBaseBoundedQueue.MeasureExecutionTimes }
-
-procedure TOmniBaseBoundedQueue.Release;
-begin
-  {$IFNDEF OTL_HaveCmpx16b}
-  obqLock.Release;
-  {$ENDIF ~OTL_HaveCmpx16b}
-end; { TOmniBaseBoundedQueue.Release }
 
 class function TOmniBaseBoundedQueue.RemoveLink(const ringBuffer: POmniRingBuffer): pointer;
 var
@@ -1315,12 +1315,25 @@ begin
   inherited;
 end; { TOmniBaseQueue.Destroy }
 
-procedure TOmniBaseQueue.Acquire;
+procedure TOmniBaseQueue.Acquire; //inline
 begin
   {$IFNDEF OTL_HaveCmpx16b}
   obcLock.Acquire;
   {$ENDIF OTL_HaveCmpx16b}
 end; { TOmniBaseQueue.Acquire }
+
+function TOmniBaseQueue.NextSlot(slot: POmniTaggedValue): POmniTaggedValue; //inline
+begin
+  Result := slot;
+  Inc(Result);
+end; { TOmniBaseQueue.NextSlot }
+
+procedure TOmniBaseQueue.Release; //inline
+begin
+  {$IFNDEF OTL_HaveCmpx16b}
+  obcLock.Release;
+  {$ENDIF OTL_HaveCmpx16b}
+end; { TOmniBaseQueue.Release }
 
 function TOmniBaseQueue.AllocateBlock: POmniTaggedValue;
 begin
@@ -1512,12 +1525,6 @@ begin
   finally Release; end;
 end; { TOmniBaseQueue.IsEmpty }
 
-function TOmniBaseQueue.NextSlot(slot: POmniTaggedValue): POmniTaggedValue;
-begin
-  Result := slot;
-  Inc(Result);
-end; { TOmniBaseQueue.NextSlot }
-
 procedure TOmniBaseQueue.PartitionMemory(memory: POmniTaggedValue);
 var
   iSlot: integer;
@@ -1554,13 +1561,6 @@ begin
   Result := slot;
   Dec(Result);
 end; { TOmniBaseQueue.PrevSlot }
-
-procedure TOmniBaseQueue.Release;
-begin
-  {$IFNDEF OTL_HaveCmpx16b}
-  obcLock.Release;
-  {$ENDIF OTL_HaveCmpx16b}
-end; { TOmniBaseQueue.Release }
 
 procedure TOmniBaseQueue.ReleaseBlock(firstSlot: POmniTaggedValue; forceFree: boolean);
 begin
