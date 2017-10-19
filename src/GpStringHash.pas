@@ -99,9 +99,12 @@ interface
 {$ENDIF}
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
+{$IFDEF ConditionalExpressions}
+{$IF CompilerVersion <= 20} //D2009 or older
+  NativeInt  = integer;
+  NativeUInt = cardinal;
 {$IFEND}
+{$ENDIF}    
 
   ///<summary>Internal hash item representation.</summary>
   PGpHashItem = ^TGpHashItem;
@@ -420,7 +423,7 @@ const
   CGpGoodHashSizes: array [5..30] of cardinal = (53, 97, 193, 389, 769, 1543, 3079, 6151,
     12289, 24593, 49157, 98317, 196613, 393241, 786433, 1572869, 3145739, 6291469,
     12582917, 25165843, 50331653, 100663319, 201326611, 402653189, 805306457, 1610612741);
-
+    
 {$R-,Q-}
 
 function GetGoodHashSize(dataSize: cardinal): cardinal;
