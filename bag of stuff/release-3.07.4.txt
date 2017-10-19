@@ -49,6 +49,9 @@ Changes since version 3.07.3
   - TOmniEnumeratorProvider and TOmniValueEnumeratorProvider support
     dmoPreserveOrder option.
   - Fixed 64-bit issues in DSiWin32, GpLists, GpStringHash, and GpStuff.
+  
+- New features:
+  - Locked<T>.Value is now both readable and writable property.  
   - Moved 'inline' functions around so that they will be inlined more often.
 
 --

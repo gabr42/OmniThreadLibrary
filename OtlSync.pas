@@ -34,7 +34,7 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin
+///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
 ///   Last modification : 2017-09-28
 ///   Version           : 1.25
