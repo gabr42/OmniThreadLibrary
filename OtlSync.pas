@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin
 ///   Creation date     : 2009-03-30
-///   Last modification : 2017-06-14
-///   Version           : 1.24
+///   Last modification : 2017-09-28
+///   Version           : 1.25
 ///</para><para>
 ///   History:
+///     1.25: 2017-09-28
+///       - Locked<T>.Value is now both readable and writable property.
 ///     1.24: 2017-06-14
 ///       - TOmniCS.Initialize uses global lock to synchronize initialization instead of
 ///         a CAS operation. This fixes all reasons for the infamous error
@@ -379,6 +381,7 @@ type
     FOwnsObject : boolean;
     procedure Clear; inline;
     function  GetValue: T; inline;
+    procedure SetValue(const value: T); inline;
   public
     type TFactory = reference to function: T;
     type TProcT = reference to procedure(const value: T);
@@ -394,7 +397,7 @@ type
     procedure Locked(proc: TProcT); overload; inline;
     procedure Release; inline;
     procedure Free; inline;
-    property Value: T read GetValue;
+    property Value: T read GetValue write SetValue;
   end; { Locked<T> }
 
   IOmniLockManagerAutoUnlock = interface
@@ -1560,6 +1563,12 @@ begin
   Assert(FLock.LockCount > 0, 'Locked<T>.GetValue: Not locked');
   Result := FValue;
 end; { Locked<T>.GetValue }
+
+procedure Locked<T>.SetValue(const value: T);
+begin
+  Assert(FLock.LockCount > 0, 'Locked<T>.SetValue: Not locked');
+  FValue := value;
+end; { Locked<T>.SetValue }
 
 function Locked<T>.Initialize(factory: TFactory): T;
 begin
