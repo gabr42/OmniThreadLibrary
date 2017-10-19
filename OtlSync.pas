@@ -1131,12 +1131,14 @@ end; { TOmniCS.Release }
 
 constructor TOmniCriticalSection.Create;
 begin
+  inherited Create;
   ocsCritSect := TFixedCriticalSection.Create;
 end; { TOmniCriticalSection.Create }
 
 destructor TOmniCriticalSection.Destroy;
 begin
   FreeAndNil(ocsCritSect);
+  inherited;
 end; { TOmniCriticalSection.Destroy }
 
 procedure TOmniCriticalSection.Acquire;

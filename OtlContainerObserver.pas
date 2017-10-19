@@ -225,16 +225,16 @@ end; { CreateContainerWindowsMessageObserver }
 
 { TOmniContainerObserver }
 
+procedure TOmniContainerObserver.Activate; //inline
+begin
+  coIsActivated.Value := 1;
+end; { TOmniContainerObserver.Activate }
+
 constructor TOmniContainerObserver.Create;
 begin
   inherited;
   Activate;
 end; { TOmniContainerObserver.Create }
-
-procedure TOmniContainerObserver.Activate;
-begin
-  coIsActivated.Value := 1;
-end; { TOmniContainerObserver.Activate }
 
 function TOmniContainerObserver.CanNotify: boolean;
 begin
@@ -275,6 +275,7 @@ end; { TOmniContainerWindowsEventObserverImpl.Notify }
 
 constructor TOmniContainerWindowsEventObserverImpl.Create(externalEvent: THandle);
 begin
+  inherited Create;
   if externalEvent <> 0 then begin
     cweoEvent := externalEvent;
     cweoEventIsExternal := true;                               

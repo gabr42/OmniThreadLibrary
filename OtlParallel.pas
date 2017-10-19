@@ -1930,21 +1930,21 @@ end; { TOmniParallelJoin.DoOnStop }
 function TOmniParallelJoin.Execute: IOmniParallelJoin;
 var
   iProc      : integer;
-  numTasks   : integer;
   taskControl: IOmniTaskControl;
+  taskCount  : integer;
 begin
-  numTasks := FNumTasks;
-  if numTasks > FTasks.Count then
-    numTasks := FTasks.Count;
-  SetLength(FJoinStates, numTasks);
-  FCountStopped := CreateResourceCount(numTasks + 1);
+  taskCount := FNumTasks;
+  if taskCount > FTasks.Count then
+    taskCount := FTasks.Count;
+  SetLength(FJoinStates, taskCount);
+  FCountStopped := CreateResourceCount(taskCount + 1);
   FInput := TOmniBlockingCollection.Create;
-  for iProc := 0 to numTasks - 1 do
+  for iProc := 0 to taskCount - 1 do
     FJoinStates[iProc] := TOmniJoinState.Create(FGlobalCancellationFlag, FGlobalExceptionFlag);
   for iProc := 0 to FTasks.Count - 1 do
     FInput.Add(iProc);
   FInput.CompleteAdding;
-  for iProc := 0 to numTasks - 1 do begin
+  for iProc := 0 to taskCount - 1 do begin
     taskControl :=
       CreateTask(
         procedure (const task: IOmniTask)
@@ -1988,6 +1988,7 @@ begin
   if not FNoWait then begin
     WaitFor(INFINITE);
     DoOnStop(nil);
+    Result := nil;
   end
   else
     Result := Self;
@@ -3239,6 +3240,7 @@ end; { TOmniParallelLoop }
 
 constructor TOmniDelegateEnumerator.Create(delegate: TEnumeratorDelegate);
 begin
+  inherited Create;
   FDelegate := delegate;
 end; { TOmniDelegateEnumerator.Create }
 
@@ -3506,17 +3508,17 @@ var
   iTask        : integer;
   kv           : TGpKeyValue;
   lockAggregate: IOmniCriticalSection;
-  numTasks     : integer;
   task         : IOmniTaskControl;
+  taskCount    : integer;
 begin
   dmOptions := [];
-  numTasks := FNumTasks;
-  if FNoWait and (numTasks > 1) and (not FNumTasksManual) then
-    Dec(numTasks);
-  CreatePartitions(numTasks);
-  FCountStopped := CreateResourceCount(numTasks + 1);
+  taskCount := FNumTasks;
+  if FNoWait and (taskCount > 1) and (not FNumTasksManual) then
+    Dec(taskCount);
+  CreatePartitions(taskCount);
+  FCountStopped := CreateResourceCount(taskCount + 1);
   lockAggregate := CreateOmniCriticalSection;
-  for iTask := 0 to numTasks - 1 do begin
+  for iTask := 0 to taskCount - 1 do begin
     task := CreateForTask(iTask, taskDelegate);
     Parallel.ApplyConfig(FTaskConfig, task);
     task.Unobserved;
@@ -3525,7 +3527,7 @@ begin
     Parallel.Start(task, FTaskConfig);
   end;
   if not FNoWait then begin
-    if numTasks = 0 then
+    if taskCount = 0 then
       FCountStopped.Allocate //all done
     else
       {$IFDEF MSWINDOWS}

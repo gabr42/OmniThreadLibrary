@@ -3033,6 +3033,13 @@ begin
   inherited Destroy;
 end; { TOmniTaskControl.Destroy }
 
+procedure TOmniTaskControl.EnsureCommChannel; //inline
+begin
+  if not assigned(otcSharedInfo.CommChannel) then
+    otcSharedInfo.CommChannel :=
+      CreateTwoWayChannel(otcQueueLength, otcSharedInfo.TerminatedEvent);
+end; { TOmniTaskControl.EnsureCommChannel }
+
 function TOmniTaskControl.Alertable: IOmniTaskControl;
 begin
   Options := Options + [tcoAlertableWait];
@@ -3108,13 +3115,6 @@ begin
     Options := Options - [tcoForceExecution];
   Result := Self;
 end; { TOmniTaskControl.Enforced }
-
-procedure TOmniTaskControl.EnsureCommChannel;
-begin
-  if not assigned(otcSharedInfo.CommChannel) then
-    otcSharedInfo.CommChannel :=
-      CreateTwoWayChannel(otcQueueLength, otcSharedInfo.TerminatedEvent);
-end; { TOmniTaskControl.EnsureCommChannel }
 
 function TOmniTaskControl.FilterMessage(const msg: TOmniMessage): boolean;
 {$IFDEF OTL_Anonymous}

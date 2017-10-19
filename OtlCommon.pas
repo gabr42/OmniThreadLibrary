@@ -1609,6 +1609,13 @@ begin
   ovcCount := 0;
 end; { TOmniValueContainer.Create }
 
+procedure TOmniValueContainer.Clear; //inline
+begin
+  SetLength(ovcNames, 0);
+  SetLength(ovcValues, 0);
+  ovcCount := 0;
+end; { TOmniValueContainer.Clear }
+
 procedure TOmniValueContainer.Add(const paramValue: TOmniValue; const paramName: string);
 var
   idxParam: integer;
@@ -1679,13 +1686,6 @@ begin
   else
     Result := defValue;
 end; { TOmniValueContainer.ByName }
-
-procedure TOmniValueContainer.Clear;
-begin
-  SetLength(ovcNames, 0);
-  SetLength(ovcValues, 0);
-  ovcCount := 0;
-end; { TOmniValueContainer.Clear }
 
 function TOmniValueContainer.Count: integer;
 begin
@@ -2198,6 +2198,75 @@ begin
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
+
+procedure TOmniValue.SetAsArray(value: TOmniValueContainer); //inline
+begin
+  ovType := ovtArray;
+  ovIntf := CreateAutoDestroyObject(value);
+  ovData := int64(value);
+end; { TOmniValue.SetAsArray }
+
+function TOmniValue.TryCastToBoolean(var value: boolean): boolean; //inline
+begin
+  if ovType <> ovtBoolean then
+    Result := false
+  else begin
+    value := PByte(@ovData)^ <> 0;
+    Result := true;
+  end;
+end; { TOmniValue.TryCastToBoolean }
+
+function TOmniValue.TryCastToInt64(var value: int64): boolean; //inline
+begin
+  Result := true;
+  case ovType of
+    ovtInteger,
+    ovtInt64:   value := ovData;
+    ovtNull:    value := 0;
+    ovtVariant: value := integer(AsVariant);
+    else Result := false;
+  end;
+end; { TOmniValue.TryGetAsInt64 }
+
+function TOmniValue.TryCastToInteger(var value: integer): boolean; //integer
+var
+  val64: int64;
+begin
+  Result := TryCastToInt64(val64);
+  if Result then
+    value := val64;
+end; { TOmniValue.TryCastToInteger }
+
+function TOmniValue.TryCastToCardinal(var value: cardinal): boolean; //inline
+var
+  val64: int64;
+begin
+  Result := TryCastToInt64(val64);
+  if Result then
+    value := val64;
+end; { TOmniValue.TryCastToCardinal }
+
+function TOmniValue.TryCastToInterface(var value: IInterface): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInterface: value := ovIntf;
+    ovtNull:      value := nil;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToInterface }
+
+function TOmniValue.TryCastToObject(var value: TObject): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtObject,
+    ovtException:   value := TObject(ovData);
+    ovtOwnedObject: value := (ovIntf as IOmniAutoDestroyObject).Value;
+    ovtNull:        value := nil;
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToObject }
 
 constructor TOmniValue.Create(const values: array of const);
 var
@@ -2940,13 +3009,6 @@ begin
 end; { TOmniValue.SetAsAnsiString }
 {$ENDIF}
 
-procedure TOmniValue.SetAsArray(value: TOmniValueContainer);
-begin
-  ovType := ovtArray;
-  ovIntf := CreateAutoDestroyObject(value);
-  ovData := int64(value);
-end; { TOmniValue.SetAsArray }
-
 procedure TOmniValue.SetAsArrayItem(idx: integer; const value: TOmniValue);
 begin
   if IsEmpty then
@@ -3167,25 +3229,6 @@ begin
 end; { TOmniValue.TryCastToAnsiString }
 {$ENDIF}
 
-function TOmniValue.TryCastToBoolean(var value: boolean): boolean;
-begin
-  if ovType <> ovtBoolean then
-    Result := false
-  else begin
-    value := PByte(@ovData)^ <> 0;
-    Result := true;
-  end;
-end; { TOmniValue.TryCastToBoolean }
-
-function TOmniValue.TryCastToCardinal(var value: cardinal): boolean;
-var
-  val64: int64;
-begin
-  Result := TryCastToInt64(val64);
-  if Result then
-    value := val64;
-end; { TOmniValue.TryCastToCardinal }
-
 function TOmniValue.TryCastToDateTime(var value: TDateTime): boolean;
 begin
   Result := true;
@@ -3238,49 +3281,6 @@ begin
     else Result := false;
   end;
 end; { TOmniValue.TryCastToExtended }
-
-function TOmniValue.TryCastToInt64(var value: int64): boolean;
-begin
-  Result := true;
-  case ovType of
-    ovtInteger,
-    ovtInt64:   value := ovData;
-    ovtNull:    value := 0;
-    ovtVariant: value := integer(AsVariant);
-    else Result := false;
-  end;
-end; { TOmniValue.TryGetAsInt64 }
-
-function TOmniValue.TryCastToInteger(var value: integer): boolean;
-var
-  val64: int64;
-begin
-  Result := TryCastToInt64(val64);
-  if Result then
-    value := val64;
-end; { TOmniValue.TryCastToInteger }
-
-function TOmniValue.TryCastToInterface(var value: IInterface): boolean;
-begin
-  Result := true;
-  case ovType of
-    ovtInterface: value := ovIntf;
-    ovtNull:      value := nil;
-    else Result := false;
-  end;
-end; { TOmniValue.TryCastToInterface }
-
-function TOmniValue.TryCastToObject(var value: TObject): boolean;
-begin
-  Result := true;
-  case ovType of
-    ovtObject,
-    ovtException:   value := TObject(ovData);
-    ovtOwnedObject: value := (ovIntf as IOmniAutoDestroyObject).Value;
-    ovtNull:        value := nil;
-    else Result := false;
-  end;
-end; { TOmniValue.TryCastToObject }
 
 function TOmniValue.TryCastToPointer(var value: pointer): boolean;
 begin
@@ -4502,6 +4502,15 @@ end; { NextOid }
 
 { TOmniAlignedInt32 }
 
+function TOmniAlignedInt32.Subtract(value: integer): integer; //inline
+begin
+  {$IFDEF MSWINDOWS}
+  Result := InterlockedExchangeAdd(Addr^, -value);
+  {$ELSE}
+  Result := TInterlocked.Add(Addr^, -value);
+  {$ENDIF}
+end; { TOmniAlignedInt32.Subtract }
+
 procedure TOmniAlignedInt32.Initialize;
 begin
   FAddr := PInteger((NativeInt(@FData) + 3) AND NOT 3);
@@ -4577,15 +4586,6 @@ begin
   Addr^ := value;
 end; { TOmniAlignedInt32.SetValue }
 
-function TOmniAlignedInt32.Subtract(value: integer): integer;
-begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedExchangeAdd(Addr^, -value);
-  {$ELSE}
-  Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
-end; { TOmniAlignedInt32.Subtract }
-
 class operator TOmniAlignedInt32.Add(const ai: TOmniAlignedInt32; i: integer): cardinal;
 begin
   Result := cardinal(int64(ai.Value) + i);
@@ -4644,6 +4644,15 @@ begin
 end; { TOmniAlignedInt32.Subtract }
 
 { TOmniAlignedInt64 }
+
+function TOmniAlignedInt64.Subtract(value: int64): int64; //inline
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
+  {$ELSE}
+  Result := TInterlocked.Add(Addr^, -value);
+  {$ENDIF}
+end; { TOmniAlignedInt64.Subtract }
 
 procedure TOmniAlignedInt64.Initialize;
 begin
@@ -4720,15 +4729,6 @@ procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
   Addr^ := value;
 end; { TOmniAlignedInt64.SetValue }
-
-function TOmniAlignedInt64.Subtract(value: int64): int64;
-begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
-  {$ELSE}
-  Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
-end; { TOmniAlignedInt64.Subtract }
 
 { TOmniIntegerSet }
 
@@ -4830,19 +4830,19 @@ end; { TOmniIntegerSet.GetAsBits }
 
 function TOmniIntegerSet.GetAsIntArray: TIntegerDynArray;
 var
-  count: integer;
-  i    : integer;
+  i      : integer;
+  numBits: integer;
 begin
-  count := 0;
+  numBits := 0;
   for i := 0 to FBits.Size - 1 do
     if FBits[i] then
-      Inc(count);
-  SetLength(Result, count);
-  count := 0;
+      Inc(numBits);
+  SetLength(Result, numBits);
+  numBits := 0;
   for i := 0 to FBits.Size - 1 do
     if FBits[i] then begin
-      Result[count] := i;
-      Inc(count);
+      Result[numBits] := i;
+      Inc(numBits);
     end;
 end; { TOmniIntegerSet.GetAsIntArray }
 
