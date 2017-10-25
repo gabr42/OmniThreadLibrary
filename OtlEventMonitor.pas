@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-01-22
-///   Version           : 1.09
+///   Last modification : 2017-10-25
+///   Version           : 1.10
 ///</para><para>
 ///   History:
+///     1.10: 2017-10-25
+///       - TOmniEventMonitorPool.Allocate and Release can now be called from different threads.
 ///     1.09: 2017-01-22
 ///       - ERROR_NOT_ENOUGH_QUOTA (1816) is handled in TOmniEventMonitor.WndProc.
 ///     1.08: 2015-10-04
@@ -134,6 +136,7 @@ type
     emOnTaskMessage           : TOmniMonitorTaskMessageEvent;
     emOnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent;
     emOnTaskTerminated        : TOmniMonitorTaskEvent;
+    emThreadID                : cardinal;
     {$IFDEF MSWINDOWS}
       emCurrentMsg            : TOmniMessage;
     {$ENDIF}
@@ -155,6 +158,7 @@ type
     {$IFDEF MSWINDOWS}
     property MessageWindow: THandle read emMessageWindow;
     {$ENDIF}
+    property ThreadID: cardinal read emThreadID;
     property OnPoolThreadCreated: TOmniMonitorPoolThreadEvent read emOnPoolThreadCreated
       write emOnPoolThreadCreated;
     property OnPoolThreadDestroying: TOmniMonitorPoolThreadEvent read emOnPoolThreadDestroying
@@ -230,6 +234,7 @@ begin
   {$ENDIF}
   emMonitoredTasks := CreateInterfaceDictionary;
   emMonitoredPools := CreateInterfaceDictionary;
+  emThreadID := {$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF};
 end; { TOmniEventMonitor.Create }
 
 destructor TOmniEventMonitor.Destroy;
@@ -449,7 +454,7 @@ begin
       monitorInfo.Allocate
     else begin
       monitorInfo := TOmniCountedEventMonitor.Create(MonitorClass.Create(nil));
-      empMonitorList.AddObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}), monitorInfo);
+      empMonitorList.AddObject(integer(monitorInfo.Monitor.ThreadID), monitorInfo);
     end;
     Result := monitorInfo.Monitor;
   finally empListLock.Release; end;
@@ -465,11 +470,11 @@ var
 begin
   empListLock.Acquire;
   try
-    idxMonitor := empMonitorList.IndexOf(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}));
+    idxMonitor := empMonitorList.IndexOf(integer(monitor.ThreadID));
     if idxMonitor < 0 then
       raise Exception.CreateFmt(
         'TOmniEventMonitorPool.Release: Monitor is not allocated for thread %d',
-        [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}]);
+        [monitor.ThreadID]);
     monitorInfo := TOmniCountedEventMonitor(empMonitorList.Objects[idxMonitor]);
     Assert(monitorInfo.Monitor = monitor);
     monitorInfo.Release;
