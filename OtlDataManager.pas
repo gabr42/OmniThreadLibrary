@@ -891,6 +891,7 @@ var
   Events: array of IOmniSynchro;
   {$ENDIF ~MSWINDOWS}
 begin
+  inherited Create;
   obsShareLock := CreateOmniCriticalSection;
   {$IFNDEF MSWINDOWS}
   SetLength(Events, CNumBuffersInSet);
