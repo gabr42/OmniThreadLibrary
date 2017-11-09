@@ -36,12 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2017-09-28
-///   Version           : 1.25
+///   Last modification : 2017-11-09
+///   Version           : 1.26
 ///</para><para>
 ///   History:
+///     1.26: 2017-11-09
+///       - [VyPu] Fixed: TOmniCriticalSection.Release decremented ocsLockCount after releasing the critical section.
 ///     1.25: 2017-09-28
-///       - Locked<T>.Value is now both readable and writable property.
+///       - [VyPu] Locked<T>.Value is now both readable and writable property.
 ///     1.24: 2017-06-14
 ///       - TOmniCS.Initialize uses global lock to synchronize initialization instead of
 ///         a CAS operation. This fixes all reasons for the infamous error
@@ -1162,8 +1164,8 @@ end; { TOmniCriticalSection.GetSyncObj }
 
 procedure TOmniCriticalSection.Release;
 begin
-  ocsCritSect.Release;
   Dec(ocsLockCount);
+  ocsCritSect.Release;
 end; { TOmniCriticalSection.Release }
 
 { TOmniCancellationToken }
