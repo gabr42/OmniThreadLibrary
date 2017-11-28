@@ -1234,6 +1234,7 @@ uses
   Rtti,
   Diagnostics,
   {$ENDIF ~MSWINDOWS}
+  OtlCommon.Utils,
   OtlEventMonitor;
 
 type
