@@ -72,6 +72,13 @@ uses
 threadvar
   LastThreadName: string[255];
 
+{$IFNDEF OTL_DontSetThreadName}
+procedure SetThreadName(const name: string);
+begin
+  // do nothing
+end; { SetThreadName }
+{$ELSE}
+
 {$IFDEF OTL_HasNameThreadForDebugging}
 
 procedure SetThreadName(const name: string);
@@ -124,5 +131,6 @@ end; { SetThreadName }
 
 {$ENDIF ~MSWINDOWS}
 {$ENDIF ~OTL_HasNameThreadForDebugging}
+{$ENDIF ~OTL_DontSetThreadName}
 
 end.
