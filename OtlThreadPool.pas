@@ -39,6 +39,8 @@
 ///   Version           : 2.18a
 /// </para><para>
 ///   History:
+///     2.19: 2017-11-28
+///       - Worker thread name is set to 'Idle thread worker' only when worker has no work.
 ///     2.18a: 2017-05-29
 ///       - Did not compile when NUMA support was enabled.
 ///     2.18: 2017-05-27
@@ -311,6 +313,7 @@ uses
   {$ENDIF}
   OtlHooks,
   OtlSync,
+  OtlCommon.Utils,
   OtlComm,
   OtlContainerObserver,
   OtlTaskControl,
@@ -382,6 +385,7 @@ type
   strict protected
     function  Comm: IOmniCommunicationEndpoint;
     procedure ExecuteWorkItem(workItem: TOTPWorkItem);
+    function  GetMsg(var msg: TOmniMessage): boolean;
     function  GetOwnerCommEndpoint: IOmniCommunicationEndpoint;
     procedure Log(const msg: string; const params: array of const);
   public
@@ -829,19 +833,17 @@ begin
         except
           owtThreadData := nil;
         end;
-        while true do begin
-          if Comm.ReceiveWait(msg, INFINITE) then begin
-            case msg.MsgID of
-              MSG_RUN:
-                ExecuteWorkItem(TOTPWorkItem(msg.MsgData.AsObject));
-              MSG_STOP:
-                break; // while
-            else
-              raise Exception.CreateFmt(
-                'TOTPWorkerThread.Execute: Unexpected message %d', [msg.MsgID]);
-            end; // case
-          end; // if Comm.ReceiveWait
-        end; // while Comm.ReceiveWait()
+        while GetMsg(msg) do begin
+          case msg.MsgID of
+            MSG_RUN:
+              ExecuteWorkItem(TOTPWorkItem(msg.MsgData.AsObject));
+            MSG_STOP:
+              break; // while
+          else
+            raise Exception.CreateFmt(
+              'TOTPWorkerThread.Execute: Unexpected message %d', [msg.MsgID]);
+          end; // case
+        end; // while GetMsg
       finally Comm.Send(MSG_THREAD_DESTROYING, threadID); end;
     except
       on E: Exception do
@@ -893,8 +895,16 @@ begin
       Comm.Send(MSG_COMPLETED, workItem);
     end;
   finally if assigned(owtWorkItemLock) then owtWorkItemLock.Release; end;
-  SetThreadName('Idle thread worker');
 end; { TOTPWorkerThread.ExecuteWorkItem }
+
+function TOTPWorkerThread.GetMsg(var msg: TOmniMessage): boolean;
+begin
+  Result := Comm.ReceiveWait(msg, 100);
+  if not Result then begin
+    SetThreadName('Idle thread worker');
+    Result := Comm.ReceiveWait(msg, INFINITE);
+  end;
+end; { TOTPWorkerThread.GetMsg }
 
 function TOTPWorkerThread.GetOwnerCommEndpoint: IOmniCommunicationEndpoint;
 begin

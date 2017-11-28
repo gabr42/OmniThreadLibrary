@@ -1097,7 +1097,6 @@ type
   function  CreateAutoDestroyObject(obj: TObject): IOmniAutoDestroyObject;
 
   function  Environment: IOmniEnvironment;
-  procedure SetThreadName(const name: string);
   function  VarToObj(const v: Variant): TObject; inline;
   function  NextOid: int64;
 
@@ -1116,6 +1115,7 @@ implementation
 uses
   {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
   GpStringHash,
+  OtlCommon.Utils,
   OtlSync;
 {$ENDIF}
 
@@ -1502,39 +1502,6 @@ function Environment: IOmniEnvironment;
 begin
   Result := GEnvironment;
 end; { Environment }
-
-{$IFDEF MSWINDOWS}
-procedure SetThreadName(const name: string);
-// TODO 1 -oPrimoz Gabrijelcic : This should only exist in OtlCommon.Utils or not at all
-// if SetThreadNameForDebugging exists in D2009.
-type
-  TThreadNameInfo = record
-    FType    : LongWord; // must be 0x1000
-    FName    : PAnsiChar;// pointer to name (in user address space)
-    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
-    FFlags   : LongWord; // reserved for future use, must be zero
-  end; { TThreadNameInfo }
-var
-  ansiName      : AnsiString;
-  threadNameInfo: TThreadNameInfo;
-begin
-  if DebugHook <> 0 then begin
-    ansiName := AnsiString(name);
-    threadNameInfo.FType := $1000;
-    threadNameInfo.FName := PAnsiChar(ansiName);
-    threadNameInfo.FThreadID := $FFFFFFFF;
-    threadNameInfo.FFlags := 0;
-    try
-      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
-    except {ignore} end;
-  end;
-end; { SetThreadName }
-{$ELSE}
-
-procedure SetThreadName( const name: string);
-begin
-end;
-{$ENDIF}
 
 function VarToObj(const v: Variant): TObject;
 begin
