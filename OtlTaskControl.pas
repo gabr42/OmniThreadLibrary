@@ -1565,9 +1565,7 @@ begin
   try
     try
       try
-        {$IFNDEF OTL_DontSetThreadName}
         SetThreadName(otSharedInfo_ref.TaskName);
-        {$ENDIF OTL_DontSetThreadName}
         if (tcoForceExecution in otExecutor_ref.Options) or (not Terminated) then
         try
           if otSharedInfo_ref.ProcessorGroup >= 0 then
