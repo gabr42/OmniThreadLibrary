@@ -61,7 +61,7 @@ implementation
 
 {$IFDEF OTL_HasNameThreadForDebugging}
 uses
-  System.Classes;
+  Classes;
 {$ELSE ~OTL_HasNameThreadForDebugging}
 {$IFDEF MSWINDOWS}
 uses
