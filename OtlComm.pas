@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2015, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2016-12-07
-///   Version           : 1.13
+///   Last modification : 2018-01-16
+///   Version           : 1.13a
 ///</para><para>
 ///   History:
+///     1.13a: 2018-01-16
+///       - TOmniMessageQueue.Destroy does not call Empty if TOmniMessageQueue.Create
+///         raised exception. This prevents new exception from popping up in Destroy
+///         (which masked the initial Create exception).
 ///     1.13: 2016-12-07
 ///       - Default queue size bumped to 10000 messages.
 ///     1.12: 2015-10-04
@@ -171,6 +175,7 @@ type
   {$ELSE ~MSWINDOWS}
     mqEventObserver: TOmniContainerEventObserver;
   {$ENDIF ~MSWINDOWS}
+    mqIsInitialized: boolean;
   strict protected
     procedure AttachEventObserver;
   {$IFDEF MSWINDOWS}
@@ -359,6 +364,7 @@ begin
   inherited Create(numMessages, SizeOf(TOmniMessage));
   if createEventObserver then
     AttachEventObserver;
+  mqIsInitialized := true;
 end; { TOmniMessageQueue.Create }
 
 destructor TOmniMessageQueue.Destroy;
@@ -371,7 +377,8 @@ begin
   ContainerSubject.Detach(mqEventObserver, coiNotifyOnAllInserts);
   FreeAndNil(mqEventObserver);
   {$ENDIF ~MSWINDOWS}
-  Empty;
+  if mqIsInitialized then // don't try to clear the queue if code crashes in constructor
+    Empty;
   inherited;
 end; { TOmniMessageQueue.Destroy }
 
