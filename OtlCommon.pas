@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-07-26
-///   Version           : 1.48
+///   Last modification : 2018-02-24
+///   Version           : 1.49
 ///</para><para>
 ///   History:
+///     1.49: 2018-02-24
+///       - Reading/writing TOmniAlignedInt64 is atomic on 32-bit platforms.
 ///     1.48: 2017-07-26
 ///       - TOmniMessageID can now hold TProc<integer>.
 ///     1.47: 2017-02-03
@@ -4671,7 +4673,13 @@ end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
 begin
+  {$IFDEF CPU64BITS}
   Result := Addr^;
+  {$ELSE}{$IFDEF MSWindows}
+  Result := DSiInterlockedCompareExchange64(Addr^, 0, 0);
+  {$ELSE}
+  Result := TInterlocked.Read(Addr^);
+  {$ENDIF}{$ENDIF}
 end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
@@ -4694,7 +4702,13 @@ end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
+  {$IFDEF CPU64BITS}
   Addr^ := value;
+  {$ELSE}{$IFDEF MSWindows}
+  DSiInterlockedExchange64(Addr^, value);
+  {$ELSE}
+  TInterlocked.Exchange(Addr^, value);
+  {$ENDIF}{$ENDIF}
 end; { TOmniAlignedInt64.SetValue }
 
 { TOmniIntegerSet }
