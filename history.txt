@@ -3,6 +3,7 @@
 - General improvements:
   - Reduced number of times NameThreadForDebugging is called when threadpool
     is used.
+  - Reading/writing TOmniAlignedInt64 is atomic on 32-bit platforms.
 - Bug fixes:
   - [VyPu] fixed race condition in TOmniCriticalSection.Release which affected
     code that was using TOmniCriticalSection.LockCount.
