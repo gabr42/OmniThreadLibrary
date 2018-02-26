@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,11 +36,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///
 ///   Creation date     : 2011-08-31
-///   Last modification : 2017-11-28
-///   Version           : 1.0a
+///   Last modification : 2018-02-26
+///   Version           : 1.0b
 ///</para><para>
 ///   History:
-///     1.22a: 2017-11-28
+///     1.0b: 2018-02-26
+///       - Semantics of OTL_DontSetThreadName was reversed.
+///     1.0a: 2017-11-28
 ///       - Did not include OtlOptions.inc
 ///     1.0: 2011-08-31
 ///       - [Lee_Nover] SetThreadName implementation moved here. Disabled debug info for
@@ -72,7 +74,7 @@ uses
 threadvar
   LastThreadName: string[255];
 
-{$IFNDEF OTL_DontSetThreadName}
+{$IFDEF OTL_DontSetThreadName}
 procedure SetThreadName(const name: string);
 begin
   // do nothing
@@ -96,7 +98,7 @@ end; { SetThreadName }
 {$ELSE ~OTL_HasNameThreadForDebugging}
 {$IFDEF MSWINDOWS}
 
-procedure SetThreadName(const name: string);
+!procedure SetThreadName(const name: string);
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
