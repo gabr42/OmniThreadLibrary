@@ -98,7 +98,7 @@ end; { SetThreadName }
 {$ELSE ~OTL_HasNameThreadForDebugging}
 {$IFDEF MSWINDOWS}
 
-!procedure SetThreadName(const name: string);
+procedure SetThreadName(const name: string);
 type
   TThreadNameInfo = record
     FType    : LongWord; // must be 0x1000
