@@ -1,7 +1,6 @@
 3.07.5: 2017-02-28
 
 - General improvements:
-  - Reading/writing TOmniAlignedInt64 is atomic on 32-bit platforms.
   - Reduced number of times NameThreadForDebugging is called when threadpool
     is used.
 - Bug fixes:
