@@ -1,9 +1,9 @@
-3.07.5: <<unreleased>>
+3.07.5: 2017-02-28
 
 - General improvements:
+  - Reading/writing TOmniAlignedInt64 is atomic on 32-bit platforms.
   - Reduced number of times NameThreadForDebugging is called when threadpool
     is used.
-  - Reading/writing TOmniAlignedInt64 is atomic on 32-bit platforms.
 - Bug fixes:
   - [VyPu] fixed race condition in TOmniCriticalSection.Release which affected
     code that was using TOmniCriticalSection.LockCount.
@@ -36,9 +36,10 @@
   - Cancel(taskID) will signal task's cancellation token before calling task's Terminate
     method. CancelAll will signal cancellation token for all running tasks before calling
     their Terminate method.
-    Old behaviour (no CancellationToken.Signal before Terminate) can be achieved by
-    calling overloaded version of the functions accepting the `signalCancellationToken`
-    parameter or by setting IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
+    Old behaviour (no CancellationToken.Signal before Terminate) can be 
+    achieved by calling overloaded version of the functions accepting the 
+    `signalCancellationToken` parameter or by setting IOmniThreadPool.Options 
+    to [tpoPreventCancellationTokenOnCancel].
 - New features:
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
