@@ -41,9 +41,10 @@ uses
 {$R *.dfm}
 
 const
-  MSG_CREATING_CONNECTION = 1;
-  MSG_CREATED_CONNECTION  = 2;
-  MSG_DESTROY_CONNECTION  = 3;
+  MSG_CREATING_CONNECTION  = 1;
+  MSG_CREATED_CONNECTION   = 2;
+  MSG_DESTROY_CONNECTION   = 3;
+  MSG_DESTROYED_CONNECTION = 4;
 
 type
   IConnectionPoolData = interface ['{F604640D-6D4E-48B4-9A8C-483CA9635C71}']
@@ -132,6 +133,8 @@ begin
       Log(Format('Created connection %d', [msg.LParam]));
     MSG_DESTROY_CONNECTION:
       Log(Format('Destroying connection %d', [msg.LParam]));
+    MSG_DESTROYED_CONNECTION:
+      Log(Format('Destroyed connection in thread %d', [msg.LParam]));
     else
       Log(Format('Invalid message %d', [msg.WParam]));
   end;
@@ -155,6 +158,7 @@ end;
 destructor TConnectionPoolData.Destroy;
 begin
   PostToForm(WM_USER, MSG_DESTROY_CONNECTION, cpID);
+  PostToForm(WM_USER, MSG_DESTROYED_CONNECTION, integer(GetCurrentThreadID));
 end;
 
 function TConnectionPoolData.ConnectionID: integer;

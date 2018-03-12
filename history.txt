@@ -1,3 +1,12 @@
+3.07.6: <<unreleased>>
+
+- Bug fixed:
+  - ThreadData is destroyed in the worker thread and not in the thread pool
+    management thread.
+  - Reduced hints&warnings. [issue #110]
+  - Implemented TOmniBlockingCollection.FromArray<T>, .FromRange<T>, 
+    and .AddRange<T>. [issue #76]
+
 3.07.5: 2017-02-28
 
 - General improvements:

@@ -91,7 +91,7 @@ begin
   if ansiName = LastThreadName then
     Exit;
 
-  TThread.NameThreadForDebugging(name);
+  TThread.NameThreadForDebugging(string(name));
   LastThreadName := ansiName;
 end; { SetThreadName }
 

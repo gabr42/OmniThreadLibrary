@@ -1,15 +1,21 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2017 Primoz Gabrijelcic
+   (c) 2018 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2017-09-05
-   Version           : 1.65a
+   Last modification : 2018-02-20
+   Version           : 1.67
 </pre>*)(*
    History:
+     1.67: 2018-02-20
+       - Implemented ClassNameEx.
+     1.66: 2017-10-25
+       - Implemented ExceptionsInDebugger which can be used to temporarily
+         prevent debugger from breaking on exception. 
+       - Implemented two OutputDebugString overloads.
      1.65a: 2017-09-05
        - Fixed three occasions where pointer was incorrectly cast as integer instead of
          NativeUInt and one where it was cast as NativeInt.
@@ -652,6 +658,9 @@ function BuildString: IGpStringBuilder;
 
 function GetRefCount(const intf: IInterface): integer;
 
+procedure OutputDebugString(const msg: string); overload; inline;
+procedure OutputDebugString(const msg: string; const params: array of const); overload;
+
 {$IFDEF GpStuff_Generics}
 type
   TStoredValue<T> = record
@@ -663,6 +672,18 @@ type
     class function Create(const value: T): TStoredValue<T>; static;
   end;
 {$ENDIF GpStuff_Generics}
+
+type
+  IIgnoreExceptionsInDebugger = interface ['{3F16180B-B3B6-48CF-B6F0-1708E79580DB}']
+    procedure Handle;
+  end; { IIgnoreExceptionsInDebugger }
+
+  ExceptionsInDebugger = class
+  public
+    class function Ignore: IIgnoreExceptionsInDebugger;
+  end;
+
+function ClassNameEx(obj: TObject): string;
 
 implementation
 
@@ -802,6 +823,18 @@ type
     function Add(const s: string; const param: array of const): IGpStringBuilder; overload;
     function AsString: string; inline;
   end; { TGpStringBuilder }
+
+  EUnusedException = class(Exception)
+  end; { EUnusedException }
+
+  TIgnoreExceptionsInDebugger = class(TInterfacedObject, IIgnoreExceptionsInDebugger)
+  strict private
+    FOriginalClass: TClass;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Handle;
+  end; { TIgnoreExceptionsInDebugger }
 
 function BuildString: IGpStringBuilder;
 begin
@@ -1145,7 +1178,9 @@ end; { X64AsmBreak }
 procedure DebugBreak(triggerBreak: boolean = true);
 begin
   {$IFDEF DEBUG}
-  if triggerBreak and (DebugHook <> 0) then
+  {$WARN SYMBOL_PLATFORM OFF}
+  if triggerBreak {$IFDEF MSWINDOWS}and (DebugHook <> 0){$ENDIF} then
+  {$WARN SYMBOL_PLATFORM ON}
     {$IFDEF CPUX64}
     X64AsmBreak;
     {$ELSE}
@@ -1889,6 +1924,34 @@ begin
 end; { ParseURL }
 {$ENDIF}
 
+{ TIgnoreExceptionsInDebugger }
+
+constructor TIgnoreExceptionsInDebugger.Create;
+begin
+  inherited Create;
+  FOriginalClass := ExceptionClass;
+  ExceptionClass := EUnusedException;
+end; { TIgnoreExceptionsInDebugger.Create }
+
+destructor TIgnoreExceptionsInDebugger.Destroy;
+begin
+  Handle;
+  inherited;
+end; { TIgnoreExceptionsInDebugger.Destroy }
+
+procedure TIgnoreExceptionsInDebugger.Handle;
+begin
+  if ExceptionClass = EUnusedException then
+    ExceptionClass := FOriginalClass;
+end; { TIgnoreExceptionsInDebugger.Handle }
+
+{ ExceptionsInDebugger }
+
+class function ExceptionsInDebugger.Ignore: IIgnoreExceptionsInDebugger;
+begin
+  Result := TIgnoreExceptionsInDebugger.Create;
+end; { ExceptionsInDebugger.Ignore }
+
 { TGpStringBuilder }
 
 function TGpStringBuilder.Add(const s: string): IGpStringBuilder;
@@ -2040,6 +2103,34 @@ begin
   Result := intf._AddRef - 1;
   intf._Release;
 end; { GetRefCount }
+
+procedure OutputDebugString(const msg: string);
+begin
+{$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
+  if DebugHook <> 0 then
+    Windows.OutputDebugString(PChar(msg));
+{$WARN SYMBOL_PLATFORM ON}
+{$ENDIF}
+end; { OutputDebugString }
+
+procedure OutputDebugString(const msg: string; const params: array of const);
+begin
+{$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
+  if DebugHook <> 0 then
+    OutputDebugString(Format(msg, params));
+{$WARN SYMBOL_PLATFORM ON}
+{$ENDIF}
+end; { OutputDebugString }
+
+function ClassNameEx(obj: TObject): string;
+begin
+  if assigned(obj) then
+    Result := obj.ClassName
+  else
+    Result := '<>';
+end; { ClassNameEx }
 
 { TGpDisableHandler }
 {$IFDEF GpStuff_ValuesEnumerators}
@@ -2400,3 +2491,4 @@ end; { StoreValue<T>.Create }
 {$ENDIF GpStuff_Generics}
 
 end.
+

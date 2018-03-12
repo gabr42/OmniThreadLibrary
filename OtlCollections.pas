@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017 Primoz Gabrijelcic
+///Copyright (c) 2018 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2017-09-26
-///   Version           : 1.10a
+///   Last modification : 2018-03-12
+///   Version           : 1.11
 ///</para><para>
 ///   History:
+///     1.11: 2018-03-12
+///       - Added TOmniBlockingCollection.FromArray<T> and .ToArray<T> (multiple overloads).
 ///     1.10a: 2017-09-26
 ///       - Parameter to TOmniBlockingCollection.ToArray<T> marked 'const'.
 ///     1.10: 2017-06-25
@@ -113,6 +115,11 @@ uses
   {$ELSE}
   SyncObjs,
   {$ENDIF}
+  {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
+  TypInfo,
+  RTTI,
+  Generics.Collections,
+  {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
   OtlCommon,
   OtlContainers,
   OtlContainerObserver,
@@ -194,6 +201,9 @@ type
   protected
     function  GetApproxCount: integer; inline;
     function  GetContainerSubject: TOmniContainerSubject;
+    {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
+    procedure InsertElement<T>(const value: T; ti: PTypeInfo; ds: integer);
+    {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -203,7 +213,14 @@ type
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
     {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
+    class function FromArray<T>(const values: TArray<T>): IOmniBlockingCollection; inline; //alias for FromRange
+    class function FromRange<T>(const values: array of T): IOmniBlockingCollection; overload;
+    class function FromRange<T>(const collection: IEnumerable<T>): IOmniBlockingCollection; overload; inline;
+    class function FromRange<T>(const collection: TEnumerable<T>): IOmniBlockingCollection; overload; inline;
     class function ToArray<T>(const coll: IOmniBlockingCollection): TArray<T>;
+    procedure AddRange<T>(const values: array of T); overload;
+    procedure AddRange<T>(const collection: IEnumerable<T>); overload;
+    procedure AddRange<T>(const collection: TEnumerable<T>); overload;
     {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
@@ -239,16 +256,16 @@ type
 {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
   //compiler requires it to be public
   function Clamp(value: integer): integer;
+  procedure GetTypeInformation(ti: PTypeInfo; var ds: integer; var maxValue: uint64);
 {$ENDIF}{$ENDIF}{$ENDIF}
 
 implementation
 
 uses
-  Classes,
   {$IFNDEF MSWINDOWS}
   Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  TypInfo;
+  Classes;
 
 {$IFDEF MSWINDOWS}
 {$IFDEF CPUX64}
@@ -358,7 +375,9 @@ begin
       Exit;
     if obcAddCountAndCompleted.CAS(0, CCompletedFlag) then begin // there must be no active writers
       {$IFDEF MSWINDOWS}
+      {$WARN SYMBOL_PLATFORM OFF}
       Win32Check(SetEvent(obcCompletedSignal)); // tell blocked readers to quit
+      {$WARN SYMBOL_PLATFORM ON}
       {$ELSE}
       obcCompletedSignal.SetEvent; // tell blocked readers to quit
       {$ENDIF ~MSWINDOWS}
@@ -446,18 +465,9 @@ begin
     Result := (((value - 1) div CMinIncrement) + 1) * CMinIncrement;
 end; { Clamp }
 
-class function TOmniBlockingCollection.ToArray<T>(const coll: IOmniBlockingCollection):
-  TArray<T>;
-var
-  ds      : integer;
-  lenArr  : integer;
-  maxValue: uint64;
-  numEl   : integer;
-  ti      : PTypeInfo;
-  value   : TOmniValue;
+procedure GetTypeInformation(ti: PTypeInfo; var ds: integer; var maxValue: uint64);
 begin
   ds := 0;
-  ti := System.TypeInfo(T);
   if assigned(ti) then
     if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
       ds := 1
@@ -469,6 +479,114 @@ begin
   maxValue := High(uint64);
   if ds > 0 then
     maxValue := uint64($FF) SHL ((ds-1) * 8);
+end; { GetTypeInformation }
+
+procedure TOmniBlockingCollection.InsertElement<T>(const value: T; ti: PTypeInfo; ds: integer);
+var
+  i : integer;
+  ov: TOmniValue;
+begin
+  case ti.Kind of
+    tkInteger, tkPointer:
+      if ds = 8 then
+        ov.AsInt64 := PInt64(@value)^
+      else begin
+        Assert(ds <= 4, 'TOmniBlockingCollection.InsertElement<T>: Integer data is too large');
+        i := 0;
+        Move(value, i, ds);
+        ov.AsInteger := i;
+      end;
+    tkInt64:
+      ov.AsInt64 := PInt64(@value)^;
+    tkClass:
+      ov.AsObject := PObject(@value)^;
+    tkChar, tkWChar, tkString, tkWString, tkLString, tkUString:
+      ov.AsString := TValue.From<T>(value).AsString;
+    tkRecord:
+      ov := TOmniValue.FromRecordUnsafe<T>(value);
+    tkInterface:
+      ov.AsInterface := PInterface(@value)^;
+    else
+      ov.AsTValue := TValue.From<T>(value);
+  end;
+
+  Add(ov);
+end; { TOmniBlockingCollection.InsertElement<T> }
+
+procedure TOmniBlockingCollection.AddRange<T>(const values: array of T);
+var
+  ds      : integer;
+  el      : T;
+  maxValue: uint64;
+  ti      : PTypeInfo;
+begin
+  ti := System.TypeInfo(T);
+  GetTypeInformation(ti, ds, maxValue);
+  for el in values do
+    InsertElement<T>(el, ti, ds);
+end; { TOmniBlockingCollection.AddRange<T> }
+
+procedure TOmniBlockingCollection.AddRange<T>(const collection: IEnumerable<T>);
+var
+  ds      : integer;
+  el      : T;
+  maxValue: uint64;
+  ti      : PTypeInfo;
+begin
+  ti := System.TypeInfo(T);
+  GetTypeInformation(ti, ds, maxValue);
+  for el in collection do
+    InsertElement<T>(el, ti, ds);
+end; { TOmniBlockingCollection.AddRange<T> }
+
+procedure TOmniBlockingCollection.AddRange<T>(const collection: TEnumerable<T>);
+var
+  ds      : integer;
+  el      : T;
+  maxValue: uint64;
+  ti      : PTypeInfo;
+begin
+  ti := System.TypeInfo(T);
+  GetTypeInformation(ti, ds, maxValue);
+  for el in collection do
+    InsertElement<T>(el, ti, ds);
+end; { TOmniBlockingCollection.AddRange<T> }
+
+class function TOmniBlockingCollection.FromRange<T>(const values: array of T): IOmniBlockingCollection;
+begin
+  Result := TOmniBlockingCollection.Create;
+  (Result as TOmniBlockingCollection).AddRange<T>(values);
+end; { TOmniBlockingCollection.FromRange<T> }
+
+class function TOmniBlockingCollection.FromRange<T>(const collection: IEnumerable<T>): IOmniBlockingCollection;
+begin
+  Result := TOmniBlockingCollection.Create;
+  (Result as TOmniBlockingCollection).AddRange<T>(collection);
+end; { TOmniBlockingCollection.FromRange<T> }
+
+class function TOmniBlockingCollection.FromRange<T>(const collection: TEnumerable<T>): IOmniBlockingCollection;
+begin
+  Result := TOmniBlockingCollection.Create;
+  (Result as TOmniBlockingCollection).AddRange<T>(collection);
+end; { TOmniBlockingCollection.FromRange<T> }
+
+class function TOmniBlockingCollection.FromArray<T>(const values: TArray<T>): IOmniBlockingCollection;
+begin
+  Result := TOmniBlockingCollection.FromRange<T>(values);
+end; { TOmniBlockingCollection.FromArray<T> }
+
+class function TOmniBlockingCollection.ToArray<T>(const coll: IOmniBlockingCollection):
+  TArray<T>;
+var
+  ds      : integer;
+  lenArr  : integer;
+  maxValue: uint64;
+  numEl   : integer;
+  ti      : PTypeInfo;
+  value   : TOmniValue;
+begin
+  ti := System.TypeInfo(T);
+  GetTypeInformation(ti, ds, maxValue);
 
   lenArr := Clamp(0);
   SetLength(Result, lenArr);
@@ -515,7 +633,9 @@ begin
       obcAccessed := true;
       if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
         {$IFDEF MSWINDOWS}
+        {$WARN SYMBOL_PLATFORM OFF}
         Win32Check(ResetEvent(obcNotOverflow));
+        {$WARN SYMBOL_PLATFORM ON}
         {$ELSE}
         obcNotOverflow.Reset;
         {$ENDIF ~MSWINDOWS}

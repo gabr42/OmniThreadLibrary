@@ -155,7 +155,7 @@ var
   method: PMethodInfoHeader;
   i: Integer;
 begin
-    MethodInfo := PPointer(NativeUInt(PPointer(self)^) + vmtMethodTable)^;
+    MethodInfo := PPointer(NativeUInt(PPointer(self)^) + NativeUInt(vmtMethodTable))^;
     if MethodInfo <> nil then
     begin
       // Scan method and get string about each
