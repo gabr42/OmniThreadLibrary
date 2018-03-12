@@ -1,4 +1,10 @@
-3.07.5: 2018-02-28
+3.07.6: <<unreleased>>
+
+- Bug fixed:
+  - ThreadData is destroyed in the worker thread and not in the thread pool
+    management thread.
+
+3.07.5: 2017-02-28
 
 - General improvements:
   - Reduced number of times NameThreadForDebugging is called when threadpool

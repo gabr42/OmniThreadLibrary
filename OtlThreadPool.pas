@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-05-29
-///   Version           : 2.18a
+///   Last modification : 2018-03-12
+///   Version           : 2.19a
 /// </para><para>
 ///   History:
+///     2.19a: 2018-03-12
+///       - ThreadData is destroyed in the worker thread and not in the thread pool
+///         management thread.
 ///     2.19: 2017-11-28
 ///       - Worker thread name is set to 'Idle thread worker' only when worker has no work.
 ///     2.18a: 2017-05-29
@@ -844,6 +847,10 @@ begin
               'TOTPWorkerThread.Execute: Unexpected message %d', [msg.MsgID]);
           end; // case
         end; // while GetMsg
+        try
+          owtThreadData := nil;
+        except
+        end;
       finally Comm.Send(MSG_THREAD_DESTROYING, threadID); end;
     except
       on E: Exception do
