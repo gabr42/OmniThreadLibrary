@@ -6132,7 +6132,11 @@ var
     tempClass        : TWndClass;
     utilWindowClass  : TWndClass;
   begin
+    {$IFNDEF ConditionalExpressions}
     Result := 0;
+    {$ELSE}{$IF CompilerVersion < 32} //with Tokyo this assignment causes 'value never used' hint
+    Result := 0;
+    {$IFEND}{$ENDIF}
     FillChar(utilWindowClass, SizeOf(utilWindowClass), 0);
     EnterCriticalSection(GDSiWndHandlerCritSect);
     try
@@ -8760,8 +8764,14 @@ var
     @since   2003-09-02
   }
   function DSiGetProcAddress(const libFileName, procName: string): FARPROC;
+  var
+    hLibrary: HMODULE;
   begin
-    Result := GetProcAddress(DSiLoadLibrary(libFileName), PChar(procName));
+    hLibrary := DSiLoadLibrary(libFileName);
+    if hLibrary = 0 then
+      Result := nil
+    else
+      Result := GetProcAddress(hLibrary, PChar(procName));
   end; { DSiGetProcAddress }
 
   {:Unloads all loaded libraries.

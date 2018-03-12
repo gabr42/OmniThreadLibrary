@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2016, Primoz Gabrijelcic
+Copyright (c) 2018, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2017-09-05
-   Version           : 1.72c
+   Last modification : 2018-01-22
+   Version           : 1.77
 </pre>*)(*
    History:
+     1.77: 2018-01-22
+       - TGpFifoBuffer.Truncate was not taking active block into account.
+     1.76: 2017-12-13
+       - Successful TGpCache<K,V>.TryGetValue pushes retrieved key to the front of the
+         MRU list.
+     1.75: 2017-11-15
+       - Key comparer can be set for TGpCache<K,V>.
+     1.74: 2017-11-02
+       - Implemented O(1) size-constrained cache TGpCache<K,V>.
+     1.73: 2017-10-04
+       - All lists that implemented Contains(element) got also Contains(element, var index).
+         (Except the skip lists where elements are not indexed.)
      1.72c: 2017-09-05
        - TGpObjectMap's internal storage change from TGpIntegerObjectList to
          TGpInt64ObjectList so that it can correctly store pointers in 64-bit code.
@@ -333,6 +345,7 @@ uses
   Posix.Pthread,
   {$ENDIF}
   {$IFDEF Unicode}
+  Generics.Defaults,
   Generics.Collections,
   {$ENDIF}
   SyncObjs,
@@ -521,7 +534,8 @@ type
     procedure Assign(const elements: array of integer); overload;
     procedure Assign(list: TGpIntegerList); overload;
     procedure Clear;
-    function  Contains(item: integer): boolean;
+    function  Contains(item: integer): boolean; overload;
+    function  Contains(item: integer; var idx: integer): boolean; overload;
     {$IFDEF GpLists_Sorting}
     procedure CustomSort(sortMethod: TGpIntegerListSortCompare);
     {$ENDIF}
@@ -607,7 +621,8 @@ type
     procedure Assign(list: TGpIntegerList); overload; virtual;
     procedure Assign(list: IGpIntegerList); overload; virtual;
     procedure Clear; virtual;
-    function  Contains(item: integer): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: integer): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: integer; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$IFDEF GpLists_Sorting}
     procedure CustomSort(sortMethod: TGpIntegerListSortCompare);
     {$ENDIF}
@@ -737,7 +752,8 @@ type
     procedure Assign(list: TGpInt64List); overload;
     procedure Assign(list: TGpIntegerList); overload;
     procedure Clear;
-    function  Contains(item: int64): boolean;
+    function  Contains(item: int64): boolean; overload;
+    function  Contains(item: int64; var idx: integer): boolean; overload;
     procedure Delete(idx: integer);
     function  Dump(baseAddr: pointer): pointer;
     function  Ensure(item: int64): integer;
@@ -818,7 +834,8 @@ type
     procedure Assign(list: TGpIntegerList); overload; virtual;
     procedure Assign(list: IGpIntegerList); overload; virtual;
     procedure Clear; virtual;
-    function  Contains(item: int64): boolean;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: int64): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: int64; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer); virtual;
     function  Dump(baseAddr: pointer): pointer; virtual;
     function  Ensure(item: int64): integer; virtual;
@@ -1187,7 +1204,7 @@ type
   end; { TGpCountedInt64List }
 
   TGpGUIDRec = packed record
-    case Integer of
+    case integer of
       0: (Lo, Hi: int64);
       1: (Guid: TGUID);
   end; { TGpGUIDRec }
@@ -1278,7 +1295,8 @@ type
     procedure Assign(const elements: array of TGUID); overload;
     procedure Assign(list: TGpGUIDList); overload;
     procedure Clear;
-    function  Contains(const item: TGUID): boolean;
+    function  Contains(const item: TGUID): boolean; overload;
+    function  Contains(const item: TGUID; var idx: integer): boolean; overload;
     {$IFDEF GpLists_Sorting}
     procedure CustomSort(sortMethod: TGpGUIDListSortCompare);
     {$ENDIF}
@@ -1360,7 +1378,8 @@ type
     procedure Assign(list: TGpGUIDList); overload; virtual;
     procedure Assign(list: IGpGUIDList); overload; virtual;
     procedure Clear; virtual;
-    function  Contains(const item: TGUID): boolean; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const item: TGUID): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const item: TGUID; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$IFDEF GpLists_Sorting}
     procedure CustomSort(sortMethod: TGpGUIDListSortCompare); virtual;
     {$ENDIF}
@@ -1417,7 +1436,8 @@ type
   //
     function  Add(const item: T): integer;
     procedure Clear;
-    function  Contains(const item: T): boolean;
+    function  Contains(const item: T): boolean; overload;
+    function  Contains(const item: T; var idx: integer): boolean; overload;
     procedure Delete(idx: integer);
     function  Ensure(const item: T): integer;
     procedure Exchange(idx1, idx2: integer);
@@ -1449,7 +1469,8 @@ type
     class function CreateInterface: IGpInterfaceList<T>;
     function  Add(const item: T): integer;          {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  Contains(const item: T): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const item: T): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const item: T; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Delete(idx: integer);                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Ensure(const item: T): integer;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Exchange(idx1, idx2: integer);        {$IFDEF GpLists_Inline}inline;{$ENDIF}
@@ -1486,10 +1507,11 @@ type
   ///<since>2007-06-28</since>
   TGpStringsHelper = class helper for TStrings
   public
-    function  Contains(const s: string): boolean;   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const s: string): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const s: string; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  FetchObject(const s: string): TObject;
     procedure FreeObjects;
-    function  Last: string;                         {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Last: string;                                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Remove(const s: string);
     procedure RemoveObject(const s: string);
     {$IFDEF GpLists_Enumerators}
@@ -1512,7 +1534,8 @@ type
     procedure SetItemCount(idx: integer; const value: integer); virtual;
   public
     function  Add(const s: string; count: integer): integer; reintroduce;
-    function  Contains(const s: string): boolean;   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const s: string): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(const s: string; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  Ensure(const s: string; count: integer): integer;
     procedure SortByCounter(descending: boolean = true);
     property  Counter[idx: integer]: integer read GetItemCount write SetItemCount;
@@ -1525,7 +1548,7 @@ type
   TAnsiStringStream = class(TStream)
   private
     FDataString: AnsiString;
-    FPosition: Integer;
+    FPosition: integer;
   protected
     procedure SetSize(NewSize: Longint); override;
   public
@@ -1566,7 +1589,8 @@ type
     function  Add(item: TMethod): integer;
     procedure Assign(list: TGpTMethodList);
     procedure Clear;
-    function  Contains(item: TMethod): boolean;
+    function  Contains(item: TMethod): boolean; overload;
+    function  Contains(item: TMethod; var idx: integer): boolean; overload;
     procedure Delete(idx: integer);
     function  Ensure(item: TMethod): integer;
     {$IFDEF GpLists_Enumerators}
@@ -1598,18 +1622,19 @@ type
     constructor Create;
     destructor  Destroy; override;
     class function CreateInterface: IGpTMethodList;
-    function  Add(item: TMethod): integer;          {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Assign(list: TGpTMethodList); overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Clear;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  Contains(item: TMethod): boolean;     {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Delete(idx: integer);                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  Ensure(item: TMethod): integer;       {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Add(item: TMethod): integer;                                  {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Assign(list: TGpTMethodList); overload;                       {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Clear;                                                        {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: TMethod): boolean; overload;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Contains(item: TMethod; var idx: integer): boolean; overload; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Delete(idx: integer);                                         {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Ensure(item: TMethod): integer;                               {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$IFDEF GpLists_Enumerators}
-    function  GetEnumerator: TGpTMethodListEnumerator; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  GetEnumerator: TGpTMethodListEnumerator;                      {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$ENDIF GpLists_Enumerators}
     function  IndexOf(item: TMethod): integer;
-    procedure Insert(idx: integer; item: TMethod);  {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    procedure Remove(item: TMethod);                {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Insert(idx: integer; item: TMethod);                          {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Remove(item: TMethod);                                        {$IFDEF GpLists_Inline}inline;{$ENDIF}
     property Capacity: integer read GetCapacity write SetCapacity;
     property Count: integer read GetCount write SetCount;
     property Items[idx: integer]: TMethod read GetItems write SetItems; default;
@@ -2312,8 +2337,8 @@ type
       maxLevels: integer = CDefaultMaxLevels);
     destructor  Destroy; override;
     procedure Clear; virtual;
-    function  Contains(const key: K): boolean; inline;
-    function  ContainsElement(const element: T): boolean; inline;
+    function  Contains(const key: K): boolean; overload; inline;
+    function  ContainsElement(const element: T): boolean; overload; inline;
     function  Count: integer; inline;
     function  Delete(const key: K): boolean; virtual;
     procedure DeleteElement(const element: T); inline;
@@ -2371,6 +2396,52 @@ type
     procedure Clear; override;
     procedure Delete(const element: T); override;
   end; { TGpSkipObjectList<T> }
+
+  ///  The TGpCache class maintains a dictionary of (key, index) pairs where
+  ///  an 'index' is a pointer into a MRU linked list of values.
+  ///  That allows us to remove the leastrecently used key from the dictionary
+  //   when the cache becomes full in O(1) time.
+  ///  As the linked list has a known maximum size, it is stored as an
+  ///  array of list elements and 'index' from the dictionary is just the
+  ///  element number.
+
+  TGpCache<K,V> = class
+  strict private
+  const
+    NilPointer = -1;
+  type
+    TListElement = record
+      Next : integer;
+      Prev : integer;
+      Key  : K;
+      Value: V;
+    end;
+    PListElement = ^TListElement;
+  var
+    FCache     : TDictionary<K,integer>;
+    FFreeList  : integer;
+    FHead      : integer;
+    FKeys      : TArray<TListElement>;
+    FOwnsValues: boolean;
+    FTail      : integer;
+  strict protected
+    function  GetFree: integer;                                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  IsNil(element: integer): boolean;                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  RemoveOldest: integer;
+    procedure BuildLinkedList(numElements: integer);
+    procedure DestroyOwnedValues;
+    procedure InsertInFront(elementIdx: integer);
+    procedure Unlink(element: integer);
+  public
+    constructor Create(ANumElements: integer;
+      const AComparer: IEqualityComparer<K > = nil;
+      AOwnsValues: boolean = false); overload;
+    destructor  Destroy; override;
+    function  Remove(const key: K): boolean;
+    function  IsFull: boolean;                                                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  TryGetValue(const key: K; var value: V): boolean;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Update(const key: K; const value: V);
+  end; { TGpCache<K,V> }
 {$ENDIF}
 {$ENDIF}
 
@@ -2392,6 +2463,9 @@ type
   function Int64Compare(avalue1, avalue2: int64): integer; {$IFDEF GpLists_Inline}inline;{$ENDIF}
 
 implementation
+
+uses
+  TypInfo;
 
 {$IFDEF ConditionalExpressions}
 {$IF CompilerVersion <= 20} //D2009 or older
@@ -2747,9 +2821,17 @@ begin
   ilList.Clear;
 end; { TGpIntegerList.Clear }
 
-function TGpIntegerList.Contains(item: integer): boolean;
+function TGpIntegerList.Contains(item: integer; var idx: integer): boolean;
 begin
-  Result := (IndexOf(item) >= 0);
+  idx := IndexOf(item);
+  Result := (idx >= 0);
+end; { TGpIntegerList.Contains }
+
+function TGpIntegerList.Contains(item: integer): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(item, idx);
 end; { TGpIntegerList.Contains }
 
 class function TGpIntegerList.CreateInterface: IGpIntegerList;
@@ -3418,9 +3500,17 @@ begin
   ilList.Clear;
 end; { TGpInt64List.Clear }
 
-function TGpInt64List.Contains(item: int64): boolean;
+function TGpInt64List.Contains(item: int64; var idx: integer): boolean;
 begin
-  Result := (IndexOf(item) >= 0);
+  idx := IndexOf(item);
+  Result := (idx >= 0);
+end; { TGpInt64List.Contains }
+
+function TGpInt64List.Contains(item: int64): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(item, idx);
 end; { TGpInt64List.Contains }
 
 class function TGpInt64List.CreateInterface: IGpInt64List;
@@ -4881,9 +4971,17 @@ begin
   glList.Clear;
 end; { TGpGUIDList.Clear }
 
-function TGpGUIDList.Contains(const item: TGUID): boolean;
+function TGpGUIDList.Contains(const item: TGUID; var idx: integer): boolean;
 begin
-  Result := (IndexOf(item) >= 0);
+  idx := IndexOf(item);
+  Result := (idx >= 0);
+end; { TGpGUIDList.Contains }
+
+function TGpGUIDList.Contains(const item: TGUID): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(item, idx);
 end; { TGpGUIDList.Contains }
 
 class function TGpGUIDList.CreateInterface: IGpGUIDList;
@@ -5257,9 +5355,17 @@ begin
   ilList.Clear;
 end; { TGpInterfaceList<T>.Clear }
 
-function TGpInterfaceList<T>.Contains(const item: T): boolean;
+function TGpInterfaceList<T>.Contains(const item: T; var idx: integer): boolean;
 begin
-  Result := (IndexOf(item) >= 0);
+  idx := IndexOf(item);
+  Result := (idx >= 0);
+end; { TGpInterfaceList }
+
+function TGpInterfaceList<T>.Contains(const item: T): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(item, idx);
 end; { TGpInterfaceList<T>.Contains }
 
 class function TGpInterfaceList<T>.CreateInterface: IGpInterfaceList<T>;
@@ -5386,9 +5492,17 @@ end; { TGpStringsHelperWalkKVEnumerator.MoveNext }
 
 { TGpStringsHelper }
 
-function TGpStringsHelper.Contains(const s: string): boolean;
+function TGpStringsHelper.Contains(const s: string; var idx: integer): boolean;
 begin
-  Result := (IndexOf(s) >= 0);
+  idx := IndexOf(s);
+  Result := (idx >= 0);
+end; { TGpStringsHelper.Contains }
+
+function TGpStringsHelper.Contains(const s: string): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(s, idx);
 end; { TGpStringsHelper.Contains }
 
 function TGpStringsHelper.FetchObject(const s: string): TObject;
@@ -5492,9 +5606,17 @@ begin
   Result := inherited AddObject(s, pointer(count));
 end; { TGpCountedStringList.Add }
 
-function TGpCountedStringList.Contains(const s: string): boolean;
+function TGpCountedStringList.Contains(const s: string; var idx: integer): boolean;
 begin
-  Result := (IndexOf(s) >= 0);
+  idx := IndexOf(s);
+  Result := (idx >= 0);
+end; { TGpCountedStringList.Contains }
+
+function TGpCountedStringList.Contains(const s: string): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(s, idx);
 end; { TGpCountedStringList.Contains }
 
 function TGpCountedStringList.Ensure(const s: string;
@@ -5569,7 +5691,7 @@ end;
 
 function TAnsiStringStream.ReadString(Count: Longint): AnsiString;
 var
-  Len: Integer;
+  Len: integer;
 begin
   Len := Length(FDataString) - FPosition;
   if Len > Count then Len := Count;
@@ -5646,9 +5768,17 @@ begin
   mlData.Clear;
 end; { TGpTMethodList.Clear }
 
-function TGpTMethodList.Contains(item: TMethod): boolean;
+function TGpTMethodList.Contains(item: TMethod; var idx: integer): boolean;
 begin
-  Result := (IndexOf(item) >= 0);
+  idx := IndexOf(item);
+  Result := (idx >= 0);
+end; { TGpTMethodList.Contains }
+
+function TGpTMethodList.Contains(item: TMethod): boolean;
+var
+  idx: integer;
+begin
+  Result := Contains(item, idx);
 end; { TGpTMethodList.Contains }
 
 class function TGpTMethodList.CreateInterface: IGpTMethodList;
@@ -7214,6 +7344,13 @@ var
 begin
   while FCurrentSize > Size do begin
     block := (FFifo.RemoveFromTail as TFifoBlock);
+    if not assigned(block) then begin
+      // Truncate active block
+      Assert(FActiveBlockInUse);
+      FActiveBlock.Size := FActiveBlock.Position + Size;
+      FCurrentSize := FActiveBlock.Size - FActiveBlock.Position;
+      break; //while
+    end;
     Dec(FCurrentSize, block.Size);
     ReleaseBlock(block);
   end;
@@ -7648,6 +7785,177 @@ begin
     element.Free;
 end; { TGpSkipObjectList }
 
+{ TGpCache<K, V> }
+
+constructor TGpCache<K, V>.Create(ANumElements: integer;
+  const AComparer: IEqualityComparer<K>; AOwnsValues: boolean);
+begin
+  inherited Create;
+  FOwnsValues := AOwnsValues;
+  if AOwnsValues and (PTypeInfo(System.TypeInfo(V)).Kind <> tkClass) then
+    raise Exception.Create('TGpCache<K, V>.Create: AOwnsValues is set, but V is not a class type');
+  FCache := TDictionary<K,integer>.Create(ANumElements, AComparer);
+  BuildLinkedList(ANumElements);
+end; { TGpCache<K, V>.Create }
+
+destructor TGpCache<K, V>.Destroy;
+begin
+  if FOwnsValues then
+    DestroyOwnedValues;
+  FreeAndNil(FCache);
+  inherited;
+end; { TGpCache<K, V>.Destroy }
+
+function TGpCache<K, V>.IsNil(element: integer): boolean; //inline
+begin
+  Result := (element = NilPointer);
+end; { TGpCache<K, V>.IsNil }
+
+procedure TGpCache<K, V>.DestroyOwnedValues;
+begin
+  while not IsNil(FHead) do begin
+    PObject(@FKeys[FHead].Value)^.DisposeOf;
+    FHead := FKeys[FHead].Next;
+  end;
+end; { TGpCache<K, V>.DestroyOwnedValues }
+
+procedure TGpCache<K, V>.BuildLinkedList(numElements: integer);
+var
+  i: integer;
+begin
+  SetLength(FKeys, numElements);
+
+  for i := 0 to numElements - 2 do
+    FKeys[i].Next := i + 1;
+  FKeys[numElements - 1].Next := NilPointer;
+
+  FKeys[0].Prev := NilPointer;
+  for i := 1 to numElements - 1 do
+    FKeys[i].Prev := i - 1;
+
+  FHead := NilPointer;
+  FTail := NilPointer;
+  FFreeList := 0;
+end; { TGpCache<K, V>.BuildLinkedList }
+
+function TGpCache<K, V>.GetFree: integer;
+begin
+  if IsNil(FFreeList) then
+    raise Exception.Create('TGpCache<K, V>.GetFree: Free list is empty!');
+  Result := FFreeList;
+  FFreeList := FKeys[FFreeList].Next;
+end; { TGpCache<K, V>.GetFree }
+
+procedure TGpCache<K, V>.InsertInFront(elementIdx: integer);
+begin
+  FKeys[elementIdx].Next := FHead;
+  FKeys[elementIdx].Prev := NilPointer;
+  if not IsNil(FHead) then
+    FKeys[FHead].Prev := elementIdx;
+  FHead := elementIdx;
+  if IsNil(FTail) then
+    FTail := FHead;
+end; { TGpCache<K, V>.InsertInFront }
+
+function TGpCache<K, V>.IsFull: boolean;
+begin
+  Result := IsNil(FFreeList);
+end; { TGpCache<K, V>.IsFull }
+
+function TGpCache<K, V>.Remove(const key: K): boolean;
+var
+  element : integer;
+  pElement: PListElement;
+begin
+  Result := FCache.TryGetValue(key, element);
+  if Result then begin
+    Unlink(element);
+    pElement := @FKeys[element];
+    pElement.Next := FFreeList;
+    pElement.Prev := NilPointer;
+    FFreeList := element;
+    FCache.Remove(key);
+    if FOwnsValues then
+      PObject(@pElement.Value)^.DisposeOf;
+  end;
+end; { TGpCache<K, V>.Remove }
+
+function TGpCache<K, V>.RemoveOldest: integer;
+var
+  element: integer;
+begin
+  if IsNil(FTail) then
+    raise Exception.Create('TGpCache<K, V>.RemoveOldest: List is empty!');
+  Result := FTail;
+  Unlink(FTail);
+  FCache.Remove(FKeys[Result].Key);
+  if FOwnsValues then
+    PObject(@FKeys[Result].Value)^.DisposeOf;
+end; { TGpCache<K, V>.RemoveOldest }
+
+function TGpCache<K, V>.TryGetValue(const key: K; var value: V): boolean;
+var
+  element: integer;
+begin
+  Result := FCache.TryGetValue(key, element);
+  if Result then begin
+    value := FKeys[element].Value;
+    Unlink(element);
+    InsertInFront(element);
+  end;
+end; { TGpCache<K, V>.TryGetValue }
+
+procedure TGpCache<K, V>.Unlink(element: integer);
+var
+  pElement: PListElement;
+begin
+  pElement := @FKeys[element];
+  if not IsNil(pElement.Next) then
+    FKeys[pElement.Next].Prev := pElement.Prev
+  else begin
+    Assert(FTail = element);
+    FTail := pElement.Prev;
+  end;
+
+  if not IsNil(pElement.Prev) then
+    FKeys[pElement.Prev].Next := pElement.Next
+  else begin
+    Assert(FHead = element);
+    FHead := pElement.Next;
+  end;
+end; { TGpCache<K, V>.Unlink }
+
+procedure TGpCache<K, V>.Update(const key: K; const value: V);
+var
+  element : integer;
+  oldValue: V;
+  pElement: PListElement;
+begin
+  if FCache.TryGetValue(key, element) then begin // update existing element
+    pElement := @FKeys[element];
+    if not FOwnsValues then
+      pElement.Value := value
+    else begin
+      oldValue := pElement.Value;
+      pElement.Value := value;
+      if PObject(@oldValue)^ <> PObject(@value)^ then
+        PObject(@oldValue)^.DisposeOf;
+    end;
+    Unlink(element);
+    InsertInFront(element);
+  end
+  else begin // add new element
+    if IsFull then
+      element := RemoveOldest
+    else
+      element := GetFree;
+    InsertInFront(element);
+    pElement := @FKeys[element];
+    pElement.Key := key;
+    pElement.Value := value;
+    FCache.Add(key, element);
+  end;
+end; { TGpCache<K, V>.Update }
 {$ENDIF}
 {$ENDIF}
 
