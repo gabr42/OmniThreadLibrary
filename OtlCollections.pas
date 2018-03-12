@@ -118,7 +118,7 @@ uses
   {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
   TypInfo,
   RTTI,
-  System.Generics.Collections,
+  Generics.Collections,
   {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
   OtlCommon,
   OtlContainers,

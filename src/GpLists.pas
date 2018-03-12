@@ -7814,7 +7814,11 @@ end; { TGpCache<K, V>.IsNil }
 procedure TGpCache<K, V>.DestroyOwnedValues;
 begin
   while not IsNil(FHead) do begin
+    {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
+    PObject(@FKeys[FHead].Value)^.Free;
+    {$ELSE}
     PObject(@FKeys[FHead].Value)^.DisposeOf;
+    {$IFEND}
     FHead := FKeys[FHead].Next;
   end;
 end; { TGpCache<K, V>.DestroyOwnedValues }
@@ -7876,7 +7880,11 @@ begin
     FFreeList := element;
     FCache.Remove(key);
     if FOwnsValues then
+      {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
+      PObject(@pElement.Value)^.Free;
+      {$ELSE}
       PObject(@pElement.Value)^.DisposeOf;
+      {$IFEND}
   end;
 end; { TGpCache<K, V>.Remove }
 
@@ -7890,7 +7898,11 @@ begin
   Unlink(FTail);
   FCache.Remove(FKeys[Result].Key);
   if FOwnsValues then
+    {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
+    PObject(@FKeys[Result].Value)^.Free;
+    {$ELSE}
     PObject(@FKeys[Result].Value)^.DisposeOf;
+    {$IFEND}
 end; { TGpCache<K, V>.RemoveOldest }
 
 function TGpCache<K, V>.TryGetValue(const key: K; var value: V): boolean;
@@ -7939,7 +7951,11 @@ begin
       oldValue := pElement.Value;
       pElement.Value := value;
       if PObject(@oldValue)^ <> PObject(@value)^ then
+        {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
+        PObject(@oldValue)^.Free;
+        {$ELSE}
         PObject(@oldValue)^.DisposeOf;
+        {$IFEND}
     end;
     Unlink(element);
     InsertInFront(element);
