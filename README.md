@@ -1,6 +1,6 @@
 ### What is OmniThreadLibrary?
 
-OmniThreadLibrary is a simple to use threading library for Delphi. OmniThreadLibrary's main "selling" points (besides the prices, of course ;) are power, simplicity, and openess. With just few lines of code, you can set up multiple threads, send messages between them, process Windows messages and more. OmniThreadLibrary doesn't limit you in any way - if it is not powerfull enough for you, you can ignore any part of its "smartness" and replace it with your own code.
+OmniThreadLibrary is a powerful threading library for Delphi. OmniThreadLibrary's main "selling" points (besides the prices, of course ;) are power, simplicity, and openess. With just few lines of code, you can set up multiple threads, send messages between them, process Windows messages and more. OmniThreadLibrary doesn't limit you in any way - if it is not powerfull enough for you, you can ignore any part of its "smartness" and replace it with your own code.
 
 ### How do I get OmniThreadLibrary?
 
