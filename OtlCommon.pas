@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-07-26
-///   Version           : 1.48
+///   Last modification : 2018-03-12
+///   Version           : 1.49
 ///</para><para>
 ///   History:
+///     1.49: 2018-03-12
+///       - Added TOmniValue.FromRecordUnsafe<T> which works same as FromRecord<T> but
+///         doesn't enforce a 'record' constraint on T.
 ///     1.48: 2017-07-26
 ///       - TOmniMessageID can now hold TProc<integer>.
 ///     1.47: 2017-02-03
@@ -514,6 +517,7 @@ type
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastTo<T>: T;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
+    class function FromRecordUnsafe<T>(const value: T): TOmniValue; static;
     function  ToRecord<T>: T;
     class function Wrap<T>(const value: T): TOmniValue; static;
     function  Unwrap<T>: T; //Use this form to call: omnivalue.Unwrap<T>()
@@ -2454,6 +2458,11 @@ class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
 begin
   Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
 end; { TOmniValue.FromRecord<T> }
+
+class function TOmniValue.FromRecordUnsafe<T>(const value: T): TOmniValue;
+begin
+  Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
+end; { TOmniValue.FromRecordUnsafe<T> }
 
 {$IF CompilerVersion > 20}
 function TOmniValue.ToObject<T>: T;
