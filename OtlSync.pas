@@ -1940,9 +1940,11 @@ begin
     idxWait := FWaitHandles.AddObject(0 {placeholder}, waiter);
     if iHandle <> idxWait then
       raise Exception.Create('TWaitFor.RegisterWaitHandles: Indexes out of sync');
+{$WARN SYMBOL_PLATFORM OFF}
     Win32Check(RegisterWaitForSingleObject(newWaitObject, FHandles[iHandle], WaitForCallback,
                                            pointer(waiter), INFINITE,
                                            extraFlags OR WT_EXECUTEINPERSISTENTTHREAD));
+{$WARN SYMBOL_PLATFORM ON}
     FWaitHandles[idxWait] := newWaitObject;
   end;
   SetLength(FSignalledHandles, 0);
