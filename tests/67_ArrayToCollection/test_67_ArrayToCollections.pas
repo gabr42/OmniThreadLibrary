@@ -3,8 +3,8 @@ unit test_67_ArrayToCollections;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, StdCtrls,
   OtlCollections;
 
 type
@@ -32,7 +32,7 @@ var
 implementation
 
 uses
-  System.Generics.Collections,
+  Generics.Collections,
   DSiWin32,
   OtlCommon;
 
@@ -135,7 +135,7 @@ begin
 
   Assert(coll.Count = CTestSize);
   for i := 1 to CTestSize do begin
-    obj := coll.Next.ToObject<TTestObj>;
+    obj := TTestObj(coll.Next.AsObject);
     Assert(obj.Key = arr[i-1].Key);
     Assert(obj.Value = arr[i-1].Value);
     obj.Free;
