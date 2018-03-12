@@ -2397,6 +2397,8 @@ type
     procedure Delete(const element: T); override;
   end; { TGpSkipObjectList<T> }
 
+  {$IF CompilerVersion >= 24} //XE2 has problems compiling this class
+
   ///  The TGpCache class maintains a dictionary of (key, index) pairs where
   ///  an 'index' is a pointer into a MRU linked list of values.
   ///  That allows us to remove the leastrecently used key from the dictionary
@@ -2434,7 +2436,7 @@ type
     procedure Unlink(element: integer);
   public
     constructor Create(ANumElements: integer;
-      const AComparer: IEqualityComparer<K > = nil;
+      const AComparer: IEqualityComparer<K> = nil;
       AOwnsValues: boolean = false); overload;
     destructor  Destroy; override;
     function  Remove(const key: K): boolean;
@@ -2442,6 +2444,7 @@ type
     function  TryGetValue(const key: K; var value: V): boolean;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Update(const key: K; const value: V);
   end; { TGpCache<K,V> }
+{$IFEND CompilerVersion >= 24}
 {$ENDIF}
 {$ENDIF}
 
@@ -7785,6 +7788,8 @@ begin
     element.Free;
 end; { TGpSkipObjectList }
 
+{$IF CompilerVersion >= 24} //XE3 or newer
+
 { TGpCache<K, V> }
 
 constructor TGpCache<K, V>.Create(ANumElements: integer;
@@ -7972,6 +7977,7 @@ begin
     FCache.Add(key, element);
   end;
 end; { TGpCache<K, V>.Update }
+{$IFEND CompilerVersion >= 24}
 {$ENDIF}
 {$ENDIF}
 
