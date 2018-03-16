@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-08-01
-///   Version           : 1.40
+///   Last modification : 2018-03-16
+///   Version           : 1.40a
 ///</para><para>
 ///   History:
+///     1.40a: 2018-03-16
+///       - TOmniMessageExec.OnTerminated checks whether the event handler is assigned
+///         before executing it.
 ///     1.40: 2017-08-01
 ///       - Implemented IOmniTask.InvokeOnSelf method.
 ///     1.39: 2017-07-26
@@ -4215,9 +4218,13 @@ procedure TOmniMessageExec.OnTerminated(const task: IOmniTaskControl);
 begin
   case omeOnTerminated.Kind of
     {$IFDEF OTL_Anonymous}
-    oekDelegate: TOmniOnTerminatedFunction(TProc(omeOnTerminated))(task);
+    oekDelegate:
+      if assigned(TProc(omeOnTerminated)) then
+        TOmniOnTerminatedFunction(TProc(omeOnTerminated))(task);
     {$ENDIF OTL_Anonymous}
-    oekMethod: TOmniTaskTerminatedEvent(TMethod(omeOnTerminated))(task);
+    oekMethod:
+      if TMethod(omeOnTerminated).Code <> nil then
+        TOmniTaskTerminatedEvent(TMethod(omeOnTerminated))(task);
     else raise Exception.CreateFmt('TOmniMessageExec.OnTerminated: Unexpected kind %s',
       [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnTerminated.Kind))]);
   end;
