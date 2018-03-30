@@ -95,8 +95,8 @@ uses
   DSiWin32,
   {$ELSE}
   Generics.Collections,
-  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
   {$ENDIF}
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel,
   SysUtils,
   Classes,
   SyncObjs,

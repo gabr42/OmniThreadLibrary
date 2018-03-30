@@ -1504,7 +1504,6 @@ end; { TOmniTask.GetUniqueID }
 procedure TOmniTask.InternalExecute(calledFromTerminate: boolean);
 var
   chainTo       : IOmniTaskControl;
-  sync          : TSynchroObject;
   taskException : Exception;
   terminateEvent: TOmniTransitionEvent;
 begin
@@ -1544,17 +1543,15 @@ begin
         terminateEvent := otSharedInfo_ref.TerminatedEvent;
         otSharedInfo_ref.Stopped := true;
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
-        sync := nil; // to remove the warning in the 'finally' clause below
         otSharedInfo_ref.MonitorLock.Acquire;
         try
-          sync := otSharedInfo_ref.MonitorLock.SyncObj as TSynchroObject;
+          // sync := otSharedInfo_ref.MonitorLock.SyncObj as TSynchroObject;
           {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
               integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
           {$ENDIF MSWINDOWS}
-          otSharedInfo_ref := nil;
-        finally sync.Release; end;
+        finally otSharedInfo_ref.MonitorLock.Release end;
       end;
     finally
       //Task controller could die any time now. Make sure we're not using shared
@@ -1835,8 +1832,9 @@ begin
   oteInternalLock.Acquire;
   try
     Cleanup;
-    //oteMsgInfo.Waiter.Free;
     {$IFDEF MSWINDOWS}
+    FreeAndNil( oteMsgInfo.Waiter);
+    {$ELSE}
     oteMsgInfo.Waiter := nil;
     {$ENDIF}
     FreeAndNil(oteCommList);
@@ -2627,6 +2625,8 @@ var
   SignallerIdx  : integer;
   {$ENDIF ~MSWINDOWS}
 begin
+  msgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
+  try
     RemoveTerminationEvents(oteMsgInfo, msgInfo);
     waitHandlesGen := oteWaitHandlesGen;
     repeat
@@ -2650,7 +2650,11 @@ begin
         EmptyMessageQueues(task);
       end;
     until false;
+  finally msgInfo.Waiter.Free; end;
 end; { TOmniTaskExecutor.ProcessMessages }
+
+
+
 
 {$IFDEF MSWINDOWS}
 procedure TOmniTaskExecutor.ProcessThreadMessages;

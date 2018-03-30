@@ -202,11 +202,12 @@ var
   
 implementation
 
-{$IFDEF MSWINDOWS}
 uses
+{$IFDEF MSWINDOWS}
   Windows,
-  DSiWin32;
+  DSiWin32,
 {$ENDIF}
+  Otl.Parallel.SynchroPrimitives.InterfaceLevel;
 
 const
   CMaxReceiveLoop_ms = 5;

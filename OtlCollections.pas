@@ -282,7 +282,9 @@ end; { TOmniBlockingCollectionEnumerator.TryTake }
 constructor TOmniBlockingCollection.Create(numProducersConsumers: integer);
 var
   ShareLock: IOmniCriticalSection;
-  Factors: TSynchroArray;
+  {$IFNDEF MSWINDOWS}
+    Factors: TSynchroArray;
+  {$ENDIF}
 begin
   inherited Create;
   FEventFactory := TSynchroFactory.Create( MaxCardinal);

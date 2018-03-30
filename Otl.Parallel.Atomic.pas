@@ -20,7 +20,7 @@ type
   integer;
   TVolatileInt32Helper = record helper for TVolatileInt32
   {$ENDIF}
-    procedure Initialize( Value: integer);                  {$IFDEF ARM} inline; {$ENDIF}
+    procedure Initialize( Value: integer);     {$IFNDEF USE_SLACKSPACE_ALIGNMENT}  inline; {$ENDIF}
     procedure Finalize;                                                  inline;
     function  Increment: integer;                                        inline;
     function  Decrement: integer;                                        inline;
@@ -49,7 +49,7 @@ type
   cardinal;
   TVolatileUInt32Helper = record helper for TVolatileUInt32
   {$ENDIF}
-    procedure Initialize( Value: cardinal);                  {$IFDEF ARM} inline; {$ENDIF}
+    procedure Initialize( Value: cardinal);                         {$IFNDEF USE_SLACKSPACE_ALIGNMENT}  inline; {$ENDIF}
     procedure Finalize;                                                   inline;
     function  Increment: cardinal;                                        inline;
     function  Decrement: cardinal;                                        inline;
@@ -81,7 +81,7 @@ type
   int64;
   TVolatileInt64Helper = record helper for TVolatileInt64
   {$ENDIF}
-    procedure Initialize( Value: int64);                  {$IFDEF ARM} inline; {$ENDIF}
+    procedure Initialize( Value: int64);                  {$IFNDEF USE_SLACKSPACE_ALIGNMENT}  inline; {$ENDIF}
     procedure Finalize;                                                inline;
     function  Increment: int64;                                        inline;
     function  Decrement: int64;                                        inline;
@@ -110,7 +110,7 @@ type
   uint64;
   TVolatileUInt64Helper = record helper for TVolatileUInt64
   {$ENDIF}
-    procedure Initialize( Value: uint64);                  {$IFDEF ARM} inline; {$ENDIF}
+    procedure Initialize( Value: uint64);                  {$IFNDEF USE_SLACKSPACE_ALIGNMENT}  inline; {$ENDIF}
     procedure Finalize;                                                 inline;
     function  Increment: uint64;                                        inline;
     function  Decrement: uint64;                                        inline;

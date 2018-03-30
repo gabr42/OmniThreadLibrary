@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{3E37359F-9F1A-4FFB-AB81-96D3C6C77CA2}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OmniThreadLibraryRuntime10Berlin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibraryPOSIXRuntime10Berlin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OmniThreadLibraryDesigntime10Berlin.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OmniThreadLibraryRuntime10Berlin">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Berlin.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntime10Berlin:Clean">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Berlin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryRuntime10Berlin:Make">
+        <MSBuild Projects="OmniThreadLibraryRuntime10Berlin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntime10Berlin">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntime10Berlin.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntime10Berlin:Clean">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntime10Berlin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryPOSIXRuntime10Berlin:Make">
+        <MSBuild Projects="OmniThreadLibraryPOSIXRuntime10Berlin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Berlin">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Berlin.dproj"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Berlin:Clean">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Berlin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OmniThreadLibraryDesigntime10Berlin:Make">
+        <MSBuild Projects="OmniThreadLibraryDesigntime10Berlin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Berlin;OmniThreadLibraryPOSIXRuntime10Berlin;OmniThreadLibraryDesigntime10Berlin"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Berlin:Clean;OmniThreadLibraryPOSIXRuntime10Berlin:Clean;OmniThreadLibraryDesigntime10Berlin:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OmniThreadLibraryRuntime10Berlin:Make;OmniThreadLibraryPOSIXRuntime10Berlin:Make;OmniThreadLibraryDesigntime10Berlin:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -73,7 +73,6 @@ type
     function  GetDefaultFlavour: IResourceFlavour;
     procedure SetDefaultFlavour( const Value: IResourceFlavour);
     function  Acquire( const MatchingFlavour: IResourceFlavour): T;
-    function  AcquireVanilla: T;
     procedure Release( const Retiree: T);
     procedure ReleaseNoRecycle( const Retiree: T);
     procedure PopAnOldOne;
@@ -86,6 +85,7 @@ type
     procedure Pop( Idx: integer);
 
   public
+    function  AcquireVanilla: T;
     constructor CreateHeavyEx(
       ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
       const ADefaultFlavour: IResourceFlavour;
@@ -95,9 +95,8 @@ type
   end;
 
   THeavyPool<T> = class( THeavyPoolEx<T>, IHeavyPool<T>)
-  private
-    function IHeavyPool<T>.Acquire = AcquireVanilla;
   public
+    function IHeavyPool<T>.Acquire = AcquireVanilla;
     constructor CreateHeavy(
       ADatum: pointer; AMaxPopulation, AMinReserve: cardinal; MaxAge: double;
       AGenFunc: TGenerate<T>; ARelFunc: TDestroy<T>);
@@ -141,13 +140,15 @@ begin
   FMaxPop     := AMaxPopulation;
   FMinReserve := AMinReserve;
   FMaxAge     := MaxAge;
+  if FMaxAge = -1.0 then
+    FMaxAge := 1E999; // Forever.
   FFreePool   := TBasketList.Create;
   FAcquired   := TList<T>.Create;
   FGate       := _CreateCritLockIntf( nil);
   FGenFunc    := AGenFunc;
   FVanillaGenFunc := function(): T
     begin
-      if assigned( @FGenFunc) then
+      if assigned( FGenFunc) then // Change 1
           result := FGenFunc( FDefaultFlavour)
         else
           result := Default(T)
@@ -195,8 +196,10 @@ end;
 procedure THouseKeeperThread<T>.Execute;
 var
   doBreak: boolean;
+  Id: TThreadId;
 begin
   doBreak := False;
+  Id      := System.Classes.TThread.CurrentThread.ThreadID;
   try
     repeat
       case FOwner.FWakeHouseKeeper.WaitFor( 1000) of
@@ -224,7 +227,7 @@ function THeavyPoolEx<T>.FreeItemMatches( FreePoolIdx: integer; const MatchingFl
 var
   ItemFlavour: IResourceFlavour;
 begin
-  if assigned( @FTaste) then
+  if assigned( FTaste) then // Change 1
       ItemFlavour := FTaste( FFreepool[ FreePoolIdx].FObject)
     else
       ItemFlavour := nil;
@@ -287,9 +290,12 @@ function THeavyPoolEx<T>.Acquire( const MatchingFlavour: IResourceFlavour): T;
 var
   MinIdx: integer;
   Res: TAquireResult;
-  S: String;
+//  S: String;
 begin
-  S := MatchingFlavour.Descriptor;
+//  if assigned( MatchingFlavour) then     // Change 1
+//      S := MatchingFlavour.Descriptor
+//    else
+//      S := '';
   FGate.Enter;
   try
     if cardinal( FAcquired.Count) >= FMaxPop then
@@ -306,7 +312,7 @@ begin
             FAcquired.Add( result)
             end
 
-          else if assigned( @FGenFunc) and (LiveCount < FMaxPop) then
+          else if assigned( FGenFunc) and (LiveCount < FMaxPop) then  // Change 1
             begin
             Res    := aNew;
             result := FGenFunc( MatchingFlavour);
@@ -315,7 +321,7 @@ begin
             FAcquired.Add( result)
             end
 
-          else if assigned( @FGenFunc) and (FFreePool.Count > 0) then
+          else if assigned( FGenFunc) and (FFreePool.Count > 0) then   // Change 1
             begin
             PopAnOldOne;
             Res    := aNew;
@@ -325,7 +331,7 @@ begin
             FAcquired.Add( result)
             end
 
-          else if assigned( @FGenFunc) then
+          else if assigned( FGenFunc) then  // Change 1
             Res := aOverPop
 
           else
@@ -411,9 +417,10 @@ begin
     didAnAction := False;
     FGate.Enter;
     try
-      if assigned( FRelFunc) then
+      if assigned( FRelFunc) then   // Change 1
         begin
         // Check for the Maximum Population restriction. Enforce it.
+        MinIdx := -1;
         if (LiveCount > FMaxPop) and (FFreePool.Count > 0) then
           begin
           MinIdx := NextToMatureAny;
@@ -426,7 +433,7 @@ begin
 
         // Check for the Maxiumum Age restriction. Retire items that are stale (too old).
         dNow := Now;
-        if not didAnAction then
+        if (not didAnAction) and (MinIdx >= 0) then
           for i := FFreePool.Count - 1 downto 0 do
             begin
               if FFreePool[ i].FMaturity < dNow then
@@ -439,7 +446,7 @@ begin
         end;
 
       // Check for the Minimum Free Pool Requirement. Pre-build, if required.
-      if assigned( @FGenFunc) and
+      if assigned( FGenFunc) and   // Change 1
          (cardinal( FFreePool.Count) < FMinReserve) and (LiveCount < FMaxPop) then
             begin
             if didAnAction then
@@ -598,7 +605,7 @@ begin
   inherited CreateHeavyEx( ADatum, AMaxPopulation, AMinReserve, MaxAge, nil,
       function( const OfFlavour: IResourceFlavour): T
         begin
-          if assigned( @FVanillaGenFunc) then
+          if assigned( FVanillaGenFunc) then // Change 1
               result := FVanillaGenFunc
             else
               result := Default( T)
