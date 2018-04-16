@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-12
-///   Version           : 1.49
+///   Last modification : 2018-04-13
+///   Version           : 1.50
 ///</para><para>
 ///   History:
+///     1.50: 2018-04-13
+///       - Implemented TOmniValue.LogValue, useful for debug logging.
 ///     1.49: 2018-03-12
 ///       - Added TOmniValue.FromRecordUnsafe<T> which works same as FromRecord<T> but
 ///         doesn't enforce a 'record' constraint on T.
@@ -322,7 +324,7 @@ type
            , ovtWideString, ovtAnsiString
 {$ENDIF});
 
-  TOmniValue = packed record // 13 bytes in 32-bit, 17 bytes in 64-bits
+  TOmniValue = packed record // 13 bytes in 32-bit, 17 bytes in 64-bit
   private
     ovData: int64;
     ovIntf: IInterface;
@@ -431,6 +433,7 @@ type
     function  IsRecord: boolean; inline;
     function  IsString: boolean; inline;
     function  IsVariant: boolean; inline;
+    function  LogValue: string;
     class function Null: TOmniValue; static;
     function  RawData: PInt64; inline;
     procedure RawZero; inline;
@@ -2938,6 +2941,38 @@ begin
   Result := (ovType = ovtWideString);
 end; { TOmniValue.IsWideString }
 {$ENDIF}
+
+function TOmniValue.LogValue: string;
+const
+  CBoolStr: array [boolean] of string = ('F', 'T');
+begin
+  try
+    case DataType of
+      ovtNull:        Result := '[0]';
+      ovtBoolean:     Result := '[B]' + CBoolStr[AsBoolean];
+      ovtInteger:     Result := '[4]' + AsString;
+      ovtInt64:       Result := '[8]' + AsString;
+      ovtDouble:      Result := '[D]' + AsString;
+      ovtObject:      Result := '[O]' + AsObject.ClassName;
+      ovtPointer:     Result := '[P]' + Format('%p', [AsPointer]);
+      ovtDateTime:    Result := '[T]' + FormatDateTime('yyyymmddhhnnsszzz', AsDateTime);
+      ovtException:   Result := '[E]' + AsException.ClassName;
+      ovtExtended:    Result := '[X]' + AsString;
+      ovtString:      Result := '[S]' + AsString;
+      ovtInterface:   Result := '[I]';
+      ovtVariant:     Result := '[V]' + AsString;
+      ovtArray:       Result := '[A]' + IntToStr(AsArray.Count);
+      ovtRecord:      Result := '[R]';
+      ovtOwnedObject: Result := '[o]' + AsObject.ClassName;
+    {$IFDEF MSWINDOWS}
+      ovtWideString:  Result := '[W]' + AsString;
+      ovtAnsiString:  Result := '[N]' + AsString;
+    {$ENDIF MSWINDOWS}
+    end;
+  except
+    Result := '!' + IntToStr(Ord(DataType));
+  end;
+end; { TOmniValue.LogValue }
 
 class function TOmniValue.Null: TOmniValue;
 begin
