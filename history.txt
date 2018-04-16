@@ -1,5 +1,7 @@
 3.07.6: <<unreleased>>
 
+- New features:
+  - Implemented TOmniValue.LogValue.
 - Bug fixed:
   - ThreadData is destroyed in the worker thread and not in the thread pool
     management thread.
