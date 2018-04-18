@@ -359,19 +359,21 @@ end;
 procedure TfrmTestOtlContainers.OmniEventMonitor1TaskMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
 var
-  f  : textfile;
+  f      : textfile;
+  msgData: TOmniValue;
 begin
+  msgData := msg.MsgData; // make a local copy because the code below calls Application.ProcessMessages which clears the original value
   case msg.MsgID of
     MSG_FULL_STOP:
       begin
         Log('All tasks stopped');
         Log(Format('Total reader throughput: %d msg/s', [FReaderThroughput]));
         Log(Format('Total writer throughput: %d msg/s', [FWriterThroughput]));
-        if msg.MsgData = 'base stack' then
+        if msgData = 'base stack' then
           btnBaseStackCorrectnessTest.Click
-        else if msg.MsgData = 'stack' then
+        else if msgData = 'stack' then
           btnStackCorrectnessTest.Click
-        else if msg.MsgData = 'base queue' then
+        else if msgData = 'base queue' then
           btnBaseQueueCorrectnessTest.Click
         else
           btnQueueCorrectnessTest.Click;
@@ -385,16 +387,16 @@ begin
         CloseFile(f);
       end;
     MSG_TEST_END:
-      Log(string(msg.MsgData));
+      Log(string(msgData));
     MSG_WRITER_THROUGHPUT:
-      Inc(FWriterThroughput, msg.MsgData);
+      Inc(FWriterThroughput, msgData);
     MSG_READER_THROUGHPUT:
-      Inc(FReaderThroughput, msg.MsgData);
+      Inc(FReaderThroughput, msgData);
     MSG_STACK_WRITE_COMPLETED:
       begin
         Log('Reading from stack');
         FReaders[1].Comm.Send(MSG_START_STACK_READ,
-          [CTestQueueLength, cardinal(msg.MsgData)]);
+          [CTestQueueLength, cardinal(msgData)]);
       end;
     MSG_STACK_READ_COMPLETED, MSG_QUEUE_READ_COMPLETED:
       begin
@@ -412,10 +414,10 @@ begin
       begin
         Log('Reading from queue');
         FReaders[1].Comm.Send(MSG_START_QUEUE_READ,
-          [CTestQueueLength, cardinal(msg.MsgData)]);
+          [CTestQueueLength, cardinal(msgData)]);
       end;
     MSG_TEST_FAILED:
-      Log('Write test failed. ' + msg.MsgData);
+      Log('Write test failed. ' + msgData);
     else
       Log(Format('Unknown message %d', [msg.MsgID]));
   end; //case
