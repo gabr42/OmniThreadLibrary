@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017 Primoz Gabrijelcic
+///Copyright (c) 2018 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2017-04-06
-///   Version           : 3.02a
+///   Last modification : 2018-04-17
+///   Version           : 3.02b
 ///</para><para>
 ///   History:
+///     3.02b: 2018-04-17
+///       - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
+///         TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
 ///     3.02a: 2017-04-06
 ///       - Compiles with Delphi 10.2 Tokyo.
 ///     3.02: 2015-10-03
@@ -914,17 +917,19 @@ TryAgain:
       CurrentReference := LastIn.Reference;
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
-    if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-       not TInterlockedEx.CAS(CurrentReference, ThreadReference, LastIn.Reference)
+    if ((CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference))
+       or (not TInterlockedEx.CAS(CurrentReference, ThreadReference, LastIn.Reference))
     then
       goto TryAgain;
+
     //Reference is set...
     CurrentLastIn := LastIn.PData;
     TInterlockedEx.CAS(CurrentLastIn.Reference, ThreadReference, CurrentLastIn.Reference);
     if (ThreadReference <> LastIn.Reference) or
-       not CAS(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^)
+       (not CAS(CurrentLastIn.PData, ThreadReference, data, ThreadReference, CurrentLastIn^))
     then
       goto TryAgain;    //Calculate ringBuffer next LastIn address
+
     NewLastIn := pointer(NativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
     if NativeInt(NewLastIn) > NativeInt(EndBuffer) then
       NewLastIn := StartBuffer;
@@ -932,6 +937,7 @@ TryAgain:
     if not CAS(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
       goto TryAgain;
   end;
+
   {$ELSE ~OTL_HaveCmpx16b}
   CurrentLastIn := ringBuffer^.LastIn.PData;
   CurrentLastIn^.PData := data;
@@ -1042,29 +1048,34 @@ TryAgain:
       CurrentReference := FirstIn.Reference;
       Dec(TaskCounter);
     until (TaskCounter = 0) or (CurrentReference AND 1 = 0);
-    if (CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference) or
-      not TInterlockedEx.CAS(CurrentReference, Reference, FirstIn.Reference)
+    if ((CurrentReference AND 1 <> 0) and (AtStartReference <> CurrentReference))
+       or (not TInterlockedEx.CAS(CurrentReference, Reference, FirstIn.Reference))
     then
       goto TryAgain;
+
     //Reference is set...
     CurrentFirstIn := FirstIn.PData;
     //Empty test
-    if CurrentFirstIn = LastIn.PData then begin
+    if CurrentFirstIn = pointer(TInterlockedEx.CompareExchange(PNativeInt(@LastIn.PData)^, 0, 0)) then begin // LastIn is not locked so we have to read value in a safe manner
       //Clear Reference if task own reference
-      TInterlockedEx.CAS(Reference, 0, FirstIn.Reference);
+      if not TInterlockedEx.CAS(Reference, 0, FirstIn.Reference) then
+        goto TryAgain; // can happen due to a race condition between RemoveLink and InsertLink
       Result := nil;
       Exit;
     end;
+
     //Load Result
     Result := PReferencedPtr(FirstIn.PData).PData;
     //Calculate ringBuffer next FirstIn address
     NewFirstIn := pointer(NativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
     if NativeInt(NewFirstIn) > NativeInt(EndBuffer) then
       NewFirstIn := StartBuffer;
+
     //Try to exchange and clear Reference if task own reference
     if not CAS(CurrentFirstIn, Reference, NewFirstIn, 0, FirstIn) then
       goto TryAgain;
   end;
+
   {$ELSE ~OTL_HaveCmpx16b}
   CurrentFirstIn := ringBuffer^.FirstIn.PData;
   if CurrentFirstIn = ringBuffer^.LastIn.PData then
