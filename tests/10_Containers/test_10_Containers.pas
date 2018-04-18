@@ -575,7 +575,7 @@ end;
 
 procedure TCommWriter.OMStartBaseQueueStressTest(var msg: TOmniMessage);
 var
-  counter    : integer;
+  counter    : int64;
   endTime    : int64;
   numEnqueued: integer;
   numLoops   : word;
@@ -617,7 +617,7 @@ end;
 
 procedure TCommWriter.OMStartBaseStackStressTest(var msg: TOmniMessage);
 var
-  counter   : integer;
+  counter   : int64;
   endTime   : int64;
   numLoops  : word;
   numPushed : integer;
@@ -659,7 +659,7 @@ end;
 
 procedure TCommWriter.OMStartQueueStressTest(var msg: TOmniMessage);
 var
-  counter    : integer;
+  counter    : int64;
   endTime    : int64;
   numEnqueued: integer;
   numLoops   : word;
@@ -742,7 +742,7 @@ end;
 
 procedure TCommWriter.OMStartStackStressTest(var msg: TOmniMessage);
 var
-  counter   : integer;
+  counter   : int64;
   endTime   : int64;
   numLoops  : word;
   numPushed : integer;
@@ -825,7 +825,7 @@ end;
 
 procedure TCommReader.OMStartBaseQueueStressTest(var msg: TOmniMessage);
 var
-  counter    : integer;
+  counter    : int64;
   endTime    : int64;
   numDequeued: integer;
   numEmpty   : integer;
@@ -866,7 +866,7 @@ end;
 
 procedure TCommReader.OMStartBaseStackStressTest(var msg: TOmniMessage);
 var
-  counter  : integer;
+  counter  : int64;
   endTime  : int64;
   numEmpty : integer;
   numLoops : word;
@@ -940,7 +940,7 @@ end;
 
 procedure TCommReader.OMStartQueueStressTest(var msg: TOmniMessage);
 var
-  counter    : integer;
+  counter    : int64;
   endTime    : int64;
   numDequeued: integer;
   numEmpty   : integer;
@@ -1014,7 +1014,7 @@ end;
 
 procedure TCommReader.OMStartStackStressTest(var msg: TOmniMessage);
 var
-  counter   : integer;
+  counter   : int64;
   endTime   : int64;
   numEmpty  : integer;
   numLoops  : word;
