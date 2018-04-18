@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2017-11-09
-///   Version           : 1.26
+///   Last modification : 2018-04-06
+///   Version           : 1.27
 ///</para><para>
 ///   History:
+///	    1.27: 2018-04-06
+///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
 ///       - [VyPu] Fixed: TOmniCriticalSection.Release decremented ocsLockCount after releasing the critical section.
 ///     1.25: 2017-09-28
@@ -290,8 +292,8 @@ type
     procedure EnterWriteLock; inline;
     procedure ExitReadLock; inline;
     procedure ExitWriteLock; inline;
-    function  TryEnterReadLock: boolean; inline;
-    function  TryEnterWriteLock: boolean; inline;
+    function  TryEnterReadLock(timeout_ms: integer = 0): boolean;
+    function  TryEnterWriteLock(timeout_ms: integer = 0): boolean;
   end; { TOmniMREW }
 
   IOmniResourceCount = interface({$IFDEF MSWINDOWS}
@@ -1276,34 +1278,62 @@ begin
   NativeInt(omrewReference) := 0;
 end; { TOmniMREW.ExitWriteLock }
 
-function TOmniMREW.TryEnterReadLock: boolean;
+function TOmniMREW.TryEnterReadLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
+  startWait_ms: int64;
+
+  function Timeout(var returnFalse: boolean): boolean;
+  begin
+    Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
+    if Result then
+      returnFalse := true;
+  end; { Timeout }
+
 begin
+  Result := true;
+  startWait_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
-  currentReference := NativeInt(omrewReference) AND NOT 1;
+  repeat
+    currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  Result := CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
+  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
   {$ELSE}
-  Result := TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference;
+  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result);
   {$ENDIF}
 end; { TOmniMREW.TryEnterReadLock }
 
-function TOmniMREW.TryEnterWriteLock: boolean;
+function TOmniMREW.TryEnterWriteLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
+  startWait_ms: int64;
+
+  function Timeout(var returnFalse: boolean): boolean;
+  begin
+    Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
+    if Result then
+      returnFalse := true;
+  end; { Timeout }
+
 begin
+  Result := true;
+  startWait_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
+
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
-  currentReference := NativeInt(omrewReference) AND NOT 1;
+  repeat
+    currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  Result := CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
+  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
   {$ELSE}
-  Result := TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference;
+  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference) or Timeout(Result);
   {$ENDIF}
-  if Result then
+  if Result then begin
     //Now wait on all readers
     repeat
-    until NativeInt(omrewReference) = 1;
+    until (NativeInt(omrewReference) = 1) or Timeout(Result);
+    if not Result then
+      ExitWriteLock;
+  end;
 end; { TOmniMREW.TryEnterWriteLock }
 
 {$IFDEF MSWINDOWS}
@@ -1363,7 +1393,7 @@ var
   waitTime_ms : int64;
 begin
   Result := false;
-  startTime_ms := DSiTimeGetTime64;
+  startTime_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
   orcLock.Acquire;
   repeat
     if orcNumResources.Value = 0 then begin
@@ -1731,7 +1761,7 @@ var
 begin
   Result := false;
   waitEvent := 0;
-  startWait := DSiTimeGetTime64;
+  startWait := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
 
   repeat
     FLock.Acquire;
