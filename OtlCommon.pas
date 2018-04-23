@@ -284,13 +284,9 @@ uses
 {$IFDEF POSIX}
   Posix.Pthread,
 {$ENDIF}
-{$IFDEF OTL_ERTTI}
   RTTI,
-{$ENDIF OTL_ERTTI}
-{$IFDEF OTL_Generics}
   Generics.Defaults,
   Generics.Collections,
-{$ENDIF OTL_Generics}
   SysUtils;
 
 const
@@ -351,6 +347,9 @@ type
     //GetAsArrayItemOV is used in D2007 instead
     {$IFEND}
     function  GetAsArrayItemOV(const param: TOmniValue): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
+    function  GetAsTValue: TValue;
+    function  GetArrayFromTValue(const value: TValue): TOmniValueContainer;
+    function  GetTValueFromArray(const a: TOmniValueContainer): TValue;
     procedure SetAsArray(value: TOmniValueContainer); inline;
     procedure SetAsArrayItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetAsArrayItem(const name: string; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
@@ -374,6 +373,7 @@ type
     procedure SetAsRecord(const intf: IOmniAutoDestroyObject); inline;
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
+    procedure SetAsTValue(const value: TValue);
     procedure SetOwnsObject(const value: boolean);
     {$REGION 'Documentation'}
     ///  <summary>Most of the code in this method never executes. It is just here so that
@@ -387,13 +387,6 @@ type
     function  CastToWideString: WideString;
     procedure SetAsAnsiString(const value: AnsiString);
     procedure SetAsWideString(const value: WideString);
-  {$ENDIF}
-  {$IFDEF OTL_ERTTI}
-  private
-    function  GetAsTValue: TValue;
-    function  GetArrayFromTValue(const value: TValue): TOmniValueContainer;
-    function  GetTValueFromArray(const a: TOmniValueContainer): TValue;
-    procedure SetAsTValue(const value: TValue);
   {$ENDIF}
   public
     constructor Create(const values: array of const);
@@ -462,6 +455,9 @@ type
     class operator Implicit(const a: IInterface): TOmniValue; //don't inline, something is broken in codegen (XE)
     class operator Implicit(const a: TObject): TOmniValue; inline;
     class operator Implicit(const a: Exception): TOmniValue; inline;
+    class operator Implicit(const a: Variant): TOmniValue; inline;
+    class operator Implicit(const a: TValue): TOmniValue; inline;
+    class operator Implicit(const a: TDateTime): TOmniValue; inline;
     class operator Implicit(const a: TOmniValue): int64; inline;
     class operator Implicit(const a: TOmniValue): TObject; inline;
     class operator Implicit(const a: TOmniValue): Double; inline;
@@ -472,11 +468,8 @@ type
     class operator Implicit(const a: TOmniValue): pointer; inline;
     class operator Implicit(const a: TOmniValue): boolean; inline;
     class operator Implicit(const a: TOmniValue): IInterface; inline;
-    class operator Implicit(const a: Variant): TOmniValue; inline;
-  {$IFDEF OTL_TOmniValueImplicitDateTime}
-    class operator Implicit(const a: TDateTime): TOmniValue; inline;
+    class operator Implicit(const a: TOmniValue): TValue; inline;
     class operator Implicit(const a: TOmniValue): TDateTime; inline;
-  {$ENDIF OTL_TOmniValueImplicitDateTime}
     property AsArray: TOmniValueContainer read GetAsArray;
     property AsArrayItem[idx: integer]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
     property AsArrayItem[const name: string]: TOmniValue read GetAsArrayItem write SetAsArrayItem; default;
@@ -507,16 +500,13 @@ type
     function  IsWideString: boolean; inline;
     function  TryCastToAnsiString(var value: AnsiString): boolean;
     function  TryCastToWideString(var value: WideString): boolean;
-    {$IFDEF Unicode}
     class operator Implicit(const a: TOmniValue): AnsiString; inline;
     class operator Implicit(const a: AnsiString): TOmniValue; inline;
-    {$ENDIF Unicode}
     class operator Implicit(const a: TOmniValue): WideString; inline;
     class operator Implicit(const a: WideString): TOmniValue; inline;
     property AsAnsiString: AnsiString read CastToAnsiString write SetAsAnsiString;
     property AsWideString: WideString read CastToWideString write SetAsWideString;
   {$ENDIF}
-  {$IFDEF OTL_Generics}
     class function CastFrom<T>(const value: T): TOmniValue; static;
     function  CastTo<T>: T;
     class function FromRecord<T: record>(const value: T): TOmniValue; static;
@@ -524,20 +514,11 @@ type
     function  ToRecord<T>: T;
     class function Wrap<T>(const value: T): TOmniValue; static;
     function  Unwrap<T>: T; //Use this form to call: omnivalue.Unwrap<T>()
-  {$IFDEF OTL_HasArrayOfT}
     class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
     function  ToArray<T>: TArray<T>;
-  {$ENDIF OTL_HasArrayOfT}
-  {$IF CompilerVersion > 20}
-    function  CastToObject<T: class>: T; overload;
-    function  ToObject<T: class>: T;
-  {$IFEND}
-  {$ENDIF OTL_Generics}
-  {$IFDEF OTL_ERTTI}
-    class operator Implicit(const a: TValue): TOmniValue; inline;
-    class operator Implicit(const a: TOmniValue): TValue; inline;
+    function  CastToObject<T: class>: T; overload; inline;
+    function  ToObject<T: class>: T; inline;
     property AsTValue: TValue read GetAsTValue write SetAsTValue;
-  {$ENDIF OTL_ERTTI}
   end; { TOmniValue }
 
   ///  <summary>TOmniValue wrapper - for when you need to treat TOmniValue as an object.</summary>
@@ -549,7 +530,6 @@ type
     property Value: TOmniValue read FValue;
   end; { TOmniValueObj }
 
-  {$IFDEF OTL_Generics}
   TOmniRecord<T> = record
   strict private
     FValue: T;
@@ -557,7 +537,6 @@ type
     constructor Create(const aValue: T);
     property Value: T read FValue write FValue;
   end;
-  {$ENDIF OTL_Generics}
 
   ///<summary>Slightly different from the IEnumerable:
   ///    - Returns TOmniValue.
@@ -690,33 +669,10 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounter }
 
-{$IFDEF OTL_GoodGenerics}
   TOmniInterfaceDictionaryPair = TPair<int64, IInterface>;
-{$ELSE}
-  TOmniInterfaceDictionaryPair = class
-  strict private
-    idpKey  : int64;
-    idpValue: IInterface;
-  protected
-    procedure SetKeyValue(const key: int64; const value: IInterface);
-  public
-    property Key: int64 read idpKey;
-    property Value: IInterface read idpValue;
-  end; { TOmniInterfaceDictionaryPair }
-
-  IOmniInterfaceDictionaryEnumerator = interface
-    function  GetCurrent: TOmniInterfaceDictionaryPair;
-    function  MoveNext: boolean;
-    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
-  end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF OTL_GoodGenerics}
 
   IOmniInterfaceDictionary = interface ['{619FCCF3-E810-4DCF-B902-1EF1A5A72DB5}']
-{$IFDEF OTL_GoodGenerics}
     function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
-{$ELSE}
-    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-{$ENDIF OTL_GoodGenerics}
   //
     procedure Add(const key: int64; const value: IInterface);
     procedure Clear;
@@ -730,19 +686,17 @@ type
   TOmniIntegerSetChangedEvent = procedure(const intSet: IOmniIntegerSet) of object;
 
   IOmniIntegerSet = interface ['{571F85D0-CFD8-40FE-8860-A8C1C932028C}']
+    function  GetAsArray: TArray<integer>;
     function  GetAsBits: TBits;
     function  GetAsIntArray: TIntegerDynArray;
     function  GetAsMask: int64;
     function  GetItem(idx: integer): integer;
     function  GetOnChange: TOmniIntegerSetChangedEvent;
+    procedure SetAsArray(const Value: TArray<integer>);
     procedure SetAsBits(const value: TBits);
     procedure SetAsIntArray(const Value: TIntegerDynArray);
     procedure SetAsMask(const value: int64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent);
-  {$IFDEF OTL_HasArrayOfT}
-    function  GetAsArray: TArray<integer>;
-    procedure SetAsArray(const Value: TArray<integer>);
-  {$ENDIF OTL_HasArrayOfT}
   //
     function  Add(value: integer): boolean;
     procedure Assign(const value: IOmniIntegerSet);
@@ -751,9 +705,7 @@ type
     function  Count: integer;
     function  IsEmpty: boolean;
     function  Remove(value: integer): boolean;
-  {$IFDEF OTL_HasArrayOfT}
     property AsArray: TArray<integer> read GetAsArray write SetAsArray;
-  {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
     property AsMask: int64 read GetAsMask write SetAsMask;
@@ -769,20 +721,18 @@ type
     FValueCopy   : TIntegerDynArray;
   protected
     procedure DoOnChange;
+    function  GetAsArray: TArray<integer>;
     function  GetAsBits: TBits; inline;
     function  GetAsIntArray: TIntegerDynArray;
     function  GetAsMask: int64;
     function  GetItem(idx: integer): integer;
     function  GetOnChange: TOmniIntegerSetChangedEvent; inline;
     procedure PrepareValueCopy;
+    procedure SetAsArray(const value: TArray<integer>);
     procedure SetAsBits(const value: TBits);
     procedure SetAsIntArray(const value: TIntegerDynArray);
     procedure SetAsMask(const value: int64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent); inline;
-  {$IFDEF OTL_HasArrayOfT}
-    function  GetAsArray: TArray<integer>;
-    procedure SetAsArray(const value: TArray<integer>);
-  {$ENDIF OTL_HasArrayOfT}
   public
     constructor Create;
     constructor Clone(const value: IOmniIntegerSet);
@@ -795,9 +745,7 @@ type
     function  Count: integer;
     function  IsEmpty: boolean;
     function  Remove(value: integer): boolean;
-  {$IFDEF OTL_HasArrayOfT}
     property AsArray: TArray<integer> read GetAsArray write SetAsArray;
-  {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
     property AsMask: int64 read GetAsMask write SetAsMask;
@@ -861,10 +809,6 @@ type
     property Affinity: IOmniAffinity read GetAffinity;
   end; { IOmniSystemEnvironment }
 
-  {$IFNDEF OTL_HasThreadID}
-  TThreadID = LongWord;
-  {$ENDIF ~OTL_HasThreadID}
-
   TOmniGroupAffinity = record
   private
     FAffinity: IOmniIntegerSet;
@@ -888,7 +832,6 @@ type
     property ID: TThreadId read GetID;
   end; { IOmniThreadEnvironment }
 
-  {$IFDEF OTL_NUMASupport}
   IOmniNUMANode = interface ['{8D3B415F-8B13-4BFF-B7C7-2D0BC1705217}']
     function  GetAffinity: IOmniIntegerSet;
     function  GetGroupNumber: integer;
@@ -927,81 +870,67 @@ type
     function  GetEnumerator: TList<IOmniProcessorGroup>.TEnumerator;
     property Item[idx: integer]: IOmniProcessorGroup read GetItem; default;
   end; { IOmniProcessorGroups }
-  {$ENDIF OTL_NUMASupport}
 
   IOmniEnvironment = interface ['{4F9594E2-8B88-483C-9616-85B50493406D}']
-  {$IFDEF OTL_NUMASupport}
     function  GetNUMANodes: IOmniNUMANodes;
     function  GetProcessorGroups: IOmniProcessorGroups;
-  {$ENDIF OTL_NUMASupport}
     function  GetProcess: IOmniProcessEnvironment;
     function  GetSystem: IOmniSystemEnvironment;
     function  GetThread: IOmniThreadEnvironment;
   //
-  {$IFDEF OTL_NUMASupport}
     property NUMANodes: IOmniNUMANodes read GetNUMANodes;
     property ProcessorGroups: IOmniProcessorGroups read GetProcessorGroups;
-  {$ENDIF OTL_NUMASupport}
     property Process: IOmniProcessEnvironment read GetProcess;
     property System: IOmniSystemEnvironment read GetSystem;
     property Thread: IOmniThreadEnvironment read GetThread;
   end; { IOmniEnvironment }
 
-  TOmniExecutableKind = (oekNull, oekProcedure, oekMethod {$IFDEF OTL_Anonymous},
-    oekDelegate{$ENDIF});
+  TOmniExecutableKind = (oekNull, oekProcedure, oekMethod, oekDelegate);
 
   TOmniExecutable = record
-  {$IFDEF OTL_Anonymous}
   strict private
     oeDelegate: TProc;
-    procedure SetAnonDelegate(const value: TProc); inline;
-    function  GetDelegate: TProc; inline;
-  {$ENDIF OTL_Anonymous}
-  strict private
     oeMethod   : TMethod;
     oeProcedure: TProcedure;
     oeKind     : TOmniExecutableKind;
     procedure CheckKind(kind: TOmniExecutableKind); inline;
+    function  GetDelegate: TProc; inline;
     function  GetMethod: TMethod; inline;
     function  GetProc: TProcedure; inline;
+    procedure SetAnonDelegate(const value: TProc); inline;
     procedure SetMethod(const value: TMethod); inline;
     procedure SetProc(const value: TProcedure); inline;
   public
+    class procedure AnonCopy(var Dest; const Source); static;
     class operator Explicit(const a: TOmniExecutable): TMethod; inline;
+    class operator Explicit(const a: TOmniExecutable): TProc; inline;
     class operator Explicit(const a: TOmniExecutable): TProcedure; inline;
     class operator Explicit(const a: TMethod): TOmniExecutable; inline;
+    class operator Explicit(const a: TProc): TOmniExecutable; inline;
     class operator Explicit(const a: TProcedure): TOmniExecutable; inline;
     class operator Implicit(const a: TMethod): TOmniExecutable; inline;
+    class operator Implicit(const a: TProc): TOmniExecutable; inline;
     class operator Implicit(const a: TProcedure): TOmniExecutable; inline;
     class operator Implicit(const a: TOmniExecutable): TMethod; inline;
+    class operator Implicit(const a: TOmniExecutable): TProc; inline;
     class operator Implicit(const a: TOmniExecutable): TProcedure; inline;
     procedure Clear; inline;
     function  IsNull: boolean; inline;
+    procedure SetDelegate(const source);
+    property Delegate: TProc read GetDelegate write SetAnonDelegate;
     property Kind: TOmniExecutableKind read oeKind;
     property Method: TMethod read GetMethod write SetMethod;
     property Proc: TProcedure read GetProc write SetProc;
-  public
-    {$IFDEF OTL_Anonymous}
-    class procedure AnonCopy(var Dest; const Source); static;
-    class operator Explicit(const a: TOmniExecutable): TProc; inline;
-    class operator Explicit(const a: TProc): TOmniExecutable; inline;
-    class operator Implicit(const a: TOmniExecutable): TProc; inline;
-    class operator Implicit(const a: TProc): TOmniExecutable; inline;
-    procedure SetDelegate(const source);
-    property Delegate: TProc read GetDelegate write SetAnonDelegate;
-    {$ENDIF OTL_Anonymous}
   end; { TOmniExecutable }
 
-  TOmniMessageIDType = (mitInteger, mitString, mitPointer {$IFDEF OTL_Anonymous}, mitAnon{$ENDIF});
+  TOmniMessageIDType = (mitInteger, mitString, mitPointer, mitAnon);
 
   ///<summary>Describes 'smart' IOmniTaskControl message (either message ID, method name,
   ///    or method pointer.</summary>
   ///<since>2010-03-16</since>
   TOmniMessageID = record
   strict private
-  {$IFDEF OTL_Anonymous}
     omidAnon       : TProc<integer>;
-  {$ENDIF OTL_Anonymous}
     omidInteger    : integer;
     omidMessageType: TOmniMessageIDType;
     omidPointer    : pointer;
@@ -1013,17 +942,12 @@ type
     class operator Implicit(const a: TOmniMessageID): integer; inline;
     class operator Implicit(const a: TOmniMessageID): string; inline;
     class operator Implicit(const a: TOmniMessageID): pointer; inline;
-  {$IFDEF OTL_Anonymous}
     constructor Create(const proc: TProc<integer>);
-  {$ENDIF OTL_Anonymous}
     function AsString: string;
     property MessageType: TOmniMessageIDType read omidMessageType;
-  {$IFDEF OTL_Anonymous}
     property Proc: TProc<integer> read omidAnon;
-  {$ENDIF OTL_Anonymous}
   end; { TOmniMessageID }
 
-{$IFDEF OTL_Generics}
   TOmniRecordWrapper<T> = class
   strict private
     FValue: T;
@@ -1033,7 +957,6 @@ type
     procedure SetRecord(const value: T);
     property Value: T read GetRecord write SetRecord;
   end; { TOmniRecordWrapper<T> }
-{$ENDIF OTL_Generics}
 
   IOmniAutoDestroyObject = interface ['{37DE60D3-C53D-4D13-B87C-C70BDC76A530}']
     function GetValue: TObject;
@@ -1230,60 +1153,18 @@ type
     property Value: integer read GetValue write SetValue;
   end; { TOmniCounterImpl }
 
-{$IFNDEF OTL_GoodGenerics}
-  PPHashItem = ^PHashItem;
-  PHashItem = ^THashItem;
-  THashItem = record
-    Next : PHashItem;
-    Key  : int64;
-    Value: IInterface;
-  end; { THashItem }
-
-  TBucketArray = array of PHashItem;
-  PBucketArray = ^TBucketArray;
-
-  TOmniInterfaceDictionaryEnumerator = class(TInterfacedObject, IOmniInterfaceDictionaryEnumerator)
-  strict private
-    ideBuckets  : PBucketArray;
-    ideBucketIdx: integer;
-    ideCurrent  : PHashItem;
-    ideItem     : PHashItem;
-    idePair     : TOmniInterfaceDictionaryPair;
-  public
-    constructor Create(buckets: PBucketArray);
-    destructor  Destroy; override;
-    function  GetCurrent: TOmniInterfaceDictionaryPair;
-    function  MoveNext: boolean;
-    property Current: TOmniInterfaceDictionaryPair read GetCurrent;
-  end; { IOmniInterfaceDictionaryEnumerator }
-{$ENDIF ~OTL_GoodGenerics}
-
   TOmniInterfaceDictionary = class(TInterfacedObject, IOmniInterfaceDictionary)
-  {$IFDEF OTL_GoodGenerics}
   strict private
     FDictionary: TDictionary<int64, IInterface>;
-  {$ELSE}
-  strict private
-    idBuckets: TBucketArray;
-    idCount  : integer;
-  strict protected
-    function  Find(const key: int64): PPHashItem;
-    function  HashOf(const key: int64): integer; inline;
-    procedure Resize(size: Cardinal);
-  {$ENDIF OTL_GoodGenerics}
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(const key: int64; const value: IInterface);
-    procedure Clear;
+    procedure Add(const key: int64; const value: IInterface); inline;
+    procedure Clear; inline;
     function  Count: integer; inline;
-    {$IFDEF OTL_GoodGenerics}
-    function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
-    {$ELSE}
-    function  GetEnumerator: IOmniInterfaceDictionaryEnumerator;
-    {$ENDIF ~OTL_GoodGenerics}
-    procedure Remove(const key: int64);
-    function  ValueOf(const key: int64): IInterface;
+    function  GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator; inline;
+    procedure Remove(const key: int64); inline;
+    function  ValueOf(const key: int64): IInterface; inline;
   end; { TOmniInterfaceDictionary }
 
   TOmniAffinityTarget = (atSystem, atProcess, atThread);
@@ -1356,7 +1237,6 @@ type
     property ID: TThreadID read GetID;
   end; { TOmniThreadEnvironment }
 
-  {$IFDEF OTL_NUMASupport}
   TOmniNUMANode = class(TInterfacedObject, IOmniNUMANode)
   private
     FAffinity   : IOmniIntegerSet;
@@ -1433,34 +1313,27 @@ type
     function  GetEnumerator: TList<IOmniProcessorGroup>.TEnumerator; inline;
     property Item[idx: integer]: IOmniProcessorGroup read GetItem; default;
   end; { IOmniProcessorGroups }
-  {$ENDIF OTL_NUMASupport}
 
   TOmniEnvironment = class(TInterfacedObject, IOmniEnvironment)
   strict private
     oeProcessEnv: IOmniProcessEnvironment;
     oeSystemEnv : IOmniSystemEnvironment;
-  {$IFDEF OTL_NUMASupport}
     oeNUMANodes      : IOmniNUMANodes;
     oeProcessorGroups: IOmniProcessorGroups;
   strict protected
     procedure CreateFakeNUMAInfo;
     procedure LoadNUMAInfo;
-  {$ENDIF OTL_NUMASupport}
   protected
-  {$IFDEF OTL_NUMASupport}
     function  GetNUMANodes: IOmniNUMANodes;
     function  GetProcessorGroups: IOmniProcessorGroups;
-  {$ENDIF OTL_NUMASupport}
     function  GetProcess: IOmniProcessEnvironment;
     function  GetSystem: IOmniSystemEnvironment;
     function  GetThread: IOmniThreadEnvironment;
   public
     constructor Create;
-  {$IFDEF OTL_NUMASupport}
     destructor  Destroy; override;
     property NUMANodes: IOmniNUMANodes read GetNUMANodes;
     property ProcessorGroups: IOmniProcessorGroups read GetProcessorGroups;
-  {$ENDIF OTL_NUMASupport}
     property Process: IOmniProcessEnvironment read GetProcess;
     property System: IOmniSystemEnvironment read GetSystem;
     property Thread: IOmniThreadEnvironment read GetThread;
@@ -1512,7 +1385,7 @@ end; { Environment }
 
 function VarToObj(const v: Variant): TObject;
 begin
-  Result := TObject({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(v));
+  Result := TObject(NativeUInt(v));
 end; { VarToObj }
 
 { globals }
@@ -1524,7 +1397,6 @@ begin
 end; { StrPasA }
 {$ENDIF}
 
-{$IFDEF OTL_Generics}
 { TOmniRecordWrapper }
 
 constructor TOmniRecordWrapper<T>.Create(const value: T);
@@ -1542,7 +1414,6 @@ procedure TOmniRecordWrapper<T>.SetRecord(const value: T);
 begin
   FValue := value;
 end; { TOmniRecordWrapper<T>.SetRecord }
-{$ENDIF OTL_Generics}
 
 { TOmniAutoDestroyObject }
 
@@ -1944,231 +1815,50 @@ begin
   Result := taken > 0
 end; { TOmniCounterImpl.Take }
 
-{$IFNDEF OTL_GoodGenerics}
-{ TOmniInterfaceDictionaryPair }
-
-procedure TOmniInterfaceDictionaryPair.SetKeyValue(const key: int64; const value: IInterface);
-begin
-  idpKey := key;
-  idpValue := value;
-end; { TOmniInterfaceDictionaryPair.SetKeyValue }
-
-{ TOmniInterfaceDictionaryEnumerator }
-
-constructor TOmniInterfaceDictionaryEnumerator.Create(buckets: PBucketArray);
-begin
-  ideBuckets := buckets;
-  ideBucketIdx := Low(ideBuckets^);
-  ideItem := nil;
-  idePair := TOmniInterfaceDictionaryPair.Create;
-end; { TOmniInterfaceDictionaryEnumerator.Create }
-
-destructor TOmniInterfaceDictionaryEnumerator.Destroy;
-begin
-  FreeAndNil(idePair);
-  inherited Destroy;
-end; { TOmniInterfaceDictionaryEnumerator.Destroy }
-
-function TOmniInterfaceDictionaryEnumerator.GetCurrent: TOmniInterfaceDictionaryPair;
-begin
-  idePair.SetKeyValue(ideCurrent^.Key, ideCurrent^.Value);
-  Result := idePair;
-end; { TOmniInterfaceDictionaryEnumerator.GetCurrent }
-
-function TOmniInterfaceDictionaryEnumerator.MoveNext: boolean;
-begin
-  Result := false;
-  while not assigned(ideItem) do begin
-    Inc(ideBucketIdx);
-    if ideBucketIdx > High(ideBuckets^) then
-      Exit;
-    ideItem := ideBuckets^[ideBucketIdx];
-  end;
-  ideCurrent := ideItem;
-  ideItem := ideItem^.Next;
-  Result := true;
-end; { TOmniInterfaceDictionaryEnumerator.MoveNext }
-{$ENDIF ~OTL_GoodGenerics}
-
 { TOmniInterfaceDictionary }
 
 constructor TOmniInterfaceDictionary.Create;
 begin
   inherited Create;
-  {$IFDEF OTL_GoodGenerics}
   FDictionary := TDictionary<int64, IInterface>.Create(100);
-  {$ELSE}
-  Resize(1);
-  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Create }
 
 destructor TOmniInterfaceDictionary.Destroy;
 begin
-  {$IFDEF OTL_GoodGenerics}
   FreeAndNil(FDictionary);
-  {$ELSE}
-  Clear;
-  {$ENDIF ~OTL_GoodGenerics}
   inherited;
 end; { TOmniInterfaceDictionary.Destroy }
 
 procedure TOmniInterfaceDictionary.Add(const key: int64; const value: IInterface);
-{$IFNDEF OTL_GoodGenerics}
-var
-  bucket: PHashItem;
-  hash  : integer;
-{$ENDIF ~OTL_GoodGenerics}
-
 begin
-{$IFDEF OTL_GoodGenerics}
   FDictionary.AddOrSetValue(key, value);
-{$ELSE}
-  hash := HashOf(key);
-  New(bucket);
-  bucket^.Key := key;
-  bucket^.Value := value;
-  bucket^.Next := idBuckets[hash];
-  idBuckets[hash] := bucket;
-  Inc(idCount);
-  if idCount > (1.5 * Length(idBuckets)) then
-    Resize(idCount * 2);
-{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Add }
 
 procedure TOmniInterfaceDictionary.Clear;
-{$IFNDEF OTL_GoodGenerics}
-var
-  bucket : PHashItem;
-  iBucket: integer;
-  next   : PHashItem;
-{$ENDIF ~OTL_GoodGenerics}
-
 begin
-{$IFDEF OTL_GoodGenerics}
   FDictionary.Clear;
-{$ELSE}
-  for iBucket := 0 to Length(idBuckets) - 1 do begin
-    bucket := idBuckets[iBucket];
-    while bucket <> nil do begin
-      next := bucket^.Next;
-      bucket^.Value := nil;
-      Dispose(bucket);
-      bucket := next;
-    end;
-    idBuckets[iBucket] := nil;
-  end;
-  idCount := 0;
-{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Clear }
 
 function TOmniInterfaceDictionary.Count: integer;
 begin
-  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.Count;;
-  {$ELSE}
-  Result := idCount;
-  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Count }
 
-{$IFNDEF OTL_GoodGenerics}
-function TOmniInterfaceDictionary.Find(const key: int64): PPHashItem;
-var
-  hash: integer;
+function TOmniInterfaceDictionary.GetEnumerator: TDictionary<int64, IInterface>.TPairEnumerator;
 begin
-  hash := HashOf(key);
-  Result := @idBuckets[hash];
-  while Result^ <> nil do begin
-    if Result^.key = key then
-      Exit
-    else
-      Result := @Result^.Next;
-  end;
-end; { TOmniInterfaceDictionary.Find }
-{$ENDIF ~OTL_GoodGenerics}
-
-function TOmniInterfaceDictionary.GetEnumerator: {$IFDEF OTL_GoodGenerics}TDictionary<int64, IInterface>.TPairEnumerator{$ELSE}IOmniInterfaceDictionaryEnumerator{$ENDIF OTL_GoodGenerics};
-begin
-  {$IFDEF OTL_GoodGenerics}
   Result := FDictionary.GetEnumerator;
-  {$ELSE}
-  Result := TOmniInterfaceDictionaryEnumerator.Create(@idBuckets);
-  {$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.GetEnumerator }
 
-{$IFNDEF OTL_GoodGenerics}
-function TOmniInterfaceDictionary.HashOf(const key: int64): integer;
-begin
-  Result := key mod Length(idBuckets);
-end; { TOmniInterfaceDictionary.HashOf }
-{$ENDIF ~OTL_GoodGenerics}
-
 procedure TOmniInterfaceDictionary.Remove(const key: int64);
-{$IFNDEF OTL_GoodGenerics}
-var
-  bucket    : PHashItem;
-  bucketHead: PPHashItem;
-{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_GoodGenerics}
   if FDictionary.ContainsKey(key) then
     FDictionary.Remove(key);
-{$ELSE}
-  bucketHead := Find(key);
-  bucket := bucketHead^;
-  if assigned(bucket) then begin
-    bucketHead^ := bucket^.Next;
-    Dispose(bucket);
-    Dec(idCount);
-  end;
-{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.Remove }
 
-{$IFNDEF OTL_GoodGenerics}
-procedure TOmniInterfaceDictionary.Resize(size: Cardinal);
-var
-  bucket    : PHashItem;
-  iBucket   : integer;
-  next      : PHashItem;
-  oldBuckets: TBucketArray;
-  oldSize   : integer;
-begin
-  if Cardinal(Length(idBuckets)) >= size then
-    Exit;
-  oldSize := Count;
-  oldBuckets := idBuckets;
-  idBuckets := nil;
-  idCount := 0;
-  SetLength(idBuckets, GetGoodHashSize(size));
-  for iBucket := 0 to High(oldBuckets) do begin
-    bucket := oldBuckets[iBucket];
-    while assigned(bucket) do begin
-       Add(bucket.Key, bucket.Value);
-       bucket.Value := nil;
-       next := bucket.Next;
-       Dispose(bucket);
-       bucket := next;
-    end;
-  end;
-  Assert(oldSize = Count);
-end; { TOmniInterfaceDictionary.Resize }
-{$ENDIF ~OTL_GoodGenerics}
-
 function TOmniInterfaceDictionary.ValueOf(const key: int64): IInterface;
-{$IFNDEF OTL_GoodGenerics}
-var
-  bucketHead: PHashItem;
-{$ENDIF ~OTL_GoodGenerics}
 begin
-{$IFDEF OTL_GoodGenerics}
   if not FDictionary.TryGetValue(key, Result) then
     Result := nil;
-{$ELSE}
-  bucketHead := Find(key)^;
-  if bucketHead <> nil then
-    Result := bucketHead^.Value
-  else
-    Result := nil;
-{$ENDIF ~OTL_GoodGenerics}
 end; { TOmniInterfaceDictionary.ValueOf }
 
 { TOmniValue }
@@ -2260,10 +1950,7 @@ begin
         vtObject:        ovc.Add(VObject);
         vtInterface:     ovc.Add(IInterface(VInterface));
         vtInt64:         ovc.Add(VInt64^);
-
-      {$IFDEF UNICODE}
         vtUnicodeString: ovc.Add(string(VUnicodeString));
-      {$ENDIF UNICODE}
       {$IFNDEF NEXTGEN}
         vtChar:          ovc.Add(string(VChar));
         vtString:        ovc.Add(string(VString^));
@@ -2296,9 +1983,7 @@ begin
       if not Odd(i) then
         case VType of
           vtVariant:       name := string(VVariant^);
-        {$IFDEF UNICODE}
           vtUnicodeString: name := string(VUnicodeString);
-        {$ENDIF UNICODE}
         {$IFNDEF NEXTGEN}
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
@@ -2322,9 +2007,7 @@ begin
           vtObject:        ovc.Add(VObject, name);
           vtInterface:     ovc.Add(IInterface(VInterface), name);
           vtInt64:         ovc.Add(VInt64^, name);
-        {$IFDEF UNICODE}
           vtUnicodeString: ovc.Add(string(VUnicodeString), name);
-        {$ENDIF UNICODE}
         {$IFNDEF NEXTGEN}
           vtChar:          ovc.Add(string(VChar), name);
           vtString:        ovc.Add(string(VString^), name);
@@ -2342,8 +2025,6 @@ begin
   SetAsArray(ovc);
 end; { TOmniValue.CreateNamed }
 
-{$IFDEF OTL_Generics}
-{$IFDEF OTL_HasArrayOfT}
 function TOmniValue.ToArray<T>: TArray<T>;
 var
   iItem: integer;
@@ -2354,7 +2035,6 @@ begin
   for iItem := 0 to TOmniValueContainer(ovData).Count - 1 do
     Result[iItem] := TOmniValueContainer(ovData)[iItem].CastTo<T>;
 end; { TOmniValue.ToArray }
-{$ENDIF OTL_HasArrayOfT}
 
 function TOmniValue.ToRecord<T>: T;
 begin
@@ -2380,11 +2060,7 @@ begin
     if ti.Kind = tkRecord then
       Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
     else
-      {$IFDEF OTL_ERTTI}
-      Result := AsTValue.AsType<T>
-      {$ELSE}
-      raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
-      {$ENDIF OTL_ERTTI}
+      Result := AsTValue.AsType<T>;
   end
   else begin // simple types
     if ds < 8 then begin
@@ -2416,11 +2092,7 @@ begin
     if ti^.Kind = tkRecord then
       Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)))
     else
-      {$IFDEF OTL_ERTTI}
-      Result.AsTValue := TValue.From<T>(value)
-      {$ELSE}
-      raise Exception.Create('Only casting from simple types is supported in Delphi 2009')
-      {$ENDIF OTL_ERTTI}
+      Result.AsTValue := TValue.From<T>(value);
   end
   else begin // simple types
     data := 0;
@@ -2434,17 +2106,14 @@ begin
         Result.AsInt64 := data;
       tkInt64:
         Result.AsInt64 := data;
-      {$IFDEF OTL_HasTkPointer}
       tkPointer:
         Result.AsPointer := pointer(data);
-      {$ENDIF OTL_HasTkPointer}
       else
         raise Exception.CreateFmt('TOmniValue: CastFrom<%s> is broken!', [ti^.Name]);
     end;
   end;
 end; { TOmniValue.CastFrom }
 
-{$IFDEF OTL_HasArrayOfT}
 class function TOmniValue.FromArray<T>(const values: TArray<T>): TOmniValue;
 var
   ovc  : TOmniValueContainer;
@@ -2455,7 +2124,6 @@ begin
     ovc.Add(TOmniValue.CastFrom<T>(value));
   Result.SetAsArray(ovc);
 end; { TOmniValue.FromArray }
-{$ENDIF OTL_HasArrayOfT}
 
 class function TOmniValue.FromRecord<T>(const value: T): TOmniValue;
 begin
@@ -2467,23 +2135,15 @@ begin
   Result.SetAsRecord(CreateAutoDestroyObject(TOmniRecordWrapper<T>.Create(value)));
 end; { TOmniValue.FromRecordUnsafe<T> }
 
-{$IF CompilerVersion > 20}
-function TOmniValue.ToObject<T>: T;
-begin
-  {$IF CompilerVersion <= 21}
-  Result := T(AsObject as TClass(T));
-  {$ELSE}
-  Result := AsObject as T;
-  {$IFEND}
-end; { TOmniValue.ToObject<T> }
-{$IFEND}
-
-{$IF CompilerVersion > 20}
 function TOmniValue.CastToObject<T>: T;
 begin
   Result := T(AsObject);
  end; { TOmniValue.CastToObject<T> }
-{$IFEND}
+
+function TOmniValue.ToObject<T>: T;
+begin
+  Result := AsObject as T;
+end; { TOmniValue.ToObject<T> }
 
 function TOmniValue.Unwrap<T>: T;
 begin
@@ -2494,7 +2154,6 @@ class function TOmniValue.Wrap<T>(const value: T): TOmniValue;
 begin
   Result.AsOwnedObject := TOmniRecordWrapper<T>.Create(value);
 end; { TOmniValue.Wrap }
-{$ENDIF OTL_Generics}
 
 procedure TOmniValue.Clear;
 begin
@@ -2734,7 +2393,6 @@ begin
     Result := defValue;
 end; { TOmniValue.CastToStringDef }
 
-{$IFDEF OTL_ERTTI}
 function TOmniValue.GetArrayFromTValue(const value: TValue): TOmniValueContainer;
 var
   ov: TOmniValue;
@@ -2826,7 +2484,6 @@ begin
       Result := GetTValueFromArray(AsArray);
   end;
 end; { TOmniValue.GetAsTValue }
-{$ENDIF OTL_ERRTI}
 
 function TOmniValue.CastToVariant: Variant;
 begin
@@ -3152,7 +2809,6 @@ begin
   ovType := ovtString;
 end; { TOmniValue.SetAsString }
 
-{$IFDEF OTL_ERTTI}
 procedure TOmniValue.SetAsTValue(const value: TValue);
 begin
   case value.Kind of
@@ -3186,7 +2842,6 @@ begin
         [GetEnumName(TypeInfo(TTypeKind), Ord(value.Kind))]);
   end;
 end; { TOmniValue.SetAsTValue }
-{$ENDIF OTL_ERTTI}
 
 procedure TOmniValue.SetAsVariant(const value: Variant);
 begin
@@ -3386,12 +3041,10 @@ begin
 end; { TOmniValue.Equal }
 
 {$IFDEF MSWINDOWS}
-{$IFDEF UNICODE}
 class operator TOmniValue.Implicit(const a: AnsiString): TOmniValue;
 begin
   Result.AsAnsiString := a;
 end; { TOmniValue.Implicit }
-{$ENDIF UNICODE}
 {$ENDIF}
 
 class operator TOmniValue.Implicit(const a: boolean): TOmniValue;
@@ -3404,12 +3057,10 @@ begin
   Result.AsDouble := a;
 end; { TOmniValue.Implicit }
 
-{$IFDEF OTL_TOmniValueImplicitDateTime}
 class operator TOmniValue.Implicit(const a: TDateTime): TOmniValue;
 begin
   Result.AsDateTime := a;
 end; { TOmniValue.Implicit }
-{$ENDIF OTL_TOmniValueImplicitDateTime}
 
 class operator TOmniValue.Implicit(const a: Extended): TOmniValue;
 begin
@@ -3447,12 +3098,10 @@ begin
 end; { TOmniValue.Implicit }
 
 {$IFDEF MSWINDOWS}
-{$IFDEF UNICODE}
 class operator TOmniValue.Implicit(const a: TOmniValue): AnsiString;
 begin
   Result := a.AsAnsiString;
 end; { TOmniValue.Implicit }
-{$ENDIF UNICODE}
 
 class operator TOmniValue.Implicit(const a: TOmniValue): WideString;
 begin
@@ -3480,12 +3129,10 @@ begin
   Result := a.AsDouble;
 end; { TOmniValue.Implicit }
 
-{$IFDEF OTL_TOmniValueImplicitDateTime}
 class operator TOmniValue.Implicit(const a: TOmniValue): TDateTime;
 begin
   Result := a.AsDateTime;
 end; { TOmniValue.Implicit }
-{$ENDIF OTL_TOmniValueImplicitDateTime}
 
 class operator TOmniValue.Implicit(const a: TOmniValue): integer;
 begin
@@ -3534,7 +3181,6 @@ begin
   Result := a.AsPointer;
 end; { TOmniValue.Implicit }
 
-{$IFDEF OTL_ERTTI}
 class operator TOmniValue.Implicit(const a: TValue): TOmniValue;
 begin
   Result.AsTValue := a;
@@ -3544,7 +3190,6 @@ class operator TOmniValue.Implicit(const a: TOmniValue): TValue;
 begin
   Result := a.AsTValue;
 end; { TOmniValue.Implicit }
-{$ENDIF OTL_ERTTI}
 
 { TOmniValueObj }
 
@@ -3554,14 +3199,12 @@ begin
   FValue := value;
 end; { TOmniValueObj.Create }
 
-{$IFDEF OTL_Generics}
 { TOmniRecord<T> }
 
 constructor TOmniRecord<T>.Create(const aValue: T);
 begin
   Value := aValue;
 end; { TOmniRecord<T>.Create }
-{$ENDIF OTL_Generics}
 
 { TOmniWaitableValue }
 
@@ -3957,8 +3600,6 @@ begin
   {$ENDIF}
 end; { TOmniThreadEnvironment.SetGroupAffinity }
 
-{$IFDEF OTL_NUMASupport}
-
 { TOmniNUMANode }
 
 constructor TOmniNUMANode.Create(nodeNumber, groupNumber: integer; affinity: NativeUInt);
@@ -4193,8 +3834,6 @@ begin
   Result := FGroups[idx];
 end; { TOmniProcessorGroups.GetItem }
 
-{$ENDIF OTL_NUMASupport}
-
 { TOmniEnvironment }
 
 constructor TOmniEnvironment.Create;
@@ -4202,14 +3841,11 @@ begin
   inherited Create;
   oeProcessEnv := TOmniProcessEnvironment.Create;
   oeSystemEnv := TOmniSystemEnvironment.Create;
-{$IFDEF OTL_NUMASupport}
   oeNUMANodes       := TOmniNUMANodes.Create;
   oeProcessorGroups := TOmniProcessorGroups.Create;
   LoadNUMAInfo;
-{$ENDIF OTL_NUMASupport}
 end; { TOmniEnvironment.Create }
 
-{$IFDEF OTL_NUMASupport}
 destructor TOmniEnvironment.Destroy;
 begin
   oeNUMANodes := nil;
@@ -4238,7 +3874,6 @@ function TOmniEnvironment.GetProcessorGroups: IOmniProcessorGroups;
 begin
   Result := oeProcessorGroups;
 end; { TOmniEnvironment.GetProcessorGroups }
-{$ENDIF OTL_NUMASupport}
 
 function TOmniEnvironment.GetProcess: IOmniProcessEnvironment;
 begin
@@ -4255,7 +3890,6 @@ begin
   Result := TOmniThreadEnvironment.Create;
 end; { TOmniEnvironment.GetThread }
 
-{$IFDEF OTL_NUMASupport}
 procedure TOmniEnvironment.LoadNUMAInfo;
 {$IFDEF MSWindows}
 var
@@ -4303,7 +3937,6 @@ begin
   end;
   {$ENDIF MSWindows}
 end; { TOmniEnvironment.LoadNUMAInfo }
-{$ENDIF OTL_NUMASupport}
 
 { TOmniExecutable }
 
@@ -4389,7 +4022,6 @@ begin
   oeProcedure := value;
 end; { TOmniExecutable.SetProc }
 
-{$IFDEF OTL_Anonymous}
 class procedure TOmniExecutable.AnonCopy(var Dest; const Source);
 var
   P: Pointer;
@@ -4440,17 +4072,13 @@ begin
   AnonCopy(oeDelegate, source);
 end; { TOmniExecutable.SetDelegate }
 
-{$ENDIF OTL_Anonymous}
-
 { TOmniMessageID }
 
-{$IFDEF OTL_Anonymous}
 constructor TOmniMessageID.Create(const proc: TProc<integer>);
 begin
   omidMessageType := mitAnon;
   omidAnon := proc;
 end; { TOmniMessageID.Create }
-{$ENDIF OTL_Anonymous}
 
 function TOmniMessageID.AsString: string;
 begin
@@ -4498,9 +4126,6 @@ begin
   Assert(a.omidMessageType = mitPointer);
   Result := a.omidPointer;
 end; { TOmniMessageID.Implicit }
-
-{$IFDEF OTL_Anonymous}
-{$ENDIF OTL_Anonymous}
 
 function NextOid: int64;
 begin
@@ -4814,7 +4439,6 @@ begin
     OnChange(Self);
 end; { TOmniIntegerSet.DoOnChange }
 
-{$IFDEF OTL_HasArrayOfT}
 function TOmniIntegerSet.GetAsArray: TArray<integer>;
 var
   count: integer;
@@ -4832,7 +4456,6 @@ begin
       Inc(count);
     end;
 end; { TOmniIntegerSet.GetAsArray }
-{$ENDIF OTL_HasArrayOfT}
 
 function TOmniIntegerSet.GetAsBits: TBits;
 begin
@@ -4911,7 +4534,6 @@ begin
     DoOnChange;
 end; { TOmniIntegerSet.Remove }
 
-{$IFDEF OTL_HasArrayOfT}
 procedure TOmniIntegerSet.SetAsArray(const value: TArray<integer>);
 var
   max     : integer;
@@ -4931,7 +4553,6 @@ begin
   if oldValue <> AsMask then
     DoOnChange;
 end; { TOmniIntegerSet.SetAsArray }
-{$ENDIF OTL_HasArrayOfT}
 
 procedure TOmniIntegerSet.SetAsBits(const value: TBits);
 var
@@ -5039,8 +4660,6 @@ initialization
   TOmniValue_DataSize[tkClass]   := SizeOf(TObject);
   TOmniValue_DataSize[tkMethod]  := SizeOf(TMethod);
   TOmniValue_DataSize[tkInt64]   := SizeOf(int64);
-  {$IFDEF OTL_HasTkPointer}
   TOmniValue_DataSize[tkPointer] := SizeOf(pointer);
-  {$ENDIF OTL_HasTkPointer}
   TOmniValue._RemoveWarnings;
 end.

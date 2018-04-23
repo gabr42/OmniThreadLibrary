@@ -59,11 +59,8 @@ var
   msgData: TOmniValue;
   msgID  : word;
   ov     : TOmniValue;
-  s      : string;
-{$IFDEF OTL_Generics}
-var
   rec    : TTestRecord;
-{$ENDIF OTL_Generics}
+  s      : string;
 begin
   while DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, INFINITE) = WAIT_OBJECT_1 do
   begin
@@ -88,13 +85,11 @@ begin
         end;
       MSG_RECORD:
         begin
-          {$IFDEF OTL_Generics}
           rec := msgData.ToRecord<TTestRecord>;
           task.Comm.Send(MSG_RESULT, 'Received record with values: ' +
             Format('%d, %s, %d, %d', [rec.TestInt, rec.TestStr,
               rec.TestObj.Value.AsInteger, rec.TestIntf.Value]));
           rec.TestObj.Free;
-          {$ENDIF OTL_Generics}
         end;
     end;
   end;
@@ -118,19 +113,15 @@ begin
 end;
 
 procedure TfrmOmniValueArray.btnSendRecordClick(Sender: TObject);
-{$IFDEF OTL_Generics}
 var
   rec: TTestRecord;
-{$ENDIF OTL_Generics}
 begin
-  {$IFDEF OTL_Generics}
   rec.TestInt := 42;
   rec.TestStr := 'OTL';
   rec.TestObj := TOmniWaitableValue.Create;
   rec.TestObj.Signal(17);
   rec.TestIntf := CreateCounter(127);
   FWorker.Comm.Send(MSG_RECORD, TOmniValue.FromRecord<TTestRecord>(rec));
-  {$ENDIF OTL_Generics}
 end;
 
 procedure TfrmOmniValueArray.FormDestroy(Sender: TObject);
@@ -142,9 +133,7 @@ end;
 procedure TfrmOmniValueArray.FormCreate(Sender: TObject);
 begin
   FWorker := CreateTask(Worker).OnMessage(MSG_RESULT, ShowResult).Run;
-  {$IFNDEF OTL_Generics}
   btnSendRecord.Enabled := false;
-  {$ENDIF ~OTL_Generics}
 end;
 
 procedure TfrmOmniValueArray.ShowResult(const task: IOmniTaskControl; const msg:

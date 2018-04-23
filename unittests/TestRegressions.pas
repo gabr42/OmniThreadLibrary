@@ -2,7 +2,6 @@ unit TestRegressions;
 
 interface
 
-{$IFDEF Unicode}
 uses
   TestFramework;
 
@@ -11,11 +10,9 @@ type
   published
     procedure TestTOmniValueArrayInt64Cast;
   end;
-{$ENDIF}
 
 implementation
 
-{$IFDEF Unicode}
 uses
   System.Generics.Collections,
   OtlCommon;
@@ -37,5 +34,4 @@ end;
 
 initialization
   RegisterTest(TestBugfixes.Suite);
-{$ENDIF}
 end.

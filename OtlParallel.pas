@@ -350,10 +350,8 @@ uses
   Messages,
   {$ENDIF MSWINDOWS}
   SysUtils,
-  {$IFDEF OTL_ERTTI}
   TypInfo,
   RTTI,
-  {$ENDIF OTL_ERTTI}
   SyncObjs,
   Generics.Collections,
   GpLists,
@@ -522,7 +520,6 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
-  {$IFDEF OTL_GoodGenerics}
   TOmniIteratorSimpleSimpleDelegate<T> = reference to procedure(var value: T);
   TOmniIteratorSimpleDelegate<T> = reference to procedure(taskIndex: integer; var value: T);
   TOmniIteratorSimpleFullDelegate<T> = reference to procedure(const task: IOmniTask; taskIndex: integer; var value: T);
@@ -544,7 +541,6 @@ type
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop<T>; overload;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
-  {$ENDIF OTL_GoodGenerics}
 
   TEnumeratorDelegate = reference to function(var next: TOmniValue): boolean;
   TEnumeratorDelegate<T> = reference to function(var next: T): boolean;
@@ -740,16 +736,6 @@ type
   TOmniParallelLoopOptions = set of TOmniParallelLoopOption;
 
   TOmniParallelLoopBase = class(TInterfacedObject)
-  {$IFDEF OTL_ERTTI}
-  strict private
-    FDestroy    : TRttiMethod;
-    FEnumerable : TValue;
-    FGetCurrent : TRttiMethod;
-    FMoveNext   : TRttiMethod;
-    FRttiContext: TRttiContext;
-  public
-    constructor Create(enumerable: TObject); overload;
-  {$ENDIF OTL_ERTTI}
   strict private
     FAggregate          : TOmniValue;
     FAggregator         : TOmniAggregatorDelegate;
@@ -757,8 +743,12 @@ type
     FCountStopped       : IOmniResourceCount;
     FDataManager        : TOmniDataManager;
     FDelegateEnum       : TOmniDelegateEnumerator;
+    FDestroy            : TRttiMethod;
+    FEnumerable         : TValue;
+    FGetCurrent         : TRttiMethod;
     FIntoQueueIntf      : IOmniBlockingCollection;
     FManagedProvider    : boolean;
+    FMoveNext           : TRttiMethod;
     FNumTasks           : integer;
     FNumTasksManual     : boolean;
     FOnMessageList      : TGpIntegerObjectList;
@@ -766,6 +756,7 @@ type
     FOnTaskControlCreate: TOmniTaskControlCreateDelegate;
     FOnTaskCreate       : TOmniTaskCreateDelegate;
     FOptions            : TOmniParallelLoopOptions;
+    FRttiContext        : TRttiContext;
     FSourceProvider     : TOmniSourceProvider;
     FTaskConfig         : IOmniTaskConfig;
     FTaskFinalizer      : TOmniTaskFinalizerDelegate;
@@ -802,6 +793,7 @@ type
   public
     constructor Create(const sourceProvider: TOmniSourceProvider; managedProvider: boolean); overload;
     constructor Create(const enumerator: TEnumeratorDelegate); overload;
+    constructor Create(enumerable: TObject); overload;
     destructor  Destroy; override;
     property Options: TOmniParallelLoopOptions read FOptions write FOptions;
   end; { TOmniParallelLoopBase }
@@ -934,7 +926,6 @@ type
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { IOmniParallelSimpleLoop }
 
-  {$IFDEF OTL_GoodGenerics}
   TOmniParallelSimpleLoop<T> = class(TInterfacedObject, IOmniParallelSimpleLoop<T>)
   strict private
     FData    : TArray<T>;
@@ -957,7 +948,6 @@ type
     function  Finalize(taskFinalizer: TOmniSimpleTaskFinalizerTaskDelegate): IOmniParallelSimpleLoop<T>; overload; inline;
     function  WaitFor(maxWait_ms: cardinal): boolean; inline;
   end; { TOmniParallelSimpleLoop<T> }
-  {$ENDIF OTL_GoodGenerics}
 
   EJoinException = class(Exception)
   strict private
@@ -1168,8 +1158,6 @@ type
 
   TMapProc<T1,T2> = reference to function(const source: T1; var target: T2): boolean;
 
-  {$IFDEF OTL_HasArrayOfT}
-  {$IFDEF OTL_GoodGenerics}
   IOmniParallelMapper<T1,T2> = interface
     function  Execute(mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
     function  NoWait: IOmniParallelMapper<T1,T2>;
@@ -1215,8 +1203,6 @@ type
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelMapper<T1,T2>;
     function  WaitFor(maxWait_ms: cardinal): boolean;
   end; { TOmniParallelMapper<T1,T2> }
-  {$ENDIF OTL_GoodGenerics}
-  {$ENDIF OTL_HasArrayOfT}
 
   {$REGION 'Documentation'}
   ///	<summary>Parallel class represents a base class for all high-level language
@@ -1229,11 +1215,9 @@ type
     /// <summary>Creates fast parallel loop without support for work stealing which
     /// only enumerates integer ranges.</summary>
     class function  &For(first, last: integer; step: integer = 1): IOmniParallelSimpleLoop; overload;
-    {$IFDEF OTL_GoodGenerics}
     /// <summary>Creates fast parallel loop without support for work stealing which
     ///   only enumerates dynamic arrays.</summary>
     class function  &For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>; overload;
-    {$ENDIF OTL_GoodGenerics}
 
   // ForEach
     ///	<summary>Creates parallel loop that iterates over an IOmniValueEnumerable.</summary>
@@ -1252,10 +1236,8 @@ type
     class function  ForEach(enumerator: TEnumeratorDelegate): IOmniParallelLoop; overload;
     ///	<summary>Creates parallel loop that iterates over an integer range.</summary>
     class function  ForEach(first, last: integer; step: integer = 1): IOmniParallelLoop<integer>; overload;
-    {$IFDEF OTL_ERTTI}
     ///	<summary>Creates parallel loop that iterates over a GetEnumerator implemented in the object.</summary>
     class function  ForEach(const enumerable: TObject): IOmniParallelLoop; overload;
-    {$ENDIF OTL_ERTTI}
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IOmniValueEnumerable.</summary>
     class function  ForEach<T>(const enumerable: IOmniValueEnumerable): IOmniParallelLoop<T>; overload;
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from an IOmniEnumerator.</summary>
@@ -1272,10 +1254,8 @@ type
     class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a TEnumeratorDelegate.</summary>
     class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
-    {$IFDEF OTL_ERTTI}
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</summary>
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
-    {$ENDIF OTL_ERTTI}
 
   // Join
     ///	<summary>Creates a Join interface.</summary>
@@ -1331,15 +1311,11 @@ type
     class function TimedTask: IOmniTimedTask;
 
   // Map
-    {$IFDEF OTL_HasArrayOfT}
-    {$IFDEF OTL_GoodGenerics}
     ///	<summary>Creates a parallel Map mapping &lt;T1&gt; to &lt;T2&gt;.</summary>
     class function Map<T1,T2>: IOmniParallelMapper<T1,T2>; overload;
     ///	<summary>Maps and array of &lt;T1&gt; to an array of &lt;T2&gt;.</summary>
     class function Map<T1,T2>(const source: TArray<T1>;
       mapper: TMapProc<T1,T2>): TArray<T2>; overload;
-    {$ENDIF OTL_GoodGenerics}
-    {$ENDIF OTL_HasArrayOfT}
 
   // task configuration
     ///	<summary>Creates Task configuration block.</summary>
@@ -2160,12 +2136,10 @@ begin
   Result := TOmniParallelSimpleLoop.Create(first, last, step);
 end; { Parallel.&For }
 
-{$IFDEF OTL_GoodGenerics}
 class function Parallel.&For<T>(const arr: TArray<T>): IOmniParallelSimpleLoop<T>;
 begin
   Result := TOmniParallelSimpleLoop<T>.Create(arr);
 end; { Parallel }
-{$ENDIF OTL_GoodGenerics}
 
 class function Parallel.ForEach(const enumerable: IOmniValueEnumerable):
   IOmniParallelLoop;
@@ -2201,12 +2175,10 @@ begin
   Result := TOmniParallelLoop.Create(CreateSourceProvider(enum), true);
 end; { Parallel.ForEach }
 
-{$IFDEF OTL_ERTTI}
 class function Parallel.ForEach(const enumerable: TObject): IOmniParallelLoop;
 begin
   Result := TOmniParallelLoop.Create(enumerable);
 end; { Parallel.ForEach }
-{$ENDIF OTL_ERTTI}
 
 class function Parallel.ForEach(const source: IOmniBlockingCollection): IOmniParallelLoop;
 begin
@@ -2252,12 +2224,10 @@ begin
   Result := TOmniParallelLoop<T>.Create(CreateSourceProvider(enum), true );
 end; { Parallel.ForEach<T> }
 
-{$IFDEF OTL_ERTTI}
 class function Parallel.ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>;
 begin
   Result := TOmniParallelLoop<T>.Create(enumerable);
 end; { Parallel.ForEach<T> }
-{$ENDIF OTL_ERTTI}
 
 class function Parallel.ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>;
 begin
@@ -2323,8 +2293,6 @@ begin
   Result := TOmniParallelJoin.Create;
 end; { Parallel.Join }
 
-{$IFDEF OTL_HasArrayOfT}
-{$IFDEF OTL_GoodGenerics}
 class function Parallel.Map<T1, T2>(const source: TArray<T1>; mapper: TMapProc<T1,T2>):
   TArray<T2>;
 var
@@ -2340,8 +2308,6 @@ class function Parallel.Map<T1,T2>: IOmniParallelMapper<T1,T2>;
 begin
   Result := TOmniParallelMapper<T1,T2>.Create;
 end; { Parallel.Map }
-{$ENDIF OTL_GoodGenerics}
-{$ENDIF OTL_HasArrayOfT}
 
 class function Parallel.ParallelTask: IOmniParallelTask;
 begin
@@ -2415,7 +2381,6 @@ begin
   Create(CreateSourceProvider(FDelegateEnum), true);
 end; { TOmniParallelLoopBase.Create }
 
-{$IFDEF OTL_ERTTI}
 constructor TOmniParallelLoopBase.Create(enumerable: TObject);
 var
   rm: TRttiMethod;
@@ -2445,7 +2410,6 @@ begin
     end
   );
 end; { TOmniParallelLoopBase.Create }
-{$ENDIF OTL_ERTTI}
 
 destructor TOmniParallelLoopBase.Destroy;
 begin
@@ -2460,12 +2424,10 @@ begin
   FreeAndNil(FDelegateEnum);
   FreeAndNil(FDataManager);
   FreeAndNil(FOnMessageList);
-  {$IFDEF OTL_ERTTI}
   if FEnumerable.AsObject <> nil then begin
     FDestroy.Invoke(FEnumerable, []);
     FRttiContext.Free;
   end;
-  {$ENDIF OTL_ERTTI}
   inherited;
 end; { TOmniParallelLoopBase.Destroy }
 
@@ -3602,7 +3564,6 @@ begin
   {$ENDIF ~MSWINDOWS}
 end; { TOmniParallelSimpleLoop.WaitFor }
 
-{$IFDEF OTL_GoodGenerics}
 { TOmniParallelSimpleLoop<T> }
 
 constructor TOmniParallelSimpleLoop<T>.Create(const arr: TArray<T>);
@@ -3727,7 +3688,6 @@ function TOmniParallelSimpleLoop<T>.WaitFor(maxWait_ms: cardinal): boolean;
 begin
   Result := FIterator.WaitFor(maxWait_ms);
 end; { TOmniParallelSimpleLoop<T>.WaitFor }
-{$ENDIF OTL_GoodGenerics}
 
 { TOmniFuture<T> }
 
@@ -5208,9 +5168,6 @@ begin
   end));
 end; { TOmniAwait.Await }
 
-{$IFDEF OTL_HasArrayOfT}
-{$IFDEF OTL_GoodGenerics}
-
 { TOmniParallelMapper<T1,T2> }
 
 constructor TOmniParallelMapper<T1,T2>.Create;
@@ -5376,9 +5333,6 @@ begin
   if assigned(FWorker) then
     Result := FWorker.WaitFor(maxWait_ms);
 end; { TOmniParallelMapper<T1,T2> }
-
-{$ENDIF OTL_GoodGenerics}
-{$ENDIF OTL_HasArrayOfT}
 
 { TOmniTimedTaskWorker }
 

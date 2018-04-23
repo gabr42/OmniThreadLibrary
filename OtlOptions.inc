@@ -48,6 +48,16 @@
 
 // See the Configuration block below to configure your build process.
 
+{$IFNDEF CONDITIONALEXPRESSIONS}
+'OmniThreadLibrary requires Delphi XE or newer'
+{$ENDIF}
+
+{$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
+
+{$IF CompilerVersion < 22}
+{$MESSAGE ERROR 'OmniThreadLibrary requires Delphi XE or newer'}
+{$IFEND}
+
 {$ALIGN 8}
 {$BOOLEVAL OFF}
 {$EXTENDEDSYNTAX ON}
@@ -58,36 +68,6 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 {$TYPEINFO OFF}
-
-{$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
-
-{$IF CompilerVersion < 19} //D2007
-  {$DEFINE OTL_NeedsWindowsAPIs}
-{$IFEND}
-
-{$IF CompilerVersion >= 20} //D2009
-  {$DEFINE OTL_Anonymous}
-  {$DEFINE OTL_Generics}
-  {$DEFINE OTL_HasInterlockedCompareExchangePointer}
-  {$DEFINE OTL_NUMASupport}
-{$IFEND}
-
-{$IF CompilerVersion >= 21} //D2010
-  {$DEFINE OTL_ERTTI}
-  {$DEFINE OTL_DeprecatedResume}
-  {$DEFINE OTL_KnowsParamCount}
-  {$DEFINE OTL_HasTkPointer}
-  {$DEFINE OTL_HasArrayOfT}
-  {$DEFINE OTL_HasNameThreadForDebugging}
-{$IFEND}
-
-{$IF CompilerVersion >= 22} //DXE
-  {$DEFINE OTL_TOmniValueImplicitDateTime}
-  {$DEFINE OTL_HasThreadID}
-  {$DEFINE OTL_HasTInterlocked}
-  {$DEFINE OTL_GoodGenerics}
-  {$DEFINE OTL_HasTThreadYield}
-{$IFEND}
 
 {$IF CompilerVersion >= 23} //DXE2
   {$DEFINE OTL_Supports64Bit}

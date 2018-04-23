@@ -61,15 +61,8 @@ procedure SetThreadName(const name: string);
 
 implementation
 
-{$IFDEF OTL_HasNameThreadForDebugging}
 uses
   Classes;
-{$ELSE ~OTL_HasNameThreadForDebugging}
-{$IFDEF MSWINDOWS}
-uses
-  Windows;
-{$ENDIF MSWINDOWS}
-{$ENDIF ~OTL_HasNameThreadForDebugging}
 
 threadvar
   LastThreadName: string[255];
@@ -80,8 +73,6 @@ begin
   // do nothing
 end; { SetThreadName }
 {$ELSE}
-
-{$IFDEF OTL_HasNameThreadForDebugging}
 
 procedure SetThreadName(const name: string);
 var
@@ -94,45 +85,6 @@ begin
   TThread.NameThreadForDebugging(string(name));
   LastThreadName := ansiName;
 end; { SetThreadName }
-
-{$ELSE ~OTL_HasNameThreadForDebugging}
-{$IFDEF MSWINDOWS}
-
-procedure SetThreadName(const name: string);
-type
-  TThreadNameInfo = record
-    FType    : LongWord; // must be 0x1000
-    FName    : PAnsiChar;// pointer to name (in user address space)
-    FThreadID: LongWord; // thread ID (-1 indicates caller thread)
-    FFlags   : LongWord; // reserved for future use, must be zero
-  end; { TThreadNameInfo }
-var
-  ansiName      : AnsiString;
-  threadNameInfo: TThreadNameInfo;
-begin
-  if DebugHook <> 0 then begin
-    ansiName := AnsiString(name);
-    if ansiName = LastThreadName then
-      Exit;
-    threadNameInfo.FType := $1000;
-    threadNameInfo.FName := PAnsiChar(ansiName);
-    threadNameInfo.FThreadID := $FFFFFFFF;
-    threadNameInfo.FFlags := 0;
-    try
-      RaiseException($406D1388, 0, SizeOf(threadNameInfo) div SizeOf(LongWord), @threadNameInfo);
-    except {ignore} end;
-    LastThreadName := ansiName;
-  end;
-end; { SetThreadName }
-
-{$ELSE ~MSWINDOWS}
-
-procedure SetThreadName(const name: string);
-begin
-end; { SetThreadName }
-
-{$ENDIF ~MSWINDOWS}
-{$ENDIF ~OTL_HasNameThreadForDebugging}
 {$ENDIF ~OTL_DontSetThreadName}
 
 end.

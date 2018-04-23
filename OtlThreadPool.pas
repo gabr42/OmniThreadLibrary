@@ -251,7 +251,9 @@ type
     function  CountExecuting: integer;
     function  CountQueued: integer;
     function  GetAffinity: IOmniIntegerSet;
+    function  GetNUMANodes: IOmniIntegerSet;
     function  GetOptions: TOmniThreadPoolOptions;
+    function  GetProcessorGroups: IOmniIntegerSet;
     function  IsIdle: boolean;
     function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
@@ -259,12 +261,8 @@ type
     procedure SetOptions(const value: TOmniThreadPoolOptions);
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod); overload;
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryFunction); overload;
-  {$IFDEF OTL_NUMASupport}
-    function  GetNUMANodes: IOmniIntegerSet;
-    function  GetProcessorGroups: IOmniIntegerSet;
     procedure SetNUMANodes(const value: IOmniIntegerSet);
     procedure SetProcessorGroups(const value: IOmniIntegerSet);
-  {$ENDIF OTL_NUMASupport}
     property IdleWorkerThreadTimeout_sec: integer read GetIdleWorkerThreadTimeout_sec
       write SetIdleWorkerThreadTimeout_sec;
     property Asy_OnUnhandledWorkerException: TOTPUnhandledWorkerException read
@@ -276,16 +274,14 @@ type
       SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property NUMANodes: IOmniIntegerSet read GetNUMANodes write SetNUMANodes;
     property NumCores: integer read GetNumCores;
     property Options: TOmniThreadPoolOptions read GetOptions write SetOptions;
+    property ProcessorGroups: IOmniIntegerSet read GetProcessorGroups write
+      SetProcessorGroups;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec
       write SetWaitOnTerminate_sec;
-    {$IFDEF OTL_NUMASupport}
-    property ProcessorGroups: IOmniIntegerSet read GetProcessorGroups write
-      SetProcessorGroups;
-    property NUMANodes: IOmniIntegerSet read GetNUMANodes write SetNUMANodes;
-    {$ENDIF OTL_NUMASupport}
   end; { IOmniThreadPool }
 
   IOmniThreadPoolScheduler = interface
@@ -311,9 +307,6 @@ uses
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  {$IFNDEF Unicode} // D2009+ provides own TStringBuilder class
-  HVStringBuilder,
-  {$ENDIF}
   OtlHooks,
   OtlSync,
   OtlCommon.Utils,
@@ -333,9 +326,6 @@ const
   MSG_CANCEL_RESULT     = 6;
 
 type
-{$IFNDEF Unicode}
-  TStringBuilder = HVStringBuilder.StringBuilder;
-{$ENDIF}
   TOTPWorkerThread = class;
   TOmniThreadPool = class;
 
@@ -551,15 +541,13 @@ type
     FOptions: TOmniThreadPoolOptions;
     otpAffinity                      : IOmniIntegerSet;
     otpAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
+    otpNUMANodes                     : IOmniIntegerSet;
     otpPoolName                      : string;
+    otpProcessorGroups               : IOmniIntegerSet;
     otpThreadDataFactory             : TOTPThreadDataFactory;
     otpUniqueID                      : int64;
     otpWorker                        : IOmniWorker;
     otpWorkerTask                    : IOmniTaskControl;
-  {$IFDEF OTL_NUMASupport}
-    otpNUMANodes                     : IOmniIntegerSet;
-    otpProcessorGroups               : IOmniIntegerSet;
-  {$ENDIF OTL_NUMASupport}
   protected
     procedure Asy_ForwardUnhandledWorkerException(thread: TThread; E: Exception);
     function  GetAffinity: IOmniIntegerSet;
@@ -570,8 +558,10 @@ type
     function  GetMaxQueuedTime_sec: integer;
     function  GetMinWorkers: integer;
     function  GetName: string;
+    function  GetNUMANodes: IOmniIntegerSet;
     function  GetNumCores: integer;
     function  GetOptions: TOmniThreadPoolOptions;
+    function  GetProcessorGroups: IOmniIntegerSet;
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure Log(const msg: string; const params: array of const);
@@ -583,17 +573,13 @@ type
     procedure SetMaxQueuedTime_sec(value: integer);
     procedure SetMinWorkers(value: integer);
     procedure SetName(const value: string);
+    procedure SetNUMANodes(const value: IOmniIntegerSet);
     procedure SetOptions(const value: TOmniThreadPoolOptions);
+    procedure SetProcessorGroups(const value: IOmniIntegerSet);
     procedure SetWaitOnTerminate_sec(value: integer);
     function  WorkerObj: TOTPWorker;
-  {$IFDEF OTL_NUMASupport}
-    function  GetNUMANodes: IOmniIntegerSet;
-    function  GetProcessorGroups: IOmniIntegerSet;
     procedure NotifyNUMANodesChanged(const value: IOmniIntegerSet);
     procedure NotifyProcessorGroupsChanged(const value: IOmniIntegerSet);
-    procedure SetNUMANodes(const value: IOmniIntegerSet);
-    procedure SetProcessorGroups(const value: IOmniIntegerSet);
-  {$ENDIF OTL_NUMASupport}
   public
     constructor Create(const name: string);
     destructor  Destroy; override;
@@ -621,16 +607,14 @@ type
       write SetMaxQueuedTime_sec;
     property MinWorkers: integer read GetMinWorkers write SetMinWorkers;
     property Name: string read GetName write SetName;
+    property NUMANodes: IOmniIntegerSet read GetNUMANodes write SetNUMANodes;
     property NumCores: integer read GetNumCores;
     property Options: TOmniThreadPoolOptions read GetOptions write SetOptions;
+    property ProcessorGroups: IOmniIntegerSet read GetProcessorGroups write
+      SetProcessorGroups;
     property UniqueID: int64 read GetUniqueID;
     property WaitOnTerminate_sec: integer read GetWaitOnTerminate_sec write
       SetWaitOnTerminate_sec;
-  {$IFDEF OTL_NUMASupport}
-    property ProcessorGroups: IOmniIntegerSet read GetProcessorGroups write
-      SetProcessorGroups;
-    property NUMANodes: IOmniIntegerSet read GetNUMANodes write SetNUMANodes;
-  {$ENDIF OTL_NUMASupport}
   end; { TOmniThreadPool}
 
 const
@@ -952,11 +936,7 @@ end; { TOTPWorkerThread.Log }
 
 procedure TOTPWorkerThread.Start;
 begin
-  {$IFDEF OTL_DeprecatedResume}
   inherited Start;
-  {$ELSE}
-  inherited Resume;
-  {$ENDIF OTL_DeprecatedResume}
 end; { TOTPWorkerThread.Start }
 
 function TOTPWorkerThread.WorkItemDescription: string;
@@ -1636,12 +1616,10 @@ begin
     (otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
   otpAffinity := TOmniIntegerSet.Create;
   otpAffinity.OnChange := NotifyAffinityChanged;
-  {$IFDEF OTL_NUMASupport}
   otpNUMANodes := TOmniIntegerSet.Create;
   otpNUMANodes.OnChange := NotifyNUMANodesChanged;
   otpProcessorGroups := TOmniIntegerSet.Create;
   otpProcessorGroups.OnChange := NotifyProcessorGroupsChanged;
-  {$ENDIF OTL_NUMASupport}
 end; { TOmniThreadPool.Create }
 
 destructor TOmniThreadPool.Destroy;
@@ -1749,7 +1727,6 @@ begin
   Result := otpPoolName;
 end; { TOmniThreadPool.GetName }
 
-{$IFDEF OTL_NUMASupport}
 function TOmniThreadPool.GetNUMANodes: IOmniIntegerSet;
 begin
   Result := otpNUMANodes;
@@ -1759,7 +1736,6 @@ function TOmniThreadPool.GetProcessorGroups: IOmniIntegerSet;
 begin
   Result := otpProcessorGroups;
 end; { TOmniThreadPool.GetProcessorGroups }
-{$ENDIF OTL_NUMASupport}
 
 function TOmniThreadPool.GetNumCores: integer;
 begin
@@ -1820,7 +1796,6 @@ begin
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.NotifyAffinityChanged }
 
-{$IFDEF OTL_NUMASupport}
 procedure TOmniThreadPool.NotifyNUMANodesChanged(const value: IOmniIntegerSet);
 var
   copySet: IOmniIntegerSet;
@@ -1848,7 +1823,6 @@ begin
     res.WaitFor(INFINITE);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.NotifyProcessorGroupsChanged }
-{$ENDIF OTL_NUMASupport}
 
 function TOmniThreadPool.RemoveMonitor: IOmniThreadPool;
 begin
@@ -1920,7 +1894,6 @@ begin
   FOptions := value;
 end; { TOmniThreadPool.SetOptions }
 
-{$IFDEF OTL_NUMASupport}
 procedure TOmniThreadPool.SetNUMANodes(const value: IOmniIntegerSet);
 begin
   otpNUMANodes.Assign(value);
@@ -1930,7 +1903,6 @@ procedure TOmniThreadPool.SetProcessorGroups(const value: IOmniIntegerSet);
 begin
   otpProcessorGroups.Assign(value);
 end; { TOmniThreadPool.SetProcessorGroups }
-{$ENDIF OTL_NUMASupport}
 
 procedure TOmniThreadPool.SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod);
 begin
@@ -2019,15 +1991,12 @@ end; { TOTPWorkerScheduler.Count }
 
 procedure TOTPWorkerScheduler.CreateInitialClusters(const processorGroups, numaNodes:
   IOmniIntegerSet);
-{$IFDEF OTL_NUMASupport}
 var
   envGroups   : IOmniProcessorGroups;
   envNodes    : IOmniNUMANodes;
   i           : integer;
   nodeInfo    : IOmniNUMANode;
-{$ENDIF OTL_NUMASupport}
 begin
-  {$IFDEF OTL_NUMASupport}
   envGroups := Environment.ProcessorGroups;
   envNodes := Environment.NUMANodes;
   if numaNodes.Count > 0 then begin
@@ -2045,9 +2014,6 @@ begin
   end
   else
     owsClusters.Add(TOTPGroupAffinity.Create(0, envGroups[0].Affinity.AsMask));
-  {$ELSE}
-  owsClusters.Add(TOTPGroupAffinity.Create(0, Environment.Process.Affinity.Mask));
-  {$ENDIF OTL_NUMASupport}
 
   if owsClusters.Count = 0 then
     raise Exception.Create('TOTPWorkerScheduler.Update: All cores were filtered out');

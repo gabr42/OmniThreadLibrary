@@ -55,10 +55,8 @@ uses
 
 {$R *.dfm}
 
-{$IFNDEF OTL_HasArrayOfT}
 type
   TArray<T> = array of T;
-{$ENDIF ~OTL_HasArrayOfT}
 
 procedure TfrmDemoParallelTaskConfig.btnAsyncClick(Sender: TObject);
 var

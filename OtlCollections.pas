@@ -115,11 +115,9 @@ uses
   {$ELSE}
   SyncObjs,
   {$ENDIF}
-  {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
   TypInfo,
   RTTI,
   Generics.Collections,
-  {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
   OtlCommon,
   OtlContainers,
   OtlContainerObserver,
@@ -201,9 +199,7 @@ type
   protected
     function  GetApproxCount: integer; inline;
     function  GetContainerSubject: TOmniContainerSubject;
-    {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
     procedure InsertElement<T>(const value: T; ti: PTypeInfo; ds: integer);
-    {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
   public
     {$REGION 'Documentation'}
     ///	<remarks>If numProducersConsumers &gt; 0, collection will automatically
@@ -212,7 +208,6 @@ type
     {$ENDREGION}
     constructor Create(numProducersConsumers: integer = 0);
     destructor  Destroy; override;
-    {$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
     class function FromArray<T>(const values: TArray<T>): IOmniBlockingCollection; inline; //alias for FromRange
     class function FromRange<T>(const values: array of T): IOmniBlockingCollection; overload;
     class function FromRange<T>(const collection: IEnumerable<T>): IOmniBlockingCollection; overload; inline;
@@ -221,7 +216,6 @@ type
     procedure AddRange<T>(const values: array of T); overload;
     procedure AddRange<T>(const collection: IEnumerable<T>); overload;
     procedure AddRange<T>(const collection: TEnumerable<T>); overload;
-    {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
     function  GetEnumerator: IOmniValueEnumerator; inline;
@@ -253,11 +247,9 @@ type
 
   PInterface = ^IInterface;
 
-{$IFDEF OTL_Generics}{$IFDEF OTL_HasArrayOfT}{$IFDEF OTL_ERTTI}
-  //compiler requires it to be public
+  //compiler requires them to be public
   function Clamp(value: integer): integer;
   procedure GetTypeInformation(ti: PTypeInfo; var ds: integer; var maxValue: uint64);
-{$ENDIF}{$ENDIF}{$ENDIF}
 
 implementation
 
@@ -449,9 +441,6 @@ begin
   Result := TryTake(value, INFINITE);
 end; { TOmniBlockingCollection.Take }
 
-{$IFDEF OTL_Generics}
-{$IFDEF OTL_HasArrayOfT}
-{$IFDEF OTL_ERTTI}
 function Clamp(value: integer): integer; inline;
 const
   CMinIncrement = 1024;
@@ -612,9 +601,6 @@ begin
   end;
   SetLength(Result, numEl);
 end; { TOmniBlockingCollection.ToArray<T> }
-{$ENDIF OTL_ERTTI}
-{$ENDIF OTL_HasArrayOfT}
-{$ENDIF OTL_Generics}
 
 function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
 var

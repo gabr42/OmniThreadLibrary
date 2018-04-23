@@ -136,10 +136,8 @@ type
   end;
   {$ENDIF ~MSWINDOWS}
 
-  {$IFDEF OTL_Anonymous}
   TOmniTaskInvokeFunction = reference to procedure;
 //  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTaskControl);
-  {$ENDIF OTL_Anonymous}
 
   IOmniTask = interface ['{958AE8A3-0287-4911-B475-F275747400E4}']
     function  GetCancellationToken: IOmniCancellationToken;
@@ -155,24 +153,20 @@ type
   //
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
-    {$IFDEF OTL_Anonymous}
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction); //overload;
     procedure InvokeOnSelf(remoteFunc: TOmniTaskInvokeFunction);
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
-    {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
     procedure SetNUMANode(numaNodeNumber: integer);
-    procedure SetTimer(interval_ms: cardinal); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
-    procedure SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID); overload; deprecated {$IFDEF Unicode}'use three-parameter version'{$ENDIF Unicode};
+    procedure SetTimer(interval_ms: cardinal); overload; deprecated 'use three-parameter version';
+    procedure SetTimer(interval_ms: cardinal; const timerMessage: TOmniMessageID); overload; deprecated 'use three-parameter version';
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID); overload;
-    {$IFDEF OTL_Anonymous}
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TProc); overload;
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TProc<integer>); overload;
-    {$ENDIF OTL_Anonymous}
     procedure StopTimer;
     procedure Terminate;
     function  Terminated: boolean;
@@ -196,9 +190,7 @@ type
     procedure SetThreadData(const value: IInterface);
   end; { IOmniTaskExecutor }
 
-{$IFDEF OTL_Anonymous}
   TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
-{$ENDIF OTL_Anonymous}
 
 {$IFNDEF MSWINDOWS}
   function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;

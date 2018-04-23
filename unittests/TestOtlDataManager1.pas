@@ -2,7 +2,6 @@ unit TestOtlDataManager1;
 
 interface
 
-{$IFDEF Unicode}
 uses
   TestFramework, OtlCommon, OtlDataManager, OtlCollections, GpStuff;
 
@@ -250,6 +249,5 @@ initialization
   RegisterTest(TestIntegerSourceProvider.Suite);
   RegisterTest(TestOmniValueDataPackage.Suite);
   RegisterTest(TestOmniValueSourceProvider.Suite);
-{$ENDIF}
 end.
 

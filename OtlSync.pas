@@ -154,13 +154,9 @@ uses
   SysUtils,
   SyncObjs,
   Classes,
-  {$IFDEF OTL_Generics}
   Generics.Defaults,
   Generics.Collections,
-  {$ENDIF OTL_Generics}
-  {$IFDEF OTL_ERTTI}
   RTTI,
-  {$ENDIF OTL_ERTTI}
   TypInfo,
   {$IFDEF MSWINDOWS}
   Windows,
@@ -360,20 +356,15 @@ type
     {$ENDIF MSWINDOWS}
   end; { IOmniCancellationToken }
 
-  {$IFDEF OTL_Generics}
   Atomic<T> = class
     type TFactory = reference to function: T;
     class function Initialize(var storage: T; factory: TFactory): T; overload;
-    {$IFDEF OTL_ERTTI}
     class function Initialize(var storage: T): T; overload;
-    {$ENDIF OTL_ERTTI}
   end; { Atomic<T> }
 
-  {$IFDEF OTL_ERTTI}
   Atomic<I; T:constructor> = class
     class function Initialize(var storage: I): I;
   end; { Atomic<I,T> }
-  {$ENDIF OTL_ERTTI}
 
   Locked<T> = record
   strict private // keep those aligned!
@@ -393,9 +384,7 @@ type
     class operator Implicit(const value: Locked<T>): T; inline;
     class operator Implicit(const value: T): Locked<T>; inline;
     function  Initialize(factory: TFactory): T; overload;
-    {$IFDEF OTL_ERTTI}
     function  Initialize: T; overload;
-    {$ENDIF OTL_ERTTI}
     procedure Acquire; inline;
     procedure Locked(proc: TProc); overload; inline;
     procedure Locked(proc: TProcT); overload; inline;
@@ -453,7 +442,6 @@ type
     procedure Unlock(const key: K);
   end; { TOmniLockManager<K> }
   {$ENDIF MSWINDOWS}
-  {$ENDIF OTL_Generics}
 
   {$IFDEF MSWINDOWS}
   ///<summary>Waits on any/all from any number of handles.</summary>
@@ -599,29 +587,6 @@ type
     class function Increment(var Target: Integer): Integer; overload; static; inline;
     class function Decrement(var Target: Integer): Integer; overload; static; inline;
   end; { TInterlockedEx }
-
-{$IFDEF OTL_NeedsWindowsAPIs}
-  TWaitOrTimerCallback = procedure (Context: Pointer; Success: Boolean) stdcall;
-  BOOL = LongBool;
-  ULONG = Cardinal;
-
-const
-  WT_EXECUTEONLYONCE           = ULONG($00000008);
-  WT_EXECUTEINPERSISTENTTHREAD = ULONG($00000080);
-
-function RegisterWaitForSingleObject(out phNewWaitObject: THandle; hObject: THandle;
-  CallBack: TWaitOrTimerCallback; Context: Pointer; dwMilliseconds: ULONG;
-  dwFlags: ULONG): BOOL; stdcall;
-  external 'kernel32.dll' name 'RegisterWaitForSingleObject';
-function RegisterWaitForSingleObjectEx(hObject: THandle;
-  CallBack: TWaitOrTimerCallback; Context: Pointer; dwMilliseconds: ULONG;
-  dwFlags: ULONG): THandle; stdcall;
-  external 'kernel32.dll' name 'RegisterWaitForSingleObjectEx';
-function UnregisterWait(WaitHandle: THandle): BOOL; stdcall;
-  external 'kernel32.dll' name 'UnregisterWait';
-function UnregisterWaitEx(WaitHandle: THandle; CompletionEvent: THandle): BOOL; stdcall;
-  external 'kernel32.dll' name 'UnregisterWaitEx';
-{$ENDIF OTL_NeedsWindowsAPIs}
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
@@ -1070,15 +1035,6 @@ asm
   lock  xadd [addend], value
 end; { NInterlockedExchangeAdd }
 
-{$IFNDEF OTL_HasInterlockedCompareExchangePointer}
-function InterlockedCompareExchangePointer(var destination: pointer; exchange: pointer;
-  comparand: pointer): pointer;
-begin
-  Result := pointer(InterlockedCompareExchange(integer(destination), integer(exchange),
-    integer(comparand)));
-end; { InterlockedCompareExchangePointer }
-{$ENDIF OTL_HasInterlockedCompareExchangePointer}
-
 procedure MFence; assembler;
 asm
   mfence
@@ -1465,7 +1421,6 @@ begin
 end; { TOmniResourceCount.TryAllocate }
 
 {$ENDIF ~MSWINDOWS}
-{$IFDEF OTL_Generics}
 
 { Atomic<T> }
 
@@ -1497,7 +1452,6 @@ begin
   Result := storage;
 end; { Atomic<T>.Initialize }
 
-{$IFDEF OTL_ERTTI}
 class function Atomic<T>.Initialize(var storage: T): T;
 begin
   if not assigned(PPointer(@storage)^) then begin
@@ -1536,8 +1490,6 @@ begin
       Result := TValue.From<T>(T.Create).AsType<I>;
     end);
 end; { Atomic<I,T>.Initialize }
-
-{$ENDIF OTL_ERTTI}
 
 { Locked<T> }
 
@@ -1617,7 +1569,6 @@ begin
   Result := FValue;
 end; { Locked<T>.Initialize }
 
-{$IFDEF OTL_ERTTI}
 function Locked<T>.Initialize: T;
 begin
   if not FInitialized then begin
@@ -1649,8 +1600,6 @@ begin
       end);
   end;
 end; { Locked<T>.Initialize }
-
-{$ENDIF OTL_ERTTI}
 
 procedure Locked<T>.Locked(proc: TProc);
 begin
@@ -1841,7 +1790,6 @@ begin
 end; { TOmniLockManager<K>.Unlock }
 
 {$ENDIF MSWINDOWS}
-{$ENDIF OTL_Generics}
 
 {$IFDEF MSWINDOWS}
 
@@ -2610,11 +2558,9 @@ class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): 
 begin
   {$IFDEF CPUX64}
   Result := TInterlocked.Add(Int64(Target), Int64(Increment));
-  {$ELSE}{$IFDEF OTL_HasTInterlocked}
-  Result := TInterlocked.Add(Integer(Target), Integer(Increment));
   {$ELSE}
-  Result := InterlockedExchangeAdd(Target, Increment);
-  {$ENDIF}{$ENDIF}
+  Result := TInterlocked.Add(Integer(Target), Integer(Increment));
+  {$ENDIF}
 end; { TInterlockedEx.Add }
 
 class function TInterlockedEx.CAS(const oldValue, newValue: pointer; var destination): boolean;
@@ -2640,29 +2586,19 @@ class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: Nati
 begin
   {$IFDEF CPUX64}
   Result := TInterlocked.CompareExchange(Int64(Target), Int64(Value), Int64(Comparand));
-  {$ELSE}{$IFDEF OTL_HasTInterlocked}
-  Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
   {$ELSE}
-  Result := InterlockedCompareExchange(Target, Value, Comparand);
-  {$ENDIF}{$ENDIF}
+  Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
+  {$ENDIF}
 end; { TInterlockedEx.CompareExchange }
 
 class function TInterlockedEx.Decrement(var Target: Integer): Integer;
 begin
-  {$IFDEF OTL_HasTInterlocked}
   Result := TInterlocked.Decrement(Target);
-  {$ELSE}
-  Result := InterlockedDecrement(Target);
-  {$ENDIF OTL_HasTInterlocked}
 end; { TInterlockedEx.Decrement }
 
 class function TInterlockedEx.Increment(var Target: Integer): Integer;
 begin
-  {$IFDEF OTL_HasTInterlocked}
   Result := TInterlocked.Increment(Target);
-  {$ELSE}
-  Result := InterlockedIncrement(Target);
-  {$ENDIF OTL_HasTInterlocked}
 end; { TInterlockedEx.Increment }
 
 initialization

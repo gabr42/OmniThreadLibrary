@@ -608,7 +608,7 @@ begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
       obsTaskPopLoops := 1;
       obsTaskPushLoops := 1;
       for n := 1 to NumOfSamples do begin
-        {$IFDEF OTL_HasTThreadYield}TThread.Yield;{$ELSE}DSiYield;{$ENDIF}
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := PopLink(obsRecycleChainP^);

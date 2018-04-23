@@ -12,26 +12,20 @@ type
   TSmokeTest = class(TTestCase)
   published
     procedure TestDSiClassWndProcParamSize;
-  {$IFDEF Unicode}
-  {$IFDEF OTL_HasArrayOfT}
     procedure TestTOmniValueArrayInt64Cast;
-  {$ENDIF}
     procedure TestCancelledFuture;
-  {$ENDIF}
   end;
 
 implementation
 
 uses
-{$IFDEF Unicode}
   OtlParallel,
-{$ENDIF}
   OtlCommon,
   OtlSync;
 
 type
-  TDSiWParam = {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
-  TDSiLParam = {$IFDEF Unicode}LPARAM{$ELSE}longint{$ENDIF};
+  TDSiWParam = WPARAM;
+  TDSiLParam = LPARAM;
 
 { TSmokeTest }
 
@@ -46,8 +40,6 @@ begin
   {$ENDIF}
 end;
 
-{$IFDEF Unicode}
-{$IFDEF OTL_HasArrayOfT}
 procedure TSmokeTest.TestTOmniValueArrayInt64Cast;
 var
   arrIn : TArray<int64>;
@@ -73,7 +65,6 @@ begin
   for i := Low(arrIn) to High(arrIn) do
     CheckEquals(arrIn[i], arrOut[i]);
 end;
-{$ENDIF}
 
 procedure TSmokeTest.TestCancelledFuture;
 var
@@ -98,7 +89,6 @@ begin
   CheckTrue(future.IsCancelled);
   CheckFalse(executed);
 end;
-{$ENDIF Unicode}
 
 initialization
   RegisterTest(TSmokeTest.Suite);

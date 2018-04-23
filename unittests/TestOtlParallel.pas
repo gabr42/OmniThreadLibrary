@@ -2,7 +2,6 @@ unit TestOtlParallel;
 
 interface
 
-{$IFDEF Unicode}
 uses
   TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils;
 
@@ -25,11 +24,9 @@ type
     procedure TestNoExecution;
     procedure TestStepZero;
   end;
-{$ENDIF}
 
 implementation
 
-{$IFDEF Unicode}
 uses
   Math,
   OtlParallel;
@@ -175,6 +172,5 @@ end;
 
 initialization
   RegisterTest(TestParallelFor.Suite);
-{$ENDIF}
 end.
 

@@ -2,7 +2,6 @@ unit TestBlockingCollection1;
 
 interface
 
-{$IFDEF Unicode}
 uses
   TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync;
@@ -18,11 +17,9 @@ type
     procedure TestOmniValueObjectleak;
     procedure TestInterfaceLeak;
   end;
-{$ENDIF}
 
 implementation
 
-{$IFDEF Unicode}
 uses
   OtlParallel,
   Classes;
@@ -168,6 +165,5 @@ end;
 initialization
   // Register any test cases with the test runner
   RegisterTest(TestIOmniBlockingCollection.Suite);
-{$ENDIF}
 end.
 

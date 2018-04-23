@@ -17,10 +17,8 @@ uses
   OtlComm,
   OtlCommBufferTest,
   OtlContainerObserver,
-  {$IFDEF OTL_Generics}
   OtlDataManager,
   OtlParallel,
-  {$ENDIF OTL_Generics}
   OtlEventMonitor,
   OtlHooks,
   OtlLogger,
