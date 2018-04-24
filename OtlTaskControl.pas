@@ -1504,6 +1504,7 @@ procedure TOmniTask.InternalExecute(calledFromTerminate: boolean);
 var
   chainTo       : IOmniTaskControl;
   eventTerminate: TOmniTransitionEvent;
+  sync          : TSynchroObject;
   taskException : Exception;
 begin
   otCleanupLock.EnterWriteLock;
@@ -1546,13 +1547,14 @@ begin
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
         otSharedInfo_ref.MonitorLock.Acquire;
         try
-          {$IFDEF MSWINDOWS}
+          sync := otSharedInfo_ref.MonitorLock.SyncObj;
+           {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
               integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
           {$ENDIF MSWINDOWS}
           otSharedInfo_ref := nil;
-        finally otSharedInfo_ref.MonitorLock.Release; end;
+        finally sync.Release; end;
       end;
     finally
       //Task controller could die any time now. Make sure we're not using shared
