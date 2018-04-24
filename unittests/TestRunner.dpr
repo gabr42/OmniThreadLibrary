@@ -15,7 +15,6 @@ program TestRunner;
 {$ENDIF}
 
 uses
-//  FastMM4,
   Forms,
   TestFramework,
   GUITestRunner,
@@ -27,7 +26,10 @@ uses
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
-  TestOtlParallel in 'TestOtlParallel.pas';
+  TestOtlParallel in 'TestOtlParallel.pas' {;
+
+{$R *.RES},
+  TestPlatform in 'TestPlatform.pas';
 
 {$R *.RES}
 

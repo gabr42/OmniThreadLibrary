@@ -8,7 +8,7 @@ uses
   TestFramework, SysUtils, Windows, DSiWin32;
 
 type
-  // Regression tests for the DSiWin32 unit
+  // Regression tests
   TSmokeTest = class(TTestCase)
   published
     procedure TestDSiClassWndProcParamSize;

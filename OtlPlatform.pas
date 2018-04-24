@@ -48,7 +48,7 @@ end; { TTimeSource.Create }
 function TTimeSource.GetTimestamp_ms: int64;
 begin
   {$IFDEF OTL_HasStopwatch}
-  Result := FStopwatch.ElapsedTicks;
+  Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000);
   {$ELSE}
   Result := DSiTimeGetTime64;
   {$ENDIF ~OTL_HasStopwatch}
