@@ -77,13 +77,8 @@ var
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  DSiWin32,
-  {$ELSE}
-  System.Diagnostics,
-  {$ENDIF ~MSWINDOWS}
   SysUtils,
+  OtlPlatform,
   OtlCommon;
 
 { TOmniLogger }
@@ -126,9 +121,9 @@ end; { TOmniLogger.Log }
 procedure TOmniLogger.Log(const msg: string);
 begin
   if StoreTimeOfDay then
-    eventList.Enqueue(Format('[%d] %s %s', [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
+    eventList.Enqueue(Format('[%d] %s %s', [TThread.CurrentThread.ThreadID, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
   else
-    eventList.Enqueue(Format('[%d] %d %s', [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF}, {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.GetTimeStamp{$ENDIF}, msg]));
+    eventList.Enqueue(Format('[%d] %d %s', [TThread.CurrentThread.ThreadID, GetTimeStamp_ms, msg]));
 end; { TOmniLogger.Log }
 
 procedure TOmniLogger.SaveEventList(const fileName: string);

@@ -9,6 +9,7 @@ program CompileAllUnits;
 uses
   SysUtils,
   Classes,
+  OtlPlatform,
   OtlContainers,
   OtlCommon,
   OtlCommon.Utils,
@@ -23,7 +24,7 @@ uses
   OtlHooks,
   OtlLogger,
   OtlRegister,
-//  OtlSuperObject,
+//  OtlSuperobject,
   OtlTask,
   OtlTaskControl,
   OtlThreadPool;

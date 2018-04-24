@@ -73,6 +73,7 @@
   {$DEFINE OTL_Supports64Bit}
   {$DEFINE OTL_HasSystemTypes}
   {$DEFINE OTL_HasCorrectNativeInt}
+  {$DEFINE OTL_HasStopwatch}
 {$IFEND}
 
 {$IF CompilerVersion >= 24} //DXE3
