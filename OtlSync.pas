@@ -151,15 +151,15 @@ unit OtlSync;
 interface
 
 uses
-  System.SysUtils,
-  System.SyncObjs,
-  System.Classes,
+  SysUtils,
+  SyncObjs,
+  Classes,
   Generics.Defaults,
   Generics.Collections,
-  System.RTTI,
-  System.TypInfo,
+  RTTI,
+  TypInfo,
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   DSiWin32,
   GpStuff,
   GpLists,
@@ -784,7 +784,7 @@ begin
   Result := true;
   {$IFDEF MSWINDOWS}
   if event <> 0 then
-    Result := Winapi.Windows.SetEvent(event);
+    Result := Windows.SetEvent(event);
   {$ELSE}
   if assigned(event) then
     event.SetEvent;

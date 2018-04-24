@@ -107,16 +107,16 @@ unit OtlCollections;
 interface
 
 uses
-  System.SysUtils,
+  SysUtils,
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   DSiWin32,
   GpStuff,
   {$ELSE}
-  System.SyncObjs,
+  SyncObjs,
   {$ENDIF}
-  System.TypInfo,
-  System.RTTI,
+  TypInfo,
+  RTTI,
   Generics.Collections,
   OtlCommon,
   OtlContainers,
@@ -255,9 +255,9 @@ implementation
 
 uses
   {$IFNDEF MSWINDOWS}
-  System.Diagnostics,
+  Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  System.Classes;
+  Classes;
 
 {$IFDEF MSWINDOWS}
 {$IFDEF CPUX64}

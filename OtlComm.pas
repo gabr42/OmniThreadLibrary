@@ -95,16 +95,16 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
-  Winapi.Messages,
+  Windows,
+  Messages,
   GpStuff,
   DSiWin32,
   {$ELSE}
   Generics.Collections,
   {$ENDIF}
-  System.SysUtils,
-  System.Classes,
-  System.SyncObjs,
+  SysUtils,
+  Classes,
+  SyncObjs,
   OtlCommon,
   OtlSync,
   OtlContainerObserver,
@@ -237,7 +237,7 @@ uses
   {$ENDIF}
   {$IFDEF MSWINDOWS}{$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}{$ENDIF}
   {$IFNDEF MSWINDOWS}
-  System.Diagnostics,
+  Diagnostics,
   {$ENDIF}
   OtlEventMonitor;
 

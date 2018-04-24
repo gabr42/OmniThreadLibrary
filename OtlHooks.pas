@@ -56,8 +56,8 @@ unit OtlHooks;
 interface
 
 uses
-  System.SysUtils,
-  System.Classes,
+  SysUtils,
+  Classes,
   OtlSync,
   OtlThreadPool;
 

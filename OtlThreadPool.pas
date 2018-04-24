@@ -167,13 +167,13 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   {$ELSE}
-  System.Diagnostics,
+  Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  System.Contnrs,
-  System.Classes,
-  System.SysUtils,
+  Contnrs,
+  Classes,
+  SysUtils,
   OtlCommon,
   OtlTask;
 

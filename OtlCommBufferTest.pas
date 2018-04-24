@@ -58,7 +58,7 @@ uses
 implementation
 
 uses
-  System.SysUtils,
+  SysUtils,
   OtlCommon;
 
 procedure RingBufferTest;

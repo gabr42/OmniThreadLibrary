@@ -69,7 +69,7 @@ unit OtlContainerObserver;
 interface
 
 uses
-  System.Classes,
+  Classes,
   {$IFDEF OTL_MobileSupport}
   System.SyncObjs,
   System.Generics.Collections,
@@ -154,10 +154,10 @@ uses
   System.Types,
   {$ENDIF}
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   DSiWin32,
   {$ENDIF MSWINDOWS}
-  System.SysUtils;
+  SysUtils;
 
 type
   {$IFDEF OTL_MobileSupport}
@@ -281,7 +281,7 @@ begin
     cweoEventIsExternal := true;                               
   end
   else begin
-    cweoEvent := Winapi.Windows.CreateEvent(nil, false, false, nil);
+    cweoEvent := Windows.CreateEvent(nil, false, false, nil);
     cweoEventIsExternal := false;
   end;
 end; { TOmniContainerWindowsEventObserverImpl.Create }

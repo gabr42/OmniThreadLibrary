@@ -346,13 +346,13 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
-  Winapi.Messages,
+  Windows,
+  Messages,
   {$ENDIF MSWINDOWS}
-  System.SysUtils,
-  System.TypInfo,
-  System.RTTI,
-  System.SyncObjs,
+  SysUtils,
+  TypInfo,
+  RTTI,
+  SyncObjs,
   Generics.Collections,
   GpLists,
   OtlCommon,
@@ -1354,7 +1354,7 @@ uses
   {$IFDEF MSWINDOWS}
   DSiWin32,
   {$ENDIF MSWINDOWS}
-  System.Classes,
+  Classes,
   GpStuff,
   OtlComm,
   OtlContainerObserver;

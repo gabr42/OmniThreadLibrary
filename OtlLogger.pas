@@ -52,7 +52,7 @@ unit OtlLogger;
 interface
 
 uses
-  System.Classes,
+  Classes,
   OtlContainers;
 
 type
@@ -78,12 +78,12 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   DSiWin32,
   {$ELSE}
   System.Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  System.SysUtils,
+  SysUtils,
   OtlCommon;
 
 { TOmniLogger }

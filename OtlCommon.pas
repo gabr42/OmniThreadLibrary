@@ -272,22 +272,22 @@ unit OtlCommon;
 interface
 
 uses
-  System.Classes,
-  System.Variants,
-  System.TypInfo,
-  System.SyncObjs,
-  System.Types,
+  Classes,
+  Variants,
+  TypInfo,
+  SyncObjs,
+  Types,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows,
+  Windows,
   DSiWin32,
 {$ENDIF}
 {$IFDEF POSIX}
   Posix.Pthread,
 {$ENDIF}
-  System.RTTI,
-  System.SysUtils,
+  RTTI,
   Generics.Defaults,
-  Generics.Collections;
+  Generics.Collections,
+  SysUtils;
 
 const
   // reserved exit statuses
@@ -2987,7 +2987,7 @@ begin
   Result := true;
   case ovType of
     ovtVariant: value := (ovIntf as IOmniVariantData).Value;
-    ovtNull:    value := System.Variants.Null;
+    ovtNull:    value := Variants.Null;
     else Result := false;
   end;
 end; { TOmniValue.TryCastToVariant }
@@ -3509,7 +3509,7 @@ var
 {$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
-  priority := Winapi.Windows.GetPriorityClass(GetCurrentProcess);
+  priority := Windows.GetPriorityClass(GetCurrentProcess);
   if priority = $8000 then
     Result := pcAboveNormal
   else if priority = $4000 then
