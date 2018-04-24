@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2017-10-02
-///   Version           : 1.02a
+///   Last modification : 2018-04-24
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-24
+///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///     1.02a: 2017-10-02
 ///       - Fixed bad implementation of TOmniEnumeratorProvider.GetPackage and
 ///         TOmniValueEnumeratorProvider.GetPackage.
@@ -144,15 +146,13 @@ uses
   Windows,
   Contnrs,
   DSiWin32,
-{$ELSE}
-  System.Diagnostics,
 {$ENDIF}
   GpLists,
   SysUtils,
   Classes,
-  {$IFDEF OTL_HasSystemTypes}
-  System.Types,
-  {$ENDIF}
+  {$IFDEF OTL_HasSystemTypes}System.Types,{$ENDIF}
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  OtlPlatform,
   OtlSync;
 
 const
@@ -392,9 +392,6 @@ type
     const CFetchTimeout_ms = 10;
   strict private
     hdmEstimatedPackageSize: TOmniAlignedInt32;
-    {$IFNDEF MSWINDOWS}
-    FStopWatch: TStopwatch;
-    {$ENDIF}
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer; options:
       TOmniDataManagerOptions);
@@ -1188,9 +1185,6 @@ constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider
 begin
   inherited Create(sourceProvider, numWorkers, options);
   hdmEstimatedPackageSize.Value := GetDataCountForGeneration(High(integer)); // hope for the best
-  {$IFNDEF MSWINDOWS}
-  FStopWatch := TStopWatch.Create;
-  {$ENDIF}
 end; { TOmniHeuristicDataManager.Create }
 
 function TOmniHeuristicDataManager.GetNextFromProvider(package: TOmniDataPackage;
@@ -1200,7 +1194,7 @@ const
 var
   dataPerMs: cardinal;
   dataSize : integer;
-  time     : int64;
+  time_ms   : int64;
 begin
   // the goal is to fetch as much (but not exceeding <fetch_limit>) data as possible in
   // <fetch_timeout> milliseconds; highest amount of data is limited by the
@@ -1208,24 +1202,14 @@ begin
   dataSize := GetDataCountForGeneration(generation);
   if dataSize > hdmEstimatedPackageSize.Value then
     dataSize := hdmEstimatedPackageSize.Value;
-  {$IFDEF MSWINDOWS}
-  time := DSiTimeGetTime64;
-  {$ELSE}
-  FStopWatch.Reset;
-  FStopWatch.Start;
-  {$ENDIF}
+  time_ms := Time.Timestamp_ms;
   Result := SourceProvider.GetPackage(dataSize, package);
-  {$IFDEF MSWINDOWS}
-  time := DSiTimeGetTime64 - time;
-  {$ELSE}
-  FStopWatch.Stop;
-  time := FStopWatch.ElapsedMilliseconds;
-  {$ENDIF}
+  time_ms := Time.Elapsed_ms(time_ms);
   if Result then begin
-    if time = 0 then
+    if time_ms = 0 then
       dataPerMs := CDataLimit
     else begin
-      dataPerMs := Round(dataSize / time);
+      dataPerMs := Round(dataSize / time_ms);
       if dataPerMs >= CDataLimit then
         dataPerMs := CDataLimit;
     end;

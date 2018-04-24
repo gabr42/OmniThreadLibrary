@@ -20,6 +20,7 @@ type
   public
     class function Create: TTimeSource; static;
     function  Elapsed_ms(startTime_ms: int64): int64; inline;
+    function  HasElapsed(startTime_ms, timeout_ms: int64): boolean;
     function  Timestamp_ms: int64; inline;
   end; { TTimeSource }
   PTimeSource = ^TTimeSource;
@@ -61,6 +62,16 @@ function TTimeSource.Elapsed_ms(startTime_ms: int64): int64;
 begin
   Result := Timestamp_ms - startTime_ms;
 end; { TTimeSource.Elapsed_ms }
+
+function TTimeSource.HasElapsed(startTime_ms, timeout_ms: int64): boolean;
+begin
+  if timeout_ms <= 0 then
+    Result := true
+  else if timeout_ms = INFINITE then
+    Result := false
+  else
+    Result := (Elapsed_ms(startTime_ms) >= timeout_ms);
+end; { TTimeSource.HasElapsed }
 
 initialization
   GTimeSource := TTimeSource.Create;

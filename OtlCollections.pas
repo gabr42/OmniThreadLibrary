@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2018-03-12
-///   Version           : 1.11
+///   Last modification : 2018-04-24
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-24
+///       - Removed support for pre-XE Delphis.
+///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///     1.11: 2018-03-12
 ///       - Added TOmniBlockingCollection.FromArray<T> and .ToArray<T> (multiple overloads).
 ///     1.10a: 2017-09-26
@@ -257,7 +260,9 @@ uses
   {$IFNDEF MSWINDOWS}
   Diagnostics,
   {$ENDIF ~MSWINDOWS}
-  Classes;
+  Classes,
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  OtlPlatform;
 
 {$IFDEF MSWINDOWS}
 {$IFDEF CPUX64}
@@ -662,7 +667,7 @@ var
     if timeout_ms = INFINITE then
       Result := false
     else
-      Result := (startTime + timeout_ms) < DSiTimeGetTime64;
+      Result := (startTime + timeout_ms) < Time.Timestamp_ms;
   end; { Elapsed }
 
   function TimeLeft_ms: DWORD;
@@ -672,7 +677,7 @@ var
     if timeout_ms = INFINITE then
       Result := INFINITE
     else begin
-      intTime := startTime + timeout_ms - DSiTimeGetTime64;
+      intTime := startTime + timeout_ms - Time.Timestamp_ms;
       if intTime < 0 then
         Result := 0
       else
@@ -687,7 +692,7 @@ begin { TOmniBlockingCollection.TryTake }
     if assigned(obcResourceCount) then
       obcResourceCount.Allocate;
     try
-      startTime := DSiTimeGetTime64;
+      startTime := Time.Timestamp_ms;
       waitHandles[0] := obcCompletedSignal;
       waitHandles[1] := obcObserver.GetEvent;
       if assigned(obcResourceCount) then

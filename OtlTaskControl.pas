@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-16
-///   Version           : 1.40a
+///   Last modification : 2018-04-24
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-24
+///       - Removed support for pre-XE Delphis.
+///       - Internal time functions replaced with OtlPlatform.Time.
 ///     1.40a: 2018-03-16
 ///       - TOmniMessageExec.OnTerminated checks whether the event handler is assigned
 ///         before executing it.
@@ -780,7 +783,6 @@ type
     oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
     oteLastTimeGetTime64 : int64;
     oteTerminating       : boolean;
-    oteTimeGetTime64Base : int64;
     oteTimers            : TGpInt64ObjectList;
     {$IFDEF MSWINDOWS}
     oteWakeMask          : DWORD;
@@ -824,7 +826,6 @@ type
     procedure SetTimer(timerID: integer; interval_ms: cardinal; const timerMessage: TOmniMessageID);
     function  TestForInternalRebuild(const task: IOmniTask;
       var msgInfo: TOmniMessageInfo): boolean;
-    function  TimeGetTime64: int64;
   protected
     function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask;
       var msgInfo: TOmniMessageInfo{$IFNDEF MSWINDOWS}; SignalEvent: IOmnIEvent{$ENDIF}): boolean; virtual;
@@ -1188,12 +1189,11 @@ uses
   Generics.Collections,
   ObjAuto,
   OtlHooks,
-  {$IFDEF MSWINDOWS}
-  MMSystem,
-  {$ELSE}
+  {$IFNDEF MSWINDOWS}
   Rtti,
-  Diagnostics,
   {$ENDIF ~MSWINDOWS}
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  OtlPlatform,
   OtlCommon.Utils,
   OtlEventMonitor;
 
@@ -2461,7 +2461,7 @@ function TOmniTaskExecutor.HaveElapsedTimer: boolean;
 begin
   oteTimerLock.Acquire;
   try
-    Result := (oteTimers.Count > 0) and (oteTimers[0] <= TimeGetTime64);
+    Result := (oteTimers.Count > 0) and (oteTimers[0] <= Time.Timestamp_ms);
   finally oteTimerLock.Release; end;
 end; { TOmniTaskExecutor.HaveElapsedTimer }
 
@@ -2758,7 +2758,7 @@ begin
       timerInfo.Interval_ms := interval_ms;
       timerInfo.MessageID := timerMessage;
     end;
-    InsertTimer(TimeGetTime64 + interval_ms, timerInfo);
+    InsertTimer(Time.Timestamp_ms + interval_ms, timerInfo);
   end;
 end; { TOmniTaskExecutor.SetTimer }
 
@@ -2791,24 +2791,6 @@ begin
   end;
 end; { TOmniTaskExecutor.TestForInternalRebuild }
 
-function TOmniTaskExecutor.TimeGetTime64: int64;
-begin
-  {$IFNDEF MSWINDOWS}
-  Result := TStopwatch.GetTimeStamp;
-  {$ELSE}
-
-  {$IFDEF DEBUG}
-  Assert(oteTimerLock.LockCount > 0);
-  {$ENDIF}
-
-  Result := timeGetTime;
-  if Result < oteLastTimeGetTime64 then
-    oteTimeGetTime64Base := oteTimeGetTime64Base + $100000000;
-  oteLastTimeGetTime64 := Result;
-  Result := Result + oteTimeGetTime64Base;
-  {$ENDIF}
-end; { TOmniTaskExecutor.TimeGetTime64 }
-
 function TOmniTaskExecutor.TimeUntilNextTimer_ms: cardinal;
 var
   timeout_ms: int64;
@@ -2818,7 +2800,7 @@ begin
     if oteTimers.Count = 0 then
       Result := INFINITE
     else begin
-      timeout_ms := oteTimers[0] - TimeGetTime64;
+      timeout_ms := oteTimers[0] - Time.Timestamp_ms;
       if timeout_ms < 0 then
         timeout_ms := 0;
       Result := timeout_ms;

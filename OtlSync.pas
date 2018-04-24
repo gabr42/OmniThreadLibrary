@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-04-06
-///   Version           : 1.27
+///   Last modification : 2018-04-24
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-24
+///       - Removed support for pre-XE Delphis.
+///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///	    1.27: 2018-04-06
 ///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
@@ -168,8 +171,8 @@ uses
   {$IFDEF POSIX}
   Posix.Pthread,
   {$ENDIF}
-  System.Diagnostics,
   {$ENDIF OTL_MobileSupport}
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
   OtlCommon;
 
 type
@@ -637,6 +640,9 @@ var
   CASAlignment: integer; //required alignment for the CAS function - 8 or 16, depending on the platform
 
 implementation
+
+uses
+  OtlPlatform;
 
 type
   TOmniCriticalSection = class(TInterfacedObject, IOmniCriticalSection)
@@ -1241,14 +1247,14 @@ var
 
   function Timeout(var returnFalse: boolean): boolean;
   begin
-    Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
+    Result := Time.HasElapsed(startWait_ms, timeout_ms);
     if Result then
       returnFalse := true;
   end; { Timeout }
 
 begin
   Result := true;
-  startWait_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
+  startWait_ms := Time.Timestamp_ms;
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
@@ -1266,14 +1272,14 @@ var
 
   function Timeout(var returnFalse: boolean): boolean;
   begin
-    Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
+    Result := Time.HasElapsed(startWait_ms, timeout_ms);
     if Result then
       returnFalse := true;
   end; { Timeout }
 
 begin
   Result := true;
-  startWait_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
+  startWait_ms := Time.Timestamp_ms;
 
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
@@ -1349,7 +1355,7 @@ var
   waitTime_ms : int64;
 begin
   Result := false;
-  startTime_ms := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
+  startTime_ms := Time.Timestamp_ms;
   orcLock.Acquire;
   repeat
     if orcNumResources.Value = 0 then begin
@@ -1359,7 +1365,7 @@ begin
       if timeout_ms = INFINITE then
         waitTime_ms := INFINITE
       else begin
-        waitTime_ms := startTime_ms + timeout_ms - DSiTimeGetTime64;
+        waitTime_ms := timeout_ms - Time.Elapsed_ms(startTime_ms);
         if waitTime_ms <= 0 then
           Exit;
       end;
@@ -1710,7 +1716,7 @@ var
 begin
   Result := false;
   waitEvent := 0;
-  startWait := DSiTimeGetTime64; //TODO: Rewrite this with a faster, non-locking clock
+  startWait := Time.Timestamp_ms;
 
   repeat
     FLock.Acquire;
@@ -1733,7 +1739,7 @@ begin
         FNotifyList.InsertAtTail(TNotifyPair.Create(key, waitEvent));
       end;
     finally FLock.Release; end;
-    wait_ms := integer(timeout_ms) - integer(DSiTimeGetTime64 - startWait);
+    wait_ms := integer(timeout_ms) - integer(Time.Elapsed_ms(startWait));
   until ((timeout_ms <> INFINITE) and (wait_ms <= 0)) or
         (WaitForSingleObject(waitEvent, cardinal(wait_ms)) = WAIT_TIMEOUT);
 

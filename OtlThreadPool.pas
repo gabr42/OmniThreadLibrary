@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-12
-///   Version           : 2.19a
+///   Last modification : 2018-04-24
+///   Version           : 3.0
 /// </para><para>
 ///   History:
+///     3.0: 2018-04-24
+///       - Removed support for pre-XE Delphis.
+///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///     2.19a: 2018-03-12
 ///       - ThreadData is destroyed in the worker thread and not in the thread pool
 ///         management thread.
@@ -304,9 +307,9 @@ uses
   Math,
   SyncObjs,
   TypInfo,
-  {$IFDEF OTL_HasSystemTypes}
-  System.Types,
-  {$ENDIF}
+  {$IFDEF OTL_HasSystemTypes}System.Types,{$ENDIF}
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  OtlPlatform,
   OtlHooks,
   OtlSync,
   OtlCommon.Utils,
@@ -690,7 +693,7 @@ begin
   inherited Create;
   owiTask := task;
   owiScheduledAt := Now;
-  owiScheduled_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF};
+  owiScheduled_ms := Time.Timestamp_ms;
   owiUniqueID := owiTask.UniqueID;
 end; { TOTPWorkItem.Create }
 
@@ -1015,8 +1018,8 @@ begin
       {$IFDEF LogThreadPool}Log('Cancel request %d on thread %p:%d', [taskID, pointer(worker), worker.threadID]); {$ENDIF LogThreadPool}
       owRunningWorkers.Delete(iWorker);
       worker.Asy_Stop(signalToken);
-      endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
-      while ({$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} < endWait_ms) and (not worker.Stopped) do begin
+      endWait_ms := Time.Timestamp_ms + int64(WaitOnTerminate_sec.Value) * 1000;
+      while (Time.Timestamp_ms < endWait_ms) and (not worker.Stopped) do begin
         ProcessMessages;
         Sleep(10);
       end;
@@ -1155,9 +1158,8 @@ begin
     StopThread(TOTPWorkerThread(owRunningWorkers[iWorker]), signalCancellationToken);
   owRunningWorkers.Clear;
   CountRunning.Value := 0;
-  endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
-  while (endWait_ms > {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) and (NumRunningStoppedThreads > 0) do
-  begin
+  endWait_ms := Time.Timestamp_ms + int64(WaitOnTerminate_sec.Value) * 1000;
+  while (Time.Timestamp_ms < endWait_ms) and (NumRunningStoppedThreads > 0) do begin
     ProcessMessages;
     // TODO 1 -oPrimoz Gabrijelcic : ! what happens here during CancelAll? can the task die? !
     Sleep(10);
@@ -1212,8 +1214,7 @@ begin
     begin
       worker := TOTPWorkerThread(owIdleWorkers[iWorker]);
       if (worker.StartStopping_ms = 0) and
-        ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec.Value) * 1000)
-         < {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) then
+        ((worker.StartIdle_ms + int64(IdleWorkerThreadTimeout_sec.Value) * 1000) < Time.Timestamp_ms) then
       begin
         {$IFDEF LogThreadPool}Log(
           'Destroying idle thread %s because it was idle for more than %d seconds',
@@ -1229,8 +1230,7 @@ begin
   iWorker := 0;
   while iWorker < owStoppingWorkers.Count do begin
     worker := TOTPWorkerThread(owStoppingWorkers[iWorker]);
-    if worker.Stopped or ((worker.StartStopping_ms + int64(WaitOnTerminate_sec.Value) * 1000) <
-                         {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF}) then
+    if worker.Stopped or ((worker.StartStopping_ms + int64(WaitOnTerminate_sec.Value) * 1000) < Time.Timestamp_ms) then
     begin
       if not worker.Stopped then begin
         {$IFDEF MSWINDOWS}
@@ -1361,7 +1361,7 @@ begin
     if (not worker.RemoveFromPool) and
       ((MaxExecuting.Value < 0) or (owRunningWorkers.Count < MaxExecuting.Value)) then
     begin
-      worker.StartIdle_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF};
+      worker.StartIdle_ms := Time.Timestamp_ms;
       owIdleWorkers.Add(worker);
       {$IFDEF LogThreadPool}Log(
         'Thread %s moved back to the idle list, num idle = %d, num running = %d[%d]'
@@ -1405,7 +1405,7 @@ begin
     while iWorkItem < owWorkItemQueue.Count do begin
       workItem := TOTPWorkItem(owWorkItemQueue[iWorkItem]);
       maxWaitTime_ms := workItem.Scheduled_ms + int64(MaxQueuedTime_sec.Value) * 1000;
-      if maxWaitTime_ms > {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} then
+      if maxWaitTime_ms > Time.Timestamp_ms then
         Inc(iWorkItem)
       else begin
         {$IFDEF LogThreadPool}Log(
@@ -1574,7 +1574,7 @@ procedure TOTPWorker.StopThread(worker: TOTPWorkerThread; signalCancellationToke
 begin
   {$IFDEF LogThreadPool}Log('Stopping worker thread %s', [worker.Description]);{$ENDIF LogThreadPool}
   owStoppingWorkers.Add(worker);
-  worker.StartStopping_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF};
+  worker.StartStopping_ms := Time.Timestamp_ms;
   worker.Asy_Stop(signalCancellationToken); // have to force asynchronous stop as the worker thread may be stuck in the ExecuteWorkItem
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [owStoppingWorkers.Count]);{$ENDIF LogThreadPool}

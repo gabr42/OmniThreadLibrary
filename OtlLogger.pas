@@ -78,6 +78,7 @@ implementation
 
 uses
   SysUtils,
+  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
   OtlPlatform,
   OtlCommon;
 
@@ -123,7 +124,7 @@ begin
   if StoreTimeOfDay then
     eventList.Enqueue(Format('[%d] %s %s', [TThread.CurrentThread.ThreadID, FormatDateTime ('yyyymmdd-hhnnsszzz', Now), msg]))
   else
-    eventList.Enqueue(Format('[%d] %d %s', [TThread.CurrentThread.ThreadID, GetTimeStamp_ms, msg]));
+    eventList.Enqueue(Format('[%d] %d %s', [TThread.CurrentThread.ThreadID, Time.TimeStamp_ms, msg]));
 end; { TOmniLogger.Log }
 
 procedure TOmniLogger.SaveEventList(const fileName: string);

@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-01-16
-///   Version           : 1.13a
+///   Last modification : 2018-04-24
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-24
+///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///     1.13a: 2018-01-16
 ///       - TOmniMessageQueue.Destroy does not call Empty if TOmniMessageQueue.Create
 ///         raised exception. This prevents new exception from popping up in Destroy
@@ -105,6 +107,10 @@ uses
   SysUtils,
   Classes,
   SyncObjs,
+  {$IFDEF OTL_HasStopwatch}
+  Diagnostics,
+  {$ENDIF}
+  OtlPlatform,
   OtlCommon,
   OtlSync,
   OtlContainerObserver,
@@ -236,9 +242,6 @@ uses
   System.Types,
   {$ENDIF}
   {$IFDEF MSWINDOWS}{$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}{$ENDIF}
-  {$IFNDEF MSWINDOWS}
-  Diagnostics,
-  {$ENDIF}
   OtlEventMonitor;
 
 {$IFDEF MSWINDOWS}
@@ -561,7 +564,7 @@ begin
     if ceTaskTerminatedEvent_ref = {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF} then
       raise Exception.Create('TOmniCommunicationEndpoint.ReceiveWait: <task terminated> event is not set');
     {$IFDEF MSWINDOWS}
-    startTime := DSiTimeGetTime64;
+    startTime := Time.Timestamp_ms;
     insertObserver := CreateContainerWindowsEventObserver;
     try
       ceReader_ref.ContainerSubject.Attach(insertObserver, coiNotifyOnAllInserts);
@@ -570,7 +573,7 @@ begin
           retry := false;
           Result := ceReader_ref.TryDequeue(msg);
           while not Result do begin
-            waitTime := Int64(timeout_ms) - DSiElapsedTime64(startTime);
+            waitTime := Int64(timeout_ms) - Time.Elapsed_ms(startTime);
             if (waitTime >= 0) and
                (DSiWaitForTwoObjects(insertObserver.GetEvent, ceTaskTerminatedEvent_ref,
                  false, Cardinal(waitTime)) = WAIT_OBJECT_0)
@@ -623,7 +626,7 @@ var
   msg                : TOmniMessage;
   partlyEmptyObserver: {$IFDEF MSWINDOWS}TOmniContainerWindowsEventObserver{$ELSE}TOmniContainerEventObserver{$ENDIF};
   retry              : boolean;
-  startTime          : {$IFDEF MSWINDOWS}int64{$ELSE}TStopWatch{$ENDIF};
+  startTime          : int64;
   waitTime           : integer;
   {$IFNDEF MSWINDOWS}
   partlyEvent        : IOmniEvent;
@@ -637,7 +640,7 @@ begin
   if (not Result) and (timeout_ms > 0) then begin
     if ceTaskTerminatedEvent_ref = {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF} then
       raise Exception.Create('TOmniCommunicationEndpoint.SendWait: <task terminated> event is not set');
-    startTime := {$IFDEF MSWINDOWS}DSiTimeGetTime64{$ELSE}TStopWatch.StartNew{$ENDIF};
+    startTime := Time.Timestamp_ms;
 
     partlyEmptyObserver := {$IFDEF MSWINDOWS}CreateContainerWindowsEventObserver
                            {$ELSE}CreateContainerEventObserver{$ENDIF};
@@ -653,13 +656,12 @@ begin
             retry := false;
             Result := ceWriter_ref.Enqueue(msg);
             while not Result do begin
+              waitTime := timeout_ms - Time.Elapsed_ms(startTime);
               {$IFDEF MSWINDOWS}
-              waitTime := timeout_ms - DSiElapsedTime64(startTime);
               if (waitTime >= 0) and
                  (DSiWaitForTwoObjects(partlyEmptyObserver.GetEvent, ceTaskTerminatedEvent_ref,
                    false, waitTime) = WAIT_OBJECT_0)
               {$ELSE}
-              waitTime := timeout_ms - startTime.ElapsedMilliseconds;
               if (waitTime >= 0) and
                  (partlyEmptyWaiter.WaitAny(waitTime, Signaller) = wrSignaled) and
                  (Signaller = partlyEvent)
