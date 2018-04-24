@@ -58,11 +58,9 @@ type
     procedure TestLoops;
     procedure TestSplit;
   end;
-{$ENDIF}
 
 implementation
 
-{$IFDEF Unicode}
 uses
   Windows,
   SysUtils;
