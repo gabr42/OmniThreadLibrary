@@ -11,8 +11,6 @@ uses
   DSiWin32;
   {$ENDIF ~OTL_HasStopwatch}
 
-function GetTimestamp_ms: int64; inline;
-
 type
   TTimeSource = record
   {$IFDEF OTL_HasStopwatch}
@@ -21,9 +19,14 @@ type
   {$ENDIF OTL_HasStopwatch}
   public
     class function Create: TTimeSource; static;
-    function  GetTimestamp_ms: int64;
+    function  Elapsed_ms(startTime_ms: int64): int64; inline;
+    function  Timestamp_ms: int64; inline;
   end; { TTimeSource }
+  PTimeSource = ^TTimeSource;
 
+function Time: PTimeSource; inline;
+
+// must be global for inlining
 var
   GTimeSource: TTimeSource;
 
@@ -31,10 +34,10 @@ implementation
 
 { exports }
 
-function GetTimestamp_ms: int64;
+function Time: PTimeSource;
 begin
-  Result := GTimeSource.GetTimestamp_ms;
-end; { GetTimestamp_ms }
+  Result := @GTimeSource;
+end; { Time }
 
 { TTimeSource }
 
@@ -45,14 +48,19 @@ begin
   {$ENDIF OTL_HasStopwatch}
 end; { TTimeSource.Create }
 
-function TTimeSource.GetTimestamp_ms: int64;
+function TTimeSource.Timestamp_ms: int64;
 begin
   {$IFDEF OTL_HasStopwatch}
   Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000);
   {$ELSE}
   Result := DSiTimeGetTime64;
   {$ENDIF ~OTL_HasStopwatch}
-end; { TTimeSource.GetTimestamp_ms }
+end; { TTimeSource.Timestamp_ms }
+
+function TTimeSource.Elapsed_ms(startTime_ms: int64): int64;
+begin
+  Result := Timestamp_ms - startTime_ms;
+end; { TTimeSource.Elapsed_ms }
 
 initialization
   GTimeSource := TTimeSource.Create;
