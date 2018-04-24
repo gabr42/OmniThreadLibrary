@@ -141,15 +141,15 @@ implementation
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows,
-  Contnrs,
+  Winapi.Windows,
+  System.Contnrs,
   DSiWin32,
 {$ELSE}
   System.Diagnostics,
 {$ENDIF}
   GpLists,
-  SysUtils,
-  Classes,
+  System.SysUtils,
+  System.Classes,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}

@@ -62,7 +62,7 @@ procedure SetThreadName(const name: string);
 implementation
 
 uses
-  Classes;
+  System.Classes;
 
 threadvar
   LastThreadName: string[255];

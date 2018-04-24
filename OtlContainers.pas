@@ -119,10 +119,10 @@ unit OtlContainers;
 interface
 
 uses
-  Classes,
+  System.Classes,
   OtlCommon,
   OtlSync,
-  SyncObjs,
+  System.SyncObjs,
 {$IFDEF MSWINDOWS}
   DSiWin32,
   GpStuff,
@@ -386,12 +386,12 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
+  Winapi.Windows,
   {$ENDIF MSWINDOWS}
   {$IFDEF OTL_MobileSupport}
   Generics.Collections,
   {$ENDIF OTL_MobileSupport}
-  SysUtils;
+  System.SysUtils;
 
 {$IFDEF OTL_MobileSupport}
 type

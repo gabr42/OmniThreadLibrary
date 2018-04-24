@@ -303,8 +303,8 @@ interface
 uses
   OtlCommon,
   {$IFDEF MSWINDOWS}
-  Windows,
-  Messages,
+  Winapi.Windows,
+  Winapi.Messages,
   DetailedRTTI,
   DSiWin32,
   GpStuff,
@@ -313,10 +313,10 @@ uses
   {$ENDIF ~MSWINDOWS}
   GpLists,
   GpStringHash,
-  SysUtils,
-  Classes,
-  SyncObjs,
-  TypInfo,
+  System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
+  System.TypInfo,
   OtlSync,
   OtlComm,
   OtlTask,
@@ -1191,8 +1191,8 @@ uses
   {$IFDEF MSWINDOWS}
   MMSystem,
   {$ELSE}
-  Rtti,
-  Diagnostics,
+  System.Rtti,
+  System.Diagnostics,
   {$ENDIF ~MSWINDOWS}
   OtlCommon.Utils,
   OtlEventMonitor;

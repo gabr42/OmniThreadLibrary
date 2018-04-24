@@ -103,13 +103,13 @@ interface
 
 uses
   OtlCommon,
-  SysUtils,
+  System.SysUtils,
   {$IFDEF MSWINDOWS}
-  Messages,
+  Winapi.Messages,
   GpStuff,
   {$ENDIF}
   GpLists,
-  Classes,
+  System.Classes,
   OtlComm,
   OtlSync,
   OtlTaskControl,
@@ -203,7 +203,7 @@ implementation
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows,
+  Winapi.Windows,
   DSiWin32,
 {$ENDIF}
   OtlHooks;

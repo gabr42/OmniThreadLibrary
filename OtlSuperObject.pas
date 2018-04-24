@@ -45,7 +45,7 @@ unit OtlSuperObject;
 interface
 
 uses
-  RTTI,
+  System.RTTI,
   SuperObject;
 
 type
@@ -60,7 +60,7 @@ function SOToOmniVal(ctx: TSuperRttiContext; const obj: ISuperObject; var Value:
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
   OtlCommon;
 
 function OmniValToSO(ctx: TSuperRttiContext; var value: TValue; const index: ISuperObject): ISuperObject;
