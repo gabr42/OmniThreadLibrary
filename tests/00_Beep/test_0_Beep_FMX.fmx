@@ -1,0 +1,18 @@
+object frmTestSimple: TfrmTestSimple
+  Left = 0
+  Top = 0
+  Caption = 'Simple test'
+  ClientHeight = 127
+  ClientWidth = 364
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object Button1: TButton
+    Position.X = 16.000000000000000000
+    Position.Y = 16.000000000000000000
+    TabOrder = 0
+    Text = 'Beep'
+    OnClick = Button1Click
+  end
+end
