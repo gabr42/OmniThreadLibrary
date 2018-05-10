@@ -261,7 +261,7 @@ uses
   Diagnostics,
   {$ENDIF ~MSWINDOWS}
   Classes,
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Diagnostics,
   OtlPlatform;
 
 {$IFDEF MSWINDOWS}

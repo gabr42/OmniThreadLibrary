@@ -79,7 +79,7 @@ implementation
 uses
   SysUtils,
   {$IFDEF MSWINDOWS}DSiWin32,{$ENDIF}
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Diagnostics,
   OtlPlatform,
   OtlCommon;
 

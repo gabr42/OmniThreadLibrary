@@ -150,8 +150,8 @@ uses
   GpLists,
   SysUtils,
   Classes,
-  {$IFDEF OTL_HasSystemTypes}System.Types,{$ENDIF}
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Types,
+  System.Diagnostics,
   OtlPlatform,
   OtlSync;
 

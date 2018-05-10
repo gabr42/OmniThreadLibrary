@@ -299,13 +299,6 @@ const
   EXIT_THREADPOOL_INTERNAL_ERROR = EXIT_INTERNAL + 3;
 
 type
-{$IFNDEF OTL_HasCorrectNativeInt}
-  NativeInt = integer;
-  NativeUInt = cardinal;
-  PNativeInt = PInteger;
-  PNativeUInt = PCardinal;
-{$ENDIF}
-
   //:TOmniValue conversion exception.
   EOmniValueConv = class(Exception);
 
@@ -1045,6 +1038,7 @@ implementation
 uses
   {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
   GpStringHash,
+  OtlPlatform,
   OtlCommon.Utils,
   OtlSync;
 {$ENDIF}
@@ -3552,7 +3546,7 @@ end; { TOmniSystemEnvironment.GetAffinity }
 constructor TOmniThreadEnvironment.Create;
 begin
   oteAffinity := TOmniAffinity.Create(atThread);
-  oteThreadID := GetCurrentThreadID;
+  oteThreadID := TPlatform.ThreadID;
 end; { TOmniThreadEnvironment.Create }
 
 function TOmniThreadEnvironment.GetAffinity: IOmniAffinity;

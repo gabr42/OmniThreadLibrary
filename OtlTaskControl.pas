@@ -1190,7 +1190,7 @@ uses
   {$IFNDEF MSWINDOWS}
   Rtti,
   {$ENDIF ~MSWINDOWS}
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Diagnostics,
   OtlPlatform,
   OtlCommon.Utils,
   OtlEventMonitor;
@@ -2724,7 +2724,7 @@ begin
     end;
   end;
   raise Exception.CreateFmt('[%d] TOmniTaskExecutor: Invalid handle!'#13#10'%s',
-    [{$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}GetThreadID{$ENDIF}, failedList]);
+    [TPlatform.ThreadID, failedList]);
 end; { TOmniTaskExecutor.ReportInvalidHandle}
 
 procedure TOmniTaskExecutor.SetOptions(const value: TOmniTaskControlOptions);

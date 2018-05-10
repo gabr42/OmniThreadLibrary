@@ -150,9 +150,7 @@ type
 implementation
 
 uses
-  {$IFDEF OTL_HasSystemTypes}
   System.Types,
-  {$ENDIF}
   {$IFDEF MSWINDOWS}
   Windows,
   DSiWin32,

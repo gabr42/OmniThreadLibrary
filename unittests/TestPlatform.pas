@@ -18,7 +18,7 @@ implementation
 
 uses
   SysUtils,
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Diagnostics,
   OtlPlatform;
 
 { TPlatformTest }

@@ -11,7 +11,7 @@
 ///- Redistributions of source code must retain the above copyright notice, this
 ///  list of conditions and the following disclaimer.
 ///- Redistributions in binary form must reproduce the above copyright notice,
-///  this list of conditions and the following disclaimer in the documentation
+///  this list of conditions and sthe following disclaimer in the documentation
 ///  and/or other materials provided with the distribution.
 ///- The name of the Primoz Gabrijelcic may not be used to endorse or promote
 ///  products derived from this software without specific prior written permission.
@@ -121,14 +121,9 @@ type
   TOmniMonitorPoolThreadEvent = procedure(const pool: IOmniThreadPool; threadID: integer) of object;
   TOmniMonitorPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
-  {$IFDEF OTL_Supports64Bit}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  {$ENDIF OTL_Supports64Bit}
   TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
   strict private
-    {$IFDEF MSWINDOWS}
-      emMessageWindow         : THandle;
-    {$ENDIF}
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
     emOnPoolThreadCreated     : TOmniMonitorPoolThreadEvent;
@@ -142,24 +137,15 @@ type
     {$IFDEF MSWINDOWS}
       emCurrentMsg            : TOmniMessage;
     {$ENDIF}
-  {$IFDEF MSWINDOWS}
-  strict protected
-    procedure WndProc(var msg: TMessage);
-  {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
-    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     procedure ProcessMessages;
-    {$ENDIF}
   published
-    {$IFDEF MSWINDOWS}
-    property MessageWindow: THandle read emMessageWindow;
-    {$ENDIF}
     property ThreadID: cardinal read emThreadID;
     property OnPoolThreadCreated: TOmniMonitorPoolThreadEvent read emOnPoolThreadCreated
       write emOnPoolThreadCreated;
@@ -202,11 +188,8 @@ var
 implementation
 
 uses
-{$IFDEF MSWINDOWS}
-  Windows,
-  DSiWin32,
-{$ENDIF}
-  OtlHooks;
+  OtlHooks,
+  OtlPlatform;
 
 const
   CMaxReceiveLoop_ms = 5;
@@ -231,21 +214,18 @@ type
 constructor TOmniEventMonitor.Create(AOwner: TComponent);
 begin
   inherited;
-  {$IFDEF MSWINDOWS}
-  emMessageWindow := DSiAllocateHWnd(WndProc);
-  Win32Check(emMessageWindow <> 0);
-  {$ENDIF}
+  emThreadID := TPlatform.ThreadID;
+  if emThreadID <> MainThreadID then
+    raise Exception.CreateFmt('TOmniEventMonitor can only be used in the main thread. ' +
+                              '(Create called from thread %d)',
+                              [emThreadID]);
   emMonitoredTasks := CreateInterfaceDictionary;
   emMonitoredPools := CreateInterfaceDictionary;
-  emThreadID := {$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF};
 end; { TOmniEventMonitor.Create }
 
 destructor TOmniEventMonitor.Destroy;
 var
   intfKV   : TOmniInterfaceDictionaryPair;
-  {$IFDEF MSWINDOWS}
-  winHandle: THandle;
-  {$ENDIF}
 begin
   for intfKV in emMonitoredTasks do
     (intfKV.Value as IOmniTaskControl).RemoveMonitor;
@@ -253,13 +233,6 @@ begin
   for intfKV in emMonitoredPools do
     (intfKV.Value as IOmniThreadPool).RemoveMonitor;
   emMonitoredPools.Clear;
-  {$IFDEF MSWINDOWS}
-  if emMessageWindow <> 0 then begin
-    winHandle := emMessageWindow;
-    emMessageWindow := 0;
-    DSiDeallocateHWnd(winHandle);
-  end;
-  {$ENDIF}
   inherited;
 end; { TOmniEventMonitor.Destroy }
 
@@ -275,40 +248,38 @@ begin
   Result := pool.RemoveMonitor;
 end; { TOmniEventMonitor.Detach }
 
-{$IFDEF MSWINDOWS}
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
-  Assert(emMessageWindow <> 0);
   emMonitoredTasks.Add(task.UniqueID, task);
   Result := task.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
-{$ENDIF}
 
-{$IFDEF MSWINDOWS}
 function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
-  Assert(emMessageWindow <> 0);
   emMonitoredPools.Add(pool.UniqueID, pool);
   Result := pool.SetMonitor(emMessageWindow);
 end; { TOmniEventMonitor.Monitor }
-{$ENDIF}
 
-{$IFDEF MSWINDOWS}
 procedure TOmniEventMonitor.ProcessMessages;
-var
-  msg: TMsg;
+//var
+//  msg: TMsg;
 begin
-  while (emMessageWindow <> 0) and
-        PeekMessage(Msg, emMessageWindow, 0, 0, PM_REMOVE) and
-        (Msg.Message <> WM_QUIT) do
-  begin
-    TranslateMessage(Msg);
-    DispatchMessage(Msg);
-  end;
+  { TODO 1 -oPrimoz Gabrijelcic : This method should probably be killed! }
+//{$IFDEF MSWINDOWS}
+//  while (emMessageWindow <> 0) and
+//        PeekMessage(Msg, emMessageWindow, 0, 0, PM_REMOVE) and
+//        (Msg.Message <> WM_QUIT) do
+//  begin
+//    TranslateMessage(Msg);
+//    DispatchMessage(Msg);
+//  end;
+//{$ELSE}
+  CheckSynchronize;
+//{$ENDIF ~MSWINDOWS}
 end; { TOmniEventMonitor.ProcessMessages }
-{$ENDIF}
 
-{$IFDEF MSWINDOWS}
+{$IFDEF OTL_MobileSupport}
+(*
 procedure TOmniEventMonitor.WndProc(var msg: TMessage);
 var
   endpoint     : IOmniCommunicationEndpoint;
@@ -406,6 +377,7 @@ begin { TOmniEventMonitor.WndProc }
     end;
   end;
 end; { TOmniEventMonitor.WndProc }
+*)
 {$ENDIF}
 
 { TOmniCountedEventMonitor }
@@ -462,7 +434,7 @@ var
 begin
   empListLock.Acquire;
   try
-    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer({$IFDEF MSWINDOWS}GetCurrentThreadID{$ELSE}TThread.CurrentThread.ThreadID{$ENDIF})));
+    monitorInfo := TOmniCountedEventMonitor(empMonitorList.FetchObject(integer(TPlatform.ThreadID)));
     if assigned(monitorInfo) then
       monitorInfo.Allocate
     else begin
@@ -498,6 +470,7 @@ begin
 end; { TOmniEventMonitorPool.Release }
 
 {$IFDEF MSWINDOWS}
+(*
 initialization
   COmniTaskMsg_NewMessage := RegisterWindowMessage('Gp/OtlTaskEvents/NewMessage');
   Win32Check(COmniTaskMsg_NewMessage <> 0);
@@ -505,6 +478,7 @@ initialization
   Win32Check(COmniTaskMsg_Terminated <> 0);
   COmniPoolMsg := RegisterWindowMessage('Gp/OtlThreadPool');
   Win32CHeck(COmniPoolMsg <> 0);
+*)
 {$ENDIF}
 
 end.

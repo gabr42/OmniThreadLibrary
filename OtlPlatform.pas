@@ -6,19 +6,19 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
+  Winapi.Windows,
   DSiWin32,
   {$ENDIF MSWINDOWS}
-  {$IFDEF OTL_HasStopwatch}
+  {$IFDEF OTL_MobileSupport}
+  System.Classes,
+  {$ENDIF OTL_MobileSupport}
   System.Diagnostics,
-  {$ENDIF ~OTL_HasStopwatch}
   SysUtils;
 
 type
   TTimeSource = record
-  {$IFDEF OTL_HasStopwatch}
   private
     FStopwatch: TStopwatch;
-  {$ENDIF OTL_HasStopwatch}
   public
     class function Create: TTimeSource; static;
     function  Elapsed_ms(startTime_ms: int64): int64; inline;
@@ -26,6 +26,13 @@ type
     function  Timestamp_ms: int64; inline;
   end; { TTimeSource }
   PTimeSource = ^TTimeSource;
+
+  TPlatform = record
+  private
+    class function GetThreadID: TThreadID; static;
+  public
+    class property ThreadID: TThreadID read GetThreadID;
+  end; { TPlatform }
 
 function Time: PTimeSource; inline;
 
@@ -46,21 +53,19 @@ end; { Time }
 
 class function TTimeSource.Create: TTimeSource;
 begin
-  {$IFDEF OTL_HasStopwatch}
   Result.FStopwatch := TStopwatch.StartNew;
-  {$ENDIF OTL_HasStopwatch}
 end; { TTimeSource.Create }
 
 function TTimeSource.Timestamp_ms: int64;
 begin
-  {$IFDEF OTL_HasStopwatch}
+  {$IFDEF MSWINDOWS}
   if FStopwatch.IsHighResolution then
     Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000)
   else
     Result := DSiTimeGetTime64;
   {$ELSE}
-  Result := DSiTimeGetTime64;
-  {$ENDIF ~OTL_HasStopwatch}
+  Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000)
+  {$ENDIF ~MSWINDOWS}
 end; { TTimeSource.Timestamp_ms }
 
 function TTimeSource.Elapsed_ms(startTime_ms: int64): int64;
@@ -77,6 +82,13 @@ begin
   else
     Result := (Elapsed_ms(startTime_ms) >= timeout_ms);
 end; { TTimeSource.HasElapsed }
+
+{ TPlatform }
+
+class function TPlatform.GetThreadID: TThreadID;
+begin
+  Result := {$IFDEF OTL_MobileSupport}TThread.CurrentThread.ThreadID{$ELSE}GetCurrentThreadID{$ENDIF};
+end; { TPlatform.GetThreadID }
 
 initialization
   GTimeSource := TTimeSource.Create;

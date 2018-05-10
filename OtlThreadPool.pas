@@ -307,8 +307,8 @@ uses
   Math,
   SyncObjs,
   TypInfo,
-  {$IFDEF OTL_HasSystemTypes}System.Types,{$ENDIF}
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Types,
+  System.Diagnostics,
   OtlPlatform,
   OtlHooks,
   OtlSync,

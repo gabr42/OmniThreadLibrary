@@ -49,13 +49,13 @@
 // See the Configuration block below to configure your build process.
 
 {$IFNDEF CONDITIONALEXPRESSIONS}
-'OmniThreadLibrary requires Delphi XE or newer'
+'OmniThreadLibrary requires Delphi XE2 or newer'
 {$ENDIF}
 
 {$IF CompilerVersion >= 26}{$LEGACYIFEND ON}{$IFEND}
 
-{$IF CompilerVersion < 22}
-{$MESSAGE ERROR 'OmniThreadLibrary requires Delphi XE or newer'}
+{$IF CompilerVersion < 23}
+{$MESSAGE ERROR 'OmniThreadLibrary requires Delphi XE2 or newer'}
 {$IFEND}
 
 {$ALIGN 8}
@@ -68,13 +68,6 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 {$TYPEINFO OFF}
-
-{$IF CompilerVersion >= 23} //DXE2
-  {$DEFINE OTL_Supports64Bit}
-  {$DEFINE OTL_HasSystemTypes}
-  {$DEFINE OTL_HasCorrectNativeInt}
-  {$DEFINE OTL_HasStopwatch}
-{$IFEND}
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}

@@ -107,9 +107,7 @@ uses
   SysUtils,
   Classes,
   SyncObjs,
-  {$IFDEF OTL_HasStopwatch}
-  Diagnostics,
-  {$ENDIF}
+  System.Diagnostics,
   OtlPlatform,
   OtlCommon,
   OtlSync,
@@ -238,9 +236,7 @@ type
 implementation
 
 uses
-  {$IFDEF OTL_HasSystemTypes}
   System.Types,
-  {$ENDIF}
   {$IFDEF MSWINDOWS}{$IFDEF DEBUG}OtlCommBufferTest,{$ENDIF}{$ENDIF}
   OtlEventMonitor;
 

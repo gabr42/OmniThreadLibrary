@@ -172,7 +172,7 @@ uses
   Posix.Pthread,
   {$ENDIF}
   {$ENDIF OTL_MobileSupport}
-  {$IFDEF OTL_HasStopwatch}Diagnostics,{$ENDIF}
+  System.Diagnostics,
   OtlCommon;
 
 type
