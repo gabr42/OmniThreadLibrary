@@ -6,9 +6,10 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ActnList,
   OtlCommon,
+  OtlComm,
   OtlTask,
   OtlTaskControl,
-  OtlEventMonitor, OtlComm;
+  OtlEventMonitor;
 
 type
   TfrmTestHelloWorld = class(TForm)

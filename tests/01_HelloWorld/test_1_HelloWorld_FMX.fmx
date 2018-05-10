@@ -1,0 +1,37 @@
+object Form77: TForm77
+  Left = 0
+  Top = 0
+  Caption = 'Form77'
+  ClientHeight = 480
+  ClientWidth = 640
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object btnHello: TButton
+    Position.X = 24.000000000000000000
+    Position.Y = 24.000000000000000000
+    Size.Width = 97.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    Text = 'Hello, world!'
+    OnClick = btnHelloClick
+  end
+  object lbLog: TListBox
+    Align = Right
+    Anchors = [akLeft, akTop, akRight, akBottom]
+    Position.X = 144.000000000000000000
+    Size.Width = 496.000000000000000000
+    Size.Height = 480.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    DisableFocusEffect = True
+    DefaultItemStyles.ItemStyle = ''
+    DefaultItemStyles.GroupHeaderStyle = ''
+    DefaultItemStyles.GroupFooterStyle = ''
+    Viewport.Width = 492.000000000000000000
+    Viewport.Height = 476.000000000000000000
+  end
+end
