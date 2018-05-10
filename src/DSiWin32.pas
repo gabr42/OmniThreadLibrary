@@ -8,10 +8,12 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2017-09-05
-   Version           : 1.100b
+   Last modification : 2018-04-19
+   Version           : 1.101
 </pre>*)(*
    History:
+     1.101: 2018-04-19
+       - DSiExecuteAndCapture supports CR-delimited output.
      1.100b: 2017-09-05
        - Fixed WideCharBufToUTF8Buf and UTF8BufToWideCharBuf which were casting pointers
          to integer instead of NativeUInt.
@@ -5076,12 +5078,15 @@ type
       p       : integer;
       tokenLen: integer;
     begin
+      if numBytes = 0 then
+        Exit;
       if lineBufferSize < (numBytes + 1) then begin
         lineBufferSize := numBytes + 1;
         ReallocMem(lineBuffer, lineBufferSize);
       end;
-      // called made sure that buffer is zero terminated
+      // caller made sure that buffer is zero terminated
       OemToCharA(buffer, lineBuffer);
+
       {$IFDEF Unicode}
       partialLine := partialLine + UnicodeString(StrPasA(lineBuffer));
       {$ELSE}
@@ -5090,8 +5095,13 @@ type
       repeat
         p := Pos(#13#10, partialLine);
         if p <= 0 then begin
-          p := Pos(#10, partialLine);
           tokenLen := 1;
+          p := Pos(#10, partialLine);
+          if p <= 0 then begin
+            p := Pos(#13, partialLine);
+            if p = Length(partialLine) then
+              p := 0;
+          end;
         end
         else
           tokenLen := 2;
@@ -5105,24 +5115,36 @@ type
       until false;
     end; { ProcessPartialLine }
 
+//    function DisplayStr(buf: PAnsiChar; count: integer): string;
+//    begin
+//      Result := '';
+//      while count > 0 do begin
+//        if CharInSet(buf^, [#32..#126]) then
+//          Result := Result + string(buf^)
+//        else
+//          Result := Result + Format('$%.2x', [byte(buf^)]);
+//        Inc(buf);
+//        Dec(count);
+//      end;
+//    end;
+
   const
     SizeReadBuffer = 1048576;  // 1 MB Buffer
 
   var
-    appRunning      : integer;
-    appW            : string;
-    buffer          : PAnsiChar;
-    bytesLeftThisMsg: integer;
-    bytesRead       : DWORD;
-    err             : cardinal;
-    processInfo     : TProcessInformation;
-    readPipe        : THandle;
-    security        : TSecurityAttributes;
-    start           : TStartUpInfo;
-    totalBytesAvail : integer;
-    totalBytesRead  : DWORD;
-    useWorkDir      : string;
-    writePipe       : THandle;
+    appRunning     : integer;
+    appW           : string;
+    buffer         : PAnsiChar;
+    bytesRead      : DWORD;
+    err            : cardinal;
+    processInfo    : TProcessInformation;
+    readPipe       : THandle;
+    security       : TSecurityAttributes;
+    start          : TStartUpInfo;
+    totalBytesAvail: DWORD;
+    totalBytesRead : DWORD;
+    useWorkDir     : string;
+    writePipe      : THandle;
 
   begin { DSiExecuteAndCapture }
     Result := 0;
@@ -5134,7 +5156,7 @@ type
     security.nLength := SizeOf(TSecurityAttributes);
     security.bInheritHandle := true;
     security.lpSecurityDescriptor := nil;
-    if CreatePipe (readPipe, writePipe, @security, 0) then begin
+    if CreatePipe(readPipe, writePipe, @security, 0) then begin
       buffer := AllocMem(SizeReadBuffer + 1);
       FillChar(Start,Sizeof(Start),#0);
       start.cb := SizeOf(start);
@@ -5157,19 +5179,24 @@ type
         totalBytesRead := 0;
         repeat
           appRunning := WaitForSingleObject(processInfo.hProcess, 100);
-          if not PeekNamedPipe(readPipe, @buffer[totalBytesRead],
-                   SizeReadBuffer - totalBytesRead, @bytesRead, @totalBytesAvail,
-                   @bytesLeftThisMsg)
-          then
+          if not PeekNamedPipe(readPipe, nil, 0, nil, @totalBytesAvail, nil) then
             break //repeat
-          else if bytesRead > 0 then
-            ReadFile(readPipe, buffer[totalBytesRead], bytesRead, bytesRead, nil);
-          buffer[totalBytesRead + bytesRead] := #0; // required for ProcessPartialLine
-          if assigned(onNewLine) then
-            ProcessPartialLine(@buffer[totalBytesRead], bytesRead);
-          totalBytesRead := totalBytesRead + bytesRead;
-          if totalBytesRead = SizeReadBuffer then
-            raise Exception.Create('DSiExecuteAndCapture: Buffer full!');
+          else if totalBytesAvail > 0 then begin
+            if totalBytesAvail <= (SizeReadBuffer - totalBytesRead) then
+              bytesRead := totalBytesAvail
+            else
+              bytesRead := SizeReadBuffer - totalBytesRead;
+            if not ReadFile(readPipe, buffer[totalBytesRead], bytesRead, bytesRead, nil) then
+              RaiseLastOSError
+            else begin
+              buffer[totalBytesRead + bytesRead] := #0; // required for ProcessPartialLine
+              if assigned(onNewLine) then
+                ProcessPartialLine(@buffer[totalBytesRead], bytesRead);
+              totalBytesRead := totalBytesRead + bytesRead;
+              if totalBytesRead = SizeReadBuffer then
+                raise Exception.Create('DSiExecuteAndCapture: Buffer full!');
+            end;
+          end;
         until (appRunning <> WAIT_TIMEOUT) or (DSiTimeGetTime64 > endTime_ms);
         if DSiTimeGetTime64 > endTime_ms then
           SetLastError(ERROR_TIMEOUT);

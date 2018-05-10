@@ -6,10 +6,12 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2018-02-20
-   Version           : 1.67
+   Last modification : 2018-04-11
+   Version           : 1.68
 </pre>*)(*
    History:
+     1.68: 2018-04-11
+       - Implemented IGpBuffer.Current.
      1.67: 2018-02-20
        - Implemented ClassNameEx.
      1.66: 2017-10-25
@@ -372,11 +374,13 @@ type
     function  GetAsString: string;
     function  GetByteAddr(idx: integer): pointer;
     function  GetByteVal(idx: integer): byte;
+    function  GetCurrent: pointer;
     function  GetSize: integer;
     function  GetValue: pointer;
     procedure SetAsAnsiString(const value: AnsiString);
     procedure SetAsString(const value: string);
     procedure SetByteVal(idx: integer; const value: byte);
+    procedure SetCurrent(const value: pointer);
     procedure SetSize(const value: integer);
   //
     procedure Add(b: byte); overload;
@@ -391,6 +395,7 @@ type
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
+    property Current: pointer read GetCurrent write SetCurrent;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
   end; { IGpBuffer }
@@ -404,11 +409,13 @@ type
     function  GetAsString: string; inline;
     function  GetByteAddr(idx: integer): pointer; inline;
     function  GetByteVal(idx: integer): byte; inline;
+    function  GetCurrent: pointer; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
     procedure SetAsAnsiString(const value: AnsiString); inline;
     procedure SetAsString(const value: string); inline;
     procedure SetByteVal(idx: integer; const value: byte); inline;
+    procedure SetCurrent(const value: pointer); inline;
     procedure SetSize(const value: integer); inline;
   public
     constructor Create; overload;
@@ -427,6 +434,7 @@ type
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
+    property Current: pointer read GetCurrent write SetCurrent;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
   end; { TGpBuffer }
@@ -454,12 +462,12 @@ function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$
 function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
 
-function  AssignValue(var AssignTo: string; const AssignFrom: string): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
-function  AssignValue(var AssignTo: Byte; const AssignFrom: Byte): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
-function  AssignValue(var AssignTo: Word; const AssignFrom: Word): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
-function  AssignValue(var AssignTo: Longint; const AssignFrom: Longint): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
-function  AssignValue(var AssignTo: DWORD; const AssignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
-function  AssignValue(var AssignTo: Int64; const AssignFrom: Int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: string; const assignFrom: string): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: byte; const assignFrom: byte): boolean; overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: word; const assignFrom: word): boolean; overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: longint; const assignFrom: longint): boolean; overload;{$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: DWORD; const assignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  AssignValue(var assignTo: int64; const assignFrom: int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 {$IFDEF GpStuff_Generics}
 type
@@ -498,7 +506,7 @@ type
   end;
 {$ENDIF GpStuff_Generics}
 
-function  OffsetPtr(ptr: pointer; offset: integer): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  OffsetPtr(ptr: pointer; offset: NativeInt): pointer;                  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
 ///<summary>Reverses byte order in a 4-byte number.</summary>
 function  ReverseDWord(dw: DWORD): DWORD;
@@ -1053,73 +1061,49 @@ begin
 end; { IFF }
 {$ENDIF Unicode}
 
-function  AssignValue(var AssignTo: string; const AssignFrom: string): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var assignTo: string; const assignFrom: string): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function  AssignValue(var AssignTo: Byte; const AssignFrom: Byte): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var AssignTo: Byte; const AssignFrom: Byte): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function  AssignValue(var AssignTo: Word; const AssignFrom: Word): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var AssignTo: Word; const AssignFrom: Word): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function  AssignValue(var AssignTo: Longint; const AssignFrom: Longint): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var AssignTo: Longint; const AssignFrom: Longint): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function  AssignValue(var AssignTo: DWORD; const AssignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var AssignTo: DWORD; const AssignFrom: DWORD): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function  AssignValue(var AssignTo: Int64; const AssignFrom: Int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function AssignValue(var AssignTo: Int64; const AssignFrom: Int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 begin
-  if AssignFrom = AssignTo then
-    Result := false
-  else
-  begin
-    Result := true;
-    AssignTo := AssignFrom;
-  end;
-end;
+  Result := (assignFrom <> assignTo);
+  if Result then
+    assignTo := assignFrom;
+end; { AssignValue }
 
-function OffsetPtr(ptr: pointer; offset: integer): pointer;
+function OffsetPtr(ptr: pointer; offset: NativeInt): pointer;
 begin
   Result := pointer({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(int64(ptr) + offset));
 end; { OffsetPtr }
@@ -2293,6 +2277,11 @@ begin
     FData.CopyFrom(stream, 0);
 end; { TGpBuffer.Create }
 
+function TGpBuffer.GetCurrent: pointer;
+begin
+  Result := OffsetPtr(FData.Memory, FData.Position);
+end; { TGpBuffer.GetCurrent }
+
 destructor TGpBuffer.Destroy;
 begin
   FreeAndNil(FData);
@@ -2397,6 +2386,12 @@ begin
   Assert((idx >= 0) and (idx < Size));
   PByte(NativeUInt(Value) + NativeUInt(idx))^ := value;
 end; { TGpBuffer.SetByteVal }
+
+procedure TGpBuffer.SetCurrent(const value: pointer);
+begin
+  FData.Position := {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(value) -
+                    {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(FData.Memory);
+end; { TGpBuffer.SetCurrent }
 
 procedure TGpBuffer.SetSize(const value: integer);
 begin
