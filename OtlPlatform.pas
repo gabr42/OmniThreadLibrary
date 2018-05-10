@@ -5,11 +5,13 @@ unit OtlPlatform;
 interface
 
 uses
+  {$IFDEF MSWINDOWS}
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
   {$IFDEF OTL_HasStopwatch}
-  System.Diagnostics;
-  {$ELSE}
-  DSiWin32;
+  System.Diagnostics,
   {$ENDIF ~OTL_HasStopwatch}
+  SysUtils;
 
 type
   TTimeSource = record
@@ -52,7 +54,10 @@ end; { TTimeSource.Create }
 function TTimeSource.Timestamp_ms: int64;
 begin
   {$IFDEF OTL_HasStopwatch}
-  Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000);
+  if FStopwatch.IsHighResolution then
+    Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000)
+  else
+    Result := DSiTimeGetTime64;
   {$ELSE}
   Result := DSiTimeGetTime64;
   {$ENDIF ~OTL_HasStopwatch}
