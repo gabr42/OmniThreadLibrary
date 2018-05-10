@@ -28,7 +28,7 @@
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_9_Communications.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -41,9 +41,9 @@
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-			<DCC_ResourcePath>..\..;..\..\src;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\src;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\src;$(DCC_IncludePath)</DCC_IncludePath>
+			<DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;$(DCC_ResourcePath)</DCC_ResourcePath>
+			<DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;$(DCC_ObjPath)</DCC_ObjPath>
+			<DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_MapFile>3</DCC_MapFile>

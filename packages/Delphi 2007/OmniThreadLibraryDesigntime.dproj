@@ -79,7 +79,7 @@
     <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-    <DCC_UnitSearchPath>..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    <DCC_UnitSearchPath>..;..\GpDelphiUnits\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     <VerInfo_Locale>1033</VerInfo_Locale>
   </PropertyGroup>
   <ItemGroup>

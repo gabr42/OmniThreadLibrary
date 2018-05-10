@@ -17,10 +17,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG</DCC_Define>
-    <DCC_UnitSearchPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src</DCC_UnitSearchPath>
-    <DCC_ResourcePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src</DCC_ResourcePath>
-    <DCC_ObjPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src</DCC_ObjPath>
-    <DCC_IncludePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\src</DCC_IncludePath>
+    <DCC_UnitSearchPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\GpDelphiUnits\src</DCC_UnitSearchPath>
+    <DCC_ResourcePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\GpDelphiUnits\src</DCC_ResourcePath>
+    <DCC_ObjPath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\GpDelphiUnits\src</DCC_ObjPath>
+    <DCC_IncludePath>h:\razvoj\omnithreadlibrary;h:\razvoj\omnithreadlibrary\GpDelphiUnits\src</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

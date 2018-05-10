@@ -55,7 +55,7 @@
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<VerInfo_Locale>1060</VerInfo_Locale>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_1_HelloWorld.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win64)'!=''">
@@ -117,11 +117,11 @@
 			<DCCReference Include="..\..\OtlTask.pas"/>
 			<DCCReference Include="..\..\OtlThreadPool.pas"/>
 			<DCCReference Include="..\..\OtlComm.pas"/>
-			<DCCReference Include="..\..\src\DSiWin32.pas"/>
-			<DCCReference Include="..\..\src\GpLists.pas"/>
-			<DCCReference Include="..\..\src\GpStuff.pas"/>
-			<DCCReference Include="..\..\src\HVStringBuilder.pas"/>
-			<DCCReference Include="..\..\src\HVStringData.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\DSiWin32.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\GpLists.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\GpStuff.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\HVStringBuilder.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\HVStringData.pas"/>
 			<DCCReference Include="..\..\OtlContainers.pas"/>
 			<DCCReference Include="..\..\OtlCommBufferTest.pas"/>
 			<DCCReference Include="..\..\OtlEventMonitor.pas"/>

@@ -29,10 +29,10 @@
     <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
     <DCC_MapFile>3</DCC_MapFile>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-    <DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
@@ -59,12 +59,12 @@
     <DCCReference Include="..\..\OtlTask.pas" />
     <DCCReference Include="..\..\OtlTaskControl.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
-    <DCCReference Include="..\..\src\DSiWin32.pas" />
-    <DCCReference Include="..\..\src\GpLists.pas" />
-    <DCCReference Include="..\..\src\GpStuff.pas" />
-    <DCCReference Include="..\..\src\HVStringBuilder.pas" />
-    <DCCReference Include="..\..\src\HVStringData.pas" />
-    <DCCReference Include="..\..\src\SpinLock.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\DSiWin32.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\GpLists.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\GpStuff.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\HVStringBuilder.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\HVStringData.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\SpinLock.pas" />
     <DCCReference Include="test_1_HelloWorld.pas">
       <Form>frmTestHelloWorld</Form>
     </DCCReference>

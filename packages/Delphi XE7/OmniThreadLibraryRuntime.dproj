@@ -75,7 +75,7 @@
     <DCC_DebugInformation>0</DCC_DebugInformation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-    <DCC_UnitSearchPath>..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    <DCC_UnitSearchPath>..;..\GpDelphiUnits\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     <VerInfo_Locale>1033</VerInfo_Locale>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_2)'!=''">
@@ -89,10 +89,10 @@
     <DCCReference Include="vclx.dcp" />
     <DCCReference Include="vcl.dcp" />
     <DCCReference Include="OmniThreadLibraryRuntime.dcp" />
-    <DCCReference Include="..\..\src\GpLists.pas" />
-    <DCCReference Include="..\..\src\GpStuff.pas" />
-    <DCCReference Include="..\..\src\GpStringHash.pas" />
-    <DCCReference Include="..\..\src\DetailedRTTI.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\GpLists.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\GpStuff.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\GpStringHash.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\DetailedRTTI.pas" />
     <DCCReference Include="..\..\OtlCommon.pas" />
     <DCCReference Include="..\..\OtlContainers.pas" />
     <DCCReference Include="..\..\OtlCommBufferTest.pas" />
@@ -101,7 +101,7 @@
     <DCCReference Include="..\..\OtlTaskControl.pas" />
     <DCCReference Include="..\..\OtlThreadPool.pas" />
     <DCCReference Include="..\..\OtlEventMonitor.pas" />
-    <DCCReference Include="..\..\src\DSiWin32.pas" />
+    <DCCReference Include="..\..\GpDelphiUnits\src\DSiWin32.pas" />
     <DCCReference Include="..\..\OtlContainerObserver.pas" />
     <DCCReference Include="..\..\OtlSync.pas" />
     <DCCReference Include="..\..\OtlHooks.pas" />

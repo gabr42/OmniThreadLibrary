@@ -41,7 +41,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<Manifest_File>None</Manifest_File>
 			<DCC_DcuOutput>..\..\lib\XE2\$(Platform)\$(Config)</DCC_DcuOutput>
 			<VerInfo_Locale>1060</VerInfo_Locale>

@@ -308,7 +308,6 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   Messages,
-  DetailedRTTI,
   DSiWin32,
   GpStuff,
   {$ELSE}
@@ -781,7 +780,6 @@ type
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
     oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
-    oteLastTimeGetTime64 : int64;
     oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList;
     {$IFDEF MSWINDOWS}
@@ -1197,6 +1195,9 @@ uses
   OtlCommon.Utils,
   OtlEventMonitor;
 
+const
+  SHORT_LEN = sizeof(ShortString) - 1;
+
 type
   TOmniTaskControlEventMonitor = class(TOmniEventMonitor)
   strict protected
@@ -1215,6 +1216,18 @@ type
     function  Allocate: TOmniTaskControlEventMonitor;
     procedure Release(monitor: TOmniTaskControlEventMonitor);
   end; { TOmniTaskControlEventMonitorPool }
+
+  TParamInfoHelper = record helper for TParamInfo
+  public
+    function NextParam: PParamInfo;
+  end; { TParamInfoHelper }
+
+  TMethodInfoHeaderHelper = record helper for TMethodInfoHeader
+  private
+    function GetReturnInfo: PReturnInfo;
+  public
+    property ReturnInfo: PReturnInfo read GetReturnInfo;
+  end; { TMethodInfoHeaderHelper }
 
 var
   GTaskControlEventMonitorPool: TOmniTaskControlEventMonitorPool;
@@ -1251,6 +1264,24 @@ function CreateTaskControlList: IOmniTaskControlList;
 begin
   Result := TOmniTaskControlList.Create;
 end; { CreateTaskControlList }
+
+{ TMethodInfoHeaderHelper }
+
+function TMethodInfoHeaderHelper.GetReturnInfo: PReturnInfo;
+begin
+  Result := PReturnInfo(NativeUInt(@self) + SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Name));
+end; { TMethodInfoHeaderHelper.GetReturnInfo }
+
+{ TParamInfoHelper }
+
+function TParamInfoHelper.NextParam: PParamInfo;
+begin
+  Result := PParamInfo(NativeUInt(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
+  {$IF CompilerVersion >= 21}
+  // Skip attribute data
+  Result := PParamInfo(NativeUInt(Result) + PWord(Result)^);
+  {$IFEND}
+end; { TParamInfoHelper.NextParam }
 
 { TOmniInternalMessage }
 
@@ -1545,6 +1576,7 @@ begin
         eventTerminate := otSharedInfo_ref.TerminatedEvent;
         otSharedInfo_ref.Stopped := true;
         // with internal monitoring this will not be processed if the task controller owner is also shutting down
+        sync := nil;
         otSharedInfo_ref.MonitorLock.Acquire;
         try
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
@@ -1554,7 +1586,10 @@ begin
               integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
           {$ENDIF MSWINDOWS}
           otSharedInfo_ref := nil;
-        finally sync.Release; end;
+        finally
+          if assigned(sync) then
+            sync.Release;
+        end;
       end;
     finally
       //Task controller could die any time now. Make sure we're not using shared

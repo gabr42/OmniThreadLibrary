@@ -24,7 +24,7 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_DcuOutput>..\..\lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
-			<DCC_UnitSearchPath>..\..;..\..\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_3_HelloWorld_with_package.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -49,7 +49,7 @@
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_DcuOutput>..\..\lib\2010\$(Platform)\$(Config)</DCC_DcuOutput>
-			<DCC_UnitSearchPath>..\..\src;..\..;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..\GpDelphiUnits\src;..\..;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="app_3_HelloWorld_with_package.dpr">
@@ -66,12 +66,12 @@
 			<DCCReference Include="..\..\OtlTask.pas"/>
 			<DCCReference Include="..\..\OtlThreadPool.pas"/>
 			<DCCReference Include="..\..\OtlComm.pas"/>
-			<DCCReference Include="..\..\src\DSiWin32.pas"/>
-			<DCCReference Include="..\..\src\GpLists.pas"/>
-			<DCCReference Include="..\..\src\GpStuff.pas"/>
-			<DCCReference Include="..\..\src\HVStringBuilder.pas"/>
-			<DCCReference Include="..\..\src\HVStringData.pas"/>
-			<DCCReference Include="..\..\src\SpinLock.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\DSiWin32.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\GpLists.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\GpStuff.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\HVStringBuilder.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\HVStringData.pas"/>
+			<DCCReference Include="..\..\GpDelphiUnits\src\SpinLock.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
