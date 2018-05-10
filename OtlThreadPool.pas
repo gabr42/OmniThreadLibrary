@@ -191,9 +191,7 @@ type
   IOmniThreadPoolMonitor = interface
     ['{09EFADE8-3F14-4184-87CA-131100EC57E4}']
     function  Detach(const task: IOmniThreadPool): IOmniThreadPool;
-    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniThreadPool): IOmniThreadPool;
-    {$ENDIF MSWINDOWS}
   end; { IOmniThreadPoolMonitor }
 
   TOTPThreadDataFactoryFunction = function: IInterface;

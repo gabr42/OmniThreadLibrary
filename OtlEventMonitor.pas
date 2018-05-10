@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-16
-///   Version           : 1.11
+///   Last modification : 2018-05-10
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-05-10
+///       - Platform independant implementation. Currently only works in main thread.
 ///     1.11: 2018-03-16
 ///       - Unhandled exceptions in TOmniEventMonitor.WndProc are passed to OtlHooks filter.
 ///     1.10: 2017-10-25
@@ -195,11 +197,6 @@ type
     property MonitorClass: TOmniEventMonitorClass read empMonitorClass write empMonitorClass;
   end; { TOmniEventMonitorPool }
 
-var
-  COmniTaskMsg_NewMessage: cardinal;
-  COmniTaskMsg_Terminated: cardinal;
-  COmniPoolMsg           : cardinal;
-  
 implementation
 
 uses
@@ -313,21 +310,8 @@ begin
 end; { TOmniEventMonitor.NotifyThreadPool }
 
 procedure TOmniEventMonitor.ProcessMessages;
-//var
-//  msg: TMsg;
 begin
-  { TODO 1 -oPrimoz Gabrijelcic : This method should probably be killed! }
-//{$IFDEF MSWINDOWS}
-//  while (emMessageWindow <> 0) and
-//        PeekMessage(Msg, emMessageWindow, 0, 0, PM_REMOVE) and
-//        (Msg.Message <> WM_QUIT) do
-//  begin
-//    TranslateMessage(Msg);
-//    DispatchMessage(Msg);
-//  end;
-//{$ELSE}
   CheckSynchronize;
-//{$ENDIF ~MSWINDOWS}
 end; { TOmniEventMonitor.ProcessMessages }
 
 procedure TOmniEventMonitor.ProcessNewMessage(taskControlID: int64);

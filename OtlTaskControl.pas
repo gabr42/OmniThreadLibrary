@@ -3589,9 +3589,7 @@ begin
     ForwardTaskMessage(msg);
   if otcEventMonitorInternal and assigned(otcEventMonitor) then begin
     //! must process monitor messages first
-    {$IFDEF MSWINDOWS}
     TOmniEventMonitor(otcEventMonitor).ProcessMessages;
-    {$ENDIF MSWINDOWS}
     DestroyMonitor;
   end;
   if not Result then begin
