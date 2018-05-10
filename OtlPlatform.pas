@@ -29,8 +29,11 @@ type
 
   TPlatform = record
   private
-    class function GetThreadID: TThreadID; static;
+    class function  GetThreadAffinity: string; static;
+    class function  GetThreadID: TThreadID; static;
+    class procedure SetThreadAffinity(const value: string); static;
   public
+    class property ThreadAffinity: string read GetThreadAffinity write SetThreadAffinity;
     class property ThreadID: TThreadID read GetThreadID;
   end; { TPlatform }
 
@@ -85,10 +88,30 @@ end; { TTimeSource.HasElapsed }
 
 { TPlatform }
 
+class function TPlatform.GetThreadAffinity: string;
+{$IFNDEF MSWINDOWS}
+const
+  CPUIDs = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$';
+{$ENDIF}
+begin
+  {$IFDEF MSWINDOWS}
+  Result := DSiGetThreadAffinity;
+  {$ELSE}
+  Result := Copy(CPUIDs, 1, TThread.ProcessorCount);
+  {$ENDIF ~MSWINDOWS}
+end; { TPlatform.GetThreadAffinity }
+
 class function TPlatform.GetThreadID: TThreadID;
 begin
   Result := {$IFDEF OTL_MobileSupport}TThread.CurrentThread.ThreadID{$ELSE}GetCurrentThreadID{$ENDIF};
 end; { TPlatform.GetThreadID }
+
+class procedure TPlatform.SetThreadAffinity(const value: string);
+begin
+  {$IFDEF MSWINDOWS}
+  DSiSetThreadAffinity(value);
+  {$ENDIF MSWINDOWS}
+end; { TPlatform.SetThreadAffinity }
 
 initialization
   GTimeSource := TTimeSource.Create;

@@ -750,19 +750,15 @@ type
     function  GetAsString: string;
     function  GetCount: integer;
     function  GetCountPhysical: integer;
+    function  GetMask: NativeUInt;
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
-  {$IFDEF MSWINDOWS}
-    function  GetMask: NativeUInt;
     procedure SetMask(const value: NativeUInt);
-  {$ENDIF}
   //
     property AsString: string read GetAsString write SetAsString;
     property Count: integer read GetCount write SetCount;
     property CountPhysical: integer read GetCountPhysical;
-  {$IFDEF MSWINDOWS}
     property Mask: NativeUInt read GetMask write SetMask;
-  {$ENDIF}
   end; { IOmniAffinity }
 
 {$IFDEF MSWINDOWS}
@@ -1170,19 +1166,15 @@ type
     function  GetAsString: string;
     function  GetCount: integer;
     function  GetCountPhysical: integer;
+    function  GetMask: NativeUInt;
     procedure SetAsString(const value: string);
     procedure SetCount(const value: integer);
-  {$IFDEF MSWINDOWS}
-    function  GetMask: NativeUInt;
     procedure SetMask(const value: NativeUInt);
-  {$ENDIF}
   public
     constructor Create(target: TOmniAffinityTarget);
     property AsString: string read GetAsString write SetAsString;
     property Count: integer read GetCount write SetCount;
-  {$IFDEF MSWINDOWS}
     property Mask: NativeUInt read GetMask write SetMask;
-  {$ENDIF}
   end; { TOmniAffinity }
 
   TOmniProcessEnvironment = class(TInterfacedObject, IOmniProcessEnvironment)
@@ -3354,18 +3346,8 @@ begin
 end; { TOmniAffinity.Create }
 
 function TOmniAffinity.GetAsString: string;
-{$IFNDEF MSWINDOWS}
-var
-  i: integer;
-{$ENDIF MSWINDOWS}
 begin
-{$IFDEF MSWINDOWS}
-// TODO 1 -oPrimoz Gabrijelcic : Port this to non-Windows
   Result := DSiAffinityMaskToString(Mask);
-{$ELSE}
-  for i := 1 to System.CPUCount do
-    Result := result + 'P'
-{$ENDIF !MSWINDOWS}
 end; { TOmniAffinity.GetAsString }
 
 function TOmniAffinity.GetCount: integer;
@@ -3382,9 +3364,9 @@ begin
   end;
 {$ELSE}
 begin
-  Result := System.CPUCount;
+  Result := TThread.ProcessorCount;
 {$ENDIF}
-end;
+end; { TOmniAffinity.GetCount }
 
 function TOmniAffinity.GetCountPhysical: integer;
 {$IFDEF MSWINDOWS}
@@ -3407,17 +3389,15 @@ begin
       end;
     end;
   end;
-end;
-
 {$ELSE}
 begin
-  Result := System.CPUCount;
-end;
+  Result := TThread.ProcessorCount;
 {$ENDIF}
+end; { TOmniAffinity.GetCountPhysical }
 
-{$IFDEF MSWINDOWS}
 function TOmniAffinity.GetMask: NativeUInt;
 begin
+  {$IFDEF MSWINDOWS}
   case oaTarget of
     atSystem:
       Result := DSiGetSystemAffinityMask;
@@ -3428,8 +3408,12 @@ begin
     else
       Result := 0; // to keep compiler happy
   end;
+  {$ELSE}
+  Result := 0;
+  for i := 1 to TThread.ProcessorCount do
+    Result := (Result SHL 1) OR 1;
+  {$ENDIF ~MSWINDOWS}
 end; { TOmniAffinity.GetMask }
-{$ENDIF}
 
 procedure TOmniAffinity.SetAsString(const value: string);
 begin
@@ -3468,12 +3452,12 @@ begin
 {$ENDIF}
 end; { TOmniAffinity.SetCount }
 
-{$IFDEF MSWINDOWS}
 procedure TOmniAffinity.SetMask(const value: NativeUInt);
 begin
+{$IFDEF MSWINDOWS}
   AsString := DSiAffinityMaskToString(value);
-end; { TOmniAffinity.SetMask }
 {$ENDIF}
+end; { TOmniAffinity.SetMask }
 
 { TOmniProcessEnvironment }
 
@@ -4134,11 +4118,7 @@ end; { NextOid }
 
 function TOmniAlignedInt32.Subtract(value: integer): integer; //inline
 begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedExchangeAdd(Addr^, -value);
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Subtract }
 
 procedure TOmniAlignedInt32.Initialize;
@@ -4148,11 +4128,7 @@ end; { TOmniAlignedInt32.Initialize }
 
 function TOmniAlignedInt32.Add(value: integer): integer;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedExchangeAdd(Addr^, value);
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Add }
 
 function TOmniAlignedInt32.Addr: PInteger;
@@ -4163,29 +4139,17 @@ end; { TOmniAlignedInt32.Addr }
 
 function TOmniAlignedInt32.CAS(oldValue, newValue: integer): boolean;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;
-  {$ELSE}
   Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
-  {$ENDIF}
 end; { TOmniAlignedInt32.CAS }
 
 function TOmniAlignedInt32.Decrement: integer;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedDecrement(Addr^);
-  {$ELSE}
   Result := TInterlocked.Decrement(Addr^);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.Decrement(value: integer): integer;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := Subtract(value) - value;
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.GetValue: integer;
@@ -4195,20 +4159,12 @@ end; { TOmniAlignedInt32.GetValue }
 
 function TOmniAlignedInt32.Increment: integer;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := InterlockedIncrement(Addr^);
-  {$ELSE}
   Result := TInterlocked.Increment(Addr^);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
 function TOmniAlignedInt32.Increment(value: integer): integer;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := Add(value) + value;
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
-  {$ENDIF}
 end; { TOmniAlignedInt32.Increment }
 
 procedure TOmniAlignedInt32.SetValue(value: integer);
@@ -4277,11 +4233,7 @@ end; { TOmniAlignedInt32.Subtract }
 
 function TOmniAlignedInt64.Subtract(value: int64): int64; //inline
 begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
 end; { TOmniAlignedInt64.Subtract }
 
 procedure TOmniAlignedInt64.Initialize;
@@ -4292,11 +4244,7 @@ end; { TOmniAlignedInt64.Initialize }
 
 function TOmniAlignedInt64.Add(value: int64): int64;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedExchangeAdd64(Addr^, value);
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
-  {$ENDIF}
 end; { TOmniAlignedInt64.Add }
 
 function TOmniAlignedInt64.Addr: PInt64;
@@ -4307,29 +4255,17 @@ end; { TOmniAlignedInt64.Addr }
 
 function TOmniAlignedInt64.CAS(oldValue, newValue: int64): boolean;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;
-  {$ELSE}
   Result := TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;
-  {$ENDIF}
 end; { TOmniAlignedInt64.CAS }
 
 function TOmniAlignedInt64.Decrement: int64;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedDecrement64(Addr^);
-  {$ELSE}
   Result := TInterlocked.Decrement(Addr^)
-  {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.Decrement(value: int64): int64;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := Subtract(value) - value;
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
-  {$ENDIF}
 end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
@@ -4339,20 +4275,12 @@ end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedIncrement64(Addr^);
-  {$ELSE}
   Result := TInterlocked.Increment(Addr^);
-  {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
 function TOmniAlignedInt64.Increment(value: int64): int64;
 begin
-  {$IFDEF MSWINDOWS}
-  Result := Add(value) + value;
-  {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
-  {$ENDIF}
 end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
@@ -4636,11 +4564,7 @@ var
 begin
   if not assigned(FAffinity) then begin
     syncMask := TOmniIntegerSet.Create;
-    {$IFDEF MSWINDOWS}
-    if CAS(nil, pointer(syncMask), FAffinity) then
-    {$ELSE}
     if TInterlocked.CompareExchange(pointer(FAffinity), pointer(syncMask), nil) = nil then
-    {$ENDIF}
       pointer(syncMask) := nil;
   end;
   Result := FAffinity;

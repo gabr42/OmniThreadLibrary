@@ -148,10 +148,11 @@ uses
   DSiWin32,
 {$ENDIF}
   GpLists,
-  SysUtils,
-  Classes,
+  System.SysUtils,
+  System.Classes,
   System.Types,
   System.Diagnostics,
+  System.SyncObjs,
   OtlPlatform,
   OtlSync;
 

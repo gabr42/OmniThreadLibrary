@@ -333,9 +333,7 @@ type
   
   IOmniTaskControlMonitor = interface ['{20CB3AB7-04D8-454B-AEFE-CFCFF8F27301}']
     function  Detach(const task: IOmniTaskControl): IOmniTaskControl;
-    {$IFDEF MSWINDOWS}
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl;
-    {$ENDIF MSWINDOWS}
   end; { IOmniTaskControlMonitor }
 
   {$TYPEINFO ON} {$METHODINFO ON}
@@ -2998,9 +2996,7 @@ begin
   if not assigned(otcEventMonitor) then begin
     otcEventMonitorInternal := true;
     otcEventMonitor := GTaskControlEventMonitorPool.Allocate;
-    {$IFDEF MSWINDOWS}
     TOmniEventMonitor(otcEventMonitor).Monitor(Self);
-    {$ENDIF MSWINDOWS}
   end;
 end; { TOmniTaskControl.CreateInternalMonitor }
 
@@ -3246,9 +3242,7 @@ end; { TOmniTaskControl.Leave }
 
 function TOmniTaskControl.MonitorWith(const monitor: IOmniTaskControlMonitor): IOmniTaskControl;
 begin
-  {$IFDEF MSWINDOWS}
   monitor.Monitor(Self);
-  {$ENDIF MSWINDOWS}
   Result := Self;
 end; { TOmniTaskControl.MonitorWith }
 
@@ -3419,7 +3413,6 @@ end; { TOmniTaskControl.Run }
 
 function TOmniTaskControl.RemoveMonitor: IOmniTaskControl;
 begin
-  {$IFDEF MSWINDOWS}
   if assigned(otcSharedInfo.Monitor) then begin
     EnsureCommChannel;
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Detach(
@@ -3430,7 +3423,6 @@ begin
       otcSharedInfo.Monitor := nil;
     finally otcSharedInfo.MonitorLock.Release; end;
   end;
-  {$ENDIF MSWINDOWS}
   Result := Self;
   if otcDelayedTerminate then begin
     otcDelayedTerminate := false;
@@ -3454,7 +3446,6 @@ begin
   otcDebugFlags := value;
 end; { TOmniTaskControl.SetDebugFlags }
 
-{$IFDEF MSWINDOWS}
 function TOmniTaskControl.SetMonitor(const notify: IOmniEventMonitorNotify): IOmniTaskControl;
 begin
   if not assigned(otcSharedInfo.Monitor) then begin
@@ -3470,7 +3461,6 @@ begin
   otcSharedInfo.Monitor.Activate;
   Result := Self;
 end; { TOmniTaskControl.SetMonitor }
-{$ENDIF MSWINDOWS}
 
 procedure TOmniTaskControl.SetOptions(const value: TOmniTaskControlOptions);
 begin

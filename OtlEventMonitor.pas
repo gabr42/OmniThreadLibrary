@@ -200,6 +200,7 @@ type
 implementation
 
 uses
+  System.SyncObjs,
   OtlHooks,
   OtlPlatform;
 

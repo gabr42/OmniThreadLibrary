@@ -108,14 +108,6 @@ unit OtlContainers;
 {$ENDIF ~CPUX64}
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
-//We don't have a platform-independant way of using cmpx8b/cmpx16b
-//(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
-{$IFDEF MSWINDOWS}
-  {$DEFINE OTL_HaveCmpx16b}
-{$ELSE}
-  {$UNDEF OTL_HaveCmpx16b}
-{$ENDIF ~MSWINDOWS}
-
 interface
 
 uses
@@ -388,10 +380,11 @@ uses
   {$IFDEF MSWINDOWS}
   Windows,
   {$ENDIF MSWINDOWS}
+  SysUtils,
   {$IFDEF OTL_MobileSupport}
   Generics.Collections,
   {$ENDIF OTL_MobileSupport}
-  SysUtils;
+  OtlPlatform;
 
 {$IFDEF OTL_MobileSupport}
 type
@@ -408,7 +401,7 @@ type
   strict private
     procedure CollectionNotifyEvent(Sender: TObject; const Item: TOmniValue; Action: TCollectionNotification);
     function  Dequeue: TOmniValue;
-    procedure DoWithCritSec( Proc: TProc);
+    procedure DoWithCritSec(Proc: TProc);
     procedure Enqueue(const value: TOmniValue);
     function  GetContainerSubject: TOmniContainerSubject;
     function  IsEmpty: boolean;
@@ -591,19 +584,15 @@ var
   end; { GetMinAndClear }
 
 var
-  {$IFDEF MSWINDOWS}
   affinity   : string;
-  {$ENDIF MSWINDOWS}
   currElement: POmniLinkedData;
   n          : integer;
 
 begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
   if not obsIsInitialized then begin
-    {$IFDEF MSWINDOWS}
-    affinity := DSiGetThreadAffinity;
-    DSiSetThreadAffinity(affinity[1]);
+    affinity := TPlatform.ThreadAffinity;
+    TPlatform.ThreadAffinity := affinity[1];
     try
-    {$ENDIF MSWINDOWS}
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
       obsTaskPopLoops := 1;
       obsTaskPushLoops := 1;
@@ -623,9 +612,7 @@ begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
       //Calculate first 4 minimum average for InsertLink rutine
       obsTaskPushLoops := GetMinAndClear(1, 4) div 4;
       obsIsInitialized := true;
-    {$IFDEF MSWINDOWS}
-    finally DSiSetThreadAffinity(affinity); end;
-    {$ENDIF MSWINDOWS}
+    finally TPlatform.ThreadAffinity := affinity; end;
   end;
 end;  { TOmniBaseBoundedStack.MeasureExecutionTimes }
 
@@ -991,19 +978,15 @@ var
   end; { GetMinAndClear }
 
 var
-  {$IFDEF MSWINDOWS}
   affinity   : string;
-  {$ENDIF MSWINDOWS}
   currElement: pointer;
   n          : integer;
 
 begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
   if not obqIsInitialized then begin
-    {$IFDEF MSWINDOWS}
-    affinity := DSiGetThreadAffinity;
-    DSiSetThreadAffinity(affinity[1]);
+    affinity := TPlatform.ThreadAffinity;
+    TPlatform.ThreadAffinity := affinity[1];
     try
-    {$ENDIF MSWINDOWS}
       //Calculate  TaskPopDelay and TaskPushDelay counter values depend on CPU speed!!!}
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
@@ -1021,9 +1004,7 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
       obqTaskRemoveLoops := GetMinAndClear(0, 4) div 4;
       obqTaskInsertLoops := GetMinAndClear(1, 4) div 4;
       obqIsInitialized := true;
-    {$IFDEF MSWINDOWS}
-    finally DSiSetThreadAffinity(affinity); end;
-    {$ENDIF MSWINDOWS}
+    finally TPlatform.ThreadAffinity := affinity; end;
   end;
 end; { TOmniBaseBoundedQueue.MeasureExecutionTimes }
 

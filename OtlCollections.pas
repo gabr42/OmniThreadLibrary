@@ -257,10 +257,8 @@ type
 implementation
 
 uses
-  {$IFNDEF MSWINDOWS}
-  Diagnostics,
-  {$ENDIF ~MSWINDOWS}
-  Classes,
+  System.Classes,
+  System.SyncObjs,
   System.Diagnostics,
   OtlPlatform;
 

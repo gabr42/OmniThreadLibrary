@@ -95,3 +95,11 @@
 {$ENDIF ~OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
 
+//We don't have a platform-independant way of using cmpx8b/cmpx16b
+//(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
+{$IFDEF MSWINDOWS}
+  {$DEFINE OTL_HaveCmpx16b}
+{$ELSE}
+  {$UNDEF OTL_HaveCmpx16b}
+{$ENDIF ~MSWINDOWS}
+
