@@ -39,7 +39,7 @@
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_Define>DEBUG;FullDebugMode;NoDebugInfo;$(DCC_Define)</DCC_Define>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
-			<DCC_UnitSearchPath>..\..;..\..\fastmm4;..\..\GpDelphiUnits\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\fastmm44;..\..\GpDelphiUnits\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>

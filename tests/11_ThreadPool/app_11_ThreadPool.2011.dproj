@@ -26,7 +26,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm44;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<DCC_DependencyCheckOutputName>app_11_ThreadPool.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
@@ -41,9 +41,9 @@
 			<Version>7.0</Version>
 			<DCC_Define>DEBUG;FullDebugMode;$(DCC_Define)</DCC_Define>
 			<DCC_UnitSearchPath>P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_IncludePath)</DCC_IncludePath>
+			<DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm44;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ResourcePath)</DCC_ResourcePath>
+			<DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm44;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_ObjPath)</DCC_ObjPath>
+			<DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm44;P:\madCollection\madExcept\Sources;P:\madCollection\madBasic\Sources;P:\madCollection\madDisAsm\Sources;$(DCC_IncludePath)</DCC_IncludePath>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_Optimize>False</DCC_Optimize>

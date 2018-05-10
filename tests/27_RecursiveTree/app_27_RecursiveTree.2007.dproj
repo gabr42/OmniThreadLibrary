@@ -17,10 +17,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG;xFullDebugMode</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>

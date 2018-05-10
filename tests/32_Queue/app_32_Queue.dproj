@@ -12,19 +12,19 @@
     <Version>7.0</Version>
     <DCC_SymbolReferenceInfo>2</DCC_SymbolReferenceInfo>
     <DCC_Define>RELEASE</DCC_Define>
-    <DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>$(BDS)\lib\Debug;$(BDS)\Lib\Debug\Indy10;..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
     <DCC_Define>DEBUG;FullDebugMode;ShowThreadNames</DCC_Define>
-    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_Optimize>False</DCC_Optimize>
     <DCC_RangeChecking>True</DCC_RangeChecking>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>

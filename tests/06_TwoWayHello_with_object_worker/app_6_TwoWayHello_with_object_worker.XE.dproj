@@ -28,7 +28,7 @@
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_DcuOutput>..\..\lib\XE\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>app_6_TwoWayHello_with_object_worker.exe</DCC_DependencyCheckOutputName>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -52,9 +52,9 @@
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_MapFile>3</DCC_MapFile>
 			<DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-			<DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_ResourcePath)</DCC_ResourcePath>
-			<DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_ObjPath)</DCC_ObjPath>
-			<DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm;$(DCC_IncludePath)</DCC_IncludePath>
+			<DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;$(DCC_ResourcePath)</DCC_ResourcePath>
+			<DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;$(DCC_ObjPath)</DCC_ObjPath>
+			<DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="app_6_TwoWayHello_with_object_worker.dpr">

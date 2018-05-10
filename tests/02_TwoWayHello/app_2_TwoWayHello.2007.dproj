@@ -28,10 +28,10 @@
     <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
     <DCC_MapFile>3</DCC_MapFile>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>

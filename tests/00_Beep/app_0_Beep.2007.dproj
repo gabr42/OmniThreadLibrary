@@ -21,10 +21,10 @@
     <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
     <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
     <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
-    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
@@ -36,10 +36,10 @@
     <DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
     <DCC_MapFile>3</DCC_MapFile>
     <DCC_SYMBOL_PLATFORM>False</DCC_SYMBOL_PLATFORM>
-    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_UnitSearchPath>
-    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ResourcePath>
-    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_ObjPath>
-    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm</DCC_IncludePath>
+    <DCC_UnitSearchPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_UnitSearchPath>
+    <DCC_ResourcePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ResourcePath>
+    <DCC_ObjPath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_ObjPath>
+    <DCC_IncludePath>..\..;..\..\GpDelphiUnits\src;..\..\fastmm4</DCC_IncludePath>
     <DCC_DcuOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_DcuOutput>
     <DCC_ObjOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_ObjOutput>
     <DCC_HppOutput>..\..\lib\2007\$(Platform)\$(Config)</DCC_HppOutput>
