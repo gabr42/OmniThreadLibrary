@@ -75,7 +75,8 @@ uses
   System.Generics.Collections,
   {$ENDIF OTL_MobileSupport}
   OtlSync,
-  OtlCommon;
+  OtlCommon,
+  OtlEventMonitor.Notify;
 
 type
   ///<summary>All possible actions observer can take interest in.</summary>
@@ -105,6 +106,15 @@ type
   end; { TOmniContainerEventObserver }
   {$ENDIF OTL_MobileSupport}
 
+  // Platform-independant observer using TThread.Queue as a communication mechanism.
+  TOmniContainerPlatformObserver = class(TOmniContainerObserver)
+  strict protected
+    function GetMonitorNotify: IOmniEventMonitorNotify; virtual; abstract;
+  public
+    property MonitorNotify: IOmniEventMonitorNotify read GetMonitorNotify;
+  end; { TOmniContainerPlatformObserver }
+
+  // Windows-specific observers are left in for compatibility with existing codebase.
   {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
   public
@@ -140,6 +150,10 @@ type
   function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
     TOmniContainerEventObserver;
   {$ENDIF OTL_MobileSupport}
+
+  function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
+    taskControlID: int64): TOmniContainerPlatformObserver;
+
   {$IFDEF MSWINDOWS}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
@@ -168,6 +182,17 @@ type
     procedure Notify; override;
   end; { TOmniContainerEventObserverImpl }
   {$ENDIF OTL_MobileSupport}
+
+  TOmniContainerPlatformObserverImpl = class(TOmniContainerPlatformObserver)
+  strict private
+    FNotify       : IOmniEventMonitorNotify;
+    FTaskControlID: int64;
+  strict protected
+    function GetMonitorNotify: IOmniEventMonitorNotify; override;
+  public
+    constructor Create(notify: IOmniEventMonitorNotify; taskControlID: int64);
+    procedure Notify; override;
+  end; { TOmniContainerPlatformObserverImpl }
 
   {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
@@ -206,6 +231,12 @@ begin
   Result := TOmniContainerEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
 {$ENDIF OTL_MobileSupport}
+
+function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
+  taskControlID: int64): TOmniContainerPlatformObserver;
+begin
+  Result := TOmniContainerPlatformObserverImpl.Create(notify, taskControlID);
+end; { CreateContainerPlatformObserver }
 
 {$IFDEF MSWINDOWS}
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
@@ -449,6 +480,25 @@ begin
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}
 end; { TOmniContainerSubject.Rearm }
+
+{ TOmniContainerPlatformObserverImpl }
+
+constructor TOmniContainerPlatformObserverImpl.Create(notify: IOmniEventMonitorNotify; taskControlID: int64);
+begin
+  inherited Create;
+  FNotify := notify;
+  FTaskControlID := taskControlID;
+end; { TOmniContainerPlatformObserverImpl.Create }
+
+function TOmniContainerPlatformObserverImpl.GetMonitorNotify: IOmniEventMonitorNotify;
+begin
+  Result := FNotify;
+end; { TOmniContainerPlatformObserverImpl.GetMonitorNotify }
+
+procedure TOmniContainerPlatformObserverImpl.Notify;
+begin
+  FNotify.NotifyMessage(FTaskControlID);
+end; { TOmniContainerPlatformObserverImpl.Notify }
 
 end.
 

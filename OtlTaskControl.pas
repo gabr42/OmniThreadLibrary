@@ -323,8 +323,9 @@ uses
   OtlComm,
   OtlTask,
   OtlContainers,
-  OtlThreadPool,
-  OtlContainerObserver;
+  OtlContainerObserver,
+  OtlEventMonitor.Notify,
+  OtlThreadPool;
 
 type
   IOmniTaskControl = interface;
@@ -473,9 +474,7 @@ type
     function  Run(remoteFunc: TOmniTaskControlInvokeFunction): IOmniTaskControl; overload;
     function  Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}): IOmniTaskControl;
-    {$IFDEF MSWINDOWS}
-    function  SetMonitor(hWindow: THandle): IOmniTaskControl;
-    {$ENDIF MSWINDOWS}
+    function  SetMonitor(const notify: IOmniEventMonitorNotify): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
@@ -577,9 +576,7 @@ type
     ostiCommChannel       : IOmniTwoWayChannel;
     ostiCounter           : IOmniCounter;
     ostiLock              : TSynchroObject;
-    {$IFDEF MSWINDOWS}
-    ostiMonitor           : TOmniContainerWindowsMessageObserver;
-    {$ENDIF MSWINDOWS}
+    ostiMonitor           : TOmniContainerPlatformObserver;
     ostiMonitorLock       : TOmniCS;
     ostiNUMANode          : integer;
     ostiProcessorGroup    : integer;
@@ -601,9 +598,7 @@ type
     property CommChannel: IOmniTwoWayChannel read ostiCommChannel write ostiCommChannel;
     property Counter: IOmniCounter read ostiCounter write ostiCounter;
     property Lock: TSynchroObject read ostiLock write ostiLock;
-    {$IFDEF MSWINDOWS}
-    property Monitor: TOmniContainerWindowsMessageObserver read ostiMonitor write ostiMonitor;
-    {$ENDIF MSWINDOWS}
+    property Monitor: TOmniContainerPlatformObserver read ostiMonitor write ostiMonitor;
     property MonitorLock: TOmniCS read ostiMonitorLock;
     property NUMANode: integer read ostiNUMANode write ostiNUMANode;
     property ProcessorGroup: integer read ostiProcessorGroup write ostiProcessorGroup;
@@ -969,7 +964,9 @@ type
     property TerminatedEvent: TOmniTransitionEvent read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
-  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl, IOmniTaskControlSharedInfo, IOmniTaskControlInternals)
+  TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl,
+                                              IOmniTaskControlSharedInfo,
+                                              IOmniTaskControlInternals)
   strict private
     otcDebugFlags          : TOmniTaskControlInternalDebugFlags;
     otcDelayedTerminate    : boolean;
@@ -1071,9 +1068,7 @@ type
     function  Run(remoteFunc: TOmniTaskControlInvokeFunctionEx): IOmniTaskControl; overload;
     function  Schedule(const threadPool: IOmniThreadPool = nil {default pool}):
       IOmniTaskControl;
-    {$IFDEF MSWINDOWS}
-    function  SetMonitor(hWindow: THandle): IOmniTaskControl;
-    {$ENDIF MSWINDOWS}
+    function  SetMonitor(const notify: IOmniEventMonitorNotify): IOmniTaskControl;
     function  SetParameter(const paramName: string; const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameter(const paramValue: TOmniValue): IOmniTaskControl; overload;
     function  SetParameters(const parameters: array of TOmniValue): IOmniTaskControl;
@@ -1580,11 +1575,10 @@ begin
         otSharedInfo_ref.MonitorLock.Acquire;
         try
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
-           {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
-            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
-          {$ENDIF MSWINDOWS}
+            otSharedInfo_ref.Monitor.MonitorNotify.NotifyTerminated(UniqueID);
+//            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
+//              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
           otSharedInfo_ref := nil;
         finally
           if assigned(sync) then
@@ -3463,15 +3457,16 @@ begin
 end; { TOmniTaskControl.SetDebugFlags }
 
 {$IFDEF MSWINDOWS}
-function TOmniTaskControl.SetMonitor(hWindow: THandle): IOmniTaskControl;
+function TOmniTaskControl.SetMonitor(const notify: IOmniEventMonitorNotify): IOmniTaskControl;
 begin
   if not assigned(otcSharedInfo.Monitor) then begin
     if otcParameters.IsLocked then
       raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
     EnsureCommChannel;
-    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(
-      hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
-      integer(Int64Rec(UniqueID).Hi));
+    otcSharedInfo.Monitor := CreateContainerPlatformObserver(notify, UniqueID);
+//    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(
+//      hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
+//      integer(Int64Rec(UniqueID).Hi));
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
       otcSharedInfo.Monitor, coiNotifyOnAllInserts);
   end

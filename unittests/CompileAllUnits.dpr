@@ -21,6 +21,7 @@ uses
   OtlDataManager,
   OtlParallel,
   OtlEventMonitor,
+  OtlEventMonitor.Notify,
   OtlHooks,
   OtlLogger,
   OtlRegister,

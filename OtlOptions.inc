@@ -85,6 +85,10 @@
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
+{$IF CompilerVersion >= 32} //Tokyo
+  {$DEFINE OTL_HasForceQueue}
+{$IFEND}
+
 {$IFNDEF MSWINDOWS}
 {$IFNDEF OTL_MobileSupport}
 {$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE8 is required for non-Windows platforms.'}

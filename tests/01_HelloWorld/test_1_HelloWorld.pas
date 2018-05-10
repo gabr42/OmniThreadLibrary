@@ -66,7 +66,7 @@ end;
 procedure TfrmTestHelloWorld.RunHelloWorld(const task: IOmniTask);
 begin
   //Executed in a background thread
-  task.Comm.Send(0, 'Hello, world!');
+  task.Comm.Send(WM_USER, 'Hello, world!');
 end;
 
 initialization

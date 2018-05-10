@@ -178,7 +178,8 @@ uses
   Classes,
   SysUtils,
   OtlCommon,
-  OtlTask;
+  OtlTask,
+  OtlEventMonitor.Notify;
 
 const
   CDefaultIdleWorkerThreadTimeout_sec = 10;
@@ -260,7 +261,7 @@ type
     function  IsIdle: boolean;
     function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
-    function  SetMonitor(hWindow: THandle): IOmniThreadPool;
+    function  SetMonitor(const notify: IOmniEventMonitorNotify): IOmniThreadPool;
     procedure SetOptions(const value: TOmniThreadPoolOptions);
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod); overload;
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryFunction); overload;
@@ -596,7 +597,7 @@ type
     function  MonitorWith(const monitor: IOmniThreadPoolMonitor): IOmniThreadPool;
     function  RemoveMonitor: IOmniThreadPool;
     procedure Schedule(const task: IOmniTask);
-    function  SetMonitor(hWindow: THandle): IOmniThreadPool;
+    function  SetMonitor(const notify: IOmniEventMonitorNotify): IOmniThreadPool;
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryMethod); overload;
     procedure SetThreadDataFactory(const value: TOTPThreadDataFactoryFunction); overload;
     property Asy_OnUnhandledWorkerException: TOTPUnhandledWorkerException read
@@ -1517,6 +1518,7 @@ var
   {$ENDIF MSWINDOWS}
   waitParam: TOmniValue;
 begin
+!
   {$IFDEF MSWINDOWS}
   hWindow := params[0];
   if not assigned(owMonitorObserver) then
@@ -1871,13 +1873,13 @@ begin
   otpWorkerTask.Invoke(@TOTPWorker.CheckIdleQueue);
 end; { TOmniThreadPool.SetMinWorkers }
 
-function TOmniThreadPool.SetMonitor(hWindow: THandle): IOmniThreadPool;
+function TOmniThreadPool.SetMonitor(const notify: IOmniEventMonitorNotify): IOmniThreadPool;
 var
   res: TOmniWaitableValue;
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, [hWindow, res]);
+    otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, [notify, res]);
     res.WaitFor(INFINITE);
   finally FreeAndNil(res); end;
   Result := Self;

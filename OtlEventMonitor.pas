@@ -113,7 +113,8 @@ uses
   OtlComm,
   OtlSync,
   OtlTaskControl,
-  OtlThreadPool;
+  OtlThreadPool,
+  OtlEventMonitor.Notify;
 
 type
   TOmniMonitorTaskEvent = procedure(const task: IOmniTaskControl) of object;
@@ -122,7 +123,9 @@ type
   TOmniMonitorPoolWorkItemEvent = procedure(const pool: IOmniThreadPool; taskID: int64) of object;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64)]
-  TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor, IOmniThreadPoolMonitor)
+  TOmniEventMonitor = class(TComponent, IOmniTaskControlMonitor,
+                                        IOmniThreadPoolMonitor,
+                                        IOmniEventMonitorNotify)
   strict private
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
@@ -137,6 +140,9 @@ type
     {$IFDEF MSWINDOWS}
       emCurrentMsg            : TOmniMessage;
     {$ENDIF}
+  strict protected
+    procedure ProcessNewMessage(taskControlID: int64);
+    procedure ProcessTerminated(taskControlID: int64);
   public
     constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
@@ -144,6 +150,8 @@ type
     function  Detach(const pool: IOmniThreadPool): IOmniThreadPool; overload;
     function  Monitor(const task: IOmniTaskControl): IOmniTaskControl; overload;
     function  Monitor(const pool: IOmniThreadPool): IOmniThreadPool; overload;
+    procedure NotifyMessage(taskControlID: int64);
+    procedure NotifyTeminated(taskControlID: int64);
     procedure ProcessMessages;
   published
     property ThreadID: cardinal read emThreadID;
@@ -251,14 +259,34 @@ end; { TOmniEventMonitor.Detach }
 function TOmniEventMonitor.Monitor(const task: IOmniTaskControl): IOmniTaskControl;
 begin
   emMonitoredTasks.Add(task.UniqueID, task);
-  Result := task.SetMonitor(emMessageWindow);
+  Result := task.SetMonitor(Self as IOmniEventMonitorNotify);
 end; { TOmniEventMonitor.Monitor }
 
 function TOmniEventMonitor.Monitor(const pool: IOmniThreadPool): IOmniThreadPool;
 begin
   emMonitoredPools.Add(pool.UniqueID, pool);
-  Result := pool.SetMonitor(emMessageWindow);
+  Result := pool.SetMonitor(Self as IOmniEventMonitorNotify);
 end; { TOmniEventMonitor.Monitor }
+
+procedure TOmniEventMonitor.NotifyMessage(taskControlID: int64);
+begin
+  TThread.{$IFDEF OTL_HasForceQueue}ForceQueue{$ELSE}Queue{$ENDIF}(
+    TThread.Current,
+    procedure
+    begin
+      ProcessNewMessage(taskControlID);
+    end);
+end; { TOmniEventMonitor.NotifyMessage }
+
+procedure TOmniEventMonitor.NotifyTeminated(taskControlID: int64);
+begin
+  TThread.{$IFDEF OTL_HasForceQueue}ForceQueue{$ELSE}Queue{$ENDIF}(
+    TThread.Current,
+    procedure
+    begin
+      ProcessTerminated(taskControlID);
+    end);
+end; { TOmniEventMonitor.NotifyTeminated }
 
 procedure TOmniEventMonitor.ProcessMessages;
 //var
@@ -277,6 +305,61 @@ begin
   CheckSynchronize;
 //{$ENDIF ~MSWINDOWS}
 end; { TOmniEventMonitor.ProcessMessages }
+
+procedure TOmniEventMonitor.ProcessNewMessage(taskControlID: int64);
+var
+  task        : IOmniTaskControl;
+  timeStart_ms: int64;
+
+  function ProcessMessages(timeout_ms: integer = CMaxReceiveLoop_ms;
+    rearmSelf: boolean = true): boolean;
+  begin
+    Result := true;
+    while task.Comm.Receive(emCurrentMsg) do begin
+      if (not (task as IOmniTaskControlInternals).FilterMessage(emCurrentMsg))
+         and assigned(emOnTaskMessage)
+      then
+        emOnTaskMessage(task, emCurrentMsg);
+
+      { TODO 1 -oPrimoz Gabrijelcic : emMessageWindow? }
+      {$IFDEF OTL_HasForceQueue}
+      if (GTimeSource.Elapsed_ms(timeStart_ms) > timeout_ms) {and (emMessageWindow <> 0)} then begin
+        if rearmSelf then
+          NotifyMessage(taskControlID);
+        break; //while
+      end;
+      {$ENDIF OTL_HasForceQueue}
+    end; //while
+    emCurrentMsg.MsgData._ReleaseAndClear;
+  end; { ProcessMessages }
+
+begin
+  task := emMonitoredTasks.ValueOf(taskControlID) as IOmniTaskControl;
+  if assigned(task) then begin
+    timeStart_ms := GTimeSource.Timestamp_ms;
+    ProcessMessages;
+  end;
+end; { TOmniEventMonitor.ProcessNewMessage }
+
+procedure TOmniEventMonitor.ProcessTerminated(taskControlID: int64);
+begin
+      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+      if assigned(task) then begin
+        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
+        while endpoint.Receive(emCurrentMsg) do
+          if Assigned(emOnTaskMessage) then
+            emOnTaskMessage(task, emCurrentMsg);
+        endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
+        while endpoint.Receive(emCurrentMsg) do
+          if Assigned(emOnTaskUndeliveredMessage) then
+            emOnTaskUndeliveredMessage(task, emCurrentMsg);
+        emCurrentMsg.MsgData._ReleaseAndClear;
+        if Assigned(emOnTaskTerminated) then
+          OnTaskTerminated(task);
+        Detach(task);
+      end;
+
+end; { TOmniEventMonitor.ProcessTerminated }
 
 {$IFDEF OTL_MobileSupport}
 (*
@@ -317,7 +400,7 @@ var
 begin { TOmniEventMonitor.WndProc }
   try
     if msg.Msg = COmniTaskMsg_NewMessage then begin
-      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
+      task := `emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
       if assigned(task) then begin
         timeStart := GetTickCount;
         ProcessMessages;
