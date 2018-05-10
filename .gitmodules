@@ -1,3 +1,6 @@
 [submodule "GpDelphiUnits"]
 	path = GpDelphiUnits
 	url = https://github.com/gabr42/GpDelphiUnits
+[submodule "FastMM4"]
+	path = FastMM4
+	url = https://github.com/pleriche/FastMM4
