@@ -48,11 +48,52 @@ unit OtlEventMonitor.Notify;
 interface
 
 type
+  TThreadPoolOperation = (tpoCreateThread, tpoDestroyThread, tpoKillThread,
+    tpoWorkItemCompleted);
+
+  TOmniThreadPoolMonitorInfo = class
+  strict private
+    otpmiTaskID             : int64;
+    otpmiThreadID           : integer;
+    otpmiThreadPoolOperation: TThreadPoolOperation;
+    otpmiUniqueID           : int64;
+  public
+    constructor Create(uniqueID: int64; threadPoolOperation: TThreadPoolOperation;
+      threadID: integer); overload;
+    constructor Create(uniqueID, taskID: int64); overload;
+    property TaskID: int64 read otpmiTaskID;
+    property ThreadPoolOperation: TThreadPoolOperation read
+      otpmiThreadPoolOperation;
+    property ThreadID: integer read otpmiThreadID;
+    property UniqueID: int64 read otpmiUniqueID;
+  end; { TOmniThreadPoolMonitorInfo }
+
   IOmniEventMonitorNotify = interface ['{AC7059B5-5262-4440-AE9F-6A6D9DE7D8B9}']
+    function  GetID: int64;
+  //
     procedure NotifyMessage(taskControlID: int64);
-    procedure NotifyTeminated(taskControlID: int64);
+    procedure NotifyTerminated(taskControlID: int64);
+    procedure NotifyThreadPool(threadPoolInfo: TOmniThreadPoolMonitorInfo);
+    property ID: int64 read GetID;
   end; { IOmniEventMonitorNotify }
 
 implementation
+
+{ TOmniThreadPoolMonitorInfo }
+
+constructor TOmniThreadPoolMonitorInfo.Create(uniqueID: int64;
+  threadPoolOperation: TThreadPoolOperation; threadID: integer);
+begin
+  otpmiUniqueID := uniqueID;
+  otpmiThreadPoolOperation := threadPoolOperation;
+  otpmiThreadID := threadID;
+end; { TOmniThreadPoolMonitorInfo.Create }
+
+constructor TOmniThreadPoolMonitorInfo.Create(uniqueID, taskID: int64);
+begin
+  otpmiUniqueID := uniqueID;
+  otpmiThreadPoolOperation := tpoWorkItemCompleted;
+  otpmiTaskID := taskID;
+end; { TOmniThreadPoolMonitorInfo.Create }
 
 end.

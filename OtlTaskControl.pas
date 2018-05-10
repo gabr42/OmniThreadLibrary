@@ -1577,8 +1577,6 @@ begin
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
           if assigned(otSharedInfo_ref.Monitor) then
             otSharedInfo_ref.Monitor.MonitorNotify.NotifyTerminated(UniqueID);
-//            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-//              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
           otSharedInfo_ref := nil;
         finally
           if assigned(sync) then
@@ -3464,13 +3462,10 @@ begin
       raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
     EnsureCommChannel;
     otcSharedInfo.Monitor := CreateContainerPlatformObserver(notify, UniqueID);
-//    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(
-//      hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
-//      integer(Int64Rec(UniqueID).Hi));
     otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
       otcSharedInfo.Monitor, coiNotifyOnAllInserts);
   end
-  else if otcSharedInfo.Monitor.Handle <> hWindow then
+  else if otcSharedInfo.Monitor.MonitorNotify.ID <> notify.ID then
     raise Exception.Create('TOmniTaskControl.SetMonitor: Task can be only monitored with a single monitor');
   otcSharedInfo.Monitor.Activate;
   Result := Self;

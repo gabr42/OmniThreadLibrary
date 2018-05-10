@@ -35,7 +35,6 @@ implementation
 
 procedure TForm77.btnHelloClick(Sender: TObject);
 begin
-  Application.ProcessMessages
   btnHello.Enabled := false;
   FMessageDispatch.Monitor(CreateTask(RunHelloWorld, 'HelloWorld')).Run;
 end;

@@ -152,7 +152,7 @@ type
   {$ENDIF OTL_MobileSupport}
 
   function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
-    taskControlID: int64): TOmniContainerPlatformObserver;
+    objectID: int64): TOmniContainerPlatformObserver;
 
   {$IFDEF MSWINDOWS}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
@@ -185,12 +185,12 @@ type
 
   TOmniContainerPlatformObserverImpl = class(TOmniContainerPlatformObserver)
   strict private
-    FNotify       : IOmniEventMonitorNotify;
-    FTaskControlID: int64;
+    FNotify    : IOmniEventMonitorNotify;
+    FObjectID  : int64;
   strict protected
     function GetMonitorNotify: IOmniEventMonitorNotify; override;
   public
-    constructor Create(notify: IOmniEventMonitorNotify; taskControlID: int64);
+    constructor Create(notify: IOmniEventMonitorNotify; objectID: int64);
     procedure Notify; override;
   end; { TOmniContainerPlatformObserverImpl }
 
@@ -233,9 +233,9 @@ end; { CreateContainerWindowsEventObserver }
 {$ENDIF OTL_MobileSupport}
 
 function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
-  taskControlID: int64): TOmniContainerPlatformObserver;
+  objectID: int64): TOmniContainerPlatformObserver;
 begin
-  Result := TOmniContainerPlatformObserverImpl.Create(notify, taskControlID);
+  Result := TOmniContainerPlatformObserverImpl.Create(notify, objectID);
 end; { CreateContainerPlatformObserver }
 
 {$IFDEF MSWINDOWS}
@@ -483,11 +483,12 @@ end; { TOmniContainerSubject.Rearm }
 
 { TOmniContainerPlatformObserverImpl }
 
-constructor TOmniContainerPlatformObserverImpl.Create(notify: IOmniEventMonitorNotify; taskControlID: int64);
+constructor TOmniContainerPlatformObserverImpl.Create(notify: IOmniEventMonitorNotify;
+  objectID: int64);
 begin
   inherited Create;
   FNotify := notify;
-  FTaskControlID := taskControlID;
+  FObjectID := objectID;
 end; { TOmniContainerPlatformObserverImpl.Create }
 
 function TOmniContainerPlatformObserverImpl.GetMonitorNotify: IOmniEventMonitorNotify;
@@ -497,7 +498,7 @@ end; { TOmniContainerPlatformObserverImpl.GetMonitorNotify }
 
 procedure TOmniContainerPlatformObserverImpl.Notify;
 begin
-  FNotify.NotifyMessage(FTaskControlID);
+  FNotify.NotifyMessage(FObjectID);
 end; { TOmniContainerPlatformObserverImpl.Notify }
 
 end.

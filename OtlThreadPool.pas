@@ -196,26 +196,6 @@ type
     {$ENDIF MSWINDOWS}
   end; { IOmniThreadPoolMonitor }
 
-  TThreadPoolOperation = (tpoCreateThread, tpoDestroyThread, tpoKillThread,
-    tpoWorkItemCompleted);
-
-  TOmniThreadPoolMonitorInfo = class
-  strict private
-    otpmiTaskID             : int64;
-    otpmiThreadID           : integer;
-    otpmiThreadPoolOperation: TThreadPoolOperation;
-    otpmiUniqueID           : int64;
-  public
-    constructor Create(uniqueID: int64; threadPoolOperation: TThreadPoolOperation;
-      threadID: integer); overload;
-    constructor Create(uniqueID, taskID: int64); overload;
-    property TaskID: int64 read otpmiTaskID;
-    property ThreadPoolOperation: TThreadPoolOperation read
-      otpmiThreadPoolOperation;
-    property ThreadID: integer read otpmiThreadID;
-    property UniqueID: int64 read otpmiUniqueID;
-  end; { TOmniThreadPoolMonitorInfo }
-
   TOTPThreadDataFactoryFunction = function: IInterface;
   TOTPThreadDataFactoryMethod = function: IInterface of object;
 
@@ -464,9 +444,7 @@ type
     owAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
     owDestroying                    : boolean;
     owIdleWorkers                   : TObjectList;
-    {$IFDEF MSWINDOWS}
-    owMonitorObserver               : TOmniContainerWindowsMessageObserver;
-    {$ENDIF MSWINDOWS}
+    owMonitorObserver               : TOmniContainerPlatformObserver;
     owName                          : string;
     owNUMANodes                     : IOmniIntegerSet;
     owProcessorGroups               : IOmniIntegerSet;
@@ -641,23 +619,6 @@ begin
   Result := TOmniThreadPool.Create(threadPoolName);
   SendPoolNotifications(pntCreate, Result);
 end; { CreateThreadPool }
-
-{ TOmniThreadPoolMonitorInfo }
-
-constructor TOmniThreadPoolMonitorInfo.Create(uniqueID: int64;
-  threadPoolOperation: TThreadPoolOperation; threadID: integer);
-begin
-  otpmiUniqueID := uniqueID;
-  otpmiThreadPoolOperation := threadPoolOperation;
-  otpmiThreadID := threadID;
-end; { TOmniThreadPoolMonitorInfo.Create }
-
-constructor TOmniThreadPoolMonitorInfo.Create(uniqueID, taskID: int64);
-begin
-  otpmiUniqueID := uniqueID;
-  otpmiThreadPoolOperation := tpoWorkItemCompleted;
-  otpmiTaskID := taskID;
-end; { TOmniThreadPoolMonitorInfo.Create }
 
 { TOTPThreadDataFactory }
 
@@ -1087,12 +1048,9 @@ end; { TOTPWorker.Cleanup }
 
 procedure TOTPWorker.ForwardThreadCreated(threadID: TThreadID);
 begin
-  {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-        (TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID))
-      );
-  {$ENDIF MSWINDOWS}
+    owMonitorObserver.MonitorNotify.NotifyThreadPool(
+      TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID));
 end; { TOTPWorker.ForwardThreadCreated }
 
 procedure TOTPWorker.ForwardThreadDestroying(threadID: TThreadID;
@@ -1104,12 +1062,9 @@ begin
     task.UnregisterComm(worker.OwnerCommEndpoint);
     worker.Stopped := true;
   end;
-  {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation,
-        threadID)));
-  {$ENDIF MSWINDOWS}
+    owMonitorObserver.MonitorNotify.NotifyThreadPool(
+      TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation, threadID));
 end; { TOTPWorker.ForwardThreadDestroying }
 
 function TOTPWorker.Initialize: boolean;
@@ -1348,11 +1303,9 @@ begin
   Log('Thread %s completed request %s', [worker.Description, workItem.Description]);
   Log('Destroying %s', [workItem.Description]);
   {$ENDIF LogThreadPool}
-  {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
-      (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID)));
-  {$ENDIF MSWINDOWS}
+    owMonitorObserver.MonitorNotify.NotifyThreadPool(
+      TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID));
   FreeAndNil(workItem);
   if owRunningWorkers.IndexOf(worker) < 0 then
     worker := nil;
@@ -1430,9 +1383,7 @@ end; { TOTPWorker.PruneWorkingQueue }
 
 procedure TOTPWorker.RemoveMonitor;
 begin
-  {$IFDEF MSWINDOWS}
   FreeAndNil(owMonitorObserver);
-  {$ENDIF MSWINDOWS}
 end; { TOTPWorker.RemoveMonitor }
 
 procedure TOTPWorker.RequestCompleted(workItem: TOTPWorkItem;
@@ -1513,22 +1464,16 @@ end; { TOTPWorker.SetAsy_OnUnhandledWorkerException }
 
 procedure TOTPWorker.SetMonitor(const params: TOmniValue);
 var
-  {$IFDEF MSWINDOWS}
-  hWindow  : THandle;
-  {$ENDIF MSWINDOWS}
+  notify   : IOmniEventMonitorNotify;
   waitParam: TOmniValue;
 begin
-!
-  {$IFDEF MSWINDOWS}
-  hWindow := params[0];
+  notify := params[0].AsInterface as IOmniEventMonitorNotify;
   if not assigned(owMonitorObserver) then
-    owMonitorObserver :=
-      CreateContainerWindowsMessageObserver(hWindow, COmniPoolMsg, 0, 0)
-  else if owMonitorObserver.Handle <> hWindow then
+    owMonitorObserver := CreateContainerPlatformObserver(notify, owUniqueID)
+  else if owMonitorObserver.MonitorNotify.ID <> notify.ID then
     raise Exception.Create(
       'TOTPWorker.SetMonitor: Task can be only monitored with a single monitor'
       );
-  {$ENDIF MSWINDOWS}
   waitParam := params[1];
   (waitParam.AsObject as TOmniWaitableValue).Signal;
 end; { TOTPWorker.SetMonitor }
