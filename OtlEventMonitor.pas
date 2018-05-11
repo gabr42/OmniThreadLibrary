@@ -282,7 +282,7 @@ end; { TOmniEventMonitor.Monitor }
 procedure TOmniEventMonitor.NotifyMessage(taskControlID: int64);
 begin
   TThread.{$IFDEF OTL_HasForceQueue}ForceQueue{$ELSE}Queue{$ENDIF}(
-    TThread.Current,
+    TThread.CurrentThread,
     procedure
     begin
       ProcessNewMessage(taskControlID);
@@ -292,7 +292,7 @@ end; { TOmniEventMonitor.NotifyMessage }
 procedure TOmniEventMonitor.NotifyTerminated(taskControlID: int64);
 begin
   TThread.{$IFDEF OTL_HasForceQueue}ForceQueue{$ELSE}Queue{$ENDIF}(
-    TThread.Current,
+    TThread.CurrentThread,
     procedure
     begin
       ProcessTerminated(taskControlID);
@@ -303,7 +303,7 @@ procedure TOmniEventMonitor.NotifyThreadPool(
   threadPoolInfo: TOmniThreadPoolMonitorInfo);
 begin
   TThread.{$IFDEF OTL_HasForceQueue}ForceQueue{$ELSE}Queue{$ENDIF}(
-    TThread.Current,
+    TThread.CurrentThread,
     procedure
     begin
       ProcessThreadPool(threadPoolInfo);

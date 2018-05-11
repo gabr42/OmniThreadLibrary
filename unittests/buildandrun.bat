@@ -13,10 +13,10 @@
   if exist %otl_ut_root%\unittest.log del %otl_ut_root%\unittest.log
 
 echo Compiling 32-bit
-  dcc32 CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc32 CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
-  dcc32 TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc32 TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
 echo Running 32-bit
@@ -27,10 +27,10 @@ echo Running 32-bit
   if errorlevel 1 goto exit
 
 echo Compiling 64-bit  
-  dcc64 CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc64 CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
-  dcc64 TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
+  dcc64 TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 -dCONSOLE_TESTRUNNER >%otl_ut_root%\build.log 2>&1
   if errorlevel 1 goto error
 
   if not %PROCESSOR_ARCHITECTURE%==AMD64 goto on32bit
