@@ -8,10 +8,13 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2018-04-19
-   Version           : 1.101
+   Last modification : 2018-05-11
+   Version           : 1.102
 </pre>*)(*
    History:
+     1.102: 2018-05-11
+       - Fixed DSiExecuteInSession. In Unicode, `cmdLine` was not copied to local buffer.
+         In Ansi, `cmdLine` was of wrong string type.
      1.101: 2018-04-19
        - DSiExecuteAndCapture supports CR-delimited output.
      1.100b: 2017-09-05
@@ -5022,7 +5025,7 @@ type
   function  DSiExecuteInSession(sessionID: DWORD; const commandLine: string;
     var processInfo: TProcessInformation; workDir: string): boolean;
   var
-    cmdLine : WideString;
+    cmdLine : string;
     hToken  : THandle;
     pEnv    : pointer;
     pWorkDir: PChar;
@@ -5047,6 +5050,7 @@ type
       pWorkDir := nil
     else
       pWorkDir := @workDir[1];
+    {$IFDEF Unicode}UniqueString(cmdLine);{$ENDIF}
     Result := CreateProcessAsUser(hToken, pWorkDir, PChar(cmdLine), nil, nil, false,
                 NORMAL_PRIORITY_CLASS OR CREATE_UNICODE_ENVIRONMENT,
                 pEnv, nil, si, processInfo);
