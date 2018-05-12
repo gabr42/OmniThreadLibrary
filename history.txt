@@ -12,6 +12,7 @@
   - ThreadData is destroyed in the worker thread and not in the thread pool
     management thread.
   - Reduced hints&warnings. [issue #110]
+  - [Thomas Mueller] Fixed Delphi 2007 packages.
 
 3.07.5: 2017-02-28
 
