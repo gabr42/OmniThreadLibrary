@@ -1058,17 +1058,17 @@ type
     function  Increment: integer; overload; inline;
     function  Increment(value: integer): integer; overload; inline;
     function  Subtract(value: integer): integer; inline;
-    class operator Add(const ai: TOmniAlignedInt32; i: integer): cardinal; inline;
-    class operator Equal(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
+    class operator Add(const ai: TOmniAlignedInt32; i: integer): cardinal; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator Equal(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator GreaterThan(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator GreaterThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
     class operator Implicit(const ai: TOmniAlignedInt32): integer; inline;
     class operator Implicit(const ai: TOmniAlignedInt32): cardinal; inline;
     class operator Implicit(const ai: TOmniAlignedInt32): PInteger; inline;
-    class operator LessThan(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean; inline;
-    class operator Subtract(ai: TOmniAlignedInt32; i: integer): cardinal; inline;
+    class operator LessThan(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator LessThanOrEqual(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator NotEqual(const ai: TOmniAlignedInt32; i: integer): boolean; {$IFDEF OTL_CanInlineOperators}inline;{$ENDIF}
+    class operator Subtract(const ai: TOmniAlignedInt32; i: integer): cardinal;
     property Value: integer read GetValue write SetValue;
   end; { TOmniAlignedInt32 }
 
@@ -4649,7 +4649,7 @@ begin
   Result := (ai.Value <> i);
 end; { TOmniAlignedInt32.NotEqual }
 
-class operator TOmniAlignedInt32.Subtract(ai: TOmniAlignedInt32; i: integer): cardinal;
+class operator TOmniAlignedInt32.Subtract(const ai: TOmniAlignedInt32; i: integer): cardinal;
 begin
   Result := cardinal(int64(ai.Value) - i);
 end; { TOmniAlignedInt32.Subtract }

@@ -13,6 +13,9 @@
     management thread.
   - Reduced hints&warnings. [issue #110]
   - [Thomas Mueller] Fixed Delphi 2007 packages.
+  - Fixed problems with TOmniAlignedInt32 and pre-Seattle compilers.
+  - First parameter in TOmniAlignedInt32 Subtract operator marked as `const` to fix
+    problems with all Delphi compilers.
 
 3.07.5: 2017-02-28
 

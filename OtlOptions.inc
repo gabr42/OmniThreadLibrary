@@ -111,6 +111,10 @@
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
+{$IF CompilerVersion >= 30} //Seattle
+  {$DEFINE OTL_CanInlineOperators}
+{$IFEND}
+
 {$IFNDEF MSWINDOWS}
 {$IFNDEF OTL_MobileSupport}
 {$MESSAGE ERROR 'Only Windows compilation is supported on this Delphi version (at least XE8 is required for non-Windows platforms.'}
