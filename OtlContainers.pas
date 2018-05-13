@@ -1511,7 +1511,7 @@ begin
         {$ENDIF}
         tag := tagSentinel; // retry
       end;
-      if assigned(header) and (TInterlockedEx.Decrement(PInteger(header)^) = 0) then
+      if assigned(header) and (TInterlocked.Decrement(PInteger(header)^) = 0) then
         ReleaseBlock(header);
     end; //while tag = tagSentinel
   finally Release; end;
@@ -1641,7 +1641,7 @@ begin
           obcTailPointer.Move(next, tagSentinel); {$ELSE} Assert(obcTailPointer.CAS(tail, tagDestroying, next, tagSentinel)); {$ENDIF}
           tag := tagSentinel; // retry
         end;
-        if assigned(header) and (TInterlockedEx.Decrement(PInteger(header)^) = 0) then
+        if assigned(header) and (TInterlocked.Decrement(PInteger(header)^) = 0) then
           ReleaseBlock(header);
       end;
     end; //while Result and (tag = tagSentinel)

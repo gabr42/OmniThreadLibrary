@@ -31,7 +31,7 @@ var
     int: TOmniAlignedInt32;
   end;
 begin
-  CheckTrue((NativeUInt(r.int.Addr) mod 4) = 0);
+  CheckTrue((NativeUInt(r.int.Addr) mod 4) = 0, 'alignment');
   r.int.Value := 42;
 
   CheckEquals(42,    r.int.Value);
@@ -66,20 +66,20 @@ var
     int: TOmniAlignedInt32;
   end;
 begin
-  CheckTrue((NativeUInt(r.int.Addr) mod 4) = 0);
+  CheckTrue((NativeUInt(r.int.Addr) mod 4) = 0, 'alignment');
   r.int.Value := 42;
 
-  CheckEquals(42, r.int.Value);
-  CheckFalse(r.int > 42);
-  CheckTrue(r.int >= 42);
-  CheckFalse(r.int < 42);
-  CheckTrue(r.int <= 42);
-  CheckFalse(r.int <> 42);
-  CheckTrue(r.int = 42);
-  CheckEquals(42+17, r.int + 17);
-  CheckEquals(42,    r.int.Value);
-  CheckEquals(42-17, r.int - 17);
-  CheckEquals(42,    r.int.Value);
+  CheckEquals(42, r.int.Value, 'value');
+  CheckFalse(r.int > 42,  'greater');
+  CheckTrue(r.int >= 42,  'greater or equal');
+  CheckFalse(r.int < 42,  'less');
+  CheckTrue(r.int <= 42,  'less or equal');
+  CheckFalse(r.int <> 42, 'not equal');
+  CheckTrue(r.int = 42,   'equal');
+  CheckEquals(42+17, r.int + 17,  'add');
+  CheckEquals(42,    r.int.Value, 'value after add');
+  CheckEquals(42-17, r.int - 17,  'subtract');
+  CheckEquals(42,    r.int.Value, 'value after subtract');
 end;
 
 procedure TInterlockedSTTest.TestAligned64;
@@ -89,7 +89,7 @@ var
     int: TOmniAlignedInt64;
   end;
 begin
-  CheckTrue((NativeUInt(r.int.Addr) mod 8) = 0);
+  CheckTrue((NativeUInt(r.int.Addr) mod 8) = 0, 'alignment');
   r.int.Value := 42;
 
   CheckEquals(42,    r.int.Value);
@@ -118,15 +118,8 @@ end;
 
 procedure TInterlockedSTTest.TestInterlockedEx;
 var
-  i: integer;
   ni: NativeInt;
 begin
-  i := 42;
-  CheckEquals(43, TInterlockedEx.Increment(i));
-  CheckEquals(43, i);
-  CheckEquals(42, TInterlockedEx.Decrement(i));
-  CheckEquals(42, i);
-
   ni := 42;
   CheckEquals(42+17, TInterlockedEx.Add(ni, 17));
   CheckEquals(42+17, ni);

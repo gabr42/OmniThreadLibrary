@@ -40,9 +40,10 @@
 ///   Version           : 2.0
 ///</para><para>
 ///   History:
-///     2.0: 2018-04-24
+///     2.0: 2018-05-13
 ///       - Removed support for pre-XE Delphis.
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
+///       - Removed TInterlockedEx.Increment and .Decrement.
 ///	    1.27: 2018-04-06
 ///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
@@ -587,8 +588,6 @@ type
     class function CAS(const oldValue, newValue: NativeInt; var destination): boolean; overload; static; inline;
     class function CAS(const oldValue, newValue: pointer; var destination): boolean; overload; static; inline;
     class function CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; static; inline;
-    class function Increment(var Target: Integer): Integer; overload; static; inline;
-    class function Decrement(var Target: Integer): Integer; overload; static; inline;
   end; { TInterlockedEx }
 
 function CreateOmniCriticalSection: IOmniCriticalSection;
@@ -2563,6 +2562,15 @@ end; { TPreSignalData.Create }
 
 { TInterlockedEx }
 
+class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt; //inline
+begin
+  {$IFDEF CPUX64}
+  Result := TInterlocked.CompareExchange(Int64(Target), Int64(Value), Int64(Comparand));
+  {$ELSE}
+  Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
+  {$ENDIF}
+end; { TInterlockedEx.CompareExchange }
+
 class function TInterlockedEx.Add(var Target: NativeInt; Increment: NativeInt): NativeInt;
 begin
   {$IFDEF CPUX64}
@@ -2577,8 +2585,7 @@ begin
   {$IFDEF MSWINDOWS} //***WINDOWS***
   Result := OtlSync.CAS(oldValue, newValue, destination);
   {$ELSE}
-  { TODO 1 : Is this OK? }
-  Result := CompareExchange(NativeInt(destination), NativeInt(newValue), NativeInt(oldValue)) = NativeInt(newValue);
+  Result := CompareExchange(NativeInt(destination), NativeInt(newValue), NativeInt(oldValue)) = NativeInt(oldValue);
   {$ENDIF}
 end; { TInterlockedEx.CAS }
 
@@ -2588,37 +2595,19 @@ begin
   {$IFDEF MSWINDOWS} //***WINDOWS***
   Result := OtlSync.CAS(oldValue, newValue, destination);
   {$ELSE}
-  { TODO 1 : Is this OK? }
-  Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(newValue);
+  Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(oldValue);
   {$ENDIF}
 end; { TInterlockedEx.CAS }
-
-class function TInterlockedEx.CompareExchange(var Target: NativeInt; Value: NativeInt; Comparand: NativeInt): NativeInt;
-begin
-  {$IFDEF CPUX64}
-  Result := TInterlocked.CompareExchange(Int64(Target), Int64(Value), Int64(Comparand));
-  {$ELSE}
-  Result := TInterlocked.CompareExchange(Integer(Target), Integer(Value), Integer(Comparand));
-  {$ENDIF}
-end; { TInterlockedEx.CompareExchange }
-
-class function TInterlockedEx.Decrement(var Target: Integer): Integer;
-begin
-  Result := TInterlocked.Decrement(Target);
-end; { TInterlockedEx.Decrement }
-
-class function TInterlockedEx.Increment(var Target: Integer): Integer;
-begin
-  Result := TInterlocked.Increment(Target);
-end; { TInterlockedEx.Increment }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
   GOmniCSInitializer := TOmniCriticalSection.Create;
   {$IFDEF CPUX64}
   CASAlignment := 16;
+  Assert(SizeOf(NativeInt) = SizeOf(int64)); //assumption in TInterlockedEx.Add
   {$ELSE}
   CASAlignment := 8;
+  Assert(SizeOf(NativeInt) = SizeOf(integer)); //assumption in TInterlockedEx.Add
   {$ENDIF CPUX64}
 finalization
   FreeAndNil(GOmniCSInitializer);

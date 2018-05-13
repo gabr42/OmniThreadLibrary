@@ -88,6 +88,10 @@
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
+{$IF CompilerVersion >= 30} //Seattle
+  {$DEFINE OTL_CanInlineOperators}
+{$IFEND}
+
 {$IF CompilerVersion >= 32} //Tokyo
   {$DEFINE OTL_HasForceQueue}
 {$IFEND}

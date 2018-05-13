@@ -26,10 +26,9 @@ uses
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
-  TestOtlParallel in 'TestOtlParallel.pas' {;
-
-{$R *.RES},
-  TestPlatform in 'TestPlatform.pas';
+  TestOtlParallel in 'TestOtlParallel.pas',
+  TestPlatform in 'TestPlatform.pas',
+  TestInterlocked in 'TestInterlocked.pas';
 
 {$R *.RES}
 
