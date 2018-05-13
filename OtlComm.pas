@@ -97,16 +97,16 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
-  Messages,
+  Winapi.Windows,
+  Winapi.Messages,
   GpStuff,
   DSiWin32,
   {$ELSE}
-  Generics.Collections,
+  System.Generics.Collections,
   {$ENDIF}
-  SysUtils,
-  Classes,
-  SyncObjs,
+  System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
   System.Diagnostics,
   OtlPlatform,
   OtlCommon,

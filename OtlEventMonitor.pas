@@ -105,13 +105,13 @@ interface
 
 uses
   OtlCommon,
-  SysUtils,
+  System.SysUtils,
   {$IFDEF MSWINDOWS}
-  Messages,
+  Winapi.Messages,
   GpStuff,
   {$ENDIF}
   GpLists,
-  Classes,
+  System.Classes,
   OtlComm,
   OtlSync,
   OtlTaskControl,

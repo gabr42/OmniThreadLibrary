@@ -306,19 +306,19 @@ interface
 uses
   OtlCommon,
   {$IFDEF MSWINDOWS}
-  Windows,
-  Messages,
+  Winapi.Windows,
+  Winapi.Messages,
   DSiWin32,
   GpStuff,
   {$ELSE}
-  Generics.Collections,
+  System.Generics.Collections,
   {$ENDIF ~MSWINDOWS}
   GpLists,
   GpStringHash,
-  SysUtils,
-  Classes,
-  SyncObjs,
-  TypInfo,
+  System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
+  System.TypInfo,
   OtlSync,
   OtlComm,
   OtlTask,
@@ -1178,11 +1178,9 @@ implementation
 
 uses
   Generics.Collections,
-  ObjAuto,
+  System.ObjAuto,
   OtlHooks,
-  {$IFNDEF MSWINDOWS}
-  Rtti,
-  {$ENDIF ~MSWINDOWS}
+  System.Rtti,
   System.Diagnostics,
   OtlPlatform,
   OtlCommon.Utils,
@@ -2387,7 +2385,7 @@ begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
   {$ELSE}
   // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
   // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
-  methodInfoHeader := ObjAuto.GetMethodInfo(WorkerIntf.Implementor,
+  methodInfoHeader := System.ObjAuto.GetMethodInfo(WorkerIntf.Implementor,
     {$IFNDEF OTL_LongGetMethodInfo}ShortString{$ENDIF}(methodName));
   methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
   // find the method info

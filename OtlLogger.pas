@@ -52,7 +52,7 @@ unit OtlLogger;
 interface
 
 uses
-  Classes,
+  System.Classes,
   OtlContainers;
 
 type
@@ -77,7 +77,7 @@ var
 implementation
 
 uses
-  SysUtils,
+  System.SysUtils,
   {$IFDEF MSWINDOWS}DSiWin32,{$ENDIF}
   System.Diagnostics,
   OtlPlatform,

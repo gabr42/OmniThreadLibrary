@@ -143,8 +143,8 @@ implementation
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows,
-  Contnrs,
+  Winapi.Windows,
+  System.Contnrs,
   DSiWin32,
 {$ENDIF}
   GpLists,

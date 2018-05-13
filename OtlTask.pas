@@ -88,12 +88,12 @@ unit OtlTask;
 interface
 
 uses
-  SysUtils,
-  Classes,
-  SyncObjs,
+  System.SysUtils,
+  System.Classes,
+  System.SyncObjs,
   GpLists,
   {$IFNDEF MSWINDOWS}
-  Generics.Collections,
+  System.Generics.Collections,
   {$ENDIF ~MSWINDOWS}
   OtlCommon,
   OtlSync,

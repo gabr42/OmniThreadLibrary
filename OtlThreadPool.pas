@@ -170,13 +170,11 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
-  {$ELSE}
-  Diagnostics,
+  Winapi.Windows,
   {$ENDIF ~MSWINDOWS}
-  Contnrs,
-  Classes,
-  SysUtils,
+  System.Contnrs,
+  System.Classes,
+  System.SysUtils,
   OtlCommon,
   OtlTask,
   OtlEventMonitor.Notify;
@@ -279,13 +277,13 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}
-  Messages,
+  Winapi.Messages,
   DSiWin32,
   GpStuff,
   {$ENDIF}
-  Math,
-  SyncObjs,
-  TypInfo,
+  System.Math,
+  System.SyncObjs,
+  System.TypInfo,
   System.Types,
   System.Diagnostics,
   OtlPlatform,

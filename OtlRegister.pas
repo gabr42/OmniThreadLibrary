@@ -54,7 +54,7 @@ unit OtlRegister;
 interface
 
 uses
-  Classes,
+  System.Classes,
   OtlEventMonitor;
 
 {$R OtlEventMonitor.dcr}
