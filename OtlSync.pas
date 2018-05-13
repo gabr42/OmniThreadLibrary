@@ -1200,12 +1200,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
-  {$ELSE}
-  { TODO 1 : Is this OK? }
-  until TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference;
-  {$ENDIF}
+  until TInterlockedEx.CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
 end; { TOmniMREW.EnterReadLock }
 
 procedure TOmniMREW.EnterWriteLock;
@@ -1215,12 +1210,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
-  {$ELSE}
-  { TODO 1 : Is this OK? }
-  until TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference;
-  {$ENDIF}
+  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
   //Now wait on all readers
   repeat
   until NativeInt(omrewReference) = 1;
@@ -1229,12 +1219,7 @@ end; { TOmniMREW.EnterWriteLock }
 procedure TOmniMREW.ExitReadLock;
 begin
   //Decrease omrewReference
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  NInterlockedExchangeAdd(NativeInt(omrewReference), -2);
-  {$ELSE}
-  { TODO 1 : Is this OK? }
-  TInterlockedEx.Add(NativeInt(omrewReference), -2)
-  {$ENDIF}
+  TInterlockedEx.Add(NativeInt(omrewReference), -2);
 end; { TOmniMREW.ExitReadLock }
 
 procedure TOmniMREW.ExitWriteLock;
@@ -1260,11 +1245,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
-  {$ELSE}
-  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result);
-  {$ENDIF}
+  until TInterlockedEx.CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
 end; { TOmniMREW.TryEnterReadLock }
 
 function TOmniMREW.TryEnterWriteLock(timeout_ms: integer): boolean;
@@ -1286,11 +1267,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
-  {$ELSE}
-  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference) or Timeout(Result);
-  {$ENDIF}
+  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
   if Result then begin
     //Now wait on all readers
     repeat
@@ -1441,11 +1418,7 @@ begin
     Assert(NativeUInt(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
     Assert(NativeUInt(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
     tmpT := factory();
-    {$IFDEF MSWINDOWS} //***WINDOWS***
-    interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
-    {$ELSE}
     interlockRes := TInterlocked.CompareExchange(PPointer(@storage)^, PPointer(@tmpT)^, nil);
-    {$ENDIF}
     case PTypeInfo(TypeInfo(T))^.Kind of
       tkInterface:
         if interlockRes = nil then
@@ -2582,21 +2555,13 @@ end; { TInterlockedEx.Add }
 
 class function TInterlockedEx.CAS(const oldValue, newValue: pointer; var destination): boolean;
 begin
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  Result := OtlSync.CAS(oldValue, newValue, destination);
-  {$ELSE}
   Result := CompareExchange(NativeInt(destination), NativeInt(newValue), NativeInt(oldValue)) = NativeInt(oldValue);
-  {$ENDIF}
 end; { TInterlockedEx.CAS }
 
 class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
   var destination): boolean;
 begin
-  {$IFDEF MSWINDOWS} //***WINDOWS***
-  Result := OtlSync.CAS(oldValue, newValue, destination);
-  {$ELSE}
   Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(oldValue);
-  {$ENDIF}
 end; { TInterlockedEx.CAS }
 
 initialization
