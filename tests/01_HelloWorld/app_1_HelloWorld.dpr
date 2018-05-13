@@ -13,8 +13,6 @@ uses
   DSiWin32 in '..\..\GpDelphiUnits\src\DSiWin32.pas',
   GpLists in '..\..\GpDelphiUnits\src\GpLists.pas',
   GpStuff in '..\..\GpDelphiUnits\src\GpStuff.pas',
-  HVStringBuilder in '..\..\GpDelphiUnits\src\HVStringBuilder.pas',
-  HVStringData in '..\..\GpDelphiUnits\src\HVStringData.pas',
   OtlContainers in '..\..\OtlContainers.pas',
   OtlCommBufferTest in '..\..\OtlCommBufferTest.pas',
   OtlEventMonitor in '..\..\OtlEventMonitor.pas',
