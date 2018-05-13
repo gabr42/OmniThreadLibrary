@@ -17,8 +17,11 @@ implementation
 {$I OtlOptions.inc}
 
 uses
-  SysUtils,
+  System.SysUtils,
   System.Diagnostics,
+  {$IFDEF MSWINDOWS}
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
   OtlPlatform;
 
 { TPlatformTest }

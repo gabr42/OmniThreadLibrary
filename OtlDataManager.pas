@@ -458,7 +458,7 @@ begin
   if not HasData then
     Result := false
   else begin
-    value.AsInt64 := idpLow.Add(idpStep);
+    value.AsInt64 := idpLow.Add(idpStep) - idpStep; // When this code was written, Add was returning *old* value.
     if idpStep > 0 then
       Result := (value.AsInt64 <= idpHigh)
     else
@@ -514,7 +514,7 @@ begin
       Result := false
     else begin
       midSteps := (((idpHigh - idpLow.Value) div 2 + 1) div idpStep) * idpStep;
-      low := idpLow.Add(midSteps);
+      low := idpLow.Add(midSteps) - midSteps; // When this code was written, Add was returning *old* value.
       high := low + midSteps - idpStep;
       Result := (low * idpSign <= idpHighSign);
       if Result and (high * idpSign > idpHighSign) then

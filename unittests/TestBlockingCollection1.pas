@@ -40,7 +40,7 @@ var
   lastAdded: integer;
   lastRead : TOmniValue;
 begin
-  for iTest := 1 to 1000 do begin
+  for iTest := 1 to 100 do begin
     coll := TOmniBlockingCollection.Create;
     lastAdded := -1;
     lastRead := -2;

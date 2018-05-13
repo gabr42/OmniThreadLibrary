@@ -1201,9 +1201,10 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   until CAS(currentReference, currentReference + 2, NativeInt(omrewReference));
   {$ELSE}
+  { TODO 1 : Is this OK? }
   until TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference;
   {$ENDIF}
 end; { TOmniMREW.EnterReadLock }
@@ -1215,9 +1216,10 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   until CAS(currentReference, currentReference + 1, NativeInt(omrewReference));
   {$ELSE}
+  { TODO 1 : Is this OK? }
   until TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference;
   {$ENDIF}
   //Now wait on all readers
@@ -1228,9 +1230,10 @@ end; { TOmniMREW.EnterWriteLock }
 procedure TOmniMREW.ExitReadLock;
 begin
   //Decrease omrewReference
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   NInterlockedExchangeAdd(NativeInt(omrewReference), -2);
   {$ELSE}
+  { TODO 1 : Is this OK? }
   TInterlockedEx.Add(NativeInt(omrewReference), -2)
   {$ENDIF}
 end; { TOmniMREW.ExitReadLock }
@@ -1258,7 +1261,7 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   until CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
   {$ELSE}
   until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result);
@@ -1284,7 +1287,7 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   until CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
   {$ELSE}
   until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference) or Timeout(Result);
@@ -1439,7 +1442,7 @@ begin
     Assert(NativeUInt(@storage) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: storage is not properly aligned!');
     Assert(NativeUInt(@tmpT) mod SizeOf(pointer) = 0, 'Atomic<T>.Initialize: tmpT is not properly aligned!');
     tmpT := factory();
-    {$IFDEF MSWINDOWS}
+    {$IFDEF MSWINDOWS} //***WINDOWS***
     interlockRes := InterlockedCompareExchangePointer(PPointer(@storage)^, PPointer(@tmpT)^, nil);
     {$ELSE}
     interlockRes := TInterlocked.CompareExchange(PPointer(@storage)^, PPointer(@tmpT)^, nil);
@@ -2571,9 +2574,10 @@ end; { TInterlockedEx.Add }
 
 class function TInterlockedEx.CAS(const oldValue, newValue: pointer; var destination): boolean;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   Result := OtlSync.CAS(oldValue, newValue, destination);
   {$ELSE}
+  { TODO 1 : Is this OK? }
   Result := CompareExchange(NativeInt(destination), NativeInt(newValue), NativeInt(oldValue)) = NativeInt(newValue);
   {$ENDIF}
 end; { TInterlockedEx.CAS }
@@ -2581,9 +2585,10 @@ end; { TInterlockedEx.CAS }
 class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
   var destination): boolean;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS} //***WINDOWS***
   Result := OtlSync.CAS(oldValue, newValue, destination);
   {$ELSE}
+  { TODO 1 : Is this OK? }
   Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(newValue);
   {$ENDIF}
 end; { TInterlockedEx.CAS }

@@ -201,6 +201,10 @@ implementation
 
 uses
   System.SyncObjs,
+  System.Diagnostics,
+  {$IFDEF MSWINDOWS}
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
   OtlHooks,
   OtlPlatform;
 

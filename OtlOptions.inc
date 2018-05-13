@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2012-09-23
-///   Version           : 1.04
+///   Last modification : 2018-05-12
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-05-12
+///       - Removed defines associated with Delphi 2007 do XE as these versions are
+///         no longer supported.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
@@ -46,7 +49,7 @@
 ///       - Released.
 ///</para></remarks>
 
-// See the Configuration block below to configure your build process.
+// Defines below this point should not be changed. Changing them could break OmniThreadLibrary.
 
 {$IFNDEF CONDITIONALEXPRESSIONS}
 'OmniThreadLibrary requires Delphi XE2 or newer'
