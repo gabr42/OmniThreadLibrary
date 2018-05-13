@@ -1268,10 +1268,7 @@ end; { TMethodInfoHeaderHelper.GetReturnInfo }
 function TParamInfoHelper.NextParam: PParamInfo;
 begin
   Result := PParamInfo(NativeUInt(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
-  {$IF CompilerVersion >= 21}
-  // Skip attribute data
-  Result := PParamInfo(NativeUInt(Result) + PWord(Result)^);
-  {$IFEND}
+  Result := PParamInfo(NativeUInt(Result) + PWord(Result)^); // skip attribute data
 end; { TParamInfoHelper.NextParam }
 
 { TOmniInternalMessage }
@@ -2349,34 +2346,18 @@ var
   paramType       : PTypeInfo;
   returnInfo      : PReturnInfo;
 
-  function VerifyObjectFlags(flags, requiredFlags: {$IF CompilerVersion >= 23}System.TypInfo.{$IFEND}TParamFlags): boolean;
+  function VerifyObjectFlags(flags, requiredFlags: System.TypInfo.TParamFlags): boolean;
   begin
     Result := ((flags * requiredFlags) = requiredFlags);
     if not Result then
       Exit;
     flags := flags - requiredFlags;
-    {$IF CompilerVersion < 21}
-    Result := (flags = []);
-    {$ELSEIF CompilerVersion = 21}
-    // Delphi 2010 original and Update 1: []
-    // Delphi 2010 with Update 2 and 4: [pfAddress]
-    Result := (flags = []) or (flags = [pfAddress]);
-    {$ELSE} // best guess
     Result := (flags = [pfAddress]);
-    {$IFEND}
   end; { VerifyObjectFlags }
 
-  function VerifyConstFlags(flags: {$IF CompilerVersion >= 23}System.TypInfo.{$IFEND}TParamFlags): boolean;
+  function VerifyConstFlags(flags: System.TypInfo.TParamFlags): boolean;
   begin
-    {$IF CompilerVersion < 21}
-    Result := (flags = [pfVar]);
-    {$ELSEIF CompilerVersion = 21}
-    // Delphi 2010 original and Update 1: [pfVar]
-    // Delphi 2010 Update 2 and 4: [pfConst, pfReference]
-    Result := (flags = [pfVar]) or (flags = [pfConst, pfReference]);
-    {$ELSE} // best guess
     Result := (flags = [pfConst, pfReference]);
-    {$IFEND}
   end; { VerifyConstFlags }
 
 begin { TOmniTaskExecutor.GetMethodAddrAndSignature }

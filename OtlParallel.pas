@@ -1360,10 +1360,6 @@ uses
   OtlContainerObserver;
 
 type
-{$IF CompilerVersion < 23} //pre-XE2
-  NativeInt = integer;
-{$IFEND}
-
   IOmniPipelineStageEx = interface ['{C34393C7-E9EE-4CE7-895F-EECA553F4E54}']
     function  GetHandleExceptions: boolean;
     function  GetNumTasks: integer;
