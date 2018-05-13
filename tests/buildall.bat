@@ -13,6 +13,13 @@
   mkdir %otl_ut_root%\dcu\Win32 >nul 2>nul
   mkdir %otl_ut_root%\dcu\Win64 >nul 2>nul  
 
+  set _comp_fmx=1
+  if /i %1==XE2 set _comp_fmx=0
+  if /i %1==XE3 set _comp_fmx=0
+  if /i %1==XE4 set _comp_fmx=0
+  if /i %1==XE5 set _comp_fmx=0
+  if /i %1==XE6 set _comp_fmx=0
+
   dcc64 >nul 2>nul
   if errorlevel 1 goto no64
   
@@ -38,35 +45,17 @@
 
   for %%a in (*.%1.dproj) do (
     set c=1
-  )
+  )                   
 
   for %%a in (*.%1.test) do (
     set c=1
-  )
+  )       
   if %c%.==1. (
     for %%b in (*.dpr) do (
-      if %%~xb==.dpr (  
-        if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
-        dcc32 /b /u..\..;..\..\GpDelphiUnits\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 %%b >%otl_ut_root%\build.log 2>&1
-        if errorlevel 1 (
-          echo %2[32]: *** ERROR *** 
-          type %otl_ut_root%\build.log
-          exit /b 1
-        ) else (
-          echo %2[32]: OK
-        )
-        if %hasdcc64%==1 (
-          if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
-          dcc64 /b /u..\..;..\..\GpDelphiUnits\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 %%b >%otl_ut_root%\build.log 2>&1
-          if errorlevel 1 (
-            echo %2[64]: *** ERROR *** 
-            type %otl_ut_root%\build.log
-            exit /b 1
-          ) else (
-            echo %2[64]: OK
-          )
-        )
-      )
+      if %%~xb==.dpr (
+        call :compile %%b
+        if errorlevel 1 exit /b 1
+      )  
     )
   ) else (
     echo %2: Missing
@@ -74,6 +63,35 @@
     dcc32 >nul 2>&1
   )
 
+  goto :eof
+  
+:compile
+  set _b1=%1
+  set _b2=%_b1:FMX=%
+  if not %_b1%==%_b2% (
+      if %_comp_fmx%==0 goto :eof
+  )
+  
+  if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
+  dcc32 /b /u..\..;..\..\GpDelphiUnits\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win32 %1 >%otl_ut_root%\build.log 2>&1
+  if errorlevel 1 (
+    echo %1[32]: *** ERROR *** 
+    type %otl_ut_root%\build.log
+    exit /b 1
+  ) else (
+    echo %1[32]: OK
+  )
+  if %hasdcc64%==1 (
+    if exist %otl_ut_root%\build.log del %otl_ut_root%\build.log >nul 2>nul
+    dcc64 /b /u..\..;..\..\GpDelphiUnits\src;..\..\..\fastmm /i..\.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e%otl_ut_root%\exe -n0%otl_ut_root%\dcu\win64 %1 >%otl_ut_root%\build.log 2>&1
+    if errorlevel 1 (
+      echo %1[64]: *** ERROR *** 
+      type %otl_ut_root%\build.log
+      exit /b 1
+    ) else (
+      echo %1[64]: OK
+    )
+  )
   goto :eof
 
 :usage
