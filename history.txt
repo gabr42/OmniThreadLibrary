@@ -5,6 +5,12 @@
   - Removed compatibility with Delphi versions up to and including 2010.
   - TOmniValue.AsArrayItemOV[] property removed (use ArrayAsItem[]).
 
+- New features:
+  - Platform-independant 'event' observer TOmniContainerEventObserver.
+  - Platform-independant 'window' observer TOmniContainerPlatformObserver.
+  - TOmniContainerWindowsEventObserver and TOmniContainerWindowsMessageObserver are
+    still implemented for backwards compatibility.
+
 3.07.6: <<unreleased>>
 
 - New features:
