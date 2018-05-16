@@ -99,12 +99,10 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
-  {$IFDEF OTL_MobileSupport}
   TOmniContainerEventObserver = class(TOmniContainerObserver)
   public
     function GetEvent: IOmniEvent; virtual; abstract;
   end; { TOmniContainerEventObserver }
-  {$ENDIF OTL_MobileSupport}
 
   // Platform-independant observer using TThread.Queue as a communication mechanism.
   TOmniContainerPlatformObserver = class(TOmniContainerObserver)
@@ -146,10 +144,8 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
-  {$IFDEF OTL_MobileSupport}
   function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
     TOmniContainerEventObserver;
-  {$ENDIF OTL_MobileSupport}
 
   function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
     objectID: int64): TOmniContainerPlatformObserver;
@@ -172,7 +168,6 @@ uses
   System.SysUtils;
 
 type
-  {$IFDEF OTL_MobileSupport}
   TOmniContainerEventObserverImpl = class(TOmniContainerEventObserver)
   strict private
     ceoEvent: IOmniEvent;
@@ -181,7 +176,6 @@ type
     function  GetEvent: IOmniEvent; override;
     procedure Notify; override;
   end; { TOmniContainerEventObserverImpl }
-  {$ENDIF OTL_MobileSupport}
 
   TOmniContainerPlatformObserverImpl = class(TOmniContainerPlatformObserver)
   strict private
@@ -224,13 +218,11 @@ type
 
 { exports }
 
-{$IFDEF OTL_MobileSupport}
 function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
   TOmniContainerEventObserver;
 begin
   Result := TOmniContainerEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
-{$ENDIF OTL_MobileSupport}
 
 function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
   objectID: int64): TOmniContainerPlatformObserver;
@@ -275,8 +267,6 @@ begin
   coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
 
-{$IFDEF OTL_MobileSupport}
-
 { TOmniContainerEventObserverImpl }
 
 constructor TOmniContainerEventObserverImpl.Create(const externalEvent: IOmniEvent);
@@ -295,8 +285,6 @@ procedure TOmniContainerEventObserverImpl.Notify;
 begin
   ceoEvent.SetEvent;
 end; { TOmniContainerWindowsEventObserverImpl.Notify }
-
-{$ENDIF OTL_MobileSupport}
 
 {$IFDEF MSWINDOWS}
 
