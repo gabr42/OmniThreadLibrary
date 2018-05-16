@@ -40,6 +40,8 @@
 ///   Version           : 1.0b
 ///</para><para>
 ///   History:
+///     2.0: 2018-04-23
+///       - Removed pre-XE2 support.
 ///     1.0b: 2018-02-26
 ///       - Semantics of OTL_DontSetThreadName was reversed.
 ///     1.0a: 2017-11-28
