@@ -6,8 +6,9 @@
   - TOmniValue.AsArrayItemOV[] property removed (use ArrayAsItem[]).
 
 - New features:
-  - Platform-independant 'event' observer TOmniContainerEventObserver.
-  - Platform-independant 'window' observer TOmniContainerPlatformObserver.
+  - Added platform-independant 'event' observer TOmniContainerEventObserver.
+  - Added platform-independant observer TOmniContainerPlatformObserver used to feed
+    TOTLEventMonitor component.
   - TOmniContainerWindowsEventObserver and TOmniContainerWindowsMessageObserver are
     still implemented for backwards compatibility.
 

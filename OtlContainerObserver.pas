@@ -105,6 +105,7 @@ type
   end; { TOmniContainerEventObserver }
 
   // Platform-independant observer using TThread.Queue as a communication mechanism.
+  // Used in the TOTLEventMonitor component.
   TOmniContainerPlatformObserver = class(TOmniContainerObserver)
   strict protected
     function GetMonitorNotify: IOmniEventMonitorNotify; virtual; abstract;
