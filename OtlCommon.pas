@@ -1010,14 +1010,14 @@ var
 
 implementation
 
-{$IFDEF MSWINDOWS}
 uses
+{$IFDEF MSWINDOWS}
   {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
   GpStringHash,
-  OtlPlatform,
   OtlCommon.Utils,
-  OtlSync;
+  OtlSync,
 {$ENDIF}
+  OtlPlatform;
 
 type
 {$IFDEF MSWINDOWS}
@@ -1137,6 +1137,9 @@ type
 
   TOmniAffinity = class(TInterfacedObject, IOmniAffinity)
   strict private
+  const
+    CPUIDs = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$';
+  var
     oaTarget: TOmniAffinityTarget;
   protected
     function  GetAsString: string;
@@ -3227,8 +3230,17 @@ begin
 end; { TOmniAffinity.Create }
 
 function TOmniAffinity.GetAsString: string;
+var
+  affinity: NativeUInt;
+  idxID   : integer;
 begin
-  Result := DSiAffinityMaskToString(Mask);
+  Result := '';
+  affinity := GetMask;
+  for idxID := 1 to Length(CPUIDs) do begin
+    if Odd(affinity) then
+      Result := Result + CPUIDs[idxID];
+    affinity := affinity SHR 1;
+  end;
 end; { TOmniAffinity.GetAsString }
 
 function TOmniAffinity.GetCount: integer;
@@ -3272,6 +3284,10 @@ begin
 end; { TOmniAffinity.GetCountPhysical }
 
 function TOmniAffinity.GetMask: NativeUInt;
+{$IFNDEF MSWINDOWS}
+var
+  i: integer;
+{$ENDIF ~MSWINDOWS}
 begin
   {$IFDEF MSWINDOWS}
   case oaTarget of
@@ -3415,8 +3431,10 @@ begin
 end; { TOmniThreadEnvironment.GetAffinity }
 
 function TOmniThreadEnvironment.GetGroupAffinity: TOmniGroupAffinity;
+{$IFDEF MSWINDOWS}
 var
   groupAffinity: TGroupAffinity;
+{$ENDIF MSWINDOWS}
 begin
   {$IFDEF MSWINDOWS}
   if DSiGetThreadGroupAffinity(GetCurrentThread, groupAffinity) then begin
@@ -3439,8 +3457,10 @@ begin
 end; { TOmniThreadEnvironment.GetID }
 
 procedure TOmniThreadEnvironment.SetGroupAffinity(const value: TOmniGroupAffinity);
+{$IFDEF MSWINDOWS}
 var
   groupAffinity: TGroupAffinity;
+{$ENDIF MSWINDOWS}
 begin
   {$IFDEF MSWINDOWS}
   FillChar(groupAffinity, SizeOf(groupAffinity), 0);
@@ -3544,7 +3564,7 @@ begin
 end; { TOmniNUMANodes.GetItem }
 
 procedure TOmniNUMANodes.InitializeProximity;
-
+{$IFDEF MSWINDOWS}
   function MakeDWORD(const name: AnsiString): DWORD;
   begin
     Result := (Ord(name[1]) SHL 24)
@@ -3565,8 +3585,13 @@ var
   proximityToNuma: array of integer;
   q              : PByte;
   size           : integer;
-
+{$ENDIF MSWINDOWS}
 begin { TOmniNUMANodes.InitializeProximity }
+{$IFNDEF MSWINDOWS}
+  SetLength(FProximity, 1);
+  SetLength(FProximity[0], 1);
+  FProximity[0,0] := 10;
+{$ELSE}
   if not DSiGetNumaHighestNodeNumber(highestNuma) then
     raise Exception.Create('TOmniNUMANodes.InitializeProximity: Failed to read highest NUMA node number');
 
@@ -3604,7 +3629,7 @@ begin { TOmniNUMANodes.InitializeProximity }
       end;
     finally FreeMem(p); end;
   end; // if size > 44
-
+{$ENDIF MSWINDOWS}
   FProximityInitialized := true;
 end; { TOmniNUMANodes.InitializeProximity }
 
