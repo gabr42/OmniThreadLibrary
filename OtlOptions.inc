@@ -71,6 +71,7 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 {$TYPEINFO OFF}
+{$ZEROBASEDSTRINGS OFF}
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
