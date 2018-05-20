@@ -4051,11 +4051,11 @@ end; { TOmniAlignedInt32.Decrement }
 
 function TOmniAlignedInt32.GetValue: integer;
 begin
-{$IFDEF CPU386}
+{$IFDEF Defined(CPU386) or Defined(CPUX64)}
   Result := Addr^;
 {$ELSE}
   Result := TInterlocked.CompareExchange(integer(Addr^), 0, 0);
-{$ENDIF ~CPU386}
+{$ENDIF}
 end; { TOmniAlignedInt32.GetValue }
 
 function TOmniAlignedInt32.Increment: integer;
@@ -4070,11 +4070,11 @@ end; { TOmniAlignedInt32.Increment }
 
 procedure TOmniAlignedInt32.SetValue(value: integer);
 begin
-{$IFDEF CPU386}
+{$IFDEF Defined(CPU386) or Defined(CPUX64)}
   Addr^ := value;
 {$ELSE}
   TInterlocked.Exchange(integer(Addr^), value);
-{$ENDIF ~CPU386}
+{$ENDIF}
 end; { TOmniAlignedInt32.SetValue }
 
 class operator TOmniAlignedInt32.Add(const ai: TOmniAlignedInt32; i: integer): cardinal;
@@ -4175,11 +4175,11 @@ end; { TOmniAlignedInt64.Decrement }
 
 function TOmniAlignedInt64.GetValue: int64;
 begin
-{$IFDEF CPU386}
+{$IFDEF Defined(CPU386) or Defined(CPUX64)}
   Result := Addr^;
 {$ELSE}
   Result := TInterlocked.Read(Addr^);
-{$ENDIF ~CPU386}
+{$ENDIF}
 end; { TOmniAlignedInt64.GetValue }
 
 function TOmniAlignedInt64.Increment: int64;
@@ -4194,11 +4194,11 @@ end; { TOmniAlignedInt64.Increment }
 
 procedure TOmniAlignedInt64.SetValue(value: int64);
 begin
-{$IFDEF CPU386}
+{$IFDEF Defined(CPU386) or Defined(CPUX64)}
   Addr^ := value;
 {$ELSE}
   TInterlocked.Exchange(int64(Addr^), value);
-{$ENDIF ~CPU386}
+{$ENDIF}
 end; { TOmniAlignedInt64.SetValue }
 
 { TOmniIntegerSet }
