@@ -1,0 +1,8 @@
+[Global]
+Folder=h:\razvoj\omnithreadlibrary-v4\unittests
+Cmd=$(Path)\dcc32.exe CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
+Cmd=$(Path)\dcc32.exe TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
+Cmd="$(Scratch)\exe\TestRunner.exe"
+Cmd=$(Path)\dcc64.exe CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
+Cmd=$(Path)\dcc64.exe TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
+Cmd="$(Scratch)\exe\TestRunner.exe"
