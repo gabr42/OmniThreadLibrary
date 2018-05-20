@@ -1,0 +1,45 @@
+[Global]
+Scratch=c:\0\MultiBuilder\$(EnvironmentName)
+ForceDir=$(Scratch)\exe;$(Scratch)\dcu;$(Scratch)\dcu\win32;$(Scratch)\dcu\win64
+
+[Delphi 2007]
+Path=d:\Delphi\5.0\bin
+
+[Delphi 2009]
+Path=d:\Delphi\6.0\bin
+
+[Delphi 2010]
+Path=d:\Delphi\7.0\bin
+
+[Delphi XE]
+Path=d:\Delphi\8.0\bin
+
+[Delphi XE2]
+Path=d:\Delphi\9.0\bin
+
+[Delphi XE3]
+Path=d:\Delphi\10.0\bin
+
+[Delphi XE4]
+Path=d:\Delphi\11.0\bin
+
+[Delphi XE5]
+Path=d:\Delphi\12.0\bin
+
+[Delphi XE6]
+Path=d:\Delphi\14.0\bin
+
+[Delphi XE7]
+Path=d:\Delphi\15.0\bin
+
+[Delphi XE8]
+Path=d:\Delphi\16.0\bin
+
+[Delphi 10 Seattle]
+Path=d:\Delphi\17.0\bin
+
+[Delphi 10.1 Berlin]
+Path=d:\Delphi\18.0\bin
+
+[Delphi 10.2 Tokyo]
+Path=d:\Delphi\19.0\bin
