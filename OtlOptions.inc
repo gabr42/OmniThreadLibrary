@@ -71,7 +71,6 @@
 {$TYPEDADDRESS OFF}
 {$ASSERTIONS ON}
 {$TYPEINFO OFF}
-{$ZEROBASEDSTRINGS OFF}
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
@@ -87,6 +86,7 @@
 
 {$IF CompilerVersion >= 29} //DXE8
   {$DEFINE OTL_MobileSupport}
+  {$ZEROBASEDSTRINGS OFF}
 {$IFEND}
 
 {$IF CompilerVersion >= 30} //Seattle

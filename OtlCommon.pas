@@ -4178,7 +4178,7 @@ begin
 {$IFDEF Defined(CPU386) or Defined(CPUX64)}
   Result := Addr^;
 {$ELSE}
-  Result := TInterlocked.Read(Addr^);
+  Result := TInterlocked.CompareExchange(int64(Addr^), 0, 0);
 {$ENDIF}
 end; { TOmniAlignedInt64.GetValue }
 
