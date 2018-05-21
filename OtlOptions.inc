@@ -74,6 +74,7 @@
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
+  {$DEFINE OTL_CountdownHasSpinCount}
 {$IFEND}
 
 {$IF CompilerVersion >= 26} //DXE5

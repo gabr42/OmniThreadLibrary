@@ -1,7 +1,8 @@
 4.0: <<work in progress>>
 
 - Breaking changes:
-  - *** TOmniValueInt32/64.Add/.Subtract were returning *old* value. Fixed now, but may break your code.
+  - TOmniValueInt32/64.Add/.Subtract were returning *old* value. Fixed now, 
+    but the change may break your code.
   - Removed compatibility with Delphi versions up to and including 2010.
   - TOmniValue.AsArrayItemOV[] property removed (use ArrayAsItem[]).
 

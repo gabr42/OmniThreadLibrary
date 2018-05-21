@@ -191,7 +191,6 @@ type
     property LockCount: integer read GetLockCount;
   end; { IOmniCriticalSection }
 
-  {$IFDEF OTL_MobileSupport}
   IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
     procedure EnterGate;
     procedure LeaveGate;
@@ -251,7 +250,6 @@ type
     function  BaseCountdown: TCountdownEvent;
     procedure Reset;
   end; { IOmniCountdownEvent }
-  {$ENDIF OTL_MobileSupport}
 
   //At some point this type will be dropped and all the codebase will use
   //IOmniEvent or something similar.
@@ -594,10 +592,8 @@ function CreateOmniCriticalSection: IOmniCriticalSection;
 function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
-{$IFDEF OTL_MobileSupport}
 function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
 function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
-{$ENDIF OTL_MobileSupport}
 
 {$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
@@ -683,7 +679,6 @@ type
   {$ENDIF MSWINDOWS}
   end; { TOmniCancellationToken }
 
-  {$IFDEF OTL_MobileSupport}
   TOmniSynchroObject = class abstract(TSynchroObject, IInterface, IOmniSynchro)
   private
     procedure PerformObservableAction(Action: TProc; DoLock: boolean);
@@ -757,6 +752,7 @@ type
     function  IsSignalled: boolean; override;
   end; { TOmniEvent }
 
+  {$IFDEF OTL_MobileSupport}
   {$IFNDEF MSWINDOWS}
   TOneCondition = class(TSynchroWaitFor.TCondition)
   public
@@ -813,7 +809,6 @@ begin
   Result := TOmniResourceCount.Create(initialCount);
 end; { CreateResourceCount }
 
-{$IFDEF OTL_MobileSupport}
 function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
 begin
   Result := TOmniCountdownEvent.Create(Count, SpinCount, AShareLock);
@@ -823,7 +818,6 @@ function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: 
 begin
   Result := TOmniEvent.Create(AManualReset, InitialState, AShareLock);
 end; { CreateOmniEvent }
-{$ENDIF OTL_MobileSupport}
 
 {$IFDEF MSWINDOWS}
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
@@ -2259,8 +2253,6 @@ begin
   {$ENDIF MSWINDOWS}
 end; { TOmniSingleThreadUseChecker.DebugCheck }
 
-{$IFDEF OTL_MobileSupport}
-
 { TOmniSynchroObject }
 
 constructor TOmniSynchroObject.Create(ABase: TSynchroObject; OwnsIt: boolean;
@@ -2439,7 +2431,7 @@ end; { TSynchroSpin.Destroy }
 
 constructor TOmniCountdownEvent.Create(Count, SpinCount: Integer; const AShareLock: IOmniCriticalSection);
 begin
-  FCountdown := TCountdownEvent.Create(Count, SpinCount);
+  FCountdown := TCountdownEvent.Create(Count {$IFDEF OTL_CountdownHasSpinCount}, SpinCount{$ENDIF});
   inherited Create(FCountdown, True, AShareLock)
 end; { TOmniCountdownEvent.Create }
 
@@ -2531,7 +2523,6 @@ begin
 end; { TPreSignalData.Create }
 
 {$ENDIF ~MSWINDOWS}
-{$ENDIF OTL_MobileSupport}
 
 { TInterlockedEx }
 
