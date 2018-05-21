@@ -1,3 +1,7 @@
+[Global]
+Scratch=c:\0\MultiBuilder\$(EnvironmentName)
+ForceDir=$(Scratch)\exe;$(Scratch)\dcu;$(Scratch)\dcu\win32;$(Scratch)\dcu\win64
+
 [Delphi XE2]
 Path=d:\Delphi\9.0\bin
 

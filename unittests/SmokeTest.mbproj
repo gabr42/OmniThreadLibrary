@@ -7,13 +7,11 @@ dcc64.exe=DccCleanup
 ;dccosx.exe=DccCleanup;OSXFilter
 
 [Global]
-Scratch=c:\0\MultiBuilder\$(EnvironmentName)
-ForceDir=$(Scratch)\exe;$(Scratch)\dcu;$(Scratch)\dcu\win32;$(Scratch)\dcu\win64
-Folder=h:\razvoj\omnithreadlibrary-v4\unittests
+WorkingDIr=h:\razvoj\omnithreadlibrary-v4\unittests
 Cmd=$(Path)\dcc32.exe CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
 Cmd=$(Path)\dcc32.exe TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
 Cmd="$(Scratch)\exe\TestRunner.exe"
-;Folder=new workdir
+;WorkingDir=new workdir
 Cmd=$(Path)\dcc64.exe CompileAllUnits -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
 Cmd=$(Path)\dcc64.exe TestRunner -b -u..;..\GpDelphiUnits\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
 Cmd="$(Scratch)\exe\TestRunner.exe"
