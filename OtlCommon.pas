@@ -4516,7 +4516,7 @@ end; { NextOid }
 function TOmniAlignedInt32.Subtract(value: integer): integer; //inline
 begin
   {$IFDEF MSWINDOWS}
-  Result := InterlockedExchangeAdd(Addr^, -value);
+  Result := InterlockedExchangeAdd(Addr^, -value) - value;
   {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
@@ -4530,7 +4530,7 @@ end; { TOmniAlignedInt32.Initialize }
 function TOmniAlignedInt32.Add(value: integer): integer;
 begin
   {$IFDEF MSWINDOWS}
-  Result := InterlockedExchangeAdd(Addr^, value);
+  Result := InterlockedExchangeAdd(Addr^, value) + value;
   {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
@@ -4563,7 +4563,7 @@ end; { TOmniAlignedInt32.Decrement }
 function TOmniAlignedInt32.Decrement(value: integer): integer;
 begin
   {$IFDEF MSWINDOWS}
-  Result := Subtract(value) - value;
+  Result := Subtract(value);
   {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
@@ -4586,7 +4586,7 @@ end; { TOmniAlignedInt32.Increment }
 function TOmniAlignedInt32.Increment(value: integer): integer;
 begin
   {$IFDEF MSWINDOWS}
-  Result := Add(value) + value;
+  Result := Add(value);
   {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
@@ -4659,7 +4659,7 @@ end; { TOmniAlignedInt32.Subtract }
 function TOmniAlignedInt64.Subtract(value: int64): int64; //inline
 begin
   {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedExchangeAdd64(Addr^, -value);
+  Result := DSiInterlockedExchangeAdd64(Addr^, -value) - value;
   {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
@@ -4674,7 +4674,7 @@ end; { TOmniAlignedInt64.Initialize }
 function TOmniAlignedInt64.Add(value: int64): int64;
 begin
   {$IFDEF MSWINDOWS}
-  Result := DSiInterlockedExchangeAdd64(Addr^, value);
+  Result := DSiInterlockedExchangeAdd64(Addr^, value) + value;
   {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}
@@ -4707,7 +4707,7 @@ end; { TOmniAlignedInt64.Decrement }
 function TOmniAlignedInt64.Decrement(value: int64): int64;
 begin
   {$IFDEF MSWINDOWS}
-  Result := Subtract(value) - value;
+  Result := Subtract(value);
   {$ELSE}
   Result := TInterlocked.Add(Addr^, -value);
   {$ENDIF}
@@ -4730,7 +4730,7 @@ end; { TOmniAlignedInt64.Increment }
 function TOmniAlignedInt64.Increment(value: int64): int64;
 begin
   {$IFDEF MSWINDOWS}
-  Result := Add(value) + value;
+  Result := Add(value);
   {$ELSE}
   Result := TInterlocked.Add(Addr^, value);
   {$ENDIF}

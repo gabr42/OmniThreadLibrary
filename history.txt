@@ -1,5 +1,8 @@
 3.07.6: <<unreleased>>
 
+- Breaking changes:
+  - TOmniValueInt32/64.Add/.Subtract were returning *old* value. Fixed now, 
+    but this change may break your code.
 - New features:
   - Implemented TOmniValue.LogValue.
   - Implemented TOmniBlockingCollection.FromArray<T>, .FromRange<T>, 

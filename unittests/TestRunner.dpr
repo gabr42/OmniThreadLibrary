@@ -27,7 +27,8 @@ uses
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
-  TestOtlParallel in 'TestOtlParallel.pas';
+  TestOtlParallel in 'TestOtlParallel.pas',
+  TestInterlocked in 'TestInterlocked.pas';
 
 {$R *.RES}
 
