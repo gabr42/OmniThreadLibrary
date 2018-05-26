@@ -2613,7 +2613,7 @@ begin
   {$ELSE}{$IFDEF OTL_HasTInterlocked}
   Result := TInterlocked.Add(Integer(Target), Integer(Increment));
   {$ELSE}
-  Result := InterlockedExchangeAdd(Target, Increment);
+  Result := InterlockedExchangeAdd(Target, Increment) + Increment;
   {$ENDIF}{$ENDIF}
 end; { TInterlockedEx.Add }
 

@@ -91,12 +91,13 @@ begin
   if ansiName = LastThreadName then
     Exit;
 
-  TThread.NameThreadForDebugging(string(name));
+  TThread.NameThreadForDebugging({$IFDEF OTL_NameThreadHasStringParameter}name{$ELSE}ansiName{$ENDIF});
   LastThreadName := ansiName;
 end; { SetThreadName }
 
 {$ELSE ~OTL_HasNameThreadForDebugging}
 {$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
 
 procedure SetThreadName(const name: string);
 type
@@ -125,6 +126,7 @@ begin
   end;
 end; { SetThreadName }
 
+{$WARN SYMBOL_PLATFORM ON}
 {$ELSE ~MSWINDOWS}
 
 procedure SetThreadName(const name: string);

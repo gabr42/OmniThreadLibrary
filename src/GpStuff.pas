@@ -216,7 +216,7 @@ uses
   {$IF CompilerVersion >= 17} //D2005+
     {$DEFINE USE_STRICT}
   {$IFEND}
-  {$IF CompilerVersion >= 26} //DXE5+
+  {$IF CompilerVersion >= 25} //DXE4+
     {$IFDEF MSWINDOWS}
     {$DEFINE GpStuff_AnsiStrings}
     {$ENDIF MSWINDOWS}

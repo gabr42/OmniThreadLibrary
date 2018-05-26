@@ -542,7 +542,7 @@ interface
   {$UNDEF DSiNeedUTF}{$DEFINE DSiNeedVariants}{$UNDEF DSiNeedStartupInfo}{$UNDEF DSiHasSafeNativeInt}{$UNDEF UseAnsiStrings}
   {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
-  {$IF CompilerVersion >= 26}{$DEFINE DSiUseAnsiStrings}{$IFEND}
+  {$IF CompilerVersion >= 25}{$DEFINE DSiUseAnsiStrings}{$IFEND}
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
   {$IF CompilerVersion >= 22}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND} // only XE+ has 'good enough' generics
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}

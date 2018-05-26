@@ -1,13 +1,18 @@
+[Filters]
+dcc32.exe=DccCleanup $(DccFilterSwitch)
+dcc64.exe=DccCleanup $(DccFilterSwitch)
+
 [Global]
-Folder=h:\razvoj\omnithreadlibrary\unittests
-Cmd=$(Path)\dcc32.exe CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
-Cmd=$(Path)\dcc32.exe TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
-Cmd="$(Scratch)\exe\TestRunner.exe"
+ForceDir=$(Scratch)\exe;$(Scratch)\dcu;$(Scratch)\dcu\win32;$(Scratch)\dcu\win64
+WorkingDir=h:\razvoj\omnithreadlibrary\unittests
+Execute=$(Path)\dcc32.exe CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
+Execute=$(Path)\dcc32.exe TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
+Execute="$(Scratch)\exe\TestRunner.exe"
 
 [Default]
-Cmd=$(Path)\dcc64.exe CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
-Cmd=$(Path)\dcc64.exe TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
-Cmd="$(Scratch)\exe\TestRunner.exe"
+Execute=$(Path)\dcc64.exe CompileAllUnits -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
+Execute=$(Path)\dcc64.exe TestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
+Execute="$(Scratch)\exe\TestRunner.exe"
 
 [Delphi 2007]
 Null=

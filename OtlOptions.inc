@@ -97,9 +97,10 @@
 
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
+  {$DEFINE OTL_NameThreadHasStringParameter}
 {$IFEND}
 
-{$IF CompilerVersion >= 26} //DXE5
+{$IF CompilerVersion >= 25} //DXE4
   {$DEFINE OTL_StrPasInAnsiStrings}
 {$IFEND}
 
