@@ -20,6 +20,10 @@ type
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  DSiWin32,
+  {$ENDIF MSWINDOWS}
   SyncObjs;
 
 { TInterlockedSTTest }

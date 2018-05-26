@@ -1,6 +1,6 @@
 [Global]
 Scratch=c:\0\MultiBuilder\$(EnvironmentName)
-DccFilterSwitch=/FailOnWarning
+DccFilterSwitch=/FailOnWarning /FailOnHint
 
 [Delphi 2007]
 Path=d:\Delphi\5.0\bin
