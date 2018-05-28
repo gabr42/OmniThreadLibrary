@@ -34,6 +34,9 @@
 ///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.01: 2018-05-28
+///       - Introduced OTL_NameThreadHasStringParameter and OTL_HasVolatileAttribute.
+///       - OTL_StrPasInAnsiStrings moved from XE5 to XE4 section.
 ///     2.0: 2018-05-12
 ///       - Removed defines associated with Delphi 2007 do XE as these versions are
 ///         no longer supported.
@@ -75,10 +78,12 @@
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
   {$DEFINE OTL_CountdownHasSpinCount}
+  {$DEFINE OTL_NameThreadHasStringParameter}
 {$IFEND}
 
-{$IF CompilerVersion >= 26} //DXE5
+{$IF CompilerVersion >= 25} //DXE4
   {$DEFINE OTL_StrPasInAnsiStrings}
+  {$DEFINE OTL_HasVolatileAttribute}
 {$IFEND}
 
 {$IF CompilerVersion >= 28} //DX7

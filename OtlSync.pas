@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-04-24
-///   Version           : 2.0
+///   Last modification : 2018-05-28
+///   Version           : 2.0a
 ///</para><para>
 ///   History:
+///     2.0a: 2018-05-28
+///       - Fixed warnings.
 ///     2.0: 2018-05-13
 ///       - Removed support for pre-XE Delphis.
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
@@ -687,13 +689,14 @@ type
     function  Handle: THandle;
     {$ENDIF}
   strict protected
-    FBase               : TSynchroObject;
-    FOwnsBase           : boolean;
-    FLock               : TSpinLock;
-    FObservers          : TList<IOmniSynchroObserver>;
-    FData               : TArray<TObject>;
-    [Volatile] FRefCount: integer;
-    FShareLock          : IOmniCriticalSection;
+    FBase     : TSynchroObject;
+    FOwnsBase : boolean;
+    FLock     : TSpinLock;
+    FObservers: TList<IOmniSynchroObserver>;
+    FData     : TArray<TObject>;
+    {$IFDEF OTL_HasVolatileAttribute}[Volatile]{$ENDIF}
+    FRefCount : integer;
+    FShareLock: IOmniCriticalSection;
   private
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
     function _AddRef: Integer; stdcall;
@@ -739,9 +742,10 @@ type
 
   TOmniEvent = class(TOmniSynchroObject, IOmniEvent)
   strict protected
-    FEvent: TEvent;
-    [Volatile] FState: boolean;
+    FEvent      : TEvent;
     FManualReset: boolean;
+    {$IFDEF OTL_HasVolatileAttribute}[Volatile]{$ENDIF}
+    FState      : boolean;
   public
     constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil);
     procedure Reset;

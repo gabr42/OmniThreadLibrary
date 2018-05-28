@@ -84,7 +84,7 @@ begin
   if ansiName = LastThreadName then
     Exit;
 
-  TThread.NameThreadForDebugging(string(name));
+  TThread.NameThreadForDebugging({$IFDEF OTL_NameThreadHasStringParameter}name{$ELSE}ansiName{$ENDIF});
   LastThreadName := ansiName;
 end; { SetThreadName }
 {$ENDIF ~OTL_DontSetThreadName}

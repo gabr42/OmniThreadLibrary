@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-05-10
-///   Version           : 2.0
+///   Last modification : 2018-05-28
+///   Version           : 2.0a
 ///</para><para>
 ///   History:
+///     2.0a: 2018-05-28
+///       - Fixed warnings.
 ///     2.0: 2018-05-10
 ///       - Platform independant implementation. Currently only works in main thread.
 ///     1.11: 2018-03-16
@@ -322,7 +324,9 @@ end; { TOmniEventMonitor.ProcessMessages }
 procedure TOmniEventMonitor.ProcessNewMessage(taskControlID: int64);
 var
   task        : IOmniTaskControl;
+{$IFDEF OTL_HasForceQueue}
   timeStart_ms: int64;
+{$ENDIF OTL_HasForceQueue}
 
   function ProcessMessages(timeout_ms: integer = CMaxReceiveLoop_ms;
     rearmSelf: boolean = true): boolean;
@@ -349,7 +353,9 @@ var
 begin
   task := emMonitoredTasks.ValueOf(taskControlID) as IOmniTaskControl;
   if assigned(task) then begin
+    {$IFDEF OTL_HasForceQueue}
     timeStart_ms := GTimeSource.Timestamp_ms;
+    {$ENDIF}
     ProcessMessages;
   end;
 end; { TOmniEventMonitor.ProcessNewMessage }
