@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017 Primoz Gabrijelcic
+///Copyright (c) 2018 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-07-05
-///   Version           : 1.52a
+///   Last modification : 2018-06-14
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2018-06-14
+///       - Started work on platform independency.
+///       - TOmniTransitionEvent changed to IOmniEvent.
 ///     1.52a: 2017-07-05
 ///       - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> is removed
 ///         for pre-XE7 compilers because of compiler bugs. This removes
@@ -1442,7 +1445,7 @@ type
     opOnStop          : TOmniTaskStopDelegate;
     opOutput          : IOmniBlockingCollection;
     opOutQueues       : TInterfaceList;
-    opShutDownComplete: TOmniTransitionEvent;
+    opShutDownComplete: IOmniEvent;
     opStages          : TInterfaceList;
     opThrottle        : integer;
     opThrottleLow     : integer;
@@ -3988,11 +3991,7 @@ begin
   opCancelWith := CreateOmniCancellationToken;
   opInput := TOmniBlockingCollection.Create;
   opOutput := TOmniBlockingCollection.Create;
-  {$IFDEF MSWINDOWS}
-  opShutDownComplete := CreateEvent(nil, true, false, nil);
-  {$ELSE}
   opShutDownComplete := CreateOmniEvent(true, false);
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniPipeline.Create }
 
 destructor TOmniPipeline.Destroy;
@@ -4000,11 +3999,7 @@ begin
   Cancel;
   FreeAndNil(opOutQueues);
   FreeAndNil(opStages);
-  {$IFDEF MSWINDOWS}
-  DSiCloseHandleAndNull(opShutDownComplete);
-  {$ELSE}
   opShutdownComplete := nil;
-  {$ENDIF ~MSWINDOWS}
   inherited Destroy;
 end; { TOmniPipeline.Destroy }
 
@@ -4181,11 +4176,7 @@ begin
               if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
               begin
                 DoOnStop(task);
-                {$IFDEF MSWINDOWS}
-                SetEvent(Task.Param['ShutDownComplete']);
-                {$ELSE}
                 (Task.Param['ShutDownComplete'].AsInterface as IOmniEvent).SetEvent;
-                {$ENDIF MSWINDOWS}
               end;
             end;
           end,
@@ -4296,13 +4287,8 @@ end; { TOmniPipeline.Throttle }
 function TOmniPipeline.WaitFor(timeout_ms: cardinal): boolean;
 begin
   Assert(assigned(opCountStopped));
-  {$IFDEF MSWINDOWS}
-  Assert(opShutDownComplete <> 0);
-  Result := (WaitForSingleObject(opShutDownComplete, timeout_ms) = WAIT_OBJECT_0);
-  {$ELSE}
   Assert(opShutDownComplete <> nil);
   Result := opShutDownComplete.WaitFor(timeout_ms) = wrSignaled;
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniPipeline.WaitFor }
 
 { TOmniCompute<T> }

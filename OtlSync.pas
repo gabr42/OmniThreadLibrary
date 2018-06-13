@@ -2267,7 +2267,7 @@ begin
   if assigned(AShareLock) then
     FShareLock := AShareLock
   else
-    FLock.Create(False);
+    FLock := TSpinLock.Create({$IFDEF OTL_ForceThreadTracking}True{$ELSE}False{$ENDIF});
   FObservers := TList<IOmniSynchroObserver>.Create
 end; { TOmniSynchroObject.Create }
 
@@ -2489,6 +2489,11 @@ end; { TOmniEvent.IsSignalled }
 
 procedure TOmniEvent.Reset;
 begin
+  {$IFDEF MSWINDOWS}
+  {$WARN SYMBOL_PLATFORM OFF}
+  Win32Check(Winapi.Windows.ResetEvent(FEvent.Handle));
+  {$WARN SYMBOL_PLATFORM ON}
+  {$ELSE}
   PerformObservableAction(
     procedure
     begin
@@ -2496,10 +2501,16 @@ begin
       FState := False;
     end,
     True);
+  {$ENDIF}
 end; { TOmniEvent.Reset }
 
 procedure TOmniEvent.SetEvent;
 begin
+  {$IFDEF MSWINDOWS}
+  {$WARN SYMBOL_PLATFORM OFF}
+  Win32Check(Winapi.Windows.SetEvent(FEvent.Handle));
+  {$WARN SYMBOL_PLATFORM ON}
+  {$ELSE}
   PerformObservableAction(
     procedure
     begin
@@ -2507,6 +2518,7 @@ begin
       FState := True;
     end,
     True);
+  {$ENDIF}
 end; { TOmniEvent.SetEvent }
 
 function TOmniEvent.WaitFor(Timeout: LongWord): TWaitResult;

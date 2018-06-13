@@ -6,10 +6,11 @@ uses
   TestFramework;
 
 type
-  // Tests for the OtlPlatform unit
+  // Tests for the OtlPlatform unit and other platform-dependant stuff
   TPlatformTest = class(TTestCase)
   published
     procedure TestTimestamp;
+    procedure TestEventWaitFor;
   end;
 
 implementation
@@ -22,9 +23,29 @@ uses
   {$IFDEF MSWINDOWS}
   DSiWin32,
   {$ENDIF MSWINDOWS}
-  OtlPlatform;
+  OtlPlatform,
+  OtlSync;
 
 { TPlatformTest }
+
+procedure TPlatformTest.TestEventWaitFor;
+var
+  event  : IOmniEvent;
+  time_ms: int64;
+begin
+  event := CreateOmniEvent(false, false);
+  event.SetEvent;
+  time_ms := Time.Timestamp_ms;
+  event.WaitFor(1000);
+  time_ms := Time.Elapsed_ms(time_ms);
+  CheckTrue(time_ms < 500 {allowed measurement error}, 'WaitFor(1000) took too long');
+
+  event.Reset;
+  time_ms := Time.Timestamp_ms;
+  event.WaitFor(1000);
+  time_ms := Time.Elapsed_ms(time_ms);
+  CheckTrue((time_ms >= 1000) and (time_ms <= 1050) {allowed measurement error}, 'WaitFor(1000) did not last around 1 s');
+end;
 
 procedure TPlatformTest.TestTimestamp;
 var

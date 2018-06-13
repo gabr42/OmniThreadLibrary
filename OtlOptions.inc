@@ -75,6 +75,10 @@
 {$ASSERTIONS ON}
 {$TYPEINFO OFF}
 
+{$IF CompilerVersion = 23} //DXE2
+  {$DEFINE OTL_ForceThreadTracking} //passing False to TSpinLock.Create causes problems on XE2
+{$IFEND}
+
 {$IF CompilerVersion >= 24} //DXE3
   {$DEFINE OTL_LongGetMethodInfo}
   {$DEFINE OTL_CountdownHasSpinCount}
@@ -109,11 +113,11 @@
 {$ENDIF ~OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
 
-//We don't have a platform-independant way of using cmpx8b/cmpx16b
-//(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
 {$IFDEF MSWINDOWS}
   {$DEFINE OTL_HaveCmpx16b}
 {$ELSE}
+  //We don't have a platform-independant way of using cmpx8b/cmpx16b
+  //(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
   {$UNDEF OTL_HaveCmpx16b}
 {$ENDIF ~MSWINDOWS}
 

@@ -355,7 +355,7 @@ begin
   if assigned(task) then begin
     {$IFDEF OTL_HasForceQueue}
     timeStart_ms := GTimeSource.Timestamp_ms;
-    {$ENDIF}
+    {$ENDIF OTL_HasForceQueue}
     ProcessMessages;
   end;
 end; { TOmniEventMonitor.ProcessNewMessage }
