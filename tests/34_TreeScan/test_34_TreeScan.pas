@@ -49,6 +49,8 @@ var
 implementation
 
 uses
+  SyncObjs,
+  Types,
   DSiWin32,
   GpStuff,
   OtlCommon,
@@ -227,7 +229,7 @@ begin
           .Unobserved
           .Run;
       end;
-      if WaitForSingleObject(nodeQueue.CompletedSignal, 10*1000) <> WAIT_OBJECT_0 then begin
+      if nodeQueue.CompletedSignal.WaitFor(10*1000) <> wrSignaled then begin
         Log('Catastrophic failure, parallel scan did not complete in 10 seconds', []);
         nodeQueue.CompleteAdding;
         Result := nil;

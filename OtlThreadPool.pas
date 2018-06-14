@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-04-24
-///   Version           : 3.0
+///   Last modification : 2018-06-14
+///   Version           : 3.01
 /// </para><para>
 ///   History:
+///     3.0a: 2018-06-14
+///       - Removed TOTPWorkerThread.NewWorkEvent. It was not used.
 ///     3.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
@@ -345,7 +347,7 @@ type
   strict private
     owtAsy_OnUnhandledException: TOTPUnhandledWorkerException;
     owtCommChannel             : IOmniTwoWayChannel;
-    owtNewWorkEvent            : TOmniTransitionEvent;
+//    owtNewWorkEvent            : IOmniEvent;
     owtRemoveFromPool          : boolean;
     owtStartIdle_ms            : int64;
     owtStartStopping_ms        : int64;
@@ -375,7 +377,7 @@ type
     function  WorkItemDescription: string;
     property Asy_OnUnhandledException: TOTPUnhandledWorkerException read
       owtAsy_OnUnhandledException write owtAsy_OnUnhandledException;
-    property NewWorkEvent: TOmniTransitionEvent read owtNewWorkEvent;
+//    property NewWorkEvent: IOmniEvent read owtNewWorkEvent;
     property OwnerCommEndpoint: IOmniCommunicationEndpoint read GetOwnerCommEndpoint;
     property RemoveFromPool: boolean read owtRemoveFromPool;
     property StartIdle_ms: int64 read owtStartIdle_ms write owtStartIdle_ms;
@@ -681,12 +683,11 @@ begin
   {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
   owtThreadDataFactory := ThreadDataFactory;
   {$IFDEF MSWINDOWS}
-  owtNewWorkEvent := CreateEvent(nil, false, false, nil);
   owtTerminateEvent := CreateEvent(nil, false, false, nil);
   {$ELSE}
-  owtNewWorkEvent := CreateOmniEvent(false, false);
   owtTerminateEvent := CreateOmniEvent(false, false);
   {$ENDIF ~MSWINDOWS}
+//  owtNewWorkEvent := CreateOmniEvent(false, false);
   owtWorkItemLock := CreateOmniCriticalSection;
   owtCommChannel := CreateTwoWayChannel(100, owtTerminateEvent);
 end; { TOTPWorkerThread.Create }
@@ -697,11 +698,10 @@ begin
   owtWorkItemLock := nil;
   {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(owtTerminateEvent);
-  DSiCloseHandleAndNull(owtNewWorkEvent);
   {$ELSE}
   owtTerminateEvent := nil;
-  owtNewWorkEvent := nil;
   {$ENDIF ~MSWINDOWS}
+//  owtNewWorkEvent := nil;
   inherited Destroy;
 end; { TOTPWorkerThread.Destroy }
 

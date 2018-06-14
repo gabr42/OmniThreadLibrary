@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2018, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2018-04-24
-///   Version           : 2.0
+///   Last modification : 2018-06-14
+///   Version           : 2.01
 ///</para><para>
 ///   History:
+///     2.01: 2018-06-14
+///       - TOmniOutputBufferImpl.EmptyEvent changed to IOmniEvent.
 ///     2.0: 2018-04-24
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///     1.02a: 2017-10-02
@@ -284,7 +286,7 @@ type
   strict private
     obiBuffer         : TOmniBlockingCollection;
     obiDataManager_ref: TOmniBaseDataManager;
-    obiEmptyEvent     : TOmniTransitionEvent;
+    obiEmptyEvent     : IOmniEvent;
     obiFull           : boolean;
     obiHasData        : boolean;
     obiNextPosition   : int64;
@@ -299,7 +301,7 @@ type
     procedure CopyToOutput;
     procedure MarkFull;
     procedure Submit(position: int64; const data: TOmniValue); override;
-    property EmptyEvent: TOmniTransitionEvent read obiEmptyEvent;
+    property EmptyEvent: IOmniEvent read obiEmptyEvent;
     property IsFull: boolean read obiFull;
     property Range: TOmniPositionRange read obiRange write SetRange;
   end; { TOmniOutputBufferImpl }
@@ -875,20 +877,12 @@ begin
   obiDataManager_ref := owner;
   obiOutput := output;
   obiBuffer := TOmniBlockingCollection.Create;
-  {$IFDEF MSWINDOWS}
-  obiEmptyEvent := CreateEvent(nil, false, true, nil);
-  {$ELSE}
   obiEmptyEvent := CreateOmniEvent(false, true, AShareLock);
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferImpl.Create }
 
 destructor TOmniOutputBufferImpl.Destroy;
 begin
-  {$IFDEF MSWINDOWS}
-  DSiCloseHandleAndNull(obiEmptyEvent);
-  {$ELSE}
   obiEmptyEvent := nil;
-  {$ENDIF ~MSWINDOWS}
   FreeAndNil(obiBuffer);
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
@@ -899,7 +893,7 @@ var
 begin
   while obiBuffer.TryTake(value) do
     obiOutput.Add(value);
-  SetEvent(obiEmptyEvent);
+  obiEmptyEvent.SetEvent;
   obiFull := false;
 end; { TOmniOutputBufferImpl.CopyToOutput }
 
@@ -943,7 +937,7 @@ begin
   for iBuffer := 1 to CNumBuffersInSet do begin
     obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output);
     {$IFDEF MSWINDOWS}
-    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyEvent;
+    obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyEvent.Handle;
     {$ELSE}
     Events[iBuffer-1] := obsBuffers[iBuffer].EmptyEvent;
     {$ENDIF ~MSWINDOWS}
