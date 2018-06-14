@@ -36,10 +36,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-05-28
-///   Version           : 2.0a
+///   Last modification : 2018-06-14
+///   Version           : 2.01
 ///</para><para>
 ///   History:
+///     2.01: 2018-06-14
+///       - Added TOmniEvent constructor that wraps existing THandle (Windows only),
+///         optionally taking over the ownership.
 ///     2.0a: 2018-05-28
 ///       - Fixed warnings.
 ///     2.0: 2018-05-13
@@ -595,7 +598,11 @@ function CreateOmniCancellationToken: IOmniCancellationToken;
 function CreateResourceCount(initialCount: integer): IOmniResourceCount;
 
 function CreateOmniCountdownEvent(Count: Integer; SpinCount: Integer; const AShareLock: IOmniCriticalSection = nil): IOmniCountdownEvent;
-function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent;
+function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil): IOmniEvent; overload;
+function CreateOmniEvent(AExternalEvent: TEvent; ATakeOwnership: boolean = false): IOmniEvent; overload;
+{$IFDEF MSWINDOWS}
+function CreateOmniEvent(AExternalEvent: THandle; ATakeOwnership: boolean = false): IOmniEvent; overload;
+{$ENDIF MSWINDOWS}
 
 {$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
@@ -740,6 +747,14 @@ type
     function  BaseCountdown: TCountdownEvent;
   end; { TOmniCountdownEvent }
 
+  TOmniWrappedEvent = class(TEvent)
+  strict private
+    FIsOwner: boolean;
+  public
+    constructor Create(AExternalEvent: THandle; ATakeOwnership: boolean = false);
+    destructor Destroy; override;
+  end; { TOmniWrappedEvent }
+
   TOmniEvent = class(TOmniSynchroObject, IOmniEvent)
   strict protected
     FEvent      : TEvent;
@@ -747,7 +762,10 @@ type
     {$IFDEF OTL_HasVolatileAttribute}[Volatile]{$ENDIF}
     FState      : boolean;
   public
-    constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil);
+    constructor Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection = nil); overload;
+    {$IFDEF MSWINDOWS}
+    constructor Create(AExternalEvent: THandle; ATakeOwnership: boolean = false); overload;
+    {$ENDIF MSWINDOWS}
     procedure Reset;
     procedure SetEvent;
     function  BaseEvent: TEvent;
@@ -822,6 +840,18 @@ function CreateOmniEvent(AManualReset, InitialState: boolean; const AShareLock: 
 begin
   Result := TOmniEvent.Create(AManualReset, InitialState, AShareLock);
 end; { CreateOmniEvent }
+
+function CreateOmniEvent(AExternalEvent: TEvent; ATakeOwnership: boolean): IOmniEvent;
+begin
+  Result := TOmniEvent.Create(AExternalEvent, ATakeOwnership);
+end; { CreateOmniEvent }
+
+{$IFDEF MSWINDOWS}
+function CreateOmniEvent(AExternalEvent: THandle; ATakeOwnership: boolean): IOmniEvent;
+begin
+  Result := TOmniEvent.Create(AExternalEvent, ATakeOwnership);
+end; { CreateOmniEvent }
+{$ENDIF MSWINDOWS}
 
 {$IFDEF MSWINDOWS}
 function CAS8(const oldValue, newValue: byte; var destination): boolean;
@@ -2458,6 +2488,25 @@ procedure TOmniCountdownEvent.ConsumeSignalFromObserver(const Observer: IOmniSyn
 begin
 end; { TOmniCountdownEvent.ConsumeSignalFromObserver }
 
+{ TOmniWrappedEvent }
+
+constructor TOmniWrappedEvent.Create(AExternalEvent: THandle; ATakeOwnership: boolean);
+begin
+  inherited Create(nil, false, false, '');
+  if FHandle <> 0 then
+    CloseHandle(FHandle);
+  FHandle := AExternalEvent;
+  FIsOwner := ATakeOwnership;
+end; { TOmniWrappedEvent.Create }
+
+destructor TOmniWrappedEvent.Destroy;
+begin
+  if FIsOwner and (FHandle <> 0) then
+    CloseHandle(FHandle);
+  FHandle := 0;
+  inherited;
+end; { TOmniWrappedEvent.Destroy }
+
 { TOmniEvent }
 
 constructor TOmniEvent.Create(AManualReset, InitialState: boolean; const AShareLock: IOmniCriticalSection);
@@ -2468,6 +2517,15 @@ begin
   inherited Create(FEvent, True, AShareLock);
 end; { TOmniEvent.Create }
 
+{$IFDEF MSWINDOWS}
+constructor TOmniEvent.Create(AExternalEvent: THandle; ATakeOwnership: boolean);
+begin
+  FEvent := TOmniWrappedEvent.Create(AExternalEvent, ATakeOwnership);
+  FState := FEvent.WaitFor(0) = wrSignaled;
+  inherited Create(FEvent, True, nil);
+end;
+{$ENDIF MSWINDOWS}
+
 function TOmniEvent.BaseEvent: TEvent;
 begin
   Result := FEvent;
@@ -2475,6 +2533,10 @@ end; { TOmniEvent.BaseEvent }
 
 procedure TOmniEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
 begin
+  {$IFDEF MSWINDOWS}
+  // at the moment, FManualReset is not set when event is created by wrapping an external THandle
+  raise Exception.Create('Not supported: TOmniEvent.ConsumeSignalFromObserver');
+  {$ENDIF MSWINDOWS}
   // Here we are already inside the lock.
   if not FManualReset then begin
     FEvent.ResetEvent;
