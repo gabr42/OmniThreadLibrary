@@ -1600,8 +1600,11 @@ begin
           sync := otSharedInfo_ref.MonitorLock.SyncObj;
           {$IFDEF MSWINDOWS}
           if assigned(otSharedInfo_ref.Monitor) then
-            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated,
-              integer(Int64Rec(UniqueID).Lo), integer(Int64Rec(UniqueID).Hi));
+           {$IFDEF CPUX64}
+            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated, WPARAM(UniqueID), 0);
+           {$ELSE}          
+            otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated, WPARAM(Int64Rec(UniqueID).Lo), LPARAM(Int64Rec(UniqueID).Hi));
+           {$ENDIF} 
           {$ENDIF MSWINDOWS}
           otSharedInfo_ref := nil;
         finally sync.Release; end;
@@ -3567,10 +3570,14 @@ begin
     if otcParameters.IsLocked then
       raise Exception.Create('TOmniTaskControl.SetMonitor: Monitor can only be assigned while task is not running');
     EnsureCommChannel;
-    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(
-      hWindow, COmniTaskMsg_NewMessage, integer(Int64Rec(UniqueID).Lo),
-      integer(Int64Rec(UniqueID).Hi));
-    otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
+
+   {$IFDEF CPUX64}
+    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(hWindow, COmniTaskMsg_NewMessage, WPARAM(UniqueID), 0);
+   {$ELSE}
+    otcSharedInfo.Monitor := CreateContainerWindowsMessageObserver(hWindow, COmniTaskMsg_NewMessage, WPARAM(Int64Rec(UniqueID).Lo), LPARAM(Int64Rec(UniqueID).Hi));
+   {$ENDIF} 
+  
+  otcSharedInfo.CommChannel.Endpoint2.Writer.ContainerSubject.Attach(
       otcSharedInfo.Monitor, coiNotifyOnAllInserts);
   end
   else if otcSharedInfo.Monitor.Handle <> hWindow then
