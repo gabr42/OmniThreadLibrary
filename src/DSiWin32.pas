@@ -1076,14 +1076,14 @@ type
   _PROCESS_MEMORY_COUNTERS = packed record
     cb: DWORD;
     PageFaultCount: DWORD;
-    PeakWorkingSetSize: DWORD;
-    WorkingSetSize: DWORD;
-    QuotaPeakPagedPoolUsage: DWORD;
-    QuotaPagedPoolUsage: DWORD;
-    QuotaPeakNonPagedPoolUsage: DWORD;
-    QuotaNonPagedPoolUsage: DWORD;
-    PagefileUsage: DWORD;
-    PeakPagefileUsage: DWORD;
+    PeakWorkingSetSize: SIZE_T;
+    WorkingSetSize: SIZE_T;
+    QuotaPeakPagedPoolUsage: SIZE_T;
+    QuotaPagedPoolUsage: SIZE_T;
+    QuotaPeakNonPagedPoolUsage: SIZE_T;
+    QuotaNonPagedPoolUsage: SIZE_T;
+    PagefileUsage: SIZE_T;
+    PeakPagefileUsage: SIZE_T;
   end;
   PROCESS_MEMORY_COUNTERS = _PROCESS_MEMORY_COUNTERS;
   PPROCESS_MEMORY_COUNTERS = ^_PROCESS_MEMORY_COUNTERS;
@@ -6121,8 +6121,7 @@ var
     the window extra data and calls it.
   }
   function DSiClassWndProc(Window: HWND; Message: cardinal;
-    aWParam: {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
-    aLParam: {$IFDEF Unicode}LPARAM{$ELSE}longint{$ENDIF}): longint; stdcall;
+    aWParam: WPARAM; aLParam: LPARAM): LRESULT; stdcall;
   var
     instanceWndProc: TMethod;
     msg            : TMessage;
