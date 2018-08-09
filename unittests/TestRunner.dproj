@@ -116,9 +116,7 @@
         <DCCReference Include="TestOmniValue.pas"/>
         <DCCReference Include="TestValue.pas"/>
         <DCCReference Include="TestOtlParallel.pas">
-            <Form>;
-
-{$R *.RES</Form>
+            <Form>$R *.RES</Form>
         </DCCReference>
         <DCCReference Include="TestPlatform.pas"/>
         <DCCReference Include="TestInterlocked.pas"/>
@@ -227,6 +225,12 @@
                 <DeployClass Name="AndroidLibnativeArmeabiFile">
                     <Platform Name="Android">
                         <RemoteDir>library\lib\armeabi</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                </DeployClass>
+                <DeployClass Name="Android_LauncherIcon144">
+                    <Platform Name="Android">
+                        <RemoteDir>res\drawable-xxhdpi</RemoteDir>
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
@@ -343,6 +347,7 @@
                         <Extensions>.dylib</Extensions>
                     </Platform>
                     <Platform Name="iOSDevice64">
+                        <RemoteDir>..\$(PROJECTNAME).app.dSYM\Contents\Resources\DWARF</RemoteDir>
                         <Operation>1</Operation>
                         <Extensions>.dylib</Extensions>
                     </Platform>

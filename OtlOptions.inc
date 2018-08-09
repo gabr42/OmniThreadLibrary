@@ -30,7 +30,7 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2018-05-12
+///   Last modification : 2018-05-28
 ///   Version           : 2.0
 ///</para><para>
 ///   History:
