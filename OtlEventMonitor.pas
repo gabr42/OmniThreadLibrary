@@ -343,19 +343,31 @@ var
     emCurrentMsg.MsgData._ReleaseAndClear;
   end; { ProcessMessages }
 
+  function GetUniqueID(const AMsg: TMessage): Int64;
+  begin
+   {$IFDEF CPUX64}
+    Result := AMsg.wParam;
+   {$ELSE}
+    Int64Rec(Result).Lo := AMsg.wParam;
+    Int64Rec(Result).Hi := AMsg.lParam;
+   {$ENDIF}
+  end;
+  
 begin { TOmniEventMonitor.WndProc }
   try
-    if msg.Msg = COmniTaskMsg_NewMessage then begin
-      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then begin
+    if msg.Msg = COmniTaskMsg_NewMessage then 
+    begin
+      if Supports(emMonitoredTasks.ValueOf(GetUniqueID(msg)), IOmniTaskControl, Task) then
+      begin
         timeStart := GetTickCount;
         ProcessMessages;
       end;
       msg.Result := 0;
     end
-    else if msg.Msg = COmniTaskMsg_Terminated then begin
-      task := emMonitoredTasks.ValueOf(Pint64(@msg.WParam)^) as IOmniTaskControl;
-      if assigned(task) then begin
+    else if msg.Msg = COmniTaskMsg_Terminated then 
+    begin
+      if Supports(emMonitoredTasks.ValueOf(GetUniqueID(msg)), IOmniTaskControl, Task) then
+      begin
         endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
         while endpoint.Receive(emCurrentMsg) do
           if Assigned(emOnTaskMessage) then

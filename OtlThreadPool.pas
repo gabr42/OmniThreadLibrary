@@ -1105,7 +1105,7 @@ procedure TOTPWorker.ForwardThreadCreated(threadID: TThreadID);
 begin
   {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+    owMonitorObserver.Send(COmniPoolMsg, 0, LPARAM
         (TOmniThreadPoolMonitorInfo.Create(owUniqueID, tpoCreateThread, threadID))
       );
   {$ENDIF MSWINDOWS}
@@ -1122,7 +1122,7 @@ begin
   end;
   {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+    owMonitorObserver.Send(COmniPoolMsg, 0, LPARAM
       (TOmniThreadPoolMonitorInfo.Create(owUniqueID, threadPoolOperation,
         threadID)));
   {$ENDIF MSWINDOWS}
@@ -1369,7 +1369,7 @@ begin
   {$ENDIF LogThreadPool}
   {$IFDEF MSWINDOWS}
   if assigned(owMonitorObserver) then
-    owMonitorObserver.Send(COmniPoolMsg, 0, cardinal
+    owMonitorObserver.Send(COmniPoolMsg, 0, LPARAM
       (TOmniThreadPoolMonitorInfo.Create(owUniqueID, workItem.UniqueID)));
   {$ENDIF MSWINDOWS}
   FreeAndNil(workItem);
