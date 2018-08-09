@@ -1,4 +1,4 @@
-﻿(*:Collection of Win32/Win64 wrappers and helper functions.
+(*:Collection of Win32/Win64 wrappers and helper functions.
    @desc <pre>
    Free for personal and commercial use. No rights reserved.
 
@@ -8,10 +8,17 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2018-05-11
-   Version           : 1.102
+   Last modification : 2018-08-09
+   Version           : 1.103a
 </pre>*)(*
    History:
+     1.103a: 2018-08-09
+       - [MkhPavel] fixed declarations for _PROCESS_MEMORY_COUNTERS.
+       - Compiles again with Delphi 2007 and 2009.
+     1.103: 2018-05-12
+       - DSiExecuteAndCapture can accept a nil output in which case the buffer will be reset
+          on each ProcessPartialLine.
+       - Added an optional abortHandle parameter to DSiExecuteAndCapture to make it cancellable.
      1.102: 2018-05-11
        - Fixed DSiExecuteInSession. In Unicode, `cmdLine` was not copied to local buffer.
          In Ansi, `cmdLine` was of wrong string type.
@@ -543,7 +550,7 @@ interface
   {$IF CompilerVersion >= 25}{$LEGACYIFEND ON}{$IFEND}
   {$IF RTLVersion >= 18}{$UNDEF DSiNeedFileCtrl}{$IFEND}
   {$IF CompilerVersion >= 25}{$DEFINE DSiUseAnsiStrings}{$IFEND}
-  {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$IFEND}
+  {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$DEFINE DSiHasSizeT}{$IFEND}
   {$IF CompilerVersion >= 22}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND} // only XE+ has 'good enough' generics
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
   {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
@@ -1025,6 +1032,9 @@ type
   USHORT = Word;
   {$EXTERNALSYM USHORT}
   {$ENDIF}
+  {$IFNDEF DSiHasSizeT}
+  SIZE_T = ULONG_PTR;
+  {$ENDIF DSiHasSizeT}
 
   {$IFDEF DSiHasSafeNativeInt}
   DSiNativeInt = NativeInt;
@@ -1075,7 +1085,7 @@ type
 
   _PROCESS_MEMORY_COUNTERS = packed record
     cb: DWORD;
-    PageFaultCount: DWORD;
+    PageFaultCount: SIZE_T;
     PeakWorkingSetSize: SIZE_T;
     WorkingSetSize: SIZE_T;
     QuotaPeakPagedPoolUsage: SIZE_T;
@@ -1352,7 +1362,8 @@ type
   function  DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
     var exitCode: longword; waitTimeout_sec: integer = 15;
     onNewLine: TDSiOnNewLineCallback = nil;
-    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal;
+    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS;
+    const abortHandle: THandle = 0): cardinal;
   function  DSiExecuteAsAdmin(const path: string; const parameters: string = '';
     const directory: string = ''; parentWindow: THandle = 0;
     showWindow: integer = SW_NORMAL; wait: boolean = false): boolean;
@@ -5068,7 +5079,7 @@ type
   }
   function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
     var exitCode: longword; waitTimeout_sec: integer; onNewLine: TDSiOnNewLineCallback;
-    creationFlags: DWORD): cardinal;
+    creationFlags: DWORD; const abortHandle: THandle): cardinal;
   var
     endTime_ms         : int64;
     lineBuffer         : PAnsiChar;
@@ -5136,7 +5147,7 @@ type
     SizeReadBuffer = 1048576;  // 1 MB Buffer
 
   var
-    appRunning     : integer;
+    appRunning     : DWORD;
     appW           : string;
     buffer         : PAnsiChar;
     bytesRead      : DWORD;
@@ -5149,6 +5160,7 @@ type
     totalBytesRead : DWORD;
     useWorkDir     : string;
     writePipe      : THandle;
+    waitHandles    : array of THandle;
 
   begin { DSiExecuteAndCapture }
     Result := 0;
@@ -5174,6 +5186,7 @@ type
       else
         useWorkDir := workDir;
       appW := app;
+      appRunning := WAIT_FAILED; // in case CreateProcess fails
       {$IFDEF Unicode}UniqueString(appW);{$ENDIF Unicode}
       if CreateProcess(nil, PChar(appW), @security, @security, true,
            creationFlags, nil, PChar(useWorkDir), start, processInfo) then
@@ -5181,8 +5194,13 @@ type
         SetLastError(0); // [Mitja] found a situation where CreateProcess succeeded but the last error was 126
         Result := processInfo.hProcess;
         totalBytesRead := 0;
+        SetLength(waitHandles, 1 + Ord(abortHandle > 0));
+        waitHandles[0] := processInfo.hProcess;
+        if abortHandle > 0 then
+          waitHandles[1] := abortHandle;
+
         repeat
-          appRunning := WaitForSingleObject(processInfo.hProcess, 100);
+          appRunning := WaitForMultipleObjects(Length(waitHandles), @waitHandles[0], False, 100);
           if not PeekNamedPipe(readPipe, nil, 0, nil, @totalBytesAvail, nil) then
             break //repeat
           else if totalBytesAvail > 0 then begin
@@ -5196,7 +5214,11 @@ type
               buffer[totalBytesRead + bytesRead] := #0; // required for ProcessPartialLine
               if assigned(onNewLine) then
                 ProcessPartialLine(@buffer[totalBytesRead], bytesRead);
-              totalBytesRead := totalBytesRead + bytesRead;
+
+              if Assigned(output) then
+                totalBytesRead := totalBytesRead + bytesRead
+              else
+                totalBytesRead := 0;
               if totalBytesRead = SizeReadBuffer then
                 raise Exception.Create('DSiExecuteAndCapture: Buffer full!');
             end;
@@ -5208,17 +5230,26 @@ type
           runningTimeLeft_sec := 0;
           onNewLine(partialLine, runningTimeLeft_sec);
         end;
-        OemToCharA(buffer, buffer);
-        {$IFDEF Unicode}
-        output.Text := UnicodeString(StrPasA(Buffer));
-        {$ELSE}
-        output.Text := StrPas(buffer);
-        {$ENDIF Unicode}
+        if Assigned(output) then begin
+          OemToCharA(buffer, buffer);
+          {$IFDEF Unicode}
+          output.Text := UnicodeString(StrPasA(Buffer));
+          {$ELSE}
+          output.Text := StrPas(buffer);
+          {$ENDIF Unicode}
+        end;
       end
       else
         err := GetLastError;
       FreeMem(buffer);
-      GetExitCodeProcess(processInfo.hProcess, exitCode);
+      if appRunning = WAIT_OBJECT_1 then
+      begin
+        exitCode := 1;
+        if TerminateProcess(processInfo.hProcess, exitCode) then
+          WaitForSingleObject(processInfo.hProcess, INFINITE);
+      end
+      else
+        GetExitCodeProcess(processInfo.hProcess, exitCode);
       CloseHandle(processInfo.hProcess);
       CloseHandle(processInfo.hThread);
       CloseHandle(readPipe);
@@ -6121,7 +6152,8 @@ var
     the window extra data and calls it.
   }
   function DSiClassWndProc(Window: HWND; Message: cardinal;
-    aWParam: WPARAM; aLParam: LPARAM): LRESULT; stdcall;
+    aWParam: {$IFDEF Unicode}WPARAM{$ELSE}longint{$ENDIF};
+    aLParam: {$IFDEF Unicode}LPARAM{$ELSE}longint{$ENDIF}): longint; stdcall;
   var
     instanceWndProc: TMethod;
     msg            : TMessage;

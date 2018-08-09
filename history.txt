@@ -12,8 +12,8 @@
   - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
     TOmniMREW.TryExitReadLock.
 - Bug fixed:
-  -  Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
-     TOmniBaseBoundedQueue.Enqueue to return False when queue was empty. 
+  - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
+    TOmniBaseBoundedQueue.Enqueue to return False when queue was empty. 
   - ThreadData is destroyed in the worker thread and not in the thread pool
     management thread.
   - Reduced hints&warnings. [issue #110]
@@ -21,6 +21,7 @@
   - Fixed problems with TOmniAlignedInt32 and pre-Seattle compilers.
   - First parameter in TOmniAlignedInt32 Subtract operator marked as `const` to fix
     problems with all Delphi compilers.
+  - [MkhPavel] Fixed API prototypes for 64-bit.
   - Removed hints and warnings in all compilers.
 
 3.07.5: 2017-02-28

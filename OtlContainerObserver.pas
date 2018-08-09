@@ -70,6 +70,9 @@ interface
 
 uses
   Classes,
+  {$IFDEF MSWindows}
+  Windows,
+  {$ENDIF MSWindows}
   {$IFDEF OTL_MobileSupport}
   System.SyncObjs,
   System.Generics.Collections,
@@ -154,7 +157,6 @@ uses
   System.Types,
   {$ENDIF}
   {$IFDEF MSWINDOWS}
-  Windows,
   DSiWin32,
   {$ENDIF MSWINDOWS}
   SysUtils;
@@ -307,7 +309,7 @@ end; { TOmniContainerWindowsEventObserverImpl.Notify }
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:
-  cardinal; wParam: WPARAM: lParam: LPARAM);
+  cardinal; wParam: WPARAM; lParam: LPARAM);
 begin
   inherited Create;
   cwmoHandle := handle;
