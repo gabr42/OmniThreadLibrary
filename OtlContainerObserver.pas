@@ -124,7 +124,7 @@ type
   strict protected
     function  GetHandle: THandle; virtual; abstract;
   public
-    procedure Send(aMessage: cardinal; wParam, lParam: integer); virtual; abstract;
+    procedure Send(aMessage: cardinal; wParam: WPARAM; lParam: LPARAM); virtual; abstract;
     property Handle: THandle read GetHandle;
   end; { TOmniContainerWindowsMessageObserver }
   {$ENDIF MSWINDOWS}
@@ -155,7 +155,7 @@ type
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
-    wParam, lParam: integer): TOmniContainerWindowsMessageObserver;
+    wParam: WPARAM; lParam: LPARAM): TOmniContainerWindowsMessageObserver;
   {$ENDIF MSWINDOWS}
 
 implementation
@@ -204,15 +204,15 @@ type
   TOmniContainerWindowsMessageObserverImpl = class(TOmniContainerWindowsMessageObserver)
   strict private
     cwmoHandle  : THandle;
-    cwmoLParam  : integer;
+    cwmoLParam  : LPARAM;
     cwmoMessage : cardinal;
-    cwmoWParam  : integer;
+    cwmoWParam  : WPARAM;
   strict protected
     function  GetHandle: THandle; override;
     procedure PostWithRetry(msg: UINT; wParam: WPARAM; lParam: LPARAM);
   public
-    constructor Create(handle: THandle; aMessage: cardinal; wParam, lParam: integer);
-    procedure Send(aMessage: cardinal; wParam, lParam: integer); override;
+    constructor Create(handle: THandle; aMessage: cardinal; wParam: WPARAM; lParam: LPARAM);
+    procedure Send(aMessage: cardinal; wParam: WPARAM; lParam: LPARAM); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
   {$ENDIF MSWINDOWS}
@@ -238,8 +238,8 @@ begin
   Result := TOmniContainerWindowsEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
 
-function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; wParam,
-  lParam: integer): TOmniContainerWindowsMessageObserver;
+function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; 
+  wParam: WPARAM; lParam: LPARAM): TOmniContainerWindowsMessageObserver;
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
@@ -325,7 +325,7 @@ end; { TOmniContainerWindowsEventObserverImpl.Notify }
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:
-  cardinal; wParam, lParam: integer);
+  cardinal; wParam: WPARAM: lParam: LPARAM);
 begin
   inherited Create;
   cwmoHandle := handle;
@@ -370,7 +370,7 @@ begin
 end; { TOmniContainerWindowsMessageObserverImpl.PostWithRetry }
 
 procedure TOmniContainerWindowsMessageObserverImpl.Send(aMessage: cardinal;
-  wParam, lParam: integer);
+  wParam: WPARAM; lParam: LPARAM);
 begin
   PostWithRetry(aMessage, wParam, lParam);
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
