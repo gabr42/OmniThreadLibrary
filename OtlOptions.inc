@@ -30,10 +30,13 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2012-09-23
-///   Version           : 1.04
+///   Last modification : 2018-05-26
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2018-05-26
+///       - Introduced OTL_NameThreadHasStringParameter and OTL_CanInlineOperators.
+///       - OTL_StrPasInAnsiStrings moved from XE5 to XE4 section.
 ///     1.04: 2012-09-23
 ///       - Introduced OTL_HasSystemTypes and OTL_LongGetMethodInfo.
 ///     1.03: 2011-07-23
