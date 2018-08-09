@@ -69,6 +69,9 @@ unit OtlContainerObserver;
 interface
 
 uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF MSWINDOWS}
   System.Classes,
   System.SyncObjs,
   {$IFDEF OTL_MobileSupport}
@@ -163,7 +166,6 @@ implementation
 uses
   System.Types,
   {$IFDEF MSWINDOWS}
-  Winapi.Windows,
   DSiWin32,
   {$ENDIF MSWINDOWS}
   System.SysUtils;
@@ -325,7 +327,7 @@ end; { TOmniContainerWindowsEventObserverImpl.Notify }
 { TOmniContainerWindowsMessageObserver }
 
 constructor TOmniContainerWindowsMessageObserverImpl.Create(handle: THandle; aMessage:
-  cardinal; wParam: WPARAM: lParam: LPARAM);
+  cardinal; wParam: WPARAM; lParam: LPARAM);
 begin
   inherited Create;
   cwmoHandle := handle;
