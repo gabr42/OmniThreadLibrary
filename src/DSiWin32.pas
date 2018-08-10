@@ -1085,7 +1085,7 @@ type
 
   _PROCESS_MEMORY_COUNTERS = packed record
     cb: DWORD;
-    PageFaultCount: SIZE_T;
+    PageFaultCount: DWORD;
     PeakWorkingSetSize: SIZE_T;
     WorkingSetSize: SIZE_T;
     QuotaPeakPagedPoolUsage: SIZE_T;
