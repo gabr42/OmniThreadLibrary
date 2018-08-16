@@ -38,6 +38,7 @@
   - First parameter in TOmniAlignedInt32 Subtract operator marked as `const` to fix
     problems with all Delphi compilers.
   - Removed hints and warnings in all compilers.
+  - Fixed test 00_Beep.
 
 3.07.5: 2017-02-28
 
