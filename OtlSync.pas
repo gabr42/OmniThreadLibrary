@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-04-06
-///   Version           : 1.27
+///   Last modification : 2018-11-02
+///   Version           : 1.27a
 ///</para><para>
 ///   History:
+///     1.27a: 2018-11-02
+///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///	    1.27: 2018-04-06
 ///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
@@ -1415,8 +1417,8 @@ begin
       Result := true;
       resourceCount := cardinal(orcNumResources.Decrement);
       if resourceCount = 0 then begin
+        ResetEvent(orcAvailable); //reset before release - otherwise there's a race condition between this code and .Release
         orcLock.Release; //prevent race condition - another thread may wait on orcHandle and destroy this instance
-        ResetEvent(orcAvailable);
         SetEvent(orcHandle);
         Exit; // skip final Release
       end;
@@ -2613,7 +2615,7 @@ begin
   {$ELSE}{$IFDEF OTL_HasTInterlocked}
   Result := TInterlocked.Add(Integer(Target), Integer(Increment));
   {$ELSE}
-  Result := InterlockedExchangeAdd(Target, Increment) + Increment;
+  Result := InterlockedExchangeAdd(Target, Increment);
   {$ENDIF}{$ENDIF}
 end; { TInterlockedEx.Add }
 
