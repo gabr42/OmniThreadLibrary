@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-06-14
-///   Version           : 2.01
+///   Last modification : 2018-11-02
+///   Version           : 2.01a
 ///</para><para>
 ///   History:
+///     2.01a: 2018-11-02
+///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///     2.01: 2018-06-14
 ///       - Added TOmniEvent constructor that wraps existing THandle (Windows only),
 ///         optionally taking over the ownership.
@@ -1384,8 +1386,8 @@ begin
       Result := true;
       resourceCount := cardinal(orcNumResources.Decrement);
       if resourceCount = 0 then begin
+        ResetEvent(orcAvailable); //reset before release - otherwise there's a race condition between this code and .Release
         orcLock.Release; //prevent race condition - another thread may wait on orcHandle and destroy this instance
-        ResetEvent(orcAvailable);
         SetEvent(orcHandle);
         Exit; // skip final Release
       end;

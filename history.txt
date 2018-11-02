@@ -16,11 +16,6 @@
 
 3.07.6: <<unreleased>>
 
-- Breaking changes:
-  - TOmniValueInt32/64.Add/.Subtract were returning *old* value. Fixed now, 
-    but this change may break your code.
-  - TInterlockedEx.Add was returning *old* value for Delphi 2007 and 2009. Fixed now,
-    but this change may break your code.
 - New features:
   - Implemented TOmniValue.LogValue.
   - Implemented TOmniBlockingCollection.FromArray<T>, .FromRange<T>, 
@@ -28,8 +23,10 @@
   - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
     TOmniMREW.TryExitReadLock.
 - Bug fixed:
-  -  Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
-     TOmniBaseBoundedQueue.Enqueue to return False when queue was empty. 
+  - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
+    TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
+  - Fixed race condition between TOmniResourceCount.[Try]Allocate and
+    TOmniResourceCount.Release. [tnx to Stephen Melnyk]
   - ThreadData is destroyed in the worker thread and not in the thread pool
     management thread.
   - Reduced hints&warnings. [issue #110]
