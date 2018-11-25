@@ -22,6 +22,7 @@ type
 implementation
 
 uses
+  System.SyncObjs,
   OtlTaskControl;
 
 const
