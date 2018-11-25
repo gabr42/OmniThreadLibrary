@@ -18,27 +18,20 @@ type
     end;
     FSharedValue: int64;
     FResourceCount: IOmniResourceCount;
-    FQueuedCount: TOmniAlignedInt32;
   strict protected
     procedure LockCS(const task: IOmniTask);
-    procedure ResourceAllocate(const task: IOmniTask);
     procedure ResourceCount(const task: IOmniTask);
-    procedure ResourceRelease(const task: IOmniTask);
   published
     procedure TestCSInitialization;
     procedure TestCSParallel;
     procedure TestCSLock;
     procedure TestResourceCountBasic;
-    procedure StressTestResourceCount;
   end;
 
 implementation
 
 uses
   OtlTaskControl;
-
-const
-  CResourceCountStressTest_sec = 30;
 
 procedure TestOtlSync.TestCSInitialization;
 var
@@ -148,72 +141,6 @@ begin
 
   Assert(FResourceCount.Allocate = 3);
 end;
-
-procedure TestOtlSync.ResourceAllocate(const task: IOmniTask);
-var
-  startTime: int64;
-  i: integer;
-begin
-  startTime := DSiTimeGetTime64;
-  while not DSiHasElapsed64(startTime, CResourceCountStressTest_sec * 1000) do
-    for i := 1 to 10 do begin
-      FResourceCount.Allocate;
-      FQueuedCount.Increment;
-    end;
-end;
-
-procedure TestOtlSync.ResourceRelease(const task: IOmniTask);
-var
-  startTime: int64;
-  i: integer;
-begin
-  startTime := DSiTimeGetTime64;
-  while not DSiHasElapsed64(startTime, CResourceCountStressTest_sec * 1000) do
-    if FQueuedCount.Value > 0 then begin
-      FQueuedCount.Decrement;
-      FResourceCount.Release;
-    end;
-end;
-
-procedure TestOtlSync.StressTestResourceCount;
-var
-  alloc    : IOmniTaskControl;
-  release  : IOmniTaskControl;
-  startTime: int64;
-
-  function WaitTime: integer;
-  var
-    wait: int64;
-  begin
-    wait := (CResourceCountStressTest_sec * 1000 + 1000) - DSiElapsedTime(startTime);
-    if wait < 0 then
-      Result := 0
-    else
-      Result := wait;
-  end;
-
-begin
-  FResourceCount := CreateResourceCount(10);
-  FQueuedCount.Value := 0;
-
-  alloc := CreateTask(ResourceAllocate, 'ResourceAllocate');
-  release := CreateTask(ResourceRelease, 'ResourceRelease');
-
-  startTime := DSiTimeGetTime64;
-  alloc.Run;
-  release.Run;
-
-  try
-    Assert(alloc.WaitFor(WaitTime), 'ResourceAllocate did not terminate correctly');
-  finally
-    alloc.Terminate(0);
-    try
-      Assert(release.WaitFor(WaitTime), 'ResourceRelease did not terminate correctly');
-    finally
-      release.Terminate(0);
-    end;
-  end;
-end; { TestOtlSync.StressTestResourceCount }
 
 initialization
   // Register any test cases with the test runner

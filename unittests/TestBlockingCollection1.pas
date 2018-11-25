@@ -36,41 +36,36 @@ var
 procedure TestIOmniBlockingCollection.TestCompleteAdding;
 var
   coll     : IOmniBlockingCollection;
-  iTest    : integer;
   lastAdded: integer;
   lastRead : TOmniValue;
 begin
-  for iTest := 1 to 100 do begin
-    coll := TOmniBlockingCollection.Create;
-    lastAdded := -1;
-    lastRead := -2;
-    Parallel.Join([
-      procedure
-      var
-        i: integer;
-      begin
-        for i := 1 to 100000 do begin
-          if not coll.TryAdd(i) then
-            break;
-          lastAdded := i;
-        end;
-      end,
+  coll := TOmniBlockingCollection.Create;
+  lastAdded := -1;
+  lastRead := -2;
+  Parallel.Join([
+    procedure
+    var
+      i: integer;
+    begin
+      for i := 1 to 100000 do begin
+        if not coll.TryAdd(i) then
+          break;
+        lastAdded := i;
+      end;
+    end,
 
-      procedure
-      begin
-        Sleep(1);
-        coll.CompleteAdding;
-      end,
+    procedure
+    begin
+      Sleep(1);
+      coll.CompleteAdding;
+    end,
 
-      procedure
-      begin
-        while coll.TryTake(lastRead, INFINITE) do
-          ;
-      end
-    ]).Execute;
-    if (lastAdded > 0) and (lastRead.AsInteger > 0) and (lastAdded <> lastRead.AsInteger) then
-      break; //for iTest
-  end;
+    procedure
+    begin
+      while coll.TryTake(lastRead, INFINITE) do
+        ;
+    end
+  ]).Execute;
   CheckEquals(lastAdded, lastRead.AsInteger);
 end;
 
