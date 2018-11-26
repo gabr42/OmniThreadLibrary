@@ -1,4 +1,4 @@
-3.07.6: <<unreleased>>
+3.07.6: 2018-11-26
 
 - New features:
   - Implemented TOmniValue.LogValue.
@@ -6,7 +6,7 @@
     and .AddRange<T>. [issue #76]
   - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
     TOmniMREW.TryExitReadLock.
-- Bug fixed:
+- Bug fixes:
   - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
     TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
   - Fixed race condition between TOmniResourceCount.[Try]Allocate and
