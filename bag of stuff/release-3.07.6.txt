@@ -1,0 +1,67 @@
+OmniThreadLibrary 3.07.6 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.6)
+or as a ZIP archive
+(https://drive.google.com/open?id=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, and 10.3 Rio
+on the Win32 and Win64 platforms. 
+
+Currently, there are no plans to support older Delphi compilers and .NET. 
+XE2+ support is limited to Windows targets. Firemonkey is currently not 
+supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Support forum: https://en.delphipraxis.net/forum/32-omnithreadlibrary/
+Downloads: https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list
+Repository: https://github.com/gabr42/OmniThreadLibrary
+Issue tracker: https://github.com/gabr42/OmniThreadLibrary/issues
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation wiki: http://otl.17slon.com/book/
+Documentation book: http://leanpub.com/omnithreadlibrary
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
+
+Changes since version 3.07.5
+============================
+
+- New features:
+  - Implemented TOmniValue.LogValue.
+  - Implemented TOmniBlockingCollection.FromArray<T>, .FromRange<T>, 
+    and .AddRange<T>. [issue #76]
+  - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
+    TOmniMREW.TryExitReadLock.
+
+- Bug fixes:
+  - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which 
+    could cause TOmniBaseBoundedQueue.Enqueue to return False when 
+    the queue was empty.
+  - Fixed race condition between TOmniResourceCount.[Try]Allocate 
+    and TOmniResourceCount.Release. [tnx to Stephen Melnyk]
+  - ThreadData is destroyed in the worker thread and not in the 
+    thread pool management thread.
+  - Reduced hints&warnings. [issue #110]
+
+--
+Primoz
+[http://thedelphigeek.com]
