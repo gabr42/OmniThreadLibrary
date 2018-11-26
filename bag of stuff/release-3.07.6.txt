@@ -1,7 +1,7 @@
 OmniThreadLibrary 3.07.6 has just been released. It is available via
 GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.6)
 or as a ZIP archive
-(https://drive.google.com/open?id=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX).
+(https://drive.google.com/open?id=1jEfTlzOS7tjEXk8owEY06tV4KsYUjhGv).
 
 What is OmniThreadLibrary?
 ==========================
