@@ -1,0 +1,25 @@
+[Filters]
+dcc32.exe=DccCleanup $(DccFilterSwitch)
+dcc64.exe=DccCleanup $(DccFilterSwitch)
+
+[Global]
+ForceDir=$(Scratch)\exe;$(Scratch)\dcu;$(Scratch)\dcu\win32;$(Scratch)\dcu\win64
+WorkingDir=h:\razvoj\omnithreadlibrary\unittests
+Execute=$(Path)\dcc32.exe StressTestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win32" -dCONSOLE_TESTRUNNER
+Execute="$(Scratch)\exe\StressTestRunner.exe"
+
+[Default]
+Execute=$(Path)\dcc64.exe StressTestRunner -b -u..;..\src;..\..\fastmm -i.. -nsSystem;System.Win;Winapi;Vcl;Vcl.Imaging;Vcl.Samples;Data;Xml -e"$(Scratch)\exe" -n0"$(Scratch)\dcu\win64" -dCONSOLE_TESTRUNNER
+Execute="$(Scratch)\exe\StressTestRunner.exe"
+
+[Delphi 2007]
+Null=
+
+[Delphi 2009]
+Null=
+
+[Delphi 2010]
+Null=
+
+[Delphi XE]
+Null=

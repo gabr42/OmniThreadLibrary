@@ -85,7 +85,7 @@ var
   var
     wait: int64;
   begin
-    wait := (CResourceCountStressTest_sec * 1000 + 1000) - DSiElapsedTime(startTime);
+    wait := (CResourceCountStressTest_sec * 1000 + 1000) - DSiElapsedTime64(startTime);
     if wait < 0 then
       Result := 0
     else
@@ -104,24 +104,26 @@ begin
         alloc[i] := CreateTask(ResourceAllocate, 'ResourceAllocate');
       for i := Low(release) to High(release) do
         release[i] := CreateTask(ResourceRelease, 'ResourceRelease');
+
       startTime := DSiTimeGetTime64;
       for i := Low(alloc) to High(alloc) do
         alloc[i].Run;
       for i := Low(release) to High(release) do
         release[i].Run;
-    end;
-    try
-      for i := Low(alloc) to High(alloc) do
-        Assert(alloc[i].WaitFor(WaitTime), 'ResourceAllocate did not terminate correctly');
-    finally
-      for i := Low(alloc) to High(alloc) do
-        alloc[i].Terminate(0);
+
       try
-        for i := Low(release) to High(release) do
-          Assert(release[i].WaitFor(WaitTime), 'ResourceRelease did not terminate correctly');
+        for i := Low(alloc) to High(alloc) do
+          Assert(alloc[i].WaitFor(WaitTime), 'ResourceAllocate did not terminate correctly');
       finally
-        for i := Low(release) to High(release) do
-          release[i].Terminate(0);
+        for i := Low(alloc) to High(alloc) do
+          alloc[i].Terminate(0);
+        try
+          for i := Low(release) to High(release) do
+            Assert(release[i].WaitFor(WaitTime), 'ResourceRelease did not terminate correctly');
+        finally
+          for i := Low(release) to High(release) do
+            release[i].Terminate(0);
+        end;
       end;
     end;
   end;
