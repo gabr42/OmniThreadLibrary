@@ -22,7 +22,7 @@ type
 implementation
 
 uses
-  System.SyncObjs,
+  SyncObjs,
   OtlTaskControl;
 
 const
@@ -74,11 +74,11 @@ end;
 
 procedure TestOtlSync.StressTestResourceCount;
 var
-  alloc    : TArray<IOmniTaskControl>;
+  alloc    : array [1..3] of IOmniTaskControl;
   i        : integer;
   iAlloc   : integer;
   iRelease : integer;
-  release  : TArray<IOmniTaskControl>;
+  release  : array [1..3] of IOmniTaskControl;
   startTime: int64;
 
   function WaitTime: integer;
@@ -97,31 +97,29 @@ begin
   FQueuedCount.Value := 0;
 
   for iAlloc := 1 to 3 do begin
-    SetLength(alloc, iAlloc);
     for iRelease := 1 to 3 do begin
-      SetLength(release, iRelease);
-      for i := Low(alloc) to High(alloc) do
+      for i := 1 to iAlloc do
         alloc[i] := CreateTask(ResourceAllocate, 'ResourceAllocate');
-      for i := Low(release) to High(release) do
+      for i := 1 to iRelease do
         release[i] := CreateTask(ResourceRelease, 'ResourceRelease');
 
       startTime := DSiTimeGetTime64;
-      for i := Low(alloc) to High(alloc) do
+      for i := 1 to iAlloc do
         alloc[i].Run;
-      for i := Low(release) to High(release) do
+      for i := 1 to iRelease do
         release[i].Run;
 
       try
-        for i := Low(alloc) to High(alloc) do
+        for i := 1 to iAlloc do
           Assert(alloc[i].WaitFor(WaitTime), 'ResourceAllocate did not terminate correctly');
       finally
-        for i := Low(alloc) to High(alloc) do
+        for i := 1 to iAlloc do
           alloc[i].Terminate(0);
         try
-          for i := Low(release) to High(release) do
+          for i := 1 to iRelease do
             Assert(release[i].WaitFor(WaitTime), 'ResourceRelease did not terminate correctly');
         finally
-          for i := Low(release) to High(release) do
+          for i := 1 to iRelease do
             release[i].Terminate(0);
         end;
       end;
