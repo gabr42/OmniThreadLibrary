@@ -5,7 +5,7 @@ unit TestOtlSync1;
 interface
 
 uses
-  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils,
+  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlTask;
 
 type
