@@ -14,6 +14,12 @@
   - TOmniContainerWindowsEventObserver and TOmniContainerWindowsMessageObserver are
     still implemented for backwards compatibility.
 
+3.07.7: <<unreleased>>
+
+- Bug fixes:
+  - If additional wait objects registered with RegisterWaitObject were
+    constantly signalled, timers were never called.
+
 3.07.6: 2018-11-26
 
 - New features:
