@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-16
-///   Version           : 1.40a
+///   Last modification : 2018-12-13
+///   Version           : 1.40b
 ///</para><para>
 ///   History:
+///     1.40b: 2018-12-13
+///       - Fixed: If additional wait objects registered with RegisterWaitObject were
+///         constantly signalled, timers were never called.
 ///     1.40a: 2018-03-16
 ///       - TOmniMessageExec.OnTerminated checks whether the event handler is assigned
 ///         before executing it.
@@ -2208,6 +2211,7 @@ begin
             responseHandler := oteWaitObjectList.ResponseHandlers[info.Index - msgInfo.IdxFirstWaitObject];
           finally oteInternalLock.Release; end;
           responseHandler();
+          CheckTimers;
         end;
 //        TestForInternalRebuild(task, msgInfo); // doesn't seem safe anymore
       end // comm handles
