@@ -1276,7 +1276,6 @@ type
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a IEnumerable<T> interface</summary>
     class function  ForEach<T>(const enumerable: IEnumerable<T>): IOmniParallelLoop<T>;
       overload;
-    {$IFDEF OTL_ERTTI}
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</summary>
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
 

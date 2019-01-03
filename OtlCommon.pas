@@ -1976,8 +1976,7 @@ begin
   if ds = 0 then begin // complicated stuff
     if ti.Kind = tkRecord then
       Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
-    else
-      {$IFDEF OTL_ERTTI}
+    else begin
       {$IFDEF OTL_TypeInfoHasTypeData}
       if (ti.Kind = tkInterface)
          and Supports(AsInterface, ti.TypeData.Guid, intf)
@@ -1987,10 +1986,8 @@ begin
       end
       else
       {$ENDIF OTL_TypeInfoHasTypeData}
-        Result := AsTValue.AsType<T>
-      {$ELSE}
-      raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
-      {$ENDIF OTL_ERTTI}
+      Result := AsTValue.AsType<T>;
+    end;
   end
   else begin // simple types
     if ds < 8 then begin
