@@ -1,7 +1,10 @@
 3.07.7: <<unreleased>>
 
 - New features:
-  [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting to an interface.
+  - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
+    to an interface.
+  - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
+    Parallel.ForEach(IEnumerable<T>).
 
 - Bug fixes:
   - If additional wait objects registered with RegisterWaitObject were
