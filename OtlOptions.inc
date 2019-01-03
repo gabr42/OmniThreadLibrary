@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2010 Primoz Gabrijelcic
+///Copyright (c) 2019 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,12 +30,16 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2018-05-28
+///   Last modification : 2019-01-03
 ///   Version           : 2.0
 ///</para><para>
 ///   History:
 ///     2.01: 2018-05-28
 ///       - Introduced OTL_NameThreadHasStringParameter and OTL_HasVolatileAttribute.
+///     1.06: 2019-01-03
+///       - Introduced OTL_TypeInfoHasTypeData.
+///     1.05: 2018-05-26
+///       - Introduced OTL_NameThreadHasStringParameter and OTL_CanInlineOperators.
 ///       - OTL_StrPasInAnsiStrings moved from XE5 to XE4 section.
 ///     2.0: 2018-05-12
 ///       - Removed defines associated with Delphi 2007 do XE as these versions are
@@ -83,6 +87,7 @@
   {$DEFINE OTL_LongGetMethodInfo}
   {$DEFINE OTL_CountdownHasSpinCount}
   {$DEFINE OTL_NameThreadHasStringParameter}
+  {$DEFINE OTL_TypeInfoHasTypeData}
 {$IFEND}
 
 {$IF CompilerVersion >= 25} //DXE4

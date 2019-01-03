@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{8004D070-B539-44EF-8050-FEFC76288190}</ProjectGuid>
         <ProjectVersion>18.4</ProjectVersion>
@@ -13,7 +13,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
-    </PropertyGroup>
+    </PropertyGroup><><
     <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
         <Base_Win32>true</Base_Win32>
         <CfgParent>Base</CfgParent>
@@ -112,7 +112,7 @@
         <DCCReference Include="TestBlockingCollection1.pas"/>
         <DCCReference Include="TestOtlDataManager1.pas"/>
         <DCCReference Include="TestOmniInterfaceDictionary.pas"/>
-        <DCCReference Include="..\OtlCommon.pas"/>
+        <DCCReference Include="TestOtlSync1.pas"/>
         <DCCReference Include="TestOmniValue.pas"/>
         <DCCReference Include="TestValue.pas"/>
         <DCCReference Include="TestOtlParallel.pas">
@@ -200,6 +200,11 @@
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
                         <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                    <Platform Name="iOSSimulator">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
                     </Platform>
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\MacOS</RemoteDir>

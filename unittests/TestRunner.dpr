@@ -24,7 +24,6 @@ uses
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
   TestOtlSync1 in 'TestOtlSync1.pas',
-  OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
   TestOtlParallel in 'TestOtlParallel.pas',
