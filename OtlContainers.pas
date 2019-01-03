@@ -1,10 +1,10 @@
-﻿///<summary>Microlocking containers. Part of the OmniThreadLibrary project.</summary>
+///<summary>Microlocking containers. Part of the OmniThreadLibrary project.</summary>
 ///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer) unless OTL_OLDCPU is defined.</remarks>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2018 Primoz Gabrijelcic
+///Copyright (c) 2019 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
