@@ -39,6 +39,9 @@
 ///   Version           : 1.50
 ///</para><para>
 ///   History:
+///     1.51: 2019-01-03
+///       - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
+///         to an interface. Fixes #128.
 ///     1.50: 2018-04-13
 ///       - Implemented TOmniValue.LogValue, useful for debug logging.
 ///     1.49: 2018-03-12
@@ -605,7 +608,7 @@ type
     property Value: TOmniValue read GetValue;
   end; { IOmniWaitableValue }
 
-  TOmniWaitableValue = class( TInterfacedObject, IOmniWaitableValue)
+  TOmniWaitableValue = class(TInterfacedObject, IOmniWaitableValue)
   strict private
     FEvent: TEvent;
     FValue: TOmniValue;
@@ -2366,6 +2369,11 @@ var
   ds      : integer;
   maxValue: uint64;
   ti      : PTypeInfo;
+{$IFDEF OTL_TypeInfoHasTypeData}
+var
+  intf    : IInterface;
+  value   : TValue;
+{$ENDIF OTL_TypeInfoHasTypeData}
 begin
   ds := 0;
   ti := System.TypeInfo(T);
@@ -2381,7 +2389,16 @@ begin
       Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
     else
       {$IFDEF OTL_ERTTI}
-      Result := AsTValue.AsType<T>
+      {$IFDEF OTL_TypeInfoHasTypeData}
+      if (ti.Kind = tkInterface)
+         and Supports(AsInterface, ti.TypeData.Guid, intf)
+      then begin
+        TValue.Make(@intf, ti, value);
+        Result := value.AsType<T>;
+      end
+      else
+      {$ENDIF OTL_TypeInfoHasTypeData}
+        Result := AsTValue.AsType<T>
       {$ELSE}
       raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
       {$ENDIF OTL_ERTTI}

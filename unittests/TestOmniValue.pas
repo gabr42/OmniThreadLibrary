@@ -15,11 +15,12 @@ uses
   TestFramework, GpStuff, Windows, TypInfo, DSiWin32, Classes, SysUtils, Variants,
   OtlCommon;
 
+{$I OtlOptions.inc}
+
 type
   // Test methods for class TOmniValueContainer
 
   TestTOmniValueContainer = class(TTestCase)
-  strict private
   strict protected
     procedure CheckSimpleType(const ov: TOmniValue; expected: array of boolean);
     procedure CheckWrappedType(const ov: TOmniValue; expected: array of boolean);
@@ -30,12 +31,30 @@ type
     procedure TestInterface;
     procedure TestSimpleValues;
     procedure TestWrappedValues;
+  {$IFDEF OTL_TypeInfoHasTypeData}
+    procedure TestCastToInterface_issue_128;
+  {$ENDIF OTL_TypeInfoHasTypeData}
   end;
 
 implementation
 
 uses
   TestValue;
+
+type
+  ITestInterface = interface ['{D9F4791C-1FD3-46F6-BE8E-DF5C5356402D}']
+    function GetValue: int64;
+    procedure SetValue(const value: int64);
+    property Value: int64 read GetValue write SetValue;
+  end;
+
+  TTestInterface = class(TInterfacedObject, ITestInterface)
+  strict private
+    FValue: int64;
+  public
+    function GetValue: int64;
+    procedure SetValue(const value: int64);
+  end;
 
 procedure TestTOmniValueContainer.CheckSimpleType(const ov: TOmniValue; expected: array
   of boolean);
@@ -61,6 +80,20 @@ procedure TestTOmniValueContainer.TearDown;
 begin
   CheckEquals(0, GTestValueCount);
 end;
+
+{$IFDEF OTL_TypeInfoHasTypeData}
+procedure TestTOmniValueContainer.TestCastToInterface_issue_128;
+var
+  ov: TOmniValue;
+  intf: ITestInterface;
+begin
+  intf := TTestInterface.Create;
+  intf.Value := $42000000000017;
+  ov := intf;
+  intf := nil;
+  CheckEquals($42000000000017, ov.CastTo<ITestInterface>.Value);
+end;
+{$ENDIF OTL_TypeInfoHasTypeData}
 
 procedure TestTOmniValueContainer.TestComposed;
 var
@@ -151,6 +184,18 @@ begin
   ov := v;
   CheckEquals(integer(127), integer(ov.AsVariant));
   CheckWrappedType(ov, [false, false, false, true]); CheckSimpleType(ov, [false, false, false, false]); CheckFalse(ov.IsInterface);
+end;
+
+{ TTestInterface }
+
+function TTestInterface.GetValue: int64;
+begin
+  Result := FValue;
+end;
+
+procedure TTestInterface.SetValue(const value: int64);
+begin
+  FValue := value;
 end;
 
 initialization
