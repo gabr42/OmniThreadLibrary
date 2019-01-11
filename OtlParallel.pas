@@ -36,16 +36,20 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack
 ///   Creation date     : 2010-01-08
-///   Last modification : 2019-01-03
-///   Version           : 1.53
+///   Last modification : 2019-01-10
+///   Version           : 2.01a
 ///</para><para>
 ///   History:
+///     2.01a: 2019-01-10
+///       - Fixed pool scheduling for OtlParallel threads. Since 1.52 threads were
+///         incorrectly scheduled to the main pool unless IOmniTaskConfig.ThreadPool
+///         was used.
+///     2.01: 2019-01-03
+///       - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
+///         Parallel.ForEach(IEnumerable<T>). Fixes #129.
 ///     2.0: 2018-06-14
 ///       - Started work on platform independency.
 ///       - TOmniTransitionEvent changed to IOmniEvent.
-///     1.53: 2019-01-03
-///       - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
-///         Parallel.ForEach(IEnumerable<T>). Fixes #129.
 ///     1.52a: 2017-07-05
 ///       - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> is removed
 ///         for pre-XE7 compilers because of compiler bugs. This removes
@@ -5072,7 +5076,12 @@ end; { TOmniTaskConfig.GetTerminated }
 
 function TOmniTaskConfig.GetThreadPool: IOmniThreadPool;
 begin
-  Result := otcThreadPool;
+  if otcNoThreadPool then
+    Result := nil
+  else if assigned(otcThreadPool) then
+    Result := otcThreadPool
+  else
+    Result := GlobalParallelPool;
 end; { TOmniTaskConfig.GetThreadPool }
 
 function TOmniTaskConfig.MonitorWith(const monitor: IOmniTaskControlMonitor):
