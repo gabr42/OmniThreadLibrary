@@ -9,6 +9,9 @@
 - Bug fixes:
   - If additional wait objects registered with RegisterWaitObject were
     constantly signalled, timers were never called.
+  - OtlParallel threads were incorrectly scheduled to the main pool 
+    instead of GlobalParallelPool unless IOmniTaskConfig.ThreadPool
+    was used. (introduced in 3.07.6)
 
 3.07.6: 2018-11-26
 
