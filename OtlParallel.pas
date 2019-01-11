@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack
 ///   Creation date     : 2010-01-08
-///   Last modification : 2019-01-10
-///   Version           : 2.01a
-///</para><para>
+///   Last modification : 2019-01-11
+///   Version           : 2.01b
 ///   History:
+///     2.01b: 2019-01-11
+///       - Using Parallel.Join.OnStopInvoke failed with access violation if Join
+///         was not executed with .NoWait.
 ///     2.01a: 2019-01-10
 ///       - Fixed pool scheduling for OtlParallel threads. Since 1.52 threads were
 ///         incorrectly scheduled to the main pool unless IOmniTaskConfig.ThreadPool
@@ -2054,11 +2056,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelJoin.OnStopInvoke }
 
@@ -3218,11 +3223,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelLoop<T>.OnStopInvoke }
 {$ENDIF OTL_FixedGenericIncompletelyDefined}
@@ -3596,11 +3604,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelSimpleLoop.OnStopInvoke }
 
