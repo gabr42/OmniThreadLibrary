@@ -4,9 +4,9 @@ OmniThreadLibrary is a powerful threading library for Delphi. OmniThreadLibrary'
 
 ### How do I get OmniThreadLibrary?
 
-Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.6) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
+Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.7) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
 
-Download the [latest release](https://drive.google.com/open?id=1jEfTlzOS7tjEXk8owEY06tV4KsYUjhGv).
+Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.7).
 
 Download an [older release](https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list).
 
