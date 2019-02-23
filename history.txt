@@ -1,4 +1,4 @@
-3.07.7: <<unreleased>>
+3.07.7: 2019-02-23
 
 - New features:
   - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
@@ -28,6 +28,7 @@
     and .AddRange<T>. [issue #76]
   - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
     TOmniMREW.TryExitReadLock.
+
 - Bug fixes:
   - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
     TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
@@ -42,6 +43,7 @@
 - General improvements:
   - Reduced number of times NameThreadForDebugging is called when threadpool
     is used.
+
 - Bug fixes:
   - [VyPu] fixed race condition in TOmniCriticalSection.Release which affected
     code that was using TOmniCriticalSection.LockCount.
@@ -63,6 +65,7 @@
 - Bug fixes:
   - Nasty thread-unsafe condition fixed in DSiWin32's DSiTimeGetTime64, which is
     used all around OmniThreadLibrary to measure small time intervals. 
+
 - New features:
   - SetTimer accepts TProc and TProc<integer> timer methods.
   - IOmniTask implements method InvokeOnSelf which can be used to schedule
@@ -78,6 +81,7 @@
     achieved by calling overloaded version of the functions accepting the 
     `signalCancellationToken` parameter or by setting IOmniThreadPool.Options 
     to [tpoPreventCancellationTokenOnCancel].
+
 - New features:
   - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
     to Parallel.Join and Parallel.ParallelTask.
@@ -89,8 +93,10 @@
   - TOmniCS.Initialize uses global lock to synchronize initialization instead of
     a CAS operation. This fixes all reasons for the infamous error
     "TOmniCS.Initialize: XXX is not properly aligned!".
+
  - Bug fixes:
   - Parallel.Future did not create task with the .Unobserved qualifier.
+
 - New demos:
   - 66_ThreadsInThreads: Demonstrates how to manage OTL threads from other OTL threads
     and from TThread threads.
@@ -99,6 +105,7 @@
 
 - New features:
   - Supports Delphi 10.2 Tokyo.
+
 - Bug fixes:
   - Fixed long standing problem with timer processing in OtlTaskControl
     which could cause timers not to be triggered correctly and sometimes
@@ -125,6 +132,7 @@
       OnRequestDone handler won't be called.
   - If ThreadDataFactory.Execute throws an exception, that exception is caught,
     ignored and ThreadData is set to nil. [issue #88]
+
 - Bug fixes:
   - Reverted change from 3.06: "Any change to Affinity, ProcessorGroups,
     or NUMANodes properties will reset the MaxExecuting property."
@@ -137,6 +145,7 @@
   - Fixed TOmniValue.CastTo<TArray<Int64>>. [issue #89]
   - If a future's cancellation token is signalled before the future is even
     created, the future worker is not started at all. [issue #85]
+
 - New demos:
   - examples\folder scanner: File scanning example implemented 
     with a Pipeline.
@@ -145,6 +154,7 @@
 - New features:
   - Implemented two-parameter version of Atomic initializer which 
     intializes an interface type from a class type.
+
 - Bug fixes:
   - Programs using OtlCommon can be started on Windows XP.
 
@@ -153,6 +163,7 @@
   - Implemented TOmniValue.Wrap<T> and .Unwrap<T>, a way to wrap anything
     (including TMethod and 'reference to procedure') in a TOmniObject.
     [Unwrap<T> must be called as follows: omnivalue.Unwrap<T>()]
+
 - Bug fixes:
   - Fixed enum size enforcement in DSiWin32. [Could cause an application
     to crash if OtlCommon was used in the program.]
@@ -161,6 +172,7 @@
 - Breaking changes:
   - Type TWaitFor.TWaitResult renamed to TWaitFor.TWaitForResult.
   - Packages were renamed. Now they are using $LIBSUFFIX scheme.
+
 - New features:
   - Implemented Parallel.For<T>(const arr: TArray<T>).
   - New abstraction Parallel.TimedTask.  
@@ -185,8 +197,10 @@
   - Implemented TOmniRecord<T>, a simple way to wrap "anything" in a record.
   - Added thread pool lifecycle notifications to OtlHooks 
     (RegisterPoolNotification, UnregisterPoolNotification).  
+
 - Demos:
   - [HHasenack] Added more unit tests.
+
 - Bug fixes:
   - Fixed unsafe 64-bit pointer-to-integer casts in TOmniCS.Initialize and 
     Atomic<T>.Initialize.
@@ -201,6 +215,7 @@
   - Added Delphi 10 Seattle packages and projects.
   - Setting IOmniThreadPool.MinWorkers property will start up idle worker threads 
     if total number of threads managed by the thread pool is lower than the new value.
+
 - Bug fixes:
   - Fixed 'record' type handling in TOmniValue.FromArray<T> and TOmniValue.ToArray<T>.
   - Reimplemented support for > 60 worker tasks in the OtlThreadPool unit which 
@@ -225,6 +240,7 @@
     is only used from one thread. 
   - TOmniCommunicationEndpoint.ReceiveWait and .SendWait are now fully thread-safe
     and support multiple consumers (former) and multiple producers (latter).
+
 - Bug fixes:
   - Reimplemented support for TWaitFor in the TOmniTaskControl which was removed
     from the code in 3.04a by mistake.
@@ -233,6 +249,7 @@
 - New features:
   - Added XE8 packages and projects.
   - Tested with XE8.
+
 - Bug fixes:  
   - DSiWin32
     - Fixed DSiClassWndProc parameter types for Win64.
@@ -264,11 +281,13 @@
     6 of them (8 - 2) will be used to run the task.  
   - Removed project groups.
   - Tested with 2007-XE7.
+
 - Bug fixes:
   - Fixed race condition in IOmniPipeline termination code [tnx to Dean Hill].
   - Creating parameters with the array overload
     (IOmniTaskControl.SetParameters(['From', 0, 'To', 99])) was not working.
   - Fixed problems in demos 33_BlockingCollection and 47_TaskConfig.
+
 - New demos:
   - 55_ForEachProgress: Demonstrates progress bar updating from a ForEach loop.
   - 56_RunInvoke: Simplified 'run & invoke' low-level API.
@@ -299,6 +318,7 @@
     http://www.thedelphigeek.com/2013/04/threadsafe-lock-manager-1-design.html
     http://www.thedelphigeek.com/2013/04/threadsafe-lock-manager-2-code.html
     http://www.thedelphigeek.com/2013/04/threadsafe-lock-manager-3-test.html
+
 - Bug fixes:
   - Fixed XE2/XE3 package compilation
   - TOmniBaseBounded(Queue|Stack) internally aligns allocated memory to required
@@ -333,6 +353,7 @@
     and task finalizer (Finalize).
   - IOmniWorkItem extended with property TaskState.
   - Inlined bunch of TOmniWorkItem methods.
+
 - Bug fixes:
   - Parallel.Join was broken if number of task to be executed was larger
     than number of threads. Thanks to [Passella] for reporting the problem.
@@ -354,10 +375,13 @@
   - XE2 and XE3 design packages were referring to wrong runtime package (XE).
   - TOmniEventMonitor is marked as 64-bit compliant in XE2+.
     Thanks to [M.J. Brandt] for reporting a problem.
+
 - Other changes:
   - Marked IOmniParallelLoop.OnMessage as deprecated (use TaskConfig.OnMessage).
+
 - New demos:
   - 53_AsyncAwait: Demonstration of the new Async/Await abstraction.
+
 - New examples:
   - ForEach output: Demonstrates how to 'flow' ForEach output directly into
     the main thread which immediately processes the data.
@@ -369,6 +393,7 @@
     http://www.thedelphigeek.com/2012/02/exceptions-in-async.html
   - Task property added to the IOmniWorkItem interface.
   - Added TOmniValueObj class, a class wrapper for TOmniValue record.
+
 - Bug fixes:
   - Fixed race condition in InternalStop.
   - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
@@ -410,6 +435,7 @@
   - Added a class which can wrap any record - TOmniRecordWrapper<T>.
   - Added an interface which can wrap any object and destroy it when the 
     interface goes out of scope - IOmniAutoDestroyObject.
+
 - Bug fixes:
   - Fixed bugs in TOmniInterfaceDictionary which caused scheduled tasks not 
     to be destroyed until the program was terminated. Great thanks to 
@@ -425,6 +451,7 @@
     reference counted value (found by [meishier]).
   - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was 
     off by 1 (found by [meishier]).
+
 - New demos:
   - 49_FramedWorkers: Multiple frames communication with each own worker task.
   - 50_OmniValueArray: Wrapping arrays, hashes and records in TOmniValue.
