@@ -37,6 +37,9 @@
   - ThreadData is destroyed in the worker thread and not in the thread pool
     management thread.
   - Reduced hints&warnings. [issue #110]
+  
+- New demos:
+  - 67_ArrayToCollection: Demonstrates the use of TOmniBlockingCollection.FromArray and TOmniBlockingCollection.FromRange.
 
 3.07.5: 2017-02-28
 
