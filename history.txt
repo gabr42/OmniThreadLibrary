@@ -26,8 +26,7 @@
   - Implemented TOmniValue.LogValue.
   - Implemented TOmniBlockingCollection.FromArray<T>, .FromRange<T>, 
     and .AddRange<T>. [issue #76]
-  - Added timeout parameter to TOmniMREW.TryEnterReadLock and 
-    TOmniMREW.TryExitReadLock.
+  - Added TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock methods.
 
 - Bug fixes:
   - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
