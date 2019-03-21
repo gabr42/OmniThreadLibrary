@@ -1,3 +1,8 @@
+3.07.&: <<unreleased>>
+
+- New features:
+  - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
+
 3.07.7: 2019-02-23
 
 - New features:
