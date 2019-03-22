@@ -6,7 +6,9 @@
 - Bug fixes:
   - [sglienke] A reference to an anonymous method executor in IOmniTask is
     cleaned up as soon as possible. This allows OTL tasks to be executed
-    from a package. [issue #132] 
+    from a package. [issue #132]
+  - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True 
+    on timeout.  
 
 3.07.7: 2019-02-23
 

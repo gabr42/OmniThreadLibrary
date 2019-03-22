@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-11-02
-///   Version           : 1.27a
+///   Last modification : 2019-03-19
+///   Version           : 1.27b
 ///</para><para>
 ///   History:
+///     1.27b: 2019-03-19
+///        - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     1.27a: 2018-11-02
 ///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///	    1.27: 2018-04-06
@@ -1283,13 +1285,13 @@ end; { TOmniMREW.ExitWriteLock }
 function TOmniMREW.TryEnterReadLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1299,7 +1301,8 @@ begin
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
+  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference))
+        or Timeout(Result);
   {$ELSE}
   until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result);
   {$ENDIF}
@@ -1308,13 +1311,13 @@ end; { TOmniMREW.TryEnterReadLock }
 function TOmniMREW.TryEnterWriteLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1325,7 +1328,8 @@ begin
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
+  until CAS(currentReference,  currentReference + 1, NativeInt(omrewReference))
+        or Timeout(Result);
   {$ELSE}
   until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference) or Timeout(Result);
   {$ENDIF}
