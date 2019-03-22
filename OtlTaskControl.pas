@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-12-13
-///   Version           : 2.0
+///   Last modification : 2019-03-22
+///   Version           : 2.0a
 ///</para><para>
 ///   History:
+///     2.0a: 2019-03-22
+///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
+///         This allows tasks to be run from a package. [issue #132]
 ///     2.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - Internal time functions replaced with OtlPlatform.Time.
@@ -1689,7 +1692,7 @@ begin
     if not otExecuting then
       otTerminateWillCallExecute := true;
   finally otCleanupLock.ExitWriteLock; end;
-  // TODO 1 -oPrimoz Gabrijelcic : This is very suspicious :(
+
   if otTerminateWillCallExecute then //call Execute to run at least cleanup code
     InternalExecute(true);
 end; { TOmniTask.Terminate }
@@ -2083,6 +2086,9 @@ procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
   FreeAndNil(oteTimers);
+  {$IFDEF OTL_Anonymous}
+  oteFunc := nil;
+  {$ENDIF OTL_Anonymous}
 end; { TOmniTaskExecutor.Cleanup }
 
 procedure TOmniTaskExecutor.DispatchCommMessage(newMsgHandle: TOmniTransitionEvent;
