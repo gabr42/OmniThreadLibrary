@@ -6,13 +6,25 @@
   - Removed compatibility with Delphi versions up to and including 2010.
   - TOmniValue.AsArrayItemOV[] property removed (use ArrayAsItem[]).
   - TOmniBlockingCollection.CompletedSignal is no longer THandle but IOmniEvent.
-
+  
 - New features:
   - Added platform-independant 'event' observer TOmniContainerEventObserver.
   - Added platform-independant observer TOmniContainerPlatformObserver used 
     to feed TOTLEventMonitor component.
   - TOmniContainerWindowsEventObserver and TOmniContainerWindowsMessageObserver
     are still implemented for backwards compatibility.
+  
+3.07.&: <<unreleased>>
+
+- New features:
+  - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
+  
+- Bug fixes:
+  - [sglienke] A reference to an anonymous method executor in IOmniTask is
+    cleaned up as soon as possible. This allows OTL tasks to be executed
+    from a package. [issue #132]
+  - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True 
+    on timeout.  
 
 3.07.&: <<unreleased>>
 
