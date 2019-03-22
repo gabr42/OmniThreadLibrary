@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-12-13
-///   Version           : 1.40b
+///   Last modification : 2019-03-22
+///   Version           : 1.40c
 ///</para><para>
 ///   History:
+///     1.40c: 2019-03-22
+///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
+///         This allows tasks to be run from a package. [issue #132]
 ///     1.40b: 2018-12-13
 ///       - Fixed: If additional wait objects registered with RegisterWaitObject were
 ///         constantly signalled, timers were never called.
@@ -829,9 +832,9 @@ type
     procedure GetMethodAddrAndSignature(const methodName: string;
       var methodAddress: pointer; var methodSignature: TOmniInvokeType);
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage; var msgName: string;
-      var msgData: TOmniValue {$IFDEF OTL_Anonymous}; var func:
-      TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx; var proc:
-      TProc<integer>; var taskFunc: TOmniTaskInvokeFunction {$ENDIF OTL_Anonymous});
+      var msgData: TOmniValue {$IFDEF OTL_Anonymous};
+      var func: TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx;
+      var proc: TProc<integer>; var taskFunc: TOmniTaskInvokeFunction {$ENDIF OTL_Anonymous});
     function  GetOptions: TOmniTaskControlOptions;
     function  HaveElapsedTimer: boolean;
     procedure Initialize;
@@ -1726,7 +1729,7 @@ begin
     if not otExecuting then
       otTerminateWillCallExecute := true;
   finally otCleanupLock.ExitWriteLock; end;
-  // TODO 1 -oPrimoz Gabrijelcic : This is very suspicious :(
+
   if otTerminateWillCallExecute then //call Execute to run at least cleanup code
     InternalExecute(true);
 end; { TOmniTask.Terminate }
@@ -2129,6 +2132,9 @@ procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
   FreeAndNil(oteTimers);
+  {$IFDEF OTL_Anonymous}
+  oteFunc := nil;
+  {$ENDIF OTL_Anonymous}
 end; { TOmniTaskExecutor.Cleanup }
 
 procedure TOmniTaskExecutor.DispatchCommMessage(newMsgHandle: TOmniTransitionEvent;
