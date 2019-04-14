@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-11-02
-///   Version           : 2.01a
+///   Last modification : 2019-03-19
+///   Version           : 2.01b
 ///</para><para>
 ///   History:
+///     2.01b: 2019-03-19
+///        - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     2.01a: 2018-11-02
 ///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///     2.01: 2018-06-14
@@ -1260,13 +1262,13 @@ end; { TOmniMREW.ExitWriteLock }
 function TOmniMREW.TryEnterReadLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := Time.HasElapsed(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1275,19 +1277,20 @@ begin
   //Wait on writer to reset write flag so Reference.Bit0 must be 0 than increase Reference
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  until TInterlockedEx.CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
+  until TInterlockedEx.CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) 
+        or Timeout(Result);
 end; { TOmniMREW.TryEnterReadLock }
 
 function TOmniMREW.TryEnterWriteLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := Time.HasElapsed(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1297,7 +1300,8 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
+  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) 
+        or Timeout(Result);
   if Result then begin
     //Now wait on all readers
     repeat
