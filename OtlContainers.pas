@@ -643,7 +643,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  ThreadReference := OtlSync.GetThreadId + 1;                           //Reference.bit0 := 1
+  ThreadReference := TThread.Current.ThreadID + 1;                           //Reference.bit0 := 1
   with chain do begin
 TryAgain:
     TaskCounter := obsTaskPopLoops;
@@ -895,7 +895,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  ThreadReference := OtlSync.GetThreadId + 1;                           //Reference.bit0 := 1
+  ThreadReference := TThread.Current.ThreadID + 1;                           //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
     TaskCounter := obqTaskInsertLoops;
@@ -991,7 +991,7 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
       obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := 1;
       for n := 1 to NumOfSamples do  begin
-        {$IFDEF OTL_HasTThreadYield}TThread.Yield;{$ELSE}DSiYield;{$ENDIF}
+        TThread.Yield;
         //Measure RemoveLink rutine delay
         TimeTestField[0, n] := GetCPUTimeStamp;
         currElement := RemoveLink(obqRecycleRingBuffer);
@@ -1020,7 +1020,7 @@ label
   TryAgain;
 begin
   {$IFDEF OTL_HaveCmpx16b}
-  Reference := OtlSync.GetThreadId + 1;                                 //Reference.bit0 := 1
+  Reference := TThread.Current.ThreadID + 1;                                 //Reference.bit0 := 1
   with ringBuffer^ do begin
 TryAgain:
     TaskCounter := obqTaskRemoveLoops;
@@ -1606,7 +1606,7 @@ begin
           break; //repeat
         end
         else
-          {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+          {$IFNDEF MSWINDOWS}TThread.Yield;{$ELSE}{$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}{$ENDIF}
       until false;
       if Result then begin // dequeueing
         {$IFDEF DEBUG_OMNI_QUEUE} Assert(tail = obcTailPointer.Slot); {$ENDIF}

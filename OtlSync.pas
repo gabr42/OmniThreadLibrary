@@ -221,7 +221,7 @@ type
     ///   rather through the containing TWaitFor, or as otherwise defined by
     //    the attached observer.
     /// </remarks>
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; overload;
+    function  WaitFor(Timeout: Cardinal = INFINITE): TWaitResult; overload;
     procedure ConsumeSignalFromObserver( const Observer: IOmniSynchroObserver);
     /// <remarks>
     ///  IsSignaled() is only valid when all the Signal()/ Reset()
@@ -638,7 +638,7 @@ procedure MoveDPtr(newData: pointer; newReference: NativeInt; var Destination); 
 function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal): boolean;
 {$ENDIF MSWINDOWS}
 
-function GetThreadId: NativeInt;
+//function GetThreadId: NativeInt;
 function GetCPUTimeStamp: int64;
 
 function SetEvent(event: TOmniTransitionEvent): boolean;
@@ -725,7 +725,7 @@ type
     procedure Acquire; override;
     procedure Release; override;
     procedure Signal;
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
+    function  WaitFor(Timeout: Cardinal = INFINITE): TWaitResult; override;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver); virtual; abstract;
     function  IsSignalled: boolean; virtual; abstract;
     procedure AddObserver(const Observer: IOmniSynchroObserver);
@@ -753,6 +753,7 @@ type
 
   TOmniWrappedEvent = class(TEvent)
   strict private
+    FHandle : THandle;
     FIsOwner: boolean;
   public
     constructor Create(AExternalEvent: THandle; ATakeOwnership: boolean = false);
@@ -774,7 +775,7 @@ type
     procedure SetEvent;
     function  BaseEvent: TEvent;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
-    function  WaitFor(Timeout: LongWord = INFINITE): TWaitResult; override;
+    function  WaitFor(Timeout: Cardinal = INFINITE): TWaitResult; override;
     function  IsSignalled: boolean; override;
   end; { TOmniEvent }
 
@@ -1046,27 +1047,21 @@ asm
 end;
 {$ENDIF MSWINDOWS}
 
-function GetThreadId: NativeInt;
-//result := GetCurrentThreadId;
-asm
-{$IFNDEF CPUX64}
-  mov   eax, fs:[$18]      //eax := thread information block
-  mov   eax, [eax + $24]   //eax := thread id
-{$ELSE CPUX64}
-  mov   rax, gs:[abs $30]
-  mov   eax, [rax + $48]
-{$ENDIF CPUX64}
-end; { GetThreadId }
-
 function GetCPUTimeStamp: int64;
+{$IFDEF MSWINDOWS}
 asm
   rdtsc
 {$IFDEF CPUX64}
   shl   rdx, 32
   or    rax, rdx
 {$ENDIF CPUX64}
+{$ELSE}             // TODO : *** Check if MeasureExecutionTimes in OtlContainers still works
+begin
+  Result := TStopwatch.GetTimestamp;
+{$ENDIF}
 end; { GetCPUTimeStamp }
 
+{$IFDEF MSWINDOWS}
 procedure NInterlockedExchangeAdd(var addend; value: NativeInt);
 asm
   lock  xadd [addend], value
@@ -1077,7 +1072,6 @@ asm
   mfence
 end; { MFence }
 
-{$IFDEF MSWINDOWS}
 function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal):
   boolean;
 var
@@ -2404,7 +2398,7 @@ begin
   Release;
 end; { TOmniSynchroObject.Signal }
 
-function TOmniSynchroObject.WaitFor(Timeout: LongWord): TWaitResult;
+function TOmniSynchroObject.WaitFor(Timeout: Cardinal): TWaitResult;
 begin
   if FObservers.Count > 0 then
     raise Exception.Create('Cannot wait directly on TOmniSynchroObject whilst it is enrolled in a compound syncro object.')
@@ -2499,16 +2493,18 @@ end; { TOmniCountdownEvent.ConsumeSignalFromObserver }
 constructor TOmniWrappedEvent.Create(AExternalEvent: THandle; ATakeOwnership: boolean);
 begin
   inherited Create(nil, false, false, '');
-  if FHandle <> 0 then
-    CloseHandle(FHandle);
+  if (FHandle <> 0) and ATakeOwnership then // TODO : *** recheck
+    raise Exception.Create('TOmniWrappedEvent.Create: Owned events are not supported yet');
+//    CloseHandle(FHandle);
   FHandle := AExternalEvent;
   FIsOwner := ATakeOwnership;
 end; { TOmniWrappedEvent.Create }
 
 destructor TOmniWrappedEvent.Destroy;
 begin
-  if FIsOwner and (FHandle <> 0) then
-    CloseHandle(FHandle);
+  if FIsOwner and (FHandle <> 0) then // TODO : *** recheck
+    raise Exception.Create('TOmniWrappedEvent.Destroy: Owned events are not supported yet');
+//    CloseHandle(FHandle);
   FHandle := 0;
   inherited;
 end; { TOmniWrappedEvent.Destroy }
@@ -2589,7 +2585,7 @@ begin
   {$ENDIF}
 end; { TOmniEvent.SetEvent }
 
-function TOmniEvent.WaitFor(Timeout: LongWord): TWaitResult;
+function TOmniEvent.WaitFor(Timeout: Cardinal): TWaitResult;
 begin
   Result := inherited WaitFor(Timeout);
   if (Result = wrSignaled) and (not FManualReset) then

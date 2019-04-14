@@ -117,9 +117,8 @@ uses
   Winapi.Windows,
   DSiWin32,
   GpStuff,
-  {$ELSE}
-  System.SyncObjs,
   {$ENDIF}
+  System.SyncObjs,
   System.TypInfo,
   System.RTTI,
   System.Generics.Collections,
@@ -260,7 +259,6 @@ implementation
 
 uses
   System.Classes,
-  System.SyncObjs,
   System.Diagnostics,
   OtlPlatform;
 

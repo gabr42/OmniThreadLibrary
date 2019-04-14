@@ -68,3 +68,5 @@ bag of stuff/numa/Win64/Debug/procinfo.dat
 *.dlens
 
 unittests/Linux64/Debug/
+
+tests/62_Console/Linux64/Debug/
