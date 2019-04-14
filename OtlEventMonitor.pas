@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-05-28
-///   Version           : 2.0a
+///   Last modification : 2019-04-14
+///   Version           : 2.0b
 ///</para><para>
 ///   History:
+///     2.0b: 2019-04-14
+///       - Removed last MSWINDOWS IFDEFs.
 ///     2.0a: 2018-05-28
 ///       - Fixed warnings.
 ///     2.0: 2018-05-10
@@ -108,10 +110,6 @@ interface
 uses
   OtlCommon,
   System.SysUtils,
-  {$IFDEF MSWINDOWS}
-  Winapi.Messages,
-  GpStuff,
-  {$ENDIF}
   GpLists,
   System.Classes,
   OtlComm,
@@ -134,6 +132,7 @@ type
   class var
     FLastID                   : TOmniAlignedInt64;
   var
+    emCurrentMsg              : TOmniMessage;
     emID                      : int64;
     emMonitoredPools          : IOmniInterfaceDictionary;
     emMonitoredTasks          : IOmniInterfaceDictionary;
@@ -145,9 +144,6 @@ type
     emOnTaskUndeliveredMessage: TOmniMonitorTaskMessageEvent;
     emOnTaskTerminated        : TOmniMonitorTaskEvent;
     emThreadID                : cardinal;
-    {$IFDEF MSWINDOWS}
-      emCurrentMsg            : TOmniMessage;
-    {$ENDIF}
   strict protected
     procedure ProcessNewMessage(taskControlID: int64);
     procedure ProcessTerminated(taskControlID: int64);
@@ -205,8 +201,8 @@ uses
   System.SyncObjs,
   System.Diagnostics,
   {$IFDEF MSWINDOWS}
-  DSiWin32,
-  {$ENDIF MSWINDOWS}
+  DSiWin32, // to help with inlining
+  {$ENDIF}
   OtlHooks,
   OtlPlatform;
 
@@ -498,17 +494,5 @@ begin
     end;
   finally empListLock.Release; end;
 end; { TOmniEventMonitorPool.Release }
-
-{$IFDEF MSWINDOWS}
-(*
-initialization
-  COmniTaskMsg_NewMessage := RegisterWindowMessage('Gp/OtlTaskEvents/NewMessage');
-  Win32Check(COmniTaskMsg_NewMessage <> 0);
-  COmniTaskMsg_Terminated := RegisterWindowMessage('Gp/OtlTaskEvents/Terminated');
-  Win32Check(COmniTaskMsg_Terminated <> 0);
-  COmniPoolMsg := RegisterWindowMessage('Gp/OtlThreadPool');
-  Win32CHeck(COmniPoolMsg <> 0);
-*)
-{$ENDIF}
 
 end.

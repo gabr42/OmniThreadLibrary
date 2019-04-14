@@ -1896,11 +1896,11 @@ begin
         case VType of
           vtVariant:       name := string(VVariant^);
           vtUnicodeString: name := string(VUnicodeString);
-        {$IFNDEF NEXTGEN}
+        {$IFNDEF NEXTGEN}  // TODO : *** Recheck IFDEFs
           vtChar:          name := string(VChar);
           vtString:        name := string(VString^);
         {$ENDIF NEXTGEN}
-        {$IFDEF MSWINDOWS}
+        {$IFDEF MSWINDOWS} // TODO : *** Recheck IFDEFs
           vtAnsiString:    name := string(VAnsiString);
           vtWideString:    name := WideString(VWideString);
           vtPChar:         name := string(StrPasA(VPChar));
@@ -1920,11 +1920,11 @@ begin
           vtInterface:     ovc.Add(IInterface(VInterface), name);
           vtInt64:         ovc.Add(VInt64^, name);
           vtUnicodeString: ovc.Add(string(VUnicodeString), name);
-        {$IFNDEF NEXTGEN}
+        {$IFNDEF NEXTGEN}  // TODO : *** Recheck IFDEFs
           vtChar:          ovc.Add(string(VChar), name);
           vtString:        ovc.Add(string(VString^), name);
         {$ENDIF NEXTGEN}
-        {$IFDEF MSWINDOWS}
+        {$IFDEF MSWINDOWS} // TODO : *** Recheck IFDEFs
           vtAnsiString:    ovc.Add(AnsiString(VAnsiString), name);
           vtWideString:    ovc.Add(WideString(VWideString), name);
           vtPChar:         ovc.Add(string(StrPasA(VPChar)), name);
