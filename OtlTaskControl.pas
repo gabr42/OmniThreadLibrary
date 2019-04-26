@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-03-22
-///   Version           : 1.40c
+///   Last modification : 2019-04-26
+///   Version           : 1.41
 ///</para><para>
 ///   History:
+///     1.41: 2019-04-26
+///       - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
 ///     1.40c: 2019-03-22
 ///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
 ///         This allows tasks to be run from a package. [issue #132]
@@ -873,7 +875,10 @@ type
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectProc); overload;
+    {$ENDIF OTL_Anonymous}
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
     procedure SetNUMANode(numaNodeNumber: integer);
@@ -941,6 +946,9 @@ type
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectProc); overload;
+    {$ENDIF OTL_Anonymous}
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
@@ -1645,10 +1653,19 @@ begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
-procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectMethod);
 begin
   otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
 end; { TOmniTask.RegisterWaitObject }
+
+{$IFDEF OTL_Anonymous}
+procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectProc);
+begin
+  otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
+end; { TOmniTask.RegisterWaitObject }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniTask.SetException(exceptionObject: pointer);
 begin
@@ -2028,10 +2045,27 @@ begin
   try
     if not assigned(oteWaitObjectList) then
       oteWaitObjectList := TOmniWaitObjectList.Create;
-    oteWaitObjectList.Add(waitObject, responseHandler);
+    oteWaitObjectList.Add(waitObject, responseHandler {$IFDEF OTL_Anonymous}, nil{$ENDIF});
     SetEvent(oteCommRebuildHandles);
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
+
+{$IFDEF OTL_Anonymous}
+procedure TOmniTaskExecutor.Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectProc);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterWaitObject: ' +
+      'WaitObject support is only available when working with an IOmniWorker');
+  oteInternalLock.Acquire;
+  try
+    if not assigned(oteWaitObjectList) then
+      oteWaitObjectList := TOmniWaitObjectList.Create;
+    oteWaitObjectList.Add(waitObject, nil, responseHandler);
+    SetEvent(oteCommRebuildHandles);
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
   const exitMessage: string);
@@ -2170,6 +2204,9 @@ var
   info           : TWaitFor.THandleInfo;
   rebuildHandles : boolean;
   responseHandler: TOmniWaitObjectMethod;
+  {$IFDEF OTL_Anonymous}
+  responseProc   : TOmniWaitObjectProc;
+  {$ENDIF OTL_Anonymous}
 begin
   // Keep logic in sync with ReportInvalidHandle!
 
@@ -2215,11 +2252,18 @@ begin
           oteInternalLock.Acquire;
           try
             responseHandler := oteWaitObjectList.ResponseHandlers[info.Index - msgInfo.IdxFirstWaitObject];
+            {$IFDEF OTL_Anonymous}
+            responseProc := oteWaitObjectList.AnonResponseHandlers[info.Index - msgInfo.IdxFirstWaitObject];
+            {$ENDIF OTL_Anonymous}
           finally oteInternalLock.Release; end;
-          responseHandler();
+          if assigned(responseHandler) then
+            responseHandler();
+          {$IFDEF OTL_Anonymous}
+          if assigned(responseProc) then
+            responseProc();
+          {$ENDIF OTL_Anonymous}
           CheckTimers;
         end;
-//        TestForInternalRebuild(task, msgInfo); // doesn't seem safe anymore
       end // comm handles
       else if info.Index = msgInfo.IdxRebuildHandles then
         rebuildHandles := true;
