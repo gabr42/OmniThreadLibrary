@@ -1,6 +1,7 @@
-3.07.&: <<unreleased>>
+3.07.8: <<unreleased>>
 
 - New features:
+  - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
   - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
   
 - Bug fixes:
