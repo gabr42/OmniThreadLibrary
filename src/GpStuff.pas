@@ -1,15 +1,35 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2018 Primoz Gabrijelcic
+   (c) 2019 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2018-05-18
-   Version           : 2.0
+   Last modification : 2019-04-14
+   Version           : 2.08
 </pre>*)(*
    History:
+     2.08: 2019-04-14
+       - Compiles for Linux with Rio.
+     2.07: 2019-01-16
+       - Implemented IsInListA and IndexOfListA.
+     2.06: 2018-11-05
+       - *** Breaking change: Replaced Ternary<T>.IFF with Ternary.IFF<T> because the
+         latter supports type inferrence.
+     2.05: 2018-10-09
+       - Added procedure DontOptimizeP.
+     2.04: 2018-10-05
+       - Implemented IGpBuffer.Create(IGpBuffer), .Append(TStream), .Append(IGpBuffer),
+         .Assign(TStream), .Assign(IGpBuffer).
+     2.03: 2018-09-13
+       - Added ASCII constants for FS, GS, RS, US.
+     2.02: 2018-07-12
+       - Added function LinearMap.
+     2.01: 2018-05-28
+       - Added global variable GDisableDebugBreak (default False). Setting it to True
+         (either in code or in debugger) will disable DebugBreak from interrupting
+         the execution.
      2.0: 2018-05-18
        - Compiles for non-Windows.
        - *** Possible breaking change: TGp4AlignedInt/TGp8AlignedInt64.Add/.Subtract
@@ -207,19 +227,14 @@ uses
   System.Generics.Collections,
   {$ENDIF}
   SysUtils,
+{$IFNDEF MSWINDOWS}
+  System.SyncObjs,
+{$ENDIF NEXTGEN}
   Classes;
 
 {$IFDEF ConditionalExpressions}
-  {$IF CompilerVersion >= 25} //DXE4+
-    {$LEGACYIFEND ON}
-  {$IFEND}
   {$IF CompilerVersion >= 17} //D2005+
     {$DEFINE USE_STRICT}
-  {$IFEND}
-  {$IF CompilerVersion >= 25} //DXE4+
-    {$IFDEF MSWINDOWS}
-    {$DEFINE GpStuff_AnsiStrings}
-    {$ENDIF MSWINDOWS}
   {$IFEND}
   {$IF CompilerVersion >= 18} //D2006+
     {$DEFINE GpStuff_Inline}
@@ -241,6 +256,18 @@ uses
   {$IF CompilerVersion >= 23} //XE2
     {$DEFINE GpStuff_FullAnonymous}
   {$IFEND}
+  {$IF CompilerVersion >= 25} //DXE4+
+    {$LEGACYIFEND ON}
+  {$IFEND}
+  {$IF CompilerVersion >= 25} //DXE4+
+    {$IFDEF MSWINDOWS}
+    {$DEFINE GpStuff_AnsiStrings}
+    {$ENDIF MSWINDOWS}
+  {$IFEND}
+  {$IF CompilerVersion >= 33} //Rio+
+    // probably before Rio too, not sure
+    {$DEFINE GpStuff_AnsiStrings}
+  {$IFEND}
 {$ENDIF}
 
 {$UNDEF GpStuff_CPUINTEL}
@@ -249,6 +276,11 @@ uses
 
 const
   MaxInt64 = $7FFFFFFFFFFFFFFF;
+
+  CASCII_FS = #$1C;
+  CASCII_GS = #$1D;
+  CASCII_RS = #$1E;
+  CASCII_US = #$1F;
 
 {$IFDEF GpStuff_AlignedInt}
 type
@@ -411,8 +443,12 @@ type
     procedure Add(ch: AnsiChar); overload;
   {$ENDIF}
     procedure Allocate(size: integer);
-    procedure Append(data: pointer; size: integer);
-    procedure Assign(data: pointer; size: integer);
+    procedure Append(data: pointer; size: integer); overload;
+    procedure Append(const buffer: IGpBuffer); overload;
+    procedure Append(stream: TStream); overload;
+    procedure Assign(data: pointer; size: integer); overload;
+    procedure Assign(const buffer: IGpBuffer); overload;
+    procedure Assign(stream: TStream); overload;
     procedure Clear;
     function  IsEmpty: boolean;
   {$IFDEF MSWINDOWS}
@@ -452,14 +488,19 @@ type
     constructor Create; overload;
     constructor Create(data: pointer; size: integer); overload;
     constructor Create(stream: TStream); overload;
+    constructor Create(const buffer: IGpBuffer); overload;
     destructor  Destroy; override;
     procedure Add(b: byte); overload; inline;
   {$IFDEF MSWINDOWS}
     procedure Add(ch: AnsiChar); overload; inline;
   {$ENDIF}
     procedure Allocate(size: integer); inline;
-    procedure Append(data: pointer; size: integer); inline;
-    procedure Assign(data: pointer; size: integer); inline;
+    procedure Append(data: pointer; size: integer); overload; inline;
+    procedure Append(const buffer: IGpBuffer); overload; inline;
+    procedure Append(stream: TStream); overload; inline;
+    procedure Assign(data: pointer; size: integer); overload; inline;
+    procedure Assign(const buffer: IGpBuffer); overload; inline;
+    procedure Assign(stream: TStream); overload; inline;
     procedure Clear; inline;
     function  IsEmpty: boolean; inline;
   {$IFDEF MSWINDOWS}
@@ -511,7 +552,10 @@ function  AssignValue(var assignTo: int64; const assignFrom: int64): boolean; ov
 {$IFDEF GpStuff_Generics}
 type
   Ternary<T> = record
-    class function IFF(condit: boolean; iftrue, iffalse: T): T; static;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+  end;
+
+  Ternary = record
+    class function IFF<T>(condit: boolean; iftrue, iffalse: T): T; static;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end;
 
   TRec<T1,T2> = record
@@ -587,6 +631,7 @@ procedure DebugBreak(triggerBreak: boolean = true);
 {$ENDIF MSWINDOWS}
 
 procedure DontOptimize(var data);
+procedure DontOptimizeP(data: pointer);
 
 function FletcherChecksum(const buffer; size: integer): word;
 
@@ -599,6 +644,8 @@ function RoundUpTo(value: integer; granularity: integer): integer; overload;    
 {$ENDIF GpStuff_NativeInt}
 function RoundDownTo(value: pointer; granularity: integer): pointer; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function RoundUpTo(value: pointer; granularity: integer): pointer; overload;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+
+function LinearMap(value: real; const x, y: TArray<real>): real;
 
 {$IFDEF GpStuff_ValuesEnumerators}
 type
@@ -676,7 +723,9 @@ function AddToList(const aList, delim, newElement: string): string; overload;
 function AddToList(const aList, delim, newElement: AnsiString): AnsiString; overload;
 {$ENDIF Unicode}{$ENDIF MSWINDOWS}
 function IsInList(const value: string; const values: array of string; caseSensitive: boolean = false): boolean;
+function IsInListA(const value: AnsiString; const values: array of AnsiString; caseSensitive: boolean = false): boolean;
 function IndexOfList(const value: string; const values: array of string; caseSensitive: boolean = false): integer;
+function IndexOfListA(const value: AnsiString; const values: array of AnsiString; caseSensitive: boolean = false): integer;
 
 {$IFDEF GpStuff_TArrayOfT}
 function SplitList(const aList: string; delim: string; const quoteChar: string = '';
@@ -740,15 +789,15 @@ type
 
 function ClassNameEx(obj: TObject): string;
 
+var
+  GDisableDebugBreak: boolean;
+
 implementation
 
 uses
 {$IFDEF GpStuff_AnsiStrings}
   System.AnsiStrings,
 {$ENDIF}
-{$IFDEF NEXTGEN}
-  System.SyncObjs,
-{$ENDIF NEXTGEN}
 {$IFDEF GpStuff_RegEx}
   RegularExpressions{$IFDEF ConditionalExpressions},{$ELSE};{$ENDIF}
 {$ENDIF GpStuff_RegEx}
@@ -1228,7 +1277,7 @@ procedure DebugBreak(triggerBreak: boolean = true);
 begin
   {$IFDEF DEBUG}
   {$WARN SYMBOL_PLATFORM OFF}
-  if triggerBreak {$IFDEF MSWINDOWS}and (DebugHook <> 0){$ENDIF} then
+  if triggerBreak and (not GDisableDebugBreak) {$IFDEF MSWINDOWS}and (DebugHook <> 0){$ENDIF} then
   {$WARN SYMBOL_PLATFORM ON}
     {$IFDEF CPUX64}
     X64AsmBreak;
@@ -1330,8 +1379,8 @@ end; { TableFindNE }
 
 function TGp4AlignedInt.Add(value: integer): integer;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Add(Addr^, value);{$ELSE}
-                            InterlockedExchangeAdd(Addr^, value) + value;{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Add(Addr^, value);{$ELSE}
+                               InterlockedExchangeAdd(Addr^, value) + value;{$ENDIF}
 end; { TGp4AlignedInt.Add }
 
 function TGp4AlignedInt.Subtract(value: integer): integer;
@@ -1347,14 +1396,14 @@ end; { TGp4AlignedInt.Addr }
 function TGp4AlignedInt.CAS(oldValue, newValue: integer): boolean;
 begin
   Result :=
-    {$IFDEF NEXTGEN}TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;{$ELSE}
-                    InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;{$ENDIF}
+    {$IFNDEF MSWINDOWS}TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;{$ELSE}
+                       InterlockedCompareExchange(Addr^, newValue, oldValue) = oldValue;{$ENDIF}
 end; { TGp4AlignedInt.CAS }
 
 function TGp4AlignedInt.Decrement: integer;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Decrement(Addr^);{$ELSE}
-                            InterlockedDecrement(Addr^);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Decrement(Addr^);{$ELSE}
+                               InterlockedDecrement(Addr^);{$ENDIF}
 end; { TGp4AlignedInt.Decrement }
 
 function TGp4AlignedInt.Decrement(value: integer): integer;
@@ -1369,8 +1418,8 @@ end; { TGp4AlignedInt.GetValue }
 
 function TGp4AlignedInt.Increment: integer;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Increment(Addr^);{$ELSE}
-                            InterlockedIncrement(Addr^);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Increment(Addr^);{$ELSE}
+                               InterlockedIncrement(Addr^);{$ENDIF}
 end; { TGp4AlignedInt.Increment }
 
 function TGp4AlignedInt.Increment(value: integer): integer;
@@ -1445,8 +1494,8 @@ end; { TGp4AlignedInt.Subtract }
 
 function TGp8AlignedInt64.Add(value: int64): int64;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Add(Addr^, value);{$ELSE}
-                            DSiInterlockedExchangeAdd64(Addr^, value) + value;{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Add(Addr^, value);{$ELSE}
+                               DSiInterlockedExchangeAdd64(Addr^, value) + value;{$ENDIF}
 end; { TGp8AlignedInt64.Add }
 
 function TGp8AlignedInt64.Addr: PInt64;
@@ -1458,14 +1507,14 @@ end; { TGp8AlignedInt64.Addr }
 function TGp8AlignedInt64.CAS(oldValue, newValue: int64): boolean;
 begin
   Result :=
-    {$IFDEF NEXTGEN}TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;{$ELSE}
-                    DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;{$ENDIF}
+    {$IFNDEF MSWINDOWS}TInterlocked.CompareExchange(Addr^, newValue, OldValue) = oldValue;{$ELSE}
+                       DSiInterlockedCompareExchange64(Addr, newValue, oldValue) = oldValue;{$ENDIF}
 end; { TGp8AlignedInt64.CAS }
 
 function TGp8AlignedInt64.Decrement: int64;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Decrement(Addr^);{$ELSE}
-                            DSiInterlockedDecrement64(Addr^);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Decrement(Addr^);{$ELSE}
+                               DSiInterlockedDecrement64(Addr^);{$ENDIF}
 end; { TGp8AlignedInt64.Decrement }
 
 function TGp8AlignedInt64.Decrement(value: int64): int64;
@@ -1481,8 +1530,8 @@ end; { TGp8AlignedInt64.GetValue }
 
 function TGp8AlignedInt64.Increment: int64;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Increment(Addr^);{$ELSE}
-                            DSiInterlockedIncrement64(Addr^);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Increment(Addr^);{$ELSE}
+                               DSiInterlockedIncrement64(Addr^);{$ENDIF}
 end; { TGp8AlignedInt64.Increment }
 
 function TGp8AlignedInt64.Increment(value: int64): int64;
@@ -1929,9 +1978,30 @@ begin
   Result := (IndexOfList(value, values, caseSensitive) >= 0);
 end; { IsInList }
 
+function IsInListA(const value: AnsiString; const values: array of AnsiString; caseSensitive: boolean): boolean;
+begin
+  Result := (IndexOfListA(value, values, caseSensitive) >= 0);
+end; { IsInList }
+
 function IndexOfList(const value: string; const values: array of string; caseSensitive: boolean = false): integer;
 var
   s: string;
+begin
+  for Result := Low(values) to High(values) do begin
+    s := values[Result];
+    if caseSensitive then begin
+      if SameStr(value, s) then
+        Exit;
+    end
+    else if SameText(value, s) then
+      Exit;
+  end;
+  Result := -1;
+end; { IndexOfList }
+
+function IndexOfListA(const value: AnsiString; const values: array of AnsiString; caseSensitive: boolean = false): integer;
+var
+  s: AnsiString;
 begin
   for Result := Low(values) to High(values) do begin
     s := values[Result];
@@ -2132,6 +2202,11 @@ begin
   // do nothing
 end; { DontOptimize }
 
+procedure DontOptimizeP(data: pointer);
+begin
+  // do nothing
+end; { DontOptimizeP }
+
 function FletcherChecksum(const buffer; size: integer): word;
 var
   iData: integer;
@@ -2154,6 +2229,7 @@ end; { FletcherChecksum }
 
 {$IFDEF GpStuff_NativeInt}
 function RoundDownTo(value: NativeInt; granularity: integer): NativeInt;
+
 {$ELSE}
 function RoundDownTo(value: integer; granularity: integer): integer;
 {$ENDIF GpStuff_NativeInt}
@@ -2182,6 +2258,21 @@ function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
   Result := pointer((((NativeUInt(value) - 1) div NativeUInt(granularity)) + 1) * NativeUInt(granularity));
 end; { RoundUpTo }
+
+function LinearMap(value: real; const x, y: TArray<real>): real;
+var
+  i: integer;
+begin
+  if (value < x[Low(x)]) or (value > x[High(x)]) then
+    raise Exception.CreateFmt('LinearMap: Value %f out of range [%f .. %f]',
+                              [value, x[Low(x)], x[High(x)]]);
+
+  for i := Low(x) to High(x) - 1 do
+    if value <= x[i+1] then
+      Exit((value - x[i]) / (x[i+1] - x[i]) * (y[i+1] - y[i]) + y[i]);
+
+  raise Exception.Create('LinearMap: Internal error. This line should never be executed.');
+end; { LinearMap }
 
 function GetRefCount(const intf: IInterface): integer;
 begin
@@ -2374,8 +2465,13 @@ end; { TGpBuffer.Create }
 constructor TGpBuffer.Create(stream: TStream);
 begin
   Create;
-  if stream.Size > 0 then
-    FData.CopyFrom(stream, 0);
+  Assign(stream);
+end; { TGpBuffer.Create }
+
+constructor TGpBuffer.Create(const buffer: IGpBuffer);
+begin
+  Create;
+  Assign(buffer);
 end; { TGpBuffer.Create }
 
 function TGpBuffer.GetCurrent: pointer;
@@ -2411,11 +2507,34 @@ begin
   FData.Write(data^, size);
 end; { TGpBuffer.Append }
 
+procedure TGpBuffer.Append(stream: TStream);
+begin
+  if stream.Size > 0 then
+    AsStream.CopyFrom(stream, 0);
+end; { TGpBuffer.Append }
+
+procedure TGpBuffer.Append(const buffer: IGpBuffer);
+begin
+  Append(buffer.Value, buffer.Size);
+end; { TGpBuffer.Append }
+
 procedure TGpBuffer.Assign(data: pointer; size: integer);
 begin
   Allocate(size);
   if size > 0 then
     Move(data^, Value^, size);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Assign(stream: TStream);
+begin
+  Size := 0;
+  Append(stream);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Assign(const buffer: IGpBuffer);
+begin
+  Size := 0;
+  Append(buffer);
 end; { TGpBuffer.Assign }
 
 procedure TGpBuffer.Clear;
@@ -2509,8 +2628,8 @@ end; { TGpBuffer.SetSize }
 
 procedure TGpInterfacedPersistent.AfterConstruction;
 begin
-  {$IFDEF NEXTGEN}TInterlocked.Decrement(FRefCount);{$ELSE}
-                  InterlockedDecrement(FRefCount);{$ENDIF}
+  {$IFNDEF MSWINDOWS}TInterlocked.Decrement(FRefCount);{$ELSE}
+                     InterlockedDecrement(FRefCount);{$ENDIF}
 end; { TGpInterfacedPersistent.AfterConstruction }
 
 procedure TGpInterfacedPersistent.BeforeDestruction;
@@ -2535,26 +2654,26 @@ end; { TGpInterfacedPersistent.QueryInterface }
 
 function TGpInterfacedPersistent._AddRef: integer;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Increment(FRefCount);{$ELSE}
-                            InterlockedIncrement(FRefCount);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Increment(FRefCount);{$ELSE}
+                               InterlockedIncrement(FRefCount);{$ENDIF}
 end; { TGpInterfacedPersistent._AddRef }
 
 function TGpInterfacedPersistent._Release: integer;
 begin
-  Result := {$IFDEF NEXTGEN}TInterlocked.Decrement(FRefCount);{$ELSE}
-                            InterlockedDecrement(FRefCount);{$ENDIF}
+  Result := {$IFNDEF MSWINDOWS}TInterlocked.Decrement(FRefCount);{$ELSE}
+                               InterlockedDecrement(FRefCount);{$ENDIF}
   if Result = 0 then
     Destroy;
 end; { TGpInterfacedPersistent._Release }
 
 {$IFDEF GpStuff_Generics}
-class function Ternary<T>.IFF(condit: boolean; iftrue, iffalse: T): T;
+class function Ternary.IFF<T>(condit: boolean; iftrue, iffalse: T): T;
 begin
   if condit then
     Result := iftrue
   else
     Result := iffalse;
-end; { Ternary<T>.IFF }
+end; { IFF<T>.condit }
 
 constructor TRec<T1, T2>.Create(Value1: T1; Value2: T2);
 begin
@@ -2593,7 +2712,10 @@ class function StoreValue<T>.Create(const value: T): TStoredValue<T>;
 begin
   Result.StoredValue := value;
 end; { StoreValue<T>.Create }
+
 {$ENDIF GpStuff_Generics}
 
+initialization
+  GDisableDebugBreak := false;
 end.
 

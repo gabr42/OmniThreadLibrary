@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2018, Primoz Gabrijelcic
+Copyright (c) 2019, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2018-01-22
-   Version           : 1.77
+   Last modification : 2019-03-20
+   Version           : 1.79
 </pre>*)(*
    History:
+     1.79: 2019-03-21
+       - Added default array property Values to TGpCache<K,V>.
+       - Fixed TGpCache<K, V>.Update.
+     1.78: 2019-03-20
+       - Defined IGpCache<K,V>.
+       - Added methods TGpCache<K,V>.Count, IsEmpty, PeekLRU, PeekMRU, RemoveLRU,
+         and RemoveMRU.
      1.77: 2018-01-22
        - TGpFifoBuffer.Truncate was not taking active block into account.
      1.76: 2017-12-13
@@ -2401,13 +2408,30 @@ type
 
   ///  The TGpCache class maintains a dictionary of (key, index) pairs where
   ///  an 'index' is a pointer into a MRU linked list of values.
-  ///  That allows us to remove the leastrecently used key from the dictionary
+  ///    That allows us to remove the leastrecently used key from the dictionary
   //   when the cache becomes full in O(1) time.
-  ///  As the linked list has a known maximum size, it is stored as an
+  ///    As the linked list has a known maximum size, it is stored as an
   ///  array of list elements and 'index' from the dictionary is just the
   ///  element number.
+  ///    NOT thread-safe!
 
-  TGpCache<K,V> = class
+  IGpCache<K,V> = interface
+    function  Count: integer;
+    function  GetValue(const key: K): V;
+    function  IsEmpty: boolean;
+    function  IsFull: boolean;
+    function  PeekLRU: TPair<K,V>;
+    function  PeekMRU: TPair<K,V>;
+    function  Remove(const key: K): boolean;
+    function  RemoveLRU: TPair<K,V>;
+    function  RemoveMRU: TPair<K,V>;
+    procedure SetValue(const key: K; const value: V);
+    function  TryGetValue(const key: K; var value: V): boolean;
+    procedure Update(const key: K; const value: V);
+    property Values[const key: K]: V read GetValue write SetValue; default;
+  end; { IGpCache<K,V> }
+
+  TGpCache<K,V> = class(TInterfacedObject, IGpCache<K,V>)
   strict private
   const
     NilPointer = -1;
@@ -2428,21 +2452,34 @@ type
     FTail      : integer;
   strict protected
     function  GetFree: integer;                                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  IsNil(element: integer): boolean;                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    function  RemoveOldest: integer;
+    function  IsNil(elementIdx: integer): boolean;                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  RemoveElement(elementIdx: integer; addToFreeList, disposeValue: boolean): integer;
     procedure BuildLinkedList(numElements: integer);
     procedure DestroyOwnedValues;
+    function  GetValue(const key: K): V;                                          {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure InsertInFront(elementIdx: integer);
-    procedure Unlink(element: integer);
+    procedure SetValue(const key: K; const value: V);                             {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    procedure Unlink(elementIdx: integer);
+    {$IFDEF TGpCache_InternalCheck}
+    function  KeysToStr: string;
+    procedure VerifyList;
+    {$ENDIF TGpCache_InternalCheck}
   public
     constructor Create(ANumElements: integer;
       const AComparer: IEqualityComparer<K> = nil;
       AOwnsValues: boolean = false); overload;
     destructor  Destroy; override;
-    function  Remove(const key: K): boolean;
+    function  Count: integer;                                                     {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  IsEmpty: boolean;                                                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  IsFull: boolean;                                                    {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  PeekLRU: TPair<K,V>;                                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  PeekMRU: TPair<K,V>;                                                {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  Remove(const key: K): boolean;                                      {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  RemoveLRU: TPair<K,V>;                                              {$IFDEF GpLists_Inline}inline;{$ENDIF}
+    function  RemoveMRU: TPair<K,V>;                                              {$IFDEF GpLists_Inline}inline;{$ENDIF}
     function  TryGetValue(const key: K; var value: V): boolean;                   {$IFDEF GpLists_Inline}inline;{$ENDIF}
     procedure Update(const key: K; const value: V);
+    property Values[const key: K]: V read GetValue write SetValue; default;
   end; { TGpCache<K,V> }
 {$IFEND CompilerVersion >= 24}
 {$ENDIF}
@@ -7811,22 +7848,10 @@ begin
   inherited;
 end; { TGpCache<K, V>.Destroy }
 
-function TGpCache<K, V>.IsNil(element: integer): boolean; //inline
+function TGpCache<K, V>.IsNil(elementIdx: integer): boolean; //inline
 begin
-  Result := (element = NilPointer);
+  Result := (elementIdx = NilPointer);
 end; { TGpCache<K, V>.IsNil }
-
-procedure TGpCache<K, V>.DestroyOwnedValues;
-begin
-  while not IsNil(FHead) do begin
-    {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
-    PObject(@FKeys[FHead].Value)^.Free;
-    {$ELSE}
-    PObject(@FKeys[FHead].Value)^.DisposeOf;
-    {$IFEND}
-    FHead := FKeys[FHead].Next;
-  end;
-end; { TGpCache<K, V>.DestroyOwnedValues }
 
 procedure TGpCache<K, V>.BuildLinkedList(numElements: integer);
 var
@@ -7845,7 +7870,26 @@ begin
   FHead := NilPointer;
   FTail := NilPointer;
   FFreeList := 0;
+
+  {$IFDEF TGpCache_InternalCheck}VerifyList;{$ENDIF}
 end; { TGpCache<K, V>.BuildLinkedList }
+
+function TGpCache<K, V>.Count: integer;
+begin
+  Result := FCache.Count;
+end; { TGpCache<K, V>.Count }
+
+procedure TGpCache<K, V>.DestroyOwnedValues;
+begin
+  while not IsNil(FHead) do begin
+    {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
+    PObject(@FKeys[FHead].Value)^.Free;
+    {$ELSE}
+    PObject(@FKeys[FHead].Value)^.DisposeOf;
+    {$IFEND}
+    FHead := FKeys[FHead].Next;
+  end;
+end; { TGpCache<K, V>.DestroyOwnedValues }
 
 function TGpCache<K, V>.GetFree: integer;
 begin
@@ -7866,78 +7910,119 @@ begin
     FTail := FHead;
 end; { TGpCache<K, V>.InsertInFront }
 
+function TGpCache<K, V>.IsEmpty: boolean;
+begin
+  Result := IsNil(FTail);
+end; { TGpCache<K, V>.IsEmpty }
+
 function TGpCache<K, V>.IsFull: boolean;
 begin
   Result := IsNil(FFreeList);
 end; { TGpCache<K, V>.IsFull }
 
-function TGpCache<K, V>.Remove(const key: K): boolean;
-var
-  element : integer;
-  pElement: PListElement;
+function TGpCache<K, V>.PeekLRU: TPair<K,V>;
 begin
-  Result := FCache.TryGetValue(key, element);
-  if Result then begin
-    Unlink(element);
-    pElement := @FKeys[element];
-    pElement.Next := FFreeList;
-    pElement.Prev := NilPointer;
-    FFreeList := element;
-    FCache.Remove(key);
-    if FOwnsValues then
-      {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
-      PObject(@pElement.Value)^.Free;
-      {$ELSE}
-      PObject(@pElement.Value)^.DisposeOf;
-      {$IFEND}
-  end;
-end; { TGpCache<K, V>.Remove }
+  if IsNil(FTail) then
+    raise Exception.Create('TGpCache<K, V>.PeekLRU: List is empty!');
+  Result := TPair<K,V>.Create(FKeys[FTail].Key, FKeys[FTail].Value);
+end; { TGpCache<K, V>.PeekLRU }
 
-function TGpCache<K, V>.RemoveOldest: integer;
+function TGpCache<K, V>.PeekMRU: TPair<K,V>;
+begin
+  if IsNil(FHead) then
+    raise Exception.Create('TGpCache<K, V>.PeekMRU: List is empty!');
+  Result := TPair<K,V>.Create(FKeys[FHead].Key, FKeys[FHead].Value);
+end; { TGpCache<K, V>.PeekMRU }
+
+function TGpCache<K, V>.RemoveLRU: TPair<K,V>;
+begin
+  {$IFDEF TGpCache_InternalCheck}VerifyList; try{$ENDIF}
+  Result := PeekLRU;
+  RemoveElement(FTail, true, false);
+  {$IFDEF TGpCache_InternalCheck}finally VerifyList; end;{$ENDIF}
+end; { TGpCache<K, V>.RemoveLRU }
+
+function TGpCache<K, V>.RemoveMRU: TPair<K,V>;
+begin
+  {$IFDEF TGpCache_InternalCheck}VerifyList; try{$ENDIF}
+  Result := PeekMRU;
+  RemoveElement(FHead, true, false);
+  {$IFDEF TGpCache_InternalCheck}finally VerifyList; end;{$ENDIF}
+end; { TGpCache<K, V>.RemoveMRU }
+
+function TGpCache<K, V>.Remove(const key: K): boolean;
 var
   element: integer;
 begin
-  if IsNil(FTail) then
-    raise Exception.Create('TGpCache<K, V>.RemoveOldest: List is empty!');
-  Result := FTail;
-  Unlink(FTail);
-  FCache.Remove(FKeys[Result].Key);
-  if FOwnsValues then
+  {$IFDEF TGpCache_InternalCheck}VerifyList; try{$ENDIF}
+  Result := FCache.TryGetValue(key, element);
+  if Result then
+    RemoveElement(element, true, true);
+  {$IFDEF TGpCache_InternalCheck}finally VerifyList; end;{$ENDIF}
+end; { TGpCache<K, V>.Remove }
+
+function TGpCache<K, V>.RemoveElement(elementIdx: integer; addToFreeList, disposeValue: boolean): integer;
+var
+  pElement: PListElement;
+begin
+  Result := elementIdx;
+  Unlink(elementIdx);
+  FCache.Remove(FKeys[elementIdx].Key);
+  if addToFreeList then begin
+    pElement := @FKeys[elementIdx];
+    pElement.Next := FFreeList;
+    pElement.Prev := NilPointer;
+    FFreeList := elementIdx;
+  end;
+  if disposeValue and FOwnsValues then
     {$IF CompilerVersion < 25} // DisposeOf was implemented in XE4
-    PObject(@FKeys[Result].Value)^.Free;
+    PObject(@pElement.Value)^.Free;
     {$ELSE}
-    PObject(@FKeys[Result].Value)^.DisposeOf;
+    PObject(@pElement.Value)^.DisposeOf;
     {$IFEND}
 end; { TGpCache<K, V>.RemoveOldest }
+
+procedure TGpCache<K, V>.SetValue(const key: K; const value: V);
+begin
+  Update(key, value);
+end; { TGpCache<K,V>.SetValue }
 
 function TGpCache<K, V>.TryGetValue(const key: K; var value: V): boolean;
 var
   element: integer;
 begin
+  {$IFDEF TGpCache_InternalCheck}VerifyList; try{$ENDIF}
   Result := FCache.TryGetValue(key, element);
   if Result then begin
     value := FKeys[element].Value;
     Unlink(element);
     InsertInFront(element);
   end;
+  {$IFDEF TGpCache_InternalCheck}finally VerifyList; end;{$ENDIF}
 end; { TGpCache<K, V>.TryGetValue }
 
-procedure TGpCache<K, V>.Unlink(element: integer);
+function TGpCache<K, V>.GetValue(const key: K): V;
+begin
+  if not TryGetValue(key, Result) then
+    raise Exception.Create('Key not found!');
+end; { TGpCache<K,V>.GetValue }
+
+procedure TGpCache<K, V>.Unlink(elementIdx: integer);
 var
   pElement: PListElement;
 begin
-  pElement := @FKeys[element];
+  pElement := @FKeys[elementIdx];
   if not IsNil(pElement.Next) then
     FKeys[pElement.Next].Prev := pElement.Prev
   else begin
-    Assert(FTail = element);
+    Assert(FTail = elementIdx);
     FTail := pElement.Prev;
   end;
 
   if not IsNil(pElement.Prev) then
     FKeys[pElement.Prev].Next := pElement.Next
   else begin
-    Assert(FHead = element);
+    Assert(FHead = elementIdx);
     FHead := pElement.Next;
   end;
 end; { TGpCache<K, V>.Unlink }
@@ -7948,6 +8033,7 @@ var
   oldValue: V;
   pElement: PListElement;
 begin
+  {$IFDEF TGpCache_InternalCheck}VerifyList; try{$ENDIF}
   if FCache.TryGetValue(key, element) then begin // update existing element
     pElement := @FKeys[element];
     if not FOwnsValues then
@@ -7967,7 +8053,7 @@ begin
   end
   else begin // add new element
     if IsFull then
-      element := RemoveOldest
+      element := RemoveElement(FTail, false, true)
     else
       element := GetFree;
     InsertInFront(element);
@@ -7976,7 +8062,58 @@ begin
     pElement.Value := value;
     FCache.Add(key, element);
   end;
+  {$IFDEF TGpCache_InternalCheck}finally VerifyList; end;{$ENDIF}
 end; { TGpCache<K, V>.Update }
+
+{$IFDEF TGpCache_InternalCheck}
+function TGpCache<K, V>.KeysToStr: string;
+var
+  i: integer;
+begin
+  Result := Format('H->%d T->%d F->%d: ', [FHead, FTail, FFreeList]);
+  for i := Low(FKeys) to High(FKeys) do begin
+    Result := Result + Format('%d<-[%d]->%d', [FKeys[i].Prev, i, FKeys[i].Next]);
+    if i < High(FKeys) then
+      Result := Result + ', ';
+  end;
+end; { function TGpCache<K, V>.KeysToStr }
+
+procedure TGpCache<K, V>.VerifyList;
+var
+  i          : integer;
+  ptr        : integer;
+  reached    : TArray<integer>;
+  reachedTail: boolean;
+
+begin
+  // Each element in FKeys must be reachable from FHead or FFreeList, each only once.
+  // In addition, FTail must be reachable from FHead unless both are equal to NilPointer.
+
+  Assert(IsNil(FHead) or IsNil(FKeys[FHead].Prev), 'Invalid head! ' + KeysToStr);
+  Assert(IsNil(FTail) or IsNil(FKeys[FTail].Next), 'Invalid tail! ' + KeysToStr);
+
+  SetLength(reached, Length(FKeys));
+
+  ptr := FHead;
+  while not IsNil(ptr) do begin
+    reached[ptr] := reached[ptr] + 1;
+    if ptr = FTail then
+      reachedTail := true;
+    ptr := FKeys[ptr].Next;
+  end;
+  Assert(IsNil(FHead) or reachedTail, 'Tail not reachable from head! ' + KeysToStr);
+
+  ptr := FFreeList;
+  while not IsNil(ptr) do begin
+    reached[ptr] := reached[ptr] + 1;
+    ptr := FKeys[ptr].Next;
+  end;
+
+  for i := Low(reached) to High(reached) do
+    Assert(reached[i] = 1, Format('R[%d] = %d! ', [i, reached[i]]) + KeysToStr);
+end; { TGpCache<K,V>.VerifyList }
+{$ENDIF TGpCache_InternalCheck}
+
 {$IFEND CompilerVersion >= 24}
 {$ENDIF}
 {$ENDIF}

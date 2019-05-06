@@ -8,10 +8,16 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2018-08-09
-   Version           : 1.103a
+   Last modification : 2019-05-06
+   Version           : 1.105a
 </pre>*)(*
    History:
+     1.105a: 2019-05-06
+       - DSiDeallocateHWnd prevents WndProc from being called after the window was destroyed.
+     1.105: 2019-03-01
+       - TDSiRegistry.WriteVariant handles more integer types.
+     1.104: 2019-02-04
+       - Added functions DSiGetSystemTimePreciseAsFileTime.
      1.103a: 2018-08-09
        - [MkhPavel] fixed declarations for _PROCESS_MEMORY_COUNTERS.
        - Compiles again with Delphi 2007 and 2009.
@@ -2034,7 +2040,6 @@ type
     property OnTimer: TNotifyEvent read dtOnTimer write SetOnTimer;
   end; { TDSiTimer }
 
-  function  DSiDateTimeToFileTime(dateTime: TDateTime; var fileTime: TFileTime): boolean;
   //Following three functions are based on GetTickCount
   function  DSiElapsedSince(midTime, startTime: int64): int64;
   function  DSiElapsedTime(startTime: int64): int64;
@@ -2044,6 +2049,7 @@ type
   function  DSiElapsedTime64(startTime: int64): int64;
   function  DSiHasElapsed64(startTime: int64; timeout_ms: DWORD): boolean;
 
+  function  DSiDateTimeToFileTime(dateTime: TDateTime; var fileTime: TFileTime): boolean;
   function  DSiFileTimeToDateTime(fileTime: TFileTime): TDateTime; overload;
   function  DSiFileTimeToDateTime(fileTime: TFileTime; var dateTime: TDateTime): boolean; overload;
   function  DSiFileTimeToMicroSeconds(fileTime: TFileTime): int64;
@@ -2051,6 +2057,8 @@ type
   function  DSiPerfCounterToUS(perfCounter: int64): int64;
   function  DSiQueryPerfCounterAsUS: int64;
   procedure DSiuSecDelay(delay: int64);
+
+  function  DSiGetSystemTimePreciseAsFileTime(var fileTime: TFileTime): boolean;
 
 { Interlocked }
 
@@ -2306,6 +2314,7 @@ type
   TGetNumaHighestNodeNumber = function(var HighestNodeNunber: ULONG): BOOL; stdcall;
   TGetNumaProximityNodeEx = function (ProximityId: ULONG;
     var NodeNumber: USHORT): BOOL; stdcall;
+  TGetSystemTimePreciseAsFileTime = procedure (var fileTime: TFileTime); stdcall;
   TNTNetShareAdd = function(serverName: PChar; level: integer; buf: PChar;
     var parm_err: integer): DWord; stdcall;
   TNTNetShareDel = function(serverName: PChar; netName: PWideChar;
@@ -2361,6 +2370,7 @@ const
   GNetWkstaGetInfo: TNetWkstaGetInfo = nil;
   GGetNumaHighestNodeNumber: TGetNumaHighestNodeNumber = nil;
   GGetNumaProximityNodeEx: TGetNumaProximityNodeEx = nil;
+  GGetSystemTimePreciseAsFileTime: TGetSystemTimePreciseAsFileTime = nil;
   GNTNetShareAdd: TNTNetShareAdd = nil;
   GNTNetShareDel: TNTNetShareDel = nil;
   GOpenSCManager: TOpenSCManager = nil;
@@ -2987,9 +2997,13 @@ type
   begin
     case VarType(value) of
       varByte,
+      varSmallInt,
+      varShortInt,
       varWord,
       varLongWord,
-      varInteger: WriteInteger(name,value);
+      varInteger,
+      varInt64,
+      varUInt64 : WriteInteger(name,value);
       varBoolean: WriteBool(name,value);
       varString : WriteString(name,value);
       {$IFDEF Unicode}
@@ -5072,7 +5086,9 @@ type
   {:Executes console process in a hidden window and captures its output in a TStrings
     object.
     Totaly reworked on 2006-01-23. New code contributed by matej.
-    Handles only up to 1 MB of console process output.
+    Handles only up to 1 MB of console process output when `output` is assigned.
+    Console output can be larger than 1 MB if `output` is `nil`. `onNewLine` callback
+    should then be used to process console output.
     @returns ID of the console process or 0 if process couldn't be started.
     @author  aoven, Lee_Nover, gabr, matej, mitja
     @since   2003-05-24
@@ -6239,6 +6255,8 @@ var
   begin
     if wnd = 0 then
       Exit;
+    SetWindowLong(wnd, GWL_METHODDATA, 0);
+    SetWindowLong(wnd, GWL_METHODCODE, 0);
     DestroyWindow(wnd);
     EnterCriticalSection(GDSiWndHandlerCritSect);
     try
@@ -8586,6 +8604,15 @@ var
       QueryPerformanceCounter(nowTime);
     until nowTime >= endTime;
   end; { DSiuSecDelay }
+
+  function DSiGetSystemTimePreciseAsFileTime(var fileTime: TFileTime): boolean;
+  begin
+    if not assigned(GGetSystemTimePreciseAsFileTime) then
+      GGetSystemTimePreciseAsFileTime := DSiGetProcAddress('kernel32.dll', 'GetSystemTimePreciseAsFileTime');
+    Result := assigned(GGetSystemTimePreciseAsFileTime);
+    if Result then
+      GGetSystemTimePreciseAsFileTime(fileTime);
+  end; { DSiGetSystemTimePreciseAsFileTime }
 
 { Interlocked }
 
