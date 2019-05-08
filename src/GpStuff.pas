@@ -645,8 +645,6 @@ function RoundUpTo(value: integer; granularity: integer): integer; overload;    
 function RoundDownTo(value: pointer; granularity: integer): pointer; overload;     {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function RoundUpTo(value: pointer; granularity: integer): pointer; overload;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
-function LinearMap(value: real; const x, y: TArray<real>): real;
-
 {$IFDEF GpStuff_ValuesEnumerators}
 type
   IGpIntegerValueEnumerator = interface 
@@ -728,6 +726,8 @@ function IndexOfList(const value: string; const values: array of string; caseSen
 function IndexOfListA(const value: AnsiString; const values: array of AnsiString; caseSensitive: boolean = false): integer;
 
 {$IFDEF GpStuff_TArrayOfT}
+function LinearMap(value: real; const x, y: TArray<real>): real;
+
 function SplitList(const aList: string; delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
 function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
@@ -796,7 +796,7 @@ implementation
 
 uses
 {$IFDEF GpStuff_AnsiStrings}
-  System.AnsiStrings,
+  AnsiStrings,
 {$ENDIF}
 {$IFDEF GpStuff_RegEx}
   RegularExpressions{$IFDEF ConditionalExpressions},{$ELSE};{$ENDIF}
@@ -1863,6 +1863,21 @@ end; { EnumList }
 {$ENDIF}
 
 {$IFDEF GpStuff_TArrayOfT}
+function LinearMap(value: real; const x, y: TArray<real>): real;
+var
+  i: integer;
+begin
+  if (value < x[Low(x)]) or (value > x[High(x)]) then
+    raise Exception.CreateFmt('LinearMap: Value %f out of range [%f .. %f]',
+                              [value, x[Low(x)], x[High(x)]]);
+
+  for i := Low(x) to High(x) - 1 do
+    if value <= x[i+1] then
+      Exit((value - x[i]) / (x[i+1] - x[i]) * (y[i+1] - y[i]) + y[i]);
+
+  raise Exception.Create('LinearMap: Internal error. This line should never be executed.');
+end; { LinearMap }
+
 function SplitList(const aList: string; delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
 var
@@ -2006,11 +2021,20 @@ begin
   for Result := Low(values) to High(values) do begin
     s := values[Result];
     if caseSensitive then begin
+      {$IFDEF GpStuff_AnsiStrings}
       if SameStr(value, s) then
+      {$ELSE}
+      if SameStr(string(value), string(s)) then
+      {$ENDIF GpStuff_AnsiStrings}
         Exit;
     end
-    else if SameText(value, s) then
-      Exit;
+    else
+      {$IFDEF GpStuff_AnsiStrings}
+      if SameText(value, s) then
+      {$ELSE}
+      if SameText(string(value), string(s)) then
+      {$ENDIF GpStuff_AnsiStrings}
+        Exit;
   end;
   Result := -1;
 end; { IndexOfList }
@@ -2258,21 +2282,6 @@ function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
   Result := pointer((((NativeUInt(value) - 1) div NativeUInt(granularity)) + 1) * NativeUInt(granularity));
 end; { RoundUpTo }
-
-function LinearMap(value: real; const x, y: TArray<real>): real;
-var
-  i: integer;
-begin
-  if (value < x[Low(x)]) or (value > x[High(x)]) then
-    raise Exception.CreateFmt('LinearMap: Value %f out of range [%f .. %f]',
-                              [value, x[Low(x)], x[High(x)]]);
-
-  for i := Low(x) to High(x) - 1 do
-    if value <= x[i+1] then
-      Exit((value - x[i]) / (x[i+1] - x[i]) * (y[i+1] - y[i]) + y[i]);
-
-  raise Exception.Create('LinearMap: Internal error. This line should never be executed.');
-end; { LinearMap }
 
 function GetRefCount(const intf: IInterface): integer;
 begin

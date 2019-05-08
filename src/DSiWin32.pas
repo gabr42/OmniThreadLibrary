@@ -8,10 +8,12 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2019-05-06
-   Version           : 1.105a
+   Last modification : 2019-05-08
+   Version           : 1.105b
 </pre>*)(*
    History:
+     1.105b: 2019-05-08
+       - Compiles with Delphi 2007.
      1.105a: 2019-05-06
        - DSiDeallocateHWnd prevents WndProc from being called after the window was destroyed.
      1.105: 2019-03-01
@@ -559,6 +561,7 @@ interface
   {$IF CompilerVersion >= 23}{$DEFINE DSiScopedUnitNames}{$DEFINE DSiHasSafeNativeInt}{$DEFINE DSiHasTPath}{$DEFINE DSiHasGroupAffinity}{$DEFINE DSiHasSizeT}{$IFEND}
   {$IF CompilerVersion >= 22}{$DEFINE DSiHasAnonymousFunctions}{$DEFINE DSiHasGenerics}{$IFEND} // only XE+ has 'good enough' generics
   {$IF CompilerVersion > 19}{$DEFINE DSiHasGetFolderLocation}{$IFEND}
+  {$IF CompilerVersion >= 19}{$DEFINE DSiHasUInt64}{$IFEND}
   {$IF CompilerVersion < 21}{$DEFINE DSiNeedUSHORT}{$IFEND}
   {$IF CompilerVersion < 18.5}{$DEFINE DSiNeedULONGEtc}{$IFEND}
 {$ENDIF}
@@ -3002,8 +3005,8 @@ type
       varWord,
       varLongWord,
       varInteger,
-      varInt64,
-      varUInt64 : WriteInteger(name,value);
+      {$IFDEF DSiHasUInt64}varUInt64,{$ENDIF}
+      varInt64  : WriteInteger(name,value);
       varBoolean: WriteBool(name,value);
       varString : WriteString(name,value);
       {$IFDEF Unicode}
