@@ -35,10 +35,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-04-13
-///   Version           : 1.50
+///   Last modification : 2019-07-26
+///   Version           : 1.53
 ///</para><para>
 ///   History:
+///     1.53: 2019-07-26
+///       - Various TOmniExecutable method correctly process `nil` parameter.
+///     1.52: 2019-06-28
+///       - TOmniWaitableValue constructor optionally accepts intial value for the
+///         Value property.
 ///     1.51: 2019-01-03
 ///       - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
 ///         to an interface. Fixes #128.
@@ -528,7 +533,8 @@ type
     class function Wrap<T>(const value: T): TOmniValue; static;
     function  Unwrap<T>: T; //Use this form to call: omnivalue.Unwrap<T>()
   {$IFDEF OTL_HasArrayOfT}
-    class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
+    class function FromArray<T>(const values: TArray<T>): TOmniValue; overload; static;
+    class function FromArray<T>(const values: array of T): TOmniValue; overload; static;
     function  ToArray<T>: TArray<T>;
   {$ENDIF OTL_HasArrayOfT}
   {$IF CompilerVersion > 20}
@@ -619,7 +625,8 @@ type
     function  GetEvent: TEvent;
     function  GetValue: TOmniValue;
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const value: TOmniValue); overload;
     destructor  Destroy; override;
     procedure Reset; inline;
     procedure Signal; overload; inline;
@@ -1103,7 +1110,8 @@ type
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
-  function  CreateWaitableValue: IOmniWaitableValue;
+  function  CreateWaitableValue: IOmniWaitableValue; overload;
+  function  CreateWaitableValue(const value: TOmniValue): IOmniWaitableValue; overload;
   function  CreateAutoDestroyObject(obj: TObject): IOmniAutoDestroyObject;
 
   function  Environment: IOmniEnvironment;
@@ -1506,6 +1514,11 @@ end; { CreateInterfaceDictionary }
 function CreateWaitableValue: IOmniWaitableValue;
 begin
   Result := TOmniWaitableValue.Create;
+end; { CreateWaitableValue }
+
+function CreateWaitableValue(const value: TOmniValue): IOmniWaitableValue; overload;
+begin
+  Result := TOmniWaitableValue.Create(value);
 end; { CreateWaitableValue }
 
 function Environment: IOmniEnvironment;
@@ -2464,6 +2477,17 @@ end; { TOmniValue.CastFrom }
 
 {$IFDEF OTL_HasArrayOfT}
 class function TOmniValue.FromArray<T>(const values: TArray<T>): TOmniValue;
+var
+  ovc  : TOmniValueContainer;
+  value: T;
+begin
+  ovc := TOmniValueContainer.Create;
+  for value in values do
+    ovc.Add(TOmniValue.CastFrom<T>(value));
+  Result.SetAsArray(ovc);
+end; { TOmniValue.FromArray }
+
+class function TOmniValue.FromArray<T>(const values: array of T): TOmniValue;
 var
   ovc  : TOmniValueContainer;
   value: T;
@@ -3589,6 +3613,12 @@ begin
   FValue := TOmniValue.Null;
 end; { TOmniWaitableValue.Create }
 
+constructor TOmniWaitableValue.Create(const value: TOmniValue);
+begin
+  Create;
+  FValue := value;
+end; { TOmniWaitableValue.Create }
+
 destructor TOmniWaitableValue.Destroy;
 begin
   FreeAndNil( FEvent);
@@ -4397,14 +4427,22 @@ end; { TOmniExecutable.Proc }
 
 procedure TOmniExecutable.SetMethod(const value: TMethod);
 begin
-  oeKind := oekMethod;
-  oeMethod := value;
+  if (value.Code <> nil) and (value.Data <> nil) then begin
+    oeKind := oekMethod;
+    oeMethod := value;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetMethod }
 
 procedure TOmniExecutable.SetProc(const value: TProcedure);
 begin
-  oeKind := oekProcedure;
-  oeProcedure := value;
+  if assigned(value) then begin
+    oeKind := oekProcedure;
+    oeProcedure := value;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetProc }
 
 {$IFDEF OTL_Anonymous}
@@ -4448,14 +4486,22 @@ end; { TOmniExecutable.GetDelegate }
 
 procedure TOmniExecutable.SetAnonDelegate(const value: TProc);
 begin
-  oeDelegate := value;
-  oeKind := oekDelegate;
+  if assigned(value) then begin
+    oeDelegate := value;
+    oeKind := oekDelegate;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetAnonDelegate }
 
 procedure TOmniExecutable.SetDelegate(const source);
 begin
-  oeKind := oekDelegate;
-  AnonCopy(oeDelegate, source);
+  if assigned(Pointer(source)) then begin
+    oeKind := oekDelegate;
+    AnonCopy(oeDelegate, source);
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetDelegate }
 
 {$ENDIF OTL_Anonymous}
