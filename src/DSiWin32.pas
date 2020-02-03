@@ -8,10 +8,15 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2019-05-08
-   Version           : 1.105b
+   Last modification : 2020-01-21
+   Version           : 1.107
 </pre>*)(*
    History:
+     1.107: 2020-01-21
+       - Better process termination of timed-out processes in DSiExecuteAndCapture.
+     1.106: 2019-12-13
+       - DSiEnumFiles* family filters out non-directories when only directories are
+         requested (attr = faDirectory).
      1.105b: 2019-05-08
        - Compiles with Delphi 2007.
      1.105a: 2019-05-06
@@ -3703,6 +3708,9 @@ type
       repeat
         // don't filter anything
         //if (S.Attr AND attr <> 0) or (S.Attr AND attr = attr) then begin
+        if (attr <> faDirectory)
+           or ((attr = faDirectory) and (S.Attr AND attr = attr))
+        then begin
           if assigned(enumCallback) then
             enumCallback(folder, S, false, stopEnum);
           if assigned(fileList) then
@@ -3713,7 +3721,7 @@ type
           if assigned(fileObjectList) then
             fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
           Inc(totalFiles);
-        //end;
+        end;
         err := FindNext(S);
       until (err <> 0) or stopEnum;
     finally FindClose(S); end;
@@ -5267,8 +5275,14 @@ type
         if TerminateProcess(processInfo.hProcess, exitCode) then
           WaitForSingleObject(processInfo.hProcess, INFINITE);
       end
-      else
+      else begin
         GetExitCodeProcess(processInfo.hProcess, exitCode);
+        if exitCode = STILL_ACTIVE then
+          if TerminateProcess(processInfo.hProcess, exitCode) then begin
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            GetExitCodeProcess(processInfo.hProcess, exitCode);
+          end;
+      end;
       CloseHandle(processInfo.hProcess);
       CloseHandle(processInfo.hThread);
       CloseHandle(readPipe);

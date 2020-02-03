@@ -6,10 +6,20 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2019-04-14
-   Version           : 2.08
+   Last modification : 2019-11-12
+   Version           : 2.13
 </pre>*)(*
    History:
+     2.13: 2019-11-12
+       - Added TGpBuffer constructor overloads accepting string and AnsiString.
+     2.12: 2019-10-10
+       - Implemented StoreValue.
+     2.11: 2019-10-09
+       - Added ASCII constant for DEL.
+     2.10: 2019-09-30
+       - Defined CompareValue for booleans.
+     2.09: 2019-07-22
+       - Defined anonymous record TRec<T1,T2,T3,T4,T5,T6>.
      2.08: 2019-04-14
        - Compiles for Linux with Rio.
      2.07: 2019-01-16
@@ -277,10 +287,11 @@ uses
 const
   MaxInt64 = $7FFFFFFFFFFFFFFF;
 
-  CASCII_FS = #$1C;
-  CASCII_GS = #$1D;
-  CASCII_RS = #$1E;
-  CASCII_US = #$1F;
+  CASCII_FS  = #$1C;
+  CASCII_GS  = #$1D;
+  CASCII_RS  = #$1E;
+  CASCII_US  = #$1F;
+  CASCII_DEL = #$7F;
 
 {$IFDEF GpStuff_AlignedInt}
 type
@@ -489,6 +500,10 @@ type
     constructor Create(data: pointer; size: integer); overload;
     constructor Create(stream: TStream); overload;
     constructor Create(const buffer: IGpBuffer); overload;
+    constructor Create(const s: string); overload;
+  {$IFDEF MSWINDOWS}
+    constructor Create(const s: AnsiString); overload;
+  {$ENDIF}
     destructor  Destroy; override;
     procedure Add(b: byte); overload; inline;
   {$IFDEF MSWINDOWS}
@@ -549,6 +564,9 @@ function  AssignValue(var assignTo: longint; const assignFrom: longint): boolean
 function  AssignValue(var assignTo: cardinal; const assignFrom: cardinal): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  AssignValue(var assignTo: int64; const assignFrom: int64): boolean; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 
+// sorts `false` before `true`
+function CompareValue(left, right: boolean): integer; overload;
+
 {$IFDEF GpStuff_Generics}
 type
   Ternary<T> = record
@@ -586,6 +604,16 @@ type
     Field4: T4;
     Field5: T5;
     constructor Create(Value1: T1; Value2: T2; Value3: T3; Value4: T4; Value5: T5);
+  end;
+
+  TRec<T1,T2,T3,T4,T5,T6> = record
+    Field1: T1;
+    Field2: T2;
+    Field3: T3;
+    Field4: T4;
+    Field5: T5;
+    Field6: T6;
+    constructor Create(Value1: T1; Value2: T2; Value3: T3; Value4: T4; Value5: T5; Value6: T6);
   end;
 {$ENDIF GpStuff_Generics}
 
@@ -774,6 +802,10 @@ type
 
   StoreValue<T> = class
     class function Create(const value: T): TStoredValue<T>; static;
+  end;
+
+  StoreValue = record
+    class function Save<T>(const value: T): TStoredValue<T>; static;
   end;
 {$ENDIF GpStuff_Generics}
 
@@ -1209,6 +1241,11 @@ begin
   if Result then
     assignTo := assignFrom;
 end; { AssignValue }
+
+function CompareValue(left, right: boolean): integer;
+begin
+  Result := Ord(Ord(left) <> 0) - Ord(Ord(right) <> 0);
+end; { CompareValue }
 
 function OffsetPtr(ptr: pointer; offset: {$IFDEF GpStuff_NativeInt}NativeInt{$ELSE}integer{$ENDIF}): pointer;
 begin
@@ -2253,7 +2290,6 @@ end; { FletcherChecksum }
 
 {$IFDEF GpStuff_NativeInt}
 function RoundDownTo(value: NativeInt; granularity: integer): NativeInt;
-
 {$ELSE}
 function RoundDownTo(value: integer; granularity: integer): integer;
 {$ENDIF GpStuff_NativeInt}
@@ -2482,6 +2518,20 @@ begin
   Create;
   Assign(buffer);
 end; { TGpBuffer.Create }
+
+constructor TGpBuffer.Create(const s: string);
+begin
+  Create;
+  AsString := s;
+end; { TGpBuffer.Create }
+
+{$IFDEF MSWINDOWS}
+constructor TGpBuffer.Create(const s: AnsiString);
+begin
+  Create;
+  AsAnsiString := s;
+end; { TGpBuffer.Create }
+{$ENDIF}
 
 function TGpBuffer.GetCurrent: pointer;
 begin
@@ -2715,12 +2765,30 @@ begin
   Field5 := Value5;
 end; { TRec<T1, T2, T3, T4, T5>.Create }
 
+constructor TRec<T1, T2, T3, T4, T5, T6>.Create(Value1: T1; Value2: T2;
+  Value3: T3; Value4: T4; Value5: T5; Value6: T6);
+begin
+  Field1 := Value1;
+  Field2 := Value2;
+  Field3 := Value3;
+  Field4 := Value4;
+  Field5 := Value5;
+  Field6 := Value6;
+end; { TRec<T1, T2, T3, T4, T5, T6>.Create }
+
 { StoreValue<T> }
 
 class function StoreValue<T>.Create(const value: T): TStoredValue<T>;
 begin
   Result.StoredValue := value;
 end; { StoreValue<T>.Create }
+
+{ StoreValue }
+
+class function StoreValue.Save<T>(const value: T): TStoredValue<T>;
+begin
+  Result.StoredValue := value;
+end; { StoreValue.Save<T> }
 
 {$ENDIF GpStuff_Generics}
 
