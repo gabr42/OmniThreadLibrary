@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2019 Primoz Gabrijelcic
+   (c) 2020 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2019-11-12
-   Version           : 2.13
+   Last modification : 2020-03-31
+   Version           : 2.14
 </pre>*)(*
    History:
+     2.14: 2020-03-31
+       - Implemented IGpBuffer.AsBytes.
      2.13: 2019-11-12
        - Added TGpBuffer constructor overloads accepting string and AnsiString.
      2.12: 2019-10-10
@@ -434,6 +436,7 @@ type
   {$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString;
   {$ENDIF}
+    function  GetAsBytes: TBytes;
     function  GetAsStream: TStream;
     function  GetAsString: string;
     function  GetByteAddr(idx: integer): pointer;
@@ -465,6 +468,7 @@ type
   {$IFDEF MSWINDOWS}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
   {$ENDIF}
+    property AsBytes: TBytes read GetAsBytes;
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
@@ -481,6 +485,7 @@ type
   {$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString; inline;
   {$ENDIF}
+    function  GetAsBytes: TBytes; inline;
     function  GetAsStream: TStream; inline;
     function  GetAsString: string; inline;
     function  GetByteAddr(idx: integer): pointer; inline;
@@ -501,10 +506,11 @@ type
     constructor Create(stream: TStream); overload;
     constructor Create(const buffer: IGpBuffer); overload;
     constructor Create(const s: string); overload;
-  {$IFDEF MSWINDOWS}
+  {$IFDEF MSWINDOWS}{$IFDEF Unicode}
     constructor Create(const s: AnsiString); overload;
-  {$ENDIF}
+  {$ENDIF}{$ENDIF}
     destructor  Destroy; override;
+    class function Make: IGpBuffer;
     procedure Add(b: byte); overload; inline;
   {$IFDEF MSWINDOWS}
     procedure Add(ch: AnsiChar); overload; inline;
@@ -521,6 +527,7 @@ type
   {$IFDEF MSWINDOWS}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
   {$ENDIF}
+    property AsBytes: TBytes read GetAsBytes;
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
@@ -2525,13 +2532,13 @@ begin
   AsString := s;
 end; { TGpBuffer.Create }
 
-{$IFDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}{$IFDEF Unicode}
 constructor TGpBuffer.Create(const s: AnsiString);
 begin
   Create;
   AsAnsiString := s;
 end; { TGpBuffer.Create }
-{$ENDIF}
+{$ENDIF}{$ENDIF}
 
 function TGpBuffer.GetCurrent: pointer;
 begin
@@ -2542,6 +2549,11 @@ destructor TGpBuffer.Destroy;
 begin
   FreeAndNil(FData);
 end; { TGpBuffer.Destroy }
+
+class function TGpBuffer.Make: IGpBuffer;
+begin
+  Result := TGpBuffer.Create;
+end; { TGpBuffer.Make }
 
 procedure TGpBuffer.Add(b: byte);
 begin
@@ -2603,10 +2615,13 @@ end; { TGpBuffer.Clear }
 
 {$IFDEF MSWINDOWS}
 function TGpBuffer.GetAsAnsiString: AnsiString;
+var
+  rb: RawByteString;
 begin
-  SetLength(Result, Size);
+  SetLength(rb, Size);
   if Size > 0 then
-    Move(Value^, Result[1], Size);
+    Move(Value^, rb[1], Size);
+  Result := rb;
 end; { TGpBuffer.GetAsAnsiString }
 {$ENDIF}
 
@@ -2614,6 +2629,19 @@ function TGpBuffer.GetAsStream: TStream;
 begin
   Result := FData;
 end; { TGpBuffer.GetAsStream }
+
+function TGpBuffer.GetAsBytes: TBytes;
+var
+  oldPos: int64;
+begin
+  SetLength(Result, AsStream.Size);
+  if Length(Result) > 0 then begin
+    oldPos := AsStream.Position;
+    AsStream.Position := 0;
+    AsStream.ReadBuffer(Result[0], Length(Result));
+    AsStream.Position := oldPos;
+  end;
+end; { TGpBuffer.GetAsBytes }
 
 function TGpBuffer.GetAsString: string;
 begin
