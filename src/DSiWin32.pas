@@ -8,10 +8,12 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2020-01-21
-   Version           : 1.107
+   Last modification : 2020-04-03
+   Version           : 1.108
 </pre>*)(*
    History:
+     1.108: 2020-04-03
+       - Compiles without referencing Vcl.Graphics if NoVCL symbol is defined.
      1.107: 2020-01-21
        - Better process termination of timed-out processes in DSiExecuteAndCapture.
      1.106: 2019-12-13
@@ -594,7 +596,9 @@ uses
   {$IFDEF DSiScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
+  {$IFNDEF NoVCL}
   {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
+  {$ENDIF NoVCL}
   {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF}
   {$IFDEF DSiUseAnsiStrings}, System.AnsiStrings{$ENDIF}
   {$IFDEF DSiHasGenerics}, {$IFDEF DSiScopedUnitNames}System.Generics.Collections{$ELSE}Generics.Collections{$ENDIF}{$ENDIF}
@@ -1194,7 +1198,9 @@ type
     function  ReadBinary(const name: string; dataStream: TStream): boolean; overload;
     function  ReadBool(const name: string; defval: boolean): boolean;
     function  ReadDate(const name: string; defval: TDateTime): TDateTime;
+    {$IFNDEF NoVCL}
     function  ReadFont(const name: string; font: TFont): boolean;
+    {$ENDIF NoVCL}
     function  ReadInt64(const name: string; defval: int64): int64;
     function  ReadInteger(const name: string; defval: integer): integer;
     function  ReadString(const name, defval: string): string;
@@ -1202,7 +1208,9 @@ type
     function  ReadVariant(const name: string; defval: variant): variant;
     procedure WriteBinary(const name: string; data: RawByteString); overload;
     procedure WriteBinary(const name: string; data: TStream); overload;
+    {$IFNDEF NoVCL}
     procedure WriteFont(const name: string; font: TFont);
+    {$ENDIF NoVCL}
     procedure WriteInt64(const name: string; value: int64);
     procedure WriteStrings(const name: string; strings: TStrings);
     procedure WriteVariant(const name: string; value: variant);
@@ -1882,7 +1890,9 @@ type
   function  DSiGetWindowsFolder: string;
   function  DSiGetWindowsVersion: TDSiWindowsVersion;
   function  DSiHasRoamingProfile(var userHasRoamingProfile: boolean): boolean;
+  {$IFNDEF NoVCL}
   function  DSiInitFontToSystemDefault(aFont: TFont; aElement: TDSiUIElement): boolean;
+  {$ENDIF NoVCL}
   function  DSiIsAdmin: boolean;
   function  DSiIsAdminLoggedOn: boolean;
   function  DSiIsCodeSigned(const exeFileName: string; var certName: AnsiString): boolean;
@@ -2828,6 +2838,7 @@ type
     except Result := defval; end;
   end; { TDSiRegistry.ReadDate }
 
+  {$IFNDEF NoVCL}
   {:Reads TFont from the registry.
     @author  gabr
     @since   2002-11-25
@@ -2854,6 +2865,7 @@ type
       Result := true;
     end;
   end; { TDSiRegistry.ReadFont }
+  {$ENDIF NoVCL}
 
   {:Reads integer from the registry returning default value if name doesn't
     exist in the open key.
@@ -3025,6 +3037,7 @@ type
     end;
   end; { TDSiRegistry.WriteVariant }
 
+  {$IFNDEF NoVCL}
   {:Writes TFont into the registry.
     @author  gabr
     @since   2002-11-25
@@ -3045,6 +3058,7 @@ type
     Move(fstyle, istyle, SizeOf(TFontStyles));
     WriteInteger(name+'_style', istyle);
   end; { TDSiRegistry.WriteFont }
+  {$ENDIF NoVCL}
 
   {:Writes TStrings into a MULTI_SZ value.
     @author  Colin Wilson, borland.public.delphi.vcl.components.using
@@ -7479,6 +7493,7 @@ var
     Result := true;
   end; { DSiHasRoamingProfile }
 
+  {$IFNDEF NoVCL}
   {:Initializes font to the metrics of a specific GUI element.
     @author  aoven
     @since   2007-11-13
@@ -7510,6 +7525,7 @@ var
       Result := true;
     end;
   end; { DSiInitFontToSystemDefault }
+  {$ENDIF NoVCL}
 
   {:Returns True if the application is running with admin privileges.
     Always returns True on Windows 95/98.
