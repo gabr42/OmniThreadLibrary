@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "id": "Gabr42.OmniThreadLibrary",
+    "version": "3.7.7",
+    "description": "OmniThreaLibraryOmniThreadLibrary is a powerful threading library for Delphi",
+    "authors": "Primož Gabrijelčič",
+    "projectUrl": "https://github.com/gabr42/OmniThreadLibrary",
+    "license": "BSD",
+    "copyright": "Primož Gabrijelčič",
+    "tags": "threading async"
+  },
+  "targetPlatforms": [
+    {
+      "compiler": "XE2",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE3",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE4",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE5",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE6",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE7",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "XE8",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "10.0",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "10.1",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "10.2",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "10.3",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "10.4",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    }
+  ],
+  "templates": [
+    {
+      "name": "default",
+      "source": [
+        {
+          "src": ".\\*.pas",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\*.ic",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\src\\*.pas",
+          "flatten": false,
+          "dest": "src\\src"
+        },
+        {
+          "src": ".\\packages\\Delphi $compiler$ $compilerCodeName$\\**",
+          "flatten": false,
+          "dest": "src\\packages\\Delphi $compiler$ $compilerCodeName$"
+        }
+      ],
+      "searchPaths": [
+        {
+          "path": "src"
+        }
+      ]
+    }
+  ]
+}

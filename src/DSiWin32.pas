@@ -554,6 +554,8 @@ interface
 {$IFDEF OSX}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF OSX}
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
+{$DEFINE NO_VCL}
+
 {$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
@@ -582,7 +584,9 @@ uses
   {$IFDEF DSiScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
   {$ENDIF}
   {$IFDEF DSiNeedFileCtrl}
+  {$IFNDEF NO_VCL}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
+  {$ENDIF}
   {$ENDIF DSiNeedFileCtrl}
   {$IFDEF DSiScopedUnitNames}
   System.UITypes,
@@ -594,7 +598,9 @@ uses
   {$IFDEF DSiScopedUnitNames}Winapi.ShlObj{$ELSE}ShlObj{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Classes{$ELSE}Classes{$ENDIF},
   {$IFDEF DSiScopedUnitNames}System.Contnrs{$ELSE}Contnrs{$ENDIF},
+  {$IFNDEF NO_VCL}
   {$IFDEF DSiScopedUnitNames}Vcl.Graphics{$ELSE}Graphics{$ENDIF},
+  {$ENDIF}
   {$IFDEF DSiScopedUnitNames}System.Win.Registry{$ELSE}Registry{$ENDIF}
   {$IFDEF DSiUseAnsiStrings}, System.AnsiStrings{$ENDIF}
   {$IFDEF DSiHasGenerics}, {$IFDEF DSiScopedUnitNames}System.Generics.Collections{$ELSE}Generics.Collections{$ENDIF}{$ENDIF}
@@ -1194,7 +1200,9 @@ type
     function  ReadBinary(const name: string; dataStream: TStream): boolean; overload;
     function  ReadBool(const name: string; defval: boolean): boolean;
     function  ReadDate(const name: string; defval: TDateTime): TDateTime;
+    {$IFNDEF NO_VCL}
     function  ReadFont(const name: string; font: TFont): boolean;
+    {$ENDIF}
     function  ReadInt64(const name: string; defval: int64): int64;
     function  ReadInteger(const name: string; defval: integer): integer;
     function  ReadString(const name, defval: string): string;
@@ -1202,7 +1210,9 @@ type
     function  ReadVariant(const name: string; defval: variant): variant;
     procedure WriteBinary(const name: string; data: RawByteString); overload;
     procedure WriteBinary(const name: string; data: TStream); overload;
+    {$IFNDEF NO_VCL}
     procedure WriteFont(const name: string; font: TFont);
+    {$ENDIF}
     procedure WriteInt64(const name: string; value: int64);
     procedure WriteStrings(const name: string; strings: TStrings);
     procedure WriteVariant(const name: string; value: variant);
@@ -1882,7 +1892,9 @@ type
   function  DSiGetWindowsFolder: string;
   function  DSiGetWindowsVersion: TDSiWindowsVersion;
   function  DSiHasRoamingProfile(var userHasRoamingProfile: boolean): boolean;
+  {$IFNDEF NO_VCL}
   function  DSiInitFontToSystemDefault(aFont: TFont; aElement: TDSiUIElement): boolean;
+  {$ENDIF}
   function  DSiIsAdmin: boolean;
   function  DSiIsAdminLoggedOn: boolean;
   function  DSiIsCodeSigned(const exeFileName: string; var certName: AnsiString): boolean;
@@ -2832,6 +2844,7 @@ type
     @author  gabr
     @since   2002-11-25
   }
+  {$IFNDEF NO_VCL}
   function TDSiRegistry.ReadFont(const name: string; font: TFont): boolean;
   var
     istyle: integer;
@@ -2854,6 +2867,7 @@ type
       Result := true;
     end;
   end; { TDSiRegistry.ReadFont }
+  {$ENDIF}
 
   {:Reads integer from the registry returning default value if name doesn't
     exist in the open key.
@@ -3029,6 +3043,7 @@ type
     @author  gabr
     @since   2002-11-25
   }
+  {$IFNDEF NO_VCL}
   procedure TDSiRegistry.WriteFont(const name: string; font: TFont);
   var
     istyle: integer;
@@ -3045,6 +3060,8 @@ type
     Move(fstyle, istyle, SizeOf(TFontStyles));
     WriteInteger(name+'_style', istyle);
   end; { TDSiRegistry.WriteFont }
+  {$ENDIF}
+
 
   {:Writes TStrings into a MULTI_SZ value.
     @author  Colin Wilson, borland.public.delphi.vcl.components.using
@@ -7483,6 +7500,7 @@ var
     @author  aoven
     @since   2007-11-13
   }
+  {$IFNDEF NO_VCL}
   function DSiInitFontToSystemDefault(aFont: TFont; aElement: TDSiUIElement): boolean;
   var
     NCM: TNonClientMetrics;
@@ -7510,7 +7528,7 @@ var
       Result := true;
     end;
   end; { DSiInitFontToSystemDefault }
-
+  {$ENDIF}
   {:Returns True if the application is running with admin privileges.
     Always returns True on Windows 95/98.
     Based on http://www.gumpi.com/Blog/2007/10/02/EKON11PromisedEntry3.aspx.
