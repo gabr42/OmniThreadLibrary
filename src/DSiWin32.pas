@@ -558,7 +558,6 @@ interface
 {$IFDEF OSX}{$MESSAGE FATAL 'This unit is for Windows only'}{$ENDIF OSX}
 {$IFDEF MSWindows}{$WARN SYMBOL_PLATFORM OFF}{$WARN UNIT_PLATFORM OFF}{$ENDIF MSWindows}
 
-
 {$DEFINE DSiNeedUTF}{$UNDEF DSiNeedVariants}{$DEFINE DSiNeedStartupInfo}
 {$DEFINE DSiNeedFileCtrl}
 {$DEFINE DSiNeedRawByteString}
@@ -587,9 +586,7 @@ uses
   {$IFDEF DSiScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
   {$ENDIF}
   {$IFDEF DSiNeedFileCtrl}
-  {$IFNDEF NO_VCL}
   FileCtrl, // use before SysUtils so deprecated functions from FileCtrl can be reintroduced
-  {$ENDIF}
   {$ENDIF DSiNeedFileCtrl}
   {$IFDEF DSiScopedUnitNames}
   System.UITypes,
@@ -3000,7 +2997,6 @@ type
       else raise Exception.Create('TDSiRegistry.WriteVariant: Invalid value type!');
     end;
   end; { TDSiRegistry.WriteVariant }
-
 
   {:Writes TStrings into a MULTI_SZ value.
     @author  Colin Wilson, borland.public.delphi.vcl.components.using
@@ -9546,4 +9542,3 @@ initialization
 finalization
   CleanupGlobals;
 end.
-
