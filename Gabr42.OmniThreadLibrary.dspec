@@ -2,7 +2,7 @@
   "metadata": {
     "id": "Gabr42.OmniThreadLibrary",
     "version": "3.7.7",
-    "description": "OmniThreaLibraryOmniThreadLibrary is a powerful threading library for Delphi",
+    "description": "OmniThreadLibrary is a powerful threading library for Delphi",
     "authors": "Primož Gabrijelčič",
     "projectUrl": "https://github.com/gabr42/OmniThreadLibrary",
     "license": "BSD",
@@ -81,7 +81,12 @@
           "dest": "src"
         },
         {
-          "src": ".\\*.ic",
+          "src": ".\\*.inc",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\LICENSE.txt",
           "flatten": false,
           "dest": "src"
         },
@@ -91,15 +96,18 @@
           "dest": "src\\src"
         },
         {
-          "src": ".\\packages\\Delphi $compiler$ $compilerCodeName$\\**",
+          "src": ".\\packages\\Delphi $compilerWithCodeName$\\**",
           "flatten": false,
-          "dest": "src\\packages\\Delphi $compiler$ $compilerCodeName$"
+          "dest": "src\\packages\\Delphi $compilerWithCodeName$"
         }
       ],
       "searchPaths": [
         {
           "path": "src"
-        }
+        },
+        {
+          "path": "src\\src"
+        }       
       ]
     }
   ]
