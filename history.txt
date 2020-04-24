@@ -9,7 +9,9 @@
     cleaned up as soon as possible. This allows OTL tasks to be executed
     from a package. [issue #132]
   - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True 
-    on timeout.  
+    on timeout.
+  - SetOnMessage(nil) works correctly.
+  - Fixed invalid FreeAndNil of an interface in TOmniFuture<T>.Execute.  
 
 3.07.7: 2019-02-23
 

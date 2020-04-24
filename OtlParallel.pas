@@ -3881,7 +3881,7 @@ begin
   FTask.Unobserved;
   if assigned(FTask.CancellationToken) and FTask.CancellationToken.IsSignalled then begin
     FCancelled := true;
-    FreeAndNil(FTask);
+    FTask := nil;
   end
   else
     Parallel.Start(FTask, taskConfig);
