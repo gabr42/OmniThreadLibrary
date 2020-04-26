@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-08-01
-///   Version           : 1.16
+///   Last modification : 2020-04-26
+///   Version           : 2.0
 ///</para><para>
 ///   History:
+///     2.0: 2020-04-26
+///       - Platform-independent TerminateEvent and TerminatedEvent.
 ///     1.16: 2017-08-01
 ///       - Defined IOmniTask.InvokeOnSelf method.
 ///     1.15: 2017-07-26
@@ -147,7 +149,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string;
     function  GetParam: TOmniValueContainer;
-    function  GetTerminateEvent: TOmniTransitionEvent;
+    function  GetTerminateEvent: IOmniEvent;
     function  GetThreadData: IInterface;
     function  GetUniqueID: int64;
   //
@@ -180,7 +182,7 @@ type
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
     property Param: TOmniValueContainer read GetParam;
-    property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
+    property TerminateEvent: IOmniEvent read GetTerminateEvent; //use Terminate to terminate a task, don't just set TerminateEvent
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { IOmniTask }

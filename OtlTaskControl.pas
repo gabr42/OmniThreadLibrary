@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-03-22
-///   Version           : 2.0a
+///   Last modification : 2020-04-26
+///   Version           : 2.01
 ///</para><para>
 ///   History:
+///     2.01: 2020-04-26
+///       - Platform-independent TerminateEvent and TerminatedEvent.
 ///     2.0a: 2019-03-22
 ///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
 ///         This allows tasks to be run from a package. [issue #132]
@@ -587,7 +589,7 @@ type
     ostiStopped           : boolean;
     ostiTaskName          : string;
     ostiTerminatedEvent   : IOmniEvent;
-    ostiTerminateEvent    : TOmniTransitionEvent;
+    ostiTerminateEvent    : IOmniEvent;
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
   strict protected
@@ -609,7 +611,7 @@ type
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
     property TerminatedEvent: IOmniEvent read ostiTerminatedEvent write ostiTerminatedEvent;
-    property TerminateEvent: TOmniTransitionEvent read ostiTerminateEvent write ostiTerminateEvent;
+    property TerminateEvent: IOmniEvent read ostiTerminateEvent write ostiTerminateEvent;
     property Terminating: boolean read ostiTerminating write ostiTerminating;
     property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
   end; { TOmniSharedTaskInfo }
@@ -890,7 +892,7 @@ type
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
     function  GetParam: TOmniValueContainer; inline;
-    function  GetTerminateEvent: TOmniTransitionEvent; inline;
+    function  GetTerminateEvent: IOmniEvent; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
     procedure InternalExecute(calledFromTerminate: boolean);
@@ -928,7 +930,7 @@ type
     property Name: string read GetName;
     property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
-    property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent;
+    property TerminateEvent: IOmniEvent read GetTerminateEvent;
     property ThreadData: IInterface read GetThreadData;
     property UniqueID: int64 read GetUniqueID;
   end; { TOmniTask }
@@ -1015,7 +1017,7 @@ type
     function  GetParam: TOmniValueContainer;
     function  GetSharedInfo: TOmniSharedTaskInfo;
     function  GetTerminatedEvent: IOmniEvent;
-    function  GetTerminateEvent: TOmniTransitionEvent;
+    function  GetTerminateEvent: IOmniEvent;
     function  GetUniqueID: int64; inline;
     function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
     procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
@@ -1510,7 +1512,7 @@ begin
   Result := otParameters_ref;
 end; { TOmniTask.GetParam }
 
-function TOmniTask.GetTerminateEvent: TOmniTransitionEvent;
+function TOmniTask.GetTerminateEvent: IOmniEvent;
 begin
   Result := otSharedInfo_ref.TerminateEvent;
 end; { TOmniTask.GetTerminateEvent }
@@ -1688,7 +1690,7 @@ begin
     if otExecuting and (not assigned(otSharedInfo_ref)) then
       Exit; // thread has just completed execution
     otSharedInfo_ref.Terminating := true;
-    SetEvent(otSharedInfo_ref.TerminateEvent);
+    otSharedInfo_ref.TerminateEvent.SetEvent;
     if not otExecuting then
       otTerminateWillCallExecute := true;
   finally otCleanupLock.ExitWriteLock; end;
@@ -2603,7 +2605,7 @@ begin
     try
       // termination events
       msgInfo.IdxFirstTerminate := 0;
-      handles.Add(task.TerminateEvent);
+      {$IFDEF MSWINDOWS}handles.Add(task.TerminateEvent.Handle);{$ELSE}handles.Add(task.TerminateEvent);{$ENDIF}
       msgInfo.IdxLastTerminate := msgInfo.IdxFirstTerminate;
       if assigned(oteTerminateHandles) then
         for aHandle in oteTerminateHandles do begin
@@ -2915,15 +2917,7 @@ begin
     end;
     FreeAndNil(otcExecutor);
     otcSharedInfo.CommChannel := nil;
-
-    {$IFDEF MSWINDOWS}
-    if otcSharedInfo.TerminateEvent <> 0 then begin
-      CloseHandle(otcSharedInfo.TerminateEvent);
-      otcSharedInfo.TerminateEvent := 0;
-    end;
-    {$ELSE}
     otcSharedInfo.TerminateEvent := nil;
-    {$ENDIF ~MSWINDOWS}
     otcSharedInfo.TerminatedEvent := nil;
     FreeAndNil(otcParameters);
   finally
@@ -3129,7 +3123,7 @@ begin
   Result := otcSharedInfo.TerminatedEvent;
 end; { TOmniTaskControl.GetTerminatedEvent }
 
-function TOmniTaskControl.GetTerminateEvent: TOmniTransitionEvent;
+function TOmniTaskControl.GetTerminateEvent: IOmniEvent;
 begin
   Result := otcSharedInfo.TerminateEvent;
 end; { TOmniTaskControl.GetTerminateEvent }
@@ -3152,15 +3146,8 @@ begin
   otcSharedInfo.TaskName := taskName;
   otcSharedInfo.UniqueID := OtlUID.Increment;
   otcParameters := TOmniValueContainer.Create;
-  {$IFDEF MSWINDOWS}
-  otcSharedInfo.TerminateEvent := CreateEvent(nil, true, false, nil);
-  Win32Check(otcSharedInfo.TerminateEvent <> 0);
-  otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false, nil); // TODO 1 -oPrimoz Gabrijelcic : *** do we need share lock here?
-  Win32Check(otcSharedInfo.TerminatedEvent <> nil);
-  {$ELSE}
   otcSharedInfo.TerminateEvent := CreateOmniEvent(true, false);
-  otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false);
-  {$ENDIF ~MSWINDOWS}
+  otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false); // TODO 1 -oPrimoz Gabrijelcic : *** do we need share lock here?
   otcUserData := TOmniValueContainer.Create;
   otcOnMessageList := TGpIntegerObjectList.Create(true);
 end; { TOmniTaskControl.Initialize }
@@ -3543,7 +3530,7 @@ procedure TOmniTaskControl.Stop;
 begin
   if assigned(otcSharedInfo) then begin
     otcSharedInfo.Terminating := true;
-    SetEvent(otcSharedInfo.TerminateEvent);
+    otcSharedInfo.TerminateEvent.SetEvent;
   end;
 end; { TOmniTaskControl.Stop }
 
