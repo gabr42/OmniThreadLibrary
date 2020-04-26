@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2019-03-19
-///   Version           : 2.01b
+///   Last modification : 2020-04-26
+///   Version           : 2.02
 ///</para><para>
 ///   History:
+///     2.02: 2020-04-26
+///        - Implemented TOmniSynchronizer<T>/IOmniSynchronizer<T>.
 ///     2.01b: 2019-03-19
 ///        - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     2.01a: 2018-11-02
@@ -454,6 +456,24 @@ type
   end; { TOmniLockManager<K> }
   {$ENDIF MSWINDOWS}
 
+  IOmniSynchronizer<T> = interface
+    procedure Signal(const event: T);
+    function  WaitFor(const event: T; timeout: cardinal = INFINITE): boolean;
+  end; { IOmniSynchronizer<T> }
+
+  TOmniSynchronizer<T> = class(TInterfacedObject)
+  strict private
+    FSync: TDictionary<T, TEvent>;
+    FLock: IOmniCriticalSection;
+  strict protected
+    function  Ensure(event: T): TEvent;
+  public
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+    procedure Signal(const event: T);
+    function  WaitFor(const event: T; timeout: cardinal = INFINITE): boolean;
+  end; { TOmniSynchronizer<T> }
+
   {$IFDEF MSWINDOWS}
   ///<summary>Waits on any/all from any number of handles.</summary>
   ///  Don't use it to wait on mutexes!
@@ -725,7 +745,7 @@ type
     procedure Acquire; override;
     procedure Release; override;
     procedure Signal;
-    function  WaitFor(Timeout: Cardinal = INFINITE): TWaitResult; override;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver); virtual; abstract;
     function  IsSignalled: boolean; virtual; abstract;
     procedure AddObserver(const Observer: IOmniSynchroObserver);
@@ -775,7 +795,7 @@ type
     procedure SetEvent;
     function  BaseEvent: TEvent;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
-    function  WaitFor(Timeout: Cardinal = INFINITE): TWaitResult; override;
+    function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
     function  IsSignalled: boolean; override;
   end; { TOmniEvent }
 
@@ -2634,6 +2654,42 @@ class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
 begin
   Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(oldValue);
 end; { TInterlockedEx.CAS }
+
+{ TOmniSynchronizer<T> }
+
+procedure TOmniSynchronizer<T>.AfterConstruction;
+begin
+  inherited;
+  FSync := TObjectDictionary<T, TEvent>.Create([doOwnsValues]);
+  FLock := TOmniCriticalSection.Create;
+end; { TOmniSynchronizer<T>.AfterConstruction }
+
+procedure TOmniSynchronizer<T>.BeforeDestruction;
+begin
+  FreeAndNil(FSync);
+  inherited;
+end; { TOmniSynchronizer<T>.BeforeDestruction }
+
+function TOmniSynchronizer<T>.Ensure(event: T): TEvent;
+begin
+  FLock.Acquire;
+  try
+    if not FSync.TryGetValue(event, Result) then begin
+      Result := TEvent.Create;
+      FSync.Add(event, Result);
+    end;
+  finally FLock.Release; end;
+end; { TOmniSynchronizer<T>.Ensure }
+
+procedure TOmniSynchronizer<T>.Signal(const event: T);
+begin
+  Ensure(event).SetEvent;
+end; { TOmniSynchronizer<T>.Signal }
+
+function TOmniSynchronizer<T>.WaitFor(const event: T; timeout: cardinal): boolean;
+begin
+  Result := Ensure(event).WaitFor(timeout) = wrSignaled;
+end; { TOmniSynchronizer<T>.WaitFor }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;
