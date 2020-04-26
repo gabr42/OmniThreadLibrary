@@ -2661,7 +2661,7 @@ procedure TOmniSynchronizer<T>.AfterConstruction;
 begin
   inherited;
   FSync := TObjectDictionary<T, TEvent>.Create([doOwnsValues]);
-  FLock := TOmniCriticalSection.Create;
+  FLock := CreateOmniCriticalSection;
 end; { TOmniSynchronizer<T>.AfterConstruction }
 
 procedure TOmniSynchronizer<T>.BeforeDestruction;
