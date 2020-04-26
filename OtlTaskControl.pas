@@ -794,7 +794,7 @@ type
     {$ENDIF ~MSWINDOWS}
     oteWaitHandlesGen    : int64;
     oteWaitObjectList    : TOmniWaitObjectList;
-    oteWorkerInitialized : TOmniTransitionEvent;
+    oteWorkerInitialized : IOmniEvent;
     oteWorkerInitOK      : boolean;
     oteWorkerIntf        : IOmniWorker;
   strict protected
@@ -873,7 +873,7 @@ type
     {$ELSE}
     property WakeAll: boolean read oteWakeAll write oteWakeAll;
     {$ENDIF ~MSWINDOWS}
-    property WorkerInitialized: TOmniTransitionEvent read oteWorkerInitialized;
+    property WorkerInitialized: IOmniEvent read oteWorkerInitialized;
     property WorkerInitOK: boolean read oteWorkerInitOK;
     property WorkerIntf: IOmniWorker read oteWorkerIntf;
   end; { TOmniTaskExecutor }
@@ -1904,11 +1904,10 @@ begin
   FreeAndNil(oteException);
   {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(oteCommRebuildHandles);
-  DSiCloseHandleAndNull(oteWorkerInitialized);
   {$ELSE}
   oteCommRebuildHandles := nil;
-  oteWorkerInitialized := nil;
   {$ENDIF ~MSWINDOWS}
+  oteWorkerInitialized := nil;
   inherited;
 end; { TOmniTaskExecutor.Destroy }
 
@@ -2213,7 +2212,7 @@ begin
           Exit;
       end;
       oteWorkerInitOK := true;
-    finally SetEvent(WorkerInitialized); end;
+    finally WorkerInitialized.SetEvent; end;
 
     if tcoMessageWait in Options then
       {$IFDEF MSWINDOWS}
@@ -2492,13 +2491,11 @@ procedure TOmniTaskExecutor.Initialize;
 begin
   oteMsgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
   oteTimers := TGpInt64ObjectList.Create;
+  oteWorkerInitialized := CreateOmniEvent(true, false);
   {$IFDEF MSWINDOWS}
-  oteWorkerInitialized := CreateEvent(nil, true, false, nil);
-  Win32Check(oteWorkerInitialized <> 0);
   oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
   Win32Check(oteCommRebuildHandles <> 0);
   {$ELSE}
-  oteWorkerInitialized := CreateOmniEvent(true, false);
   oteCommRebuildHandles := CreateOmniEvent(false, false);
   {$ENDIF ~MSWINDOWS}
   otePriority := tpNormal;
@@ -2854,11 +2851,7 @@ begin
   if oteExecutorType <> etWorker then
     raise Exception.Create('TOmniTaskExecutor.WaitForInit: ' +
       'Wait for init is only available when working with an IOmniWorker');
-  {$IFDEF MSWINDOWS}
-  WaitForSingleObject(WorkerInitialized, INFINITE);
-  {$ELSE}
   WorkerInitialized.WaitFor(INFINITE);
-  {$ENDIF ~MSWINDOWS}
   Result := WorkerInitOK;
 end; { TOmniTaskExecutor.WaitForInit }
 

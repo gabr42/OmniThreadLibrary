@@ -19,13 +19,22 @@ type
     procedure TestWait;
     procedure TestTerminate;
     procedure TestTerminateWhen;
+    procedure TestWorkerInitialized;
   end;
 
 implementation
 
 uses
-  System.SysUtils,
+  System.SysUtils, System.Diagnostics,
   OtlTask, OtlTaskControl;
+
+type
+  TSynchronizedOmniWorker = class(TOmniWorker)
+  strict protected
+    FSynchronizer: IOmniSynchronizer<string>;
+  protected
+    constructor Create(Synchronizer: IOmniSynchronizer<string>);
+  end;
 
 { TestITaskControl }
 
@@ -111,13 +120,17 @@ begin
 end;
 
 type
-  TTerminateWhenTask = class(TOmniWorker)
-  strict protected
-    FSynchronizer: IOmniSynchronizer<string>;
+  TTerminateWhenTask = class(TSynchronizedOmniWorker)
   protected
-    constructor Create(Synchronizer: IOmniSynchronizer<string>);
     function Initialize: boolean; override;
   end;
+
+function TTerminateWhenTask.Initialize: boolean;
+begin
+  Result := inherited Initialize;
+  if Result then
+    FSynchronizer.Signal('started');
+end;
 
 procedure TestITaskControl.TestTerminateWhen;
 var
@@ -137,19 +150,51 @@ begin
   task.Terminate;
 end;
 
-{ TTerminateWhenTask }
+type
+  TWorkerInitializedTask = class(TSynchronizedOmniWorker)
+  protected
+    function Initialize: boolean; override;
+  end;
 
-constructor TTerminateWhenTask.Create(Synchronizer: IOmniSynchronizer<string>);
+function TWorkerInitializedTask.Initialize: boolean;
+begin
+  Result := inherited Initialize;
+  if Result then begin
+    FSynchronizer.Signal('started');
+    FSynchronizer.WaitFor('continue', 10000);
+    Sleep(1000);
+  end;
+end;
+
+procedure TestITaskControl.TestWorkerInitialized;
+var
+  await    : boolean;
+  event    : IOmniEvent;
+  stopwatch: TStopwatch;
+  task     : IOmniTaskControl;
+begin
+  event := CreateOmniEvent(false, false);
+
+  task := CreateTask(TWorkerInitializedTask.Create(Synchronizer), 'Test task');
+  task.TerminateWhen(event).Run;
+
+  CheckTrue(Synchronizer.WaitFor('started', 1000), 'Task did not start in 1 second');
+  stopwatch := TStopwatch.StartNew;
+  Synchronizer.Signal('continue');
+  await := task.WaitForInit;
+  stopwatch.Stop;
+  CheckTrue(await, 'Task did not initialize correctly');
+  CheckTrue(stopwatch.ElapsedMilliseconds >= 1000, 'WaitForInit has returned too soon');
+
+  task.Terminate;
+end;
+
+{ TSynchronizedOmniWorker }
+
+constructor TSynchronizedOmniWorker.Create(Synchronizer: IOmniSynchronizer<string>);
 begin
   inherited Create;
   FSynchronizer := Synchronizer;
-end;
-
-function TTerminateWhenTask.Initialize: boolean;
-begin
-  Result := inherited Initialize;
-  if Result then
-    FSynchronizer.Signal('started');
 end;
 
 initialization

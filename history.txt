@@ -13,6 +13,7 @@
     to feed TOTLEventMonitor component.
   - TOmniContainerWindowsEventObserver and TOmniContainerWindowsMessageObserver
     are still implemented for backwards compatibility.
+  - Added OtlCommon.IOmniSynchronizer<T>.
   
 3.07.8: <<unreleased>>
 
