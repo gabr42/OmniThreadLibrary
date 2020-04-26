@@ -159,7 +159,10 @@ type
     procedure InvokeOnSelf(remoteFunc: TOmniTaskInvokeFunction);
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF MSWINDOWS}
+    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
+    {$ENDIF MSWINDOWS}
+    procedure RegisterWaitObject(waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
@@ -174,7 +177,10 @@ type
     function  Terminated: boolean;
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure UnregisterWaitObject(waitObject: TOmniTransitionEvent);
+    {$IFDEF MSWINDOWS}
+    procedure UnregisterWaitObject(waitObject: THandle); overload;
+    {$ENDIF MSWINDOWS}
+    procedure UnregisterWaitObject(waitObject: IOmniEvent); overload;
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;

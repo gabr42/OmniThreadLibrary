@@ -911,7 +911,10 @@ type
     procedure Invoke(remoteFunc: TOmniTaskInvokeFunction);
     procedure InvokeOnSelf(remoteFunc: TOmniTaskInvokeFunction);
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF MSWINDOWS}
+    procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
+    {$ENDIF MSWINDOWS}
+    procedure RegisterWaitObject(waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
@@ -925,7 +928,10 @@ type
     procedure StopTimer;
     function  Terminated: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure UnregisterWaitObject(waitObject: TOmniTransitionEvent);
+    {$IFDEF MSWINDOWS}
+    procedure UnregisterWaitObject(waitObject: THandle); overload;
+    {$ENDIF MSWINDOWS}
+    procedure UnregisterWaitObject(waitObject: IOmniEvent); overload;
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
     property Counter: IOmniCounter read GetCounter;
@@ -1619,9 +1625,16 @@ begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
-procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+{$IFDEF MSWINDOWS}
+procedure TOmniTask.RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod);
 begin
   otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
+end; { TOmniTask.RegisterWaitObject }
+{$ENDIF MSWINDOWS}
+
+procedure TOmniTask.RegisterWaitObject(waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod);
+begin
+  otExecutor_ref.Asy_RegisterWaitObject(waitObject{$IFDEF MSWINDOWS}.Handle{$ENDIF}, responseHandler);
 end; { TOmniTask.RegisterWaitObject }
 
 procedure TOmniTask.SetException(exceptionObject: pointer);
@@ -1716,9 +1729,16 @@ begin
   otExecutor_ref.Asy_UnregisterComm(comm);
 end; { TOmniTask.UnregisterComm }
 
-procedure TOmniTask.UnregisterWaitObject(waitObject: TOmniTransitionEvent);
+{$IFDEF MSWINDOWS}
+procedure TOmniTask.UnregisterWaitObject(waitObject: THandle);
 begin
   otExecutor_ref.Asy_UnregisterWaitObject(waitObject);
+end; { TOmniTask.UnregisterWaitObject }
+{$ENDIF MSWINDOWS}
+
+procedure TOmniTask.UnregisterWaitObject(waitObject: IOmniEvent);
+begin
+  otExecutor_ref.Asy_UnregisterWaitObject(waitObject{$IFDEF MSWINDOWS}.Handle{$ENDIF});
 end; { TOmniTask.UnregisterWaitObject }
 
 { TOmniWorker }

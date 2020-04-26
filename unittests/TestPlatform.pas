@@ -44,7 +44,7 @@ begin
   time_ms := Time.Timestamp_ms;
   event.WaitFor(1000);
   time_ms := Time.Elapsed_ms(time_ms);
-  CheckTrue((time_ms >= 1000) and (time_ms <= 1050) {allowed measurement error},
+  CheckTrue((time_ms >= 990) and (time_ms <= 1050) {allowed measurement error},
     Format('WaitFor(1000) did not last around 1 s (actual: %d ms)', [time_ms]));
 end;
 

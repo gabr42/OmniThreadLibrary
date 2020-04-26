@@ -20,6 +20,7 @@ type
     procedure TestTerminate;
     procedure TestTerminateWhen;
     procedure TestWorkerInitialized;
+    procedure TestRegisterWaitObject;
   end;
 
 implementation
@@ -53,6 +54,7 @@ end;
 procedure TestITaskControl.TestStartTask;
 var
   didRun: boolean;
+  sw    : TStopwatch;
   task  : IOmniTaskControl;
 begin
   didRun := false;
@@ -68,11 +70,14 @@ begin
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
   CheckTrue(didRun, 'Task did not run');
 
+  sw := TStopwatch.StartNew;
   task.Terminate;
+  CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
 end;
 
 procedure TestITaskControl.TestWait;
 var
+  sw  : TStopwatch;
   task: IOmniTaskControl;
 begin
   task := CreateTask(
@@ -93,11 +98,14 @@ begin
 
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
 
+  sw := TStopwatch.StartNew;
   task.Terminate;
+  CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
 end;
 
 procedure TestITaskControl.TestTerminate;
 var
+  sw  : TStopwatch;
   task: IOmniTaskControl;
 begin
   task := CreateTask(
@@ -116,7 +124,9 @@ begin
   task.Stop;
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
 
+  sw := TStopwatch.StartNew;
   task.Terminate;
+  CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
 end;
 
 type
@@ -134,8 +144,9 @@ end;
 
 procedure TestITaskControl.TestTerminateWhen;
 var
-  task: IOmniTaskControl;
   event: IOmniEvent;
+  sw   : TStopwatch;
+  task : IOmniTaskControl;
 begin
   event := CreateOmniEvent(false, false);
 
@@ -147,7 +158,9 @@ begin
   event.SetEvent;
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
 
+  sw := TStopwatch.StartNew;
   task.Terminate;
+  CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
 end;
 
 type
@@ -186,7 +199,78 @@ begin
   CheckTrue(await, 'Task did not initialize correctly');
   CheckTrue(stopwatch.ElapsedMilliseconds >= 1000, 'WaitForInit has returned too soon');
 
+  stopwatch := TStopwatch.StartNew;
   task.Terminate;
+  CheckTrue(stopwatch.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+end;
+
+type
+  TRegisterWaitObjectTask = class(TSynchronizedOmniWorker)
+  strict private
+    FWaitObject1: IOmniEvent;
+    FWaitObject2: IOmniEvent;
+  strict protected
+    procedure RespondToEvent1;
+    procedure RespondToEvent2;
+  protected
+    function Initialize: boolean; override;
+  public
+    constructor Create(Synchronizer: IOmniSynchronizer<string>;
+      const waitObject1, waitObject2: IOmniEvent);
+  end;
+
+constructor TRegisterWaitObjectTask.Create(Synchronizer: IOmniSynchronizer<string>;
+  const waitObject1, waitObject2: IOmniEvent);
+begin
+  inherited Create(Synchronizer);
+  FWaitObject1 := waitObject1;
+  FWaitObject2 := waitObject2;
+end;
+
+function TRegisterWaitObjectTask.Initialize: boolean;
+begin
+  Result := inherited Initialize;
+  if Result then begin
+    Task.RegisterWaitObject(FWaitObject1, RespondToEvent1);
+    {$IFDEF MSWINDOWS}
+    Task.RegisterWaitObject(FWaitObject2.Handle, RespondToEvent2);
+    {$ENDIF MSWINDOWS}
+  end;
+end;
+
+procedure TRegisterWaitObjectTask.RespondToEvent1;
+begin
+  FSynchronizer.Signal('signal1');
+end;
+
+procedure TRegisterWaitObjectTask.RespondToEvent2;
+begin
+  FSynchronizer.Signal('signal2');
+end;
+
+procedure TestITaskControl.TestRegisterWaitObject;
+var
+  event1: IOmniEvent;
+  event2: IOmniEvent;
+  sw    : TStopwatch;
+  task  : IOmniTaskControl;
+begin
+  event1 := CreateOmniEvent(false, false);
+  event2 := CreateOmniEvent(false, false);
+
+  task := CreateTask(TRegisterWaitObjectTask.Create(Synchronizer, event1, event2), 'Test task');
+  task.Run;
+
+  event1.SetEvent;
+  event2.SetEvent;
+  CheckTrue(Synchronizer.WaitFor('signal1', 3000), 'Wait object handler 1 was not triggered');
+  {$IFDEF MSWINDOWS}
+  CheckTrue(Synchronizer.WaitFor('signal2', 3000), 'Wait object handler 2 was not triggered');
+  {$ENDIF MSWINDOWS}
+
+  sw := TStopwatch.StartNew;
+  task.Terminate;
+  CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
 end;
 
 { TSynchronizedOmniWorker }
