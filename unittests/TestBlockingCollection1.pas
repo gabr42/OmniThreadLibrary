@@ -21,8 +21,8 @@ type
 implementation
 
 uses
-  OtlParallel,
-  Classes;
+  Classes, SyncObjs,
+  OtlParallel;
 
 type
   TMemLeakCheckObj=class(TInterfacedObject)
@@ -73,14 +73,14 @@ end;
 
 constructor TMemLeakCheckObj.Create;
 begin
-  AtomicIncrement(vMemLeakCheckObjCount);
+  TInterlocked.Increment(vMemLeakCheckObjCount);
   inherited;
 end;
 
 destructor TMemLeakCheckObj.Destroy;
 begin
   inherited;
-  AtomicDecrement(vMemLeakCheckObjCount);
+  TInterlocked.Decrement(vMemLeakCheckObjCount);
 end;
 
 procedure TestIOmniBlockingCollection.TestInterfaceLeak;

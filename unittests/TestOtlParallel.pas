@@ -131,7 +131,6 @@ var
 
 begin
   Status(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep]));
-  OutputDebugString(PChar(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep])));
   iMin := Min(iFrom, iTo);
   iMax := Max(iFrom, iTo);
   SetLength(FTestData, iMax - iMin + 1);
