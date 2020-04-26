@@ -1538,7 +1538,7 @@ begin
       Exit;
     otExecuting := true;
   finally otCleanupLock.ExitWriteLock; end;
-  otThreadID := TThread.Current.ThreadID;
+  otThreadID := TThread.CurrentThread.ThreadID;
   chainTo := nil;
   eventTerminate := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
   try
