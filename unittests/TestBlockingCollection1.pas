@@ -3,7 +3,7 @@ unit TestBlockingCollection1;
 interface
 
 uses
-  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils,
+  TestFramework, GpStuff,OtlContainers, SysUtils,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync;
 
 type
@@ -73,14 +73,14 @@ end;
 
 constructor TMemLeakCheckObj.Create;
 begin
-  InterlockedIncrement(vMemLeakCheckObjCount);
+  AtomicIncrement(vMemLeakCheckObjCount);
   inherited;
 end;
 
 destructor TMemLeakCheckObj.Destroy;
 begin
   inherited;
-  InterlockedDecrement(vMemLeakCheckObjCount);
+  AtomicDecrement(vMemLeakCheckObjCount);
 end;
 
 procedure TestIOmniBlockingCollection.TestInterfaceLeak;

@@ -5,7 +5,7 @@ unit TestOtlSync1;
 interface
 
 uses
-  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
+  TestFramework, GpStuff, OtlContainers, SysUtils, SyncObjs,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlTask;
 
 type
@@ -79,6 +79,8 @@ begin
   cs.Release;
   for i := 1 to 1000 do
     AcquireRelease;
+
+  CheckTrue(true); // no crash = pass
 end;
 
 procedure Asy_InitializeCS(const task: IOmniTask);
@@ -111,6 +113,8 @@ begin
 
   for i := Low(task) to High(task) do
     task[i].Terminate;
+
+  CheckTrue(true); // no crash = pass
 end;
 
 procedure TestOtlSync.Asy_LockCS(const task: IOmniTask);

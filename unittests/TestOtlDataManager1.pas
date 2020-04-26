@@ -62,7 +62,6 @@ type
 implementation
 
 uses
-  Windows,
   SysUtils;
 
 function TestTOmniDataManager.GetNext(pkg: TOmniDataPackage; cnt: integer): string;
