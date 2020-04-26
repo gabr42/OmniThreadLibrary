@@ -41,6 +41,7 @@
 ///   History:
 ///     2.01: 2020-04-26
 ///       - Platform-independent TerminateEvent and TerminatedEvent.
+///       - TerminateWhen accepts IOmniEvent.
 ///     2.0a: 2019-03-22
 ///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
 ///         This allows tasks to be run from a package. [issue #132]
@@ -494,7 +495,10 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
-    function  TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl; overload;
+    {$IFDEF MSWINDOWS}
+    function  TerminateWhen(event: THandle): IOmniTaskControl; overload;
+    {$ENDIF}
+    function  TerminateWhen(event: IOmniEvent): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -1089,7 +1093,10 @@ type
     function  SetUserData(const idxData: TOmniValue; const value: TOmniValue): IOmniTaskControl;
     procedure Stop;
     function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
+    {$IFDEF MSWINDOWS}
     function  TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl; overload;
+    {$ENDIF}
+    function  TerminateWhen(event: IOmniEvent): IOmniTaskControl; overload;
     function  TerminateWhen(token: IOmniCancellationToken): IOmniTaskControl; overload;
     function  Unobserved: IOmniTaskControl;
     function  WaitFor(maxWait_ms: cardinal): boolean;
@@ -3574,9 +3581,21 @@ begin
   FreeAndNil(otcOnTerminatedExec);
 end; { TOmniTaskControl.Terminate }
 
-function TOmniTaskControl.TerminateWhen(event: TOmniTransitionEvent): IOmniTaskControl;
+{$IFDEF MSWINDOWS}
+function TOmniTaskControl.TerminateWhen(event: THandle): IOmniTaskControl;
 begin
   otcExecutor.TerminateWhen(event);
+  Result := Self;
+end; { TOmniTaskControl.TerminateWhen }
+{$ENDIF MSWINDOWS}
+
+function TOmniTaskControl.TerminateWhen(event: IOmniEvent): IOmniTaskControl;
+begin
+  {$IFDEF MSWINDOWS}
+  otcExecutor.TerminateWhen(event.Handle);
+  {$ELSE}
+  otcExecutor.TerminateWhen(event);
+  {$ENDIF ~MSWINDOWS}
   Result := Self;
 end; { TOmniTaskControl.TerminateWhen }
 

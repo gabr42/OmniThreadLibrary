@@ -10,7 +10,7 @@ type
   // Test methods for class IOmniBlockingCollection
   TestITaskControl = class(TTestCase)
   strict private
-    Synchronizer: TOmniSynchronizer<string>;
+    Synchronizer: IOmniSynchronizer<string>;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -18,6 +18,7 @@ type
     procedure TestStartTask;
     procedure TestWait;
     procedure TestTerminate;
+    procedure TestTerminateWhen;
   end;
 
 implementation
@@ -36,7 +37,7 @@ end;
 
 procedure TestITaskControl.TearDown;
 begin
-  FreeAndNil(Synchronizer);
+  Synchronizer := nil;
   inherited;
 end;
 
@@ -107,6 +108,48 @@ begin
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
 
   task.Terminate;
+end;
+
+type
+  TTerminateWhenTask = class(TOmniWorker)
+  strict protected
+    FSynchronizer: IOmniSynchronizer<string>;
+  protected
+    constructor Create(Synchronizer: IOmniSynchronizer<string>);
+    function Initialize: boolean; override;
+  end;
+
+procedure TestITaskControl.TestTerminateWhen;
+var
+  task: IOmniTaskControl;
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, false);
+
+  task := CreateTask(TTerminateWhenTask.Create(Synchronizer), 'Test task');
+  task.TerminateWhen(event).Run;
+
+  CheckTrue(Synchronizer.WaitFor('started', 1000), 'Task did not start in 1 second');
+  CheckFalse(task.WaitFor(1000), 'Task has terminated prematurely');
+  event.SetEvent;
+  CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
+
+  task.Terminate;
+end;
+
+{ TTerminateWhenTask }
+
+constructor TTerminateWhenTask.Create(Synchronizer: IOmniSynchronizer<string>);
+begin
+  inherited Create;
+  FSynchronizer := Synchronizer;
+end;
+
+function TTerminateWhenTask.Initialize: boolean;
+begin
+  Result := inherited Initialize;
+  if Result then
+    FSynchronizer.Signal('started');
 end;
 
 initialization
