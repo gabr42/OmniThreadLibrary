@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2020-02-03
-   Version           : 1.79a
+   Last modification : 2020-02-25
+   Version           : 1.80
 </pre>*)(*
    History:
+     1.80: 2020-03-25
+       - Removed TGpStringListHelper.Sort as TStringList contains Sort in Delphi 10.3.
      1.79a: 2020-02-03
        - TGpInterfaceList<T>.Add did not set Result.
      1.79: 2019-03-21
@@ -1529,10 +1531,6 @@ type
     {$ENDIF GpLists_Enumerators}
   end; { TGpStringsHelper }
 
-  TGpStringListHelper = class helper for TStringList
-  public
-    procedure Sort;
-  end; { TGpStringListHelper }
   {$ENDIF GpLists_TStringsHelper}
 
   {:String list where each item has associated counter (stored in the Objects property).
@@ -5600,14 +5598,6 @@ begin
     idxTo := Count - 1;
   Result := TGpStringsHelperWalkKVEnumerator.Create(Self, idxFrom, idxTo, step);
 end; { TGpStringsHelper.WalkKV }
-
-{ TGpStringListHelper }
-
-procedure TGpStringListHelper.Sort;
-begin
-  Sorted := false;
-  Sorted := true;
-end; { TGpStringListHelper.Sort }
 
 {$ENDIF GpLists_TStringsHelper}
 
