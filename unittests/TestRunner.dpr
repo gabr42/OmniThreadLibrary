@@ -19,7 +19,9 @@ uses
   TestFramework,
   GUITestRunner,
   TextTestRunner,
+  TestInsight.DUnit,
   SmokeTest in 'SmokeTest.pas',
+  TestTask in 'TestTask.pas',
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
@@ -34,10 +36,11 @@ uses
 
 begin
   Application.Initialize;
-  if IsConsole then
-    with TextTestRunner.RunRegisteredTests(rxbHaltOnFailures) do
-      Free
-  else
-    GUITestRunner.RunRegisteredTests;
+//  if IsConsole then
+//    with TextTestRunner.RunRegisteredTests(rxbHaltOnFailures) do
+//      Free
+//  else
+//    GUITestRunner.RunRegisteredTests;
+  RunRegisteredTests;
 end.
 
