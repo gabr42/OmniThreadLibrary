@@ -461,7 +461,7 @@ type
     function  WaitFor(const event: T; timeout: cardinal = INFINITE): boolean;
   end; { IOmniSynchronizer<T> }
 
-  TOmniSynchronizer<T> = class(TInterfacedObject)
+  TOmniSynchronizer<T> = class(TInterfacedObject, IOmniSynchronizer<T>)
   strict private
     FSync: TDictionary<T, TEvent>;
     FLock: IOmniCriticalSection;
