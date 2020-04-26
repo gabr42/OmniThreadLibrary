@@ -126,3 +126,5 @@
   {$UNDEF OTL_HaveCmpx16b}
 {$ENDIF ~MSWINDOWS}
 
+// Define to force platform-independant code on Windows.
+//{$DEFINE OtlForceMobile} // not supported yet

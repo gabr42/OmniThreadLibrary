@@ -356,7 +356,7 @@ type
     owtStartIdle_ms            : int64;
     owtStartStopping_ms        : int64;
     owtStopped                 : boolean;
-    owtTerminateEvent          : TOmniTransitionEvent;
+    owtTerminateEvent          : IOmniEvent;
     owtThreadData              : IInterface;
     owtThreadDataFactory       : TOTPThreadDataFactory;
     owtWorkItemLock            : IOmniCriticalSection;
@@ -389,7 +389,7 @@ type
       write owtStartStopping_ms; // always modified from the owner thread
     property Stopped: boolean read owtStopped
       write owtStopped; // always modified from the owner thread
-    property TerminateEvent: TOmniTransitionEvent read owtTerminateEvent;
+    property TerminateEvent: IOmniEvent read owtTerminateEvent;
     property WorkItem_ref: TOTPWorkItem read owtWorkItem_ref
       write owtWorkItem_ref; // address of the work item this thread is working on
   end; { TOTPWorkerThread }
@@ -686,11 +686,7 @@ begin
   inherited Create(true);
   {$IFDEF LogThreadPool}Log('Creating thread %s', [Description]);{$ENDIF LogThreadPool}
   owtThreadDataFactory := ThreadDataFactory;
-  {$IFDEF MSWINDOWS}
-  owtTerminateEvent := CreateEvent(nil, false, false, nil);
-  {$ELSE}
   owtTerminateEvent := CreateOmniEvent(false, false);
-  {$ENDIF ~MSWINDOWS}
 //  owtNewWorkEvent := CreateOmniEvent(false, false);
   owtWorkItemLock := CreateOmniCriticalSection;
   owtCommChannel := CreateTwoWayChannel(100, owtTerminateEvent);
@@ -700,11 +696,7 @@ destructor TOTPWorkerThread.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread %s', [Description]);{$ENDIF LogThreadPool}
   owtWorkItemLock := nil;
-  {$IFDEF MSWINDOWS}
-  DSiCloseHandleAndNull(owtTerminateEvent);
-  {$ELSE}
   owtTerminateEvent := nil;
-  {$ENDIF ~MSWINDOWS}
 //  owtNewWorkEvent := nil;
   inherited Destroy;
 end; { TOTPWorkerThread.Destroy }

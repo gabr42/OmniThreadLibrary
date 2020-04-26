@@ -535,7 +535,6 @@ type
     property WaitHandles: THandleArr read GetWaitHandles;
   end; { TWaitFor }
   {$ELSE ~MSWINDOWS}
-  {$IFDEF OTL_MobileSupport}
   ///<summary>Waits on any/all from any number of synchroobjects such as Events and CountDownEvents.</summary>
   TSynchroWaitFor = class
   public type //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
@@ -595,7 +594,6 @@ type
   end; { TWaitForAll }
 
   TWaitFor = TSynchroWaitFor;
-  {$ENDIF OTL_MobileSupport}
   {$ENDIF ~MSWINDOWS}
 
   TOmniSingleThreadUseChecker = record

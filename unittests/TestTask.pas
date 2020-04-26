@@ -16,7 +16,8 @@ type
     procedure TearDown; override;
   published
     procedure TestStartTask;
-    procedure TestTaskWait;
+    procedure TestWait;
+    procedure TestTerminate;
   end;
 
 implementation
@@ -56,9 +57,11 @@ begin
 
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
   CheckTrue(didRun, 'Task did not run');
+
+  task.Terminate;
 end;
 
-procedure TestITaskControl.TestTaskWait;
+procedure TestITaskControl.TestWait;
 var
   task: IOmniTaskControl;
 begin
@@ -79,6 +82,31 @@ begin
   Synchronizer.Signal('stop');
 
   CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
+
+  task.Terminate;
+end;
+
+procedure TestITaskControl.TestTerminate;
+var
+  task: IOmniTaskControl;
+begin
+  task := CreateTask(
+    procedure (const task: IOmniTask)
+    begin
+      Synchronizer.Signal('started');
+      while not task.Terminated do
+        Sleep(0);
+    end,
+    'Test task');
+
+  task.Run;
+
+  CheckTrue(Synchronizer.WaitFor('started', 1000), 'Task did not start in 1 second');
+  CheckFalse(task.WaitFor(1000), 'Task has terminated prematurely');
+  task.Stop;
+  CheckTrue(task.WaitFor(3000), 'Task did not terminate in 3 seconds');
+
+  task.Terminate;
 end;
 
 initialization

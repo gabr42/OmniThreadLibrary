@@ -586,7 +586,7 @@ type
     ostiProcessorGroup    : integer;
     ostiStopped           : boolean;
     ostiTaskName          : string;
-    ostiTerminatedEvent   : TOmniTransitionEvent;
+    ostiTerminatedEvent   : IOmniEvent;
     ostiTerminateEvent    : TOmniTransitionEvent;
     ostiTerminating       : boolean;
     ostiUniqueID          : int64;
@@ -608,7 +608,7 @@ type
     property ProcessorGroup: integer read ostiProcessorGroup write ostiProcessorGroup;
     property Stopped: boolean read ostiStopped write ostiStopped;
     property TaskName: string read ostiTaskName write ostiTaskName;
-    property TerminatedEvent: TOmniTransitionEvent read ostiTerminatedEvent write ostiTerminatedEvent;
+    property TerminatedEvent: IOmniEvent read ostiTerminatedEvent write ostiTerminatedEvent;
     property TerminateEvent: TOmniTransitionEvent read ostiTerminateEvent write ostiTerminateEvent;
     property Terminating: boolean read ostiTerminating write ostiTerminating;
     property UniqueID: int64 read ostiUniqueID write ostiUniqueID;
@@ -957,7 +957,7 @@ type
 
   IOmniTaskControlInternals = interface ['{CE7B53E0-902E-413F-AB6E-B97E7F4B0AD5}']
     function  GetDebugFlags: TOmniTaskControlInternalDebugFlags;
-    function  GetTerminatedEvent: TOmniTransitionEvent;
+    function  GetTerminatedEvent: IOmniEvent;
     procedure SetDebugFlags(const value: TOmniTaskControlInternalDebugFlags);
   //
     function  FilterMessage(const msg: TOmniMessage): boolean;
@@ -965,7 +965,7 @@ type
     procedure ForwardTaskTerminated;
     property DebugFlags: TOmniTaskControlInternalDebugFlags read GetDebugFlags
       write SetDebugFlags;
-    property TerminatedEvent: TOmniTransitionEvent read GetTerminatedEvent;
+    property TerminatedEvent: IOmniEvent read GetTerminatedEvent;
   end; { IOmniTaskControlInternals }
 
   TOmniTaskControl = class(TInterfacedObject, IOmniTaskControl,
@@ -1014,7 +1014,7 @@ type
     function  GetOptions: TOmniTaskControlOptions;
     function  GetParam: TOmniValueContainer;
     function  GetSharedInfo: TOmniSharedTaskInfo;
-    function  GetTerminatedEvent: TOmniTransitionEvent;
+    function  GetTerminatedEvent: IOmniEvent;
     function  GetTerminateEvent: TOmniTransitionEvent;
     function  GetUniqueID: int64; inline;
     function  GetUserDataVal(const idxData: TOmniValue): TOmniValue;
@@ -1528,7 +1528,7 @@ end; { TOmniTask.GetUniqueID }
 procedure TOmniTask.InternalExecute(calledFromTerminate: boolean);
 var
   chainTo       : IOmniTaskControl;
-  eventTerminate: TOmniTransitionEvent;
+  eventTerminate: IOmniEvent;
   sync          : TSynchroObject;
   taskException : Exception;
 begin
@@ -1540,7 +1540,7 @@ begin
   finally otCleanupLock.ExitWriteLock; end;
   otThreadID := TThread.CurrentThread.ThreadID;
   chainTo := nil;
-  eventTerminate := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
+  eventTerminate := nil;
   try
     try
       try
@@ -1588,7 +1588,7 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      SetEvent(eventTerminate);
+      eventTerminate.SetEvent;
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
@@ -2921,14 +2921,10 @@ begin
       CloseHandle(otcSharedInfo.TerminateEvent);
       otcSharedInfo.TerminateEvent := 0;
     end;
-    if otcSharedInfo.TerminatedEvent <> 0 then begin
-      CloseHandle(otcSharedInfo.TerminatedEvent);
-      otcSharedInfo.TerminatedEvent := 0;
-    end;
     {$ELSE}
     otcSharedInfo.TerminateEvent := nil;
-    otcSharedInfo.TerminatedEvent := nil;
     {$ENDIF ~MSWINDOWS}
+    otcSharedInfo.TerminatedEvent := nil;
     FreeAndNil(otcParameters);
   finally
     if assigned(otcSharedInfo) then begin
@@ -3128,7 +3124,7 @@ begin
   result := otcSharedInfo;
 end; { GetSharedInfo: TOmniSharedTaskInfo }
 
-function TOmniTaskControl.GetTerminatedEvent: TOmniTransitionEvent;
+function TOmniTaskControl.GetTerminatedEvent: IOmniEvent;
 begin
   Result := otcSharedInfo.TerminatedEvent;
 end; { TOmniTaskControl.GetTerminatedEvent }
@@ -3159,8 +3155,8 @@ begin
   {$IFDEF MSWINDOWS}
   otcSharedInfo.TerminateEvent := CreateEvent(nil, true, false, nil);
   Win32Check(otcSharedInfo.TerminateEvent <> 0);
-  otcSharedInfo.TerminatedEvent := CreateEvent(nil, true, false, nil);
-  Win32Check(otcSharedInfo.TerminatedEvent <> 0);
+  otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false, nil); // TODO 1 -oPrimoz Gabrijelcic : *** do we need share lock here?
+  Win32Check(otcSharedInfo.TerminatedEvent <> nil);
   {$ELSE}
   otcSharedInfo.TerminateEvent := CreateOmniEvent(true, false);
   otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false);
@@ -3618,29 +3614,24 @@ begin
 end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
-{$IFNDEF MSWINDOWS}
+{$IF (not Defined(MSWINDOWS)) or Defined(OtlForceMobile)}
 var
   DualWaiter: TSynchroWaitFor;
   Signaller : IOmniSynchro;
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 begin
   if assigned(otcThread) then begin
-    {$IFDEF MSWINDOWS}
-    Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1]
+    {$IF Defined(MSWINDOWS) and (not Defined(OtlForceMobile))}
+    Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent.BaseEvent.Handle, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
     {$ELSE}
     DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], FMultiWaitLock);
     try
-      Result     := DualWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
+      Result := DualWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
     finally DualWaiter.Free; end;
-    {$ENDIF ~MSWINDOWS}
+    {$IFEND}
   end
-  else begin
-    {$IFDEF MSWINDOWS}
-    Result := WaitForSingleObject(otcSharedInfo.TerminatedEvent, maxWait_ms) = WAIT_OBJECT_0;
-    {$ELSE}
+  else
     Result := otcSharedInfo.TerminatedEvent.WaitFor(maxWait_ms) = wrSignaled;
-    {$ENDIF ~MSWINDOWS}
-  end;
 end; { TOmniTaskControl.WaitFor }
 
 function TOmniTaskControl.WaitForInit: boolean;
@@ -3931,7 +3922,7 @@ function TOmniTaskGroup.WaitForAll(maxWait_ms: cardinal): boolean;
 var
   {$IFDEF MSWINDOWS}
   iIntf      : integer;
-  waitHandles: array of TOmniTransitionEvent;
+  waitHandles: array of THandle;
   {$ELSE}
   MultiWaiter: TSynchroWaitFor;
   Signaller  : IOmniSynchro;
@@ -3942,7 +3933,7 @@ begin
   {$IFDEF MSWINDOWS}
   SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
-    waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent;
+    waitHandles[iIntf] := (otgTaskList[iIntf] as IOmniTaskControlInternals).TerminatedEvent.Handle;
   Result := WaitForAllObjects(waitHandles, maxWait_ms);
   {$ELSE}
   SetLength(Syncs, otgTaskList.Count);

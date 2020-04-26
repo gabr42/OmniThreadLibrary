@@ -230,8 +230,7 @@ type
   {$ENDIF MSWINDOWS}
 
   function CreateTwoWayChannel(numElements: integer = CDefaultQueueSize;
-    taskTerminatedEvent: TOmniTransitionEvent =
-    {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF}): IOmniTwoWayChannel;
+    taskTerminatedEvent: IOmniEvent = nil): IOmniTwoWayChannel;
 
 implementation
 
@@ -337,9 +336,9 @@ end; { CreateDispatchingObserver }
 {$ENDIF MSWINDOWS}
 
 function CreateTwoWayChannel(numElements: integer;
-  taskTerminatedEvent: TOmniTransitionEvent): IOmniTwoWayChannel;
+  taskTerminatedEvent: IOmniEvent): IOmniTwoWayChannel;
 begin
-  Result := TOmniTwoWayChannel.Create(numElements, taskTerminatedEvent);
+  Result := TOmniTwoWayChannel.Create(numElements, taskTerminatedEvent.Handle);
 end; { CreateTwoWayChannel }
 
 { TOmniMessage }
