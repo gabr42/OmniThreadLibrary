@@ -771,7 +771,7 @@ type
   strict private
     oteCommList          : TInterfaceList;
     oteCommNewMsgList    : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
-    oteCommRebuildHandles: TOmniTransitionEvent;
+    oteCommRebuildHandles: IOmniEvent;
     oteException         : Exception;
     oteExecutorType      : TOmniExecutorType;
     oteExitCode          : TOmniAlignedInt32;
@@ -1922,11 +1922,7 @@ begin
   {$ENDIF ~MSWINDOWS}
   FreeAndNil(oteMethodHash);
   FreeAndNil(oteException);
-  {$IFDEF MSWINDOWS}
-  DSiCloseHandleAndNull(oteCommRebuildHandles);
-  {$ELSE}
   oteCommRebuildHandles := nil;
-  {$ENDIF ~MSWINDOWS}
   oteWorkerInitialized := nil;
   inherited;
 end; { TOmniTaskExecutor.Destroy }
@@ -1998,7 +1994,7 @@ begin
     end;
     oteCommList.Add(comm);
     oteCommNewMsgList.Add((comm as IOmniCommunicationEndpoint).NewMessageEvent);
-    SetEvent(oteCommRebuildHandles);
+    oteCommRebuildHandles.SetEvent;
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterComm }
 
@@ -2013,7 +2009,7 @@ begin
     if not assigned(oteWaitObjectList) then
       oteWaitObjectList := TOmniWaitObjectList.Create;
     oteWaitObjectList.Add(waitObject, responseHandler);
-    SetEvent(oteCommRebuildHandles);
+    oteCommRebuildHandles.SetEvent;
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
 
@@ -2035,7 +2031,7 @@ begin
   try
     SetTimer(timerID, interval_ms, timerMessage);
   finally oteTimerLock.Release; end;
-  SetEvent(oteCommRebuildHandles);
+  oteCommRebuildHandles.SetEvent;
 end; { TOmniTaskExecutor.Asy_SetTimer }
 
 procedure TOmniTaskExecutor.Asy_UnregisterComm(const comm: IOmniCommunicationEndpoint);
@@ -2054,7 +2050,7 @@ begin
       FreeAndNil(oteCommList);
       FreeAndNil(oteCommNewMsgList);
     end;
-    SetEvent(oteCommRebuildHandles);
+    oteCommRebuildHandles.SetEvent;
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterComm }
 
@@ -2068,7 +2064,7 @@ begin
     oteWaitObjectList.Remove(waitObject);
     if oteWaitObjectList.Count = 0 then
       FreeAndNil(oteWaitObjectList);
-    SetEvent(oteCommRebuildHandles);
+    oteCommRebuildHandles.SetEvent;
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_UnregisterWaitObject }
 
@@ -2512,12 +2508,7 @@ begin
   oteMsgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
   oteTimers := TGpInt64ObjectList.Create;
   oteWorkerInitialized := CreateOmniEvent(true, false);
-  {$IFDEF MSWINDOWS}
-  oteCommRebuildHandles := CreateEvent(nil, false, false, nil);
-  Win32Check(oteCommRebuildHandles <> 0);
-  {$ELSE}
   oteCommRebuildHandles := CreateOmniEvent(false, false);
-  {$ENDIF ~MSWINDOWS}
   otePriority := tpNormal;
 end; { TOmniTaskExecutor.Initialize }
 
@@ -2639,7 +2630,7 @@ begin
 
       // rebuild handles
       msgInfo.IdxRebuildHandles := msgInfo.IdxLastTerminate + 1;
-      handles.Add(oteCommRebuildHandles);
+      handles.Add(oteCommRebuildHandles{$IFDEF MSWINDOWS}.Handle{$ENDIF});
 
       // message queues
       msgInfo.IdxFirstMessage := msgInfo.IdxRebuildHandles + 1;
@@ -2819,11 +2810,7 @@ function TOmniTaskExecutor.TestForInternalRebuild(const task: IOmniTask; var msg
   TOmniMessageInfo): boolean;
 begin
   Result := false;
-  {$IFDEF MSWINDOWS}
-  if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
-  {$ELSE}
   if oteCommRebuildHandles.WaitFor(0) = wrSignaled then begin
-  {$ENDIF ~MSWINDOWS}
     //could get set inside timer or message handler
     RebuildWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
