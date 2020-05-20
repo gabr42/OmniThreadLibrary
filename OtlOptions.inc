@@ -84,7 +84,6 @@
 {$IFEND}
 
 {$IF CompilerVersion >= 24} //DXE3
-  {$DEFINE OTL_LongGetMethodInfo}
   {$DEFINE OTL_CountdownHasSpinCount}
   {$DEFINE OTL_NameThreadHasStringParameter}
   {$DEFINE OTL_TypeInfoHasTypeData}
@@ -126,5 +125,8 @@
   {$UNDEF OTL_HaveCmpx16b}
 {$ENDIF ~MSWINDOWS}
 
-// Define to force platform-independant code on Windows.
-//{$DEFINE OtlForceMobile} // not supported yet
+{$IFDEF OTL_MobileSupport}
+{$IFNDEF MSWINDOWS}
+{$DEFINE OTL_PlatformIndependent} // Define manually to force platform-independant code on Windows.
+{$ENDIF}
+{$ENDIF}

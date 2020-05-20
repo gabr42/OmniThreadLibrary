@@ -6,6 +6,9 @@
   - Removed compatibility with Delphi versions up to and including 2010.
   - TOmniValue.AsArrayItemOV[] property removed (use ArrayAsItem[]).
   - TOmniBlockingCollection.CompletedSignal is no longer THandle but IOmniEvent.
+
+- Potentially breaking changes:
+  - Method dispatch (for Invoke, timers ...) uses ERTTI.
   
 - New features:
   - Added platform-independant 'event' observer TOmniContainerEventObserver.

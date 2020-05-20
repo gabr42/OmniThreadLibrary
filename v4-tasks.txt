@@ -1,0 +1,3 @@
+- replace all raise Exception with OTL-specific exceptions
+- support OTL_PlatformIndependent on Windows (when externally defined)
+

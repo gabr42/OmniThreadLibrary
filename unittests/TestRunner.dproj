@@ -121,6 +121,7 @@
         <DCCReference Include="TestOtlParallel.pas"/>
         <DCCReference Include="TestPlatform.pas"/>
         <DCCReference Include="TestInterlocked.pas"/>
+        <None Include="..\v4-tasks.txt"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -189,6 +190,12 @@
                 <DeployFile LocalName="Debug\Win32\TestRunner.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>TestRunner.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="New1.txt" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

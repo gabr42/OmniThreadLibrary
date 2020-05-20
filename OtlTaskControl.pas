@@ -35,16 +35,18 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2020-04-26
-///   Version           : 2.01
+///   Last modification : 2020-05-20
+///   Version           : 2.02
 ///</para><para>
 ///   History:
+///     2.02: 2020-05-20
+///       - Method dispatch uses ERTTI.
 ///     2.01: 2020-04-26
 ///       - Platform-independent TerminateEvent and TerminatedEvent.
 ///       - TerminateWhen accepts IOmniEvent.
 ///     2.0a: 2019-03-22
 ///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
-///         This allows tasks to be run from a package. [issue #132]
+///         This allows tasks to be run from a p ackage. [issue #132]
 ///     2.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - Internal time functions replaced with OtlPlatform.Time.
@@ -327,6 +329,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
+  System.Rtti,
   System.TypInfo,
   OtlSync,
   OtlComm,
@@ -784,6 +787,7 @@ type
     oteOwner_ref         : TOmniTaskControl;
     otePriority          : TOTLThreadPriority;
     oteProc              : TOmniTaskProcedure;
+    oteRttiContext       : TRttiContext;
     oteTerminateHandles  : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TOmniSynchroArray{$ENDIF};
     oteTerminating       : boolean;
     oteTimers            : TGpInt64ObjectList;
@@ -821,7 +825,6 @@ type
     {$IFDEF MSWINDOWS}
     procedure ProcessThreadMessages;
     {$ENDIF MSWINDOWS}
-    procedure RaiseInvalidSignature(const methodName: string);
     procedure RemoveTerminationEvents(const srcMsgInfo: TOmniMessageInfo; var dstMsgInfo:
       TOmniMessageInfo);
     procedure ReportInvalidHandle(msgInfo: TOmniMessageInfo);
@@ -1201,7 +1204,6 @@ uses
   Generics.Collections,
   System.ObjAuto,
   OtlHooks,
-  System.Rtti,
   System.Diagnostics,
   OtlPlatform,
   OtlCommon.Utils,
@@ -2308,7 +2310,7 @@ begin
             TOmniInvokeSignature_Self_Object(methodInfo.Address)(WorkerIntf.Implementor, obj);
           end
         else
-          RaiseInvalidSignature(methodName);
+          raise Exception.Create('Unexpected method signature');
       end; //case methodSignature
     end
   end
@@ -2368,17 +2370,8 @@ begin
   end;
 end; { TOmniTaskExecutor.GetImplementor }
 
-procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string; var
-  methodAddress: pointer; var methodSignature: TOmniInvokeType);
-const
-  CShortLen = SizeOf(ShortString) - 1;
-var
-  headerEnd       : cardinal;
-  methodInfoHeader: PMethodInfoHeader;
-  paramNum        : integer;
-  params          : PParamInfo;
-  paramType       : PTypeInfo;
-  returnInfo      : PReturnInfo;
+procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string;
+  var methodAddress: pointer; var methodSignature: TOmniInvokeType);
 
   function VerifyObjectFlags(flags, requiredFlags: System.TypInfo.TParamFlags): boolean;
   begin
@@ -2394,63 +2387,76 @@ var
     Result := (flags = [pfConst, pfReference]);
   end; { VerifyConstFlags }
 
+  function IsValidHandler(const method: TRttiMethod; var address: pointer;
+    var signature: TOmniInvokeType): boolean;
+  var
+    parameters: TArray<TRttiParameter>;
+  begin
+    // Handler must be a normal method that doesn't return any value.
+
+    if assigned(method.ReturnType)
+       or method.IsConstructor
+       or method.IsDestructor
+       or method.IsClassMethod
+    then
+      Exit(false);
+
+    // Only limited subset of method signatures is allowed:
+    // (Self), (Self, const TOmniValue), (Self, var TObject)
+
+    parameters := method.GetParameters;
+
+    if Length(parameters) = 0 then begin
+      address := method.CodeAddress;
+      signature := itSelf;
+      Exit(true)
+    end;
+
+    if (Length(parameters) = 1)
+       and assigned(parameters[0].ParamType)
+       and (pfConst in parameters[0].Flags)
+       and SameText(parameters[0].ParamType.Name, 'TOmniValue')
+    then begin
+      address := method.CodeAddress;
+      signature := itSelfAndOmniValue;
+      Exit(true);
+    end;
+
+    if (Length(parameters) = 1)
+       and assigned(parameters[0].ParamType)
+       and (parameters[0].ParamType.TypeKind = tkClass)
+    then begin
+      address := method.CodeAddress;
+      signature := itSelfAndObject;
+      Exit(true);
+    end;
+
+    Result := false;
+  end; { IsValidHandler }
+
+var
+  address: pointer;
+  rMethod: TRttiMethod;
+  rType  : TRttiType;
+
 begin { TOmniTaskExecutor.GetMethodAddrAndSignature }
-  {$IFNDEF MSWINDOWS} //TODO: repimplement using ERTTI for D2010+
+  rtype := oteRttiContext.GetType(WorkerIntf.Implementor.ClassType);
+  if not assigned(rtype) then
+    raise Exception.CreateFmt('Class %s does not have RTTI information.', [WorkerIntf.Implementor.ClassName]);
+
   methodAddress := nil;
-  {$ELSE}
-  // with great thanks to Hallvar Vassbotn [http://hallvards.blogspot.com/2006/04/published-methods_27.html]
-  // and David Glassborow [http://davidglassborow.blogspot.com/2006/05/class-rtti.html]
-  methodInfoHeader := System.ObjAuto.GetMethodInfo(WorkerIntf.Implementor,
-    {$IFNDEF OTL_LongGetMethodInfo}ShortString{$ENDIF}(methodName));
-  methodAddress := WorkerIntf.Implementor.MethodAddress(methodName);
-  // find the method info
-  if not (assigned(methodInfoHeader) and assigned(methodAddress)) then
-    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                              'Cannot find message method %s.%s',
+  for rMethod in rtype.GetMethods(methodName) do
+    if IsValidHandler(rMethod, address, methodSignature) then begin
+      if assigned(methodAddress) then
+        raise Exception.CreateFmt('Multiple overloads of %s.%s were found.', [WorkerIntf.Implementor.ClassName, methodName]);
+      methodAddress := address;
+    end;
+
+  if not assigned(methodAddress) then
+    raise Exception.CreateFmt('No appropriate %s.%s method was found. ' +
+                              'Only following signatures are supported: (Self), ' +
+                              '(Self, const TOmniValue), (Self, var TObject)',
                               [WorkerIntf.Implementor.ClassName, methodName]);
-  // check the RTTI sanity
-  if methodInfoHeader.Len <= (SizeOf(TMethodInfoHeader) - CShortLen + Length(methodInfoHeader.Name)) then
-    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                              'Class %d was compiled without RTTI',
-                              [WorkerIntf.Implementor.ClassName]);
-  // we can only process procedures
-  if assigned(methodInfoHeader.ReturnInfo.ReturnType) then
-    raise Exception.CreateFmt('TOmniTaskExecutor.DispatchMessage: ' +
-                              'Method %s.%s must not return result',
-                              [WorkerIntf.Implementor.ClassName, methodName]);
-  // only limited subset of method signatures is allowed:
-  // (Self), (Self, const TOmniValue), (Self, var TObject)
-  headerEnd := cardinal(methodInfoHeader) + methodInfoHeader^.Len;
-  returnInfo := PReturnInfo(cardinal(methodInfoHeader) + SizeOf(methodInfoHeader^)
-            - CShortLen + Length(methodInfoHeader^.Name));
-  params := PParamInfo(cardinal(returnInfo) + SizeOf(TReturnInfo));
-  paramNum := 0;
-  methodSignature := itUnknown;
-  // Loop over the parameters
-  while (cardinal(params) < headerEnd) do begin
-    if paramNum >= returnInfo.ParamCount then
-      break; //while
-    Inc(paramNum);
-    paramType := params.ParamType^;
-    if paramNum = 1 then
-      if (not VerifyObjectFlags(params^.Flags, [])) or (paramType^.Kind <> tkClass) then
-        RaiseInvalidSignature(methodName)
-      else
-        methodSignature := itSelf
-    else if paramNum = 2 then
-      if VerifyConstFlags(params^.Flags) and (paramType^.Kind = tkRecord) and
-         (SameText(string(paramType^.Name), 'TOmniValue'))
-      then
-        methodSignature := itSelfAndOmniValue
-      else if VerifyObjectFlags(params^.Flags, [pfVar]) and (paramType^.Kind = tkClass) then
-        methodSignature := itSelfAndObject
-      else
-        RaiseInvalidSignature(methodName)
-    else
-      RaiseInvalidSignature(methodName);
-    params := params.NextParam;
-  end;
-  {$ENDIF MSWINDOWS}
 end; { TOmniTaskExecutor.GetMethodAddrAndSignature }
 
 procedure TOmniTaskExecutor.GetMethodNameFromInternalMessage(const msg: TOmniMessage;
@@ -2505,6 +2511,7 @@ end; { TOmniTaskExecutor.HaveElapsedTimer }
 
 procedure TOmniTaskExecutor.Initialize;
 begin
+  oteRttiContext := TRttiContext.Create;
   oteMsgInfo.Waiter := TWaitFor.Create({$IFNDEF MSWINDOWS}[]{$ENDIF}); //TODO: Not implemented for non-Windows platforms.
   oteTimers := TGpInt64ObjectList.Create;
   oteWorkerInitialized := CreateOmniEvent(true, false);
@@ -2594,15 +2601,6 @@ begin
 end; { TOmniTaskExecutor.ProcessThreadMessages }
 {$ENDIF MSWINDOWS}
 
-procedure TOmniTaskExecutor.RaiseInvalidSignature(const methodName: string);
-begin
-  raise Exception.CreateFmt('TOmniTaskExecutor: ' +
-                            'Method %s.%s has invalid signature. Only following ' +
-                            'signatures are supported: (Self), ' +
-                            '(Self, const TOmniValue), (Self, var TObject)',
-                            [WorkerIntf.Implementor.ClassName, methodName]);
-end; { TOmniTaskExecutor.RaiseInvalidSignature }
-
 procedure TOmniTaskExecutor.RebuildWaitHandles(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
 var
@@ -2663,6 +2661,7 @@ begin
       {$IFDEF MSWINDOWS} //TODO: Add support for non-Windows platforms
       msgInfo.Waiter.SetHandles(msgInfo.WaitHandles);
       {$ENDIF MSWINDOWS}
+      // TODO 1 -oPrimoz Gabrijelcic : <<< HERE <<<
     finally FreeAndNil(handles); end;
   finally oteInternalLock.Release; end;
 end; { RebuildWaitHandles }
@@ -3620,21 +3619,21 @@ begin
 end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
-{$IF (not Defined(MSWINDOWS)) or Defined(OtlForceMobile)}
+{$IFDEF OTL_PlatformIndependent}
 var
   DualWaiter: TSynchroWaitFor;
   Signaller : IOmniSynchro;
-{$IFEND}
+{$ENDIF}
 begin
   if assigned(otcThread) then begin
-    {$IF Defined(MSWINDOWS) and (not Defined(OtlForceMobile))}
-    Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent.BaseEvent.Handle, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
-    {$ELSE}
+    {$IFDEF OTL_PlatformIndependent}
     DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], FMultiWaitLock);
     try
       Result := DualWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
     finally DualWaiter.Free; end;
-    {$IFEND}
+    {$ELSE}
+    Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent.BaseEvent.Handle, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
+    {$ENDIF ~OTL_PlatformIndependent}
   end
   else
     Result := otcSharedInfo.TerminatedEvent.WaitFor(maxWait_ms) = wrSignaled;
