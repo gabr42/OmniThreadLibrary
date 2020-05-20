@@ -1202,7 +1202,6 @@ implementation
 
 uses
   Generics.Collections,
-  System.ObjAuto,
   OtlHooks,
   System.Diagnostics,
   OtlPlatform,
@@ -1230,18 +1229,6 @@ type
     function  Allocate: TOmniTaskControlEventMonitor;
     procedure Release(monitor: TOmniTaskControlEventMonitor);
   end; { TOmniTaskControlEventMonitorPool }
-
-  TParamInfoHelper = record helper for TParamInfo
-  public
-    function NextParam: PParamInfo;
-  end; { TParamInfoHelper }
-
-  TMethodInfoHeaderHelper = record helper for TMethodInfoHeader
-  private
-    function GetReturnInfo: PReturnInfo;
-  public
-    property ReturnInfo: PReturnInfo read GetReturnInfo;
-  end; { TMethodInfoHeaderHelper }
 
 var
   GTaskControlEventMonitorPool: TOmniTaskControlEventMonitorPool;
@@ -1278,21 +1265,6 @@ function CreateTaskControlList: IOmniTaskControlList;
 begin
   Result := TOmniTaskControlList.Create;
 end; { CreateTaskControlList }
-
-{ TMethodInfoHeaderHelper }
-
-function TMethodInfoHeaderHelper.GetReturnInfo: PReturnInfo;
-begin
-  Result := PReturnInfo(NativeUInt(@self) + SizeOf(TMethodInfoHeader) - SHORT_LEN + Length(Name));
-end; { TMethodInfoHeaderHelper.GetReturnInfo }
-
-{ TParamInfoHelper }
-
-function TParamInfoHelper.NextParam: PParamInfo;
-begin
-  Result := PParamInfo(NativeUInt(@self) + SizeOf(self) - SHORT_LEN + Length(Name));
-  Result := PParamInfo(NativeUInt(Result) + PWord(Result)^); // skip attribute data
-end; { TParamInfoHelper.NextParam }
 
 { TOmniInternalMessage }
 
