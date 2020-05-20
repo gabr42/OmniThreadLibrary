@@ -21,13 +21,14 @@ type
     procedure TestTerminateWhen;
     procedure TestWorkerInitialized;
     procedure TestRegisterWaitObject;
+    procedure TestInvoke;
   end;
 
 implementation
 
 uses
   System.SysUtils, System.Diagnostics,
-  OtlTask, OtlTaskControl;
+  OtlTask, OtlTaskControl, OtlCommon;
 
 type
   TSynchronizedOmniWorker = class(TOmniWorker)
@@ -202,6 +203,63 @@ begin
   stopwatch := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(stopwatch.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+end;
+
+type
+  TInvokeTask = class(TSynchronizedOmniWorker)
+  strict private
+    FInvoked: integer;
+  strict protected
+    procedure SignalDone;
+  public
+    procedure Method1;
+    procedure Method2(const value: TOmniValue);
+    procedure Method3(var obj: TOmniValueObj);
+  end;
+
+procedure TInvokeTask.Method1;
+begin
+  Inc(FInvoked, 1);
+  SignalDone;
+end;
+
+procedure TInvokeTask.Method2(const value: TOmniValue);
+begin
+  if value = 42 then
+    Inc(FInvoked, 2);
+  SignalDone;
+end;
+
+procedure TInvokeTask.Method3(var obj: TOmniValueObj);
+begin
+  if obj.Value = '17' then
+    Inc(FInvoked, 4);
+  obj.Free;
+  SignalDone;
+end;
+
+procedure TInvokeTask.SignalDone;
+begin
+  if FInvoked = 7 then
+    FSynchronizer.Signal('done');
+end;
+
+procedure TestITaskControl.TestInvoke;
+var
+  task: IOmniTaskControl;
+begin
+  // Tests all the method signatures supported by Invoke (and other message dispatching functions).
+
+  task := CreateTask(TInvokeTask.Create(Synchronizer), 'Test task');
+  task.Run;
+
+  task.Invoke('Method1');
+  task.Invoke('Method2', 42);
+  task.Invoke('Method3', TOmniValueObj.Create('17'));
+
+  CheckTrue(Synchronizer.WaitFor('done', 5000));
+
+  task.Terminate;
 end;
 
 type

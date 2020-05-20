@@ -2424,6 +2424,7 @@ procedure TOmniTaskExecutor.GetMethodAddrAndSignature(const methodName: string;
 
     if (Length(parameters) = 1)
        and assigned(parameters[0].ParamType)
+       and (pfVar in parameters[0].Flags)
        and (parameters[0].ParamType.TypeKind = tkClass)
     then begin
       address := method.CodeAddress;
