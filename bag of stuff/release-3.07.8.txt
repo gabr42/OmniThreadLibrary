@@ -1,7 +1,7 @@
-OmniThreadLibrary 3.07.7 has just been released. It is available via
-GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.7)
+OmniThreadLibrary 3.07.8 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.8)
 or as a ZIP archive
-(https://drive.google.com/file/d/1N4l0ftKr0n5BTEFoLlTy0r5BE5_TS2kA).
+(https://drive.google.com/file/d/1Y0E1AOk8VfCvtdJa1nbhkfg2rv0BFu77).
 
 What is OmniThreadLibrary?
 ==========================
@@ -22,7 +22,7 @@ Code and is licensed under the BSD license.
 
 At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
 XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 
-and 10.3 Rio on the Win32 and Win64 platforms. 
+10.3 Rio, and 10.4 Sydney on the Win32 and Win64 platforms. 
 
 There are no plans to support older Delphi compilers. XE2+ support 
 is limited to Windows targets. Firemonkey is currently not supported.
@@ -40,28 +40,24 @@ Author's home page: http://primoz.gabrijelcic.org
 Documentation: http://www.omnithreadlibrary.com/documentation/
 Webinars: http://www.omnithreadlibrary.com/webinars.htm
 
-Changes since version 3.07.6
+Changes since version 3.07.7
 ============================
 
 - New features:
-  - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
-    to an interface.
-  - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
-    Parallel.ForEach(IEnumerable<T>).
-
+  - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
+  - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
+  - Added Delphi 10.4 Syndey packages.
+  
 - Bug fixes:
-  - If additional wait objects registered with RegisterWaitObject were
-    constantly signalled, timers were never called.
-  - OtlParallel threads were incorrectly scheduled to the main pool 
-    instead of GlobalParallelPool unless IOmniTaskConfig.ThreadPool
-    was used. (introduced in 3.07.6)
-  - Using Parallel.Join, .For, and .ForEach with .OnStopInvoke failed 
-    with access violation if Join/For/ForEach was not executed 
-    with .NoWait.
-  - Thread pool creation code waits for thread pool management thread 
-    to be started and initialized. Without that, CountQueued and 
-    CountExecuting may not be initialized correctly when thread pool 
-    creation code exits. [tnx to Roland Skinner]
+  - [sglienke] A reference to an anonymous method executor in IOmniTask is
+    cleaned up as soon as possible. This allows OTL tasks to be executed
+    from a package. [issue #132]
+  - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True 
+    on timeout.
+  - SetOnMessage(nil) works correctly.
+  - Fixed invalid FreeAndNil of an interface in TOmniFuture<T>.Execute. 
+  - Compiles with Delphi 10.4 Sydney.
+
 --
 Primoz
 [http://thedelphigeek.com]

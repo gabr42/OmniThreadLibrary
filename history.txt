@@ -1,4 +1,4 @@
-3.07.8: <<unreleased>>
+3.07.8: 2020-05-30
 
 - New features:
   - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
@@ -13,6 +13,7 @@
     on timeout.
   - SetOnMessage(nil) works correctly.
   - Fixed invalid FreeAndNil of an interface in TOmniFuture<T>.Execute.  
+  - Compiles with Delphi 10.4 Sydney.
 
 3.07.7: 2019-02-23
 
