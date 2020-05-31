@@ -3,7 +3,7 @@
 - New features:
   - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
   - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
-  - Added Delphi 10.4 Syndey packages.
+  - Added Delphi 10.4 Sydney packages.
   
 - Bug fixes:
   - [sglienke] A reference to an anonymous method executor in IOmniTask is
