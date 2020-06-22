@@ -18,7 +18,7 @@
     are still implemented for backwards compatibility.
   - Added OtlCommon.IOmniSynchronizer<T>.
   
-3.07.8: <<unreleased>>
+3.07.8: 2020-05-30
 
 - New features:
   - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
@@ -32,6 +32,7 @@
     on timeout.
   - SetOnMessage(nil) works correctly.
   - Fixed invalid FreeAndNil of an interface in TOmniFuture<T>.Execute.  
+  - Compiles with Delphi 10.4 Sydney.
 
 3.07.7: 2019-02-23
 
