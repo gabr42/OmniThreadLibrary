@@ -1307,7 +1307,7 @@ begin
   until CAS(currentReference, currentReference + 2, NativeInt(omrewReference))
         or Timeout(Result);
   {$ELSE}
-  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result)
+  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference)
         or Timeout(Result);
   {$ENDIF}
 end; { TOmniMREW.TryEnterReadLock }
