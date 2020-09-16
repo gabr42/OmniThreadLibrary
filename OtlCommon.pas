@@ -29,16 +29,18 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-07-26
-///   Version           : 1.53
+///   Last modification : 2019-12-09
+///   Version           : 1.54
 ///</para><para>
 ///   History:
+///     1.54: 2019-12-09
+///       - Added overloaded TOmniValue.FromArray<T> accepting `array of T`.
 ///     1.53: 2019-07-26
 ///       - Various TOmniExecutable method correctly process `nil` parameter.
 ///     1.52: 2019-06-28

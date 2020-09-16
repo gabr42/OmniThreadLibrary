@@ -29,7 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
@@ -3430,6 +3430,10 @@ end; { TOmniTaskControl.OnMessage }
 
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3437,8 +3441,7 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
 
-function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
-  IOmniTaskControl;
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
@@ -3454,9 +3457,12 @@ begin
 end; { TOmniTaskControl.OnMessage }
 
 {$IFDEF OTL_Anonymous}
-function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction):
-    IOmniTaskControl;
+function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3464,8 +3470,7 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
 
-function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction):
-  IOmniTaskControl;
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
@@ -3473,9 +3478,12 @@ begin
 end; { TOmniTaskControl.OnMessage }
 {$ENDIF OTL_Anonymous}
 
-function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
-  IOmniTaskControl;
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3495,6 +3503,10 @@ end; { TOmniTaskControl.ProcessorGroup }
 {$IFDEF OTL_Anonymous}
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3502,12 +3514,15 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
 
-function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
-  IOmniTaskControl;
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskControl;
 begin
+  otcOnTerminatedSimple := eventHandler;
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
-  otcOnTerminatedSimple := eventHandler;
   otcOnTerminatedExec.SetOnTerminated(
     procedure (const task: IOmniTaskControl)
     begin

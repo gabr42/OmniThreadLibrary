@@ -29,7 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
@@ -654,12 +654,12 @@ begin
             Result := ceWriter_ref.Enqueue(msg);
             while not Result do begin
               {$IFDEF MSWINDOWS}
-              waitTime := timeout_ms - DSiElapsedTime64(startTime);
+              waitTime := int64(timeout_ms) - DSiElapsedTime64(startTime);
               if (waitTime >= 0) and
                  (DSiWaitForTwoObjects(partlyEmptyObserver.GetEvent, ceTaskTerminatedEvent_ref,
                    false, waitTime) = WAIT_OBJECT_0)
               {$ELSE}
-              waitTime := timeout_ms - startTime.ElapsedMilliseconds;
+              waitTime := int64(timeout_ms) - startTime.ElapsedMilliseconds;
               if (waitTime >= 0) and
                  (partlyEmptyWaiter.WaitAny(waitTime, Signaller) = wrSignaled) and
                  (Signaller = partlyEvent)
