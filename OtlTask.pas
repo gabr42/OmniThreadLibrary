@@ -308,7 +308,9 @@ begin
   if idxWaitObject >= 0 then begin
     owolWaitObjects.Delete(idxWaitObject);
     owolResponseHandlers.Delete(idxWaitObject);
+    {$IFDEF OTL_Anonymous}
     owolAnonResponseHandlers.Delete(idxWaitObject);
+    {$ENDIF OTL_Anonymous}
   end;
 end; { TOmniWaitObjectList.Remove }
 

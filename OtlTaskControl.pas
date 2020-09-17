@@ -3432,8 +3432,10 @@ function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniT
 begin
   if not Assigned(eventHandler) then begin
     FreeAndNil(otcOnMessageExec);
-    Exit(Self);
+    Result := Self;
+    Exit;
   end;
+
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3482,8 +3484,10 @@ function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent): 
 begin
   if not Assigned(eventHandler) then begin
     FreeAndNil(otcOnTerminatedExec);
-    Exit(Self);
+    Result := Self;
+    Exit;
   end;
+
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);

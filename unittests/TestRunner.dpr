@@ -14,6 +14,8 @@ program TestRunner;
 {$APPTYPE CONSOLE}
 {$ENDIF}
 
+{$I OtlOptions.Inc}
+
 uses
   Forms,
   TestFramework,
@@ -26,7 +28,9 @@ uses
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
   TestOtlDataManager1 in 'TestOtlDataManager1.pas',
   TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',
+  {$IFDEF OTL_Generics}
   TestOtlSync1 in 'TestOtlSync1.pas',
+  {$ENDIF OTL_Generics}
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',

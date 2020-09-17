@@ -134,7 +134,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: TArray<IOmniTaskControl>;
+  readers: array of IOmniTaskControl;
   time   : int64;
 begin
   // Tests whether multiple readers can quire the lock at the same time
@@ -166,7 +166,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: TArray<IOmniTaskControl>;
+  readers: array of IOmniTaskControl;
   time   : int64;
 begin
   // Tests whether multiple readers can quire the lock at the same time
@@ -199,7 +199,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: TArray<IOmniTaskControl>;
+  readers: array of IOmniTaskControl;
 begin
   // Tests whether a reader will acquire a lock if it is initially blocked
 
@@ -244,8 +244,8 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: TArray<IOmniTaskControl>;
-  times  : TArray<int64>;
+  readers: array of IOmniTaskControl;
+  times  : array of int64;
 
   function MakeTask(idx: integer): TOmniTaskDelegate;
   begin
@@ -307,7 +307,7 @@ var
   hwm    : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: TArray<IOmniTaskControl>;
+  writers: array of IOmniTaskControl;
 begin
   // Tests whether multiple writers cannot quire the lock at the same time
 
@@ -339,7 +339,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: TArray<IOmniTaskControl>;
+  writers: array of IOmniTaskControl;
 begin
   // Tests whether a writer will acquire a lock if it is initially blocked
 
@@ -383,7 +383,7 @@ var
   hwm    : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: TArray<IOmniTaskControl>;
+  writers: array of IOmniTaskControl;
 begin
   // Tests whether multiple writers cannot quire the lock at the same time
 
@@ -421,8 +421,8 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: TArray<IOmniTaskControl>;
-  times  : TArray<int64>;
+  writers: array of IOmniTaskControl;
+  times  : array of int64;
 
   function MakeTask(idx: integer): TOmniTaskDelegate;
   begin
@@ -485,8 +485,8 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: TArray<IOmniTaskControl>;
-  times  : TArray<int64>;
+  writers: array of IOmniTaskControl;
+  times  : array of int64;
 
   function MakeTask(idx: integer): TOmniTaskDelegate;
   begin
