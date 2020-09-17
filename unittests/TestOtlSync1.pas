@@ -34,6 +34,7 @@ type
     FResourceCount: IOmniResourceCount;
     FSharedValue: int64;
     FSync: TOmniSynchronizer;
+    FSystemMutex: TMutex;
   {$IFDEF OTL_Generics}
     FSingleton: TSingleton;
     FSingletonIntf: ISingleton;
@@ -288,7 +289,7 @@ begin
   finally mrew.ExitWriteLock; end;
 
   for i := Low(readers) to High(readers) do
-    CheckTrue((times[i] > (CTimeout * 0.9)) and (times[i] < (CTimeout * 3)),
+    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Reader #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
@@ -465,7 +466,7 @@ begin
   finally mrew.ExitReadLock; end;
 
   for i := Low(writers) to High(writers) do
-    CheckTrue((times[i] > (CTimeout * 0.9)) and (times[i] < (CTimeout * 3)),
+    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Writer #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
@@ -529,7 +530,7 @@ begin
   finally mrew.ExitWriteLock; end;
 
   for i := Low(writers) to High(writers) do
-    CheckTrue((times[i] > (CTimeout * 0.9)) and (times[i] < (CTimeout * 3)),
+    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Writer #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
@@ -649,10 +650,14 @@ procedure TestOtlSync.SetUp;
 begin
   inherited;
   FSync := TOmniSynchronizer.Create;
+  FSystemMutex := TMutex.Create(nil, false, '/OmniThreadLibrary/TestOtlSync/A4EDD8C0-88D0-46A9-890B-8EAAF466C44A');
+  FSystemMutex.Acquire
 end;
 
 procedure TestOtlSync.TearDown;
 begin
+  FSystemMutex.Release;
+  FreeAndNil(FSystemMutex);
   FreeAndNil(FSync);
   inherited;
 end;
