@@ -30,7 +30,7 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Lee_Nover
 ///   Creation date     : 2013-06-05
 ///   Last modification : 2013-06-05

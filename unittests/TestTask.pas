@@ -4,7 +4,7 @@ interface
 
 uses
   TestFramework,
-  OtlSync;
+  OtlSync.Utils;
 
 type
   // Test methods for class IOmniBlockingCollection
@@ -28,7 +28,7 @@ implementation
 
 uses
   System.SysUtils, System.Diagnostics,
-  OtlTask, OtlTaskControl, OtlCommon;
+  OtlTask, OtlTaskControl, OtlCommon, OtlSync;
 
 type
   TSynchronizedOmniWorker = class(TOmniWorker)

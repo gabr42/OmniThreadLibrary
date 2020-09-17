@@ -29,7 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
@@ -3224,6 +3224,11 @@ end; { TOmniTaskControl.OnMessage }
 
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Exit(Self);
+  end;
+
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3250,6 +3255,11 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction):
     IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Exit(Self);
+  end;
+
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3268,6 +3278,11 @@ end; { TOmniTaskControl.OnMessage }
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
   IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
+
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3275,15 +3290,13 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
 
-function TOmniTaskControl.ProcessorGroup(procGroupNumber: integer): IOmniTaskControl;
-begin
-  TOmniTaskExecutor.VerifyProcessorGroup(procGroupNumber);
-  otcSharedInfo.ProcessorGroup := procGroupNumber;
-  Result := Self;
-end; { TOmniTaskControl.ProcessorGroup }
-
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
+
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3294,9 +3307,14 @@ end; { TOmniTaskControl.OnTerminated }
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
   IOmniTaskControl;
 begin
+  otcOnTerminatedSimple := eventHandler;
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
+
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
-  otcOnTerminatedSimple := eventHandler;
   otcOnTerminatedExec.SetOnTerminated(
     procedure (const task: IOmniTaskControl)
     begin
@@ -3305,6 +3323,13 @@ begin
   CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
+
+function TOmniTaskControl.ProcessorGroup(procGroupNumber: integer): IOmniTaskControl;
+begin
+  TOmniTaskExecutor.VerifyProcessorGroup(procGroupNumber);
+  otcSharedInfo.ProcessorGroup := procGroupNumber;
+  Result := Self;
+end; { TOmniTaskControl.ProcessorGroup }
 
 function TOmniTaskControl.Run: IOmniTaskControl;
 begin

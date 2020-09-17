@@ -30,18 +30,16 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2020-04-26
-///   Version           : 2.02
+///   Last modification : 2020-09-16
+///   Version           : 2.01b
 ///</para><para>
 ///   History:
-///     2.02: 2020-04-26
-///        - Implemented TOmniSynchronizer<T>/IOmniSynchronizer<T>.
 ///     2.01b: 2019-03-19
 ///        - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     2.01a: 2018-11-02
@@ -55,6 +53,9 @@
 ///       - Removed support for pre-XE Delphis.
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
 ///       - Removed TInterlockedEx.Increment and .Decrement.
+///     1.27c: 2020-09-16
+///       - Fixed TOmniMREW.TryEnterWriteLock which incorrectly managed the shared lock
+///         state when a timeout occurred. [issue #149]
 ///	    1.27: 2018-04-06
 ///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
@@ -455,24 +456,6 @@ type
     procedure Unlock(const key: K);
   end; { TOmniLockManager<K> }
   {$ENDIF MSWINDOWS}
-
-  IOmniSynchronizer<T> = interface
-    procedure Signal(const event: T);
-    function  WaitFor(const event: T; timeout: cardinal = INFINITE): boolean;
-  end; { IOmniSynchronizer<T> }
-
-  TOmniSynchronizer<T> = class(TInterfacedObject, IOmniSynchronizer<T>)
-  strict private
-    FSync: TDictionary<T, TEvent>;
-    FLock: IOmniCriticalSection;
-  strict protected
-    function  Ensure(event: T): TEvent;
-  public
-    procedure AfterConstruction; override;
-    procedure BeforeDestruction; override;
-    procedure Signal(const event: T);
-    function  WaitFor(const event: T; timeout: cardinal = INFINITE): boolean;
-  end; { TOmniSynchronizer<T> }
 
   {$IFDEF MSWINDOWS}
   ///<summary>Waits on any/all from any number of handles.</summary>
@@ -1312,14 +1295,17 @@ begin
   //Wait on writer to reset write flag so omrewReference.Bit0 must be 0 then set omrewReference.Bit0
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
-  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) 
+  until TInterlockedEx.CAS(currentReference, currentReference + 1, NativeInt(omrewReference))
         or Timeout(Result);
   if Result then begin
     //Now wait on all readers
     repeat
     until (NativeInt(omrewReference) = 1) or Timeout(Result);
     if not Result then
-      ExitWriteLock;
+      //Clear the write flag
+      repeat
+        currentReference := NativeInt(omrewReference);
+      until TinterlockedEx.CAS(currentReference,  currentReference AND NOT 1, NativeInt(omrewReference));
   end;
 end; { TOmniMREW.TryEnterWriteLock }
 
@@ -2652,42 +2638,6 @@ class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
 begin
   Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(oldValue);
 end; { TInterlockedEx.CAS }
-
-{ TOmniSynchronizer<T> }
-
-procedure TOmniSynchronizer<T>.AfterConstruction;
-begin
-  inherited;
-  FSync := TObjectDictionary<T, TEvent>.Create([doOwnsValues]);
-  FLock := CreateOmniCriticalSection;
-end; { TOmniSynchronizer<T>.AfterConstruction }
-
-procedure TOmniSynchronizer<T>.BeforeDestruction;
-begin
-  FreeAndNil(FSync);
-  inherited;
-end; { TOmniSynchronizer<T>.BeforeDestruction }
-
-function TOmniSynchronizer<T>.Ensure(event: T): TEvent;
-begin
-  FLock.Acquire;
-  try
-    if not FSync.TryGetValue(event, Result) then begin
-      Result := TEvent.Create;
-      FSync.Add(event, Result);
-    end;
-  finally FLock.Release; end;
-end; { TOmniSynchronizer<T>.Ensure }
-
-procedure TOmniSynchronizer<T>.Signal(const event: T);
-begin
-  Ensure(event).SetEvent;
-end; { TOmniSynchronizer<T>.Signal }
-
-function TOmniSynchronizer<T>.WaitFor(const event: T; timeout: cardinal): boolean;
-begin
-  Result := Ensure(event).WaitFor(timeout) = wrSignaled;
-end; { TOmniSynchronizer<T>.WaitFor }
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;

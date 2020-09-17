@@ -29,7 +29,7 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
@@ -42,6 +42,11 @@
 ///   History:
 ///     2.0: 2020-04-26
 ///       - Platform-independent TerminateEvent and TerminatedEvent.
+///     1.17a: 2019-10-24
+///       - Calling TOmniWaitObjectList.Remove removed only the ResponseHandlers[] handler
+///         and not the AnonResponseHandlers[] handler.
+///     1.17: 2019-04-26
+///       - Defined IOmniTask.RegisterWaitObject with an anonymous method callback.
 ///     1.16: 2017-08-01
 ///       - Defined IOmniTask.InvokeOnSelf method.
 ///     1.15: 2017-07-26
