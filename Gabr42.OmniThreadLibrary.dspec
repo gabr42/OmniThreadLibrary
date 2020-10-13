@@ -8,7 +8,7 @@
     "license": "BSD",
     "copyright": "Primož Gabrijelčič",
     "tags": "threading async",
-    "icon" : "res\\otl-dpm.png"
+    "icon" : "res\\otl-new.svg"
   },
   "targetPlatforms": [
     {
