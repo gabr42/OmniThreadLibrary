@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017 Primoz Gabrijelcic
+///Copyright (c) 2019 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,16 +30,26 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : Sean B. Durkin
+///   Contributors      : Sean B. Durkin, HHasenack
 ///   Creation date     : 2010-01-08
-///   Last modification : 2017-07-05
-///   Version           : 1.52a
+///   Last modification : 2019-01-11
+///   Version           : 1.53b
 ///</para><para>
 ///   History:
+///     1.53b: 2019-01-11
+///       - Using Parallel.Join.OnStopInvoke failed with access violation if Join
+///         was not executed with .NoWait.
+///     1.53a: 2019-01-10
+///       - Fixed pool scheduling for OtlParallel threads. Since 1.52 threads were
+///         incorrectly scheduled to the main pool unless IOmniTaskConfig.ThreadPool
+///         was used.
+///     1.53: 2019-01-03
+///       - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
+///         Parallel.ForEach(IEnumerable<T>). Fixes #129.
 ///     1.52a: 2017-07-05
 ///       - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> is removed
 ///         for pre-XE7 compilers because of compiler bugs. This removes
@@ -847,12 +857,23 @@ type
                                                       IOmniParallelAggregatorLoop<T>,
                                                       IOmniParallelInitializedLoop<T>,
                                                       IOmniParallelIntoLoop<T>)
-  strict private
+  strict private type
+    TItoTEnumeratorWrapper = class(TEnumerator<T>)
+    private
+      FEnumerator: IEnumerator<T>;
+    protected
+      function DoMoveNext: boolean; override;
+      function DoGetCurrent: T; override;
+    public
+      constructor Create(const AEnum: IEnumerator<T>);
+    end; { TItoTEnumeratorWrapper<T> }
+  var
     FDelegateEnum: TOmniDelegateEnumerator<T>;
     FEnumerator  : TEnumerator<T>;
   public
     constructor Create(const enumerator: TEnumeratorDelegate<T>); overload;
     constructor Create(const enumerator: TEnumerator<T>); overload;
+    constructor Create(const enumerator: IEnumerator<T>); overload;
     destructor  Destroy; override;
     function  Aggregate(defaultAggregateValue: TOmniValue;
       aggregator: TOmniAggregatorDelegate): IOmniParallelAggregatorLoop<T>;
@@ -1272,6 +1293,11 @@ type
     class function  ForEach<T>(const source: IOmniBlockingCollection): IOmniParallelLoop<T>; overload;
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a TEnumeratorDelegate.</summary>
     class function  ForEach<T>(enumerator: TEnumeratorDelegate<T>): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from a IEnumerator<T> interface</summary>
+    class function  ForEach<T>(const enum: IEnumerator<T>): IOmniParallelLoop<T>; overload;
+    ///	<summary>Creates parallel loop that iterates over elements of type T returned from a IEnumerable<T> interface</summary>
+    class function  ForEach<T>(const enumerable: IEnumerable<T>): IOmniParallelLoop<T>;
+      overload;
     {$IFDEF OTL_ERTTI}
     ///	<summary>Creates parallel loop that iterates over elements of type T returned from a GetEnumerator implemented in the object.</summary>
     class function  ForEach<T>(const enumerable: TObject): IOmniParallelLoop<T>; overload;
@@ -2056,11 +2082,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelJoin.OnStopInvoke }
 
@@ -2268,6 +2297,17 @@ class function Parallel.ForEach<T>(enumerator: TEnumeratorDelegate<T>):
   IOmniParallelLoop<T>;
 begin
   Result := TOmniParallelLoop<T>.Create(enumerator);
+end; { Parallel.ForEach<T> }
+
+class function Parallel.ForEach<T>(const enum: IEnumerator<T>): IOmniParallelLoop<T>;
+begin
+  Result := TOmniParallelLoop<T>.Create(enum);
+end; { Parallel.ForEach<T> }
+
+class function Parallel.ForEach<T>(const enumerable: IEnumerable<T>):
+  IOmniParallelLoop<T>;
+begin
+  Result := Parallel.ForEach<T>(enumerable.GetEnumerator);
 end; { Parallel.ForEach<T> }
 
 class function Parallel.ForkJoin: IOmniForkJoin;
@@ -2999,6 +3039,24 @@ begin
   Result := Self;
 end; { TOmniParallelLoop.TaskConfig }
 
+{ TOmniParallelLoop<T>.TItoTEnumeratorWrapper }
+
+constructor TOmniParallelLoop<T>.TItoTEnumeratorWrapper.Create(const AEnum: IEnumerator<T>);
+begin
+  inherited Create;
+  FEnumerator := AEnum;
+end; { TItoTEnumeratorWrapper.Create }
+
+function TOmniParallelLoop<T>.TItoTEnumeratorWrapper.DoGetCurrent: T;
+begin
+  Result := FEnumerator.Current;
+end; { TItoTEnumeratorWrapper.DoGetCurrent }
+
+function TOmniParallelLoop<T>.TItoTEnumeratorWrapper.DoMoveNext: boolean;
+begin
+  Result := assigned(FEnumerator) and FEnumerator.MoveNext;
+end; { TItoTEnumeratorWrapper.DoMoveNext }
+
 { TOmniParalleLoop<T> }
 
 constructor TOmniParallelLoop<T>.Create(const enumerator: TEnumeratorDelegate<T>);
@@ -3018,6 +3076,11 @@ begin
         next := FEnumerator.Current;
     end
   );
+end; { TOmniParallelLoop<T>.Create }
+
+constructor TOmniParallelLoop<T>.Create(const enumerator: IEnumerator<T>);
+begin
+  Create(TItoTEnumeratorWrapper.Create(enumerator));
 end; { TOmniParallelLoop<T>.Create }
 
 destructor TOmniParallelLoop<T>.Destroy;
@@ -3200,11 +3263,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelLoop<T>.OnStopInvoke }
 {$ENDIF OTL_FixedGenericIncompletelyDefined}
@@ -3578,11 +3644,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelSimpleLoop.OnStopInvoke }
 
@@ -3812,7 +3881,7 @@ begin
   FTask.Unobserved;
   if assigned(FTask.CancellationToken) and FTask.CancellationToken.IsSignalled then begin
     FCancelled := true;
-    FreeAndNil(FTask);
+    FTask := nil;
   end
   else
     Parallel.Start(FTask, taskConfig);
@@ -5077,7 +5146,12 @@ end; { TOmniTaskConfig.GetTerminated }
 
 function TOmniTaskConfig.GetThreadPool: IOmniThreadPool;
 begin
-  Result := otcThreadPool;
+  if otcNoThreadPool then
+    Result := nil
+  else if assigned(otcThreadPool) then
+    Result := otcThreadPool
+  else
+    Result := GlobalParallelPool;
 end; { TOmniTaskConfig.GetThreadPool }
 
 function TOmniTaskConfig.MonitorWith(const monitor: IOmniTaskControlMonitor):

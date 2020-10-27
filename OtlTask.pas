@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2019, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,17 +29,22 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2017-08-01
-///   Version           : 1.16
+///   Last modification : 2019-10-24
+///   Version           : 1.17a
 ///</para><para>
 ///   History:
+///     1.17a: 2019-10-24
+///       - Calling TOmniWaitObjectList.Remove removed only the ResponseHandlers[] handler
+///         and not the AnonResponseHandlers[] handler.
+///     1.17: 2019-04-26
+///       - Defined IOmniTask.RegisterWaitObject with an anonymous method callback.
 ///     1.16: 2017-08-01
 ///       - Defined IOmniTask.InvokeOnSelf method.
 ///     1.15: 2017-07-26
@@ -92,9 +97,13 @@ uses
   Classes,
   SyncObjs,
   GpLists,
+  {$IFDEF OTL_Anonymous}
+  Generics.Collections,
+  {$ELSE}
   {$IFNDEF MSWINDOWS}
   Generics.Collections,
   {$ENDIF ~MSWINDOWS}
+  {$ENDIF OTL_Anonymous}
   OtlCommon,
   OtlSync,
   OtlComm;
@@ -104,21 +113,36 @@ type
 
   TOmniWaitObjectMethod = procedure of object;
 
+  {$IFDEF OTL_Anonymous}
+  TOmniWaitObjectProc = reference to procedure;
+  {$ENDIF OTL_Anonymous}
+
   TOmniWaitObjectList = class
   strict private
+    {$IFDEF OTL_Anonymous}
+    owolAnonResponseHandlers: TList<TOmniWaitObjectProc>;
+    {$ENDIF OTL_Anonymous}
     owolResponseHandlers: TGpTMethodList;
     owolWaitObjects     : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
   strict protected
-    function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
+    {$IFDEF OTL_Anonymous}
+    function  GetAnonResponseHandler(idxHandler: integer): TOmniWaitObjectProc;
+    {$ENDIF OTL_Anonymous}
+    function  GetResponseHandler(idxHandler: integer): TOmniWaitObjectMethod;
     function  GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
   public
     constructor Create;
     destructor  Destroy; override;
-    procedure Add(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+    procedure Add(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod
+      {$IFDEF OTL_Anonymous}; anonResponseHandler: TOmniWaitObjectProc {$ENDIF});
     function  Count: integer;
     procedure Remove(waitObject: TOmniTransitionEvent);
+    {$IFDEF OTL_Anonymous}
+    property AnonResponseHandlers[idxHandler: integer]: TOmniWaitObjectProc read
+      GetAnonResponseHandler;
+    {$ENDIF OTL_Anonymous}
     property ResponseHandlers[idxHandler: integer]: TOmniWaitObjectMethod read
-      GetResponseHandlers;
+      GetResponseHandler;
     property WaitObjects[idxWaitObject: integer]: TOmniTransitionEvent read GetWaitObjects;
   end; { TOmniWaitObjectList }
 
@@ -162,6 +186,9 @@ type
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectProc); overload;
+    {$ENDIF OTL_Anonymous}
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
@@ -222,21 +249,31 @@ begin
   inherited Create;
   owolWaitObjects := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
   owolResponseHandlers := TGpTMethodList.Create;
+  {$IFDEF OTL_Anonymous}
+  owolAnonResponseHandlers := TList<TOmniWaitObjectProc>.Create;
+  {$ENDIF OTL_Anonymous}
 end; { TOmniWaitObjectList.Create }
 
 destructor TOmniWaitObjectList.Destroy;
 begin
+  {$IFDEF OTL_Anonymous}
+  FreeAndNil(owolAnonResponseHandlers);
+  {$ENDIF OTL_Anonymous}
   FreeAndNil(owolResponseHandlers);
   FreeAndNil(owolWaitObjects);
   inherited Destroy;
 end; { TOmniWaitObjectList.Destroy }
 
 procedure TOmniWaitObjectList.Add(waitObject: TOmniTransitionEvent;
-  responseHandler: TOmniWaitObjectMethod);
+  responseHandler: TOmniWaitObjectMethod
+  {$IFDEF OTL_Anonymous}; anonResponseHandler: TOmniWaitObjectProc {$ENDIF});
 begin
   Remove(waitObject);
   owolWaitObjects.Add(waitObject);
   owolResponseHandlers.Add(TMethod(responseHandler));
+  {$IFDEF OTL_Anonymous}
+  owolAnonResponseHandlers.Add(anonResponseHandler);
+  {$ENDIF OTL_Anonymous}
 end; { TOmniWaitObjectList.Add }
 
 function TOmniWaitObjectList.Count: integer;
@@ -244,11 +281,19 @@ begin
   Result := owolWaitObjects.Count;
 end; { TOmniWaitObjectList.Count }
 
-function TOmniWaitObjectList.GetResponseHandlers(idxHandler: integer):
+{$IFDEF OTL_Anonymous}
+function TOmniWaitObjectList.GetAnonResponseHandler(idxHandler: integer):
+  TOmniWaitObjectProc;
+begin
+  Result := owolAnonResponseHandlers[idxHandler];
+end; { TOmniWaitObjectList.GetAnonResponseHandler }
+{$ENDIF OTL_Anonymous}
+
+function TOmniWaitObjectList.GetResponseHandler(idxHandler: integer):
   TOmniWaitObjectMethod;
 begin
   Result := TOmniWaitObjectMethod(owolResponseHandlers[idxHandler]);
-end; { TOmniWaitObjectList.GetResponseHandlers }
+end; { TOmniWaitObjectList.GetResponseHandler }
 
 function TOmniWaitObjectList.GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
 begin
@@ -263,6 +308,9 @@ begin
   if idxWaitObject >= 0 then begin
     owolWaitObjects.Delete(idxWaitObject);
     owolResponseHandlers.Delete(idxWaitObject);
+    {$IFDEF OTL_Anonymous}
+    owolAnonResponseHandlers.Delete(idxWaitObject);
+    {$ENDIF OTL_Anonymous}
   end;
 end; { TOmniWaitObjectList.Remove }
 

@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2018, Primoz Gabrijelcic
+///Copyright (c) 2019, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,16 +29,20 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-12
-///   Version           : 2.19a
+///   Last modification : 2019-02-10
+///   Version           : 2.19b
 /// </para><para>
 ///   History:
+///     2.19b: 2019-02-10
+///       - Thread pool creation code waits for thread pool management thread to be
+///         started and initialized. Without that, CountQueued and CountExecuting may
+///         not be initialized yet when thread pool creation code exits.
 ///     2.19a: 2018-03-12
 ///       - ThreadData is destroyed in the worker thread and not in the thread pool
 ///         management thread.
@@ -1632,8 +1636,9 @@ begin
   otpUniqueID := OtlUID.Increment;
   otpWorker := TOTPWorker.Create(name, otpUniqueID);
   (otpWorker as IOTPWorker).Asy_OnUnhandledWorkerException := Asy_ForwardUnhandledWorkerException;
-  otpWorkerTask := CreateTask
-    (otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
+  otpWorkerTask := CreateTask(otpWorker, Format('OmniThreadPool manager %s', [name])).Run;
+  if not otpWorkerTask.WaitForInit then
+    raise Exception.Create('ThreadPool management task failed to start');
   otpAffinity := TOmniIntegerSet.Create;
   otpAffinity.OnChange := NotifyAffinityChanged;
   {$IFDEF OTL_NUMASupport}

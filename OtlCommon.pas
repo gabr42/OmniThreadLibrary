@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2018, Primoz Gabrijelcic
+///Copyright (c) 2019, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,16 +29,26 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
+///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-04-13
-///   Version           : 1.50
+///   Last modification : 2019-12-09
+///   Version           : 1.54
 ///</para><para>
 ///   History:
+///     1.54: 2019-12-09
+///       - Added overloaded TOmniValue.FromArray<T> accepting `array of T`.
+///     1.53: 2019-07-26
+///       - Various TOmniExecutable method correctly process `nil` parameter.
+///     1.52: 2019-06-28
+///       - TOmniWaitableValue constructor optionally accepts intial value for the
+///         Value property.
+///     1.51: 2019-01-03
+///       - [HHasenack] On XE3 and above, TOmniValue.CastTo<T> supports casting
+///         to an interface. Fixes #128.
 ///     1.50: 2018-04-13
 ///       - Implemented TOmniValue.LogValue, useful for debug logging.
 ///     1.49: 2018-03-12
@@ -525,7 +535,8 @@ type
     class function Wrap<T>(const value: T): TOmniValue; static;
     function  Unwrap<T>: T; //Use this form to call: omnivalue.Unwrap<T>()
   {$IFDEF OTL_HasArrayOfT}
-    class function FromArray<T>(const values: TArray<T>): TOmniValue; static;
+    class function FromArray<T>(const values: TArray<T>): TOmniValue; overload; static;
+    class function FromArray<T>(const values: array of T): TOmniValue; overload; static;
     function  ToArray<T>: TArray<T>;
   {$ENDIF OTL_HasArrayOfT}
   {$IF CompilerVersion > 20}
@@ -605,7 +616,7 @@ type
     property Value: TOmniValue read GetValue;
   end; { IOmniWaitableValue }
 
-  TOmniWaitableValue = class( TInterfacedObject, IOmniWaitableValue)
+  TOmniWaitableValue = class(TInterfacedObject, IOmniWaitableValue)
   strict private
     FEvent: TEvent;
     FValue: TOmniValue;
@@ -616,7 +627,8 @@ type
     function  GetEvent: TEvent;
     function  GetValue: TOmniValue;
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const value: TOmniValue); overload;
     destructor  Destroy; override;
     procedure Reset; inline;
     procedure Signal; overload; inline;
@@ -1100,7 +1112,8 @@ type
 
   function  CreateCounter(initialValue: integer = 0): IOmniCounter;
   function  CreateInterfaceDictionary: IOmniInterfaceDictionary;
-  function  CreateWaitableValue: IOmniWaitableValue;
+  function  CreateWaitableValue: IOmniWaitableValue; overload;
+  function  CreateWaitableValue(const value: TOmniValue): IOmniWaitableValue; overload;
   function  CreateAutoDestroyObject(obj: TObject): IOmniAutoDestroyObject;
 
   function  Environment: IOmniEnvironment;
@@ -1503,6 +1516,11 @@ end; { CreateInterfaceDictionary }
 function CreateWaitableValue: IOmniWaitableValue;
 begin
   Result := TOmniWaitableValue.Create;
+end; { CreateWaitableValue }
+
+function CreateWaitableValue(const value: TOmniValue): IOmniWaitableValue; overload;
+begin
+  Result := TOmniWaitableValue.Create(value);
 end; { CreateWaitableValue }
 
 function Environment: IOmniEnvironment;
@@ -2366,6 +2384,11 @@ var
   ds      : integer;
   maxValue: uint64;
   ti      : PTypeInfo;
+{$IFDEF OTL_TypeInfoHasTypeData}
+var
+  intf    : IInterface;
+  value   : TValue;
+{$ENDIF OTL_TypeInfoHasTypeData}
 begin
   ds := 0;
   ti := System.TypeInfo(T);
@@ -2379,12 +2402,22 @@ begin
   if ds = 0 then begin // complicated stuff
     if ti.Kind = tkRecord then
       Result := TOmniRecordWrapper<T>(CastToRecord.Value).Value
-    else
+    else begin
       {$IFDEF OTL_ERTTI}
-      Result := AsTValue.AsType<T>
+      {$IFDEF OTL_TypeInfoHasTypeData}
+      if (ti.Kind = tkInterface)
+         and Supports(AsInterface, ti.TypeData.Guid, intf)
+      then begin
+        TValue.Make(@intf, ti, value);
+        Result := value.AsType<T>;
+      end
+      else
+      {$ENDIF OTL_TypeInfoHasTypeData}
+        Result := AsTValue.AsType<T>;
       {$ELSE}
       raise Exception.Create('Only casting to simple types is supported in Delphi 2009')
       {$ENDIF OTL_ERTTI}
+    end;
   end
   else begin // simple types
     if ds < 8 then begin
@@ -2446,6 +2479,17 @@ end; { TOmniValue.CastFrom }
 
 {$IFDEF OTL_HasArrayOfT}
 class function TOmniValue.FromArray<T>(const values: TArray<T>): TOmniValue;
+var
+  ovc  : TOmniValueContainer;
+  value: T;
+begin
+  ovc := TOmniValueContainer.Create;
+  for value in values do
+    ovc.Add(TOmniValue.CastFrom<T>(value));
+  Result.SetAsArray(ovc);
+end; { TOmniValue.FromArray }
+
+class function TOmniValue.FromArray<T>(const values: array of T): TOmniValue;
 var
   ovc  : TOmniValueContainer;
   value: T;
@@ -3571,6 +3615,12 @@ begin
   FValue := TOmniValue.Null;
 end; { TOmniWaitableValue.Create }
 
+constructor TOmniWaitableValue.Create(const value: TOmniValue);
+begin
+  Create;
+  FValue := value;
+end; { TOmniWaitableValue.Create }
+
 destructor TOmniWaitableValue.Destroy;
 begin
   FreeAndNil( FEvent);
@@ -4379,14 +4429,22 @@ end; { TOmniExecutable.Proc }
 
 procedure TOmniExecutable.SetMethod(const value: TMethod);
 begin
-  oeKind := oekMethod;
-  oeMethod := value;
+  if (value.Code <> nil) and (value.Data <> nil) then begin
+    oeKind := oekMethod;
+    oeMethod := value;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetMethod }
 
 procedure TOmniExecutable.SetProc(const value: TProcedure);
 begin
-  oeKind := oekProcedure;
-  oeProcedure := value;
+  if assigned(value) then begin
+    oeKind := oekProcedure;
+    oeProcedure := value;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetProc }
 
 {$IFDEF OTL_Anonymous}
@@ -4430,14 +4488,22 @@ end; { TOmniExecutable.GetDelegate }
 
 procedure TOmniExecutable.SetAnonDelegate(const value: TProc);
 begin
-  oeDelegate := value;
-  oeKind := oekDelegate;
+  if assigned(value) then begin
+    oeDelegate := value;
+    oeKind := oekDelegate;
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetAnonDelegate }
 
 procedure TOmniExecutable.SetDelegate(const source);
 begin
-  oeKind := oekDelegate;
-  AnonCopy(oeDelegate, source);
+  if assigned(Pointer(source)) then begin
+    oeKind := oekDelegate;
+    AnonCopy(oeDelegate, source);
+  end
+  else
+    Clear;
 end; { TOmniExecutable.SetDelegate }
 
 {$ENDIF OTL_Anonymous}

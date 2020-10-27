@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2017, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -30,16 +30,21 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2018-11-02
-///   Version           : 1.27a
+///   Last modification : 2020-09-16
+///   Version           : 1.27c
 ///</para><para>
 ///   History:
+///     1.27c: 2020-09-16
+///       - Fixed TOmniMREW.TryEnterWriteLock which incorrectly managed the shared lock
+///         state when a timeout occurred. [issue #149]
+///     1.27b: 2019-03-19
+///       - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     1.27a: 2018-11-02
 ///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///	    1.27: 2018-04-06
@@ -1283,13 +1288,13 @@ end; { TOmniMREW.ExitWriteLock }
 function TOmniMREW.TryEnterReadLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1299,22 +1304,24 @@ begin
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference)) or Timeout(Result);
+  until CAS(currentReference, currentReference + 2, NativeInt(omrewReference))
+        or Timeout(Result);
   {$ELSE}
-  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference) or Timeout(Result);
+  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 2, currentReference) = currentReference)
+        or Timeout(Result);
   {$ENDIF}
 end; { TOmniMREW.TryEnterReadLock }
 
 function TOmniMREW.TryEnterWriteLock(timeout_ms: integer): boolean;
 var
   currentReference: NativeInt;
-  startWait_ms: int64;
+  startWait_ms    : int64;
 
-  function Timeout(var returnFalse: boolean): boolean;
+  function Timeout(var gotLock: boolean): boolean;
   begin
     Result := (timeout_ms <= 0) or DSiHasElapsed64(startWait_ms, timeout_ms);
     if Result then
-      returnFalse := true;
+      gotLock := false;
   end; { Timeout }
 
 begin
@@ -1325,16 +1332,26 @@ begin
   repeat
     currentReference := NativeInt(omrewReference) AND NOT 1;
   {$IFDEF MSWINDOWS}
-  until CAS(currentReference, currentReference + 1, NativeInt(omrewReference)) or Timeout(Result);
+  until CAS(currentReference,  currentReference + 1, NativeInt(omrewReference))
+        or Timeout(Result);
   {$ELSE}
-  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference) or Timeout(Result);
+  until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference + 1, currentReference) = currentReference)
+        or Timeout(Result);
   {$ENDIF}
+
   if Result then begin
     //Now wait on all readers
     repeat
     until (NativeInt(omrewReference) = 1) or Timeout(Result);
     if not Result then
-      ExitWriteLock;
+      //Clear the write flag
+      repeat
+        currentReference := NativeInt(omrewReference);
+      {$IFDEF MSWINDOWS}
+      until CAS(currentReference,  currentReference AND NOT 1, NativeInt(omrewReference))
+      {$ELSE}
+      until (TInterlockedEx.CompareExchange(NativeInt(omrewReference), currentReference AND NOT 1, currentReference) = currentReference) or Timeout(Result);
+      {$ENDIF}
   end;
 end; { TOmniMREW.TryEnterWriteLock }
 

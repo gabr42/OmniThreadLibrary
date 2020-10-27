@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2018, Primoz Gabrijelcic
+///Copyright (c) 2019, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -29,16 +29,21 @@
 ///</license>
 ///<remarks><para>
 ///   Home              : http://www.omnithreadlibrary.com
-///   Support           : https://plus.google.com/communities/112307748950248514961
+///   Support           : https://en.delphipraxis.net/forum/32-omnithreadlibrary/
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-12-13
-///   Version           : 1.40b
+///   Last modification : 2019-04-26
+///   Version           : 1.41
 ///</para><para>
 ///   History:
+///     1.41: 2019-04-26
+///       - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
+///     1.40c: 2019-03-22
+///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
+///         This allows tasks to be run from a package. [issue #132]
 ///     1.40b: 2018-12-13
 ///       - Fixed: If additional wait objects registered with RegisterWaitObject were
 ///         constantly signalled, timers were never called.
@@ -829,9 +834,9 @@ type
     procedure GetMethodAddrAndSignature(const methodName: string;
       var methodAddress: pointer; var methodSignature: TOmniInvokeType);
     procedure GetMethodNameFromInternalMessage(const msg: TOmniMessage; var msgName: string;
-      var msgData: TOmniValue {$IFDEF OTL_Anonymous}; var func:
-      TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx; var proc:
-      TProc<integer>; var taskFunc: TOmniTaskInvokeFunction {$ENDIF OTL_Anonymous});
+      var msgData: TOmniValue {$IFDEF OTL_Anonymous};
+      var func: TOmniTaskControlInvokeFunction; var funcEx: TOmniTaskControlInvokeFunctionEx;
+      var proc: TProc<integer>; var taskFunc: TOmniTaskInvokeFunction {$ENDIF OTL_Anonymous});
     function  GetOptions: TOmniTaskControlOptions;
     function  HaveElapsedTimer: boolean;
     procedure Initialize;
@@ -870,7 +875,10 @@ type
     destructor  Destroy; override;
     procedure Asy_Execute(const task: IOmniTask);
     procedure Asy_RegisterComm(const comm: IOmniCommunicationEndpoint);
-    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectProc); overload;
+    {$ENDIF OTL_Anonymous}
     procedure Asy_SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
     procedure SetNUMANode(numaNodeNumber: integer);
@@ -938,6 +946,9 @@ type
     {$ENDIF OTL_Anonymous}
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
     procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod); overload;
+    {$IFDEF OTL_Anonymous}
+    procedure RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectProc); overload;
+    {$ENDIF OTL_Anonymous}
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
     procedure SetProcessorGroup(procGroupNumber: integer);
@@ -1642,10 +1653,19 @@ begin
   otExecutor_ref.Asy_RegisterComm(comm);
 end; { TOmniTask.RegisterComm }
 
-procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent; responseHandler: TOmniWaitObjectMethod);
+procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectMethod);
 begin
   otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
 end; { TOmniTask.RegisterWaitObject }
+
+{$IFDEF OTL_Anonymous}
+procedure TOmniTask.RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectProc);
+begin
+  otExecutor_ref.Asy_RegisterWaitObject(waitObject, responseHandler);
+end; { TOmniTask.RegisterWaitObject }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniTask.SetException(exceptionObject: pointer);
 begin
@@ -1726,7 +1746,7 @@ begin
     if not otExecuting then
       otTerminateWillCallExecute := true;
   finally otCleanupLock.ExitWriteLock; end;
-  // TODO 1 -oPrimoz Gabrijelcic : This is very suspicious :(
+
   if otTerminateWillCallExecute then //call Execute to run at least cleanup code
     InternalExecute(true);
 end; { TOmniTask.Terminate }
@@ -2025,10 +2045,27 @@ begin
   try
     if not assigned(oteWaitObjectList) then
       oteWaitObjectList := TOmniWaitObjectList.Create;
-    oteWaitObjectList.Add(waitObject, responseHandler);
+    oteWaitObjectList.Add(waitObject, responseHandler {$IFDEF OTL_Anonymous}, nil{$ENDIF});
     SetEvent(oteCommRebuildHandles);
   finally oteInternalLock.Release; end;
 end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
+
+{$IFDEF OTL_Anonymous}
+procedure TOmniTaskExecutor.Asy_RegisterWaitObject(waitObject: TOmniTransitionEvent;
+  responseHandler: TOmniWaitObjectProc);
+begin
+  if oteExecutorType <> etWorker then
+    raise Exception.Create('TOmniTaskExecutor.Asy_RegisterWaitObject: ' +
+      'WaitObject support is only available when working with an IOmniWorker');
+  oteInternalLock.Acquire;
+  try
+    if not assigned(oteWaitObjectList) then
+      oteWaitObjectList := TOmniWaitObjectList.Create;
+    oteWaitObjectList.Add(waitObject, nil, responseHandler);
+    SetEvent(oteCommRebuildHandles);
+  finally oteInternalLock.Release; end;
+end; { TOmniTaskExecutor.Asy_RegisterWaitObject }
+{$ENDIF OTL_Anonymous}
 
 procedure TOmniTaskExecutor.Asy_SetExitStatus(exitCode: integer;
   const exitMessage: string);
@@ -2129,6 +2166,9 @@ procedure TOmniTaskExecutor.Cleanup;
 begin
   oteWorkerIntf := nil;
   FreeAndNil(oteTimers);
+  {$IFDEF OTL_Anonymous}
+  oteFunc := nil;
+  {$ENDIF OTL_Anonymous}
 end; { TOmniTaskExecutor.Cleanup }
 
 procedure TOmniTaskExecutor.DispatchCommMessage(newMsgHandle: TOmniTransitionEvent;
@@ -2164,6 +2204,9 @@ var
   info           : TWaitFor.THandleInfo;
   rebuildHandles : boolean;
   responseHandler: TOmniWaitObjectMethod;
+  {$IFDEF OTL_Anonymous}
+  responseProc   : TOmniWaitObjectProc;
+  {$ENDIF OTL_Anonymous}
 begin
   // Keep logic in sync with ReportInvalidHandle!
 
@@ -2209,11 +2252,18 @@ begin
           oteInternalLock.Acquire;
           try
             responseHandler := oteWaitObjectList.ResponseHandlers[info.Index - msgInfo.IdxFirstWaitObject];
+            {$IFDEF OTL_Anonymous}
+            responseProc := oteWaitObjectList.AnonResponseHandlers[info.Index - msgInfo.IdxFirstWaitObject];
+            {$ENDIF OTL_Anonymous}
           finally oteInternalLock.Release; end;
-          responseHandler();
+          if assigned(responseHandler) then
+            responseHandler();
+          {$IFDEF OTL_Anonymous}
+          if assigned(responseProc) then
+            responseProc();
+          {$ENDIF OTL_Anonymous}
           CheckTimers;
         end;
-//        TestForInternalRebuild(task, msgInfo); // doesn't seem safe anymore
       end // comm handles
       else if info.Index = msgInfo.IdxRebuildHandles then
         rebuildHandles := true;
@@ -3380,6 +3430,12 @@ end; { TOmniTaskControl.OnMessage }
 
 function TOmniTaskControl.OnMessage(eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Result := Self;
+    Exit;
+  end;
+
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3387,8 +3443,7 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
 
-function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent):
-  IOmniTaskControl;
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniTaskMessageEvent): IOmniTaskControl;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
@@ -3404,9 +3459,12 @@ begin
 end; { TOmniTaskControl.OnMessage }
 
 {$IFDEF OTL_Anonymous}
-function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction):
-    IOmniTaskControl;
+function TOmniTaskControl.OnMessage(eventHandler: TOmniOnMessageFunction): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnMessageExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnMessageExec) then
     otcOnMessageExec := TOmniMessageExec.Create;
   otcOnMessageExec.SetOnMessage(eventHandler);
@@ -3414,8 +3472,7 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnMessage }
 
-function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction):
-  IOmniTaskControl;
+function TOmniTaskControl.OnMessage(msgID: word; eventHandler: TOmniOnMessageFunction): IOmniTaskControl;
 begin
   otcOnMessageList.AddObject(msgID, TOmniMessageExec.Create(eventHandler));
   CreateInternalMonitor;
@@ -3423,9 +3480,14 @@ begin
 end; { TOmniTaskControl.OnMessage }
 {$ENDIF OTL_Anonymous}
 
-function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent):
-  IOmniTaskControl;
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Result := Self;
+    Exit;
+  end;
+
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3445,6 +3507,10 @@ end; { TOmniTaskControl.ProcessorGroup }
 {$IFDEF OTL_Anonymous}
 function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunction): IOmniTaskControl;
 begin
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
   otcOnTerminatedExec.SetOnTerminated(eventHandler);
@@ -3452,12 +3518,15 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
 
-function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple):
-  IOmniTaskControl;
+function TOmniTaskControl.OnTerminated(eventHandler: TOmniOnTerminatedFunctionSimple): IOmniTaskControl;
 begin
+  otcOnTerminatedSimple := eventHandler;
+  if not Assigned(eventHandler) then begin
+    FreeAndNil(otcOnTerminatedExec);
+    Exit(Self);
+  end;
   if not assigned(otcOnTerminatedExec) then
     otcOnTerminatedExec := TOmniMessageExec.Create;
-  otcOnTerminatedSimple := eventHandler;
   otcOnTerminatedExec.SetOnTerminated(
     procedure (const task: IOmniTaskControl)
     begin
