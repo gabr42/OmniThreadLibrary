@@ -432,7 +432,7 @@ type
     {$ENDIF OTL_Anonymous}
   end; { TOmniMessageExec }
 
-  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07556}']
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -528,6 +528,10 @@ type
     property Param: TOmniValueContainer read GetParam;
     property UniqueID: int64 read GetUniqueID;
     property UserData[const idxData: TOmniValue]: TOmniValue read GetUserDataVal write SetUserDataVal;
+    /// <summary>
+    ///   Run the task code from within in the calling thread
+    /// </summary>
+    function DirectExecute:IOmniTaskControl;
   end; { IOmniTaskControl }
 
   // Implementation details, needed by the OtlEventMonitor. Not for public consumption.
@@ -1112,6 +1116,7 @@ type
     function  OnTerminated(eventHandler: TOmniTaskTerminatedEvent): IOmniTaskControl; overload;
     function  ProcessorGroup(procGroupNumber: integer): IOmniTaskControl;
     function  RemoveMonitor: IOmniTaskControl;
+    function DirectExecute:IOmniTaskControl;
     function  Run: IOmniTaskControl; overload;
     function  Run(const msgMethod: pointer): IOmniTaskControl; overload;
     function  Run(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
@@ -3536,6 +3541,14 @@ begin
   Result := Self;
 end; { TOmniTaskControl.OnTerminated }
 {$ENDIF OTL_Anonymous}
+
+function TOmniTaskControl.DirectExecute:IOmniTaskControl;
+VAR lTask:IOmniTask;
+begin
+  Result:=self;
+  lTask:=CreateTask;
+  (lTask as IOmniTaskExecutor).Execute;
+end;
 
 function TOmniTaskControl.Run: IOmniTaskControl;
 begin
