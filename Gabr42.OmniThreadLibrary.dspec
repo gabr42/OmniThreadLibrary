@@ -5,7 +5,7 @@
     "description": "OmniThreadLibrary is a powerful threading library for Delphi",
     "authors": "Primož Gabrijelčič",
     "projectUrl": "https://github.com/gabr42/OmniThreadLibrary",
-    "license": "BSD",
+    "license": "BSD-3-Clause",
     "copyright": "Primož Gabrijelčič",
     "tags": "threading async",
     "icon" : "res\\otl-new.svg"
