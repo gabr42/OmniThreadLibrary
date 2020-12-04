@@ -40,6 +40,8 @@
 ///   Version           : 1.53b
 ///</para><para>
 ///   History:
+///     1.53c: 2020-12-4
+///       - [HHasenack] Add Cancel and IsCancelled to IOmniParallelTask
 ///     1.53b: 2019-01-11
 ///       - Using Parallel.Join.OnStopInvoke failed with access violation if Join
 ///         was not executed with .NoWait.
@@ -1109,6 +1111,8 @@ type
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
+    function  Cancel:IOmniParallelTask;
+    function  IsCancelled: boolean;
   end; { IOmniParallelTask }
 
   IOmniWorkItem = interface ['{3CE2762F-B7A3-4490-BF22-2109C042EAD1}']
@@ -1556,6 +1560,8 @@ type
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
+    function  Cancel:IOmniParallelTask;
+    function  IsCancelled: boolean;
   end; { IOmniParallelTask }
 
   TOmniTaskConfigTerminated = record
@@ -4693,6 +4699,17 @@ function TOmniParallelTask.WaitFor(timeout_ms: cardinal): boolean;
 begin
   Result := optJoin.WaitFor(timeout_ms);
 end; { TOmniParallelTask.WaitFor }
+
+function TOmniParallelTask.Cancel:IOmniParallelTask;
+begin
+  Result:=self;
+  optJoin.Cancel;
+end;
+
+function TOmniParallelTask.IsCancelled: boolean;
+begin
+  Result:=optJoin.IsCancelled;
+end;
 
 { TOmniWorkItem }
 
