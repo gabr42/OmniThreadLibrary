@@ -4,6 +4,8 @@
   - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
   - TOmniTaskControl.OnMessage and .OnTerminated free the executor
     if the eventHandler is nil.
+  - [HHasenack] Added IOmniTaskControl.DirectExecute which executes task in the
+    current thread.
 
 - Bug fixes:
   - Fixed warnings in OtlComm.
