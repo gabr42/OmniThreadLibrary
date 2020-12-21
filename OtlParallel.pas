@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019 Primoz Gabrijelcic
+///Copyright (c) 2020 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack
 ///   Creation date     : 2010-01-08
-///   Last modification : 2019-01-11
-///   Version           : 1.53b
+///   Last modification : 2020-12-21
+///   Version           : 1.54
 ///</para><para>
 ///   History:
+///     1.54: 2020-12-21
+///       - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
 ///     1.53b: 2019-01-11
 ///       - Using Parallel.Join.OnStopInvoke failed with access violation if Join
 ///         was not executed with .NoWait.
@@ -1097,10 +1099,12 @@ type
   TOmniParallelTaskDelegate = TOmniTaskDelegate;
 
   IOmniParallelTask = interface
+    function  Cancel:IOmniParallelTask;
     function  DetachException: Exception;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  FatalException: Exception;
+    function  IsCancelled: boolean;
     function  IsExceptional: boolean;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
@@ -1544,10 +1548,12 @@ type
     optNumTasks: integer;
   public
     constructor Create;
+    function  Cancel:IOmniParallelTask; inline;
     function  DetachException: Exception; inline;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  FatalException: Exception; inline;
+    function  IsCancelled: boolean; inline;
     function  IsExceptional: boolean; inline;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
@@ -1556,7 +1562,7 @@ type
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
-  end; { IOmniParallelTask }
+  end; { TOmniParallelTask }
 
   TOmniTaskConfigTerminated = record
     Event : TOmniTaskTerminatedEvent;
@@ -4600,6 +4606,12 @@ begin
     end);
 end; { TOmniParallelTask.Execute }
 
+function TOmniParallelTask.Cancel:IOmniParallelTask;
+begin
+  Result := self;
+  optJoin.Cancel;
+end; { TOmniParallelTask.Cancel }
+
 function TOmniParallelTask.DetachException: Exception;
 begin
   Result := optJoin.DetachException;
@@ -4630,6 +4642,11 @@ function TOmniParallelTask.FatalException: Exception;
 begin
   Result := optJoin.FatalException;
 end; { TOmniParallelTask.FatalException }
+
+function TOmniParallelTask.IsCancelled: boolean;
+begin
+  Result := optJoin.IsCancelled;
+end; { TOmniParallelTask.IsCancelled }
 
 function TOmniParallelTask.IsExceptional: boolean;
 begin
