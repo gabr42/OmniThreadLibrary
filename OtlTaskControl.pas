@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -33,12 +33,16 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
+///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-04-26
-///   Version           : 1.41
+///   Last modification : 2020-12-21
+///   Version           : 1.42
 ///</para><para>
 ///   History:
+///     1.42: 2020-12-21
+///       - [HHasenack] Added IOmniTaskControl.DirectExecute which executes
+///         task in the current thread.
+///       - IOmniTaskControl.Terminate cancels thread pool tasks with timeout 0.
 ///     1.41: 2019-04-26
 ///       - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
 ///     1.40c: 2019-03-22
@@ -432,7 +436,7 @@ type
     {$ENDIF OTL_Anonymous}
   end; { TOmniMessageExec }
 
-  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07555}']
+  IOmniTaskControl = interface ['{881E94CB-8C36-4CE7-9B31-C24FD8A07556}']
     function  GetCancellationToken: IOmniCancellationToken;
     function  GetComm: IOmniCommunicationEndpoint;
     function  GetExitCode: integer;
@@ -448,6 +452,10 @@ type
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer): IOmniTaskControl;
     function  DetachException: Exception;
+    /// <summary>
+    ///   Run the task code from within in the calling thread
+    /// </summary>
+    function  DirectExecute:IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  GetFatalException: Exception;
     function  GetParam: TOmniValueContainer;
@@ -1089,6 +1097,7 @@ type
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
     function  ClearTimer(timerID: integer = 0): IOmniTaskControl;
     function  DetachException: Exception;
+    function  DirectExecute:IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  Invoke(const msgMethod: pointer): IOmniTaskControl; overload; inline;
     function  Invoke(const msgMethod: pointer; msgData: array of const): IOmniTaskControl; overload;
@@ -1727,7 +1736,10 @@ end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
 begin
-  Result := otSharedInfo_ref.Stopped;
+  if not assigned(otSharedInfo_ref) then
+    Result := true
+  else
+    Result := otSharedInfo_ref.Stopped;
 end; { TOmniTask.Stopped }
 
 procedure TOmniTask.StopTimer;
@@ -3166,6 +3178,15 @@ begin
   end;
 end; { TOmniTaskControl.DetachException }
 
+function TOmniTaskControl.DirectExecute:IOmniTaskControl;
+var
+  task: IOmniTask;
+begin
+  Result := Self;
+  task := CreateTask;
+  (task as IOmniTaskExecutor).Execute;
+end; { TOmniTaskControl.DirectExecute }
+
 function TOmniTaskControl.Enforced(forceExecution: boolean = true): IOmniTaskControl;
 begin
   if forceExecution then
@@ -3772,6 +3793,9 @@ begin
     Result := true;
     Exit;
   end;
+  if (not assigned(otcSharedInfo)) or otcSharedInfo.Terminating then
+    Exit(true);
+
   otcExecutor.Terminating := true;
   Stop;
   Result := WaitFor(maxWait_ms);
@@ -3794,7 +3818,7 @@ begin
       otcThread := nil;
     end
     else if assigned(otcOwningPool) then begin
-      otcOwningPool.Cancel(UniqueID);
+      otcOwningPool.Cancel(UniqueID, 0);
       otcOwningPool := nil;
     end;
   end;
