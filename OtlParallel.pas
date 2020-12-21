@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019 Primoz Gabrijelcic
+///Copyright (c) 2020 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,290 +35,11 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack
-///   Creation date     : 2010-01-08
-///   Last modification : 2019-01-11
-///   Version           : 2.01b
-///   History:
-///     2.01b: 2019-01-11
-///       - Using Parallel.Join.OnStopInvoke failed with access violation if Join
-///         was not executed with .NoWait.
-///     2.01a: 2019-01-10
-///       - Fixed pool scheduling for OtlParallel threads. Since 1.52 threads were
-///         incorrectly scheduled to the main pool unless IOmniTaskConfig.ThreadPool
-///         was used.
-///     2.01: 2019-01-03
-///       - [HHasenack] Implemented Parallel.ForEach(IEnumerator<T>) and
-///         Parallel.ForEach(IEnumerable<T>). Fixes #129.
+///   Last modification : 2020-12-21
+///   Version           : 2.0
 ///     2.0: 2018-06-14
 ///       - Started work on platform independency.
 ///       - TOmniTransitionEvent changed to IOmniEvent.
-///     1.52a: 2017-07-05
-///       - IOmniParallelLoop<T>.OnStopInvoke and IOmniParallelMapper<T1, T2> is removed
-///         for pre-XE7 compilers because of compiler bugs. This removes
-///         Paralell.Map.OnStopInvoke and Paralell.ForEach.OnStopInvoke support for
-///         pre-XE7 compilers.
-///     1.52: 2017-07-04
-///       - Added IOmniTaskConfig.NoThreadPool. This allows high-level abstractions to
-///         bypass thread pool entirely and run in 'non-pooled' threads.
-///     1.51: 2017-06-21
-///       - Added OnStop overload that accepts 'reference to procedure (const task: IOmniTask)'
-///         to Parallel.Join and Parallel.ParallelTask.
-///       - Added OnStopInvoke to all abstractions that implement OnStop method.
-///       - Fixed: Parallel.Future did not create task with the .Unobserved qualifier.
-///     1.50: 2017-06-11
-///       - Small tweaks in TOmniTimedTask implementation.
-///     1.49b: 2017-04-06
-///       - Compiles with Delphi 10.2 Tokyo.
-///       - GParallelPool.IdleWorkerThreadTimeout_sec was incorrectly set to 60.000 seconds
-///         instead of 60 seconds. [issue #93]
-///     1.49a: 2017-02-03
-///       - If a future's cancellation token is signalled before the future is even
-///         created, the future worker is not started at all. [issue #85]
-///     1.49: 2017-02-02
-///       - Added property IOmniWorkItem.SkipCompletionHandler.
-///         If it is set to True when work item is created or during its execution,
-///         request handlers for that work item won't be called.
-///         If it is set to True in the OnRequestDone_Asy handler, then only
-///         OnRequestDone handler won't be called.
-///     1.48: 2017-01-31
-///       - Implemented IOmniBackgroundWorker.OnStop.
-///     1.47: 2016-11-08
-///       - Added function IOmniPipeline.NoThrottling which disables throttling on an
-///         entire pipeline or one of its stages.
-///     1.46: 2016-10-17
-///       - Implemented Parallel.TimedTask.
-///     1.45: 2016-04-21
-///       - Parallel.For<T>(const arr: TArray<T>) is not available on 2009 and 2010
-///         because generics support is not good enough in these two compilers.
-///     1.44: 2016-01-14
-///       - Implemented EJoinException.DetachInner.
-///     1.43: 2015-12-16
-///       - Implemented Parallel.For<T>(const arr: TArray<T>).
-///     1.42: 2015-12-14
-///       - Added DetachException, FatalException, and IsExceptional to IOmniParallelTask.
-///     1.41: 2015-10-04
-///       - Imported mobile support by [Sean].
-///     1.40: 2015-09-04
-///       - TOmniPipeline.Destroy calls TOmniPipeline.Cancel so a pipeline can be shut
-///         down if user forgets to call Input.CompleteAdding.
-///     1.39a: 2015-09-03
-///       - IOmniPipeline.PipelineStage[].Input and .Output are now always available
-///         immediately after the IOmniPipeline.Run.
-///     1.39: 2015-02-17
-///       - Corrected Parallel.For execution for negative steps.
-///       - Implemented Parallel.For.CancelWith.
-///     1.38: 2015-02-04
-///       - NumTasks parameter can be negative. In that case, specified number of cores
-///         will be reserved for other purposes and all other will be used for processing.
-///         Example: If NumTasks(-2) is used when process has access to 8 cores,
-///         6 of them (8 - 2) will be used to run the task.
-///     1.37: 2015-01-30
-///       - Implemented Parallel.Map.
-///       - Task finalizers in Parallel.For were not called.
-///       - Implemented Parallel.For.WaitFor.
-///     1.36: 2014-09-27
-///       - Implemented simple and fast Parallel.&For which supports only integer ranges.
-///     1.35: 2014-07-03
-///       - Added overloaded Execute methods to IOmniParallelInitializedLoop and
-///         IOmniParallelInitializedLoop<T> so that IOmniTask parameter can be passed
-///         to the executor.
-///     1.34a: 2014-03-13
-///       - Fixed race condition in IOmniPipeline termination code.
-///     1.34: 2014-01-08
-///       - Added SetPriority function to the IOmniTaskConfig.
-///     1.33: 2013-10-14
-///       - Different thread pool can be specified for all operations via the new
-///         TaskConfig.ThreadPool function.
-///       - Included stability fixes by [Tommaso Ercole].
-///     1.32: 2013-10-13
-///       - Removed optimization which caused ForEach to behave differently on
-///         uniprocessor computers.
-///     1.31b: 2013-07-02
-///       - Simple pipline stage handles exceptions in the executor function.
-///     1.31a: 2013-03-10
-///       - ForEach destructor waits for all internal tasks to be stopped before the
-///         object is destroyed.
-///     1.31: 2013-02-21
-///       - Implemented IOmniPipeline.PipelineStage[] property returning Input/Ouput
-///         collections of a specific stage.
-///     1.30: 2012-10-03
-///       - Added Async/Await abstraction.
-///     1.29: 2012-08-12
-///       - IOmniBackgroundWorker extended with task initializer (Initialize) and
-///         task finalizer (Finalize).
-///       - IOmniWorkItem extended with property TaskState.
-///       - Inlined bunch of TOmniWorkItem methods.
-///     1.28: 2012-07-03
-///       - Added OnStop overload to Parallel.Pipeline that accepts
-///         'reference to procedure (const task: IOmniTask)'.
-///     1.27: 2012-06-09
-///       - Added OnStop overload to Parallel.ForEach that accepts
-///         'reference to procedure (const task: IOmniTask)'.
-///     1.26c: 2012-06-06
-///       - ForEach finalizer is called if an exception occurs inside the ForEach task.
-///       - Marked IOmniParallelLoop.OnMessage as deprecated.
-///     1.26b: 2012-06-05
-///       - Invalid 'joinState' was passed to the worker task in Parallel.Join if number
-///         of tasks to be executed was larger than the number of worker threads.
-///     1.26a: 2012-06-03
-///       - Parallel.Join was broken if number of task to be executed was larger than
-///         the number of worker threads.
-///     1.26: 2012-03-31
-///       - Task property added to the IOmniWorkItem interface.
-///       - Fixed overloaded OnMessage declaration in the IOmniTaskConfig interface.
-///     1.25: 2012-03-26
-///       - Parallel.Pipeline implements OnStop.
-///     1.24b: 2012-03-21
-///       - IOmniJoinState.Task was not correctly set in TOmniParallelJoin.Execute.
-///         Thanks to [Mayjest] for reproducible test case.
-///     1.24a: 2012-02-23
-///       - Exception handling in Async works correctly if Async has OnTerminated
-///         configured.
-///     1.24: 2012-02-20
-///       - Async re-raises task exception in OnTerminated handler.
-///     1.23a: 2011-12-09
-///       - Removed unused global variable GPipelinePool.
-///     1.23: 2011-11-25
-///       - Implemented background worker abstraction, Parallel.BackgroundWorker.
-///     1.22a: 2011-11-16
-///       - Number of producers/consumers in TOmniForkJoin<T>.StartWorkerTasks was off
-///         by 1. Thanks to [meishier] for tracking the bug down.
-///     1.22: 2011-11-15
-///       - Parallel.Join implementation fixed to not depend on thread pool specifics.
-///         Parallel.Join.NumTasks works again.
-///       - GUIDs removed again (GUIDs on generic interfaces don't work). Hard casting is
-///         used whenever possible.
-///     1.21: 2011-11-11
-///       - All interfaces decorated with GUIDs.
-///     1.20a: 2011-11-09
-///       - [Anton Alisov] Fixed potential leak in Pipeline exception handling.
-///     1.20: 2011-11-03
-///       - Fixed two Parallel.Pipeline overloads to not override internal input
-///         collection if 'input' parameter was not provided.
-///       - Only one thread pool used internally.
-///       - GlobalParallelPool no longer limits maximum number of concurrent threads.
-///     1.19: 2011-11-01
-///       - Implemented IOmniParallelTask.TaskConfig.
-///       - Added IOmniParallelTask.Execute overload.
-///       - Added IOmniParallelIntoLoop and IOmniParallelIntoLoop<T> Execute overload.
-///     1.18: 2011-09-06
-///       - Initial implementation of the Parallel.ParallelTask.
-///       - Parallel.Join implements OnStop.
-///     1.17: 2011-08-29
-///       - *** Breaking change *** IOmniPipeline.Input renamed to IOmniPipeline.From.
-///       - *** Breaking change *** IOmniPipeline.Run now returns Self instead of
-///         IOmniBlockingCollection.
-///       - Added properties Input, Output: IOmniBlockingCollection to the IOmniPipeline.
-///         Input always points to valid blocking collection (either the built-in one or
-///         to the collection provided in the From method) and can be used to send data
-///         to the first stage. Output can be used to read data from the last stage.
-///       - Exception in any stage is caught and stored as an exception object in the
-///         TOmniValue wrapper, which is passed to the output collection so it can be
-///         processed by the next stage. By default, the next stage automatically reraises
-///         this exception (and so on until the exception is passed to the final
-///         collection) until you decorate the stage with the .HandleExceptions method.
-///         (You can also mark all stages to handle exceptions by calling HandleExceptions
-///         before defining any stage.) If a stage is handling exceptions, it will receive
-///         TOmniValue holding an exception on input (value.IsException will be true). In
-///         this case, it should either reraise the exception or (eventually) release the
-///         exception object (value.AsException.Free). Demo 48_OtlParallelExceptions shows
-///         possible ways to handle exceptions in the IOmniPipeline.
-///     1.16: 2011-08-27
-///       - Added two more Parallel.Pipeline overloads.
-///       - Parallel.Pipeline accepts simple stages - TPipelineSimpleStageDelegate -
-///         where collection iteration is implemented internally.
-///       - Implemented IOmniPipeline.WaitFor.
-///       - Added support for parameterless OnTerminated version to the TaskConfig.
-///     1.15: 2011-07-26
-///       - *** Breaking change *** Parallel.Join reimplemented as IOmniParallelJoin
-///         interface to add exception and cancellation support. User code must call
-///         .Execute on the interface returned from the Parallel.Join to start the
-///         execution.
-///       - Parallel.Join(const task: TOmniTaskDelegate) is no longer supported. It was
-///         replaced with the Parallel.Join(const task: IOmniJoinState).
-///       - Parallel.Join no longer supports taskConfig parameter (replaced by the
-///         IOmniParallelJoin.TaskConfig function).
-///       - Number of simultaneously executed task in Parallel.Join may be set by calling
-///         the new IOmniParallelJoin.NumTasks function.
-///     1.14: 2011-07-21
-///       - Parallel.Future implements WaitFor.
-///     1.13: 2011-07-18
-///       - Added exception handling to Parallel.Join. Tasks' fatal exceptions are wrapped
-///         in EJoinException and raised at the end of Parallel.Join method.
-///       - Two version of Parallel.Async (the ones with explicit termination handlers)
-///         were removed as this functionality can be achieved by using
-///         Parallel.TaskConfig.OnTerminated.
-///     1.12: 2011-07-18
-///       - Added exception handling to IOmniFuture<T>. Tasks' fatal exception is raised
-///         in .Value. New function .FatalException and .DetachException.
-///       - Parallel.Join with TProc parameters was leaking memory.
-///     1.11: 2011-07-16
-///       - GParallelPool and GPipelinePool are now initialized on the fly which allows
-///         OtlParallel to be used inside a DLL.
-///       - GParallelPool and GPipelinePool are now private and must be accessed with
-///         global methods GlobalParallelPool and GlobalPipelinePool.
-///     1.10a: 2011-06-25
-///       - Bug fixed: Parallel.ForEach was never running on more than
-///         Process.Affinity.Count tasks.
-///     1.10: 2011-04-16
-///       - Parallel.Join supports TaskConfig.
-///       - Parallel.Future supports TaskConfig.
-///       - Parallel.Pipeline supports TaskConfig.
-///       - Parallel.ForEach supports TaskConfig.
-///     1.09: 2011-04-06
-///       - Implemented Parallel.ForkJoin.
-///       - Implemented Parallel.Async.
-///       - Implemented Parallel.TaskConfig.
-///     1.08: 2011-03-09
-///       - Faster IOmniFuture<T>.IsDone.
-///     1.07a: 2011-02-15
-///       - Compiles in Delphi 2009.
-///     1.07: 2010-12-09
-///       - Parallel.Join(TProc) executes one task in the current thread.
-///       - Parallel.ForEach.NoWait runs on NumCores-1 tasks.
-///       - Parallel.Pipeline throttling low watermark defaults to 1/4 of the high
-///         watermark if pipeline runs on more tasks than there are available cores.
-///     1.06: 2010-12-02
-///       - Parallel.Pipeline implements Cancel method.
-///       - Parallel.Pipeline stage delegate can accept additional parameter of type
-///         IOmniTask. Stage can use it to check if the pipeline was cancelled.
-///       - Implemented task state in ForEach (ForEach.Initialize.Finalize.Execute).
-///     1.05c: 2010-11-25
-///       - CompleteAdding is called only when all tasks for the stage have completed the
-///         work.
-///       - .NumTasks works correctly after .Stage().
-///     1.05b: 2010-11-25
-///       - Parallel.Pipeline uses its own thread pool with unlimited number of running
-///         threads.
-///     1.05a: 2010-11-22
-///       - Two overloaded versions of Join added back. They were needed after all.
-///       - Fixed bugs in Join implementation - thanks to Mason Wheeler for
-///         the bug report.
-///       - Parallel.Pipeline.Run returns output collection.
-///       - Parallel.Pipeline.Throttle is fully implemented. Throttling level defaults to
-///         10240 elements.
-///     1.05: 2010-11-21
-///       - OtlFutures functionality moved into this unit.
-///       - Futures can be created by calling Parallel.Future<T>(action).
-///       - GForEachPool renamed into GParallelPool and used for all Parallel
-///         tasking.
-///       - Two overloaded versions of Join removed.
-///     1.04: 2010-11-20
-///       - Small fix regarding setting GParallelPool.MaxExecuting.
-///     1.04: 2010-07-22
-///       - Introduced overloaded Execute methods with delegates that accept the task
-///         interface parameter.
-///       - Introduced OnTaskCreate hook and MonitorWith shorthand.
-///     1.03: 2010-07-17
-///       - ForEach tasks are scheduled in the specialized pool.
-///     1.02: 2010-07-01
-///       - Includes OTLOptions.inc.
-///     1.01: 2010-02-02
-///       - Implemented ForEach(rangeLow, rangeHigh).
-///       - Implemented ForEach.Aggregate.
-///       - ForEach optimized for execution on single-core computer.
-///       - Implemented Parallel.Join.
-///       - Removed Stop method. Loop can be cancelled with a cancellation token.
 ///     1.0: 2010-01-14
 ///       - Released.
 ///</para></remarks>
@@ -1089,10 +810,12 @@ type
   TOmniParallelTaskDelegate = TOmniTaskDelegate;
 
   IOmniParallelTask = interface
+    function  Cancel:IOmniParallelTask;
     function  DetachException: Exception;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  FatalException: Exception;
+    function  IsCancelled: boolean;
     function  IsExceptional: boolean;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
@@ -1518,10 +1241,12 @@ type
     optNumTasks: integer;
   public
     constructor Create;
+    function  Cancel:IOmniParallelTask; inline;
     function  DetachException: Exception; inline;
     function  Execute(const aTask: TProc): IOmniParallelTask; overload;
     function  Execute(const aTask: TOmniParallelTaskDelegate): IOmniParallelTask; overload;
     function  FatalException: Exception; inline;
+    function  IsCancelled: boolean; inline;
     function  IsExceptional: boolean; inline;
     function  NoWait: IOmniParallelTask;
     function  NumTasks(numTasks: integer): IOmniParallelTask;
@@ -1530,7 +1255,7 @@ type
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
     function  WaitFor(timeout_ms: cardinal): boolean;
-  end; { IOmniParallelTask }
+  end; { TOmniParallelTask }
 
   TOmniTaskConfigTerminated = record
     Event : TOmniTaskTerminatedEvent;
@@ -4541,6 +4266,12 @@ begin
     end);
 end; { TOmniParallelTask.Execute }
 
+function TOmniParallelTask.Cancel:IOmniParallelTask;
+begin
+  Result := self;
+  optJoin.Cancel;
+end; { TOmniParallelTask.Cancel }
+
 function TOmniParallelTask.DetachException: Exception;
 begin
   Result := optJoin.DetachException;
@@ -4571,6 +4302,11 @@ function TOmniParallelTask.FatalException: Exception;
 begin
   Result := optJoin.FatalException;
 end; { TOmniParallelTask.FatalException }
+
+function TOmniParallelTask.IsCancelled: boolean;
+begin
+  Result := optJoin.IsCancelled;
+end; { TOmniParallelTask.IsCancelled }
 
 function TOmniParallelTask.IsExceptional: boolean;
 begin
