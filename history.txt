@@ -20,15 +20,20 @@
 
 3.07.9: <<unreleased>>
 - New features:
-  - New unit OtlSync.Utils.
-  - TOmniTaskControl.OnMessage and .OnTerminated free the executor if the eventHandler is nil
+  - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
+  - TOmniTaskControl.OnMessage and .OnTerminated free the executor
+    if the eventHandler is nil.
+  - [HHasenack] Added IOmniTaskControl.DirectExecute which executes task in the
+    current thread.
+  - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
 
 - Bug fixes:
   - Fixed warnings in OtlComm.
   - Fixed link to support forum in all units.
   - Fixed TOmniMREW.TryEnterWriteLock [issue #149].
-  - Fixed: Calling TOmniWaitObjectList.Remove removed only the ResponseHandlers[] handler and not the AnonResponseHandlers[] handler
-  
+  - Fixed: Calling TOmniWaitObjectList.Remove removed only
+    the ResponseHandlers[] handler and not the AnonResponseHandlers[] handler.
+
 3.07.8: 2020-05-30
 
 - New features:
