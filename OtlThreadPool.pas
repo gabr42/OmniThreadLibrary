@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-02-10
-///   Version           : 2.19b
+///   Last modification : 2020-12-21
+///   Version           : 2.20
 /// </para><para>
 ///   History:
+///     2.20: 2020-12-21
+///       - Added optional timeout parameter to IOmniThreadPool.Cancel.
 ///     2.19b: 2019-02-10
 ///       - Thread pool creation code waits for thread pool management thread to be
 ///         started and initialized. Without that, CountQueued and CountExecuting may
@@ -248,8 +250,8 @@ type
     procedure SetName(const value: string);
     procedure SetWaitOnTerminate_sec(value: integer);
     //
-    function  Cancel(taskID: int64): boolean; overload;
-    function  Cancel(taskID: int64; signalCancellationToken: boolean): boolean; overload;
+    function  Cancel(taskID: int64; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
+    function  Cancel(taskID: int64; signalCancellationToken: boolean; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
     procedure CancelAll; overload;
     procedure CancelAll(signalCancellationToken: boolean); overload;
     function  CountExecuting: integer;
@@ -601,8 +603,8 @@ type
   public
     constructor Create(const name: string);
     destructor  Destroy; override;
-    function  Cancel(taskID: int64): boolean; overload;
-    function  Cancel(taskID: int64; signalCancellationToken: boolean): boolean; overload;
+    function  Cancel(taskID: int64; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
+    function  Cancel(taskID: int64; signalCancellationToken: boolean; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
     procedure CancelAll; overload;
     procedure CancelAll(signalCancellationToken: boolean); overload;
     function  CountExecuting: integer;
@@ -1017,20 +1019,23 @@ begin
     owAsy_OnUnhandledWorkerException(thread, E);
 end; { TOTPWorker.Asy_ForwardUnhandledWorkerException }
 
-/// <returns>True: Normal exit, False: Thread was killed.</returns> 
 procedure TOTPWorker.Cancel(const params: TOmniValue);
 var
-  endWait_ms   : int64;
-  iWorker      : integer;
-  signalToken  : boolean;
-  taskID       : int64;
-  waitParam    : TOmniValue;
-  wasTerminated: boolean;
-  worker       : TOTPWorkerThread;
-  workItem     : TOTPWorkItem;
+  endWait_ms    : int64;
+  iWorker       : integer;
+  signalToken   : boolean;
+  taskID        : int64;
+  waitForTask_ms: int64;
+  waitParam     : TOmniValue;
+  wasTerminated : boolean;
+  worker        : TOTPWorkerThread;
+  workItem      : TOTPWorkItem;
 begin
   taskID := params[0];
   signalToken := params[1];
+  waitForTask_ms := params[2];
+  if waitForTask_ms < 0 then
+    waitForTask_ms := int64(WaitOnTerminate_sec.Value) * 1000;
   wasTerminated := true;
   iWorker := 0;
   while iWorker < owRunningWorkers.Count do begin
@@ -1039,7 +1044,7 @@ begin
       {$IFDEF LogThreadPool}Log('Cancel request %d on thread %p:%d', [taskID, pointer(worker), worker.threadID]); {$ENDIF LogThreadPool}
       owRunningWorkers.Delete(iWorker);
       worker.Asy_Stop(signalToken);
-      endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + int64(WaitOnTerminate_sec.Value) * 1000;
+      endWait_ms := {$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} + waitForTask_ms;
       while ({$IFDEF MSWINDOWS} DSiTimeGetTime64 {$ELSE} TStopWatch.GetTimeStamp {$ENDIF} < endWait_ms) and (not worker.Stopped) do begin
         ProcessMessages;
         Sleep(10);
@@ -1080,7 +1085,7 @@ begin
     end;
     Inc(iWorker);
   end; // for iWorker
-  waitParam := params[2];
+  waitParam := params[3];
   (waitParam.AsObject as TOmniWaitableValue).Signal(wasTerminated);
 end; { TOTPWorker.Cancel }
 
@@ -1667,22 +1672,23 @@ end; { TOmniThreadPool.Asy_ForwardUnhandledWorkerException }
 /// <returns>True: Normal exit, False: Thread was killed.</returns>
 {$WARN NO_RETVAL OFF}
 // starting with XE, Delphi complains that result is not always assigned
-function TOmniThreadPool.Cancel(taskID: int64; signalCancellationToken: boolean): boolean;
+function TOmniThreadPool.Cancel(taskID: int64; signalCancellationToken: boolean;
+  timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean;
 var
   res: TOmniWaitableValue;
 begin
   res := TOmniWaitableValue.Create;
   try
-    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, signalCancellationToken, res]);
+    otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, signalCancellationToken, timeout_ms, res]);
     res.WaitFor(INFINITE);
     Result := res.Value;
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.Cancel }
 {$WARN NO_RETVAL ON}
 
-function TOmniThreadPool.Cancel(taskID: int64): boolean;
+function TOmniThreadPool.Cancel(taskID: int64; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean;
 begin
-  Result := Cancel(taskID, not (tpoPreventCancellationTokenOnCancel in Options));
+  Result := Cancel(taskID, not (tpoPreventCancellationTokenOnCancel in Options), timeout_ms);
 end; { TOmniThreadPool.Cancel }
 
 procedure TOmniThreadPool.CancelAll(signalCancellationToken: boolean);

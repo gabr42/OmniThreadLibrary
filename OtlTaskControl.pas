@@ -42,6 +42,7 @@
 ///     1.42: 2020-12-21
 ///       - [HHasenack] Added IOmniTaskControl.DirectExecute which executes
 ///         task in the current thread.
+///       - IOmniTaskControl.Terminate cancels thread pool tasks with timeout 0.
 ///     1.41: 2019-04-26
 ///       - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
 ///     1.40c: 2019-03-22
@@ -1735,7 +1736,10 @@ end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
 begin
-  Result := otSharedInfo_ref.Stopped;
+  if not assigned(otSharedInfo_ref) then
+    Result := true
+  else
+    Result := otSharedInfo_ref.Stopped;
 end; { TOmniTask.Stopped }
 
 procedure TOmniTask.StopTimer;
@@ -3789,6 +3793,9 @@ begin
     Result := true;
     Exit;
   end;
+  if (not assigned(otcSharedInfo)) or otcSharedInfo.Terminating then
+    Exit(true);
+
   otcExecutor.Terminating := true;
   Stop;
   Result := WaitFor(maxWait_ms);
@@ -3811,7 +3818,7 @@ begin
       otcThread := nil;
     end
     else if assigned(otcOwningPool) then begin
-      otcOwningPool.Cancel(UniqueID);
+      otcOwningPool.Cancel(UniqueID, 0);
       otcOwningPool := nil;
     end;
   end;
