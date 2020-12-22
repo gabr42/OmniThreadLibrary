@@ -3793,8 +3793,10 @@ begin
     Result := true;
     Exit;
   end;
-  if (not assigned(otcSharedInfo)) or otcSharedInfo.Terminating then
-    Exit(true);
+  if (not assigned(otcSharedInfo)) or otcSharedInfo.Terminating then begin
+    Result := true;
+    Exit;
+  end;
 
   otcExecutor.Terminating := true;
   Stop;
