@@ -39,7 +39,6 @@ implementation
 {$IFDEF Unicode}
 uses
   Math,
-  System.Diagnostics,
   OtlParallel;
 
 { TestParallelFor }
@@ -99,7 +98,6 @@ begin
   for i := 1 to 10 do
     TestRange(i, 10, i);
 end;
-
 
 procedure TestParallelFor.InternalTestStepZero;
 begin
@@ -187,9 +185,9 @@ procedure TestJoin.TestTerminationAllStuck;
 var
   i      : integer;
   join   : IOmniParallelJoin;
-  started: TArray<boolean>;
-  stopped: TArray<boolean>;
-  sw     : TStopwatch;
+  started: array [0..1] of boolean;
+  stopped: array [0..1] of boolean;
+  time   : int64;
 
   function MakeTask(idx: integer; hangForever: boolean): TProc;
   begin
@@ -207,20 +205,19 @@ var
 begin
   // Tests IOmniParallelJoin.Terminate when all tasks are stuck and don't terminate.
 
-  SetLength(started, 2);
   FillChar(started[0], Length(started), false);
-  SetLength(stopped, 2);
   FillChar(stopped[0], Length(stopped), false);
 
   join := Parallel.Join(MakeTask(0, true), MakeTask(1, true)).NoWait.Execute;
-  sw := TStopwatch.StartNew;
+  time := DSiTimeGetTime64;
   CheckFalse(join.Terminate(500), 'Terminate');
-  CheckTrue(sw.ElapsedMilliseconds < 1900, 'Elapsed time');
+  time := DSiTimeGetTime64 - time;
+  CheckTrue(time < 1900, 'Elapsed time');
 
   Sleep(2000); // in case tasks are not really dead
   for i := 0 to 1 do begin
-    CheckTrue(started[i], 'started ' + i.ToString);
-    CheckFalse(stopped[i], 'stopped ' + i.ToString);
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckFalse(stopped[i], 'stopped ' + IntToStr(i));
   end;
 end;
 
@@ -228,9 +225,9 @@ procedure TestJoin.TestTerminationAllTerminated;
 var
   i      : integer;
   join   : IOmniParallelJoin;
-  started: TArray<boolean>;
-  stopped: TArray<boolean>;
-  sw     : TStopwatch;
+  started: array [0..1] of boolean;
+  stopped: array [0..1] of boolean;
+  time   : int64;
 
   function MakeTask(idx: integer; hangForever: boolean): TProc;
   begin
@@ -248,19 +245,18 @@ var
 begin
   // Tests IOmniParallelJoin.Terminate when some tasks are stuck and don't terminate.
 
-  SetLength(started, 2);
   FillChar(started[0], Length(started), false);
-  SetLength(stopped, 2);
   FillChar(stopped[0], Length(stopped), false);
 
   join := Parallel.Join(MakeTask(0, true), MakeTask(1, false)).NoWait.Execute;
-  sw := TStopwatch.StartNew;
+  time := DSiTimeGetTime64;
   CheckFalse(join.Terminate(500), 'Terminate');
-  CheckTrue(sw.ElapsedMilliseconds < 1900, 'Elapsed time');
+  time := DSiTimeGetTime64 - time;
+  CheckTrue(time < 1900, 'Elapsed time');
 
   for i := 0 to 1 do begin
-    CheckTrue(started[i], 'started ' + i.ToString);
-    CheckEquals(i = 1, stopped[i], 'stopped ' + i.ToString);
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckEquals(i = 1, stopped[i], 'stopped ' + IntToStr(i));
   end
 end;
 
@@ -268,9 +264,9 @@ procedure TestJoin.TestTerminationPartialStuck;
 var
   i      : integer;
   join   : IOmniParallelJoin;
-  started: TArray<boolean>;
-  stopped: TArray<boolean>;
-  sw     : TStopwatch;
+  started: array [0..1] of boolean;
+  stopped: array [0..1] of boolean;
+  time   : int64;
 
   function MakeTask(idx: integer; hangForever: boolean): TProc;
   begin
@@ -288,19 +284,18 @@ var
 begin
   // Tests IOmniParallelJoin.Terminate when all tasks terminate correctly.
 
-  SetLength(started, 2);
   FillChar(started[0], Length(started), false);
-  SetLength(stopped, 2);
   FillChar(stopped[0], Length(stopped), false);
 
   join := Parallel.Join(MakeTask(0, false), MakeTask(1, false)).NoWait.Execute;
-  sw := TStopwatch.StartNew;
+  time := DSiTimeGetTime64;
   CheckTrue(join.Terminate(500), 'Terminate');
-  CheckTrue(sw.ElapsedMilliseconds < 1900, 'Elapsed time');
+  time := DSiTimeGetTime64 - time;
+  CheckTrue(time < 1900, 'Elapsed time');
 
   for i := 0 to 1 do begin
-    CheckTrue(started[i], 'started ' + i.ToString);
-    CheckTrue(stopped[i], 'stopped ' + i.ToString);
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckTrue(stopped[i], 'stopped ' + IntToStr(i));
   end;
 end;
 
