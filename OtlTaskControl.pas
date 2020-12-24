@@ -1444,7 +1444,10 @@ end; { TOmniTask.SetTimer }
 
 function TOmniTask.Stopped: boolean;
 begin
-  Result := otSharedInfo_ref.Stopped;
+  if not assigned(otSharedInfo_ref) then
+    Result := true
+  else
+    Result := otSharedInfo_ref.Stopped;
 end; { TOmniTask.Stopped }
 
 procedure TOmniTask.StopTimer;
@@ -3332,6 +3335,9 @@ begin
     Result := true;
     Exit;
   end;
+  if (not assigned(otcSharedInfo)) or otcSharedInfo.Terminating then
+    Exit(true);
+
   otcExecutor.Terminating := true;
   Stop;
   Result := WaitFor(maxWait_ms);
@@ -3352,7 +3358,7 @@ begin
       otcThread := nil;
     end
     else if assigned(otcOwningPool) then begin
-      otcOwningPool.Cancel(UniqueID);
+      otcOwningPool.Cancel(UniqueID, 0);
       otcOwningPool := nil;
     end;
   end;

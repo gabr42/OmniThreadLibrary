@@ -767,6 +767,7 @@ type
     function  Task(const task: TProc): IOmniParallelJoin; overload;
     function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
+    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelJoin }
 
@@ -804,6 +805,7 @@ type
     function  Task(const aTask: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  Task(const aTask: TProc): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
+    function  Terminate(timeout_ms: cardinal = INFINITE): boolean;
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniParallelJoin }
 
@@ -823,6 +825,7 @@ type
     function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
+    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
@@ -1254,6 +1257,7 @@ type
     function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
+    function  Terminate(timeout_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniParallelTask }
 
@@ -1350,8 +1354,8 @@ type
     procedure Start; inline;
     procedure Stop; inline;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniTimedTask; inline;
-    function  Terminate(maxWait_ms: cardinal): boolean; inline;
-    function  WaitFor(maxWait_ms: cardinal): boolean; inline;
+    function  Terminate(timeout_ms: cardinal): boolean; inline;
+    function  WaitFor(timeout_ms: cardinal): boolean; inline;
     property Active: boolean read GetActive write SetActive;
     property Interval: integer read GetInterval write SetInterval;
   end; { TOmniTimedTask }
@@ -1481,8 +1485,8 @@ type
     procedure Schedule(const workItem: IOmniWorkItem; const workItemConfig: IOmniWorkItemConfig = nil);
     function  StopOn(const token: IOmniCancellationToken): IOmniBackgroundWorker;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniBackgroundWorker;
-    function  Terminate(maxWait_ms: cardinal): boolean;
-    function  WaitFor(maxWait_ms: cardinal): boolean;
+    function  Terminate(timeout_ms: cardinal): boolean;
+    function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniBackgroundWorker}
 
   TOmniAwait = class(TInterfacedObject, IOmniAwait)
@@ -1726,6 +1730,9 @@ end; { TOmniParallelJoin.FatalException }
 
 function TOmniParallelJoin.InternalWaitFor(timeout_ms: cardinal): boolean;
 begin
+  if not assigned(FCountStopped) then
+    raise Exception.Create('Task was not started');
+
   // Blocks until FCountStopped value is zero.
   {$IFDEF MSWINDOWS}
   Result := WaitForSingleObject(FCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0;
@@ -1812,6 +1819,17 @@ begin
   FTaskConfig := config;
   Result := Self;
 end; { TOmniParallelJoin.TaskConfig }
+
+function TOmniParallelJoin.Terminate(timeout_ms: cardinal = INFINITE): boolean;
+var
+  task: IOmniJoinState;
+begin
+  Result := WaitFor(timeout_ms);
+  if not Result then
+    for task in FJoinStates do
+      if not task.Task.Stopped then
+        (task as IOmniJoinStateEx).TaskControl.Terminate(0);
+end; { TOmniParallelJoin.Terminate }
 
 function TOmniParallelJoin.WaitFor(timeout_ms: cardinal): boolean;
 var
@@ -2091,8 +2109,8 @@ begin
   Result.Stages(stages);
 end; { Parallel.Pipeline }
 
-class function Parallel.Pipeline(const stages: array of TPipelineStageDelegateEx; const
-  input: IOmniBlockingCollection): IOmniPipeline;
+class function Parallel.Pipeline(const stages: array of TPipelineStageDelegateEx;
+  const input: IOmniBlockingCollection): IOmniPipeline;
 begin
   Result := Parallel.Pipeline;
   if assigned(input) then
@@ -2100,8 +2118,8 @@ begin
   Result.Stages(stages);
 end; { Parallel.Pipeline }
 
-class procedure Parallel.Start(const taskControl: IOmniTaskControl; const taskConfig:
-  IOmniTaskConfig);
+class procedure Parallel.Start(const taskControl: IOmniTaskControl;
+  const taskConfig: IOmniTaskConfig);
 var
   taskCfg: IOmniTaskConfigInternal;
 begin
@@ -4296,7 +4314,7 @@ begin
   if not optNoWait then
     WaitFor(INFINITE);
   Result := Self;
-end;
+end; { TOmniParallelTask.Execute }
 
 function TOmniParallelTask.FatalException: Exception;
 begin
@@ -4365,6 +4383,11 @@ begin
   optJoin.TaskConfig(config);
   Result := Self;
 end; { TOmniParallelTask.TaskConfig }
+
+function TOmniParallelTask.Terminate(timeout_ms: cardinal): boolean;
+begin
+  Result := optJoin.Terminate(timeout_ms);
+end; { TOmniParallelTask.Terminate }
 
 function TOmniParallelTask.WaitFor(timeout_ms: cardinal): boolean;
 begin
@@ -4736,9 +4759,9 @@ begin
   Result := Self;
 end; { TOmniBackgroundWorker.TaskConfig }
 
-function TOmniBackgroundWorker.Terminate(maxWait_ms: cardinal): boolean;
+function TOmniBackgroundWorker.Terminate(timeout_ms: cardinal): boolean;
 begin
-  Result := WaitFor(maxWait_ms);
+  Result := WaitFor(timeout_ms);
   {$IFDEF MSWINDOWS}
   if Result then begin
     if assigned(FObserver) then begin
@@ -4750,12 +4773,12 @@ begin
   {$ENDIF MSWINDOWS}
 end; { TOmniBackgroundWorker.Terminate }
 
-function TOmniBackgroundWorker.WaitFor(maxWait_ms: cardinal): boolean;
+function TOmniBackgroundWorker.WaitFor(timeout_ms: cardinal): boolean;
 begin
   Result := true;
   if assigned(FWorker) then begin
     FWorker.Input.CompleteAdding;
-    Result := FWorker.WaitFor(maxWait_ms);
+    Result := FWorker.WaitFor(timeout_ms);
   end;
 end; { TOmniBackgroundWorker.WaitFor }
 
@@ -5246,14 +5269,14 @@ begin
   Result := Self;
 end; { TOmniTimedTask.TaskConfig }
 
-function TOmniTimedTask.Terminate(maxWait_ms: cardinal): boolean;
+function TOmniTimedTask.Terminate(timeout_ms: cardinal): boolean;
 begin
-  Result := FWorker.Terminate(maxWait_ms);
+  Result := FWorker.Terminate(timeout_ms);
 end; { TOmniTimedTask.Terminate }
 
-function TOmniTimedTask.WaitFor(maxWait_ms: cardinal): boolean;
+function TOmniTimedTask.WaitFor(timeout_ms: cardinal): boolean;
 begin
-  Result := FWorker.WaitFor(maxWait_ms);
+  Result := FWorker.WaitFor(timeout_ms);
 end; { TOmniTimedTask.WaitFor }
 
 initialization

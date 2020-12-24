@@ -26,6 +26,8 @@
   - [HHasenack] Added IOmniTaskControl.DirectExecute which executes task in the
     current thread.
   - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
+  - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
+  - Added optional timeout parameter to IOmniThreadPool.Cancel.
 
 - Bug fixes:
   - Fixed warnings in OtlComm.
