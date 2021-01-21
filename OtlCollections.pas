@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019 Primoz Gabrijelcic
+///Copyright (c) 2021 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2018-06-14
-///   Version           : 2.01
+///   Last modification : 2021-01-21
+///   Version           : 2.01a
 ///</para><para>
 ///   History:
+///     2.01a: 2021-01-21
+///       - Better TryTake implementation for non-Windows platforms.
 ///     2.01: 2018-06-14
 ///       - TOmniTransitionEvent changed to IOmniEvent.
 ///     2.0: 2018-04-24
@@ -752,9 +754,9 @@ begin
           Result := true;
           break; //repeat
         end;
-        if (awaited = wrSignaled) and (Signaller = (obcResourceCount as IOmniSynchroObject).Synchro) then
+        if (awaited = wrSignaled) and assigned(obcResourceCount) and (Signaller = (obcResourceCount as IOmniSynchroObject).Synchro) then
           CompleteAdding;
-        if {(}awaited <> wrSignaled {) or (Signaller <> obcObserver)} then begin
+        if (awaited = wrSignaled) and (Signaller = obcCompletedSignal) then begin
           Result := false;
           break; //while
         end;
