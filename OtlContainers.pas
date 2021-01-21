@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019 Primoz Gabrijelcic
+///Copyright (c) 2021 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2018-04-17
-///   Version           : 3.02b
+///   Last modification : 2021-01-21
+///   Version           : 3.02c
 ///</para><para>
 ///   History:
+///     3.02c: 2021-01-21
+///       - Fixed TOmniBaseBoundedStack.Pop when stack was empty and OTL_HaveCmpx16b
+///         was not defined.
+///       - TOmniBaseQueue.Create was not correctly initialized when OTL_HaveCmpx16b
+///         was not defined.
 ///     3.02b: 2018-04-17
 ///       - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
 ///         TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
@@ -665,6 +670,8 @@ TryAgain:
       goto TryAgain;
   end; //with chain
   {$ELSE ~OTL_HaveCmpx16b}
+  if not assigned(chain.PData) then
+    Exit(nil);
   Result := chain.PData;
   chain.PData := Result^.Next;
   {$ENDIF ~OTL_HaveCmpx16b}
@@ -1287,6 +1294,9 @@ begin
     PartitionMemory(memory);
     Assert(obcMemStack.Push(memory));
   end;
+  {$IFNDEF OTL_HaveCmpx16b}
+  obcLock := CreateOmniCriticalSection;
+  {$ENDIF ~OTL_HaveCmpx16b}
   Initialize;
 end; { TOmniBaseQueue.Create }
 
