@@ -5,13 +5,20 @@ unit SmokeTest;
 interface
 
 uses
-  TestFramework, SysUtils, Windows, DSiWin32;
+  SysUtils,
+  {$IFDEF MSWindows}
+  Windows,
+  DSiWin32,
+  {$ENDIF}
+  TestFramework;
 
 type
   // Regression tests
   TSmokeTest = class(TTestCase)
   published
+    {$IFDEF MSWindows}
     procedure TestDSiClassWndProcParamSize;
+    {$ENDIF}
     procedure TestTOmniValueArrayInt64Cast;
     procedure TestCancelledFuture;
   end;
@@ -29,6 +36,7 @@ type
 
 { TSmokeTest }
 
+{$IFDEF MSWindows}
 procedure TSmokeTest.TestDSiClassWndProcParamSize;
 begin
   {$IFDEF CPUX64}
@@ -39,6 +47,7 @@ begin
   CheckEquals(4, SizeOf(TDSiLParam));
   {$ENDIF}
 end;
+{$ENDIF}
 
 procedure TSmokeTest.TestTOmniValueArrayInt64Cast;
 var
