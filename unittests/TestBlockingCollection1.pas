@@ -3,7 +3,7 @@ unit TestBlockingCollection1;
 interface
 
 uses
-  TestFramework, GpStuff,OtlContainers, SysUtils,
+  TestFramework, GpStuff, OtlContainers, SysUtils,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync;
 
 type
@@ -22,7 +22,7 @@ implementation
 
 uses
   Classes, SyncObjs,
-  OtlParallel;
+  System.Threading;
 
 type
   TMemLeakCheckObj=class(TInterfacedObject)
@@ -38,15 +38,18 @@ var
   coll     : IOmniBlockingCollection;
   lastAdded: integer;
   lastRead : TOmniValue;
+  join     : ITask;
 begin
   coll := TOmniBlockingCollection.Create;
   lastAdded := -1;
   lastRead := -2;
-  Parallel.Join([
+
+  join := TParallel.Join([
     procedure
     var
       i: integer;
     begin
+      TThread.Current.NameThreadForDebugging('Add');
       for i := 1 to 100000 do begin
         if not coll.TryAdd(i) then
           break;
@@ -56,16 +59,22 @@ begin
 
     procedure
     begin
-      Sleep(1);
+      TThread.Current.NameThreadForDebugging('Complete');
+      while lastAdded = -1 do
+        Sleep(1);
       coll.CompleteAdding;
     end,
 
     procedure
     begin
+      TThread.Current.NameThreadForDebugging('Take');
       while coll.TryTake(lastRead, INFINITE) do
         ;
+      Sleep(0);
     end
-  ]).Execute;
+  ]);
+  join.Wait(INFINITE);
+
   CheckEquals(lastAdded, lastRead.AsInteger);
 end;
 

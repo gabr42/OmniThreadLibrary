@@ -72,7 +72,7 @@ begin
   CheckEquals(4, Length(expected));
   CheckEquals(expected[0], ov.IsObject);
   CheckEquals(expected[1], ov.IsString);
-  CheckEquals(expected[2], ov.IsWideString);
+  {$IFDEF MSWindows}CheckEquals(expected[2], ov.IsWideString);{$ENDIF}
   CheckEquals(expected[3], ov.IsVariant);
 end;
 
@@ -177,9 +177,11 @@ begin
   ov := '42';
   CheckEquals('42', ov.AsString);
   CheckWrappedType(ov, [false, true, false, false]); CheckSimpleType(ov, [false, false, false, false]); CheckFalse(ov.IsInterface);
+  {$IFDEF MSWindows}
   ov.AsWideString := '17';
   CheckEquals('17', ov.AsWideString);
   CheckWrappedType(ov, [false, false, true, false]); CheckSimpleType(ov, [false, false, false, false]); CheckFalse(ov.IsInterface);
+  {$ENDIF}
   v := 127;
   ov := v;
   CheckEquals(integer(127), integer(ov.AsVariant));

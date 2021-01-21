@@ -73,7 +73,6 @@
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
         <SanitizedProjectName>ConsoleTestRunner</SanitizedProjectName>
-        <DCC_Define>TESTINSIGHT;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <DCC_UsePackage>DBXSqliteDriver;RESTComponents;DBXInterBaseDriver;emsclientfiredac;tethering;DataSnapFireDAC;bindcompfmx;FmxTeeUI;fmx;FireDACIBDriver;FireDACDBXDriver;dbexpress;IndyCore;dsnap;emsclient;DataSnapCommon;FireDACCommon;RESTBackendComponents;soapserver;bindengine;CloudService;FireDACCommonDriver;DataSnapClient;inet;IndyIPCommon;bindcompdbx;IndyIPServer;sgcWebSocketsD10_4;IndySystem;fmxFireDAC;FireDAC;FireDACSqliteDriver;FMXTee;soaprtl;DbxCommonDriver;xmlrtl;soapmidas;DataSnapNativeClient;FireDACDSDriver;rtl;DbxClientDriver;CustomIPTransport;bindcomp;IndyIPClient;dbxcds;dsnapxml;DataSnapProviderClient;dbrtl;IndyProtocols;$(DCC_UsePackage)</DCC_UsePackage>
@@ -108,6 +107,7 @@
     <PropertyGroup Condition="'$(Cfg_1_Linux64)'!=''">
         <Debugger_Launcher>/usr/bin/xterm -e &quot;%debuggee%&quot;</Debugger_Launcher>
         <Manifest_File>(None)</Manifest_File>
+        <Debugger_DebugSourcePath>H:\RAZVOJ\OmniThreadLibrary-v4\;$(Debugger_DebugSourcePath)</Debugger_DebugSourcePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
@@ -124,17 +124,6 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="SmokeTest.pas"/>
-        <DCCReference Include="TestTask.pas"/>
-        <DCCReference Include="TestBlockingCollection1.pas"/>
-        <DCCReference Include="TestOtlDataManager1.pas"/>
-        <DCCReference Include="TestOmniInterfaceDictionary.pas"/>
-        <DCCReference Include="TestOtlSync1.pas"/>
-        <DCCReference Include="TestOmniValue.pas"/>
-        <DCCReference Include="TestValue.pas"/>
-        <DCCReference Include="TestOtlParallel.pas"/>
-        <DCCReference Include="TestPlatform.pas"/>
-        <DCCReference Include="TestInterlocked.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -179,6 +168,12 @@
                 <DeployFile LocalName="Linux64\Debug\ConsoleTestRunner" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Linux64">
                         <RemoteName>ConsoleTestRunner</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Win32\Debug\ConsoleTestRunner.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>ConsoleTestRunner.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

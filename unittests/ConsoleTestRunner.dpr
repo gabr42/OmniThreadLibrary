@@ -12,18 +12,20 @@ uses
   TestFramework,
   TextTestRunner,
   {$ENDIF }
-  DUnitX.TestFramework,
-  {$IFDEF MSWindows}SmokeTest in 'SmokeTest.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestTask in 'TestTask.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestBlockingCollection1 in 'TestBlockingCollection1.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestOtlDataManager1 in 'TestOtlDataManager1.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestOtlSync1 in 'TestOtlSync1.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestOmniValue in 'TestOmniValue.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestValue in 'TestValue.pas',{$ENDIF}
-  {$IFDEF MSWindows}TestOtlParallel in 'TestOtlParallel.pas',{$ENDIF}
-  TestPlatform in 'TestPlatform.pas',
-  TestInterlocked in 'TestInterlocked.pas';
+  DUnitX.TestFramework
+  {$IFDEF MSWindows}, SmokeTest in 'SmokeTest.pas'{$ENDIF }
+  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
+  , TestBlockingCollection1 in 'TestBlockingCollection1.pas'
+  , TestOtlDataManager1 in 'TestOtlDataManager1.pas'
+  , TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas'
+  {$IFDEF MSWindows}, TestOtlSync1 in 'TestOtlSync1.pas'{$ENDIF }
+  , TestOmniValue in 'TestOmniValue.pas'
+  , TestValue in 'TestValue.pas'
+  {$IFDEF MSWindows}, TestOtlParallel in 'TestOtlParallel.pas'{$ENDIF }
+  , TestPlatform in 'TestPlatform.pas'
+  , TestInterlocked in 'TestInterlocked.pas'
+  , TestContainers in 'TestContainers.pas'
+  ;
 
 begin
 {$IFDEF TESTINSIGHT}
