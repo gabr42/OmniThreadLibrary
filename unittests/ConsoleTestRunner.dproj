@@ -6,7 +6,7 @@
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Linux64</Platform>
-        <TargetedPlatforms>129</TargetedPlatforms>
+        <TargetedPlatforms>131</TargetedPlatforms>
         <AppType>Console</AppType>
         <MainSource>ConsoleTestRunner.dpr</MainSource>
     </PropertyGroup>
@@ -94,6 +94,10 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <DCC_UsePackage>DBXSqliteDriver;RESTComponents;fmxase;DBXDb2Driver;DBXInterBaseDriver;vclactnband;vclFireDAC;bindcompvclsmp;emsclientfiredac;tethering;DataSnapFireDAC;FireDACADSDriver;cxLibraryRS27;DBXMSSQLDriver;DatasnapConnectorsFreePascal;FireDACMSSQLDriver;vcltouch;vcldb;bindcompfmx;DBXOracleDriver;inetdb;FmxTeeUI;emsedge;fmx;FireDACIBDriver;fmxdae;vcledge;FireDACDBXDriver;dbexpress;IndyCore;vclx;dsnap;emsclient;DataSnapCommon;FireDACCommon;RESTBackendComponents;DataSnapConnectors;VCLRESTComponents;soapserver;Abbrevia;vclie;IcsCommonD104Run;bindengine;DBXMySQLDriver;CloudService;FireDACOracleDriver;FireDACMySQLDriver;DBXFirebirdDriver;FireDACCommonODBC;FireDACCommonDriver;DataSnapClient;inet;IndyIPCommon;bindcompdbx;vcl;IndyIPServer;DBXSybaseASEDriver;sgcWebSocketsD10_4;IndySystem;FireDACDb2Driver;dsnapcon;dxComnRS27;VirtualTreesR;FireDACMSAccDriver;fmxFireDAC;FireDACInfxDriver;vclimg;TeeDB;FireDAC;dxCoreRS27;emshosting;FireDACSqliteDriver;FireDACPgDriver;FireDACASADriver;DBXOdbcDriver;FireDACTDataDriver;FMXTee;soaprtl;DbxCommonDriver;Tee;DataSnapServer;xmlrtl;soapmidas;DataSnapNativeClient;fmxobj;vclwinx;FireDACDSDriver;rtl;emsserverresource;DbxClientDriver;DBXSybaseASADriver;CustomIPTransport;vcldsnap;bindcomp;appanalytics;DBXInformixDriver;dxGDIPlusRS27;IndyIPClient;bindcompvcl;TeeUI;dbxcds;VclSmp;adortl;FireDACODBCDriver;AbbreviaVCL;DataSnapIndy10ServerTransport;dsnapxml;DataSnapProviderClient;dbrtl;IndyProtocols;inetdbxpress;FireDACMongoDBDriver;DataSnapServerMidas;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
+        <BT_BuildType>Debug</BT_BuildType>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -124,6 +128,36 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="TestBlockingCollection1.pas">
+            <Form>/  , TestOtlDataManager1 in &apos;TestOtlDataManager1.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestOtlDataManager1.pas">
+            <Form>/  , TestOmniInterfaceDictionary in &apos;TestOmniInterfaceDictionary.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestOmniInterfaceDictionary.pas">
+            <Form>/  , TestOmniValue in &apos;TestOmniValue.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestOmniValue.pas">
+            <Form>/  , TestValue in &apos;TestValue.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestValue.pas">
+            <Form>/  , TestPlatform in &apos;TestPlatform.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestPlatform.pas">
+            <Form>/  , TestInterlocked in &apos;TestInterlocked.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestInterlocked.pas">
+            <Form>/  , TestContainers in &apos;TestContainers.pas&apos;</Form>
+        </DCCReference>
+        <DCCReference Include="TestContainers.pas">
+            <Form>/  {$IFNDEF MSWindows},</Form>
+        </DCCReference>
+        <DCCReference Include="TestOtlComm.pas">
+            <Form>/  {$IFDEF MSWindows}, TestTask in &apos;TestTask.pas&apos;{$ENDIF }</Form>
+        </DCCReference>
+        <DCCReference Include="TestOtlSync1.pas">
+            <Form>/  {$IFDEF MSWindows}, TestOtlParallel in &apos;TestOtlParallel.pas&apos;{$ENDIF }</Form>
+        </DCCReference>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -943,7 +977,7 @@
                 <Platform value="Android64">False</Platform>
                 <Platform value="Linux64">True</Platform>
                 <Platform value="Win32">True</Platform>
-                <Platform value="Win64">False</Platform>
+                <Platform value="Win64">True</Platform>
             </Platforms>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>

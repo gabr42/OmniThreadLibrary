@@ -13,18 +13,20 @@ uses
   TextTestRunner,
   {$ENDIF }
   DUnitX.TestFramework
-  {$IFDEF MSWindows}, SmokeTest in 'SmokeTest.pas'{$ENDIF }
-  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
+//  {$IFDEF MSWindows}, SmokeTest in 'SmokeTest.pas'{$ENDIF }
   , TestBlockingCollection1 in 'TestBlockingCollection1.pas'
   , TestOtlDataManager1 in 'TestOtlDataManager1.pas'
   , TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas'
-  {$IFDEF MSWindows}, TestOtlSync1 in 'TestOtlSync1.pas'{$ENDIF }
   , TestOmniValue in 'TestOmniValue.pas'
   , TestValue in 'TestValue.pas'
-  {$IFDEF MSWindows}, TestOtlParallel in 'TestOtlParallel.pas'{$ENDIF }
   , TestPlatform in 'TestPlatform.pas'
   , TestInterlocked in 'TestInterlocked.pas'
   , TestContainers in 'TestContainers.pas'
+//  {$IFNDEF MSWindows},
+  , TestOtlComm in 'TestOtlComm.pas'
+//  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
+  , TestOtlSync1 in 'TestOtlSync1.pas'
+//  {$IFDEF MSWindows}, TestOtlParallel in 'TestOtlParallel.pas'{$ENDIF }
   ;
 
 begin

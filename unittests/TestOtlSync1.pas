@@ -5,8 +5,14 @@ unit TestOtlSync1;
 interface
 
 uses
-  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
-  OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlSync.Utils, OtlTask;
+  TestFramework, GpStuff,
+  {$IFDEF MSWindows}
+  Windows, DSiWin32,
+  {$ENDIF}
+  System.SysUtils, System.SyncObjs, System.Classes, System.Threading, System.Diagnostics,
+  OtlContainers,
+  OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlSync.Utils,
+  OtlPlatform;
 
 type
   ISingleton = IInterface;
@@ -34,18 +40,14 @@ type
     FResourceCount: IOmniResourceCount;
     FSharedValue: int64;
     FSync: TOmniSynchronizer;
-    FSystemMutex: TMutex;
-  {$IFDEF OTL_Generics}
+    {$IFDEF MSWindows}FSystemMutex: TMutex;{$ENDIF} // used only on MSWindows for parallel testing of all supported platforms
     FSingleton: TSingleton;
     FSingletonIntf: ISingleton;
-  {$ENDIF OTL_Generics}
   strict protected
-  {$IFDEF OTL_Generics}
-    procedure Asy_AtomicInitIntf(const task: IOmniTask);
-    procedure Asy_AtomicInit(const task: IOmniTask);
-  {$ENDIF OTL_Generics}
-    procedure Asy_LockCS(const task: IOmniTask);
-    procedure Asy_ResourceCount(const task: IOmniTask);
+    procedure Asy_AtomicInitIntf(const cancel: IOmniCancellationToken);
+    procedure Asy_AtomicInit(const cancel: IOmniCancellationToken);
+    procedure Asy_LockCS;
+    procedure Asy_ResourceCount;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -53,11 +55,11 @@ type
     procedure TestCSInitialization;
     procedure TestCSParallel;
     procedure TestCSLock;
+    {$IFDEF MSWindows}
     procedure TestResourceCountBasic;
-  {$IFDEF OTL_Generics}
+    {$ENDIF}
     procedure TestOptimisticInitialization;
     procedure TestOptimisticInitializationIntf;
-  {$ENDIF OTL_Generics}
     procedure TestMREWRead;
     procedure TestMREWReadInitalBlock;
     procedure TestMREWReadTimeout;
@@ -70,9 +72,6 @@ type
   end;
 
 implementation
-
-uses
-  OtlTaskControl;
 
 procedure TestOtlSync.TestCSInitialization;
 var
@@ -96,7 +95,7 @@ begin
   CheckTrue(true, 'ok');
 end;
 
-procedure Asy_InitializeCS(const task: IOmniTask);
+procedure Asy_InitializeCS;
 var
   i: Integer;
 
@@ -116,16 +115,16 @@ end;
 procedure TestOtlSync.TestCSParallel;
 var
   i: Integer;
-  task: array [1..8] of IOmniTaskControl;
+  task: array [1..8] of ITask;
 begin
   for i := Low(task) to High(task) do
-    task[i] := CreateTask(Asy_InitializeCS, 'Initialize CS #' + IntToStr(i));
+    task[i] := TTask.Create(Asy_InitializeCS);
 
   for i := Low(task) to High(task) do
-    task[i].Run;
+    task[i].Start;
 
   for i := Low(task) to High(task) do
-    task[i].Terminate;
+    task[i].Wait(INFINITE);
 
   CheckTrue(true, 'ok');
 end;
@@ -135,7 +134,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: array of IOmniTaskControl;
+  readers: array of ITask;
   time   : int64;
 begin
   // Tests whether multiple readers can quire the lock at the same time
@@ -144,20 +143,19 @@ begin
 
   SetLength(readers, 5);
   for i := Low(readers) to High(readers) do
-    readers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    readers[i] := TTask.Run(
+      procedure
       begin
         mrew.EnterReadLock;
         Sleep(500);
         mrew.ExitReadLock;
         if count.Increment = Length(readers) then
           FSync.Signal('done');
-      end,
-      Format('TestMREWRead/Reader #%d', [i])).Run;
+      end);
 
-  time := DSiTimeGetTime64;
+  time := GTimeSource.Timestamp_ms;
   CheckTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
-  time := DSiTimeGetTime64 - time;
+  time := GTimeSource.Elapsed_ms(time);
 
   CheckTrue(time < 1000, 'Readers did not execute in parallel');
 end;
@@ -167,7 +165,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: array of IOmniTaskControl;
+  readers: array of ITask;
   time   : int64;
 begin
   // Tests whether multiple readers can quire the lock at the same time
@@ -176,8 +174,8 @@ begin
 
   SetLength(readers, 5);
   for i := Low(readers) to High(readers) do
-    readers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    readers[i] := TTask.Run(
+      procedure
       begin
         if not mrew.TryEnterReadLock(100) then
           Exit;
@@ -185,12 +183,11 @@ begin
         mrew.ExitReadLock;
         if count.Increment = Length(readers) then
           FSync.Signal('done');
-      end,
-      Format('TestMREWReadTimeout/Reader #%d', [i])).Run;
+      end);
 
-  time := DSiTimeGetTime64;
+  time := GTimeSource.Timestamp_ms;
   CheckTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
-  time := DSiTimeGetTime64 - time;
+  time := GTimeSource.Elapsed_ms(time);
 
   CheckTrue(time < 1000, 'Readers did not execute in parallel');
 end;
@@ -200,7 +197,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: array of IOmniTaskControl;
+  readers: array of ITask;
 begin
   // Tests whether a reader will acquire a lock if it is initially blocked
 
@@ -210,8 +207,8 @@ begin
 
   SetLength(readers, 5);
   for i := Low(readers) to High(readers) do
-    readers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    readers[i] := TTask.Run(
+      procedure
       begin
         if count.Increment = Length(readers) then
           FSync.Signal('go')
@@ -227,8 +224,7 @@ begin
           if count.Decrement = 0 then
             FSync.Signal('done');
         end;
-      end,
-      Format('TestMREWReadInitialBlock/Reader #%d', [i])).Run;
+      end);
 
   FSync.WaitFor('go');
   Sleep(500);
@@ -245,21 +241,21 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  readers: array of IOmniTaskControl;
+  readers: array of ITask;
   times  : array of int64;
 
-  function MakeTask(idx: integer): TOmniTaskDelegate;
+  function MakeTask(idx: integer): TProc;
   begin
     Result :=
-      procedure (const task: IOmniTask)
+      procedure
       var
         time: int64;
       begin
         FSync.WaitFor('go');
         try
-          time := DSiTimeGetTime64;
+          time := GTimeSource.Timestamp_ms;
           if not mrew.TryEnterReadLock(CTimeout) then begin
-            times[idx] := DSiTimeGetTime64 - time;
+            times[idx] := GTimeSource.Elapsed_ms(time);
             Exit;
           end;
 
@@ -280,7 +276,7 @@ begin
   SetLength(times, 5);
   SetLength(readers, 5);
   for i := Low(readers) to High(readers) do
-    readers[i] := CreateTask(MakeTask(i), Format('TestMREWReadTimeoutFail/Reader #%d', [i])).Run;
+    readers[i] := TTask.Run(MakeTask(i));
 
   mrew.EnterWriteLock;
   try
@@ -308,7 +304,7 @@ var
   hwm    : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: array of IOmniTaskControl;
+  writers: array of ITask;
 begin
   // Tests whether multiple writers cannot quire the lock at the same time
 
@@ -317,8 +313,8 @@ begin
 
   SetLength(writers, 5);
   for i := Low(writers) to High(writers) do
-    writers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    writers[i] := TTask.Run(
+      procedure
       begin
         mrew.EnterWriteLock;
         if hwm.Increment > 1 then
@@ -328,8 +324,7 @@ begin
         mrew.ExitWriteLock;
         if count.Increment = Length(writers) then
           FSync.Signal('done');
-      end,
-      Format('TestMREWWrite/Writer #%d', [i])).Run;
+      end);
 
   CheckTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
   CheckFalse(FSync.WaitFor('overflow', 0), 'More than one writer executed in parallel');
@@ -340,7 +335,7 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: array of IOmniTaskControl;
+  writers: array of ITask;
 begin
   // Tests whether a writer will acquire a lock if it is initially blocked
 
@@ -350,8 +345,8 @@ begin
 
   SetLength(writers, 5);
   for i := Low(writers) to High(writers) do
-    writers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    writers[i] := TTask.Run(
+      procedure
       begin
         if count.Increment = Length(writers) then
           FSync.Signal('go')
@@ -367,8 +362,7 @@ begin
           if count.Decrement = 0 then
             FSync.Signal('done');
         end;
-      end,
-      Format('TestMREWWriteInitialBlock/Writer #%d', [i])).Run;
+      end);
 
   FSync.WaitFor('go');
   Sleep(500);
@@ -384,7 +378,7 @@ var
   hwm    : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: array of IOmniTaskControl;
+  writers: array of ITask;
 begin
   // Tests whether multiple writers cannot quire the lock at the same time
 
@@ -393,8 +387,8 @@ begin
 
   SetLength(writers, 5);
   for i := Low(writers) to High(writers) do
-    writers[i] := CreateTask(
-      procedure (const task: IOmniTask)
+    writers[i] := TTask.Run(
+      procedure
       begin
         if not mrew.TryEnterWriteLock(Length(writers) * 1000) then begin
           FSync.Signal('failed');
@@ -407,8 +401,7 @@ begin
         mrew.ExitWriteLock;
         if count.Increment = Length(writers) then
           FSync.Signal('done');
-      end,
-      Format('TestMREWWriteTimeout/Writer #%d', [i])).Run;
+      end);
 
   CheckTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
   CheckFalse(FSync.WaitFor('failed', 0), 'At least one writer failed to acquire lock');
@@ -422,21 +415,21 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: array of IOmniTaskControl;
+  writers: array of ITask;
   times  : array of int64;
 
-  function MakeTask(idx: integer): TOmniTaskDelegate;
+  function MakeTask(idx: integer): TProc;
   begin
     Result :=
-      procedure (const task: IOmniTask)
+      procedure
       var
         time: int64;
       begin
         FSync.WaitFor('go');
         try
-          time := DSiTimeGetTime64;
+          time := GTimeSource.Timestamp_ms;
           if not mrew.TryEnterWriteLock(CTimeout) then begin
-            times[idx] := DSiTimeGetTime64 - time;
+            times[idx] := GTimeSource.Elapsed_ms(time);
             Exit;
           end;
 
@@ -457,7 +450,7 @@ begin
   SetLength(times, 5);
   SetLength(writers, 5);
   for i := Low(writers) to High(writers) do
-    writers[i] := CreateTask(MakeTask(i), Format('TestMREWWriteTimeoutFail/Writer #%d', [i])).Run;
+    writers[i] := TTask.Run(MakeTask(i));
 
   mrew.EnterReadLock;
   try
@@ -486,21 +479,21 @@ var
   count  : TOmniAlignedInt32;
   i      : integer;
   mrew   : TOmniMREW;
-  writers: array of IOmniTaskControl;
+  writers: array of ITask;
   times  : array of int64;
 
-  function MakeTask(idx: integer): TOmniTaskDelegate;
+  function MakeTask(idx: integer): TProc;
   begin
     Result :=
-      procedure (const task: IOmniTask)
+      procedure
       var
         time: int64;
       begin
         FSync.WaitFor('go');
         try
-          time := DSiTimeGetTime64;
+          time := GTimeSource.Timestamp_ms;
           if not mrew.TryEnterWriteLock(CTimeout) then begin
-            times[idx] := DSiTimeGetTime64 - time;
+            times[idx] := GTimeSource.Elapsed_ms(time);
             Exit;
           end;
 
@@ -521,7 +514,7 @@ begin
   SetLength(times, 5);
   SetLength(writers, 5);
   for i := Low(writers) to High(writers) do
-    writers[i] := CreateTask(MakeTask(i), Format('TestMREWWriteTimeoutFail/Writer #%d', [i])).Run;
+    writers[i] := TTask.Run(MakeTask(i));
 
   mrew.EnterWriteLock;
   try
@@ -543,7 +536,7 @@ begin
     mrew.ExitWriteLock;
 end;
 
-procedure TestOtlSync.Asy_LockCS(const task: IOmniTask);
+procedure TestOtlSync.Asy_LockCS;
 var
   i: Integer;
 begin
@@ -560,24 +553,28 @@ end;
 procedure TestOtlSync.TestCSLock;
 var
   i: Integer;
-  task: array [1..8] of IOmniTaskControl;
+  task: array [1..8] of ITask;
 begin
   for i := Low(task) to High(task) do
-    task[i] := CreateTask(Asy_LockCS, 'Lock CS #' + IntToStr(i));
+    task[i] := TTask.Create(Asy_LockCS);
 
   for i := Low(task) to High(task) do
-    task[i].Run;
+    task[i].Start;
 
   for i := Low(task) to High(task) do
-    task[i].Terminate;
+    task[i].Wait(INFINITE);
 
   CheckEquals(0, FSharedValue);
 end;
 
-{$IFDEF OTL_Generics}
-procedure TestOtlSync.Asy_AtomicInit(const task: IOmniTask);
+procedure TestOtlSync.Asy_AtomicInit(const cancel: IOmniCancellationToken);
 begin
-  WaitForSingleObject(Task.CancellationToken.Handle, INFINITE);
+  {$IFDEF MSWindows}
+  WaitForSingleObject(cancel.Handle, INFINITE);
+  {$ELSE}
+  cancel.Event.WaitFor(INFINITE);
+  {$ENDIF}
+
   Atomic<TSingleton>.Initialize(FSingleton,
     function: TSingleton begin Result := TSingleton.Create; end);
 end;
@@ -586,7 +583,7 @@ procedure TestOtlSync.TestOptimisticInitialization;
 var
   i      : integer;
   iRepeat: integer;
-  task   : array [1..8] of IOmniTaskControl;
+  task   : array [1..8] of ITask;
   token  : IOmniCancellationToken;
 begin
   for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
@@ -594,12 +591,16 @@ begin
 
     token := CreateOmniCancellationToken;
     for i := Low(task) to High(task) do
-      task[i] := CreateTask(Asy_AtomicInit, 'AtomicInit #' + IntToStr(i)).CancelWith(token).Run;
+      task[i] := TTask.Run(
+                   procedure
+                   begin
+                     Asy_AtomicInit(token)
+                   end);
 
     token.Signal;
 
     for i := Low(task) to High(task) do
-      task[i].Terminate;
+      task[i].Wait(INFINITE);
 
     CheckTrue(assigned(FSingleton), 'There is no singleton');
   end;
@@ -607,9 +608,13 @@ begin
   FreeAndNil(FSingleton);
 end;
 
-procedure TestOtlSync.Asy_AtomicInitIntf(const task: IOmniTask);
+procedure TestOtlSync.Asy_AtomicInitIntf(const cancel: IOmniCancellationToken);
 begin
-  WaitForSingleObject(Task.CancellationToken.Handle, INFINITE);
+  {$IFDEF MSWIndows}
+  WaitForSingleObject(cancel.Handle, INFINITE);
+  {$ELSE}
+  cancel.Event.WaitFor(INFINITE);
+  {$ENDIF}
   Atomic<ISingleton>.Initialize(FSingletonIntf,
     function: ISingleton begin Result := TSingleton.Create; end);
 end;
@@ -618,7 +623,7 @@ procedure TestOtlSync.TestOptimisticInitializationIntf;
 var
   i      : integer;
   iRepeat: integer;
-  task   : array [1..8] of IOmniTaskControl;
+  task   : array [1..8] of ITask;
   token  : IOmniCancellationToken;
 begin
   for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
@@ -626,21 +631,24 @@ begin
 
     token := CreateOmniCancellationToken;
     for i := Low(task) to High(task) do
-      task[i] := CreateTask(Asy_AtomicInitIntf, 'AtomicInitIntf #' + IntToStr(i)).CancelWith(token).Run;
+      task[i] := TTask.Run(
+                   procedure
+                   begin
+                     Asy_AtomicInitIntf(token)
+                   end);
 
     token.Signal;
 
     for i := Low(task) to High(task) do
-      task[i].Terminate;
+      task[i].Wait(INFINITE);
 
     CheckTrue(assigned(FSingletonIntf), 'There is no singleton');
   end;
   CheckEquals(1, TSingleton.NumSingletons);
   FSingletonIntf := nil;
 end;
-{$ENDIF OTL_Generics}
 
-procedure TestOtlSync.Asy_ResourceCount(const task: IOmniTask);
+procedure TestOtlSync.Asy_ResourceCount;
 begin
   FResourceCount.Allocate;
   FResourceCount.Release;
@@ -650,36 +658,42 @@ procedure TestOtlSync.SetUp;
 begin
   inherited;
   FSync := TOmniSynchronizer.Create;
+  {$IFDEF MSWindows}
   FSystemMutex := TMutex.Create(nil, false, '/OmniThreadLibrary/TestOtlSync/A4EDD8C0-88D0-46A9-890B-8EAAF466C44A');
   FSystemMutex.Acquire
+  {$ENDIF}
 end;
 
 procedure TestOtlSync.TearDown;
 begin
+  {$IFDEF MSWindows}
   FSystemMutex.Release;
   FreeAndNil(FSystemMutex);
+  {$ENDIF}
   FreeAndNil(FSync);
   inherited;
 end;
 
+{$IFDEF MSWindows}
 procedure TestOtlSync.TestResourceCountBasic;
 var
   i   : integer;
-  task: array [1..8] of IOmniTaskControl;
+  task: array [1..8] of ITask;
 begin
   FResourceCount := CreateResourceCount(4);
 
   for i := Low(task) to High(task) do
-    task[i] := CreateTask(Asy_ResourceCount, 'ResourceCount #' + IntToStr(i));
+    task[i] := TTask.Create(Asy_ResourceCount);
 
   for i := Low(task) to High(task) do
-    task[i].Run;
+    task[i].Start;
 
   for i := Low(task) to High(task) do
-    task[i].Terminate;
+    task[i].Wait(INFINITE);
 
   CheckEquals(3, FResourceCount.Allocate);
 end;
+{$ENDIF}
 
 constructor TSingleton.Create;
 begin
