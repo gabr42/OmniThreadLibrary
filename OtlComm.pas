@@ -546,12 +546,12 @@ function TOmniCommunicationEndpoint.ReceiveWait(var msg: TOmniMessage; timeout_m
 var
   {$IFDEF MSWINDOWS}
   insertObserver: TOmniContainerWindowsEventObserver;
-  {$ELSE}
-  Signaller     : IOmniSynchro;
-  {$ENDIF MSWINDOWS}
   retry         : boolean;
   startTime     : int64;
   waitTime      : int64;
+  {$ELSE}
+  Signaller     : IOmniSynchro;
+  {$ENDIF MSWINDOWS}
 begin
   Result := Receive(msg);
   if (not Result) and (timeout_ms > 0) then begin
@@ -586,7 +586,7 @@ begin
     ceReader_ref.GetNewMessageEvent.Reset;
     Result := Receive(msg);
     if not Result then begin
-      if (FReadWaiter.WaitAny(timeout_ms, Signaller) = wrSignaled) and (Signaller = FNewMessageEvent) then
+      if (FReadWaiter.WaitAny(timeout_ms, Signaller) = waAwaited) and (Signaller = FNewMessageEvent) then
       begin
         msg := ceReader_ref.Dequeue;
         Result := true;
@@ -657,7 +657,7 @@ begin
                    false, waitTime) = WAIT_OBJECT_0)
               {$ELSE}
               if (waitTime >= 0) and
-                 (partlyEmptyWaiter.WaitAny(waitTime, Signaller) = wrSignaled) and
+                 (partlyEmptyWaiter.WaitAny(waitTime, Signaller) = waAwaited) and
                  (Signaller = partlyEvent)
               {$ENDIF}
               then begin

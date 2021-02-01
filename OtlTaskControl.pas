@@ -3417,7 +3417,7 @@ begin
     {$IFDEF OTL_PlatformIndependent}
     DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], FMultiWaitLock);
     try
-      Result := DualWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
+      Result := DualWaiter.WaitAny(maxWait_ms, Signaller) = waAwaited;
     finally DualWaiter.Free; end;
     {$ELSE}
     Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent.BaseEvent.Handle, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1];
@@ -3734,7 +3734,7 @@ begin
     Syncs[Idx] := (otgTaskList[Idx] as IOmniTaskControlInternals).TerminatedEvent;
   MultiWaiter := TSynchroWaitFor.Create(Syncs, FMultiWaitLock);
   try
-    Result := MultiWaiter.WaitAny(maxWait_ms, Signaller) = wrSignaled;
+    Result := MultiWaiter.WaitAny(maxWait_ms, Signaller) = waAwaited;
   finally MultiWaiter.Free; end;
   {$ENDIF ~MSWINDOWS}
 end; { TOmniTaskGroup.WaitForAll }

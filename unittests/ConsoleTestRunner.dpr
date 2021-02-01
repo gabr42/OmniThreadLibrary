@@ -14,6 +14,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework
 //  {$IFDEF MSWindows}, SmokeTest in 'SmokeTest.pas'{$ENDIF }
+  , TestRegressions in 'TestRegressions.pas'
   , TestBlockingCollection1 in 'TestBlockingCollection1.pas'
   , TestOtlDataManager1 in 'TestOtlDataManager1.pas'
   , TestOmniInterfaceDictionary in 'TestOmniInterfaceDictionary.pas'
@@ -22,10 +23,10 @@ uses
   , TestPlatform in 'TestPlatform.pas'
   , TestInterlocked in 'TestInterlocked.pas'
   , TestContainers in 'TestContainers.pas'
-//  {$IFNDEF MSWindows},
+  , TestOtlCommon1 in 'TestOtlCommon1.pas'
   , TestOtlComm in 'TestOtlComm.pas'
-//  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
   , TestOtlSync1 in 'TestOtlSync1.pas'
+//  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
 //  {$IFDEF MSWindows}, TestOtlParallel in 'TestOtlParallel.pas'{$ENDIF }
   ;
 
