@@ -37,10 +37,11 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
 ///   Last modification : 2021-02-01
-///   Version           : 2.01c
+///   Version           : 2.02
 ///</para><para>
 ///   History:
-///     2.01c: 2021-02-01
+///     2.02: 2021-02-01
+///       - Added TWaitFor constructor overload accepting array of IOmniSynchro instances.
 ///       - IOmniEvent.Signal works the same as IOmniEvent.SetEvent.
 ///     2.01b: 2019-03-19
 ///       - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
@@ -511,6 +512,7 @@ type
   public
     constructor Create; overload;
     constructor Create(const handles: array of THandle); overload;
+    constructor Create(const handles: array of IOmniSynchro); overload;
     destructor  Destroy; override;
     function  MsgWaitAny(timeout_ms, wakeMask, flags: cardinal): TWaitForResult;
     procedure SetHandles(const handles: array of THandle);
@@ -1837,6 +1839,17 @@ begin
   FSignal := CreateEvent(nil, false, false, nil);
   FWaitMode := wmSmart;
   FWaitHandles := TGpInt64ObjectList.Create;
+end; { TWaitFor.Create }
+
+constructor TWaitFor.Create(const handles: array of IOmniSynchro);
+var
+  hhandles: array of THandle;
+  i: integer;
+begin
+  SetLength(hhandles, Length(handles));
+  for i := Low(handles) to High(handles) do
+    hhandles[i] := handles[i].Handle;
+  Create(hhandles);
 end; { TWaitFor.Create }
 
 destructor TWaitFor.Destroy;
