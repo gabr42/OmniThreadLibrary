@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2020, Primoz Gabrijelcic
+///Copyright (c) 2021, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,12 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2020-09-16
-///   Version           : 2.01b
+///   Last modification : 2021-02-01
+///   Version           : 2.01c
 ///</para><para>
 ///   History:
+///     2.01c: 2021-02-01
+///       - IOmniEvent.Signal works the same as IOmniEvent.SetEvent.
 ///     2.01b: 2019-03-19
-///        - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
+///       - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     2.01a: 2018-11-02
 ///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///     2.01: 2018-06-14
@@ -725,7 +727,7 @@ type
     function  EnterSpinLock: IInterface;
     procedure Acquire; override;
     procedure Release; override;
-    procedure Signal;
+    procedure Signal; virtual;
     function  WaitFor(timeout: cardinal = INFINITE): TWaitResult; override;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver); virtual; abstract;
     function  IsSignalled: boolean; virtual; abstract;
@@ -773,6 +775,7 @@ type
     constructor Create(AExternalEvent: THandle; ATakeOwnership: boolean = false); overload;
     {$ENDIF MSWINDOWS}
     procedure Reset;
+    procedure Signal; override;
     procedure SetEvent;
     function  BaseEvent: TEvent;
     procedure ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);  override;
@@ -2588,6 +2591,11 @@ begin
     True);
   {$ENDIF}
 end; { TOmniEvent.SetEvent }
+
+procedure TOmniEvent.Signal;
+begin
+  SetEvent;
+end;
 
 function TOmniEvent.WaitFor(Timeout: Cardinal): TWaitResult;
 begin
