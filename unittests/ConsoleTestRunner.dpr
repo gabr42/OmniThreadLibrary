@@ -23,7 +23,6 @@ uses
   , TestPlatform in 'TestPlatform.pas'
   , TestInterlocked in 'TestInterlocked.pas'
   , TestContainers in 'TestContainers.pas'
-  , TestOtlCommon1 in 'TestOtlCommon1.pas'
   , TestOtlComm in 'TestOtlComm.pas'
   , TestOtlSync1 in 'TestOtlSync1.pas'
 //  {$IFDEF MSWindows}, TestTask in 'TestTask.pas'{$ENDIF }
