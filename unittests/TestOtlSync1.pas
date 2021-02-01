@@ -28,6 +28,14 @@ type
     class property NumSingletons: integer read GetNumSingletons;
   end;
 
+  TestIEvent = class(TTestCase)
+  published
+    procedure TestManualReset;
+    procedure TestAutoReset;
+    procedure TestInitialState;
+    procedure TestWait;
+  end;
+
   // Test methods for basic synchronisation stuff
   TestOtlSync = class(TTestCase)
   strict private
@@ -48,6 +56,7 @@ type
     procedure Asy_AtomicInit(const cancel: IOmniCancellationToken);
     procedure Asy_LockCS;
     procedure Asy_ResourceCount;
+    function  NumRepeats: integer;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -72,6 +81,8 @@ type
   end;
 
 implementation
+
+{ TestOtlSync }
 
 procedure TestOtlSync.TestCSInitialization;
 var
@@ -586,7 +597,7 @@ var
   task   : array [1..8] of ITask;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to NumRepeats do begin
     FreeAndNil(FSingleton);
 
     token := CreateOmniCancellationToken;
@@ -626,7 +637,7 @@ var
   task   : array [1..8] of ITask;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to NumRepeats do begin
     FSingletonIntf := nil;
 
     token := CreateOmniCancellationToken;
@@ -652,6 +663,14 @@ procedure TestOtlSync.Asy_ResourceCount;
 begin
   FResourceCount.Allocate;
   FResourceCount.Release;
+end;
+
+function TestOtlSync.NumRepeats: integer;
+begin
+  if DebugHook <> 0 then
+    Result := 10
+  else
+    Result := {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF};
 end;
 
 procedure TestOtlSync.SetUp;
@@ -695,6 +714,8 @@ begin
 end;
 {$ENDIF}
 
+{ TSingleton }
+
 constructor TSingleton.Create;
 begin
   inherited Create;
@@ -712,7 +733,86 @@ begin
   Result := FNumSingletons;
 end;
 
+{ TestIEvent }
+
+procedure TestIEvent.TestAutoReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, false);
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(100));
+  event.Signal;
+  CheckTrue(wrSignaled = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  event.Signal;
+  event.Reset;
+  CheckTrue(wrTimeout = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestInitialState;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, true);
+  CheckTrue(wrSignaled = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestManualReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(true, false);
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(100));
+  event.Signal;
+  CheckTrue(wrSignaled = event.WaitFor(0));
+  CheckTrue(wrSignaled = event.WaitFor(100));
+  event.Reset;
+  CheckTrue(wrTimeout = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestWait;
+var
+  event: IOmniEvent;
+  signal: ITask;
+  synch: IOmniSynchronizer<string>;
+  wait: ITask;
+begin
+  synch := TOmniSynchronizer<string>.Create;
+  event := CreateOmniEvent(true, false);
+
+  signal := TTask.Run(
+    procedure
+    begin
+      synch.Signal('S:ready');
+      synch.WaitFor('start');
+      synch.WaitFor('S:signal');
+      event.Signal;
+    end);
+
+  wait := TTask.Run(
+    procedure
+    begin
+      synch.Signal('W:ready');
+      synch.WaitFor('start');
+      CheckTrue(wrTimeout = event.WaitFor(0));
+      CheckTrue(wrTimeout = event.WaitFor(100));
+      CheckTrue(wrSignaled = event.WaitFor(1000));
+    end);
+
+  synch.WaitFor('S:ready');
+  synch.WaitFor('W:ready');
+  synch.Signal('start');
+  Sleep(200);
+  Synch.Signal('S:signal');
+
+  signal.Wait(INFINITE);
+  wait.Wait(INFINITE);
+end;
+
 initialization
   // Register any test cases with the test runner
+  RegisterTest(TestIEvent.Suite);
   RegisterTest(TestOtlSync.Suite);
 end.
