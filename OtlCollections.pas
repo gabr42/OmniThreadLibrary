@@ -600,7 +600,7 @@ var
   {$IFDEF MSWINDOWS}
   awaited: cardinal;
   {$ELSE}
-  waitResult: TWaitResult;
+  waitResult: TWaitFor.TWaitForResult;
   Signaller: IOmniSynchro;
   {$ENDIF}
 begin
@@ -624,7 +624,7 @@ begin
           {$ELSE}
           waitResult := FCompletedWaiter.WaitAny(INFINITE,Signaller);
           obcAddCountAndCompleted.Increment;
-          if ((waitResult = wrSignaled) and (Signaller = obcCompletedSignal)) or IsCompleted then begin
+          if ((waitResult = waAwaited) and (Signaller = obcCompletedSignal)) or IsCompleted then begin
           {$ENDIF}
             Result := false; // completed
             Exit;
@@ -716,7 +716,7 @@ function TOmniBlockingCollection.TryTake(
   var value: TOmniValue; timeout_ms: cardinal): boolean;
 var
   StopWatch: TStopWatch;
-  awaited: TWaitResult;
+  awaited: TWaitFor.TWaitForResult;
   Signaller: IOmniSynchro;
 
   function TimeLeft_ms: cardinal;
@@ -747,16 +747,19 @@ begin
         if assigned(FTakableWaiter) then
           awaited := FTakableWaiter.WaitAny(TimeLeft_ms, Signaller)
         else begin
-          awaited   := obcCompletedSignal.WaitFor(TimeLeft_ms);
-          Signaller := obcCompletedSignal
+          if obcCompletedSignal.WaitFor(TimeLeft_ms) = wrSignaled then
+            awaited := waAwaited
+          else
+            awaited := waTimeout;
+          Signaller := obcCompletedSignal;
         end;
         if obcCollection.TryDequeue(value) then begin // there may still be data in completed queue
           Result := true;
           break; //repeat
         end;
-        if (awaited = wrSignaled) and assigned(obcResourceCount) and (Signaller = (obcResourceCount as IOmniSynchroObject).Synchro) then
+        if (awaited = waAwaited) and assigned(obcResourceCount) and (Signaller = (obcResourceCount as IOmniSynchroObject).Synchro) then
           CompleteAdding;
-        if (awaited = wrSignaled) and (Signaller = obcCompletedSignal) then begin
+        if (awaited = waAwaited) and (Signaller = obcCompletedSignal) then begin
           Result := false;
           break; //while
         end;

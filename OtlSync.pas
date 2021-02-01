@@ -43,6 +43,7 @@
 ///     2.02: 2021-02-01
 ///       - Added TWaitFor constructor overload accepting array of IOmniSynchro instances.
 ///       - IOmniEvent.Signal works the same as IOmniEvent.SetEvent.
+///       - Fixed TWaitFor.WaitAll and TWaitFor.WaitAny for non-Windows platforms.
 ///     2.01b: 2019-03-19
 ///       - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
 ///     2.01a: 2018-11-02
@@ -524,7 +525,7 @@ type
   {$ELSE ~MSWINDOWS}
   ///<summary>Waits on any/all from any number of synchroobjects such as Events and CountDownEvents.</summary>
   TSynchroWaitFor = class
-  public type //TODO: not integrated yet (maybe will even be removed at the end but currently OtlTaskControl expects it)
+  public type
     TWaitForResult = (
       waAwaited,      // WAIT_OBJECT_0 .. WAIT_OBJECT_n
       waTimeout,      // WAIT_TIMEOUT
@@ -562,7 +563,7 @@ type
       destructor  Destroy; override;
       function  Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
       function  Test(var Signaller: IOmniSynchro): boolean; virtual; abstract;
-      function  WaitAll: boolean; virtual; abstract;
+//      function  IsWaitAll: boolean; virtual; abstract;
     end;
   strict private
     FAllSignalled: TCondition;
@@ -571,13 +572,17 @@ type
     FSynchObjects: TSynchroList;
     FSynchClient : IOmniSynchroObserver;
   protected
+    function  MapResult(waitResult: TWaitResult): TWaitForResult;
     property Gate: IOmniCriticalSection read FGate;
+    property SynchClient: IOmniSynchroObserver read FSynchClient;
     property SynchObjects: TSynchroList read FSynchObjects;
   public
     constructor Create(const SynchObjects: array of IOmniSynchro; const AShareLock: IOmniCriticalSection = nil);
     destructor  Destroy; override;
-    function  WaitAll(timeout_ms: cardinal): TWaitResult;
-    function  WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+    function  WaitAll(timeout_ms: cardinal): TWaitForResult; overload; inline;
+    function  WaitAll(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult; overload;
+    function  WaitAny(timeout_ms: cardinal): TWaitForResult; overload; inline;
+    function  WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult; overload;
   end; { TWaitForAll }
 
   TWaitFor = TSynchroWaitFor;
@@ -790,13 +795,13 @@ type
   TOneCondition = class(TSynchroWaitFor.TCondition)
   public
     function  Test(var Signaller: IOmniSynchro): boolean; override;
-    function  WaitAll: boolean; override;
+//    function  IsWaitAll: boolean; override;
   end; { TOneCondition }
 
-  TAllCondition = class( TSynchroWaitFor.TCondition)
+  TAllCondition = class(TSynchroWaitFor.TCondition)
   public
     function  Test(var Signaller: IOmniSynchro): boolean; override;
-    function  WaitAll: boolean; override;
+//    function  IsWaitAll: boolean; override;
   end; { TAllCondition }
 
   TPreSignalData = class
@@ -2038,13 +2043,13 @@ end; { TSynchroWaitFor.TSynchroClient.Create }
 
 procedure TSynchroWaitFor.TSynchroClient.EnterGate;
 begin
-  if assigned( FController) then
+  if assigned(FController) then
     FController.FGate.Acquire;
 end; { TSynchroWaitFor.TSynchroClient.EnterGate }
 
 procedure TSynchroWaitFor.TSynchroClient.LeaveGate;
 begin
-  if assigned( FController) then
+  if assigned(FController) then
     FController.FGate.Release;
 end; { TSynchroWaitFor.TSynchroClient.LeaveGate }
 
@@ -2104,56 +2109,65 @@ begin
   inherited;
 end; { TSynchroWaitFor.TCondition.Destroy }
 
-function TSynchroWaitFor.TCondition.Wait(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+function TSynchroWaitFor.TCondition.Wait(timeout_ms: cardinal;
+  var Signaller: IOmniSynchro): TWaitResult;
 var
-  Elapsed   : int64;
-  Signaller1: IOmniSynchro;
-  Timer     : TStopWatch;
-  WaitTime  : cardinal;
+  elapsed   : int64;
+  signaller1: IOmniSynchro;
+  so        : IOmniSynchro;
+  timer     : TStopWatch;
+  waitTime  : cardinal;
 begin
   Result := wrError;
-  WaitTime := timeout_ms;
-  if WaitTime > 0 then
-    Timer := TStopWatch.StartNew;
-  FController.FGate.Acquire;
+  waitTime := timeout_ms;
+  if waitTime > 0 then
+    timer := TStopWatch.StartNew;
+  FController.FGate.Acquire; // TODO 1 -oPrimoz Gabrijelcic : ??? do not release during wait ???
   try
-    repeat
-      if WaitTime > 0 then begin
-        Elapsed := Timer.ElapsedMilliseconds;
-        if timeout_ms <= Elapsed then
-          WaitTime := 0
-        else
-          WaitTime := timeout_ms - Elapsed;
-      end;
-      if Test(Signaller1) then
-        Result := wrSignaled
-      else  if WaitTime = 0 then
-        Result := wrTimeout
-      else begin
-        case FCondVar.WaitFor(TCriticalSection(FController.FGate.GetSyncObj), WaitTime) of
-          wrSignaled:
+    if Test(signaller1) then
+      Result := wrSignaled
+    else if (timeout_ms <= 0) or (timeout_ms <= timer.ElapsedMilliseconds) then
+      Result := wrTimeout
+    else begin
+      for so in FController.SynchObjects do
+        so.AddObserver(FController.SynchClient);
+      try
+        if Test(signaller1) then
+          Result := wrSignaled
+        else begin
+          elapsed := timer.ElapsedMilliseconds;
+          waitTime := timeout_ms - elapsed;
+          case FCondVar.WaitFor(TCriticalSection(FController.FGate.GetSyncObj), waitTime) of
+            wrSignaled:
+              begin
+                if Test(signaller1) then
+                  Result := wrSignaled
+                else if waitTime = 0 then
+                  Result := wrTimeout
+                else
+                  Result := wrIOCompletion
+              end;
+            wrTimeout:
+              Result := wrTimeout;
+            wrAbandoned,
+            wrError,
+            wrIOCompletion:
             begin
-              if Test( Signaller1) then
-                Result := wrSignaled
-              else if WaitTime = 0 then
-                Result := wrTimeout
-              else
-                Result := wrIOCompletion
+              Result := wrError;
             end;
-          wrTimeout:
-            Result := wrTimeout;
-          wrAbandoned,
-          wrError,
-          wrIOCompletion:
-            Result := wrError;
-        end; // case
+          end; // case
+        end;
+      finally
+        for so in FController.SynchObjects do
+          so.RemoveObserver(FController.SynchClient);
       end;
-      if Result = wrSignaled then begin
-        if assigned(Signaller1) then
-          Signaller1.ConsumeSignalFromObserver(FController.FSynchClient);
-        Signaller := Signaller1;
-      end
-    until Result <> wrIOCompletion;
+    end;
+
+    if Result = wrSignaled then begin
+      if assigned(signaller1) then
+        signaller1.ConsumeSignalFromObserver(FController.FSynchClient);
+      Signaller := signaller1;
+    end;
   finally FController.FGate.Release; end;
 end; { TSynchroWaitFor.TCondition.Wait }
 
@@ -2164,7 +2178,7 @@ constructor TSynchroWaitFor.Create(const SynchObjects: array of IOmniSynchro;
 var
   Member: IOmniSynchro;
 begin
-  if assigned( AShareLock) then
+  if assigned(AShareLock) then
     FGate := AShareLock
   else
     FGate := CreateOmniCriticalSection;
@@ -2172,7 +2186,7 @@ begin
   FSynchObjects := TSynchroList.Create;
   FOneSignalled := TOneCondition.Create(self);
   FAllSignalled := TAllCondition.Create(self);
-  TSynchroClient.Create(self);
+  FSynchClient := TSynchroClient.Create(self); // TODO 1 -oPrimoz Gabrijelcic : ??? used at all ???
   for Member in SynchObjects do
     FSynchObjects.Add(Member);
 end; { TSynchroWaitFor.Create }
@@ -2192,16 +2206,40 @@ begin
   inherited;
 end; { TSynchroWaitFor.Destroy }
 
-function TSynchroWaitFor.WaitAll(timeout_ms: cardinal): TWaitResult;
+function TSynchroWaitFor.MapResult(waitResult: TWaitResult): TWaitForResult;
+begin
+  case waitResult of
+    wrSignaled:     Result := waAwaited;
+    wrTimeout:      Result := waTimeout;
+    wrAbandoned:    Result := waFailed;
+    wrError:        Result := waFailed;
+    wrIOCompletion: Result := waIOCompletion;
+    else raise Exception.Create('Unexpected value: ' + Ord(waitResult).ToString);
+  end;
+end; { TSynchroWaitFor.MapResult }
+
+function TSynchroWaitFor.WaitAll(timeout_ms: cardinal): TWaitForResult;
 var
   Signaller: IOmniSynchro;
 begin
-  Result := FAllSignalled.Wait(timeout_ms, Signaller);
+  Result := WaitAll(timeout_ms, Signaller);
 end; { TSynchroWaitFor.WaitAll }
 
-function TSynchroWaitFor.WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitResult;
+function TSynchroWaitFor.WaitAll(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult;
 begin
-  result := FAllSignalled.Wait(timeout_ms, Signaller);
+  Result := MapResult(FAllSignalled.Wait(timeout_ms, Signaller));
+end; { TSynchroWaitFor.WaitAll }
+
+function TSynchroWaitFor.WaitAny(timeout_ms: cardinal): TWaitForResult;
+var
+  Signaller: IOmniSynchro;
+begin
+  Result := WaitAny(timeout_ms, Signaller);
+end; { TSynchroWaitFor.WaitAny }
+
+function TSynchroWaitFor.WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult;
+begin
+  Result := MapResult(FOneSignalled.Wait(timeout_ms, Signaller));
 end; { TSynchroWaitFor.WaitAny }
 
 { TOneCondition }
@@ -2214,19 +2252,18 @@ begin
   FController.Gate.Acquire;
   try
     for member in FController.SynchObjects do begin
-      Result := member.IsSignalled;
-      if Result then
-        continue; //for
-      Signaller := member;
-      break; //for
+      if member.IsSignalled then begin
+        Signaller := member;
+        Exit(true);
+      end;
     end; //for
   finally FController.Gate.Release; end
 end; { TOneCondition.Test }
 
-function TOneCondition.WaitAll: boolean;
-begin
-  Result := False;
-end; { TOneCondition.WaitAll }
+//function TOneCondition.IsWaitAll: boolean;
+//begin
+//  Result := False;
+//end; { TOneCondition.IsWaitAll }
 
 { TAllCondition }
 
@@ -2248,10 +2285,10 @@ begin
   finally FController.Gate.Release; end;
 end; { TAllCondition.Test }
 
-function TAllCondition.WaitAll: boolean;
-begin
-  Result := True;
-end; { TAllCondition.WaitAll }
+//function TAllCondition.IsWaitAll: boolean;
+//begin
+//  Result := True;
+//end; { TAllCondition.IsWaitAll }
 {$ENDIF OTL_MobileSupport}
 {$ENDIF ~MSWINDOWS}
 

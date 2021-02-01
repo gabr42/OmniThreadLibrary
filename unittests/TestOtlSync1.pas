@@ -36,6 +36,12 @@ type
     procedure TestWait;
   end;
 
+  TestWaitFor = class(TTestCase)
+  published
+    procedure TestWaitAll;
+    procedure TestWaitAny;
+  end;
+
   // Test methods for basic synchronisation stuff
   TestOtlSync = class(TTestCase)
   strict private
@@ -811,8 +817,91 @@ begin
   wait.Wait(INFINITE);
 end;
 
+{ TestWaitFor }
+
+procedure TestWaitFor.TestWaitAll;
+var
+  event1: IOmniEvent;
+  event2: IOmniEvent;
+  synch: IOmniSynchronizer<string>;
+  waiter: ITask;
+  wf: TWaitFor;
+begin
+  event1 := CreateOmniEvent(true, false);
+  event2 := CreateOmniEvent(true, false);
+  wf := TWaitFor.Create([event1, event2]);
+  try
+    synch := TOmniSynchronizer<string>.Create;
+    waiter := TTask.Run(
+      procedure
+      var
+        time: int64;
+      begin
+        synch.Signal('W:ready');
+        synch.WaitFor('start');
+        CheckTrue(waTimeout = wf.WaitAll(0));
+        CheckTrue(waTimeout = wf.WaitAll(100));
+        CheckTrue(waAwaited = wf.WaitAll(2000));
+        time := GTimeSource.Timestamp_ms;
+        CheckTrue(waAwaited = wf.WaitAll(2000));
+        CheckFalse(GTimeSource.HasElapsed(time, 1000));
+      end);
+
+    CheckTrue(waTimeout = wf.WaitAll(0));
+    CheckTrue(waTimeout = wf.WaitAll(100));
+    event1.Signal;
+    CheckTrue(waTimeout = wf.WaitAll(0));
+
+    synch.WaitFor('W:ready');
+    synch.Signal('start');
+    Sleep(500);
+    event2.Signal;
+    waiter.Wait(INFINITE);
+  finally FreeAndNil(wf); end;
+end;
+
+procedure TestWaitFor.TestWaitAny;
+var
+  event1: IOmniEvent;
+  event2: IOmniEvent;
+  synch: IOmniSynchronizer<string>;
+  waiter: ITask;
+  wf: TWaitFor;
+begin
+  event1 := CreateOmniEvent(true, false);
+  event2 := CreateOmniEvent(true, false);
+  wf := TWaitFor.Create([event1, event2]);
+  try
+    synch := TOmniSynchronizer<string>.Create;
+    waiter := TTask.Run(
+      procedure
+      var
+        time: int64;
+      begin
+        synch.Signal('W:ready');
+        synch.WaitFor('start');
+        CheckTrue(waTimeout = wf.WaitAny(0));
+        CheckTrue(waTimeout = wf.WaitAny(100));
+        CheckTrue(waAwaited = wf.WaitAny(2000));
+        time := GTimeSource.Timestamp_ms;
+        CheckTrue(waAwaited = wf.WaitAny(2000));
+        CheckFalse(GTimeSource.HasElapsed(time, 1000));
+      end);
+
+    CheckTrue(waTimeout = wf.WaitAll(0));
+    CheckTrue(waTimeout = wf.WaitAll(100));
+
+    synch.WaitFor('W:ready');
+    synch.Signal('start');
+    Sleep(500);
+    event2.Signal;
+    waiter.Wait(INFINITE);
+  finally FreeAndNil(wf); end;
+end;
+
 initialization
   // Register any test cases with the test runner
   RegisterTest(TestIEvent.Suite);
+  RegisterTest(TestWaitFor.Suite);
   RegisterTest(TestOtlSync.Suite);
 end.
