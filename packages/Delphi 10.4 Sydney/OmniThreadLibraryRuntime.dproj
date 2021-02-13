@@ -7,7 +7,7 @@
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
         <Base>True</Base>
         <AppType>Package</AppType>
-        <FrameworkType>VCL</FrameworkType>
+        <FrameworkType>None</FrameworkType>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
@@ -50,7 +50,7 @@
         <SanitizedProjectName>OmniThreadLibraryRuntime</SanitizedProjectName>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1060</VerInfo_Locale>
         <DCC_Description>OmniThreadLibrary runtime</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
@@ -95,8 +95,6 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="vclx.dcp"/>
-        <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="..\..\src\GpLists.pas"/>
         <DCCReference Include="..\..\src\GpStuff.pas"/>
         <DCCReference Include="..\..\src\GpStringHash.pas"/>
