@@ -87,6 +87,11 @@
           "dest": "src"
         },
         {
+          "src": ".\\*.dcr",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
           "src": ".\\LICENSE.txt",
           "flatten": false,
           "dest": "src"
@@ -135,6 +140,11 @@
         },
         {
           "src": ".\\*.inc",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\*.dcr",
           "flatten": false,
           "dest": "src"
         },
