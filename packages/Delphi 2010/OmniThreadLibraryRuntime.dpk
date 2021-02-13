@@ -31,9 +31,7 @@ package OmniThreadLibraryRuntime;
 {$IMPLICITBUILD ON}
 
 requires
-  rtl,
-  vclx,
-  vcl;
+  rtl;
 
 contains
   GpLists in '..\..\src\GpLists.pas',
