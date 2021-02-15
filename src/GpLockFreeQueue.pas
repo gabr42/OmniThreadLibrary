@@ -454,9 +454,9 @@ begin
   obcTailPointer.Tag := obcTailPointer.Slot.Tag;
   obcHeadPointer.Slot := NextSlot(obcTailPointer.Slot);
   obcHeadPointer.Tag := obcHeadPointer.Slot.Tag;
-  Assert(cardinal(obcTailPointer) mod 8 = 0);
-  Assert(cardinal(obcHeadPointer) mod 8 = 0);
-  Assert(cardinal(@obcCachedBlock) mod 4 = 0);
+  Assert(NativeUInt(obcTailPointer) mod 8 = 0);
+  Assert(NativeUInt(obcHeadPointer) mod 8 = 0);
+  Assert(NativeUInt(@obcCachedBlock) mod 4 = 0);
 end; { TGpLockFreeQueue.Initialize }
 
 function TGpLockFreeQueue.NextSlot(slot: PGpLFQueueTaggedValue): PGpLFQueueTaggedValue;
