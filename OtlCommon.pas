@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2021, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-12-09
-///   Version           : 1.54
+///   Last modification : 2021-02-15
+///   Version           : 1.54a
 ///</para><para>
 ///   History:
+///     1.54a: 2021-02-15
+///       - IOmniIntegerSet/TOmniIntegerSet.AsMask changed to uint64 so it can store
+///         64-bit NativeUInt without problems. [#148]
 ///     1.54: 2019-12-09
 ///       - Added overloaded TOmniValue.FromArray<T> accepting `array of T`.
 ///     1.53: 2019-07-26
@@ -744,12 +747,12 @@ type
   IOmniIntegerSet = interface ['{571F85D0-CFD8-40FE-8860-A8C1C932028C}']
     function  GetAsBits: TBits;
     function  GetAsIntArray: TIntegerDynArray;
-    function  GetAsMask: int64;
+    function  GetAsMask: uint64;
     function  GetItem(idx: integer): integer;
     function  GetOnChange: TOmniIntegerSetChangedEvent;
     procedure SetAsBits(const value: TBits);
     procedure SetAsIntArray(const Value: TIntegerDynArray);
-    procedure SetAsMask(const value: int64);
+    procedure SetAsMask(const value: uint64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent);
   {$IFDEF OTL_HasArrayOfT}
     function  GetAsArray: TArray<integer>;
@@ -768,7 +771,7 @@ type
   {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
-    property AsMask: int64 read GetAsMask write SetAsMask;
+    property AsMask: uint64 read GetAsMask write SetAsMask;
     property OnChange: TOmniIntegerSetChangedEvent read GetOnChange write SetOnChange;
     property Item[idx: integer]: integer read GetItem; default;
   end; { IOmniIntegerSet }
@@ -783,13 +786,13 @@ type
     procedure DoOnChange;
     function  GetAsBits: TBits; inline;
     function  GetAsIntArray: TIntegerDynArray;
-    function  GetAsMask: int64;
+    function  GetAsMask: uint64;
     function  GetItem(idx: integer): integer;
     function  GetOnChange: TOmniIntegerSetChangedEvent; inline;
     procedure PrepareValueCopy;
     procedure SetAsBits(const value: TBits);
     procedure SetAsIntArray(const value: TIntegerDynArray);
-    procedure SetAsMask(const value: int64);
+    procedure SetAsMask(const value: uint64);
     procedure SetOnChange(const value: TOmniIntegerSetChangedEvent); inline;
   {$IFDEF OTL_HasArrayOfT}
     function  GetAsArray: TArray<integer>;
@@ -812,7 +815,7 @@ type
   {$ENDIF OTL_HasArrayOfT}
     property AsBits: TBits read GetAsBits write SetAsBits;
     property AsIntArray: TIntegerDynArray read GetAsIntArray write SetAsIntArray;
-    property AsMask: int64 read GetAsMask write SetAsMask;
+    property AsMask: uint64 read GetAsMask write SetAsMask;
     property OnChange: TOmniIntegerSetChangedEvent read GetOnChange write SetOnChange;
     property Item[idx: integer]: integer read GetItem; default;
   end; { TOmniIntegerSet }
@@ -4840,7 +4843,7 @@ end; { TOmniIntegerSet.Add }
 procedure TOmniIntegerSet.Assign(const value: IOmniIntegerSet);
 var
   i       : integer;
-  oldValue: int64;
+  oldValue: uint64;
   valBits : TBits;
 begin
   oldValue := AsMask;
@@ -4923,7 +4926,7 @@ begin
     end;
 end; { TOmniIntegerSet.GetAsIntArray }
 
-function TOmniIntegerSet.GetAsMask: int64;
+function TOmniIntegerSet.GetAsMask: uint64;
 var
   i: integer;
 begin
@@ -4981,7 +4984,7 @@ end; { TOmniIntegerSet.Remove }
 procedure TOmniIntegerSet.SetAsArray(const value: TArray<integer>);
 var
   max     : integer;
-  oldValue: int64;
+  oldValue: uint64;
   val     : integer;
 begin
   oldValue := AsMask;
@@ -5003,7 +5006,7 @@ procedure TOmniIntegerSet.SetAsBits(const value: TBits);
 var
   i       : integer;
   max     : integer;
-  oldValue: int64;
+  oldValue: uint64;
 begin
   oldValue := AsMask;
   max := 0;
@@ -5020,7 +5023,7 @@ end; { TOmniIntegerSet.SetAsBits }
 procedure TOmniIntegerSet.SetAsIntArray(const value: TIntegerDynArray);
 var
   max     : integer;
-  oldValue: int64;
+  oldValue: uint64;
   val     : integer;
 begin
   oldValue := AsMask;
@@ -5037,13 +5040,13 @@ begin
     DoOnChange;
 end; { TOmniIntegerSet.SetAsIntArray }
 
-procedure TOmniIntegerSet.SetAsMask(const value: int64);
+procedure TOmniIntegerSet.SetAsMask(const value: uint64);
 var
   b       : boolean;
   i       : integer;
   max     : integer;
-  oldValue: int64;
-  val     : int64;
+  oldValue: uint64;
+  val     : uint64;
 begin
   oldValue := AsMask;
   FBits.Size := 64;

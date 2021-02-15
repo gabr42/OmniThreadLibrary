@@ -1,4 +1,4 @@
-3.07.1: <<unreleased>>
+3.07.9: <<unreleased>>
 
 - New features:
   - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
@@ -16,6 +16,8 @@
   - Fixed TOmniMREW.TryEnterWriteLock [issue #149].
   - Fixed: Calling TOmniWaitObjectList.Remove removed only
     the ResponseHandlers[] handler and not the AnonResponseHandlers[] handler.
+  - Fixed: IOmniIntegerSet/TOmniIntegerSet.AsMask changed to uint64 so it can store
+    64-bit NativeUInt without problems. [issue #148]
 
 3.07.8: 2020-05-30
 
