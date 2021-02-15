@@ -3787,7 +3787,7 @@ end; { TOmniAffinity.GetAsString }
 function TOmniAffinity.GetCount: integer;
 {$IFDEF MSWINDOWS}
 var
-  affMask: DWORD;
+  affMask: NativeUInt;
 begin
   Result := 0;
   affMask := Mask;
@@ -3807,7 +3807,7 @@ function TOmniAffinity.GetCountPhysical: integer;
 var
   info: TSystemLogicalProcessorInformationArr;
   item: TSystemLogicalProcessorInformation;
-  mask: DWORD;
+  mask: NativeUInt;
 begin
   if not DSiGetLogicalProcessorInfo(info) then
     Result := GetCount // running on pre-XP SP3 OS, just get the best approximation
@@ -4273,7 +4273,7 @@ end; { TOmniEnvironment.Destroy }
 procedure TOmniEnvironment.CreateFakeNUMAInfo;
 var
   i   : integer;
-  mask: DWORD;
+  mask: NativeUInt;
 begin
   mask := 0;
   for i := 1 to System.Affinity.Count do
