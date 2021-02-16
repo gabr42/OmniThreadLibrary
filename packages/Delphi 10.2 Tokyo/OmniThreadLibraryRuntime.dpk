@@ -28,7 +28,7 @@ package OmniThreadLibraryRuntime;
 {$DESCRIPTION 'OmniThreadLibrary runtime'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl;

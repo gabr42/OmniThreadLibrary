@@ -25,7 +25,7 @@ package OmniThreadLibraryDesigntime;
 {$DESCRIPTION 'OmniThreadLibrary designtime'}
 {$LIBSUFFIX '110'}
 {$DESIGNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,
