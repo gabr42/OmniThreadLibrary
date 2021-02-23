@@ -38,6 +38,8 @@
 ///   Version           : 1.0
 ///</para><para>
 ///   History:
+///     1.0a: 2021-02-09
+///       - IOmniSynchronizer<T>/TOmniSynchronizer<T> did not compile when T was not a string.
 ///     1.0: 2020-09-16
 ///       - Implemented TOmniSynchronizer class, useful for writing multithreaded unit tests.
 ///       - Requires Delphi 2009 or newer.
@@ -53,23 +55,23 @@ uses
 type
   IOmniSynchronizer<T> = interface ['{631B2859-8268-464C-8A36-EB5847BE44A5}']
     function  Count: integer;
-    procedure Signal(const name: string);
-    function  WaitFor(const name: string; timeout: cardinal = INFINITE): boolean;
+    procedure Signal(const name: T);
+    function  WaitFor(const name: T; timeout: cardinal = INFINITE): boolean;
   end; { IOmniSynchronizer<T> }
 
   TOmniSynchronizer<T> = class(TInterfacedObject, IOmniSynchronizer<T>)
   strict private
-    FEvents: TObjectDictionary<string, TEvent>;
+    FEvents: TObjectDictionary<T, TEvent>;
     FLock  : TOmniMREW;
   strict protected
-    function  Ensure(const name: string): TEvent;
+    function  Ensure(const name: T): TEvent;
   public
     constructor Create;
     destructor  Destroy; override;
     function  Count: integer;
-    procedure Reset(const name: string); inline;
-    procedure Signal(const name: string); inline;
-    function  WaitFor(const name: string; timeout: cardinal = INFINITE): boolean;
+    procedure Reset(const name: T); inline;
+    procedure Signal(const name: T); inline;
+    function  WaitFor(const name: T; timeout: cardinal = INFINITE): boolean;
   end; { TOmniSynchronizer<T> }
 
   IOmniSynchronizer = IOmniSynchronizer<string>;
@@ -85,7 +87,7 @@ uses
 constructor TOmniSynchronizer<T>.Create;
 begin
   inherited Create;
-  FEvents := TObjectDictionary<string, TEvent>.Create;
+  FEvents := TObjectDictionary<T, TEvent>.Create;
 end; { TOmniSynchronizer<T>.Create }
 
 destructor TOmniSynchronizer<T>.Destroy;
@@ -102,7 +104,7 @@ begin
   finally FLock.ExitReadLock; end;
 end; { TOmniSynchronizer<T>.Count }
 
-function TOmniSynchronizer<T>.Ensure(const name: string): TEvent;
+function TOmniSynchronizer<T>.Ensure(const name: T): TEvent;
 var
   event: TEvent;
 begin
@@ -124,17 +126,17 @@ begin
   finally FLock.ExitWriteLock; end;
 end; { TOmniSynchronizer<T>.Ensure }
 
-procedure TOmniSynchronizer<T>.Reset(const name: string);
+procedure TOmniSynchronizer<T>.Reset(const name: T);
 begin
   Ensure(name).ResetEvent;
 end;
 
-procedure TOmniSynchronizer<T>.Signal(const name: string);
+procedure TOmniSynchronizer<T>.Signal(const name: T);
 begin
   Ensure(name).SetEvent;
 end; { TOmniSynchronizer<T>.Signal }
 
-function TOmniSynchronizer<T>.WaitFor(const name: string; timeout: cardinal): boolean;
+function TOmniSynchronizer<T>.WaitFor(const name: T; timeout: cardinal): boolean;
 begin
   Result := Ensure(name).WaitFor(timeout) = wrSignaled;
 end; { TOmniSynchronizer<T>.WaitFor }
