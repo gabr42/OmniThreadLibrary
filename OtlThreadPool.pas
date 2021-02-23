@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2020-12-21
-///   Version           : 2.20
+///   Last modification : 2021-02-23
+///   Version           : 2.20a
 /// </para><para>
 ///   History:
+///     2.20a: 2021-02-23
+///       - Fixed TOmniThreadPool.Destroy when TOmniThreadPool.Create raised an exception.
 ///     2.20: 2020-12-21
 ///       - Added optional timeout parameter to IOmniThreadPool.Cancel.
 ///     2.19b: 2019-02-10
@@ -1658,7 +1660,8 @@ destructor TOmniThreadPool.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread pool %p', [pointer(Self), otpPoolName]);{$ENDIF LogThreadPool}
   SendPoolNotifications(pntDestroy, Self);
-  otpWorkerTask.Terminate;
+  if assigned(otpWorkerTask) then
+    otpWorkerTask.Terminate;
   inherited;
 end; { TOmniThreadPool.Destroy }
 
