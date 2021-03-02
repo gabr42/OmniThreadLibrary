@@ -8,10 +8,15 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2020-04-03
-   Version           : 2.0
+   Last modification : 2021-03-02
+   Version           : 2.0b
 </pre>*)(*
    History:
+     2.0b: 2021-03-02
+       - All unit names are fully scoped (when supported).
+     2.0a: 2021-02-05
+       - Read end of write pipe was passed to the child process as its input in
+         DSiExecuteAndCapture.
      2.0: 2020-04-03
        - Extracted all code depending on Vcl.Graphics into unit DSiWin32.VCL.
      1.108: 2020-04-03
@@ -2200,14 +2205,14 @@ var
 implementation
 
 uses
-  Types,
-  ComObj,
-  ActiveX,
+  {$IFDEF DSiScopedUnitNames}System.Types{$ELSE}Types{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.ActiveX{$ELSE}ActiveX{$ENDIF},
   {$IFDEF CONDITIONALCOMPILATION}
-  Variants,
+  {$IFDEF DSiScopedUnitNames}System.Variants{$ELSE}Variants{$ENDIF},
   {$ENDIF}
-  TLHelp32,
-  MMSystem;
+  {$IFDEF DSiScopedUnitNames}Winapi.TLHelp32{$ELSE}TLHelp32{$ENDIF},
+  {$IFDEF DSiScopedUnitNames}Winapi.MMSystem{$ELSE}MMSystem{$ENDIF};
 
 const
   CAPISuffix = {$IFDEF Unicode}'W'{$ELSE}'A'{$ENDIF};
@@ -5152,11 +5157,13 @@ type
     security.bInheritHandle := true;
     security.lpSecurityDescriptor := nil;
     if CreatePipe(readPipe, writePipe, @security, 0) then begin
+      if not SetHandleInformation(readPipe, HANDLE_FLAG_INHERIT, 0) then
+        RaiseLastOSError;
       buffer := AllocMem(SizeReadBuffer + 1);
       FillChar(Start,Sizeof(Start),#0);
       start.cb := SizeOf(start);
       start.hStdOutput := writePipe;
-      start.hStdInput := readPipe;
+      start.hStdInput := 0;
       start.hStdError := writePipe;
       start.dwFlags := STARTF_USESTDHANDLES + STARTF_USESHOWWINDOW;
       start.wShowWindow := SW_HIDE;
@@ -5567,7 +5574,7 @@ type
     fsCreationTime: TFileTime;
     fsExitTime    : TFileTime;
     fsKernelTime  : TFileTime;
-    fsUserTime    : FileTime;
+    fsUserTime    : TFileTime;
   begin
     Result :=
       GetThreadTimes(thread, fsCreationTime, fsExitTime, fsKernelTime, fsUserTime) and

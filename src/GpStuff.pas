@@ -6,10 +6,14 @@
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2020-03-31
-   Version           : 2.14
+   Last modification : 2020-12-11
+   Version           : 2.16
 </pre>*)(*
    History:
+     2.16: 2020-12-11
+       - Renamed TGpBuffer.CreateI => TGpBuffer.New.
+     2.15: 2020-12-04
+       - Implemented a range of TGpBuffer.CreateI interface factories.
      2.14: 2020-03-31
        - Implemented IGpBuffer.AsBytes.
      2.13: 2019-11-12
@@ -506,8 +510,14 @@ type
     constructor Create(stream: TStream); overload;
     constructor Create(const buffer: IGpBuffer); overload;
     constructor Create(const s: string); overload;
+    class function New: IGpBuffer; overload; inline;
+    class function New(data: pointer; size: integer): IGpBuffer; overload; inline;
+    class function New(stream: TStream): IGpBuffer; overload; inline;
+    class function New(const buffer: IGpBuffer): IGpBuffer; overload; inline;
+    class function New(const s: string): IGpBuffer; overload; inline;
   {$IFDEF MSWINDOWS}{$IFDEF Unicode}
     constructor Create(const s: AnsiString); overload;
+    class function New(const s: AnsiString): IGpBuffer; overload; inline;
   {$ENDIF}{$ENDIF}
     destructor  Destroy; override;
     class function Make: IGpBuffer;
@@ -553,6 +563,7 @@ function  Asgn(var output: WideString; const value: WideString): WideString; ove
 
 function  IFF(condit: boolean; const iftrue, iffalse: string): string; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: integer): integer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  IFF(condit: boolean; iftrue, iffalse: cardinal): cardinal; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: real): real; overload;        {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: boolean): boolean; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 function  IFF(condit: boolean; iftrue, iffalse: pointer): pointer; overload;  {$IFDEF GpStuff_Inline}inline;{$ENDIF}
@@ -1148,6 +1159,14 @@ begin
 end; { IFF }
 
 function IFF(condit: boolean; iftrue, iffalse: integer): integer;
+begin
+  if condit then
+    Result := iftrue
+  else
+    Result := iffalse;
+end; { IFF }
+
+function IFF(condit: boolean; iftrue, iffalse: cardinal): cardinal;
 begin
   if condit then
     Result := iftrue
@@ -2532,12 +2551,42 @@ begin
   AsString := s;
 end; { TGpBuffer.Create }
 
+class function TGpBuffer.New: IGpBuffer;
+begin
+  Result := TGpBuffer.Create;
+end; { TGpBuffer.CreateI }
+
+class function TGpBuffer.New(data: pointer; size: integer): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(data, size);
+end; { TGpBuffer.CreateI }
+
+class function TGpBuffer.New(stream: TStream): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(stream);
+end; { TGpBuffer.CreateI }
+
+class function TGpBuffer.New(const buffer: IGpBuffer): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(buffer);
+end; { TGpBuffer.CreateI }
+
+class function TGpBuffer.New(const s: string): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(s);
+end; { TGpBuffer.CreateI }
+
 {$IFDEF MSWINDOWS}{$IFDEF Unicode}
 constructor TGpBuffer.Create(const s: AnsiString);
 begin
   Create;
   AsAnsiString := s;
 end; { TGpBuffer.Create }
+
+class function TGpBuffer.New(const s: AnsiString): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(s);
+end; { TGpBuffer.CreateI }
 {$ENDIF}{$ENDIF}
 
 function TGpBuffer.GetCurrent: pointer;

@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2020-02-25
-   Version           : 1.80
+   Last modification : 2020-10-06
+   Version           : 1.80a
 </pre>*)(*
    History:
+     1.80a: 2020-10-06
+       - Fixed incorrect casting in TGpObjectMap.
      1.80: 2020-03-25
        - Removed TGpStringListHelper.Sort as TStringList contains Sort in Delphi 10.3.
      1.79a: 2020-02-03
@@ -6620,7 +6622,7 @@ function TGpObjectMap.GetItems(item: TObject): TObject;
 var
   idxItem: integer;
 begin
-  idxItem := omList.IndexOf(NativeUInt(item));
+  idxItem := omList.IndexOf(int64(item));
   if idxItem >= 0 then
     Result := omList.Objects[idxItem]
   else
@@ -6631,7 +6633,7 @@ procedure TGpObjectMap.SetItems(item: TObject; const value: TObject);
 var
   idxItem: integer;
 begin
-  idxItem := omList.IndexOf(NativeUint(item));
+  idxItem := omList.IndexOf(int64(item));
   if idxItem >= 0 then begin
     if assigned(value) then
       omList.Objects[idxItem] := value
@@ -6639,7 +6641,7 @@ begin
       omList.Delete(idxItem);
   end
   else
-    omList.AddObject(NativeUInt(item), value);
+    omList.AddObject(int64(item), value);
 end; { TGpObjectMap.SetItems }
 
 constructor TGpObjectObjectMap.Create(ownsObjects: boolean);
