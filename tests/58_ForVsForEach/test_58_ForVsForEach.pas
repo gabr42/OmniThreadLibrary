@@ -29,7 +29,8 @@ uses
 {$R *.dfm}
 
 const
-  CLoopCount = 100000000; {100 million}
+//  CLoopCount = 100000000; {100 million}
+  CLoopCount = MAXINT - 1;
 
 procedure TfrmForVsForEach.btnTestClick(Sender: TObject);
 begin
@@ -46,7 +47,10 @@ begin
   Time('Parallel.For',
     procedure
     begin
-      Parallel.For(1, CLoopCount).Execute(
+      Parallel
+      .For(1, CLoopCount)
+      .NoMsgBlock
+      .Execute(
         procedure (idx: integer)
         begin
         end);
