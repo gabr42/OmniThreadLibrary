@@ -120,7 +120,14 @@
           "id": "OmniRuntime",
           "project": ".\\src\\packages\\Delphi 10 Seattle\\OmniThreadLibraryRuntime.dproj",
           "buildForDesign": true,
-          "buildForDesignComment" : "when true, will build also win32 if the platform is not win32, so that other packages that need this for design will work"
+          "buildForDesignComment" : "when true, will build also win32 if the platform is not win32, so that other packages that need this for design will work",
+           "copyFiles" : [
+            {
+              "src" : ".\\src\\*.dcr",
+              "flatten" : true
+            }          
+          ],
+          "copyFilesComment" : "Files that need to be copied to the lib folder after compilation - typically dfm and res files"
         },
         {
           "id": "OmniDesignTime",
@@ -128,7 +135,22 @@
           "designOnly" : true,
           "designOnlyComment" : "designOnly forces compilation with win32 compiler"
         }      
-      ]
+      ],
+     "runtime" : [
+       {
+         "buildId" : "OmniRuntime",
+         "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+         "copyLocal" : true
+       }
+     ],
+     "design" : [
+       {
+        "buildId" : "OmniDesignTime",
+        "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+         "copyLocal" : false,
+         "install" : true
+       }
+     ]      
     },
     {
       "name": "default",
@@ -177,7 +199,15 @@
           "id": "OmniRuntime",
           "project": ".\\src\\packages\\Delphi $compilerWithCodeName$\\OmniThreadLibraryRuntime.dproj",
           "buildForDesign": true,
-          "buildForDesignComment" : "when true, will build also win32 if the platform is not win32, so that other packages that need this for design will work"
+          "buildForDesignComment" : "when true, will build also win32 if the platform is not win32, so that other packages that need this for design will work",
+          "copyFiles" : [
+            {
+              "src" : ".\\src\\*.dcr",
+              "flatten" : true
+            }          
+          ],
+          "copyFilesComment" : "Files that need to be copied to the lib folder after compilation - typically dfm and res files"
+          
         },
         {
           "id": "OmniDesignTime",
@@ -185,7 +215,22 @@
           "designOnly" : true,
           "designOnlyComment" : "designOnly forces compilation with win32 compiler"
         }      
-      ]
+      ],
+      "runtime" : [
+       {
+         "buildId" : "OmniRuntime",
+         "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+         "copyLocal" : true
+       }
+      ],
+       "design" : [
+         {
+          "buildId" : "OmniDesignTime",
+           "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+           "copyLocal" : false,
+           "install" : true
+         }
+       ]      
     }
   ]
 }
