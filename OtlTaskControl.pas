@@ -4389,21 +4389,23 @@ procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
 var
   msg1     : TOmniMessage;
   msgMethod: TMethod;
+  {$IFDEF OTL_GoodAnonymous}
   msgProc  : TProc;
+  {$ENDIF OTL_GoodAnonymous}
 begin
   if assigned(omeOnMessageDispatch) then begin
     msg1 := msg;
     omeOnMessageDispatch.Dispatch(msg1);
   end
   else case omeOnMessage.Kind of
-    {$IFDEF OTL_Anonymous}
+    {$IFDEF OTL_GoodAnonymous}
     oekDelegate:
       begin
         msgProc := TProc(omeOnMessage);
         if assigned(msgProc) then
           TOmniOnMessageFunction(msgProc)(task, msg);
       end;
-    {$ENDIF OTL_Anonymous}
+    {$ENDIF OTL_GoodAnonymous}
     oekMethod:
       begin
         msgMethod := TMethod(omeOnMessage);
