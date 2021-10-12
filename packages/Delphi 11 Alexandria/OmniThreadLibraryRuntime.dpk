@@ -26,7 +26,7 @@ package OmniThreadLibraryRuntime;
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'OmniThreadLibrary runtime'}
-{$LIBSUFFIX AUTO}
+{$LIBSUFFIX '280'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
@@ -34,25 +34,25 @@ requires
   rtl;
 
 contains
-  GpLists,
-  GpStuff,
-  GpStringHash,
-  DetailedRTTI,
-  OtlCommon,
-  OtlContainers,
-  OtlCommBufferTest,
-  OtlComm,
-  OtlTask,
-  OtlTaskControl,
-  OtlThreadPool,
-  OtlEventMonitor,
-  DSiWin32,
-  OtlContainerObserver,
-  OtlSync,
-  OtlHooks,
-  OtlCollections,
-  OtlCommon.Utils,
-  OtlDataManager,
-  OtlParallel;
+  GpLists in '..\..\src\GpLists.pas',
+  GpStuff in '..\..\src\GpStuff.pas',
+  GpStringHash in '..\..\src\GpStringHash.pas',
+  DetailedRTTI in '..\..\src\DetailedRTTI.pas',
+  OtlCommon in '..\..\OtlCommon.pas',
+  OtlContainers in '..\..\OtlContainers.pas',
+  OtlCommBufferTest in '..\..\OtlCommBufferTest.pas',
+  OtlComm in '..\..\OtlComm.pas',
+  OtlTask in '..\..\OtlTask.pas',
+  OtlTaskControl in '..\..\OtlTaskControl.pas',
+  OtlThreadPool in '..\..\OtlThreadPool.pas',
+  OtlEventMonitor in '..\..\OtlEventMonitor.pas',
+  DSiWin32 in '..\..\src\DSiWin32.pas',
+  OtlContainerObserver in '..\..\OtlContainerObserver.pas',
+  OtlSync in '..\..\OtlSync.pas',
+  OtlHooks in '..\..\OtlHooks.pas',
+  OtlCollections in '..\..\OtlCollections.pas',
+  OtlCommon.Utils in '..\..\OtlCommon.Utils.pas',
+  OtlDataManager in '..\..\OtlDataManager.pas',
+  OtlParallel in '..\..\OtlParallel.pas';
 
 end.

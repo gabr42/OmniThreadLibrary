@@ -84,6 +84,7 @@
   {$DEFINE OTL_HasTkPointer}
   {$DEFINE OTL_HasArrayOfT}
   {$DEFINE OTL_HasNameThreadForDebugging}
+  {$DEFINE OTL_GoodAnonymous}
 {$IFEND}
 
 {$IF CompilerVersion >= 22} //DXE

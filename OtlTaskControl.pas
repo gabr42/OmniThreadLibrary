@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2020, Primoz Gabrijelcic
+///Copyright (c) 2021, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2020-12-21
-///   Version           : 1.42
+///   Last modification : 2021-06-22
+///   Version           : 1.43a
 ///</para><para>
 ///   History:
+///     1.43a: 2021-06-22
+///       - Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage.
+///     1.43: 2021-03-10
+///       - Implemented IOmniWorker.EventInfo.
 ///     1.42: 2020-12-21
 ///       - [HHasenack] Added IOmniTaskControl.DirectExecute which executes
 ///         task in the current thread.
@@ -347,15 +351,23 @@ type
     {$ENDIF MSWINDOWS}
   end; { IOmniTaskControlMonitor }
 
+  TOmniWorkerEventInfoType = (etError, etFailed, etIOCompletion, etTimeout, etWinMessage, etMessage, etEvent, etTimer, etWaitObject, etTerminate, etInternal, etUnknown);
+  TOmniWorkerEventInfo = record
+    EventType  : TOmniWorkerEventInfoType;
+    TimerID    : integer;
+    WaitObject : integer;
+    CommChannel: integer;
+  end; { TOmniWorkerEventInfo }
+
   {$TYPEINFO ON} {$METHODINFO ON}
   IOmniWorker = interface ['{CA63E8C2-9B0E-4BFA-A527-31B2FCD8F413}']
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
-  //message loop hooks; temporary solution, will be replaced with a better one
     procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult);
     procedure BeforeWait(var timeout_ms: cardinal);
+    function  EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
     procedure MessageLoopPayload;
     procedure ProcessThreadMessages;
   //
@@ -381,6 +393,7 @@ type
     procedure ProcessThreadMessages; virtual;
   protected
     procedure Cleanup; virtual;
+    function  EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
     function  GetImplementor: TObject;
     function  GetTask: IOmniTask;
     function  Initialize: boolean; virtual;
@@ -866,6 +879,7 @@ type
     function  DispatchEvent(awaited: TWaitFor.TWaitForResult; const task: IOmniTask;
       var msgInfo: TOmniMessageInfo{$IFNDEF MSWINDOWS}; SignalEvent: IOmnIEvent{$ENDIF}): boolean; virtual;
     procedure DispatchOmniMessage(msg: TOmniMessage; doCheckTimers: boolean); virtual;
+    function  EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessMessages(task: IOmniTask); virtual;
@@ -1800,6 +1814,11 @@ begin
   Dispatch(msg);
 end; { TOmniWorker.DispatchMessage }
 
+function TOmniWorker.EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
+begin
+  Result := (owExecutor as TOmniTaskExecutor).EventInfo(awaited);
+end; { TOmniWorker.EventInfo }
+
 function TOmniWorker.GetImplementor: TObject;
 begin
   Result := Self;
@@ -2427,6 +2446,70 @@ begin
     finally oteInternalLock.Release; end;
   end;
 end; { TOmniTaskExecutor.EmptyMessageQueues }
+
+function TOmniTaskExecutor.EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
+var
+  event : integer;
+  handle: THandle;
+  i     : integer;
+begin
+  if awaited = waFailed then
+    Result.EventType := etFailed
+  else if awaited = waIOCompletion then
+    Result.EventType := etIOCompletion
+  else if awaited = waTimeout then begin
+    if HaveElapsedTimer then begin
+      Result.EventType := etTimer;
+      Result.TimerID := TOmniTaskTimerInfo(oteTimers.Objects[0]).TimerID;
+    end
+    else
+      Result.EventType := etTimeout;
+  end
+  else if awaited = waMessage then
+    Result.EventType := etWinMessage
+  else if awaited <> waAwaited then
+    Result.EventType := etError
+  else begin
+    {$IFNDEF MSWINDOWS}
+    raise Exception.Create('Not supported (yet)!');
+    {$ENDIF}
+    event := oteMsgInfo.Waiter.Signalled[0].Index;
+    if (oteMsgInfo.IdxFirstTerminate <> -1)
+       and (event >= oteMsgInfo.IdxFirstTerminate)
+       and (event <= oteMsgInfo.IdxLastTerminate)
+    then
+      Result.EventType := etTerminate
+    else if (event >= oteMsgInfo.IdxFirstMessage)
+            and (event <= oteMsgInfo.IdxLastMessage)
+    then begin
+      Result.EventType := etMessage;
+      handle := oteMsgInfo.WaitHandles[event];
+      if handle = oteMsgInfo.NewMessageEvent then
+        Result.CommChannel := -1
+      else begin
+        oteInternalLock.Acquire;
+        try
+          Result.CommChannel := -2;
+          for i := 0 to oteCommNewMsgList.Count - 1 do
+            if oteCommNewMsgList[i] = handle then begin
+              Result.CommChannel := i;
+              break; //for
+            end;
+        finally oteInternalLock.Release; end;
+      end;
+    end
+    else if (event >= oteMsgInfo.IdxFirstWaitObject)
+            and (event <= oteMsgInfo.IdxLastWaitObject)
+    then begin
+      Result.EventType := etWaitObject;
+      Result.WaitObject := event - oteMsgInfo.IdxFirstWaitObject;
+    end
+    else if event = oteMsgInfo.IdxRebuildHandles then
+      Result.EventType := etInternal
+    else
+      Result.EventType := etUnknown;
+  end;
+end; { TOmniTaskExecutor.EventInfo }
 
 function TOmniTaskExecutor.GetExitCode: integer;
 begin
@@ -4304,17 +4387,31 @@ end; { TOmniMessageExec.Clone }
 procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
 var
-  msg1: TOmniMessage;
+  msg1     : TOmniMessage;
+  msgMethod: TMethod;
+  {$IFDEF OTL_GoodAnonymous}
+  msgProc  : TProc;
+  {$ENDIF OTL_GoodAnonymous}
 begin
   if assigned(omeOnMessageDispatch) then begin
     msg1 := msg;
     omeOnMessageDispatch.Dispatch(msg1);
   end
   else case omeOnMessage.Kind of
-    {$IFDEF OTL_Anonymous}
-    oekDelegate: TOmniOnMessageFunction(TProc(omeOnMessage))(task, msg);
-    {$ENDIF OTL_Anonymous}
-    oekMethod: TOmniTaskMessageEvent(TMethod(omeOnMessage))(task, msg);
+    {$IFDEF OTL_GoodAnonymous}
+    oekDelegate:
+      begin
+        msgProc := TProc(omeOnMessage);
+        if assigned(msgProc) then
+          TOmniOnMessageFunction(msgProc)(task, msg);
+      end;
+    {$ENDIF OTL_GoodAnonymous}
+    oekMethod:
+      begin
+        msgMethod := TMethod(omeOnMessage);
+        if assigned(msgMethod.Code) and assigned(msgMethod.Data) then
+          TOmniTaskMessageEvent(msgMethod)(task, msg);
+      end
     else raise Exception.CreateFmt('TOmniMessageExec.OnMessage: Unexpected kind %s',
       [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
   end;
