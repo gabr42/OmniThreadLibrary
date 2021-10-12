@@ -72,9 +72,9 @@
       "template": "default"
     },
     {
-      "compiler": "11",
+      "compiler": "11.0",
       "platforms": "Win32, Win64",
-      "template": "default"
+      "template": "11.0"
     }
   ],
   "templates": [
@@ -236,6 +236,87 @@
            "install" : true
          }
        ]      
-    }
+    },
+    {
+      "name": "11.0",
+	  "comment":"omni uses 11 rather than 11.0 for folder names",
+      "source": [
+        {
+          "src": ".\\*.pas",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\*.inc",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\*.dcr",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\LICENSE.txt",
+          "flatten": false,
+          "dest": "src"
+        },
+        {
+          "src": ".\\src\\*.pas",
+          "flatten": false,
+          "dest": "src\\src"
+        },
+        {
+          "src": ".\\packages\\Delphi 11 Alexandria\\**",
+          "flatten": false,
+          "dest": "src\\packages\\Delphi 11 Alexandria"
+        }
+      ],
+      "searchPaths": [
+        {
+          "path": "src"
+        },
+        {
+          "path": "src\\src"
+        }       
+      ],
+      "build": [
+       {
+          "id": "OmniRuntime",
+          "project": ".\\src\\packages\\Delphi 11 Alexandria\\OmniThreadLibraryRuntime.dproj",
+          "buildForDesign": true,
+          "buildForDesignComment" : "when true, will build also win32 if the platform is not win32, so that other packages that need this for design will work",
+          "copyFiles" : [
+            {
+              "src" : ".\\src\\*.dcr",
+              "flatten" : true
+            }          
+          ],
+          "copyFilesComment" : "Files that need to be copied to the lib folder after compilation - typically dfm and res files"
+          
+        },
+        {
+          "id": "OmniDesignTime",
+          "project": ".\\src\\packages\\Delphi 11 Alexandria\\OmniThreadLibraryDesigntime.dproj",
+          "designOnly" : true,
+          "designOnlyComment" : "designOnly forces compilation with win32 compiler"
+        }      
+      ],
+      "runtime" : [
+       {
+         "buildId" : "OmniRuntime",
+         "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+         "copyLocal" : true
+       }
+      ],
+       "design" : [
+         {
+          "buildId" : "OmniDesignTime",
+           "src" : "bin\\OmniThreadLibraryRuntime$LibSuffix$.bpl",
+           "copyLocal" : false,
+           "install" : true
+         }
+       ]      
+    }	
   ]
 }
