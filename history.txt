@@ -1,4 +1,4 @@
-3.07.9: <<unreleased>>
+3.07.9: 2021-10-25
 
 - New features:
   - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
