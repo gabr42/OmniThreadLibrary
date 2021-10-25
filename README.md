@@ -4,11 +4,11 @@ OmniThreadLibrary is a powerful threading library for Delphi. OmniThreadLibrary'
 
 ### How do I get OmniThreadLibrary?
 
-Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.8) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
+Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.9) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
 
-Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.8).
+Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.9).
 
-Download an [older release](https://drive.google.com/folderview?id=0BwqVlLNTK4OxVEgzZnZGM1FNMGc&usp=drive_web#list).
+Download an [older release](https://drive.google.com/drive/folders/0BwqVlLNTK4OxVEgzZnZGM1FNMGc?resourcekey=0-vPGaxR8rszOx4hVa6SFvKA&usp=sharing).
 
 If you have Delphi XE8 or newer, you can install OmniThreadLibrary via [GetIt](http://docwiki.embarcadero.com/RADStudio/en/GetIt).
 
@@ -20,11 +20,9 @@ Download and install the sources. Compile and install the OmniThreadLibrary pack
 
 ### Is OmniThreadLibrary supported on my platform?
 
-At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, 
-XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, and 10.4 Sydney 
-on Win32 and Win64 platforms using the VCL framework. 
+At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, 10.4 Sydney, and 11 Alexandria on Win32 and Win64 platforms using the VCL framework. 
 
-There are no plans to support older Delphi compilers. 
+There are no plans to support older Delphi compilers.
 We are working on support for mobile devices, OS X, Linux, and FireMonkey.
 
 ### How do I get support?
