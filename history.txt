@@ -9,6 +9,7 @@
   - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
   - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
   - Added optional timeout parameter to IOmniThreadPool.Cancel.
+  - Added Delphi 11 Alexandria packages.
 
 - Bug fixes:
   - Fixed warnings in OtlComm.
