@@ -35,7 +35,7 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2019-02-10
+///   Last modification : 2021-02-23
 ///   Version           : 3.01
 /// </para><para>
 ///   History:
@@ -44,8 +44,128 @@
 ///     3.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - DSiTimeGetTime64 replaced with OtlPlatform.Time.
+///     2.20a: 2021-02-23
+///       - Fixed TOmniThreadPool.Destroy when TOmniThreadPool.Create raised an exception.
+///     2.20: 2020-12-21
+///       - Added optional timeout parameter to IOmniThreadPool.Cancel.
+///     2.19b: 2019-02-10
+///       - Thread pool creation code waits for thread pool management thread to be
+///         started and initialized. Without that, CountQueued and CountExecuting may
+///         not be initialized yet when thread pool creation code exits.
+///     2.19a: 2018-03-12
+///       - ThreadData is destroyed in the worker thread and not in the thread pool
+///         management thread.
+///     2.19: 2017-11-28
+///       - Worker thread name is set to 'Idle thread worker' only when worker has no work.
+///     2.18a: 2017-05-29
+///       - Did not compile when NUMA support was enabled.
+///     2.18: 2017-05-27
+///       - Breaking change: Cancel(taskID) will signal task's cancellation token before
+///         calling task's Terminate method.
+///         CancelAll will signal cancellation token for all running
+///         tasks before calling their Terminate method.
+///         Old behaviour (no CancellationToken.Signal before Terminate) can be achieved
+///         by calling overloaded version of the functions accepting the
+///         `signalCancellationToken` parameter or by setting
+///         IOmniThreadPool.Options to [tpoPreventCancellationTokenOnCancel].
+///     2.17a: 2017-04-04
+///       - TOTPWorker.Cancel must use `while`, not `for`, as owRunningWorkers.Count can
+///         change during the execution.
+///     2.17: 2017-02-03
+///       - If ThreadDataFactory.Execute throws an exception, that exception is caught,
+///         ignored and ThreadData is set to nil. [issue #88]
+///     2.16a: 2017-01-17
+///       - Fix: IdleWorkerThreadTimeout_sec and WaitOnTerminate_sec were initialized
+///         too late.
+///     2.16: 2017-01-16
+///       - Reverted [2.14]: Any change to Affinity, ProcessorGroups, or NUMANodes
+///         properties will reset the MaxExecuting.
+///       - New behaviour is compatible with the pre-2.14 code: Initially, MaxExecuting is
+///         set to Environment.Process.Affinity.Count. This value can only be changed by
+///         the external code, not inside the OtlThreadPool unit.
+///       - Added readonly property IOmniThreadPool.NumCores which returns number of cores
+///         this pool uses for running tasks. This value can be changed after Affinity,
+///         ProcessorGroups, or NUMANodes properties are modified.
+///     2.15a: 2016-09-05
+///       - TOmniThreadPool.Create no longer waits on thread to be initialized. This
+///         allows a thread pool to be created inside DLL initialization code.
+///         [https://msdn.microsoft.com/en-us/library/windows/desktop/ms682453(v=vs.85).aspx]
+///     2.15: 2016-08-31
+///       - In the past, unhandled exceptions in the code handling the task execution
+///         were lost. Now, they are passed up to the IOmniThreadPool. If its property
+///         Asy_OnUnhandledWorkerException is set, exception will be passed to the event
+///         handler and application should react to it. The only safe way at that point
+///         is to log the error (and stack trace for the current thread) and terminate
+///         the application.
+///       - TOmniThreadPool creation/destruction notifications are sent via OtlHook.
+///     2.14: 2016-07-14
+///       - Any change to Affinity, ProcessorGroups, or NUMANodes properties will reset
+///         the MaxExecuting count.
+///       - Changes to Affinity, ProcessorGroups, and NUMANodes properties are synchronous.
+///     2.13: 2016-07-13
+///       - Implemented NUMA and Processor group support.
+///     2.12: 2015-10-04
+///       - Imported mobile support by [Sean].
+///     2.11: 2015-09-07
+///       - Setting MinWorkers property will start up idle worker threads if total number
+///         of threads managed by the thread pool is lower than the new value.
+///     2.10: 2015-09-03
+///       - Removed limitation on max 60 threads in a pool (faciliated by changes in
+///         OtlTaskControl).
+///     2.09a: 2012-01-31
+///       - More accurate CountQueued.
+///     2.09: 2011-11-08
+///       - Adapted to OtlCommon 1.24.
+///     2.08: 2011-11-06
+///       - Sets thread name to 'Idle thread worker' when a thread is idle.
+///     2.07: 2011-07-14
+///       - Exceptions are no longer reported through the OnPoolWorkItemCompleted event.
+///     2.06: 2011-07-04
+///       - Fixed task exception handling. Exceptions are now reported through the
+///         OnPoolWorkItemCompleted event.
+///     2.05b: 2010-11-25
+///       - Bug fixed: Thread pool was immediately closing unused threads if MaxExecuting
+///         was set to -1.
+///     2.05a: 2010-07-19
+///       - Works correctly if MaxExecuting is set to 0. Set MaxExecuting to -1 to allow
+///         "infinite" number of execution threads.
+///       - When MaxExecuting is changed, the code checks immediately if tasks from the
+///         idle queue can now be activated.
+///     2.05: 2010-07-01
+///       - Includes OTLOptions.inc.
+///     2.04a: 2010-06-06
+///       - Modified patch from 2.04 so that it's actually working.
+///     2.04: 2010-05-30
+///       - ThreadDataFactory can now accept either a function or a method.
+///     2.03c: 2010-01-09
+///       - Fixed CancelAll.
+///       - Can be compiled with /dLogThreadPool.
+///     2.03b: 2009-12-12
+///       - Fixed exception handling for silent exceptions.
+///     2.03a: 2009-11-17
+///       - Task worker must not depend on monitor to be assigned.
+///       - SetMonitor must be synchronous.
+///     2.02: 2009-11-13
+///       - D2010 compatibility changes.
+///     2.01b: 2009-03-03
+///       - Bug fixed: TOTPWorkerThread.Create was not waiting on the worker object to
+///         initialize.
+///     2.01a: 2009-02-09
+///       - Removed critical section added in 2.0b - it is not needed as the
+///         IOmniTaskControl.Invoke is thread-safe.
+///     2.01: 2009-02-08
+///       - Added support for per-thread data storage.
+///     2.0b: 2009-02-06
+///       - Protect communication between TOmniThreadPool and TOTPWorker with a critical
+///         section. That should allow multiple threads to Schedule tasks into one
+///         thread pool. 
+///     2.0a: 2009-02-06
+///       - Removed OnWorkerThreadCreated_Asy/OnWorkerThreadDestroyed_Asy
+///         notification mechanism which was pretty much useless.
+///     2.0: 2009-01-26
+///       - Reimplemented using OmniThreadLibrary :)
 ///     1.0: 2008-08-26
-///       - First official release. 
+///       - First official release.
 /// </para></remarks>
 
 unit OtlThreadPool;
@@ -1453,7 +1573,8 @@ destructor TOmniThreadPool.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread pool %p', [pointer(Self), otpPoolName]);{$ENDIF LogThreadPool}
   SendPoolNotifications(pntDestroy, Self);
-  otpWorkerTask.Terminate;
+  if assigned(otpWorkerTask) then
+    otpWorkerTask.Terminate;
   inherited;
 end; { TOmniThreadPool.Destroy }
 
