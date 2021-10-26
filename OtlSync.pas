@@ -200,6 +200,12 @@ type
   TFixedCriticalSection = class(TCriticalSection)
   strict protected
     FDummy: array [0..95] of byte;
+    FLogMe: boolean;
+  public
+    constructor Create(logMe: boolean = false);
+    destructor  Destroy; override;
+    procedure Acquire;
+    procedure Release;
   end; { TFixedCriticalSection }
 
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
