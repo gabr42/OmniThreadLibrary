@@ -18,7 +18,8 @@
     are still implemented for backwards compatibility.
   - Added OtlCommon.IOmniSynchronizer<T>.
 
-3.07.9: <<unreleased>>
+3.07.9: 2021-10-25
+
 - New features:
   - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
   - TOmniTaskControl.OnMessage and .OnTerminated free the executor
@@ -28,6 +29,7 @@
   - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
   - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
   - Added optional timeout parameter to IOmniThreadPool.Cancel.
+  - Added Delphi 11 Alexandria packages.
 
 - Bug fixes:
   - Fixed warnings in OtlComm.

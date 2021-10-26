@@ -1,0 +1,67 @@
+OmniThreadLibrary 3.07.9 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.9)
+or as a ZIP archive
+(https://drive.google.com/file/d/1-WvsJ_3tmQ7hKOIMw0mDLbv3pwfmoaG6).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 
+10.3 Rio, 10.4 Sydney, and 11 Alexandria on the Win32 and Win64 platforms. 
+
+There are no plans to support older Delphi compilers. XE2+ support 
+is limited to Windows targets. Firemonkey is currently not supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Support: http://www.omnithreadlibrary.com/support/
+Downloads: http://www.omnithreadlibrary.com/download/
+Repository: https://github.com/gabr42/OmniThreadLibrary
+Issue tracker: https://github.com/gabr42/OmniThreadLibrary/issues
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation: http://www.omnithreadlibrary.com/documentation/
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
+
+Changes since version 3.07.8
+============================
+
+- New features:
+  - New unit OtlSync.Utils. Requires Delphi 2009 or newer.
+  - TOmniTaskControl.OnMessage and .OnTerminated free the executor
+    if the eventHandler is nil.
+  - [HHasenack] Added IOmniTaskControl.DirectExecute which executes 
+    a task in the current thread.
+  - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
+  - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
+  - Added optional timeout parameter to IOmniThreadPool.Cancel.
+
+- Bug fixes:
+  - Fixed warnings in OtlComm.
+  - Fixed link to support forum in all units.
+  - Fixed TOmniMREW.TryEnterWriteLock [issue #149].
+  - Fixed: Calling TOmniWaitObjectList.Remove removed only
+    the ResponseHandlers[] handler and not the AnonResponseHandlers[] handler.
+  - Fixed: IOmniIntegerSet/TOmniIntegerSet.AsMask changed to uint64 
+    so it can store 64-bit NativeUInt without problems. [issue #148]
+    
+--
+Primoz
+[http://thedelphigeek.com]

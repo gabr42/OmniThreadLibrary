@@ -34,8 +34,7 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
-<<<<<<< HEAD
-///   Last modification : 2020-12-21
+///   Last modification : 2021-06-22
 ///   Version           : 2.02
 ///</para><para>
 ///   History:
@@ -47,12 +46,6 @@
 ///     2.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - Internal time functions replaced with OtlPlatform.Time.
-=======
-///   Creation date     : 2008-06-12
-///   Last modification : 2021-06-22
-///   Version           : 1.43a
-///</para><para>
-///   History:
 ///     1.43a: 2021-06-22
 ///       - Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage.
 ///     1.43: 2021-03-10
@@ -292,7 +285,6 @@
 ///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
 ///     1.0a: 2008-08-29
 ///       - Bug fixed: .MsgWait was not functional.
->>>>>>> dd6829e... Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>

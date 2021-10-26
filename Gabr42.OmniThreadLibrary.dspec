@@ -1,7 +1,7 @@
 {
   "metadata": {
     "id": "Gabr42.OmniThreadLibrary",
-    "version": "3.7.8",
+    "version": "3.7.9",
     "description": "OmniThreadLibrary is a powerful threading library for Delphi",
     "authors": "Primož Gabrijelčič",
     "projectUrl": "https://github.com/gabr42/OmniThreadLibrary",
@@ -71,9 +71,15 @@
       "platforms": "Win32, Win64",
       "template": "default"
     }
+    {
+      "compiler": "11",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    }
   ],
   "templates": [
     {
+<<<<<<< HEAD
       "name" : "Seattle",
       "source": [
         {
@@ -112,6 +118,8 @@
       ]      
     },
     {
+=======
+>>>>>>> faba88e... updated for newer Delphis
       "name": "default",
       "source": [
         {

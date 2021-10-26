@@ -107,5 +107,17 @@
             "project": "Packages\\Delphi 10.2 Tokyo\\OmniThreadLibraryPackages.groupproj",
             "compiler": 32
         }
+        {
+            "project": "Packages\\Delphi 10.3 Rio\\OmniThreadLibraryPackages.groupproj",
+            "compiler": 33
+        }
+        {
+            "project": "Packages\\Delphi 10.4 Seattle\\OmniThreadLibraryPackages.groupproj",
+            "compiler": 34
+        }
+        {
+            "project": "Packages\\Delphi 11 Alexandria\\OmniThreadLibraryPackages.groupproj",
+            "compiler": 35
+        }
     ]    
 }
