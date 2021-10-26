@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2021, Primoz Gabrijelcic
+///Copyright (c) 2020, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -46,245 +46,6 @@
 ///     2.0: 2018-04-24
 ///       - Removed support for pre-XE Delphis.
 ///       - Internal time functions replaced with OtlPlatform.Time.
-///     1.43a: 2021-06-22
-///       - Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage.
-///     1.43: 2021-03-10
-///       - Implemented IOmniWorker.EventInfo.
-///     1.42: 2020-12-21
-///       - [HHasenack] Added IOmniTaskControl.DirectExecute which executes
-///         task in the current thread.
-///       - IOmniTaskControl.Terminate cancels thread pool tasks with timeout 0.
-///     1.41: 2019-04-26
-///       - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
-///     1.40c: 2019-03-22
-///       - [sglienke] TOmniTaskExecutor.Cleanup clears reference to anonymous function executor.
-///         This allows tasks to be run from a package. [issue #132]
-///     1.40b: 2018-12-13
-///       - Fixed: If additional wait objects registered with RegisterWaitObject were
-///         constantly signalled, timers were never called.
-///     1.40a: 2018-03-16
-///       - TOmniMessageExec.OnTerminated checks whether the event handler is assigned
-///         before executing it.
-///     1.40: 2017-08-01
-///       - Implemented IOmniTask.InvokeOnSelf method.
-///     1.39: 2017-07-26
-///       - Implemented support for timer events implemented as TProc and TProc<integer> methods.
-///     1.38b: 2017-04-06
-///       - Compiles with Delphi 10.2 Tokyo.
-///     1.38a: 2017-03-28
-///       - TOmniTaskExecutor now uses own 64-bit time function. DSiTimeGetTime64 cannot
-///         be used for this purpose as its results cannot be compared across threads.
-///     1.38: 2016-07-01
-///       - Defined IOmniTaskControl.ProcessorGroup and .NUMANode.
-///       - Added support for executing a task in a specific processor group or NUMA node.
-///     1.37: 2015-10-04
-///       - Imported mobile support by [Sean].
-///     1.36b: 2015-09-07
-///       - Added a debug log (when compiling a Debug build) when TWaitFor.MsgWaitAny
-///         returns WAIT_FAILED.
-///     1.36a: 2015-08-28
-///       - CheckTimers is no longer called from DispatchOmniMessage if that one was
-///         called from CheckTimers.
-///     1.36: 2015-08-27
-///       - TOmniWorker message hooks introduced.
-///     1.35: 2014-11-16
-///       - IOmniTaskControl can wait on any number of comm handles and wait objects.
-///         That enables support for >60 tasks in the OtlThreadPool.
-///     1.34: 2014-11-03
-///       - TOmniTaskGroup can now own more than 60 tasks.
-///     1.33a: 2014-09-23
-///       - Fixed TOmniTaskControl.SetParameters.
-///     1.33: 2014-09-07
-///       - Implemented Run overloads that internally call Invoke to start
-///         thread worker.
-///     1.32c: 2014-01-08
-///       - Thread priority is set correctly (to 'normal') if it is not explicitly specified.
-///     1.32b: 2013-06-03
-///       - Fixed task destruction deadlock introduced in 1.32a.
-///     1.32a: 2013-05-26
-///       - Fixed a problem in task destruction sequence.
-///     1.32: 2013-01-30
-///       - Added IOmniTaskControl.Stop - signals thread to stop and immediately returns.
-///       - Fixed TOmniTaskGroup.TerminateAll.
-///     1.31k: 2012-10-03
-///       - Fixed message processing.
-///     1.31j: 2012-10-01
-///       - Refactored TOmniTaskExecutor.DispatchEvent a bit more.
-///     1.31i: 2012-09-27
-///       - Task controller implements method FilterMessage which allows the event
-///         monitor to filter out internal messages.
-///       - Removed TOmniTaskControlEventMonitor (no longer needed).
-///     1.31h: 2012-09-24
-///       - Fixed bug in TOmniTaskGroup.TerminateAll - maxWait_ms parameter was ignored.
-///     1.31g: 2012-06-18
-///       - Fixed race condition in task teardown. Big thanks to [meishier] for putting
-///         together a reproducible test case.
-///     1.31f: 2012-04-21
-///       - Fixed race condition in InternalStop.
-///     1.31e: 2012-02-07
-///       - Bug fixed: Internal event monitor messages must be processed in Terminate,
-///         otherwise OnTerminated is not called if the task is terminated from the task
-///         controller. Big thanks to [Qmodem] for finding the bug.
-///     1.31d: 2012-02-02
-///       - Bug fixed: It was not possible to change timer delay once it was created.
-///         Big thanks to [Unspoken] for finding the bug.
-///     1.31c: 2011-12-14
-///       - Fixed race condition between TOmniTask.Execute and TOmniTask.Terminate.
-///       - Under some circumstances ProcessMessage failed to rebuild handle
-///         array before waiting which could cause 'invalid handle' error.
-///     1.31b: 2011-11-08
-///       - Fixed invalid "A call to an OS function failed" error in DispatchEvent.
-///     1.31a: 2011-11-06
-///       - Fixed wrong order in teardown sequence in TOmniTask.Execute. Great thanks to
-///         [Anton Alisov] for providing a reproducible test case.
-///     1.31: 2011-11-05
-///       - Adapted to OtlCommon 1.24.
-///     1.30: 2011-11-05
-///       - Task parameters are exposed through IOmniTaskControl.Param property.
-///     1.29: 2011-08-27
-///       - Implemented another OnTerminated overload acception parameterless anonymous
-///         function.
-///     1.28: 2011-07-17
-///       - Implemented IOmniTaskControl.DetachException.
-///     1.27: 2011-07-14
-///       - IOmniTaskControl implements FatalException property.
-///       - Support for non-silent exceptions removed.
-///     1.26a: 2011-07-14
-///       - Fixed race condition in TOmniTask.Execute. Big thanks to [Anton Alisov] for
-///         providing reproducible test case.
-///     1.26: 2011-07-04
-///       - Changed exception handling.
-///     1.25a: 2011-05-27
-///       - Passes timer ID to timer proc if it accepts const TOmniValue parameter.
-///     1.25: 2011-04-08
-///       - IOmniTaskControl termination empties task message queue and calls appropriate
-///         OnMessage handlers.
-///     1.24: 2011-03-16
-///       - Implemented IOmniTaskControl.Invoke(procedure) and
-///         .Invoke(procedure const task: IOmniTask).
-///       - Implemented IOmniTask.Invoke(procedure).
-///     1.23b: 2011-02-28
-///       - Bug fixed: Make sure timers are called even if there's a constant stream
-///         of messages in registered message queues.
-///     1.23a: 2011-01-07
-///       - Bug fixed: Enumerating over TOmniTaskControlList (for example when using
-///         IOmniTaskGroup.SendToAll) leaked one object.
-///     1.23: 2010-12-02
-///       - Added IOmniTaskControl.CancelWith(token) which can be used to enforce
-///         non-default cancellation token.
-///     1.22d: 2010-10-16
-///       - Delayed Terminate did not set result.
-///     1.22c: 2010-10-13
-///       - Allow Terminate to be called from the OnTerminated handler.
-///     1.22b: 2010-09-21
-///       - Better workaround for the 'invalid handle' error.
-///     1.22a: 2010-09-20
-///       - Changed the place where internal monitor is destroyed to prevent 'invalid
-///         handle' error.
-///     1.22: 2010-07-01
-///       - Includes OTLOptions.inc.
-///     1.21c: 2010-06-12
-///       - TOmniTaskExecutor must always call Cleanup in case task was not executed.
-///         (Issue #19, http://code.google.com/p/omnithreadlibrary/issues/detail?id=19).
-///     1.21b: 2010-05-30
-///       - Fixed TOmniTaskControl.WaitFor for pooled tasks.
-///     1.21a: 2010-04-06
-///       - [LN] Bug fixed: TOmniTaskControl.WaitFor would hang if thread was 
-///         terminated externally.
-///     1.21: 2010-03-16
-///       - Added support for multiple simultaneous timers. SetTimer takes additional
-///         'timerID' parameter. The old SetTimer assumes timerID = 0.
-///     1.20d: 2010-02-22
-///        - D2009 compilation hack moved to OtlCommon.
-///     1.20c: 2010-02-22
-///       - A better fix for the D2009 compilation issues, thanks to Serg.
-///     1.20b: 2010-02-21
-///       - TOmniTaskControl.otcOnTerminatedExec was not created when OnTerminated
-///         function was called with a "reference to function" parameter.
-///       - Fixed to compile with D2009.
-///     1.20a: 2010-02-10
-///       - Internal message forwarders must be destroyed during task termination.
-///     1.20: 2010-02-09
-///       - Added IOmniTaskControl.OnMessage(msgID, handler).
-///     1.19: 2010-02-03
-///       - IOmniTaskControl and IOmniTask implement CancellationToken property.
-///     1.18: 2010-02-02
-///       - TerminateWhen accepts cancellation token.
-///     1.17: 2010-01-31
-///       - Added WithLock overload.
-///     1.16: 2010-01-14
-///       - Implemented IOmniTaskControl.UserData[]. The application can store any values
-///         in this array. It can be accessed via the integer or string index.
-///     1.15: 2010-01-13
-///       - Implemented IOmniTask.GetImplementor.
-///     1.14a: 2009-12-18
-///       - Worked around a change in Delphi 2010 update 4.
-///     1.14: 2009-12-12
-///       - Implemented support for IOmniTask.RegisterWaitObject/UnregisterWaitObject.
-///     1.13a: 2009-12-12
-///       - Raise loud exception for pooled tasks.
-///     1.13: 2009-11-19
-///       - Implemented IOmniTaskControl.Unobserved behaviour modifier.
-///     1.12: 2009-11-15
-///       - Event monitor notifications implemented with container observer.
-///     1.11a: 2009-11-13
-///       - Cleanup in TOmniTask.Execute reordered to fix Issue 13.
-///     1.11: 2009-11-13
-///       - Implemented automatic event monitor with methods IOmniTaskControl.OnMessage
-///         and OnTerminated. Both support 'procedure of object' and
-///         'reference to procedure' parameters.
-///       - D2010 compatibility changes.
-///     1.10: 2009-05-15
-///       - Implemented IOmniTaskControl.SilentExceptions.
-///     1.09: 2009-02-08
-///       - Implemented per-thread task data storage.
-///     1.08: 2009-01-26
-///       - Implemented IOmniTaskControl.Enforced behaviour modifier.
-///       - Added TOmniWorker.ProcessMessages - a support for worker to recursively
-///         process messages inside message handlers.
-///     1.07: 2009-01-19
-///       - Implemented IOmniTaskControlList, a list of IOmniTaskControl interfaces.
-///       - TOmniTaskGroup reimplemented using IOmniTaskControlList.
-///     1.06: 2008-12-15
-///       - TOmniWorker's internal message loop can now be overridden at various places
-///         and even fully replaced with a custom code.
-///     1.05a: 2008-11-17
-///       - [Jamie] Fixed bug in TOmniTaskExecutor.Asy_SetTimerInt.
-///     1.05: 2008-11-01
-///       - IOmniTaskControl.Terminate kills the task thread if it doesn't terminate in
-///         the specified amount of time.
-///     1.04a: 2008-10-06
-///       - IOmniTaskControl.Invoke modified to return IOmniTaskControl.
-///     1.04: 2008-10-05
-///       - Implemented IOmniTaskControl.Invoke (six overloads), used for string- and
-///         pointer-based method dispatch (see demo 18 for more details and demo 19
-///         for benchmarks).
-///       - Implemented two SetTimer overloads using new invocation methods.
-///       - Implemented IOmniTaskControl.SetQueue, which can be used to increase (or
-///         reduce) the size of the IOmniTaskControl<->IOmniTask communication queue.
-///         This function must be called before .SetMonitor, .RemoveMonitor, .Run or
-///         .Schedule.
-///     1.03b: 2008-09-26
-///       - More stringent Win32 API result checking.
-///     1.03a: 2008-09-25
-///       - Bug fixed: TOmniTaskControl.Schedule always scheduled task to the global
-///         thread pool.
-///     1.03: 2008-09-20
-///       - Implemented IOmniTaskGroup.SendToAll. This should be looked at as a temporary
-///         solution. IOmniTaskGroup should expose communication interface (just like
-///         IOmniTask and IOmniTaskControl) but in this case it should be one-to-many
-///         queue connecting IOmniTaskGroup's Comm to all tasks inside the group.
-///     1.02: 2008-09-19
-///       - Added enumerator to the IOmniTaskGroup interface.
-///       - Implemented IOmniTaskGroup.RegisterAllCommWith and .UnregisterAllCommFrom.
-///       - Bug fixed in TOmniTaskExecutor.Asy_DispatchMessages - program crashed if
-///         communications unregistered inside task's own timer method.
-///       - Setting timer interval resets timer countdown.
-///     1.01: 2008-09-18
-///       - Implemented SetTimer on the IOmniTask side.
-///       - Bug fixed: IOmniTaskGroup.RunAll was not returning a result.
-///     1.0a: 2008-08-29
-///       - Bug fixed: .MsgWait was not functional.
 ///     1.0: 2008-08-26
 ///       - First official release.
 ///</para></remarks>
@@ -371,6 +132,7 @@ type
     function  GetTask: IOmniTask;
     procedure SetExecutor(executor: TObject);
     procedure SetTask(const value: IOmniTask);
+  //message loop hooks; temporary solution, will be replaced with a better one
     procedure AfterWait(waitFor: TWaitFor; awaited: TWaitFor.TWaitForResult);
     procedure BeforeWait(var timeout_ms: cardinal);
     function  EventInfo(awaited: TWaitFor.TWaitForResult): TOmniWorkerEventInfo;
@@ -1029,7 +791,7 @@ type
     otcThread              : TOmniThread;
     otcUserData            : TOmniValueContainer;
     {$IFNDEF MSWINDOWS}
-    FMultiWaitLock         : IOmniCriticalSection;
+    otcMultiWaitLock       : IOmniCriticalSection;
     {$ENDIF ~MSWINDOWS}
   strict protected
     procedure CreateInternalMonitor;
@@ -1200,7 +962,7 @@ type
     otgRegisteredWith: IOmniTask;
     otgTaskList      : IOmniTaskControlList;
     {$IFNDEF MSWINDOWS}
-    FMultiWaitLock   : IOmniCriticalSection;
+    otgMultiWaitLock : IOmniCriticalSection;
     {$ENDIF ~MSWINDOWS}
   strict protected
     procedure AutoUnregisterComms;
@@ -3224,6 +2986,9 @@ end; { TOmniTaskControl.GetUserDataVal }
 
 procedure TOmniTaskControl.Initialize(const taskName: string);
 begin
+  {$IFNDEF MSWINDOWS}
+  otcMultiWaitLock := CreateOmniCriticalSection(true);
+  {$ENDIF ~MSWINDOWS}
   otcExecutor.Options := [tcoForceExecution];
   otcQueueLength := CDefaultQueueSize;
   otcSharedInfo := TOmniSharedTaskInfo.Create;
@@ -3733,7 +3498,7 @@ var
 begin
   if assigned(otcThread) then begin
     {$IFDEF OTL_PlatformIndependent}
-    DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], FMultiWaitLock);
+    DualWaiter := TSynchroWaitFor.Create([otcSharedInfo.TerminatedEvent, otcThread.ThreadTerminationEvent], otcMultiWaitLock);
     try
       Result := DualWaiter.WaitAny(maxWait_ms, Signaller) = waAwaited;
     finally DualWaiter.Free; end;
@@ -3774,6 +3539,9 @@ constructor TOmniThread.Create(task: IOmniTask);
 begin
   inherited Create(true);
   otTask := task;
+  {$IFNDEF MSWINDOWS}
+  otThreadTerminationEvent := CreateOmniEvent(true, false, nil);
+  {$ENDIF}
 end; { TOmniThread.Create }
 
 procedure TOmniThread.Execute;
@@ -3787,7 +3555,6 @@ begin
     // task reference may not be valid anymore
   finally SendThreadNotifications(tntDestroy, taskName); end;
 end; { TOmniThread.Execute }
-
 
 {$IFNDEF MSWINDOWS}
 procedure TOmniThread.DoTerminate;
@@ -3941,6 +3708,9 @@ constructor TOmniTaskGroup.Create;
 begin
   inherited Create;
   otgTaskList := TOmniTaskControlList.Create;
+  {$IFNDEF MSWINDOWS}
+  otgMultiWaitLock := CreateOmniCriticalSection;
+  {$ENDIF ~MSWINDOWS}
 end; { TOmniTaskGroup.Create }
 
 destructor TOmniTaskGroup.Destroy;
@@ -4050,7 +3820,7 @@ begin
   SetLength(Syncs, otgTaskList.Count);
   for Idx := 0 to otgTaskList.Count - 1 do
     Syncs[Idx] := (otgTaskList[Idx] as IOmniTaskControlInternals).TerminatedEvent;
-  MultiWaiter := TSynchroWaitFor.Create(Syncs, FMultiWaitLock);
+  MultiWaiter := TSynchroWaitFor.Create(Syncs, otgMultiWaitLock);
   try
     Result := MultiWaiter.WaitAny(maxWait_ms, Signaller) = waAwaited;
   finally MultiWaiter.Free; end;
@@ -4167,7 +3937,7 @@ end; { TOmniMessageExec.Clone }
 procedure TOmniMessageExec.OnMessage(const task: IOmniTaskControl;
   const msg: TOmniMessage);
 var
-  msg1     : TOmniMessage;
+  msg1: TOmniMessage;
   msgMethod: TMethod;
   msgProc  : TProc;
 begin
@@ -4176,32 +3946,21 @@ begin
     omeOnMessageDispatch.Dispatch(msg1);
   end
   else case omeOnMessage.Kind of
-<<<<<<< HEAD
-    oekDelegate:
-      TOmniOnMessageFunction(TProc(omeOnMessage))(task, msg);
-    oekMethod:
-      TOmniTaskMessageEvent(TMethod(omeOnMessage))(task, msg);
-    else
-      raise Exception.CreateFmt('TOmniMessageExec.OnMessage: Unexpected kind %s',
-              [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
-=======
-    {$IFDEF OTL_Anonymous}
     oekDelegate:
       begin
         msgProc := TProc(omeOnMessage);
         if assigned(msgProc) then
           TOmniOnMessageFunction(msgProc)(task, msg);
       end;
-    {$ENDIF OTL_Anonymous}
     oekMethod:
       begin
         msgMethod := TMethod(omeOnMessage);
         if assigned(msgMethod.Code) and assigned(msgMethod.Data) then
           TOmniTaskMessageEvent(msgMethod)(task, msg);
       end
-    else raise Exception.CreateFmt('TOmniMessageExec.OnMessage: Unexpected kind %s',
-      [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
->>>>>>> dd6829e... Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage
+    else
+      raise Exception.CreateFmt('TOmniMessageExec.OnMessage: Unexpected kind %s',
+              [GetEnumName(TypeInfo(TOmniExecutableKind), Ord(omeOnMessage.Kind))]);
   end;
 end; { TOmniMessageExec.OnMessage }
 

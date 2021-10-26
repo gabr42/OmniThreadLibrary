@@ -60,6 +60,10 @@
 ///     1.27c: 2020-09-16
 ///       - Fixed TOmniMREW.TryEnterWriteLock which incorrectly managed the shared lock
 ///         state when a timeout occurred. [issue #149]
+///     1.27b: 2019-03-19
+///       - TOmniMREW.TryEnterReadLock and .TryEnterWriteLock were returning True on timeout.
+///     1.27a: 2018-11-02
+///       - Fixed race condition between TOmniResourceCount.[Try]Allocate and TOmniResourceCount.Release.
 ///	    1.27: 2018-04-06
 ///	      - Added timeout parameter to TOmniMREW.TryEnterReadLock and TOmniMREW.TryExitReadLock.
 ///     1.26: 2017-11-09
@@ -2130,6 +2134,7 @@ begin
       Result := wrTimeout
     else begin
       for so in FController.SynchObjects do
+        if assigned(so) then
         so.AddObserver(FController.SynchClient);
       try
         if Test(signaller1) then
@@ -2159,6 +2164,7 @@ begin
         end;
       finally
         for so in FController.SynchObjects do
+          if assigned(so) then
           so.RemoveObserver(FController.SynchClient);
       end;
     end;
@@ -2252,6 +2258,8 @@ begin
   FController.Gate.Acquire;
   try
     for member in FController.SynchObjects do begin
+      if not assigned(member) then
+        continue;
       if member.IsSignalled then begin
         Signaller := member;
         Exit(true);
@@ -2276,6 +2284,8 @@ begin
   FController.Gate.Acquire;
   try
     for member in FController.SynchObjects do begin
+      if not assigned(member) then
+        continue;
       Result := member.IsSignalled;
       if not Result then
         break; //for
@@ -2696,6 +2706,37 @@ class function TInterlockedEx.CAS(const oldValue, newValue: NativeInt;
 begin
   Result := CompareExchange(NativeInt(destination), newValue, oldValue) = NativeInt(oldValue);
 end; { TInterlockedEx.CAS }
+
+constructor TFixedCriticalSection.Create(logMe: boolean);
+begin
+  inherited Create;
+  FLogMe := logMe;
+  if FLogMe then
+    Writeln(Format('[%d] %s Create %p', [TThread.Current.ThreadID, FormatDateTime('hh:mm:ss.zzz', Now), pointer(Self)]));
+end;
+
+destructor TFixedCriticalSection.Destroy;
+begin
+  if FLogMe then
+    Writeln(Format('[%d] %s Destroy %p', [TThread.Current.ThreadID, FormatDateTime('hh:mm:ss.zzz', Now), pointer(Self)]));
+  inherited;
+end;
+
+procedure TFixedCriticalSection.Acquire;
+begin
+  if FLogMe then
+    Writeln(Format('[%d] %s Acquire %p', [TThread.Current.ThreadID, FormatDateTime('hh:mm:ss.zzz', Now), pointer(Self)]));
+  inherited;
+  if FLogMe then
+    Writeln(Format('[%d] %s Acquired %p', [TThread.Current.ThreadID, FormatDateTime('hh:mm:ss.zzz', Now), pointer(Self)]));
+end;
+
+procedure TFixedCriticalSection.Release;
+begin
+  if FLogMe then
+    Writeln(Format('[%d] %s Release %p', [TThread.Current.ThreadID, FormatDateTime('hh:mm:ss.zzz', Now), pointer(Self)]));
+  inherited;
+end;
 
 initialization
   GOmniCancellationToken := CreateOmniCancellationToken;

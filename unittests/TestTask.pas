@@ -58,6 +58,12 @@ var
   sw    : TStopwatch;
   task  : IOmniTaskControl;
 begin
+  for var i := 1 to 100 do begin
+    task := CreateTask(procedure (const task: IOmniTask) begin Sleep(Random(10)); end).Run;
+    task.WaitFor(3000);
+    task.Terminate(INFINITE);
+  end;
+
   didRun := false;
   task := CreateTask(
     procedure (const task: IOmniTask)
@@ -74,6 +80,7 @@ begin
   sw := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 procedure TestITaskControl.TestWait;
@@ -102,6 +109,7 @@ begin
   sw := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 procedure TestITaskControl.TestTerminate;
@@ -128,6 +136,7 @@ begin
   sw := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 type
@@ -162,6 +171,7 @@ begin
   sw := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 type
@@ -203,6 +213,7 @@ begin
   stopwatch := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(stopwatch.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 type
@@ -260,6 +271,7 @@ begin
   CheckTrue(Synchronizer.WaitFor('done', 5000));
 
   task.Terminate;
+  Sleep(0);
 end;
 
 type
@@ -329,6 +341,7 @@ begin
   sw := TStopwatch.StartNew;
   task.Terminate;
   CheckTrue(sw.ElapsedMilliseconds < 500, 'Task took long time to terminate');
+  Sleep(0);
 end;
 
 { TSynchronizedOmniWorker }
