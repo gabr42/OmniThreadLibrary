@@ -30,10 +30,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-21
-   Last modification : 2021-02-26
-   Version           : 2.0
+   Last modification : 2021-03-16
+   Version           : 2.01a
 </pre>*)(*
    History:
+     2.02: 2021-03-30
+       - Changed TGpStreamEnhancer.GoToStart and .GoToEnd to a function returning Self.
+     2.01a: 2021-03-16
+       - Implemented missing TGpPagedStream.SetSize.
+     2.01: 2021-03-05
+       - Implemented TGpPagedStream which provides access to another stream in page-aligned,
+         multiple-of-page-size chunks (except at the very end).
+       - Implemented TGpBaseEncryptedStream, a base stream for writing concrete
+         encrypted stream implementation. (See GpStreams.DCP for an example.)
      2.0: 2021-02-26
        - Reparented all stream-wrapping streams on the new TGpStreamWrapper class.
      1.57: 2020-11-30
@@ -215,7 +224,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
 unit GpStreams;
-                                 
+
 interface
 
 {$IFDEF CONDITIONALEXPRESSIONS}
@@ -350,8 +359,8 @@ type
       autoDestroyWrappedStream: boolean = false); overload;
     destructor  Destroy; override;
     function  AddSpan(firstPos, lastPos: int64): integer;
-    function  AddSpanOS(offset, size: int64): integer; {$IFDEF GpStreams_Inline}inline;{$ENDIF}
-    function  CountSpans: integer; {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  AddSpanOS(offset, size: int64): integer;    {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  CountSpans: integer;                        {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     function  CumulativeSize: int64;
     function  LocateCumulativeOffset(offset: int64): integer;
     function  Read(var buffer; count: integer): integer; override;
@@ -366,8 +375,8 @@ type
 
   TGpInterceptorReadProc = function (position: int64; var buffer; count: integer): integer of object;
   TGpInterceptorWriteProc = function (position: int64; const buffer; count: integer): integer of object;
-  TGpInterceptorSeekProc = function (const offset: int64; origin: TSeekOrigin): int64 of object;
-  TGpInterceptorSetSizeProc = procedure (const newSize: int64) of object;
+  TGpInterceptorSeekProc = function (offset: int64; origin: TSeekOrigin): int64 of object;
+  TGpInterceptorSetSizeProc = procedure (newSize: int64) of object;
 
   ///<summary>Interceptor stream-alike which reroutes read/write/seek calls to custom wrappers.</summary>
   TGpInterceptorStream = class(TStream)
@@ -389,7 +398,7 @@ type
     property Position: int64 read FCurrentPos write SetPosition;
   end; { TGpInterceptorStream }
 
-  ///<summary>Provides a buffered access to another stream.</summary>
+  ///<summary>Provides a read-buffered access to another stream.</summary>
   ///<since>2007-10-04</since>
   TGpBufferedStream = class(TGpStreamWrapper)
   {$IFDEF USE_STRICT} strict {$ENDIF}  private
@@ -413,25 +422,64 @@ type
     function  Write(const buffer; count: integer): integer; override;
   end; { TGpBufferedStream }
 
-  // https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)
-  // GpStreams.DCP
+  ///<summary>Provides a paged access to another stream. Data is always accessed in
+  ///    page-aligned chunks. Except at the very end of the stream all data access sizes
+  ///    are multiple of the page size.</summary>
+  TGpPagedStream = class(TGpStreamWrapper)
+  private
+    FBuffer     : PAnsiChar;
+    FBufferDirty: boolean;
+    FBufferLen  : integer;
+    FBufferPtr  : PAnsiChar;
+    FBufferPos  : int64;
+    FPageSize   : integer;
+  protected
+    function  GetPosition: int64;                 {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  GetSize: int64; override;
+    function  InBuffer(offset: int64): boolean;   {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  InternalSeek(offset: int64): int64;
+    procedure SetPosition(value: int64);          {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    procedure SetSize(const newSize: int64); override;
+  public
+    constructor Create(baseStream: TStream; pageSize: integer;
+      autoDestroyWrappedStream: boolean = false); overload;
+    destructor  Destroy; override;
+    procedure Flush;
+    function  Read(var buffer; count: integer): integer; override;
+    function  Seek(const offset: int64; origin: TSeekOrigin): int64; overload; override;
+    function  Write(const buffer; count: integer): integer; override;
+    property Position: int64 read GetPosition write SetPosition;
+  end; { TGpPagedStream }
+
+  ///<summary>Encrypts/decrypts wrapped stream on the fly. Abstract class, doesn't
+  ///    provide any encryption support. Specific implementation should be put in
+  ///    external units (see GpStreams.DCP for an example).<para>
+  ///  Uses CTR encryption mode:
+  ///  https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)
+  ///</summary>
   TGpBaseEncryptedStream = class(TGpStreamWrapper)
   private
-  const
-    CBufferSize = 1024;
-  var
-    FBufferer   : TGpBufferedStream;
     FInterceptor: TGpInterceptorStream;
-  protected
+    FPaginator  : TGpPagedStream;
+  protected { abstract }
+    procedure DecryptCTR(position: int64; var buffer; count: integer); virtual; abstract;
     procedure DoneCypher; virtual; abstract;
+    procedure EncryptCTR(position: int64; var buffer; count: integer); virtual; abstract;
+    procedure InitCypher(const key; keySize: integer; var ctrBlockSize: integer; nonce: uint64); virtual; abstract;
+  protected
     function  GetSize: int64; override;
-    procedure InitCypher(const key; keySize: integer; nonce: uint64); virtual; abstract;
-    function  InternalSeek(offset: int64): int64;
+    function  InterceptRead(position: int64; var buffer; count: integer): integer;
+    function  InterceptSeek(offset: int64; origin: TSeekOrigin): int64;
+    procedure InterceptSetSize(newSize: int64);
+    function  InterceptWrite(position: int64; const buffer; count: integer): integer;
+    procedure SetSize(const newSize: int64); override;
   public
     constructor Create(const key; keySize: integer; nonce: uint64;
       baseStream: TStream; autoDestroyWrappedStream: boolean = false);
     destructor  Destroy; override;
+    function  Read(var buffer; count: integer): integer; override;
     function  Seek(const offset: int64; origin: TSeekOrigin): int64; overload; override;
+    function  Write(const buffer; count: integer): integer; override;
   end; { TGpBaseEncryptedStream }
 
   ///<summary>Provides a streamed access to collection of streams.</summary>
@@ -598,8 +646,8 @@ type
     function  GetAsHexString: string;
     function  GetAsAnsiString: AnsiString;
     function  GetAsString: string;
-    procedure GoToStart;                          {$IFDEF GpStreams_Inline}inline;{$ENDIF}
-    procedure GoToEnd;                            {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  GoToStart: TStream;                 {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    function  GoToEnd: TStream;                   {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     function  IsEmpty: boolean;                   {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     procedure LoadFromFile(const fileName: string);
     procedure SaveToFile(const fileName: string);
@@ -732,6 +780,9 @@ type
   function ReadFromFile(const fileName: string; var buffer: IGpBuffer): boolean; overload;
 
 implementation
+
+uses
+  Math;
 
 type
   TGpDoNothingStreamWrapper = class(TInterfacedObject, IGpStreamWrapper)
@@ -2205,9 +2256,10 @@ begin
       Read(Result[1], Length(Result)*SizeOf(char));
 end; { TGpStreamEnhancer.GetAsString }
 
-procedure TGpStreamEnhancer.GoToEnd;
+function TGpStreamEnhancer.GoToEnd: TStream;
 begin
   Position := Size;
+  Result := Self;
 end; { TGpStreamEnhancer.GoToEnd }
 
 function TGpStreamEnhancer.IsEmpty: boolean;
@@ -2229,9 +2281,10 @@ begin
   end;
 end; { TGpStreamEnhancer.GetTag }
 
-procedure TGpStreamEnhancer.GoToStart;
+function TGpStreamEnhancer.GoToStart: TStream;
 begin
   Position := 0;
+  Result := Self;
 end; { TGpStreamEnhancer.GoToStart }
 
 procedure TGpStreamEnhancer.KeepLast(numBytes: integer);
@@ -2914,47 +2967,317 @@ begin
     FPosition := newSize;
 end; { TRawByteStringStream.SetSize }
 
-{ TGpBaseEncryptedStream }
+{ TGpPagedStream }
 
-constructor TGpBaseEncryptedStream.Create(const key; keySize: integer; nonce: uint64;
-  baseStream: TStream; autoDestroyWrappedStream: boolean);
+constructor TGpPagedStream.Create(baseStream: TStream; pageSize: integer;
+  autoDestroyWrappedStream: boolean);
 begin
   inherited Create(baseStream, autoDestroyWrappedStream);
-  FBufferer := TGpBufferedStream.Create(baseStream, CBufferSize, false);
-  FInterceptor := TGpInterceptorStream.Create(InterceptRead, InterceptWrite, InterceptSeek, InterceptSetSize);
-  InitCypher(key, keySize, nonce);
-end; { TGpBaseEncryptedStream.Create }
+  FPageSize := pageSize;
+  GetMem(FBuffer, FPageSize);
+  FBufferLen := -1;
+  FBufferPtr := FBuffer;
+  FBufferPos := WrappedStream.Position;
+end; { TGpPagedStream.Create }
 
-destructor TGpBaseEncryptedStream.Destroy;
+destructor TGpPagedStream.Destroy;
 begin
-  DoneCypher;
-  FreeAndNil(FBufferer);
-  FreeAndNil(FInterceptor);
+  Flush;
+  if assigned(FBuffer) then
+    FreeMem(FBuffer);
   inherited;
-end; { TGpBaseEncryptedStream.Destroy }
+end; { TGpPagedStream.Destroy }
 
-function TGpBaseEncryptedStream.GetSize: int64;
+procedure TGpPagedStream.Flush;
 begin
-  Result := FBaseStream.Size;
-  // TODO 1 -oPrimoz Gabrijelcic : plus size of unwritten buffer
-end; { TGpBaseEncryptedStream.GetSize }
+  if (FBufferLen <= 0) or (not FBufferDirty) then
+    Exit;
 
-function TGpBaseEncryptedStream.InternalSeek(offset: int64): int64;
+  WrappedStream.Position := FBufferPos;
+  WrappedStream.Write(FBuffer^, FBufferLen);
+  FBufferDirty := false;
+end; { TGpPagedStream.Flush }
+
+function TGpPagedStream.GetPosition: int64;
 begin
-  // TODO 1 -oPrimoz Gabrijelcic : implement: TGpBaseEncryptedStream.InternalSeek
-end;
+  Result := FBufferPos + (FBufferPtr - FBuffer);
+end; { TGpPagedStream.GetPosition }
 
-function TGpBaseEncryptedStream.Seek(const offset: int64; origin: TSeekOrigin): int64;
+function TGpPagedStream.GetSize: int64;
+begin
+  Result := WrappedStream.Size;
+end; { TGpPagedStream.GetSize }
+
+function TGpPagedStream.InBuffer(offset: int64): boolean;
+begin
+  Result := (FBufferLen > 0) and (offset >= FBufferPos) and (offset < (FBufferPos + FBufferLen));
+end; { TGpPagedStream.InBuffer }
+
+function TGpPagedStream.InternalSeek(offset: int64): int64;
+begin
+  if InBuffer(offset) then
+    FBufferPtr := FBuffer + (offset - FBufferPos)
+  else begin
+    Flush;
+    FBufferPos := RoundDownTo(offset, FPageSize);
+    FBufferPtr := FBuffer + (offset - FBufferPos);
+    FBufferLen := -1;
+  end;
+
+  Result := Position;
+end; { TGpPagedStream.InternalSeek }
+
+function TGpPagedStream.Read(var buffer; count: integer): integer;
+var
+  available: integer;
+  bufp     : PAnsiChar;
+  inBuf    : boolean;
+  requested: integer;
+begin
+  Result := 0;
+  if count <= 0 then
+    Exit;
+
+  bufp := @buffer;
+  inBuf := InBuffer(Position);
+
+  if not inBuf then begin
+    Flush;
+    if (FBufferPtr - FBuffer) = FPageSize then begin
+      Inc(FBufferPos, FPageSize);
+      FBufferPtr := FBuffer;
+      FBufferLen := 0;
+    end;
+    WrappedStream.Position := FBufferPos;
+    FBufferLen := WrappedStream.Read(FBuffer^, FPageSize);
+    inBuf := InBuffer(Position);
+    if not InBuf then
+      Exit;
+  end;
+
+  if inBuf then begin
+    available := FBufferLen - (FBufferPtr - FBuffer);
+    Assert(available > 0);
+    if count < available then
+      available := count;
+    Move(FBufferPtr^, bufp^, available);
+    Inc(FBufferPtr, available);
+    Inc(bufp, available);
+    Dec(count, available);
+    Inc(Result, available);
+    if count = 0 then
+      Exit;
+  end;
+
+  Flush;
+  FBufferPos := Position;
+  FBufferLen := 0;
+  FBufferPtr := FBuffer;
+
+  Flush;
+  WrappedStream.Position := Position;
+
+  requested := (count div FPageSize) * FPageSize;
+  if requested > 0 then begin
+    available := WrappedStream.Read(bufp^, requested);
+    Position := WrappedStream.Position;
+    Inc(bufp, available);
+    Dec(count, available);
+    Inc(Result, available);
+    if (count = 0) or (available <> requested) then
+      Exit;
+  end;
+
+  FBufferLen := WrappedStream.Read(FBuffer^, FPageSize);
+  available := Min(FBufferLen, count);
+  Move(FBuffer^, bufp^, available);
+  FBufferPtr := FBuffer + available;
+  Inc(Result, available);
+end; { TGpPagedStream.Read }
+
+function TGpPagedStream.Seek(const offset: int64; origin: TSeekOrigin): int64;
 begin
   case origin of
     soBeginning:
       Result := InternalSeek(offset);
     soEnd:
       Result := InternalSeek(WrappedStream.Size + offset);
-//    else
-//      Result := InternalSeek(CurrentPosition + offset);
-// TODO 1 -oPrimoz Gabrijelcic : implement: TGpBaseEncryptedStream.Seek
+    else
+      Result := InternalSeek(Position + offset);
   end;
+end; { TGpPagedStream.Seek }
+
+procedure TGpPagedStream.SetPosition(value: int64);
+begin
+  InternalSeek(value);
+end; { TGpPagedStream.SetPosition }
+
+procedure TGpPagedStream.SetSize(const newSize: int64);
+begin
+  WrappedStream.Size := newSize;
+end; { TGpPagedStream.SetSize }
+
+function TGpPagedStream.Write(const buffer; count: integer): integer;
+var
+  available: integer;
+  bufp     : PAnsiChar;
+  inBuf    : boolean;
+  oldData  : integer;
+  posSet   : boolean;
+  requested: integer;
+  written  : integer;
+begin
+  Result := 0;
+  if count <= 0 then
+    Exit;
+
+  bufp := @buffer;
+  posSet := false;
+
+  if (Position mod FPageSize) <> 0 then begin
+    inBuf := InBuffer(Position) or (FBufferPtr = (FBuffer + FBufferLen));
+
+    if not inBuf then begin
+      WrappedStream.Position := FBufferPos;
+      FBufferLen := WrappedStream.Read(FBuffer^, FPageSize);
+      FBufferDirty := false;
+      inBuf := InBuffer(Position);
+      if not InBuf then
+        Exit;
+    end;
+
+    if inBuf then begin
+      available := FPageSize - (FBufferPtr - FBuffer);
+      Assert(available > 0);
+      if count < available then
+        available := count;
+      oldData := FBufferPtr - FBuffer;
+      Move(bufp^, FBufferPtr^, available);
+      if (oldData + available) < FPageSize then begin
+        Inc(FBufferPtr, available);
+        Inc(Result, available);
+        FBufferLen := Max(FBufferLen, oldData + available);
+        FBufferDirty := true;
+        Exit;
+      end
+      else begin
+        FBufferLen := Max(FBufferLen, oldData + available);
+        if not posSet then
+          WrappedStream.Position := FBufferPos;
+        posSet := true;
+        written := WrappedStream.Write(FBuffer^, FBufferLen);
+        FBufferDirty := false;
+//        FBufferPos := RoundDownTo(FBufferPos + written, FPageSize);
+        written := written - oldData;
+        if written < 0 then
+          written := 0;
+        Inc(FBufferPtr, written);
+        Dec(count, written);
+        Inc(Result, written);
+        if (count = 0) or ((written + oldData) <> FBufferLen) then
+          Exit;
+        Inc(bufp, written);
+        Position := WrappedStream.Position;
+      end;
+    end;
+  end;
+
+  Flush;
+  FBufferLen := 0;
+  if (FBufferPtr - FBuffer) = FPageSize then
+    Inc(FBufferPos, FPageSize);
+  FBufferPtr := FBuffer;
+
+  if not posSet then
+    WrappedStream.Position := Position;
+  requested := (count div FPageSize) * FPageSize;
+  if requested > 0 then begin
+    written := WrappedStream.Write(bufp^, requested);
+    Position := WrappedStream.Position;
+    Inc(bufp, written);
+    Dec(count, written);
+    Inc(Result, written);
+    if (count = 0) or (written <> requested) then
+      Exit;
+  end;
+
+  FBufferLen := WrappedStream.Read(FBuffer^, FPageSize);
+  Move(bufp^, FBuffer^, count);
+  FBufferPtr := FBuffer + count;
+  FBufferLen := Max(FBufferLen, count);
+  Inc(Result, count);
+  FBufferDirty := true;
+end; { TGpPagedStream.Write }
+
+{ TGpBaseEncryptedStream }
+
+constructor TGpBaseEncryptedStream.Create(const key; keySize: integer; nonce: uint64;
+  baseStream: TStream; autoDestroyWrappedStream: boolean);
+var
+  blockSize: integer;
+begin
+  inherited Create(baseStream, autoDestroyWrappedStream);
+  InitCypher(key, keySize, blockSize, nonce);
+  FInterceptor := TGpInterceptorStream.Create(InterceptRead, InterceptWrite, InterceptSeek, InterceptSetSize);
+  FPaginator := TGpPagedStream.Create(FInterceptor, blockSize, false);
+end; { TGpBaseEncryptedStream.Create }
+
+destructor TGpBaseEncryptedStream.Destroy;
+begin
+  FPaginator.Flush;
+  DoneCypher;
+  FreeAndNil(FPaginator);
+  FreeAndNil(FInterceptor);
+  inherited;
+end; { TGpBaseEncryptedStream.Destroy }
+
+function TGpBaseEncryptedStream.GetSize: int64;
+begin
+  Result := FPaginator.Size;
+end; { TGpBaseEncryptedStream.GetSize }
+
+function TGpBaseEncryptedStream.InterceptRead(position: int64; var buffer;
+  count: integer): integer;
+begin
+  Result := WrappedStream.Read(buffer, count);
+  DecryptCTR(position, buffer, Result);
+end; { TGpBaseEncryptedStream.InterceptRead }
+
+function TGpBaseEncryptedStream.InterceptSeek(offset: int64; origin: TSeekOrigin): int64;
+begin
+  Result := WrappedStream.Seek(offset, origin);
+end; { TGpBaseEncryptedStream.InterceptSeek }
+
+procedure TGpBaseEncryptedStream.InterceptSetSize(newSize: int64);
+begin
+  WrappedStream.Size := newSize;
+end; { TGpBaseEncryptedStream.InterceptSetSize }
+
+function TGpBaseEncryptedStream.InterceptWrite(position: int64; const buffer;
+  count: integer): integer;
+begin
+  EncryptCTR(position, PByte(@buffer)^, count);
+  Result := WrappedStream.Write(buffer, count);
+end; { TGpBaseEncryptedStream.InterceptWrite }
+
+function TGpBaseEncryptedStream.Read(var buffer; count: integer): integer;
+begin
+  Result := FPaginator.Read(buffer, count);
+end; { TGpBaseEncryptedStream.Read }
+
+function TGpBaseEncryptedStream.Seek(const offset: int64; origin: TSeekOrigin): int64;
+begin
+  Result := FPaginator.Seek(offset, origin);
 end; { TGpBaseEncryptedStream.Seek }
+
+procedure TGpBaseEncryptedStream.SetSize(const newSize: int64);
+begin
+  FPaginator.Size := newSize;
+end; { TGpBaseEncryptedStream.SetSize }
+
+function TGpBaseEncryptedStream.Write(const buffer; count: integer): integer;
+begin
+  Result := FPaginator.Write(buffer, count);
+end; { TGpBaseEncryptedStream.Write }
 
 end.

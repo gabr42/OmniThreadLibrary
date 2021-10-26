@@ -1,15 +1,22 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2020 Primoz Gabrijelcic
+   (c) 2021 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2020-12-11
-   Version           : 2.16
+   Last modification : 2021-07-15
+   Version           : 2.18
 </pre>*)(*
    History:
+     2.18: 2021-07-15
+       - Defined constants for ASCII characters from #$00 to #$1B.
+     2.17: 2021-03-29
+       - Added IGpBuffer accessors WordAddr[], WordVal[], Int32Addr[], Int32Val[],
+         Int64Arr[], and Int64Val[].
+       - Renamed all TGpBuffer.New class function to TGpBuffer.Make to follow the
+         naming convention used in Spring4D's Shared class.
      2.16: 2020-12-11
        - Renamed TGpBuffer.CreateI => TGpBuffer.New.
      2.15: 2020-12-04
@@ -293,6 +300,34 @@ uses
 const
   MaxInt64 = $7FFFFFFFFFFFFFFF;
 
+  CASCII_NUL = #$00;
+  CASCII_SOH = #$01;
+  CASCII_STX = #$02;
+  CASCII_ETX = #$03;
+  CASCII_EOT = #$04;
+  CASCII_ENQ = #$05;
+  CASCII_ACK = #$06;
+  CASCII_BEL = #$07;
+  CASCII_BS  = #$08;
+  CASCII_TAB = #$09;
+  CASCII_LF  = #$0A;
+  CASCII_VT  = #$0B;
+  CASCII_FF  = #$0C;
+  CASCII_CR  = #$0D;
+  CASCII_SO  = #$0E;
+  CASCII_SI  = #$0F;
+  CASCII_DLE = #$10;
+  CASCII_DC1 = #$11;
+  CASCII_DC2 = #$12;
+  CASCII_DC3 = #$13;
+  CASCII_DC4 = #$14;
+  CASCII_NAK = #$15;
+  CASCII_SYN = #$16;
+  CASCII_ETB = #$17;
+  CASCII_CAN = #$18;
+  CASCII_EM  = #$19;
+  CASCII_SUB = #$1A;
+  CASCII_ESC = #$1B;
   CASCII_FS  = #$1C;
   CASCII_GS  = #$1D;
   CASCII_RS  = #$1E;
@@ -446,15 +481,24 @@ type
     function  GetByteAddr(idx: integer): pointer;
     function  GetByteVal(idx: integer): byte;
     function  GetCurrent: pointer;
+    function  GetInt32Addr(idx: integer): pointer;
+    function  GetInt32Val(idx: integer): integer;
+    function  GetInt64Addr(idx: integer): pointer;
+    function  GetInt64Val(idx: integer): int64;
     function  GetSize: integer;
     function  GetValue: pointer;
+    function  GetWordAddr(idx: integer): pointer;
+    function  GetWordVal(idx: integer): word;
   {$IFDEF MSWINDOWS}
     procedure SetAsAnsiString(const value: AnsiString);
   {$ENDIF}
     procedure SetAsString(const value: string);
     procedure SetByteVal(idx: integer; const value: byte);
     procedure SetCurrent(const value: pointer);
+    procedure SetInt32Val(idx: integer; const value: integer);
+    procedure SetInt64Val(idx: integer; const value: int64);
     procedure SetSize(const value: integer);
+    procedure SetWordVal(idx: integer; const value: word);
   //
     procedure Add(b: byte); overload;
   {$IFDEF MSWINDOWS}
@@ -477,6 +521,12 @@ type
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
+    property WordAddr[idx: integer]: pointer read GetWordAddr;
+    property WordVal[idx: integer]: word read GetWordVal write SetWordVal;
+    property Int32Addr[idx: integer]: pointer read GetInt32Addr;
+    property Int32Val[idx: integer]: integer read GetInt32Val write SetInt32Val;
+    property Int64Addr[idx: integer]: pointer read GetInt64Addr;
+    property Int64Val[idx: integer]: int64 read GetInt64Val write SetInt64Val;
     property Current: pointer read GetCurrent write SetCurrent;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
@@ -495,32 +545,40 @@ type
     function  GetByteAddr(idx: integer): pointer; inline;
     function  GetByteVal(idx: integer): byte; inline;
     function  GetCurrent: pointer; inline;
+    function  GetInt32Addr(idx: integer): pointer; inline;
+    function  GetInt32Val(idx: integer): integer; inline;
+    function  GetInt64Addr(idx: integer): pointer; inline;
+    function  GetInt64Val(idx: integer): int64; inline;
     function  GetSize: integer; inline;
     function  GetValue: pointer; inline;
+    function  GetWordAddr(idx: integer): pointer; inline;
+    function  GetWordVal(idx: integer): word; inline;
   {$IFDEF MSWINDOWS}
     procedure SetAsAnsiString(const value: AnsiString); inline;
   {$ENDIF}
     procedure SetAsString(const value: string); inline;
     procedure SetByteVal(idx: integer; const value: byte); inline;
     procedure SetCurrent(const value: pointer); inline;
+    procedure SetInt32Val(idx: integer; const value: integer); inline;
+    procedure SetInt64Val(idx: integer; const value: int64); inline;
     procedure SetSize(const value: integer); inline;
+    procedure SetWordVal(idx: integer; const value: word); inline;
   public
     constructor Create; overload;
     constructor Create(data: pointer; size: integer); overload;
     constructor Create(stream: TStream); overload;
     constructor Create(const buffer: IGpBuffer); overload;
     constructor Create(const s: string); overload;
-    class function New: IGpBuffer; overload; inline;
-    class function New(data: pointer; size: integer): IGpBuffer; overload; inline;
-    class function New(stream: TStream): IGpBuffer; overload; inline;
-    class function New(const buffer: IGpBuffer): IGpBuffer; overload; inline;
-    class function New(const s: string): IGpBuffer; overload; inline;
+    class function Make: IGpBuffer; overload;
+    class function Make(data: pointer; size: integer): IGpBuffer; overload; inline;
+    class function Make(stream: TStream): IGpBuffer; overload; inline;
+    class function Make(const buffer: IGpBuffer): IGpBuffer; overload; inline;
+    class function Make(const s: string): IGpBuffer; overload; inline;
   {$IFDEF MSWINDOWS}{$IFDEF Unicode}
     constructor Create(const s: AnsiString); overload;
-    class function New(const s: AnsiString): IGpBuffer; overload; inline;
+    class function Make(const s: AnsiString): IGpBuffer; overload; inline;
   {$ENDIF}{$ENDIF}
     destructor  Destroy; override;
-    class function Make: IGpBuffer;
     procedure Add(b: byte); overload; inline;
   {$IFDEF MSWINDOWS}
     procedure Add(ch: AnsiChar); overload; inline;
@@ -542,6 +600,12 @@ type
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
     property ByteVal[idx: integer]: byte read GetByteVal write SetByteVal; default;
+    property WordAddr[idx: integer]: pointer read GetWordAddr;
+    property WordVal[idx: integer]: word read GetWordVal write SetWordVal;
+    property Int32Addr[idx: integer]: pointer read GetInt32Addr;
+    property Int32Val[idx: integer]: integer read GetInt32Val write SetInt32Val;
+    property Int64Addr[idx: integer]: pointer read GetInt64Addr;
+    property Int64Val[idx: integer]: int64 read GetInt64Val write SetInt64Val;
     property Current: pointer read GetCurrent write SetCurrent;
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
@@ -1275,7 +1339,7 @@ end; { CompareValue }
 
 function OffsetPtr(ptr: pointer; offset: {$IFDEF GpStuff_NativeInt}NativeInt{$ELSE}integer{$ENDIF}): pointer;
 begin
-  Result := pointer({$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(int64(ptr) + offset));
+  Result := pointer((int64(ptr) + offset));
 end; { OffsetPtr }
 
 function OpenArrayToVarArray(aValues: array of const): Variant;
@@ -2551,30 +2615,25 @@ begin
   AsString := s;
 end; { TGpBuffer.Create }
 
-class function TGpBuffer.New: IGpBuffer;
-begin
-  Result := TGpBuffer.Create;
-end; { TGpBuffer.CreateI }
-
-class function TGpBuffer.New(data: pointer; size: integer): IGpBuffer;
+class function TGpBuffer.Make(data: pointer; size: integer): IGpBuffer;
 begin
   Result := TGpBuffer.Create(data, size);
-end; { TGpBuffer.CreateI }
+end; { TGpBuffer.Make }
 
-class function TGpBuffer.New(stream: TStream): IGpBuffer;
+class function TGpBuffer.Make(stream: TStream): IGpBuffer;
 begin
   Result := TGpBuffer.Create(stream);
-end; { TGpBuffer.CreateI }
+end; { TGpBuffer.Make }
 
-class function TGpBuffer.New(const buffer: IGpBuffer): IGpBuffer;
+class function TGpBuffer.Make(const buffer: IGpBuffer): IGpBuffer;
 begin
   Result := TGpBuffer.Create(buffer);
-end; { TGpBuffer.CreateI }
+end; { TGpBuffer.Make }
 
-class function TGpBuffer.New(const s: string): IGpBuffer;
+class function TGpBuffer.Make(const s: string): IGpBuffer;
 begin
   Result := TGpBuffer.Create(s);
-end; { TGpBuffer.CreateI }
+end; { TGpBuffer.Make }
 
 {$IFDEF MSWINDOWS}{$IFDEF Unicode}
 constructor TGpBuffer.Create(const s: AnsiString);
@@ -2583,10 +2642,10 @@ begin
   AsAnsiString := s;
 end; { TGpBuffer.Create }
 
-class function TGpBuffer.New(const s: AnsiString): IGpBuffer;
+class function TGpBuffer.Make (const s: AnsiString): IGpBuffer;
 begin
   Result := TGpBuffer.Create(s);
-end; { TGpBuffer.CreateI }
+end; { TGpBuffer.Make }
 {$ENDIF}{$ENDIF}
 
 function TGpBuffer.GetCurrent: pointer;
@@ -2710,6 +2769,28 @@ begin
   Result := PByte(ByteAddr[idx])^;
 end; { TGpBuffer.GetByteVal }
 
+function TGpBuffer.GetInt32Addr(idx: integer): pointer;
+begin
+  Assert((idx >= 0) and (idx < (Size div SizeOf(integer))));
+  Result := pointer(NativeUInt(Value) + NativeUInt(idx) * SizeOf(integer));
+end; { TGpBuffer.GetInt32Addr }
+
+function TGpBuffer.GetInt32Val(idx: integer): integer;
+begin
+  Result := PInteger(Int32Addr[idx])^;
+end; { TGpBuffer.GetInt32Val }
+
+function TGpBuffer.GetInt64Addr(idx: integer): pointer;
+begin
+  Assert((idx >= 0) and (idx < (Size div SizeOf(int64))));
+  Result := pointer(NativeUInt(Value) + NativeUInt(idx) * SizeOf(int64));
+end; { TGpBuffer.GetInt64Addr }
+
+function TGpBuffer.GetInt64Val(idx: integer): int64;
+begin
+  Result := PInt64(Int64Addr[idx])^;
+end; { TGpBuffer.GetInt64Val }
+
 function TGpBuffer.GetSize: integer;
 begin
   Result := FData.Size;
@@ -2719,6 +2800,17 @@ function TGpBuffer.GetValue: pointer;
 begin
   Result := FData.Memory;
 end; { TGpBuffer.GetValue }
+
+function TGpBuffer.GetWordAddr(idx: integer): pointer;
+begin
+  Assert((idx >= 0) and (idx < (Size div SizeOf(word))));
+  Result := pointer(NativeUInt(Value) + NativeUInt(idx) * SizeOf(word));
+end; { TGpBuffer.GetWordAddr }
+
+function TGpBuffer.GetWordVal(idx: integer): word;
+begin
+  Result := PWord(WordAddr[idx])^;
+end; { TGpBuffer.GetWordVal }
 
 function TGpBuffer.IsEmpty: boolean;
 begin
@@ -2753,12 +2845,27 @@ procedure TGpBuffer.SetCurrent(const value: pointer);
 begin
   FData.Position := {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(value) -
                     {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(FData.Memory);
-end; { TGpBuffer.SetCurrent }
+end; procedure TGpBuffer.SetInt32Val(idx: integer; const value: integer);
+begin
+
+end;
+
+procedure TGpBuffer.SetInt64Val(idx: integer; const value: int64);
+begin
+
+end;
+
+{ TGpBuffer.SetCurrent }
 
 procedure TGpBuffer.SetSize(const value: integer);
 begin
   FData.Size := value;
-end; { TGpBuffer.SetSize }
+end; procedure TGpBuffer.SetWordVal(idx: integer; const value: word);
+begin
+
+end;
+
+{ TGpBuffer.SetSize }
 
 { TGpInterfacedPersistent }
 

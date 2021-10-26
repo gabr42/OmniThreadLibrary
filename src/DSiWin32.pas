@@ -8,10 +8,15 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2021-03-02
-   Version           : 2.0b
+   Last modification : 2021-10-26
+   Version           : 2.01a
 </pre>*)(*
    History:
+     2.01a: 2021-10-26
+       - Fixed DSiUnregisterUserFileAssoc. (https://stackoverflow.com/a/67519966)
+     2.01: 2021-07-28
+       - Added two overloaded DSiEnumFilesEx versions that return (unexpected) errors -
+         one in a callback and another in parameters.
      2.0b: 2021-03-02
        - All unit names are fully scoped (when supported).
      2.0a: 2021-02-05
@@ -1151,6 +1156,9 @@ type
     procedure(const folder: string; S: TSearchRec;
     isAFolder: boolean; var stopEnum: boolean)
     {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
+  TDSiEnumFilesExErrorCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
+    procedure(const path: string; err: integer)
+    {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
 
   // DSiExecuteAndCapture callback
   TDSiOnNewLineCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
@@ -1318,8 +1326,13 @@ type
     enumCallback: TDSiEnumFilesCallback): integer;
   function  DSiEnumFilesEx(const fileMask: string; attr: integer;
     enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
-    maxEnumDepth: integer = 0;
-    ignoreDottedFolders: boolean = false): integer;
+    maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
+    enumCallback: TDSiEnumFilesExCallback; errorCallback: TDSiEnumFilesExErrorCallback;
+    maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
+    enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
+    maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
   procedure DSiEnumFilesToSL(const fileMask: string; attr: integer; fileList: TStrings;
     storeFullPath: boolean = false; enumSubfolders: boolean = false;
     maxEnumDepth: integer = 0;
@@ -1378,7 +1391,7 @@ type
     wait: boolean = false): cardinal; overload;
   function  DSiExecute(const commandLine: string; var processInfo: TProcessInformation;
     visibility: integer = SW_SHOWDEFAULT; const workDir: string = '';
-    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS): cardinal; overload;
+    creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS; stdIn: THandle = 0): cardinal; overload;
   function  DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
     var exitCode: longword; waitTimeout_sec: integer = 15;
     onNewLine: TDSiOnNewLineCallback = nil;
@@ -3214,7 +3227,7 @@ type
   }
   procedure DSiUnregisterUserFileAssoc(const progID: string);
   begin
-    DSiKillRegistry('\Software\Classes\' + progID, HKEY_CURRENT_USER);
+    DSiKillRegistry('\Software\Classes\' + progID, HKEY_CURRENT_USER, KEY_ALL_ACCESS);
   end; { DSiUnregisterUserFileAssoc }
 
 { Files }
@@ -3618,9 +3631,11 @@ type
     finally FindClose(S); end;
   end; { DSiEnumFiles }
 
-  procedure _DSiEnumFilesEx(const folder, fileMask: string; attr: integer; enumSubfolders:
-    boolean; enumCallback: TDSiEnumFilesExCallback; var totalFiles: integer; var stopEnum:
-    boolean; fileList: TStrings; fileObjectList: TObjectList; storeFullPath: boolean;
+  procedure _DSiEnumFilesEx(const folder, fileMask: string; attr: integer;
+    enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
+    errorCallback: TDSiEnumFilesExErrorCallback;
+    var totalFiles: integer; var stopEnum: boolean; fileList: TStrings;
+    fileObjectList: TObjectList; storeFullPath: boolean;
     currentDepth, maxDepth: integer; ignoreDottedFolders: boolean);
   var
     err: integer;
@@ -3628,7 +3643,11 @@ type
   begin
     if enumSubfolders and ((maxDepth <= 0) or (currentDepth < maxDepth)) then begin
       err := FindFirst(folder+'*.*', faDirectory or (attr and faHidden), S);
-      if err = 0 then try
+      if err <> 0 then begin
+        if assigned(errorCallback) then
+          errorCallback(folder, err);
+      end
+      else try
         repeat
           if (S.Attr and faDirectory) <> 0 then
             if (S.Name <> '.') and (S.Name <> '..') and
@@ -3651,17 +3670,23 @@ type
                   fileObjectList.Add(TDSiFileInfo.Create(folder, S, currentDepth));
               {$IFDEF DSiScopedUnitNames}end;{$ENDIF}
               _DSiEnumFilesEx(folder+S.Name+'\', fileMask, attr, enumSubfolders,
-                enumCallback, totalFiles, stopEnum, fileList, fileObjectList,
+                enumCallback, errorCallback, totalFiles, stopEnum, fileList, fileObjectList,
                 storeFullPath, currentDepth + 1, maxDepth, ignoreDottedFolders);
             end;
           err := FindNext(S);
+          if (err <> 0) and (err <> ERROR_NO_MORE_FILES) and assigned(errorCallback) then
+            errorCallback(folder + S.Name, err);
         until (err <> 0) or stopEnum;
       finally FindClose(S); end;
     end;
     if stopEnum then
       Exit;
-    err := FindFirst(folder+fileMask, attr, S);
-    if err = 0 then try
+    err := FindFirst(folder + fileMask, attr, S);
+    if err <> 0 then begin
+      if (err <> ERROR_FILE_NOT_FOUND) and assigned(errorCallback) then
+        errorCallback(folder + fileMask, err);
+    end
+    else try
       repeat
         // don't filter anything
         //if (S.Attr AND attr <> 0) or (S.Attr AND attr = attr) then begin
@@ -3680,6 +3705,8 @@ type
           Inc(totalFiles);
         end;
         err := FindNext(S);
+        if (err <> 0) and (err <> ERROR_NO_MORE_FILES) and assigned(errorCallback) then
+          errorCallback(folder + S.Name, err);
       until (err <> 0) or stopEnum;
     finally FindClose(S); end;
   end; { _DSiEnumFilesEx }
@@ -3691,8 +3718,8 @@ type
     @since   2003-06-17
   }
   function DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
-    enumCallback: TDSiEnumFilesExCallback; maxEnumDepth: integer;
-    ignoreDottedFolders: boolean): integer;
+    enumCallback: TDSiEnumFilesExCallback; errorCallback: TDSiEnumFilesExErrorCallback;
+    maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
   var
     folder  : string;
     mask    : string;
@@ -3705,8 +3732,35 @@ type
       folder := IncludeTrailingBackslash(folder);
     Result := 0;
     stopEnum := false;
-    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, enumCallback, Result, stopEnum,
+    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, enumCallback, errorCallback, Result, stopEnum,
       nil, nil, false, 1, maxEnumDepth, ignoreDottedFolders);
+  end; { DSiEnumFilesEx }
+
+  function DSiEnumFilesEx(const fileMask: string; attr: integer;
+    enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
+    maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
+  begin
+    Result := DSiEnumFilesEx(fileMask, attr, enumSubfolders, enumCallback, nil, maxEnumDepth, ignoreDottedFolders);
+  end; { DSiEnumFilesEx }
+
+  function DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
+    enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
+    maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
+  var
+    _error: integer;
+    _errorPath : string;
+  begin
+    _error := 0;
+    _errorPath := '';
+    Result := DSiEnumFilesEx(fileMask, attr, enumSubfolders, enumCallback,
+      procedure (const path: string; err: integer)
+      begin
+        _error := err;
+        _errorPath := path;
+      end,
+      maxEnumDepth, ignoreDottedFolders);
+    error := _error;
+    errorPath := _errorPath;
   end; { DSiEnumFilesEx }
 
   {:Enumerates files (optionally in subfolders) and stores results into caller-provided
@@ -3729,7 +3783,7 @@ type
     if folder <> '' then
       folder := IncludeTrailingBackslash(folder);
     stopEnum := false;
-    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, totalFiles, stopEnum,
+    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, nil, totalFiles, stopEnum,
       fileList, nil, storeFullPath, 1, maxEnumDepth, ignoreDottedFolders);
   end; { DSiEnumFilesToSL }
 
@@ -3754,7 +3808,7 @@ type
     if folder <> '' then
       folder := IncludeTrailingBackslash(folder);
     stopEnum := false;
-    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, totalFiles, stopEnum,
+    _DSiEnumFilesEx(folder, mask, attr, enumSubfolders, nil, nil, totalFiles, stopEnum,
       nil, fileList, true{ignored}, 1, maxEnumDepth, ignoreDottedFolders);
   end; { DSiEnumFilesToOL }
 
@@ -4750,7 +4804,7 @@ type
   end; { DSiExecute }
 
   function DSiExecute(const commandLine: string; var processInfo: TProcessInformation;
-    visibility: integer; const workDir: string; creationFlags: DWORD): cardinal;
+    visibility: integer; const workDir: string; creationFlags: DWORD; stdIn: THandle): cardinal;
   var
     startupInfo: TStartupInfo;
     tmpCmdLine : string;
@@ -4763,7 +4817,10 @@ type
     FillChar(startupInfo, SizeOf(startupInfo), #0);
     startupInfo.cb := SizeOf(startupInfo);
     startupInfo.dwFlags := STARTF_USESHOWWINDOW;
+    if stdIn > 0 then
+      startupInfo.dwFlags := startupInfo.dwFlags or STARTF_USESTDHANDLES;
     startupInfo.wShowWindow := visibility;
+    startupInfo.hStdInput := stdIn;
     tmpCmdLine := commandLine;
     {$IFDEF Unicode}UniqueString(tmpCmdLine);{$ENDIF Unicode}
     if not CreateProcess(nil, PChar(tmpCmdLine), nil, nil, false,
