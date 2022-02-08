@@ -1324,15 +1324,19 @@ type
   function  DSiEmptyRecycleBin: boolean;
   function  DSiEnumFiles(const fileMask: string; attr: integer;
     enumCallback: TDSiEnumFilesCallback): integer;
+  {$IF CompilerVersion > 21}
   function  DSiEnumFilesEx(const fileMask: string; attr: integer;
     enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
     maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  {$ifend}
   function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; errorCallback: TDSiEnumFilesExErrorCallback;
     maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  {$IF CompilerVersion > 21}
   function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
     maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  {$ifend}
   procedure DSiEnumFilesToSL(const fileMask: string; attr: integer; fileList: TStrings;
     storeFullPath: boolean = false; enumSubfolders: boolean = false;
     maxEnumDepth: integer = 0;
@@ -3736,13 +3740,16 @@ type
       nil, nil, false, 1, maxEnumDepth, ignoreDottedFolders);
   end; { DSiEnumFilesEx }
 
+  {$IF CompilerVersion > 21}
   function DSiEnumFilesEx(const fileMask: string; attr: integer;
     enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
     maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
   begin
     Result := DSiEnumFilesEx(fileMask, attr, enumSubfolders, enumCallback, nil, maxEnumDepth, ignoreDottedFolders);
   end; { DSiEnumFilesEx }
+  {$ifend}
 
+  {$IF CompilerVersion > 21}
   function DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
     maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
@@ -3762,6 +3769,7 @@ type
     error := _error;
     errorPath := _errorPath;
   end; { DSiEnumFilesEx }
+  {$ifend}
 
   {:Enumerates files (optionally in subfolders) and stores results into caller-provided
     TStrings object.
