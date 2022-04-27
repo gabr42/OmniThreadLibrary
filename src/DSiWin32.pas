@@ -8,10 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2021-10-26
-   Version           : 2.01a
+   Last modification : 2022-04-27
+   Version           : 2.02a
 </pre>*)(*
    History:
+     2.02: 2022-04-27
+       - Compiles again with D2007.
+     2.02: 2022-01-31
+       - Added dynamically loaded API forwarder DSiEnumProcesses.
      2.01a: 2021-10-26
        - Fixed DSiUnregisterUserFileAssoc. (https://stackoverflow.com/a/67519966)
      2.01: 2021-07-28
@@ -1330,9 +1334,11 @@ type
   function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; errorCallback: TDSiEnumFilesExErrorCallback;
     maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  {$IFDEF DSiHasAnonymousFunctions}
   function  DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
     maxEnumDepth: integer = 0; ignoreDottedFolders: boolean = false): integer; overload;
+  {$ENDIF DSiHasAnonymousFunctions}
   procedure DSiEnumFilesToSL(const fileMask: string; attr: integer; fileList: TStrings;
     storeFullPath: boolean = false; enumSubfolders: boolean = false;
     maxEnumDepth: integer = 0;
@@ -2134,6 +2140,8 @@ type
   function  DSiDestroyEnvironmentBlock(lpEnvironment: pointer): BOOL;
   function  DSiDwmEnableComposition(uCompositionAction: UINT): HRESULT; stdcall;
   function  DSiDwmIsCompositionEnabled(var pfEnabled: BOOL): HRESULT; stdcall;
+  function  DSiEnumProcesses(lpidProcess: PDWORD; cb: DWORD;
+    var lpcbNeeded: DWORD): BOOL; stdcall;
   function  DSiEnumProcessModules(hProcess: THandle; lphModule: PModule; cb: DWORD;
     var lpcbNeeded: DWORD): BOOL; stdcall;
   function  DSiGetLogicalProcessorInformation(
@@ -2300,6 +2308,8 @@ type
   TDestroyEnvironmentBlock = function(lpEnvironment: pointer): BOOL; stdcall;
   TDwmEnableComposition = function(uCompositionAction: UINT): HRESULT; stdcall;
   TDwmIsCompositionEnabled = function(var pfEnabled: BOOL): HRESULT; stdcall;
+  TEnumProcesses= function(lpidProcess: PDWORD; cb: DWORD;
+    var lpcbNeeded: DWORD): BOOL; stdcall;
   TEnumProcessModules = function(hProcess: THandle; lphModule: PModule; cb: DWORD;
     var lpcbNeeded: DWORD): BOOL; stdcall;
   TGetLongPathName = function(lpszShortPath, lpszLongPath: PChar;
@@ -2374,6 +2384,7 @@ const
   GDestroyEnvironmentBlock: TDestroyEnvironmentBlock = nil;
   GDwmEnableComposition: TDwmEnableComposition = nil;
   GDwmIsCompositionEnabled: TDwmIsCompositionEnabled = nil;
+  GEnumProcesses: TEnumProcesses = nil;
   GEnumProcessModules: TEnumProcessModules = nil;
   GGetLogicalProcessorInformation: TGetLogicalProcessorInformation = nil;
   GGetLogicalProcessorInformationEx: TGetLogicalProcessorInformationEx = nil;
@@ -3739,10 +3750,19 @@ type
   function DSiEnumFilesEx(const fileMask: string; attr: integer;
     enumSubfolders: boolean; enumCallback: TDSiEnumFilesExCallback;
     maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
+  var
+    nullErr: TDSiEnumFilesExErrorCallback;
   begin
-    Result := DSiEnumFilesEx(fileMask, attr, enumSubfolders, enumCallback, nil, maxEnumDepth, ignoreDottedFolders);
+    {$IFDEF DSiHasAnonymousFunctions}
+    nullErr := nil;
+    {$ELSE}
+    TMethod(nullErr).Code := nil;
+    TMethod(nullErr).Data := nil;
+    {$ENDIF DSiHasAnonymousFunctions};
+    Result := DSiEnumFilesEx(fileMask, attr, enumSubfolders, enumCallback, nullErr, maxEnumDepth, ignoreDottedFolders);
   end; { DSiEnumFilesEx }
 
+{$IFDEF DSiHasAnonymousFunctions}
   function DSiEnumFilesEx(const fileMask: string; attr: integer; enumSubfolders: boolean;
     enumCallback: TDSiEnumFilesExCallback; var error: integer; var errorPath: string;
     maxEnumDepth: integer; ignoreDottedFolders: boolean): integer; overload;
@@ -3762,6 +3782,7 @@ type
     error := _error;
     errorPath := _errorPath;
   end; { DSiEnumFilesEx }
+{$ENDIF DSiHasAnonymousFunctions}
 
   {:Enumerates files (optionally in subfolders) and stores results into caller-provided
     TStrings object.
@@ -9075,6 +9096,19 @@ var
       Result := S_FALSE;
     end;
   end; { DSiDwmIsCompositionEnabled }
+
+  function DSiEnumProcesses(lpidProcess: PDWORD; cb: DWORD;
+    var lpcbNeeded: DWORD): BOOL; stdcall;
+  begin
+    if not assigned(GEnumProcesses) then
+      GEnumProcesses := DSiGetProcAddress('psapi.dll', 'EnumProcesses');
+    if assigned(GEnumProcesses) then
+      Result := GEnumProcesses(lpidProcess, cb, lpcbNeeded)
+    else begin
+      SetLastError(ERROR_NOT_SUPPORTED);
+      Result := false;
+    end;
+  end; { DSiEnumProcessModules }
 
   function DSiEnumProcessModules(hProcess: THandle; lphModule: PModule; cb: DWORD;
     var lpcbNeeded: DWORD): BOOL; stdcall;
