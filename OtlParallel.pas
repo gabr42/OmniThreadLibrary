@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2020 Primoz Gabrijelcic
+///Copyright (c) 2022 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack
 ///   Creation date     : 2010-01-08
-///   Last modification : 2020-12-21
-///   Version           : 1.54
+///   Last modification : 2022-05-11
+///   Version           : 1.55
 ///</para><para>
 ///   History:
+///     1.55: 2022-05-11
+///       - Optional thread name can be passed to Parallel.TimedTask.
+///     1.54a: 2022-02-17
+///       - Enforce minimum number of execution tasks = 1.
 ///     1.54: 2020-12-21
 ///       - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
 ///       - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
@@ -1362,7 +1366,7 @@ type
 
   // TimedTask
     ///	<summary>Creates a Timed task.</summary>
-    class function TimedTask: IOmniTimedTask;
+    class function TimedTask(const threadName: string = ''): IOmniTimedTask;
 
   // Map
     {$IFDEF OTL_HasArrayOfT}
@@ -1653,7 +1657,7 @@ type
     procedure SetActive(const value: boolean);
     procedure SetInterval(const value: integer);
   public
-    constructor Create;
+    constructor Create(const threadName: string = '');
     destructor  Destroy; override;
     function  Every(interval_ms: integer): IOmniTimedTask;
     function  Execute(const aTask: TProc): IOmniTimedTask; overload;
@@ -2072,6 +2076,8 @@ begin
     FNumTasks := numTasks
   else
     FNumTasks := Environment.Process.Affinity.Count + numTasks;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   Result := Self;
 end; { TOmniParallelJoin.NumTasks }
 
@@ -2457,9 +2463,9 @@ begin
   Result := TOmniTaskConfig.Create;
 end; { Parallel.TaskConfig }
 
-class function Parallel.TimedTask: IOmniTimedTask;
+class function Parallel.TimedTask(const threadName: string): IOmniTimedTask;
 begin
-  Result := TOmniTimedTask.Create;
+  Result := TOmniTimedTask.Create(threadName);
 end; { Parallel.TimedTask }
 
 { TOmniParallelLoopBase }
@@ -2835,6 +2841,8 @@ begin
     FNumTasks := taskCount
   else
     FNumTasks := Environment.Process.Affinity.Count + taskCount;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   FNumTasksManual := true;
 end; { TOmniParallelLoopBase.SetNumTasks }
 
@@ -3644,6 +3652,8 @@ begin
     FNumTasks := taskCount
   else
     FNumTasks := Environment.Process.Affinity.Count + taskCount;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   FNumTasksManual := true;
   Result := Self;
 end; { TOmniParallelSimpleLoop.NumTasks }
@@ -4089,6 +4099,8 @@ begin
     opsNumTasks := value
   else
     opsNumTasks := Environment.Process.Affinity.Count + value;
+  if opsNumTasks <= 0 then
+    opsNumTasks := 1;
 end; { TOmniPipelineStage.SetNumTasks }
 
 procedure TOmniPipelineStage.SetQueues(const inQueue, outQueue: IOmniBlockingCollection);
@@ -4223,6 +4235,8 @@ begin
   Assert(numTasks <> 0);
   if numTasks < 0 then
     numTasks := Environment.Process.Affinity.Count + numTasks;
+  if numTasks <= 0 then
+    numTasks := 1;
 
   if opStages.Count = 0 then
     opNumTasks := numTasks
@@ -4532,6 +4546,8 @@ constructor TOmniForkJoin<T>.Create;
 begin
   inherited Create;
   FNumTasks := Environment.Process.Affinity.Count - 1;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
 end; { TOmniForkJoin<T>.Create }
 
 function TOmniForkJoin<T>.NumTasks(numTasks: integer): IOmniForkJoin<T>;
@@ -4541,6 +4557,8 @@ begin
     FNumTasks := numTasks
   else
     FNumTasks := Environment.Process.Affinity.Count + numTasks;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   Result := Self;
 end; { TOmniForkJoin<T>.NumTasks }
 
@@ -4597,6 +4615,8 @@ begin
   Assert(numTasks <> 0);
   if numTasks < 0 then
     numTasks := Environment.Process.Affinity.Count + numTasks;
+  if numTasks <= 0 then
+    numTasks := 1;
   FForkJoin.NumTasks(numTasks);
   Result := self;
 end; { TOmniForkJoin.NumTasks }
@@ -4688,6 +4708,8 @@ begin
   Assert(numTasks <> 0);
   if numTasks < 0 then
     numTasks := Environment.Process.Affinity.Count + numTasks;
+  if numTasks <= 0 then
+    numTasks := 1;
   optJoin.NumTasks(numTasks);
   optNumTasks := numTasks;
   Result := Self;
@@ -5015,6 +5037,8 @@ begin
     FNumTasks := numTasks
   else
     FNumTasks := Environment.Process.Affinity.Count + numTasks;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   Result := Self;
 end; { TOmniBackgroundWorker.NumTasks }
 
@@ -5423,6 +5447,8 @@ begin
     FNumTasks := numTasks
   else
     FNumTasks := Environment.Process.Affinity.Count + numTasks;
+  if FNumTasks <= 0 then
+    FNumTasks := 1;
   Result := Self;
 end; { TOmniParallelMapper<T1,T2> }
 
@@ -5531,10 +5557,10 @@ end; { TOmniTimedTaskWorker.TaskInterval }
 
 { TOmniTimedTask }
 
-constructor TOmniTimedTask.Create;
+constructor TOmniTimedTask.Create(const threadName: string);
 begin
-  inherited;
-  FWorker := CreateTask(TOmniTimedTaskWorker.Create(), 'Timed task').Unobserved.Run;
+  inherited Create;
+  FWorker := CreateTask(TOmniTimedTaskWorker.Create(), IFF(threadName <> '', threadName, 'Timed task')).Unobserved.Run;
 end; { TOmniTimedTask.Create }
 
 destructor TOmniTimedTask.Destroy;
