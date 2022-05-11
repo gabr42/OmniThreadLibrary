@@ -204,8 +204,8 @@ type
   public
     constructor Create(logMe: boolean = false);
     destructor  Destroy; override;
-    procedure Acquire;
-    procedure Release;
+    procedure Acquire; override;
+    procedure Release; override;
   end; { TFixedCriticalSection }
 
   IOmniCriticalSection = interface ['{AA92906B-B92E-4C54-922C-7B87C23DABA9}']
@@ -593,7 +593,7 @@ type
     function  WaitAll(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult; overload;
     function  WaitAny(timeout_ms: cardinal): TWaitForResult; overload; inline;
     function  WaitAny(timeout_ms: cardinal; var Signaller: IOmniSynchro): TWaitForResult; overload;
-  end; { TWaitForAll }
+  end; { TSynchroWaitFor }
 
   TWaitFor = TSynchroWaitFor;
   {$ENDIF ~MSWINDOWS}
