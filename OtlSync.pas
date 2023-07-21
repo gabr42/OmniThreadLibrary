@@ -2619,10 +2619,7 @@ end; { TOmniEvent.BaseEvent }
 
 procedure TOmniEvent.ConsumeSignalFromObserver(const Observer: IOmniSynchroObserver);
 begin
-  {$IFDEF MSWINDOWS}
-  // at the moment, FManualReset is not set when event is created by wrapping an external THandle
-  raise Exception.Create('Not supported: TOmniEvent.ConsumeSignalFromObserver');
-  {$ENDIF MSWINDOWS}
+  // TODO at the moment, FManualReset is not set when event is created by wrapping an external THandle
   // Here we are already inside the lock.
   if not FManualReset then begin
     FEvent.ResetEvent;
