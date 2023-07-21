@@ -279,15 +279,15 @@ type
 
   //At some point this type will be dropped and all the codebase will use
   //IOmniEvent or something similar.
-  TOmniTransitionEvent = {$IFDEF MSWINDOWS}THandle{$ELSE}IOmniEvent{$ENDIF};
+  TOmniTransitionEvent = {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}THandle{$ELSE}IOmniEvent{$IFEND};
 
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   IOmniHandleObject = interface ['{80B85D03-8E1F-4812-8782-38A04BA52076}']
     function  GetHandle: THandle;
   //
     property Handle: THandle read GetHandle;
   end; { IOmniHandleObject }
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
 
   ///<summary>Simple critical section wrapper. Critical section is automatically
   ///    initialised on first use.</summary>
@@ -320,11 +320,11 @@ type
     function  TryEnterWriteLock(timeout_ms: integer = 0): boolean;
   end; { TOmniMREW }
 
-  IOmniResourceCount = interface({$IFDEF MSWINDOWS}
+  IOmniResourceCount = interface({$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
                                  IOmniHandleObject
-                                 {$ELSE}{$IFDEF OTL_MobileSupport}
+                                 {$ELSE}
                                  IOmniSynchroObject
-                                 {$ENDIF}{$ENDIF})
+                                 {$IFEND})
   ['{F5281539-1DA4-45E9-8565-4BEA689A23AD}']
     function  Allocate: cardinal;
     function  Release: cardinal;
@@ -336,7 +336,7 @@ type
   ///   increments the count.
   ///   Threadsafe.
   ///</summary>
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   TOmniResourceCount = class(TInterfacedObject, IOmniResourceCount, IOmniHandleObject)
   strict private
     orcAvailable   : TDSiEventHandle;
@@ -353,7 +353,7 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Handle: THandle read GetHandle;
   end; { TOmniResourceCount }
-  {$ELSE}{$IFDEF OTL_MobileSupport}
+  {$ELSE}
   TOmniResourceCount = class abstract(TInterfacedObject, IOmniResourceCount, IOmniSynchroObject)
   strict protected
     function  GetSynchro: IOmniSynchro;
@@ -365,23 +365,23 @@ type
     function  TryAllocate(var resourceCount: cardinal; timeout_ms: cardinal = 0): boolean;
     property Synchro: IOmniSynchro read GetSynchro;
   end; { TOmniResourceCount }
-  {$ENDIF OTL_MobileSupport}{$ENDIF MSWINDOWS}
+  {$IFEND}
 
   IOmniCancellationToken = interface ['{5946F4E8-45C0-4E44-96AB-DBE2BE66A701}']
-    {$IFDEF MSWINDOWS}
+    {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
     function  GetHandle: THandle;
     {$ELSE}
     function  GetEvent: IOmniEvent;
-    {$ENDIF MSWINDOWS}
+    {$IFEND}
   //
     procedure Clear;
     function  IsSignalled: boolean;
     procedure Signal;
-    {$IFDEF MSWINDOWS}
+    {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
     property Handle: THandle read GetHandle;
     {$ELSE}
     property Event: IOmniEvent read GetEvent;
-    {$ENDIF MSWINDOWS}
+    {$IFEND}
   end; { IOmniCancellationToken }
 
   Atomic<T> = class
@@ -431,7 +431,8 @@ type
     procedure Unlock(const key: K);
   end; { IOmniLockManager<K> }
 
-  {$IFDEF MSWINDOWS} // mobile version does not implement doubly linked list (yet)
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
+  // mobile version does not implement doubly linked list (yet)
   TOmniLockManager<K> = class(TInterfacedObject, IOmniLockManager<K>)
   strict private type
     TNotifyPair = class(TGpDoublyLinkedListObject)
@@ -469,9 +470,9 @@ type
     function  LockUnlock(const key: K; timeout_ms: cardinal): IOmniLockManagerAutoUnlock;
     procedure Unlock(const key: K);
   end; { TOmniLockManager<K> }
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
 
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(Otl_PlatformIndependent)}
   ///<summary>Waits on any/all from any number of handles.</summary>
   ///  Don't use it to wait on mutexes!
   ///  http://joeduffyblog.com/2007/05/13/registerwaitforsingleobject-and-mutexes-dont-mix/
@@ -596,7 +597,7 @@ type
   end; { TSynchroWaitFor }
 
   TWaitFor = TSynchroWaitFor;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 
   TOmniSingleThreadUseChecker = record
   private
@@ -687,7 +688,7 @@ type
   end; { TOmniCriticalSection }
 
   TOmniCancellationToken = class(TInterfacedObject, IOmniCancellationToken)
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   private
     FEvent      : TDSiEventHandle;
     FIsSignalled: boolean;
@@ -698,18 +699,18 @@ type
     FEvent: IOmniEvent;
   protected
     function  GetEvent: IOmniEvent; inline;
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
   public
     constructor Create;
     procedure Clear; inline;
     function  IsSignalled: boolean; inline;
     procedure Signal; inline;
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
     destructor  Destroy; override;
     property Handle: THandle read GetHandle;
   {$ELSE}
     property Event: IOmniEvent read GetEvent;
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
   end; { TOmniCancellationToken }
 
   TOmniSynchroObject = class abstract(TSynchroObject, IInterface, IOmniSynchro)
@@ -801,7 +802,7 @@ type
   end; { TOmniEvent }
 
   {$IFDEF OTL_MobileSupport}
-  {$IFNDEF MSWINDOWS}
+  {$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
   TOneCondition = class(TSynchroWaitFor.TCondition)
   public
     function  Test(var Signaller: IOmniSynchro): boolean; override;
@@ -820,7 +821,7 @@ type
     AllSignalled: boolean;
     constructor Create(AOneSignalled, AllSignalled: boolean);
   end; { TPreSignaData }
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
   {$ENDIF OTL_MobileSupport}
 
 var
@@ -831,13 +832,13 @@ var
 function SetEvent(event: TOmniTransitionEvent): boolean;
 begin
   Result := true;
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   if event <> 0 then
     Result := Winapi.Windows.SetEvent(event);
   {$ELSE}
   if assigned(event) then
     event.SetEvent;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { SetEvent }
 
 { exports }
@@ -1098,10 +1099,14 @@ function WaitForAllObjects(const handles: array of THandle; timeout_ms: cardinal
 var
   waiter: TWaitFor;
 begin
+  {$IFDEF OTL_PlatformIndependent}
+  raise Exception.Create('Not implemented');
+  {$ELSE}
   waiter := TWaitFor.Create(handles);
   try
     Result := (waiter.WaitAll(timeout_ms) = waAwaited);
   finally FreeAndNil(waiter); end;
+  {$ENDIF}
 end; { WaitForAllObjects }
 {$ENDIF MSWINDOWS}
 
@@ -1182,32 +1187,32 @@ end; { TOmniCriticalSection.Release }
 
 constructor TOmniCancellationToken.Create;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   FEvent := CreateEvent(nil, true, false, nil);
   {$ELSE}
   FEvent := CreateOmniEvent(True, False);
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { TOmniCancellationToken.Create }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 destructor TOmniCancellationToken.Destroy;
 begin
   DSiCloseHandleAndNull(FEvent);
   inherited;
 end; { TOmniCancellationToken.Destroy }
-{$ENDIF MSWINDOWS}
+{$IFEND}
 
 procedure TOmniCancellationToken.Clear;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   FIsSignalled := false;
   ResetEvent(FEvent);
   {$ELSE}
   FEvent.Reset;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { TOmniCancellationToken.Clear }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 function TOmniCancellationToken.GetHandle: THandle;
 begin
   Result := FEvent;
@@ -1217,25 +1222,25 @@ function TOmniCancellationToken.GetEvent: IOmniEvent;
 begin
   Result := FEvent;
 end; { TOmniCancellationToken.GetEvent }
-{$ENDIF MSWINDOWS}
+{$IFEND}
 
 function TOmniCancellationToken.IsSignalled: boolean;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   Result := FIsSignalled;
   {$ELSE}
   Result := FEvent.IsSignalled;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { TOmniCancellationToken.IsSignalled }
 
 procedure TOmniCancellationToken.Signal;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   FIsSignalled := true;
   SetEvent(FEvent);
   {$ELSE}
   FEvent.Signal;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { TOmniCancellationToken.Signal }
 
 { TOmniMREW }
@@ -1329,7 +1334,7 @@ begin
   end;
 end; { TOmniMREW.TryEnterWriteLock }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 
 { TOmniResourceCount }
 
@@ -1457,7 +1462,7 @@ begin
   raise Exception.Create('Not implemented!');
 end; { TOmniResourceCount.TryAllocate }
 
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 { Atomic<T> }
 
@@ -1655,7 +1660,7 @@ begin
   FLock.Release;
 end; { Locked<T>.Release }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 
 { TOmniLockManager<K>.TNotifyPair<K> }
 
@@ -1822,9 +1827,9 @@ begin
   finally FLock.Release; end;
 end; { TOmniLockManager<K>.Unlock }
 
-{$ENDIF MSWINDOWS}
+{$IFEND}
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 
 { TWaitFor.TWaiter }
 
@@ -2132,7 +2137,7 @@ begin
   waitTime := timeout_ms;
   if waitTime > 0 then
     timer := TStopWatch.StartNew;
-  FController.FGate.Acquire; // TODO 1 -oPrimoz Gabrijelcic : ??? do not release during wait ???
+  FController.FGate.Acquire;
   try
     if Test(signaller1) then
       Result := wrSignaled
@@ -2306,7 +2311,7 @@ end; { TAllCondition.Test }
 //  Result := True;
 //end; { TAllCondition.IsWaitAll }
 {$ENDIF OTL_MobileSupport}
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 { TOmniSingleThreadUseChecker }
 
@@ -2319,12 +2324,12 @@ begin
 end; { TOmniSingleThreadUseChecker.AttachToCurrentThread }
 
 procedure TOmniSingleThreadUseChecker.Check;
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 var
   thID: cardinal;
-{$ENDIF MSWINDOWS}
+{$IFEND}
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   FLock.Acquire;
   try
     thID := cardinal(GetCurrentThreadID);
@@ -2334,19 +2339,22 @@ begin
         [thID, FThreadID]);
     FThreadID := thId;
   finally FLock.Release; end;
-  {$ENDIF MSWINDOWS}
+  {$ELSE}
+  //TODO Implement
+  raise Exception.Create('Not implemented');
+  {$IFEND}
 end; { TOmniSingleThreadUseChecker.Check }
 
 procedure TOmniSingleThreadUseChecker.DebugCheck;
-{$IFDEF MSWINDOWS}
 {$IFDEF OTL_CheckThreadSafety}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 var
   thID: cardinal;
+{$IFEND}
 {$ENDIF OTL_CheckThreadSafety}
-{$ENDIF MSWINDOWS}
 begin
-  {$IFDEF MSWINDOWS}
   {$IFDEF OTL_CheckThreadSafety}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   FLock.Acquire;
   try
     thID := cardinal(GetCurrentThreadID);
@@ -2356,8 +2364,11 @@ begin
         [thID, FThreadID]);
     FThreadID := thId;
   finally FLock.Release; end;
+  {$ELSE}
+  //TODO Implement
+  raise Exception.Create('Not implemented');
+  {$IFEND}
   {$ENDIF OTL_CheckThreadSafety}
-  {$ENDIF MSWINDOWS}
 end; { TOmniSingleThreadUseChecker.DebugCheck }
 
 { TOmniSynchroObject }
@@ -2626,7 +2637,7 @@ end; { TOmniEvent.IsSignalled }
 
 procedure TOmniEvent.Reset;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   {$WARN SYMBOL_PLATFORM OFF}
   Win32Check(Winapi.Windows.ResetEvent(FEvent.Handle));
   {$WARN SYMBOL_PLATFORM ON}
@@ -2638,12 +2649,12 @@ begin
       FState := False;
     end,
     True);
-  {$ENDIF}
+  {$IFEND}
 end; { TOmniEvent.Reset }
 
 procedure TOmniEvent.SetEvent;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   {$WARN SYMBOL_PLATFORM OFF}
   Win32Check(Winapi.Windows.SetEvent(FEvent.Handle));
   {$WARN SYMBOL_PLATFORM ON}
@@ -2655,7 +2666,7 @@ begin
       FState := True;
     end,
     True);
-  {$ENDIF}
+  {$IFEND}
 end; { TOmniEvent.SetEvent }
 
 procedure TOmniEvent.Signal;
@@ -2670,7 +2681,7 @@ begin
     FState := False;
 end; { TOmniEvent.WaitFor }
 
-{$IFNDEF MSWINDOWS}
+{$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
 
 { TPreSignalData }
 
@@ -2680,7 +2691,7 @@ begin
   AllSignalled := AllSignalled;
 end; { TPreSignalData.Create }
 
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 { TInterlockedEx }
 

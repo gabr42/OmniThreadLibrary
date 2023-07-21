@@ -98,10 +98,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
-  GpLists,
-  {$IFNDEF MSWINDOWS}
   System.Generics.Collections,
-  {$ENDIF ~MSWINDOWS}
+  GpLists,
   OtlCommon,
   OtlSync,
   OtlComm;
@@ -114,7 +112,7 @@ type
   TOmniWaitObjectList = class
   strict private
     owolResponseHandlers: TGpTMethodList;
-    owolWaitObjects     : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
+    owolWaitObjects     : {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}TGpInt64List{$ELSE}TList<IOmniEvent>{$IFEND};
   strict protected
     function  GetResponseHandlers(idxHandler: integer): TOmniWaitObjectMethod;
     function  GetWaitObjects(idxWaitObject: integer): TOmniTransitionEvent;
@@ -129,7 +127,7 @@ type
     property WaitObjects[idxWaitObject: integer]: TOmniTransitionEvent read GetWaitObjects;
   end; { TOmniWaitObjectList }
 
-  {$IFNDEF MSWINDOWS}
+  {$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
   IOmniEventAndProc = interface(IOmniEvent) ['{2CA14FE0-4616-41CC-BDED-EEDE88BC6492}']
     function BaseEvent: IOmniEvent;
     function Proc: TOmniWaitObjectMethod;
@@ -141,7 +139,7 @@ type
     function  AsSyncroArray: TOmniSynchroArray;
     procedure RemoveBaseEvent(const Base: IOmniEvent);
   end;
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 
   TOmniTaskInvokeFunction = reference to procedure;
 //  TOmniTaskInvokeFunctionEx = reference to procedure(const task: IOmniTaskControl);
@@ -164,9 +162,9 @@ type
     procedure InvokeOnSelf(remoteFunc: TOmniTaskInvokeFunction);
 //    procedure Invoke(remoteFunc: TOmniTaskInvokeFunctionEx); overload;
     procedure RegisterComm(const comm: IOmniCommunicationEndpoint);
-    {$IFDEF MSWINDOWS}
+    {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
     procedure RegisterWaitObject(waitObject: THandle; responseHandler: TOmniWaitObjectMethod); overload;
-    {$ENDIF MSWINDOWS}
+    {$IFEND}
     procedure RegisterWaitObject(waitObject: IOmniEvent; responseHandler: TOmniWaitObjectMethod); overload;
     procedure SetException(exceptionObject: pointer);
     procedure SetExitStatus(exitCode: integer; const exitMessage: string);
@@ -182,9 +180,9 @@ type
     function  Terminated: boolean;
     function  Stopped: boolean;
     procedure UnregisterComm(const comm: IOmniCommunicationEndpoint);
-    {$IFDEF MSWINDOWS}
+    {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
     procedure UnregisterWaitObject(waitObject: THandle); overload;
-    {$ENDIF MSWINDOWS}
+    {$IFEND}
     procedure UnregisterWaitObject(waitObject: IOmniEvent); overload;
     property CancellationToken: IOmniCancellationToken read GetCancellationToken;
     property Comm: IOmniCommunicationEndpoint read GetComm;
@@ -205,27 +203,28 @@ type
 
   TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
 
-{$IFNDEF MSWINDOWS}
+{$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
   function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 implementation
 
 { exports }
 
-{$IFNDEF MSWINDOWS}
+{$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
 function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
 begin
-  // TODO
+  // TODO Implement
+  raise Exception.Create('Not implemented');
 end;
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 { TOmniWaitObjectList }
 
 constructor TOmniWaitObjectList.Create;
 begin
   inherited Create;
-  owolWaitObjects := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
+  owolWaitObjects := {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$IFEND};
   owolResponseHandlers := TGpTMethodList.Create;
 end; { TOmniWaitObjectList.Create }
 
@@ -271,17 +270,19 @@ begin
   end;
 end; { TOmniWaitObjectList.Remove }
 
-{$IFNDEF MSWINDOWS}
+{$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
 function TOmniEventProcList.AsSyncroArray: TOmniSynchroArray;
 begin
-  //TODO
+  //TODO Implement
+  raise Exception.Create('Not implemented');
 end;
 
 procedure TOmniEventProcList.RemoveBaseEvent(const Base: IOmniEvent);
 begin
-  //TODO
+  //TODO Implement
+  raise Exception.Create('Not implemented');
 end;
-{$ENDIF ~MSWINDOWS}
+{$IFEND}
 
 initialization
   Assert(SizeOf(THandle) <= SizeOf(int64));

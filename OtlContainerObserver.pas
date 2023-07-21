@@ -154,12 +154,12 @@ type
   function CreateContainerPlatformObserver(notify: IOmniEventMonitorNotify;
     objectID: int64): TOmniContainerPlatformObserver;
 
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam: WPARAM; lParam: LPARAM): TOmniContainerWindowsMessageObserver;
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
 
 implementation
 
@@ -191,7 +191,7 @@ type
     procedure Notify; override;
   end; { TOmniContainerPlatformObserverImpl }
 
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
   strict private
     cweoEvent          : THandle;
@@ -217,7 +217,7 @@ type
     procedure Send(aMessage: cardinal; wParam: WPARAM; lParam: LPARAM); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
-  {$ENDIF MSWINDOWS}
+  {$IFEND}
 
 { exports }
 
@@ -233,19 +233,20 @@ begin
   Result := TOmniContainerPlatformObserverImpl.Create(notify, objectID);
 end; { CreateContainerPlatformObserver }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
   TOmniContainerWindowsEventObserver;
 begin
+
   Result := TOmniContainerWindowsEventObserverImpl.Create(externalEvent);
 end; { CreateContainerWindowsEventObserver }
 
-function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal; 
+function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
   wParam: WPARAM; lParam: LPARAM): TOmniContainerWindowsMessageObserver;
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
-{$ENDIF MSWINDOWS}
+{$IFEND}
 
 { TOmniContainerObserver }
 
@@ -289,7 +290,7 @@ begin
   ceoEvent.SetEvent;
 end; { TOmniContainerWindowsEventObserverImpl.Notify }
 
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
 
 { TOmniContainerWindowsEventObserverImpl }
 
@@ -298,7 +299,7 @@ begin
   inherited Create;
   if externalEvent <> 0 then begin
     cweoEvent := externalEvent;
-    cweoEventIsExternal := true;                               
+    cweoEventIsExternal := true;
   end
   else begin
     cweoEvent := Winapi.Windows.CreateEvent(nil, false, false, nil);
@@ -377,7 +378,7 @@ begin
   PostWithRetry(aMessage, wParam, lParam);
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
 
-{$ENDIF MSWINDOWS}
+{$IFEND}
 
 { TOmniContainerSubject }
 
