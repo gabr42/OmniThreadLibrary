@@ -74,9 +74,7 @@ uses
   {$ENDIF MSWINDOWS}
   System.Classes,
   System.SyncObjs,
-  {$IFDEF OTL_MobileSupport}
   System.Generics.Collections,
-  {$ENDIF OTL_MobileSupport}
   OtlSync,
   OtlCommon,
   OtlEventMonitor.Notify;

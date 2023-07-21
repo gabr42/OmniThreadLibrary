@@ -1027,12 +1027,11 @@ var
 implementation
 
 uses
-{$IFDEF MSWINDOWS}
-  {$IFDEF OTL_StrPasInAnsiStrings}System.AnsiStrings,{$ENDIF}
-  GpStringHash,
+{$IF Defined(MSWINDOWS)}
+  System.AnsiStrings,
   OtlCommon.Utils,
   OtlSync,
-{$ENDIF}
+{$IFEND}
   OtlPlatform;
 
 type

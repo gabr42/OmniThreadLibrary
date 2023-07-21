@@ -53,9 +53,7 @@ uses
   Winapi.Windows,
   DSiWin32,
   {$ENDIF MSWINDOWS}
-  {$IFDEF OTL_MobileSupport}
   System.Classes,
-  {$ENDIF OTL_MobileSupport}
   System.Diagnostics,
   SysUtils;
 
@@ -105,14 +103,14 @@ end; { TTimeSource.Create }
 
 function TTimeSource.Timestamp_ms: int64;
 begin
-  {$IFDEF MSWINDOWS}
+  {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   if FStopwatch.IsHighResolution then
     Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000)
   else
     Result := DSiTimeGetTime64;
   {$ELSE}
   Result := Round(FStopwatch.ElapsedTicks / FStopwatch.Frequency * 1000)
-  {$ENDIF ~MSWINDOWS}
+  {$IFEND}
 end; { TTimeSource.Timestamp_ms }
 
 function TTimeSource.Elapsed_ms(startTime_ms: int64): int64;
@@ -142,18 +140,21 @@ begin
   Result := DSiGetThreadAffinity;
   {$ELSE}
   Result := Copy(CPUIDs, 1, TThread.ProcessorCount);
+  // TODO : pthread_getaffinity_np
   {$ENDIF ~MSWINDOWS}
 end; { TPlatform.GetThreadAffinity }
 
 class function TPlatform.GetThreadID: TThreadID;
 begin
-  Result := {$IFDEF OTL_MobileSupport}TThread.CurrentThread.ThreadID{$ELSE}GetCurrentThreadID{$ENDIF};
+  Result := TThread.CurrentThread.ThreadID;
 end; { TPlatform.GetThreadID }
 
 class procedure TPlatform.SetThreadAffinity(const value: string);
 begin
   {$IFDEF MSWINDOWS}
   DSiSetThreadAffinity(value);
+  {$ELSE}
+  // TODO : pthread_setaffinity_np
   {$ENDIF MSWINDOWS}
 end; { TPlatform.SetThreadAffinity }
 
