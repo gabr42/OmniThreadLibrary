@@ -1,0 +1,55 @@
+object frmTwoWayHello: TfrmTwoWayHello
+  Left = 0
+  Top = 0
+  Caption = 'Form33'
+  ClientHeight = 360
+  ClientWidth = 476
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object btnStartHello: TButton
+    Position.X = 16.000000000000000000
+    Position.Y = 16.000000000000000000
+    Size.Width = 113.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    Text = 'Start "Hello"'
+    OnClick = btnStartHelloClick
+    object btnChangeMessage: TButton
+      Position.Y = 40.000000000000000000
+      Size.Width = 113.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 5
+      Text = 'Change message'
+      OnClick = btnChangeMessageClick
+      object btnStopHello: TButton
+        Position.Y = 40.000000000000000000
+        Size.Width = 113.000000000000000000
+        Size.Height = 22.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 5
+        Text = 'Stop "Hello"'
+        OnClick = btnStopHelloClick
+      end
+    end
+  end
+  object lbLog: TListBox
+    Anchors = [akLeft, akTop, akRight, akBottom]
+    Position.X = 152.000000000000000000
+    Position.Y = 16.000000000000000000
+    Size.Width = 305.000000000000000000
+    Size.Height = 329.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    DisableFocusEffect = True
+    DefaultItemStyles.ItemStyle = ''
+    DefaultItemStyles.GroupHeaderStyle = ''
+    DefaultItemStyles.GroupFooterStyle = ''
+    Viewport.Width = 301.000000000000000000
+    Viewport.Height = 325.000000000000000000
+  end
+end

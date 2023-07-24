@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ActnList,
+  Dialogs, StdCtrls, Actions, ActnList,
   OtlCommon,
   OtlTask,
   OtlTaskControl,
@@ -57,7 +57,7 @@ var
 begin
   msg := task.Param['Message'];
   repeat
-    case DSiWaitForTwoObjects(task.TerminateEvent, task.Comm.NewMessageEvent, false, task.Param['Delay']) of
+    case DSiWaitForTwoObjects(task.TerminateEvent.Handle, task.Comm.NewMessageEvent, false, task.Param['Delay']) of
       WAIT_OBJECT_1:
         begin
           while task.Comm.Receive(msgID, msgData) do begin

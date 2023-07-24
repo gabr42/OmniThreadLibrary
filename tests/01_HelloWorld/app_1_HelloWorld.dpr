@@ -16,7 +16,12 @@ uses
   OtlContainers in '..\..\OtlContainers.pas',
   OtlCommBufferTest in '..\..\OtlCommBufferTest.pas',
   OtlEventMonitor in '..\..\OtlEventMonitor.pas',
-  OtlTaskControl in '..\..\OtlTaskControl.pas';
+  OtlTaskControl in '..\..\OtlTaskControl.pas',
+  OtlPlatform in '..\..\OtlPlatform.pas',
+  OtlSync in '..\..\OtlSync.pas',
+  OtlCommon.Utils in '..\..\OtlCommon.Utils.pas',
+  OtlContainerObserver in '..\..\OtlContainerObserver.pas',
+  OtlEventMonitor.Notify in '..\..\OtlEventMonitor.Notify.pas';
 
 begin
   Application.Initialize;

@@ -537,7 +537,7 @@ type
       IdxRebuildHandles : integer;
       NewMessageEvent   : TOmniTransitionEvent;
       NumWaitHandles    : integer;
-      WaitHandles       : {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}}array of THandle{$ELSE}TOmniSynchroArray{$IFEND};
+      WaitHandles       : {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}array of THandle{$ELSE}TOmniSynchroArray{$IFEND};
       Waiter            : TWaitFor;
       {$IFDEF MSWINDOWS}
       WaitFlags         : DWORD;
@@ -2702,11 +2702,18 @@ end; { TOmniTaskExecutor.WaitForInit }
 
 function TOmniTaskExecutor.WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal
   {$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}; var SignalEvent: IOmniEvent{$IFEND}): TWaitFor.TWaitForResult;
+{$IF not Defined(MSWINDOWS) or Defined(OTL_PlatformIndependent)}
+var
+  Signaller: IOmniSynchro;
+{$IFEND}
 begin
   if assigned(WorkerIntf) then
     WorkerIntf.BeforeWait(timeout_ms);
   {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   Result := msgInfo.Waiter.MsgWaitAny(timeout_ms, msgInfo.WaitWakeMask, msgInfo.WaitFlags);
+  {$ELSE}
+  Result := msgInfo.Waiter.WaitAny(timeout_ms, Signaller);
+  {$IFEND}
   {$IFDEF Debug}
   if Result = waFailed then
     OutputDebugString(PChar(Format('*** TOmniTaskExecutor.WaitForEvent failed with error [%d] %s',
@@ -2714,9 +2721,6 @@ begin
   {$ENDIF Debug}
   if assigned(WorkerIntf) then
     WorkerIntf.AfterWait(msgInfo.Waiter, Result);
-  {$ELSE}
-  //TODO: Implement for non-Windows platforms
-  {$IFEND}
 end; { TOmniTaskExecutor.WaitForEvent }
 
 { TOmniTaskControl }
@@ -3005,6 +3009,7 @@ begin
   otcSharedInfo.TaskName := taskName;
   otcSharedInfo.UniqueID := OtlUID.Increment;
   otcParameters := TOmniValueContainer.Create;
+  // TODO 1 -oPrimoz Gabrijelcic : *** make gate ***
   otcSharedInfo.TerminateEvent := CreateOmniEvent(true, false);
   otcSharedInfo.TerminatedEvent := CreateOmniEvent(true, false); // TODO 1 -oPrimoz Gabrijelcic : *** do we need share lock here?
   otcUserData := TOmniValueContainer.Create;
