@@ -4,11 +4,11 @@ OmniThreadLibrary is a powerful threading library for Delphi. OmniThreadLibrary'
 
 ### How do I get OmniThreadLibrary?
 
-Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.9) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
+Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.10) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
 
-Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.9).
+Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.10) or (https://drive.google.com/file/d/1rlTvKIcwAGJ3nbTlKL4os8DJfvbqzBsI).
 
-Download an [older release](https://drive.google.com/drive/folders/0BwqVlLNTK4OxVEgzZnZGM1FNMGc?resourcekey=0-vPGaxR8rszOx4hVa6SFvKA&usp=sharing).
+Download an [older release](https://drive.google.com/drive/folders/0BwqVlLNTK4OxVEgzZnZGM1FNMGc?resourcekey=0-vPGaxR8rszOx4hVa6SFvKA&usp=drive_link).
 
 If you have Delphi XE8 or newer, you can install OmniThreadLibrary via [GetIt](http://docwiki.embarcadero.com/RADStudio/en/GetIt).
 
