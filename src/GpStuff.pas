@@ -1,15 +1,33 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2021 Primoz Gabrijelcic
+   (c) 2022 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2021-07-15
-   Version           : 2.18
+   Last modification : 2023-09-28
+   Version           : 2.24
 </pre>*)(*
    History:
+     2.24: 2023-09-28
+       - Implemented TGpMemoryBuffer.ClearAndKeepBuffer.
+     2.23: 2022-04-21
+       - Added parameter initializeToZero to TGpBuffer.CreateEmpty and .MakeEmpty.
+       - Implemented TGpBuffer.Create(TBytes) and .Make(TBytes).
+       - Implemented setter for TGpBuffer.AsBytes.
+     2.22: 2022-04-08
+       - Implemented TGpBuffer.CreateEmpty and .MakeEmpty.
+     2.21a: 2022-01-06
+       - Fixed accvio in TGpMemoryStream.Realloc.
+     2.21: 2021-12-27
+       - TGpBuffer uses custom memory stream to make reading .Size property thread-safe.
+     2.20: 2021-12-20
+       - TGpBuffer accesses TMemoryStream.FSize through a hardcoded offset
+         to make reading .Size property thread-safe.
+     2.19: 2021-12-01
+       - Added common 'home' for generic methods '_'. Currently implements
+         IFF<T> and Assign<T>.
      2.18: 2021-07-15
        - Defined constants for ASCII characters from #$00 to #$1B.
      2.17: 2021-03-29
@@ -471,6 +489,39 @@ type
     procedure Release(buf: pointer); overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end; { TGpMemoryBuffer }
 
+  TGpMemoryStream = class(TStream)
+  public const
+    DefGrowDelta = $1000;
+  private
+    FCapacity : NativeInt;
+    FGrowDelta: integer;
+    FMemory   : pointer;
+    FPosition : NativeInt;
+    FSize     : NativeInt;
+  strict protected
+    function  Realloc(var newCapacity: NativeInt): pointer; virtual;
+    procedure SetCapacity(newCapacity: NativeInt); virtual;
+  protected
+    function  GetSize: int64; override;
+    procedure SetSize(newSize: longint); overload; override; deprecated;
+    procedure SetSize(const newSize: int64); overload; override;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Clear;
+    procedure ClearAndKeepBuffer;
+    procedure LoadFromFile(const fileName: string);
+    procedure LoadFromStream(stream: TStream);
+    function  Read(var buffer; count: longint): longint; override;
+    procedure SaveToFile(const fileName: string);
+    procedure SaveToStream(stream: TStream); virtual;
+    function  Seek(const offset: int64; origin: TSeekOrigin): int64; override;
+    function  Write(const buffer; count: longint): longint; override;
+    property Capacity: NativeInt read FCapacity write SetCapacity;
+    property GrowDelta: integer read FGrowDelta write FGrowDelta default DefGrowDelta;
+    property Memory: Pointer read FMemory;
+  end; { TGpMemoryStream }
+
   IGpBuffer = interface ['{0B9FF0FC-492B-412D-B716-618355908550}']
   {$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString;
@@ -534,7 +585,7 @@ type
 
   TGpBuffer = class(TInterfacedObject, IGpBuffer)
   strict private
-    FData: TMemoryStream;
+    FData: TGpMemoryStream;
   protected
   {$IFDEF MSWINDOWS}
     function  GetAsAnsiString: AnsiString; inline;
@@ -556,6 +607,7 @@ type
   {$IFDEF MSWINDOWS}
     procedure SetAsAnsiString(const value: AnsiString); inline;
   {$ENDIF}
+    procedure SetAsBytes(const bytes: TBytes); inline;
     procedure SetAsString(const value: string); inline;
     procedure SetByteVal(idx: integer; const value: byte); inline;
     procedure SetCurrent(const value: pointer); inline;
@@ -569,11 +621,15 @@ type
     constructor Create(stream: TStream); overload;
     constructor Create(const buffer: IGpBuffer); overload;
     constructor Create(const s: string); overload;
+    constructor Create(const bytes: TBytes); overload;
+    constructor CreateEmpty(size: integer; initializeToZero: boolean = true);
     class function Make: IGpBuffer; overload;
     class function Make(data: pointer; size: integer): IGpBuffer; overload; inline;
     class function Make(stream: TStream): IGpBuffer; overload; inline;
     class function Make(const buffer: IGpBuffer): IGpBuffer; overload; inline;
     class function Make(const s: string): IGpBuffer; overload; inline;
+    class function Make(const bytes: TBytes): IGpBuffer; overload; inline;
+    class function MakeEmpty(size: integer; initializeToZero: boolean = true): IGpBuffer; inline;
   {$IFDEF MSWINDOWS}{$IFDEF Unicode}
     constructor Create(const s: AnsiString); overload;
     class function Make(const s: AnsiString): IGpBuffer; overload; inline;
@@ -595,7 +651,7 @@ type
   {$IFDEF MSWINDOWS}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
   {$ENDIF}
-    property AsBytes: TBytes read GetAsBytes;
+    property AsBytes: TBytes read GetAsBytes write SetAsBytes;
     property AsStream: TStream read GetAsStream;
     property AsString: string read GetAsString write SetAsString;
     property ByteAddr[idx: integer]: pointer read GetByteAddr;
@@ -651,11 +707,13 @@ function CompareValue(left, right: boolean): integer; overload;
 
 {$IFDEF GpStuff_Generics}
 type
-  Ternary<T> = record
-  end;
-
   Ternary = record
     class function IFF<T>(condit: boolean; iftrue, iffalse: T): T; static;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+  end;
+
+  _ = record
+    class function IFF<T>(condit: boolean; iftrue, iffalse: T): T; static;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+    class function Assign<T>(var output: T; const value: T): T; static;       {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end;
 
   TRec<T1,T2> = record
@@ -909,6 +967,7 @@ var
 implementation
 
 uses
+  RTLConsts,
 {$IFDEF GpStuff_AnsiStrings}
   AnsiStrings,
 {$ENDIF}
@@ -2583,12 +2642,168 @@ begin
   FList := buf;
 end; { TGpMemoryBuffer.Release }
 
+{ TGpMemoryStream }
+
+constructor TGpMemoryStream.Create;
+begin
+  inherited Create;
+  FGrowDelta := DefGrowDelta;
+end; { TGpMemoryStream.Create }
+
+destructor TGpMemoryStream.Destroy;
+begin
+  Clear;
+  inherited Destroy;
+end; { TGpMemoryStream.Destroy }
+
+procedure TGpMemoryStream.Clear;
+begin
+  SetCapacity(0);
+  FSize := 0;
+  FPosition := 0;
+end; { TGpMemoryStream.Clear }
+
+procedure TGpMemoryStream.ClearAndKeepBuffer;
+begin
+  FSize := 0;
+  FPosition := 0;
+end; { TGpMemoryStream.ClearAndKeepBuffer }
+
+function TGpMemoryStream.GetSize: int64;
+begin
+  Result := FSize;
+end; { TGpMemoryStream.GetSize }
+
+procedure TGpMemoryStream.LoadFromFile(const fileName: string);
+var
+  stream: TStream;
+begin
+  stream := TFileStream.Create(fileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(stream);
+  finally stream.Free; end;
+end; { TGpMemoryStream.LoadFromFile }
+
+procedure TGpMemoryStream.LoadFromStream(stream: TStream);
+var
+  count: int64;
+begin
+  Stream.Position := 0;
+  count := Stream.Size;
+  SetSize(count);
+  if count <> 0 then
+    Stream.ReadBuffer(FMemory^, count);
+end; { TGpMemoryStream.LoadFromStream }
+
+function TGpMemoryStream.Read(var buffer; count: longint): longint;
+begin
+  if (Count < 0) or (FPosition >= FSize) then
+    Exit(0);
+
+  if FSize > (FPosition + count) then
+    Result := count
+  else
+    Result := FSize - FPosition;
+  Move((PByte(FMemory) + FPosition)^, buffer, Result);
+  Inc(FPosition, Result);
+end; { TGpMemoryStream.Read }
+
+function TGpMemoryStream.Realloc(var newCapacity: NativeInt): pointer;
+begin
+  Result := FMemory;
+
+  if (newCapacity > 0) and (newCapacity <> FSize) then
+    newCapacity := RoundUpTo(newCapacity, GrowDelta);
+  if newCapacity = FCapacity then
+    Exit;
+
+  if newCapacity = 0 then begin
+    FreeMem(FMemory);
+    Result := nil;
+  end
+  else begin
+    if not assigned(FMemory) then
+      GetMem(Result, newCapacity)
+    else
+      ReallocMem(Result, newCapacity);
+    if Result = nil then
+      raise EStreamError.CreateRes(@SMemoryStreamError);
+  end;
+  FMemory := Result;
+end; { TGpMemoryStream.Realloc }
+
+procedure TGpMemoryStream.SaveToFile(const fileName: string);
+var
+  stream: TStream;
+begin
+  stream := TFileStream.Create(fileName, fmCreate);
+  try
+    SaveToStream(stream);
+  finally stream.Free; end;
+end; { TGpMemoryStream.SaveToFile }
+
+procedure TGpMemoryStream.SaveToStream(stream: TStream);
+begin
+  if FSize <> 0 then
+    stream.WriteBuffer(FMemory^, FSize);
+end; { TGpMemoryStream.SaveToStream }
+
+function TGpMemoryStream.Seek(const offset: int64; origin: TSeekOrigin): int64;
+begin
+  case origin of
+    soBeginning: FPosition := offset;
+    soCurrent:   FPosition := FPosition + offset;
+    soEnd:       FPosition := FSize + offset;
+  end;
+  Result := FPosition;
+end; { TGpMemoryStream.Seek }
+
+procedure TGpMemoryStream.SetCapacity(newCapacity: NativeInt);
+begin
+  Realloc(newCapacity);
+  FCapacity := newCapacity;
+end; { TGpMemoryStream.SetCapacity }
+
+procedure TGpMemoryStream.SetSize(newSize: longint);
+begin
+  SetSize(int64(newSize));
+end; { TGpMemoryStream.SetSize }
+
+procedure TGpMemoryStream.SetSize(const newSize: int64);
+var
+  oldPos: NativeInt;
+begin
+  oldPos := FPosition;
+  SetCapacity(newSize);
+  FSize := newSize;
+  if oldPos > newSize then
+    FPosition := newSize;
+end; { TGpMemoryStream.SetSize }
+
+function TGpMemoryStream.Write(const buffer; count: longint): longint;
+var
+  endPos: int64;
+begin
+  if count <= 0 then
+    Exit(0);
+
+  endPos := FPosition + count;
+  if endPos > FSize then begin
+    if endPos > FCapacity then
+      SetCapacity(endPos);
+    FSize := endPos;
+  end;
+  System.Move(buffer, (PByte(FMemory) + FPosition)^, count);
+  FPosition := endPos;
+  Result := count;
+end; { TGpMemoryStream.Write }
+
 { TGpBuffer }
 
 constructor TGpBuffer.Create;
 begin
   inherited Create;
-  FData := TMemoryStream.Create;
+  FData := TGpMemoryStream.Create;
 end; { TGpBuffer.Create }
 
 constructor TGpBuffer.Create(data: pointer; size: integer);
@@ -2615,6 +2830,28 @@ begin
   AsString := s;
 end; { TGpBuffer.Create }
 
+{$IFDEF MSWINDOWS}{$IFDEF Unicode}
+constructor TGpBuffer.Create(const s: AnsiString);
+begin
+  Create;
+  AsAnsiString := s;
+end; { TGpBuffer.Create }
+{$ENDIF}{$ENDIF}
+
+constructor TGpBuffer.Create(const bytes: TBytes);
+begin
+  Create;
+  AsBytes := bytes;
+end; { TGpBuffer.Create }
+
+constructor TGpBuffer.CreateEmpty(size: integer; initializeToZero: boolean);
+begin
+  Create;
+  Self.Size := size;
+  if initializeToZero then
+    FillChar(Value^, size, #0);
+end; { TGpBuffer.CreateEmpty }
+
 class function TGpBuffer.Make(data: pointer; size: integer): IGpBuffer;
 begin
   Result := TGpBuffer.Create(data, size);
@@ -2635,18 +2872,20 @@ begin
   Result := TGpBuffer.Create(s);
 end; { TGpBuffer.Make }
 
-{$IFDEF MSWINDOWS}{$IFDEF Unicode}
-constructor TGpBuffer.Create(const s: AnsiString);
-begin
-  Create;
-  AsAnsiString := s;
-end; { TGpBuffer.Create }
-
 class function TGpBuffer.Make (const s: AnsiString): IGpBuffer;
 begin
   Result := TGpBuffer.Create(s);
 end; { TGpBuffer.Make }
-{$ENDIF}{$ENDIF}
+
+class function TGpBuffer.Make(const bytes: TBytes): IGpBuffer;
+begin
+  Result := TGpBuffer.Create(bytes);
+end; { TGpBuffer.Make }
+
+class function TGpBuffer.MakeEmpty(size: integer; initializeToZero: boolean): IGpBuffer;
+begin
+  Result := TGpBuffer.CreateEmpty(size, initializeToZero);
+end; { TGpBuffer.MakeEmpty }
 
 function TGpBuffer.GetCurrent: pointer;
 begin
@@ -2665,6 +2904,7 @@ end; { TGpBuffer.Make }
 
 procedure TGpBuffer.Add(b: byte);
 begin
+  FData.Seek(0, soEnd);
   FData.Write(b, 1);
 end; { TGpBuffer.Add }
 
@@ -2683,13 +2923,18 @@ end; { TGpBuffer.Allocate }
 
 procedure TGpBuffer.Append(data: pointer; size: integer);
 begin
-  FData.Write(data^, size);
+  if size > 0 then begin
+    FData.Seek(0, soEnd);
+    FData.Write(data^, size);
+  end;
 end; { TGpBuffer.Append }
 
 procedure TGpBuffer.Append(stream: TStream);
 begin
-  if stream.Size > 0 then
+  if stream.Size > 0 then begin
+    FData.Seek(0, soEnd);
     AsStream.CopyFrom(stream, 0);
+  end;
 end; { TGpBuffer.Append }
 
 procedure TGpBuffer.Append(const buffer: IGpBuffer);
@@ -2739,16 +2984,10 @@ begin
 end; { TGpBuffer.GetAsStream }
 
 function TGpBuffer.GetAsBytes: TBytes;
-var
-  oldPos: int64;
 begin
-  SetLength(Result, AsStream.Size);
-  if Length(Result) > 0 then begin
-    oldPos := AsStream.Position;
-    AsStream.Position := 0;
-    AsStream.ReadBuffer(Result[0], Length(Result));
-    AsStream.Position := oldPos;
-  end;
+  SetLength(Result, Size);
+  if Size > 0 then
+    Move(Value^, Result[0], Size);
 end; { TGpBuffer.GetAsBytes }
 
 function TGpBuffer.GetAsString: string;
@@ -2827,6 +3066,14 @@ begin
 end; { TGpBuffer.SetAsAnsiString }
 {$ENDIF}
 
+procedure TGpBuffer.SetAsBytes(const bytes: TBytes);
+begin
+  if Length(bytes) = 0 then
+    Clear
+  else
+    Assign(@bytes[0], Length(bytes));
+end; { TGpBuffer.SetAsBytes }
+
 procedure TGpBuffer.SetAsString(const value: string);
 begin
   if value = '' then
@@ -2837,35 +3084,34 @@ end; { TGpBuffer.SetAsString }
 
 procedure TGpBuffer.SetByteVal(idx: integer; const value: byte);
 begin
-  Assert((idx >= 0) and (idx < Size));
-  PByte(NativeUInt(Value) + NativeUInt(idx))^ := value;
+  PByte(ByteAddr[idx])^ := value;
 end; { TGpBuffer.SetByteVal }
 
 procedure TGpBuffer.SetCurrent(const value: pointer);
 begin
   FData.Position := {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(value) -
                     {$IFDEF Unicode}NativeUInt{$ELSE}cardinal{$ENDIF}(FData.Memory);
-end; procedure TGpBuffer.SetInt32Val(idx: integer; const value: integer);
-begin
+end; { TGpBuffer.SetCurrent }
 
-end;
+procedure TGpBuffer.SetInt32Val(idx: integer; const value: integer);
+begin
+  PInteger(Int32Addr[idx])^ := value;
+end; { TGpBuffer.SetInt32Val }
 
 procedure TGpBuffer.SetInt64Val(idx: integer; const value: int64);
 begin
-
-end;
-
-{ TGpBuffer.SetCurrent }
+  PInt64(Int64Addr[idx])^ := value;
+end; { TGpBuffer.SetInt64Val }
 
 procedure TGpBuffer.SetSize(const value: integer);
 begin
   FData.Size := value;
-end; procedure TGpBuffer.SetWordVal(idx: integer; const value: word);
+end; { TGpBuffer.SetSize }
+
+procedure TGpBuffer.SetWordVal(idx: integer; const value: word);
 begin
-
-end;
-
-{ TGpBuffer.SetSize }
+  PWord(WordAddr[idx])^ := value;
+end; { TGpBuffer.SetWordVal }
 
 { TGpInterfacedPersistent }
 
@@ -2974,6 +3220,21 @@ begin
   Result.StoredValue := value;
 end; { StoreValue.Save<T> }
 
+{ _ }
+
+class function _.IFF<T>(condit: boolean; iftrue, iffalse: T): T;
+begin
+  if condit then
+    Result := iftrue
+  else
+    Result := iffalse;
+end; { _.IFF<T> }
+
+class function _.Assign<T>(var output: T; const value: T): T;
+begin
+  output := value;
+  Result := output;
+end; { _.Assign<T> }
 {$ENDIF GpStuff_Generics}
 
 initialization

@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2021, Primoz Gabrijelcic
+Copyright (c) 2023, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-21
-   Last modification : 2021-03-16
-   Version           : 2.01a
+   Last modification : 2023-03-22
+   Version           : 2.02a
 </pre>*)(*
    History:
+     2.02a: 2023-03-22
+       - TGpBufferedStream.Size was incorrect after .Write.
+     2.02: 2023-01-11
+       - Implemented TStream helpers ReadLenAnsiStr, ReadLenStr, WriteLenAnsiStr, and WriteLenStr.
+     2.02a: 2022-01-14
+       - Fixed TGpStreamEnhancer.RemoveFirst and KeepLast.
      2.02: 2021-03-30
        - Changed TGpStreamEnhancer.GoToStart and .GoToEnd to a function returning Self.
      2.01a: 2021-03-16
@@ -599,6 +605,11 @@ type
     procedure LE_WriteGUID(const g: TGUID);       {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     procedure LE_WriteHuge(const h: Int64);       {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     procedure LE_WriteWord(const w: word);        {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    // String data storage helpers
+    function  ReadLenAnsiStr: AnsiString;
+    function  ReadLenStr: string;
+    procedure WriteLenAnsiStr(const s: AnsiString); {$IFDEF GpStreams_Inline}inline;{$ENDIF}
+    procedure WriteLenStr(const s: string);         {$IFDEF GpStreams_Inline}inline;{$ENDIF}
     // Tagged readers/writers
     function  CheckTag(tag: integer): boolean;
     function  GetTag(var tag: integer; var stream: IGpStreamWrapper): boolean;
@@ -1683,7 +1694,6 @@ end; { TGpBufferedStream.CurrentPosition }
 
 function TGpBufferedStream.GetSize: int64;
 begin
-  // TODO 5 -oPrimoz Gabrijelcic : this will have to be updated when Write is implemented
   Result := bsBaseSize;
 end; { TGpBufferedStream.GetSize }
 
@@ -1768,6 +1778,7 @@ begin
   bsBasePosition := oldPos + Result;
   bsBufferPtr := bsBuffer;
   bsBufferOffset := oldPos + Result;
+  bsBaseSize := WrappedStream.Size;
 end; { TGpBufferedStream.Write }
 
 { TGpJoinedStream }
@@ -2416,6 +2427,26 @@ begin
   end;
 end; { TGpStreamEnhancer.PeekTag }
 
+function TGpStreamEnhancer.ReadLenAnsiStr: AnsiString;
+var
+  len: integer;
+begin
+  len := LE_ReadDWord;
+  SetLength(Result, len);
+  if len > 0 then
+    Read(Result[1], len);
+end; { TGpStreamEnhancer.ReadLenAnsiStr }
+
+function TGpStreamEnhancer.ReadLenStr: string;
+var
+  len: integer;
+begin
+  len := LE_ReadDWord;
+  SetLength(Result, len);
+  if len > 0 then
+    Read(Result[1], len * SizeOf(char));
+end; { TGpStreamEnhancer.ReadLenStr }
+
 {:Read the tag. Size must be zero or error will be returned.
   @since   2006-09-22
 }
@@ -2571,8 +2602,15 @@ begin
 end; { TGpStreamEnhancer.ReadTag64 }
 
 procedure TGpStreamEnhancer.RemoveFirst(numBytes: integer);
+var
+  memory: pointer;
 begin
-  Assert(Self is TMemoryStream);
+  if Self is TMemoryStream then
+    memory := TMemoryStream(Self).Memory
+  else if Self is TGpMemoryStream then
+    memory := TGpMemoryStream(Self).Memory
+  else
+    raise Exception.Create('Not supported: ' + Self.ClassName);
   if (numBytes < 0) or (numBytes > Size) then
     raise Exception.CreateFmt(
             'TGpStreamEnhancer.RemoveFirst: Cannot remove %d bytes, size = %d',
@@ -2582,8 +2620,7 @@ begin
   if numBytes = Size then
     Clear
   else begin
-    Move(OffsetPtr(TMemoryStream(Self).Memory, numBytes)^,
-         TMemoryStream(Self).Memory^, Size - numBytes);
+    Move(OffsetPtr(memory, numBytes)^, memory^, Size - numBytes);
     Size := Size - numBytes;
   end;
 end; { TGpStreamEnhancer.RemoveFirst }
@@ -2636,6 +2673,18 @@ begin
   if s <> '' then
     Write(s[1], Length(s));
 end; { TGpStreamEnhancer.WriteAnsiStr }
+
+procedure TGpStreamEnhancer.WriteLenAnsiStr(const s: AnsiString);
+begin
+  LE_WriteDWord(Length(s));
+  WriteAnsiStr(s);
+end; { TGpStreamEnhancer.WriteLenAnsiStr }
+
+procedure TGpStreamEnhancer.WriteLenStr(const s: string);
+begin
+  LE_WriteDWord(Length(s));
+  WriteStr(s);
+end; { TGpStreamEnhancer.WriteLenStr }
 
 procedure TGpStreamEnhancer.WriteStr(const s: string);
 begin
