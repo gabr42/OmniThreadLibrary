@@ -20,7 +20,7 @@ Download and install the sources. Compile and install the OmniThreadLibrary pack
 
 ### Is OmniThreadLibrary supported on my platform?
 
-At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, 10.4 Sydney, and 11 Alexandria on Win32 and Win64 platforms using the VCL framework. 
+At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, 10.4 Sydney, 11 Alexandria, and 12 Athens on Win32 and Win64 platforms using the VCL framework, service or console applications. 
 
 There are no plans to support older Delphi compilers.
 We are working on support for mobile devices, OS X, Linux, and FireMonkey.
