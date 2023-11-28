@@ -1519,7 +1519,9 @@ end; { Atomic<T>.Initialize }
 {$IFDEF OTL_ERTTI}
 class function Atomic<T>.Initialize(var storage: T): T;
 begin
-  if not assigned(PPointer(@storage)^) then begin
+  if assigned(PPointer(@storage)^) then
+    Result := storage
+  else begin
     if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
       raise Exception.Create('Atomic<T>.Initialize: Unsupported type');
     Result := Atomic<T>.Initialize(storage,
@@ -1531,6 +1533,7 @@ begin
         resValue    : TValue;
         rType       : TRttiType;
       begin
+        Result := Default(T);
         ctx := TRttiContext.Create;
         rType := ctx.GetType(TypeInfo(T));
         for aMethCreate in rType.GetMethods do begin
@@ -1652,6 +1655,7 @@ begin
         resValue    : TValue;
         rType       : TRttiType;
       begin
+        Result := Default(T);
         ctx := TRttiContext.Create;
         rType := ctx.GetType(TypeInfo(T));
         for aMethCreate in rType.GetMethods do begin
