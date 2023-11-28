@@ -36,10 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2020-09-16
-///   Version           : 1.27c
+///   Last modification : 2023-11-28
+///   Version           : 1.27d
 ///</para><para>
 ///   History:
+///     1.27d: 2023-11-28
+///       - Fixed hints & warnings.
+///       - Locked<T>.Initialize without the 'factory' parameter could return
+///         uninitialized value.
 ///     1.27c: 2020-09-16
 ///       - Fixed TOmniMREW.TryEnterWriteLock which incorrectly managed the shared lock
 ///         state when a timeout occurred. [issue #149]
@@ -1642,7 +1646,9 @@ end; { Locked<T>.Initialize }
 {$IFDEF OTL_ERTTI}
 function Locked<T>.Initialize: T;
 begin
-  if not FInitialized then begin
+  if FInitialized then
+    Result := FValue
+  else begin
     if PTypeInfo(TypeInfo(T))^.Kind  <> tkClass then
       raise Exception.Create('Locked<T>.Initialize: Unsupported type');
     Result := Initialize(
@@ -1776,7 +1782,6 @@ end; { TOmniLockManager }
 function TOmniLockManager<K>.Lock(const key: K; timeout_ms: cardinal): boolean;
 var
   lockData  : TLockValue;
-  lockThread: integer;
   notifyItem: TGpDoublyLinkedListObject;
   startWait : int64;
   waitEvent : TDSiEventHandle;
