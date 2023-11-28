@@ -30,10 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2023-08-21
-   Version           : 1.85
+   Last modification : 2023-11-28
+   Version           : 1.85a
 </pre>*)(*
    History:
+     1.85a: 2023-11-28
+       - Fixed potentially unitialized variable in TGpCache<K, V>.RemoveElement.
      1.85: 2023-08-21
        - Implemented TGpIntegerList.ToArray and TGpInt64List.ToArray.
      1.84: 2023-05-24
@@ -8293,9 +8295,9 @@ var
 begin
   Result := elementIdx;
   Unlink(elementIdx);
-  FCache.Remove(FKeys[elementIdx].Key);
+  pElement := @FKeys[elementIdx];
+  FCache.Remove(pElement^.Key);
   if addToFreeList then begin
-    pElement := @FKeys[elementIdx];
     pElement.Next := FFreeList;
     pElement.Prev := NilPointer;
     FFreeList := elementIdx;
