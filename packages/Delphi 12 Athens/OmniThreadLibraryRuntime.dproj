@@ -62,7 +62,7 @@
         <GenPackage>true</GenPackage>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Platform>x86</DCC_Platform>
-        <DllSuffix>280</DllSuffix>
+        <DllSuffix>$(Auto)</DllSuffix>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
@@ -83,7 +83,7 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <DCC_UnitSearchPath>..\..;..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <DllSuffix>290</DllSuffix>
+        <DllSuffix>$(Auto)</DllSuffix>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <DCC_UnitSearchPath>..;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
@@ -169,17 +169,17 @@
                 <Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k290.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp290.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dcldxCoreRS29.bpl">File x:\common\pkg\_packages\12\bpl\dcldxCoreRS29.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="X:\common\pkg\_packages\12\bpl\dclcxGridRS29.bpl">File X:\common\pkg\_packages\12\bpl\dclcxGridRS29.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclcxLibraryRS29.bpl">File x:\common\pkg\_packages\12\bpl\dclcxLibraryRS29.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dcldxServerModeRS29.bpl">File x:\common\pkg\_packages\12\bpl\dcldxServerModeRS29.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="X:\common\pkg\_packages\12\bpl\dcldxmdsRS29.bpl">File X:\common\pkg\_packages\12\bpl\dcldxmdsRS29.bpl not found</Excluded_Packages>
+                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dcldxCoreRS29.bpl">ExpressCore Library by Developer Express Inc.</Excluded_Packages>
+                    <Excluded_Packages Name="X:\common\pkg\_packages\12\bpl\dclcxGridRS29.bpl">ExpressQuantumGrid by Developer Express Inc.</Excluded_Packages>
+                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclcxLibraryRS29.bpl">Express Cross Platform Library by Developer Express Inc.</Excluded_Packages>
+                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dcldxServerModeRS29.bpl">ExpressDataController Server Mode by Developer Express Inc.</Excluded_Packages>
+                    <Excluded_Packages Name="X:\common\pkg\_packages\12\bpl\dcldxmdsRS29.bpl">ExpressMemData by Developer Express Inc.</Excluded_Packages>
                     <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclSvComV8D29.bpl">File x:\common\pkg\_packages\12\bpl\dclSvComV8D29.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclPython290.bpl">File x:\common\pkg\_packages\12\bpl\dclPython290.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclPythonVcl290.bpl">File x:\common\pkg\_packages\12\bpl\dclPythonVcl290.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclP4DEnvironment290.bpl">File x:\common\pkg\_packages\12\bpl\dclP4DEnvironment290.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclP4DEnvironmentProject290.bpl">File x:\common\pkg\_packages\12\bpl\dclP4DEnvironmentProject290.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclP4DPyPackage290.bpl">File x:\common\pkg\_packages\12\bpl\dclP4DPyPackage290.bpl not found</Excluded_Packages>
+                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclP4DEnvironmentProject290.bpl">P4D - Python Environments Project Menu Extension</Excluded_Packages>
+                    <Excluded_Packages Name="x:\common\pkg\_packages\12\bpl\dclP4DPyPackage290.bpl">P4D AI&amp;ML extension for Python packages</Excluded_Packages>
                 </Excluded_Packages>
                 <isVersionControl>
                     <isVersionControl Name="isVersionControlID"/>

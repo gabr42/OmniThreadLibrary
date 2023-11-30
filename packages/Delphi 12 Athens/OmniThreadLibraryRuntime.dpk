@@ -26,7 +26,7 @@ package OmniThreadLibraryRuntime;
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'OmniThreadLibrary runtime'}
-{$LIBSUFFIX '290'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
