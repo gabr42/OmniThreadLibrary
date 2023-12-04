@@ -348,8 +348,14 @@ interface
   {$IF CompilerVersion <= 20} //D2009
     {$DEFINE GpLists_LimitedGenerics}
   {$IFEND}
-  {$IF CompilerVersion >= 23} //DXE2
+  {$IF CompilerVersion >= 22} //XE
+    {$DEFINE GpLists_TArrayOfT}
+  {$IFEND}
+  {$IF CompilerVersion >= 23} // Delphi XE2
     {$DEFINE GpLists_HasSystemTypes}
+  {$IFEND}
+  {$IF CompilerVersion >= 33} // Delphi 10.3 Rio
+    {$DEFINE GpLists_HasGrowCollection}
   {$IFEND}
 {$ENDIF}
 
@@ -583,7 +589,7 @@ type
     {$IFDEF GpLists_Sorting}
     procedure Sort;
     {$ENDIF}
-    {$IFDEF Unicode}
+    {$IFDEF GpLists_TArrayOfT}
     function  ToArray: TArray<integer>;
     {$ENDIF}
     procedure UnregisterNotification(notificationHandler: TGpListNotificationEvent);
@@ -673,7 +679,7 @@ type
     {$IFDEF GpLists_Sorting}
     procedure Sort;                                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
     {$ENDIF}
-    {$IFDEF Unicode}
+    {$IFDEF GpLists_TArrayOfT}
     function  ToArray: TArray<integer>;
     {$ENDIF}
     procedure UnregisterNotification(notificationHandler: TGpListNotificationEvent);
@@ -801,7 +807,7 @@ type
     function  Restore(baseAddr: pointer): pointer;
     procedure SaveToStream(stream: TStream);
     procedure Sort;
-    {$IFDEF Unicode}
+    {$IFDEF GpLists_TArrayOfT}
     function  ToArray: TArray<int64>;
     {$ENDIF}
     procedure UnregisterNotification(notificationHandler: TGpListNotificationEvent);
@@ -886,7 +892,7 @@ type
     function  Restore(baseAddr: pointer): pointer; virtual;
     procedure SaveToStream(stream: TStream); virtual;
     procedure Sort;                                 {$IFDEF GpLists_Inline}inline;{$ENDIF}
-    {$IFDEF Unicode}
+    {$IFDEF GpLists_TArrayOfT}
     function  ToArray: TArray<int64>;
     {$ENDIF}
     procedure UnregisterNotification(notificationHandler: TGpListNotificationEvent);
@@ -2557,6 +2563,7 @@ type
 {$ENDIF}
 {$ENDIF}
 
+  {$IFDEF GpLists_TArrayOfT}
   IGpMovingAverager<T> = interface ['{A7650DD3-34A3-43D7-BC09-F15B72F34990}']
     function  GetNumSamples: integer;
     procedure SetNumSamples(value: integer);
@@ -2620,6 +2627,7 @@ type
     procedure Add(value: extended); override;
     function  Average: extended; override;
   end; { TGpFPAverager }
+  {$ENDIF GpLists_TArrayOfT}
 
   {:Compares two TGpInt64objects for equality. Ready for use in
     TGpObject(Object)Map.
@@ -2637,6 +2645,10 @@ type
     @since   2006-09-20
   }
   function Int64Compare(avalue1, avalue2: int64): integer; {$IFDEF GpLists_Inline}inline;{$ENDIF}
+
+{$IFNDEF GpLists_HasGrowCollection} // used in a parameterized type, must be exported
+function MyGrowCollection(OldCapacity, NewCount: integer): integer;
+{$ENDIF}
 
 implementation
 
@@ -2732,6 +2744,16 @@ function GUIDListCompare(List: TGpGUIDList; idx1, idx2: integer): integer; {$IFD
 begin
   Result := GUIDCompare(List[idx1], List[idx2]);
 end; { GUIDListCompare }
+
+{$IFNDEF GpLists_HasGrowCollection}
+function MyGrowCollection(OldCapacity, NewCount: integer): integer;
+begin
+  Result := OldCapacity;
+  repeat
+    Result := (Result * 3) div 2;
+  until Result >= NewCount;
+end;
+{$ENDIF}
 
 { TGpInt64 }
 
@@ -3407,7 +3429,7 @@ begin
   Sorted := true;
 end; { TGpIntegerList.Sort }
 
-{$IFDEF Unicode}
+{$IFDEF GpLists_TArrayOfT}
 function TGpIntegerList.ToArray: TArray<integer>;
 var
   i: integer;
@@ -4087,7 +4109,7 @@ begin
   Sorted := true;
 end; { TGpInt64List.Sort }
 
-{$IFDEF Unicode}
+{$IFDEF GpLists_TArrayOfT}
 function TGpInt64List.ToArray: TArray<int64>;
 var
   i: integer;
@@ -4531,7 +4553,6 @@ end; { THeap<T>.Extract }
 procedure THeap<T>.Heapify(index: integer);
 var
   childIndex: integer;
-  element   : T;
   smallest  : integer;
 begin
   smallest := index;
@@ -4561,7 +4582,7 @@ var
   parentIndex: integer;
 begin
   if FCount = FCapacity then
-    Resize(GrowCollection(FCapacity, FCount + 1));
+    Resize({$IFDEF GpLists_HasGrowCollection}GrowCollection{$ELSE}MyGrowCollection{$ENDIF}(FCapacity, FCount + 1));
 
   index := FCount;
   parentIndex := GetParentIndex(index);
@@ -7785,8 +7806,6 @@ end; { TGpSkipListEl }
 
 constructor TGpSkipList<T,K>.Create(keyExtractor: TGpSkipListExtractKey<T,K>;
   comparer: TGpSkipListCompare<K>; levelProbability: real; maxLevels: integer);
-var
-  iPtr: integer;
 begin
   FGetKey := keyExtractor;
   FComparer := comparer;
@@ -8138,8 +8157,10 @@ begin
 end; { TGpCacheEnumerator.Destroy }
 
 function TGpCache<K, V>.TGpCacheEnumerator.DoGetCurrent: TPair<K,V>;
+var
+  curr: TPair<K,integer>;
 begin
-  var curr := FCacheEnum.Current;
+  curr := FCacheEnum.Current;
   Result := TPair<K,V>.Create(curr.Key, FValues[curr.Value].Value);
 end; { TGpCache<K, V>.TGpCacheEnumerator.DoGetCurrent }
 
@@ -8450,6 +8471,9 @@ end; { TGpCache<K,V>.VerifyList }
 {$ENDIF}
 {$ENDIF}
 
+{$IFDEF GpLists_TArrayOfT}
+{ TGpMovingAverager<T> }
+
 procedure TGpMovingAverager<T>.AddValue(value: T; var oldValue: T);
 begin
   oldValue := FSamples[FNextSample];
@@ -8502,9 +8526,11 @@ begin
 end; { TGpIntAverager.Average }
 
 procedure TGpIntAverager.RecalcSum;
+var
+  i: integer;
 begin
   FSum := 0;
-  for var i := 0 to Min(Count, NumSamples) - 1 do
+  for i := 0 to Min(Count, NumSamples) - 1 do
     FSum := FSum + Sample[i];
 end; { TGpIntAverager.RecalcSum }
 
@@ -8525,9 +8551,11 @@ begin
 end; { TGpUIntAverager.Average }
 
 procedure TGpUIntAverager.RecalcSum;
+var
+  i: integer;
 begin
   FSum := 0;
-  for var i := 0 to Min(Count, NumSamples) - 1 do
+  for i := 0 to Min(Count, NumSamples) - 1 do
     FSum := FSum + Sample[i];
 end; { TGpUIntAverager.RecalcSum }
 
@@ -8560,6 +8588,7 @@ procedure TGpFPAverager.RecalcSum;
 begin
   // do nothing
 end; { TGpFPAverager.RecalcSum }
+{$ENDIF GpLists_TArrayOfT}
 
 end.
 

@@ -289,6 +289,7 @@ uses
   {$IFEND}
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
+    {$DEFINE GpStuff_GpMemoryStream}
   {$IFEND}
   {$IF CompilerVersion >= 22} //XE
     {$DEFINE GpStuff_RegEx}
@@ -489,6 +490,9 @@ type
     procedure Release(buf: pointer); overload;      {$IFDEF GpStuff_Inline}inline;{$ENDIF}
   end; { TGpMemoryBuffer }
 
+  {$IFNDEF GpStuff_GpMemoryStream}
+  TGpMemoryStream = TMemoryStream;
+  {$ELSE}
   TGpMemoryStream = class(TStream)
   public const
     DefGrowDelta = $1000;
@@ -521,6 +525,7 @@ type
     property GrowDelta: integer read FGrowDelta write FGrowDelta default DefGrowDelta;
     property Memory: Pointer read FMemory;
   end; { TGpMemoryStream }
+  {$ENDIF GpStuff_GpMemoryStream}
 
   IGpBuffer = interface ['{0B9FF0FC-492B-412D-B716-618355908550}']
   {$IFDEF MSWINDOWS}
@@ -2642,6 +2647,7 @@ begin
   FList := buf;
 end; { TGpMemoryBuffer.Release }
 
+{$IFDEF GpStuff_GpMemoryStream}
 { TGpMemoryStream }
 
 constructor TGpMemoryStream.Create;
@@ -2797,6 +2803,7 @@ begin
   FPosition := endPos;
   Result := count;
 end; { TGpMemoryStream.Write }
+{$ENDIF GpStuff_GpMemoryStream}
 
 { TGpBuffer }
 
@@ -2872,10 +2879,12 @@ begin
   Result := TGpBuffer.Create(s);
 end; { TGpBuffer.Make }
 
+{$IFDEF MSWINDOWS}{$IFDEF Unicode}
 class function TGpBuffer.Make (const s: AnsiString): IGpBuffer;
 begin
   Result := TGpBuffer.Create(s);
 end; { TGpBuffer.Make }
+{$ENDIF}{$ENDIF}
 
 class function TGpBuffer.Make(const bytes: TBytes): IGpBuffer;
 begin

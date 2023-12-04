@@ -4483,7 +4483,7 @@ function TOmniCompute<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;
 var
   compute: TOmniValue;
 begin
-  Result := false;
+//  Result := false;
   while not FComputed do begin
     if FInput.Take(compute) then
       IOmniCompute<T>(compute.AsInterface).Execute
@@ -4534,8 +4534,6 @@ begin
 end; { TOmniForkJoin }
 
 function TOmniForkJoin<T>.Compute(action: TOmniForkJoinDelegate<T>): IOmniCompute<T>;
-var
-  intf: IInterface;
 begin
   StartWorkerTasks;
   Result := TOmniCompute<T>.Create(action, FPoolInput);
@@ -5387,9 +5385,7 @@ end; { TOmniParallelMapper }
 function TOmniParallelMapper<T1,T2>.Execute(
   mapper: TMapProc<T1,T2>): IOmniParallelMapper<T1,T2>;
 var
-  dest: T2;
-  el  : T1;
-  i   : integer;
+  i: integer;
 begin
   SetLength(FTarget, Length(FSource));
   SetLength(FTargetData, FNumTasks);
