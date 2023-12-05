@@ -524,6 +524,7 @@ type
   IOmniParallelSimpleLoop = interface
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
     function  NoWait: IOmniParallelSimpleLoop;
+    function  NoMsgBlock: IOmniParallelSimpleLoop;
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop; overload;
@@ -547,6 +548,7 @@ type
   IOmniParallelSimpleLoop<T> = interface
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop<T>;
     function  NoWait: IOmniParallelSimpleLoop<T>;
+    function  NoMsgBlock: IOmniParallelSimpleLoop<T>;
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop<T>;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop<T>; overload;
     function  OnStop(stopCode: TOmniTaskStopDelegate): IOmniParallelSimpleLoop<T>; overload;
@@ -930,6 +932,7 @@ type
     FFirst              : integer;
     FInitializerDelegate: TOmniSimpleTaskInitializerTaskDelegate;
     FLast               : integer;
+    FNoMsgBlock         : boolean;
     FNoWait             : boolean;
     FNumTasks           : integer;
     FNumTasksManual     : boolean;
@@ -946,6 +949,7 @@ type
     constructor Create(first, last: integer; step: integer = 1);
     destructor  Destroy; override;
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop;
+    function  NoMsgBlock: IOmniParallelSimpleLoop;
     function  NoWait: IOmniParallelSimpleLoop;
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop; overload;
@@ -970,6 +974,7 @@ type
   public
     constructor Create(const arr: TArray<T>);
     function  CancelWith(const token: IOmniCancellationToken): IOmniParallelSimpleLoop<T>; inline;
+    function  NoMsgBlock: IOmniParallelSimpleLoop<T>; inline;
     function  NoWait: IOmniParallelSimpleLoop<T>; inline;
     function  NumTasks(taskCount : integer): IOmniParallelSimpleLoop<T>; inline;
     function  OnStop(stopCode: TProc): IOmniParallelSimpleLoop<T>; overload; inline;
@@ -3609,6 +3614,8 @@ var
   lockAggregate: IOmniCriticalSection;
   task         : IOmniTaskControl;
   taskCount    : integer;
+  awaited      : DWORD;
+  handles: array [0 .. 0] of THandle;
 begin
   dmOptions := [];
   taskCount := FNumTasks;
@@ -3630,7 +3637,17 @@ begin
       FCountStopped.Allocate //all done
     else
       {$IFDEF MSWINDOWS}
-      WaitForSingleObject(FCountStopped.Handle, INFINITE);
+      if FNoMsgBlock then begin
+        while true do begin
+          handles[0] := FCountStopped.Handle;
+          awaited := MsgWaitForMultipleObjects(1, handles, false, INFINITE, QS_ALLINPUT);
+          case awaited of
+             WAIT_OBJECT_0: break;
+             WAIT_OBJECT_0 + 1: DSiProcessThreadMessages;
+          end;
+        end;
+      end else
+        WaitForSingleObject(FCountStopped.Handle, INFINITE);
       {$ELSE}
       FCountStopped.Synchro.WaitFor(INFINITE);
       {$ENDIF ~MSWINDOWS}
@@ -3638,6 +3655,12 @@ begin
       FOnStop(nil);
   end;
 end; { TOmniParallelSimpleLoop.InternalExecute }
+
+function TOmniParallelSimpleLoop.NoMsgBlock: IOmniParallelSimpleLoop;
+begin
+  FNoMsgBlock := true;
+  Result := Self;
+end; { TOmniParallelSimpleLoop.NoMsgBlock }
 
 function TOmniParallelSimpleLoop.NoWait: IOmniParallelSimpleLoop;
 begin
@@ -3779,6 +3802,12 @@ begin
   FIterator.Initialize(taskInitializer);
   Result := Self;
 end; { TOmniParallelSimpleLoop<T>.Initialize }
+
+function TOmniParallelSimpleLoop<T>.NoMsgBlock: IOmniParallelSimpleLoop<T>;
+begin
+  FIterator.NoMsgBlock;
+  Result := Self;
+end; { TOmniParallelSimpleLoop<T>.NoMsgBlock }
 
 function TOmniParallelSimpleLoop<T>.NoWait: IOmniParallelSimpleLoop<T>;
 begin
