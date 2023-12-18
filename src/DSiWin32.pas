@@ -1425,7 +1425,7 @@ type
     const workDir: string = ''; wait: boolean = false;
     startInfo: PStartupInfo = nil): cardinal; overload;
   function  DSiExecuteInSession(sessionID: DWORD; const commandLine: string;
-    var processInfo: TProcessInformation; workDir: string = ''): boolean;
+    var processInfo: TProcessInformation; const workDir: string = ''): boolean;
   function  DSiGetProcessAffinity: string;
   function  DSiGetProcessAffinityMask: DSiNativeUInt;
   function  DSiGetProcessID(const processName: string; var processID: DWORD): boolean;
@@ -5118,7 +5118,7 @@ type
              specified or 0 in other cases.
   }
   function  DSiExecuteInSession(sessionID: DWORD; const commandLine: string;
-    var processInfo: TProcessInformation; workDir: string): boolean;
+    var processInfo: TProcessInformation; const workDir: string): boolean;
   var
     cmdLine : string;
     hToken  : THandle;
