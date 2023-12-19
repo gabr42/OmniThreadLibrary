@@ -362,6 +362,53 @@ begin
   inherited Destroy;
 end; { TOmniBlockingCollection.Destroy }
 
+function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
+var
+  {$IFDEF MSWINDOWS}
+  awaited: cardinal;
+  {$ELSE}
+  waitResult: TWaitResult;
+  Signaller: IOmniSynchro;
+  {$ENDIF}
+begin
+  obcAddCountAndCompleted.Increment;
+  try
+    // IsCompleted can not change during the execution of this function
+    Result := not IsCompleted;
+    if Result then begin
+      obcAccessed := true;
+      if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
+        {$IFDEF MSWINDOWS}
+        {$WARN SYMBOL_PLATFORM OFF}
+        Win32Check(ResetEvent(obcNotOverflow));
+        {$WARN SYMBOL_PLATFORM ON}
+        {$ELSE}
+        obcNotOverflow.Reset;
+        {$ENDIF ~MSWINDOWS}
+        // it's possible that messages were removed and obcNotOverflow set *before* the
+        // previous line has executed so test again ...
+        if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
+          obcAddCountAndCompleted.Decrement; // Leave the Add temporarily so that CompleteAdding can succeed
+          {$IFDEF MSWINDOWS}
+          awaited := DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE);
+          obcAddCountAndCompleted.Increment; // Re-enter Add; queue may be now in 'completed' state
+          if (awaited = WAIT_OBJECT_0) or IsCompleted then begin
+          {$ELSE}
+          waitResult := FCompletedWaiter.WaitAny(INFINITE,Signaller);
+          obcAddCountAndCompleted.Increment;
+          if ((waitResult = wrSignaled) and (Signaller = obcCompletedSignal)) or IsCompleted then begin
+          {$ENDIF}
+            Result := false; // completed
+            Exit;
+          end;
+        end;
+      end;
+      obcCollection.Enqueue(value);
+      obcApproxCount.Increment;
+    end;
+  finally obcAddCountAndCompleted.Decrement; end;
+end; { TOmniBlockingCollection.TryAdd }
+
 procedure TOmniBlockingCollection.Add(const value: TOmniValue);
 begin
   if not TryAdd(value) then
@@ -421,6 +468,11 @@ begin
   Result := IsCompleted and obcCollection.IsEmpty;
 end; { TOmniBlockingCollection.IsFinalized }
 
+function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
+begin
+  Result := TryTake(value, INFINITE);
+end; { TOmniBlockingCollection.Take }
+
 function TOmniBlockingCollection.Next: TOmniValue;
 begin
   if not Take(Result) then
@@ -443,11 +495,6 @@ begin
   obcLowWaterMark := lowWaterMark;
   obcThrottling := true;
 end; { TOmniBlockingCollection.SetThrottling }
-
-function TOmniBlockingCollection.Take(var value: TOmniValue): boolean;
-begin
-  Result := TryTake(value, INFINITE);
-end; { TOmniBlockingCollection.Take }
 
 {$IFDEF OTL_Generics}
 {$IFDEF OTL_HasArrayOfT}
@@ -615,53 +662,6 @@ end; { TOmniBlockingCollection.ToArray<T> }
 {$ENDIF OTL_ERTTI}
 {$ENDIF OTL_HasArrayOfT}
 {$ENDIF OTL_Generics}
-
-function TOmniBlockingCollection.TryAdd(const value: TOmniValue): boolean;
-var
-  {$IFDEF MSWINDOWS}
-  awaited: cardinal;
-  {$ELSE}
-  waitResult: TWaitResult;
-  Signaller: IOmniSynchro;
-  {$ENDIF}
-begin
-  obcAddCountAndCompleted.Increment;
-  try
-    // IsCompleted can not change during the execution of this function
-    Result := not IsCompleted;
-    if Result then begin
-      obcAccessed := true;
-      if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-        {$IFDEF MSWINDOWS}
-        {$WARN SYMBOL_PLATFORM OFF}
-        Win32Check(ResetEvent(obcNotOverflow));
-        {$WARN SYMBOL_PLATFORM ON}
-        {$ELSE}
-        obcNotOverflow.Reset;
-        {$ENDIF ~MSWINDOWS}
-        // it's possible that messages were removed and obcNotOverflow set *before* the
-        // previous line has executed so test again ...
-        if obcThrottling and (obcApproxCount.Value >= obcHighWaterMark) then begin
-          obcAddCountAndCompleted.Decrement; // Leave the Add temporarily so that CompleteAdding can succeed
-          {$IFDEF MSWINDOWS}
-          awaited := DSiWaitForTwoObjects(obcCompletedSignal, obcNotOverflow, false, INFINITE);
-          obcAddCountAndCompleted.Increment; // Re-enter Add; queue may be now in 'completed' state
-          if (awaited = WAIT_OBJECT_0) or IsCompleted then begin
-          {$ELSE}
-          waitResult := FCompletedWaiter.WaitAny(INFINITE,Signaller);
-          obcAddCountAndCompleted.Increment;
-          if ((waitResult = wrSignaled) and (Signaller = obcCompletedSignal)) or IsCompleted then begin
-          {$ENDIF}
-            Result := false; // completed
-            Exit;
-          end;
-        end;
-      end;
-      obcCollection.Enqueue(value);
-      obcApproxCount.Increment;
-    end;
-  finally obcAddCountAndCompleted.Decrement; end;
-end; { TOmniBlockingCollection.TryAdd }
 
 {$IFDEF MSWINDOWS}
 function TOmniBlockingCollection.TryTake(var value: TOmniValue;

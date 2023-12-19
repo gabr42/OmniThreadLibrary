@@ -7832,6 +7832,11 @@ begin
   Initialize;
 end; { TGpSkipList }
 
+function TGpSkipList<T,K>.GetKey(const el: T): K;
+begin
+  Result := FGetKey(el);
+end; { TGpSkipList<T,K> }
+
 function TGpSkipList<T,K>.Compare(const key: K; el: TGpSkipListEl<T>): integer;
 begin
   Result := Compare(key, GetKey(el.Element));
@@ -7963,11 +7968,6 @@ function TGpSkipList<T,K>.GetEnumerator: TGpSkipListEnumerator<T>;
 begin
   Result := TGpSkipListEnumerator<T>.Create(FHead, FTail);
 end; { TGpSkipList }
-
-function TGpSkipList<T,K>.GetKey(const el: T): K;
-begin
-  Result := FGetKey(el);
-end; { TGpSkipList<T,K> }
 
 procedure TGpSkipList<T, K>.Initialize;
 var
