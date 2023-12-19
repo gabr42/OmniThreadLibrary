@@ -995,6 +995,26 @@ type
   NativeUInt = cardinal;
 {$ENDIF}
 
+procedure OutputDebugString(const msg: string);
+begin
+{$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
+  if DebugHook <> 0 then
+    Windows.OutputDebugString(PChar(msg));
+{$WARN SYMBOL_PLATFORM ON}
+{$ENDIF}
+end; { OutputDebugString }
+
+procedure OutputDebugString(const msg: string; const params: array of const);
+begin
+{$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
+  if DebugHook <> 0 then
+    OutputDebugString(Format(msg, params));
+{$WARN SYMBOL_PLATFORM ON}
+{$ENDIF}
+end; { OutputDebugString }
+
 {$IFDEF GpStuff_ValuesEnumerators}
 type
   TGpIntegerValueEnumerator = class(TInterfacedObject, IGpIntegerValueEnumerator)
@@ -1139,7 +1159,7 @@ end; { AutoExecute }
 {$ENDIF GpStuff_Anonymous}
 
 //copied from GpString unit
-procedure GetDelimiters(const list: string; delim: string; const quoteChar: string;
+procedure GetDelimiters(const list: string; const delim: string; const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk   : boolean;
@@ -1185,7 +1205,7 @@ begin
   SetLength(delimiters,idx);
 end; { GetDelimiters }
 
-procedure GetDelimiters(const list: string; delim: TSysCharSet; const quoteChar: string;
+procedure GetDelimiters(const list: string; const delim: TSysCharSet; const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk  : boolean;
@@ -2479,26 +2499,6 @@ begin
   intf._Release;
 end; { GetRefCount }
 
-procedure OutputDebugString(const msg: string);
-begin
-{$IFDEF MSWINDOWS}
-{$WARN SYMBOL_PLATFORM OFF}
-  if DebugHook <> 0 then
-    Windows.OutputDebugString(PChar(msg));
-{$WARN SYMBOL_PLATFORM ON}
-{$ENDIF}
-end; { OutputDebugString }
-
-procedure OutputDebugString(const msg: string; const params: array of const);
-begin
-{$IFDEF MSWINDOWS}
-{$WARN SYMBOL_PLATFORM OFF}
-  if DebugHook <> 0 then
-    OutputDebugString(Format(msg, params));
-{$WARN SYMBOL_PLATFORM ON}
-{$ENDIF}
-end; { OutputDebugString }
-
 function ClassNameEx(obj: TObject): string;
 begin
   if assigned(obj) then
@@ -2807,6 +2807,44 @@ end; { TGpMemoryStream.Write }
 
 { TGpBuffer }
 
+procedure TGpBuffer.Allocate(size: integer);
+begin
+  Assert(size >= 0);
+  FData.Size := size;
+end; { TGpBuffer.Allocate }
+
+procedure TGpBuffer.Append(data: pointer; size: integer);
+begin
+  if size > 0 then begin
+    FData.Seek(0, soEnd);
+    FData.Write(data^, size);
+  end;
+end; { TGpBuffer.Append }
+
+procedure TGpBuffer.Assign(data: pointer; size: integer);
+begin
+  Allocate(size);
+  if size > 0 then
+    Move(data^, Value^, size);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Assign(stream: TStream);
+begin
+  Size := 0;
+  Append(stream);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Assign(const buffer: IGpBuffer);
+begin
+  Size := 0;
+  Append(buffer);
+end; { TGpBuffer.Assign }
+
+procedure TGpBuffer.Clear;
+begin
+  Allocate(0);
+end; { TGpBuffer.Clear }
+
 constructor TGpBuffer.Create;
 begin
   inherited Create;
@@ -2924,20 +2962,6 @@ begin
 end; { TGpBuffer.Add }
 {$ENDIF}
 
-procedure TGpBuffer.Allocate(size: integer);
-begin
-  Assert(size >= 0);
-  FData.Size := size;
-end; { TGpBuffer.Allocate }
-
-procedure TGpBuffer.Append(data: pointer; size: integer);
-begin
-  if size > 0 then begin
-    FData.Seek(0, soEnd);
-    FData.Write(data^, size);
-  end;
-end; { TGpBuffer.Append }
-
 procedure TGpBuffer.Append(stream: TStream);
 begin
   if stream.Size > 0 then begin
@@ -2950,30 +2974,6 @@ procedure TGpBuffer.Append(const buffer: IGpBuffer);
 begin
   Append(buffer.Value, buffer.Size);
 end; { TGpBuffer.Append }
-
-procedure TGpBuffer.Assign(data: pointer; size: integer);
-begin
-  Allocate(size);
-  if size > 0 then
-    Move(data^, Value^, size);
-end; { TGpBuffer.Assign }
-
-procedure TGpBuffer.Assign(stream: TStream);
-begin
-  Size := 0;
-  Append(stream);
-end; { TGpBuffer.Assign }
-
-procedure TGpBuffer.Assign(const buffer: IGpBuffer);
-begin
-  Size := 0;
-  Append(buffer);
-end; { TGpBuffer.Assign }
-
-procedure TGpBuffer.Clear;
-begin
-  Allocate(0);
-end; { TGpBuffer.Clear }
 
 {$IFDEF MSWINDOWS}
 function TGpBuffer.GetAsAnsiString: AnsiString;

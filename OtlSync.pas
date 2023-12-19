@@ -1567,6 +1567,14 @@ end; { Atomic<I,T>.Initialize }
 
 { Locked<T> }
 
+procedure Locked<T>.Clear;
+begin
+  FLifecycle := nil;
+  FInitialized := false;
+  FValue := Default(T);
+  FOwnsObject := false;
+end; { Locked }
+
 constructor Locked<T>.Create(const value: T; ownsObject: boolean);
 begin
   Clear;
@@ -1592,13 +1600,10 @@ begin
   FLock.Acquire;
 end; { Locked<T>.Acquire }
 
-procedure Locked<T>.Clear;
+procedure Locked<T>.Release;
 begin
-  FLifecycle := nil;
-  FInitialized := false;
-  FValue := Default(T);
-  FOwnsObject := false;
-end; { Locked }
+  FLock.Release;
+end; { Locked<T>.Release }
 
 procedure Locked<T>.Free;
 begin
@@ -1696,11 +1701,6 @@ begin
     proc(Value);
   finally Release; end;
 end; { Locked<T>.Locked }
-
-procedure Locked<T>.Release;
-begin
-  FLock.Release;
-end; { Locked<T>.Release }
 
 {$IFDEF MSWINDOWS}
 
