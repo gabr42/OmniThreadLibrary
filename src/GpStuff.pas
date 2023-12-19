@@ -696,7 +696,7 @@ function  IFF(condit: boolean; iftrue, iffalse: TDateTime): TDateTime; overload;
 function  IFF64(condit: boolean; iftrue, iffalse: int64): int64;              {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$IFDEF MSWINDOWS}
 {$IFDEF Unicode}
-function  IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
+function  IFF(condit: boolean; const iftrue, iffalse: AnsiString): AnsiString; overload;    {$IFDEF GpStuff_Inline}inline;{$ENDIF}
 {$ENDIF Unicode}
 {$ENDIF MSWINDOWS}
 
@@ -901,9 +901,9 @@ function IndexOfListA(const value: AnsiString; const values: array of AnsiString
 {$IFDEF GpStuff_TArrayOfT}
 function LinearMap(value: real; const x, y: TArray<real>): real;
 
-function SplitList(const aList: string; delim: string; const quoteChar: string = '';
+function SplitList(const aList: string; const delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
-function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
+function SplitList(const aList: string; const delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>; overload;
 function JoinList(const strings: TArray<string>; const delimiter: string): string;
 
@@ -1139,7 +1139,7 @@ end; { AutoExecute }
 {$ENDIF GpStuff_Anonymous}
 
 //copied from GpString unit
-procedure GetDelimiters(const list: string; delim: string; const quoteChar: string;
+procedure GetDelimiters(const list: string; const delim: string; const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk   : boolean;
@@ -1185,7 +1185,7 @@ begin
   SetLength(delimiters,idx);
 end; { GetDelimiters }
 
-procedure GetDelimiters(const list: string; delim: TSysCharSet; const quoteChar: string;
+procedure GetDelimiters(const list: string; const delim: TSysCharSet; const quoteChar: string;
   addTerminators: boolean; var delimiters: TDelimiters); overload;
 var
   chk  : boolean;
@@ -1344,7 +1344,7 @@ end; { IFF64 }
 
 {$IFDEF MSWINDOWS}
 {$IFDEF Unicode}
-function IFF(condit: boolean; iftrue, iffalse: AnsiString): AnsiString;
+function IFF(condit: boolean; const iftrue, iffalse: AnsiString): AnsiString;
 begin
   if condit then
     Result := iftrue
@@ -2069,7 +2069,7 @@ begin
   raise Exception.Create('LinearMap: Internal error. This line should never be executed.');
 end; { LinearMap }
 
-function SplitList(const aList: string; delim: string; const quoteChar: string = '';
+function SplitList(const aList: string; const delim: string; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
 var
   delimiters: TDelimiters;
@@ -2099,7 +2099,7 @@ begin
   end;
 end; { SplitList }
 
-function SplitList(const aList: string; delim: TSysCharSet; const quoteChar: string = '';
+function SplitList(const aList: string; const delim: TSysCharSet; const quoteChar: string = '';
   stripQuotes: boolean = true): TArray<string>;
 var
   delimiters: TDelimiters;

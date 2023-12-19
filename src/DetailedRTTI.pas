@@ -41,7 +41,7 @@ type
     function RTTIMethodsAsString: string;
   end;
 
-  function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
+  function DescriptionOfMethod( Obj: TObject; const MethodName: string ): string;
 
   {$ENDIF HAS_RECORDHELPERS}
 implementation
@@ -62,7 +62,7 @@ const
 
 {$IFDEF HAS_RECORDHELPERS}
 
-function DescriptionOfMethod( Obj: TObject; MethodName: string ): string;
+function DescriptionOfMethod( Obj: TObject; const MethodName: string ): string;
 var
   header: PMethodInfoHeader;
   headerEnd: Pointer;
