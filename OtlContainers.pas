@@ -108,7 +108,7 @@ unit OtlContainers;
 {$ENDIF ~CPUX64}
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
-//We don't have a platform-independant way of using cmpx8b/cmpx16b
+//We don't have a platform-independent way of using cmpx8b/cmpx16b
 //(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
 {$IFDEF MSWINDOWS}
   {$DEFINE OTL_HaveCmpx16b}
@@ -1140,7 +1140,7 @@ end; { TOmniBoundedQueue.Enqueue }
 //Bus-locking queue implementation.
 //On non-Windows platforms same memory layout is used, but synchronisation
 //is achieved using a critical section, not with bus-locking because we
-//don't have a platform-independant equivalent of cmpx8b/cmpx16b.
+//don't have a platform-independent equivalent of cmpx8b/cmpx16b.
 
 (*
 TOmniQueue
