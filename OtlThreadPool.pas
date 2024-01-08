@@ -542,7 +542,7 @@ type
   // invoked from TOmniThreadPool
     procedure Cancel(const params: TOmniValue);
     procedure CancelAll(const params: TOmniValue);
-    procedure MaintainanceTimer;
+    procedure MainteinanceTimer;
   end; { TOTPWorker }
 
   TOTPThreadDataFactoryData = class
@@ -1151,7 +1151,7 @@ begin
   owStoppingWorkers := TObjectList.Create(false);
   owWorkItemQueue := TObjectList.Create(false);
   CountQueued.Value := 0;
-  Task.SetTimer(1, 1000, @TOTPWorker.MaintainanceTimer);
+  Task.SetTimer(1, 1000, @TOTPWorker.MainteinanceTimer);
   UpdateScheduler;
   Result := true;
 end; { TOTPWorker.Initialize }
@@ -1230,7 +1230,7 @@ begin
   {$ENDIF LogThreadPool}
 end; { TOTPWorker.Log }
 
-procedure TOTPWorker.MaintainanceTimer;
+procedure TOTPWorker.MainteinanceTimer;
 var
   iWorker: integer;
   worker : TOTPWorkerThread;
@@ -1293,7 +1293,7 @@ begin
     else
       Inc(iWorker);
   end;
-end; { TOTPWorker.MaintainanceTimer }
+end; { TOTPWorker.MainteinanceTimer }
 
 procedure TOTPWorker.CheckIdleQueue;
 var
