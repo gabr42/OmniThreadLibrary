@@ -2599,7 +2599,7 @@ begin
           while (not Stopped) and localQueue.GetNext(value) do
             loopBody(task, value, taskState);
         finally FreeAndNil(localQueue); end;
-      finally FTaskFinalizer(taskState); end;
+      finally if Assigned(FTaskFinalizer) then FTaskFinalizer(taskState); end;
     end
   );
 end; { TOmniParallelLoopBase.InternalExecute }
