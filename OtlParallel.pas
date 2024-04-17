@@ -2592,7 +2592,8 @@ begin
       taskState : TOmniValue;
       value     : TOmniValue;
     begin
-      FTaskInitializer(taskState);
+      if Assigned(FTaskInitializer) then
+        FTaskInitializer(taskState);
       try
         localQueue := FDataManager.CreateLocalQueue;
         try
