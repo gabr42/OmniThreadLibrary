@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019, Primoz Gabrijelcic
+///Copyright (c) 2025, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -36,10 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2008-06-12
-///   Last modification : 2018-03-16
-///   Version           : 1.11
+///   Last modification : 2025-05-06
+///   Version           : 1.11a
 ///</para><para>
 ///   History:
+///     1.11a: 2025-05-06
+///       - Use correct time-measurement functions.
 ///     1.11: 2018-03-16
 ///       - Unhandled exceptions in TOmniEventMonitor.WndProc are passed to OtlHooks filter.
 ///     1.10: 2017-10-25
@@ -328,7 +330,7 @@ var
          assigned(emOnTaskMessage)
       then
         emOnTaskMessage(task, emCurrentMsg);
-      if (DSiElapsedSince(GetTickCount, timeStart) > timeout_ms) and (emMessageWindow <> 0) then begin
+      if DSiHasElapsed64(timeStart, timeout_ms) and (emMessageWindow <> 0) then begin
         if rearmSelf
           and (not PostMessage(emMessageWindow, COmniTaskMsg_NewMessage, msg.WParam, msg.LParam)) then
         begin
@@ -359,7 +361,7 @@ begin { TOmniEventMonitor.WndProc }
     begin
       if Supports(emMonitoredTasks.ValueOf(GetUniqueID(msg)), IOmniTaskControl, Task) then
       begin
-        timeStart := GetTickCount;
+        timeStart := DSiTimeGetTime64;
         ProcessMessages;
       end;
       msg.Result := 0;
