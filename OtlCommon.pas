@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2021, Primoz Gabrijelcic
+///Copyright (c) 2025, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,13 +35,19 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2021-02-15
+///   Last modification : 2025-08-21
 ///   Version           : 2.0
 ///</para><para>
 ///   History:
 ///     2.0: 2018-05-16
 ///       - Removed support for pre-XE2 compilers.
 ///       - Removed OTL_USE_ALIGN.
+///     1.55a: 2025-08-21
+///       - Fixed TOmniGroupAffinity.Create with 64 processors on 64-bit.
+///     1.55: 2025-07-08
+///       - Implemented TOmniValue.AsUInt64.
+///     1.54b: 2024-03-21
+///       - TOmniValue.TryCastToInt64 was casting Variant into integer insted of int64.
 ///     1.54a: 2021-02-15
 ///       - IOmniIntegerSet/TOmniIntegerSet.AsMask changed to uint64 so it can store
 ///         64-bit NativeUInt without problems. [#148]
@@ -347,6 +353,7 @@ type
     function  CastToPointer: pointer;
     function  CastToRecord: IOmniAutoDestroyObject; inline;
     function  CastToString: string;
+    function  CastToUInt64: uint64; inline;
     function  CastToVariant: Variant;
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; inline;
@@ -375,6 +382,7 @@ type
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
     procedure SetAsTValue(const value: TValue);
+    procedure SetAsUInt64(const value: uint64); inline;
     procedure SetOwnsObject(const value: boolean);
     {$REGION 'Documentation'}
     ///  <summary>Most of the code in this method never executes. It is just here so that
@@ -443,6 +451,7 @@ type
     function  TryCastToObject(var value: TObject): boolean; inline;
     function  TryCastToPointer(var value: pointer): boolean;
     function  TryCastToString(var value: string): boolean;
+    function  TryCastToUInt64(var value: uint64): boolean; inline;
     function  TryCastToVariant(var value: Variant): boolean;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
@@ -488,6 +497,7 @@ type
     property AsOwnedObject: TObject read CastToObject write SetAsOwnedObject;
     property AsPointer: pointer read CastToPointer write SetAsPointer;
     property AsString: string read CastToString write SetAsString;
+    property AsUInt64: uint64 read CastToUInt64 write SetAsUInt64;
     property AsVariant: Variant read CastToVariant write SetAsVariant;
     property DataType: TOmniValueDataType read ovType;
     property OwnsObject: boolean read IsOwnedObject write SetOwnsObject;
@@ -620,6 +630,7 @@ type
     function  GetItem(paramIdx: integer): TOmniValue; overload;
     function  GetItem(const paramName: string): TOmniValue; overload;
     function  GetItem(const param: TOmniValue): TOmniValue; overload;
+    function  GetName(paramIdx: integer): string;
     procedure SetItem(idx: integer; const value: TOmniValue); overload; inline;
     procedure SetItem(const name: string; const value: TOmniValue); overload;
     procedure SetItem(const param, value: TOmniValue); overload;
@@ -640,6 +651,7 @@ type
     property Item[paramIdx: integer]: TOmniValue read GetItem write SetItem; default;
     property Item[const paramName: string]: TOmniValue read GetItem write SetItem; default;
     property Item[const param: TOmniValue]: TOmniValue read GetItem write SetItem; default;
+    property Name[paramIdx: integer]: string read GetName;
   end; { TOmniValueContainer }
 
   //:Thread-safe counter
@@ -809,7 +821,7 @@ type
     function GetAffinity: IOmniIntegerSet;
   public
     constructor Create(groupNumber: integer; const affinity: IOmniIntegerSet); overload;
-    constructor Create(groupNumber: integer; const affinityMask: int64); overload;
+    constructor Create(groupNumber: integer; const affinityMask: uint64); overload;
     property Group: integer read FGroup write FGroup;
     property Affinity: IOmniIntegerSet read GetAffinity;
   end; { TOmniGroupAffinity }
@@ -1554,6 +1566,11 @@ begin
     raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');
 end; { TOmniValueContainer.GetItem }
 
+function TOmniValueContainer.GetName(paramIdx: integer): string;
+begin
+  Result := ovcNames[paramIdx];
+end; { TOmniValueContainer.GetName }
+
 procedure TOmniValueContainer.Grow(requiredIdx: integer = -1);
 var
   iValue   : integer;
@@ -1816,10 +1833,22 @@ begin
     ovtInteger,
     ovtInt64:   value := ovData;
     ovtNull:    value := 0;
-    ovtVariant: value := integer(AsVariant);
+    ovtVariant: value := int64(AsVariant);
     else Result := false;
   end;
 end; { TOmniValue.TryGetAsInt64 }
+
+function TOmniValue.TryCastToUInt64(var value: uint64): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInteger: value := ovData;
+    ovtInt64:   value := uint64(ovData);
+    ovtNull:    value := 0;
+    ovtVariant: value := uint64(AsVariant);
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToUInt64 }
 
 function TOmniValue.TryCastToInteger(var value: integer): boolean; //integer
 var
@@ -2339,6 +2368,13 @@ begin
     Result := defValue;
 end; { TOmniValue.CastToStringDef }
 
+function TOmniValue.CastToUInt64: uint64;
+begin
+  if not TryCastToUInt64(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to int64');
+end; { TOmniValue.CastToUInt64 }
+
+{$IFDEF OTL_ERTTI}
 function TOmniValue.GetArrayFromTValue(const value: TValue): TOmniValueContainer;
 var
   ov: TOmniValue;
@@ -4532,7 +4568,7 @@ begin
   Create(groupNumber, affinity.AsMask);
 end; { TOmniGroupAffinity.Create }
 
-constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinityMask: int64);
+constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinityMask: uint64);
 begin
   FGroup := groupNumber;
   FAffinity := TOmniIntegerSet.Create;
