@@ -3827,6 +3827,9 @@ var
   Idx        : integer;
   {$IFEND}
 begin
+  if otgTaskList.Count = 0 then
+    Exit(true);
+
   {$IF Defined(MSWINDOWS) and not Defined(OTL_PlatformIndependent)}
   SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
