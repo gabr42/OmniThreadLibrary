@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2021, Primoz Gabrijelcic
+///Copyright (c) 2022, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2021-06-22
-///   Version           : 1.43a
+///   Last modification : 2022-03-08
+///   Version           : 1.43b
 ///</para><para>
 ///   History:
+///     1.43b: 2022-03-08
+///       - IOmniTaskGroup.WaitForAll/.TerminateAll no longer crashes if the group is empty.
 ///     1.43a: 2021-06-22
 ///       - Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage.
 ///     1.43: 2021-03-10
@@ -949,11 +951,13 @@ type
     function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
+    function  GetOptions: TOmniTaskControlOptions;
     function  GetParam: TOmniValueContainer; inline;
     function  GetTerminateEvent: TOmniTransitionEvent; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
     procedure InternalExecute(calledFromTerminate: boolean);
+    procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetThreadData(const value: IInterface); inline;
     procedure Terminate;
   public
@@ -993,6 +997,7 @@ type
     property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
+    property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
     property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent;
@@ -1566,6 +1571,11 @@ begin
     Result := '';
 end; { TOmniTask.GetName }
 
+function TOmniTask.GetOptions: TOmniTaskControlOptions;
+begin
+  Result := otExecutor_ref.Options;
+end; { TOmniTask.GetOptions }
+
 function TOmniTask.GetParam: TOmniValueContainer;
 begin
   Result := otParameters_ref;
@@ -1705,6 +1715,11 @@ procedure TOmniTask.SetNUMANode(numaNodeNumber: integer);
 begin
   otExecutor_ref.SetNUMANode(numaNodeNumber);
 end; { TOmniTask.SetNUMANode }
+
+procedure TOmniTask.SetOptions(const value: TOmniTaskControlOptions);
+begin
+  otExecutor_ref.Options := value;
+end; { TOmniTask.SetOptions }
 
 procedure TOmniTask.SetProcessorGroup(procGroupNumber: integer);
 begin
@@ -4261,6 +4276,9 @@ var
   Idx        : integer;
   {$ENDIF ~MSWINDOWS}
 begin
+  if otgTaskList.Count = 0 then
+    Exit(true);
+
   {$IFDEF MSWINDOWS}
   SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
