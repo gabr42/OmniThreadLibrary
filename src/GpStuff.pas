@@ -2705,6 +2705,9 @@ begin
     cndWritten      : when := 1;
     cndReadOrWritten: when := 3;
     cndExecuted     : when := 0;
+  else
+    when := 0;
+    Assert(False);
   end;
   ctx.Dr7 := ctx.Dr7 AND NOT (3 SHL 8) OR (1 SHL 8);
   ctx.Dr7 := ctx.Dr7 AND NOT (3 SHL (16 + (idx - 1) * 4)) OR (when SHL (16 + (idx - 1) * 4));
@@ -2713,6 +2716,9 @@ begin
     sz2B: size := 1;
     sz4B: size := 3;
     sz8B: size := 2;
+  else
+    size := 0;
+    Assert(False);
   end;
   ctx.Dr7 := ctx.Dr7 AND NOT (3 SHL (16 + (idx - 1) * 4 + 2)) OR (size SHL (16 + (idx - 1) * 4 + 2));
   if      idx = 1 then ctx.Dr0 := NativeUInt(address)
@@ -3509,4 +3515,5 @@ end; { _.Assign<T> }
 initialization
   GDisableDebugBreak := false;
 end.
+
 
