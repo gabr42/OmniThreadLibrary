@@ -8,10 +8,34 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2023-07-21
-   Version           : 2.05
+   Last modification : 2025-11-05
+   Version           : 2.11
 </pre>*)(*
    History:
+     2.11: 2025-11-05
+       - Fixed DSiGetLogicalProcessorInformationEx.
+       - Implemented DSiGetLogicalProcessorInfoEx.
+       - Added new relationships to _LOGICAL_PROCESSOR_RELATIONSHIP.
+       - Added functions DSiGetSystemECoreAffinity, DSiGetSystemECoreAffinityMask,
+         DSiGetSystemPCoreAffinity, DSiGetSystemPCoreAffinityMask.
+     2.10: 2025-05-06
+       - *** BREAKING CHANGE *** Renamed time functions that are based on
+         GetTickCount from DSiElapsedSince, DSiElapsedTime, and DSiHasElapsed 
+         to _DSiElapsedSince, _DSiElapsedTime, and _DSiHasElapsed. This reduces
+         the change that programmer would use them interchangeably with 
+         timeGetTime-based functions.     
+     2.09: 2024-08-28
+       - Implemented DSiCopyRegistry.
+     2.08: 2024-08-08
+       - Added parameter 'followSymlinks' (default false) to DSiGetFolderSize.
+     2.07: 2024-07-09
+       - Added 'environment' parameter to DSiExecuteAndCapture.
+     2.06a: 2024-07-01
+       - Fixed DSiKillFile to work on LNK files with non-existing targets.
+     2.06: 2024-02-19
+       - Added parameter consoleCodePage to the DSiExecuteAndCapture.
+         Valid values are CP_OEMCP (default for backwards compatibility)
+         and CP_ACP.
      2.05: 2023-07-21
        - DSiGetWindowsVersion recognizes Windows 11 and Windows Server 2022.
      2.04a: 2023-02-02
@@ -1172,9 +1196,12 @@ type
     procedure(const path: string; err: integer)
     {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
 
-  // DSiExecuteAndCapture callback
+  // DSiExecuteAndCapture callbacks
   TDSiOnNewLineCallback = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
     procedure(const line: string; var runningTimeLeft_sec: integer)
+    {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
+  TDSiProcessCreatedEvent = {$IFDEF DSiHasAnonymousFunctions}reference to{$ENDIF}
+    procedure (const procInfo: TProcessInformation)
     {$IFNDEF DSiHasAnonymousFunctions}of object{$ENDIF};
 
   TDSiFileTime = (ftCreation, ftLastAccess, ftLastModification);
@@ -1258,6 +1285,9 @@ type
   procedure DSiRegisterUserFileAssoc(const extension, progID, description, defaultIcon,
     openCommand: string);
   procedure DSiUnregisterUserFileAssoc(const progID: string);
+
+  function DSiCopyRegistry(const sourceKey, targetKey: string;
+    root: HKEY = HKEY_CURRENT_USER; doCopySubkeys: boolean = true): boolean;
 
 { Files }
 
@@ -1364,7 +1394,8 @@ type
   function  DSiFileSize(const fileName: string): int64;
   function  DSiFileSizeAndTime(const fileName: string; var dtModified_UTC: TDateTime; var size: int64): boolean;
   function  DSiFileSizeW(const fileName: WideString): int64;
-  function  DSiGetFolderSize(const folder: string; includeSubfolders: boolean): int64;
+  function  DSiGetFolderSize(const folder: string; includeSubfolders: boolean;
+    followSymlinks: boolean = false): int64;
   function  DSiGetFileTime(const fileName: string; whatTime: TDSiFileTime): TDateTime;
   function  DSiGetFileTimes(const fileName: string; var creationTime, lastAccessTime,
     lastModificationTime: TDateTime): boolean;
@@ -1411,7 +1442,10 @@ type
     onNewLine: TDSiOnNewLineCallback = nil;
     creationFlags: DWORD = CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS;
     const abortHandle: THandle = 0;
-    terminateTimeout: DWORD = INFINITE): cardinal;
+    terminateTimeout: DWORD = INFINITE;
+    onProcessCreated: TDSiProcessCreatedEvent = nil;
+    consoleCodePage: integer = CP_OEMCP;
+    environment: pointer = nil): cardinal;
   function  DSiExecuteAsAdmin(const path: string; const parameters: string = '';
     const directory: string = ''; parentWindow: THandle = 0;
     showWindow: integer = SW_NORMAL; wait: boolean = false): boolean;
@@ -1444,8 +1478,14 @@ type
     var userTime, kernelTime: int64): boolean; overload;
   function  DSiGetSystemAffinity: string;
   function  DSiGetSystemAffinityMask: DSiNativeUInt;
+  function  DSiGetSystemECoreAffinity: string;
+  function  DSiGetSystemECoreAffinityMask: DSiNativeUInt;
+  function  DSiGetSystemPCoreAffinity: string;
+  function  DSiGetSystemPCoreAffinityMask: DSiNativeUInt;
   function  DSiGetThreadAffinity: string;
   function  DSiGetThreadAffinityMask: DSiNativeUInt;
+  function  DSiGetThreadContext(thread: THandle; var context: TContext;
+    contextFlags: DWORD = CONTEXT_FULL): boolean;
   function  DSiGetThreadTime: int64; overload;
   function  DSiGetThreadTime(thread: THandle): int64; overload;
   function  DSiGetThreadTimes(var creationTime: TDateTime; var userTime,
@@ -1679,7 +1719,8 @@ type
   TStartupInfoA = TStartupInfo;
   {$ENDIF DSiNeedStartupInfo}
 
-  _LOGICAL_PROCESSOR_RELATIONSHIP = (RelationProcessorCore{ = 0}, RelationNumaNode{ = 1}, RelationCache{ = 2}, RelationProcessorPackage{ = 3}, RelationGroup{ = 4}, RelationAll = $FFFF);
+  _LOGICAL_PROCESSOR_RELATIONSHIP = (RelationProcessorCore{ = 0}, RelationNumaNode{ = 1}, RelationCache{ = 2}, RelationProcessorPackage{ = 3}, RelationGroup{ = 4},
+    RelationProcessorDie{ = 5}, RelationNumaNodeEx{ = 6}, RelationProcessorModule{ = 7}, RelationAll = $FFFF);
   {$EXTERNALSYM _LOGICAL_PROCESSOR_RELATIONSHIP}
   LOGICAL_PROCESSOR_RELATIONSHIP = _LOGICAL_PROCESSOR_RELATIONSHIP;
   {$EXTERNALSYM LOGICAL_PROCESSOR_RELATIONSHIP}
@@ -1723,6 +1764,133 @@ type
   TSystemLogicalProcessorInformation = SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
   PSystemLogicalProcessorInformation = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
   TSystemLogicalProcessorInformationArr = array of TSystemLogicalProcessorInformation;
+
+  KAFFINITY = ULONG_PTR;
+  {$EXTERNALSYM KAFFINITY}
+  PKAFFINITY = ^ULONG_PTR;
+  {$EXTERNALSYM PKAFFINITY}
+  TKAffinity = KAFFINITY;
+
+  _GROUP_AFFINITY = record
+      Mask: KAFFINITY;
+      Group: WORD;
+      Reserved: array[0..2] of WORD;
+  end;
+  {$EXTERNALSYM _GROUP_AFFINITY}
+  GROUP_AFFINITY = _GROUP_AFFINITY;
+  {$EXTERNALSYM GROUP_AFFINITY}
+  PGROUP_AFFINITY = ^_GROUP_AFFINITY;
+  {$EXTERNALSYM PGROUP_AFFINITY}
+  TGroupAffinity = _GROUP_AFFINITY;
+  PGroupAffinity = PGROUP_AFFINITY;
+
+  _PROCESSOR_RELATIONSHIP = record
+    Flags: BYTE;
+    EfficiencyClass: BYTE;
+    Reserved: array[1..20] of BYTE;
+    GroupCount: WORD;
+    GroupMask: array[0..0] of GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _PROCESSOR_RELATIONSHIP}
+  PROCESSOR_RELATIONSHIP = _PROCESSOR_RELATIONSHIP;
+  {$EXTERNALSYM PROCESSOR_RELATIONSHIP}
+  PPROCESSOR_RELATIONSHIP = ^_PROCESSOR_RELATIONSHIP;
+  {$EXTERNALSYM PPROCESSOR_RELATIONSHIP}
+  TProcessorRelationship = _PROCESSOR_RELATIONSHIP;
+  PProcessorRelationship = PPROCESSOR_RELATIONSHIP;
+
+  _NUMA_NODE_RELATIONSHIP = record
+    NodeNumber: DWORD;
+    Reserved: array[0..17] of BYTE;
+    GroupMask: GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _NUMA_NODE_RELATIONSHIP}
+  NUMA_NODE_RELATIONSHIP = _NUMA_NODE_RELATIONSHIP;
+  {$EXTERNALSYM NUMA_NODE_RELATIONSHIP}
+  PNUMA_NODE_RELATIONSHIP = ^_NUMA_NODE_RELATIONSHIP;
+  {$EXTERNALSYM PNUMA_NODE_RELATIONSHIP}
+  TNumaNodeRelationship = _NUMA_NODE_RELATIONSHIP;
+  PNumaNodeRelationship = PNUMA_NODE_RELATIONSHIP;
+
+  _CACHE_RELATIONSHIP = record
+    Level: BYTE;
+    Associativity: BYTE;
+    LineSize: WORD;
+    CacheSize: DWORD;
+    _Type: PROCESSOR_CACHE_TYPE;
+    Reserved: array[0..17] of BYTE;
+    GroupMask: GROUP_AFFINITY;
+  end;
+  {$EXTERNALSYM _CACHE_RELATIONSHIP}
+  CACHE_RELATIONSHIP = _CACHE_RELATIONSHIP;
+  {$EXTERNALSYM CACHE_RELATIONSHIP}
+  PCACHE_RELATIONSHIP = ^_CACHE_RELATIONSHIP;
+  {$EXTERNALSYM PCACHE_RELATIONSHIP}
+  TCacheRelationship = _CACHE_RELATIONSHIP;
+  PCacheRelationship = PCACHE_RELATIONSHIP;
+
+  _PROCESSOR_GROUP_INFO = record
+    MaximumProcessorCount: BYTE;
+    ActiveProcessorCount: BYTE;
+    Reserved: array[0..37] of BYTE;
+    ActiveProcessorMask: KAFFINITY;
+  end;
+  {$EXTERNALSYM _PROCESSOR_GROUP_INFO}
+  PROCESSOR_GROUP_INFO = _PROCESSOR_GROUP_INFO;
+  {$EXTERNALSYM PROCESSOR_GROUP_INFO}
+  PPROCESSOR_GROUP_INFO = ^_PROCESSOR_GROUP_INFO;
+  {$EXTERNALSYM PPROCESSOR_GROUP_INFO}
+  TProcessorGroupInfo = _PROCESSOR_GROUP_INFO;
+  PProcessorGroupInfo = PPROCESSOR_GROUP_INFO;
+
+  _GROUP_RELATIONSHIP = record
+    MaximumGroupCount: WORD;
+    ActiveGroupCount: WORD;
+    Reserved: array[0..19] of BYTE;
+    GroupInfo: array[0..0] of PROCESSOR_GROUP_INFO;
+  end;
+  {$EXTERNALSYM _GROUP_RELATIONSHIP}
+  GROUP_RELATIONSHIP = _GROUP_RELATIONSHIP;
+  {$EXTERNALSYM GROUP_RELATIONSHIP}
+  PGROUP_RELATIONSHIP = ^_GROUP_RELATIONSHIP;
+  {$EXTERNALSYM PGROUP_RELATIONSHIP}
+  TGroupRelationship = _GROUP_RELATIONSHIP;
+  PGroupRelationship = PGROUP_RELATIONSHIP;
+
+  _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = record
+    Relationship: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Size: DWORD;
+    case Integer of
+      0: (Processor: PROCESSOR_RELATIONSHIP);
+      1: (NumaNode: NUMA_NODE_RELATIONSHIP);
+      2: (Cache: CACHE_RELATIONSHIP);
+      3: (Group: GROUP_RELATIONSHIP);
+  end;
+  {$EXTERNALSYM _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  {$EXTERNALSYM SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX = ^_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  {$EXTERNALSYM PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX}
+  TSystemLogicalProcessorInformationEx = _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+  PSystemLogicalProcessorInformationEx = PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+
+  TProcessorRelationshipEx = record
+    Flags: byte;
+    EfficiencyClass: byte;
+    GroupCount: word;
+    GroupMask: array of GROUP_AFFINITY;
+  end;
+
+  TSystemLogicalProcessorInfoEx = record
+    Relationship: LOGICAL_PROCESSOR_RELATIONSHIP;
+    Processor: TProcessorRelationshipEx;
+    NumaNode: NUMA_NODE_RELATIONSHIP;
+    Cache: CACHE_RELATIONSHIP;
+    Group: GROUP_RELATIONSHIP;
+  end;
+  PSystemLogicalProcessorInfoEx = ^TSystemLogicalProcessorInfoEx;
+
+  TSystemLogicalProcessorInformationExArr = array of TSystemLogicalProcessorInfoEx;
 
 {$IFNDEF DSiHasGroupAffinity}
   KAFFINITY = ULONG_PTR;
@@ -1905,6 +2073,8 @@ type
   function  DSiGetFolderLocation(const CSIDL: integer): string;
   procedure DSiGetKeyboardLayouts(layouts: TStrings);
   function  DSiGetLogicalProcessorInfo(var info: TSystemLogicalProcessorInformationArr): boolean;
+  function  DSiGetLogicalProcessorInfoEx(relationshipType: TLogicalProcessorRelationship;
+    var info: TSystemLogicalProcessorInformationExArr): boolean;
   function  DSiGetMyDocumentsFolder: string;
   function  DSiGetProgramFilesFolder: string;
   function  DSiGetRegisteredOwner: string;
@@ -2083,9 +2253,9 @@ type
   end; { TDSiTimer }
 
   //Following three functions are based on GetTickCount
-  function  DSiElapsedSince(midTime, startTime: int64): int64;
-  function  DSiElapsedTime(startTime: int64): int64;
-  function  DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
+  function  _DSiElapsedSince(midTime, startTime: int64): int64;
+  function  _DSiElapsedTime(startTime: int64): int64;
+  function  _DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
 
   function  DSiTimeGetTime64: int64;
   function  DSiElapsedTime64(startTime: int64): int64;
@@ -2159,7 +2329,7 @@ type
     var ReturnLength: DWORD): BOOL; stdcall;
   function  DSiGetLogicalProcessorInformationEx(
     RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
-    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
     var ReturnedLength: DWORD): BOOL; stdcall;
   function  DSiGetModuleFileNameEx(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
@@ -2329,7 +2499,7 @@ type
     var ReturnLength: DWORD): BOOL; stdcall;
   TGetLogicalProcessorInformationEx = function(
     RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
-    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
     var ReturnedLength: DWORD): BOOL; stdcall;
   TGetModuleFileNameEx = function(hProcess: THandle; hModule: HMODULE; lpFilename: PChar;
     nSize: DWORD): DWORD; stdcall;
@@ -2934,29 +3104,19 @@ type
         [SysErrorMessage(GetLastError)])
     else if valueType <> REG_MULTI_SZ then
       raise ERegistryException.Create('String list expected.')
-    else begin
+    else if valueLen > 0 then begin
       GetMem(buffer, valueLen);
       idx := 0;
       try
         RegQueryValueEx(CurrentKey, PChar(name), nil, nil, PByte(buffer),
           @valueLen);
         p := buffer;
-        // 2023-09-27 new
-        if p^ <> #0 then
+        while idx < valueLen do
         begin
-          repeat
-            strings.Add(p);
-            idx := idx + cardinal(LStrLen(p)*2) + 2;
-            Inc (p, LStrLen(p) + 1);
-          until idx >= valueLen;
-        end;
-        // before 2023-09-27
-        {
-        while p^ <> #0 do begin
           strings.Add(p);
+          idx := idx + cardinal((LStrLen(p)+1) * SizeOf (Char));
           Inc (p, LStrLen(p) + 1);
-        end
-        }
+        end;
       finally FreeMem(buffer); end
     end;
   end; { TDSiRegistry.ReadStrings }
@@ -3064,8 +3224,8 @@ type
   begin
     size := 0;
     for i := 0 to strings.Count - 1 do
-      Inc(size, Length(strings[i]) + 1);
-    Inc (size);
+      Inc(size, (Length(strings[i]) + 1)*SizeOf (Char));
+    Inc (size, SizeOf (Char));
     GetMem (buffer, size);
     try
       p := buffer;
@@ -3264,6 +3424,119 @@ type
   begin
     DSiKillRegistry('\Software\Classes\' + progID, HKEY_CURRENT_USER, KEY_ALL_ACCESS);
   end; { DSiUnregisterUserFileAssoc }
+
+  function DSiCopyRegistry(const sourceKey, targetKey: string;
+    root: HKEY; doCopySubkeys: boolean): boolean;
+  var
+    regSource : TDSiRegistry;
+    regTarget : TDSiRegistry;
+    subKeys   : TStringList;
+    value     : Variant;
+    valueNames: TStringList;
+    valueType : TRegDataType;
+
+    function CopyValues(const key: string): boolean;
+    var
+      data: TMemoryStream;
+      j   : integer;
+    begin
+      Result := true;
+      data := nil;
+      try
+        if not regSource.OpenKeyReadOnly(key) then begin
+          Result := false;
+          Exit;
+        end;
+        if not regTarget.OpenKey(targetKey + Copy(key, Length(sourceKey) + 1, MaxInt), true) then begin
+          Result := false;
+          Exit;
+        end;
+        regSource.GetValueNames(valueNames);
+        for j := 0 to valueNames.Count - 1 do begin
+          valueType := regSource.GetDataType(valueNames[j]);
+          case valueType of
+            rdString, rdExpandString:
+              value := TRegistry(regSource).ReadString(valueNames[j]);
+            rdInteger:
+              value := TRegistry(regSource).ReadInteger(valueNames[j]);
+            rdBinary:
+              begin
+                if not assigned(data) then
+                  data := TMemoryStream.Create;
+                regSource.ReadBinary(valueNames[j], data);
+              end;
+          end;
+
+          case valueType of
+            rdString, rdExpandString:
+              regTarget.WriteString(valueNames[j], value);
+            rdInteger:
+              regTarget.WriteInteger(valueNames[j], value);
+            rdBinary:
+              regTarget.WriteBinary(valueNames[j], data);
+          end;
+        end;
+      finally
+        regSource.CloseKey;
+        regTarget.CloseKey;
+        FreeAndNil(data);
+      end;
+    end;
+
+    function CopySubKeys(const key: string): boolean;
+    var
+      j: integer;
+    begin
+      Result := true;
+      if not regSource.OpenKeyReadOnly(key) then begin
+        Result := false;
+        Exit;
+      end;
+
+      regSource.GetKeyNames(subKeys);
+      regSource.CloseKey;
+
+      for j := 0 to subKeys.Count - 1 do begin
+        if not CopyValues(key + '\' + subKeys[j]) then begin
+          Result := false;
+          Exit;
+        end;
+        if not CopySubKeys(key + '\' + subKeys[j]) then begin
+          Result := false;
+          Exit;
+        end;
+      end;
+    end;
+
+  begin
+    Result := true;
+    regSource := nil;
+    regTarget := nil;
+    subKeys := nil;
+    valueNames := nil;
+    try
+      regSource := TDSiRegistry.Create(KEY_READ);
+      regTarget := TDSiRegistry.Create(KEY_READ OR KEY_WRITE);
+      subKeys := TStringList.Create;
+      valueNames := TStringList.Create;
+      regSource.RootKey := root;
+      regTarget.RootKey := root;
+      if not CopyValues(sourceKey) then begin
+        Result := false;
+        Exit;
+      end;
+      if doCopySubkeys then
+        if not CopySubKeys(sourceKey) then begin
+          Result := false;
+          Exit;
+        end;
+    finally
+      FreeAndNil(regSource);
+      FreeAndNil(regTarget);
+      FreeAndNil(subKeys);
+      FreeAndNil(valueNames);
+    end;
+  end; { DSiCopyRegistry }
 
 { Files }
 
@@ -3725,8 +3998,10 @@ type
       repeat
         // don't filter anything
         //if (S.Attr AND attr <> 0) or (S.Attr AND attr = attr) then begin
-        if (attr <> faDirectory)
-           or ((attr = faDirectory) and (S.Attr AND attr = attr))
+        if ((attr and faDirectory) = 0)
+           or (((attr and faDirectory) <> 0)
+               and (S.Name <> '.') and (S.Name <> '..')
+               and ((S.Name[1] <> '.') or (not ignoreDottedFolders)))
         then begin
           if assigned(enumCallback) then
             enumCallback(folder, S, false, stopEnum);
@@ -4010,7 +4285,7 @@ type
     @author  radicalb, gabr
     @since   2007-05-30
   }
-  function DSiGetFolderSize(const folder: string; includeSubfolders: boolean): int64;
+  function DSiGetFolderSize(const folder: string; includeSubfolders, followSymlinks: boolean): int64;
   var
     err     : integer;
     folderBk: string;
@@ -4021,7 +4296,10 @@ type
     err := FindFirst(folderBk + '*.*', faAnyFile, rec);
     if err = 0 then try
       repeat
-        Inc(Result, rec.Size);
+        if followSymlinks and ((faSymlink AND rec.Attr) = faSymLink) then
+          Inc(Result, DSiFileSize(folderBk + rec.Name))
+        else
+          Inc(Result, rec.Size);
         if includeSubfolders and ((rec.Attr and faDirectory) > 0) and
            (rec.Name <> '.') and (rec.Name <> '..')
         then
@@ -4284,8 +4562,10 @@ type
   var
     oldAttr: DWORD;
   begin
-    if not FileExists(fileName) then
-      Result := true
+    if not FileExists(fileName) then begin
+      // try deleting it anyway to remove LNK file to nonexisting targets
+      Result := DeleteFile(fileName);
+    end
     else begin
       oldAttr := GetFileAttributes(PChar(fileName));
       SetFileAttributes(PChar(fileName), 0);
@@ -5165,7 +5445,9 @@ type
   }
   function DSiExecuteAndCapture(const app: string; output: TStrings; const workDir: string;
     var exitCode: longword; waitTimeout_sec: integer; onNewLine: TDSiOnNewLineCallback;
-    creationFlags: DWORD; const abortHandle: THandle; terminateTimeout: DWORD): cardinal;
+    creationFlags: DWORD; const abortHandle: THandle; terminateTimeout: DWORD;
+    onProcessCreated: TDSiProcessCreatedEvent; consoleCodePage: integer;
+    environment: pointer): cardinal;
   var
     endTime_ms         : int64;
     lineBuffer         : PAnsiChar;
@@ -5185,14 +5467,22 @@ type
         lineBufferSize := numBytes + 1;
         ReallocMem(lineBuffer, lineBufferSize);
       end;
-      // caller made sure that buffer is zero terminated
-      OemToCharA(buffer, lineBuffer);
-
-      {$IFDEF Unicode}
-      partialLine := partialLine + UnicodeString(StrPasA(lineBuffer));
-      {$ELSE}
-      partialLine := partialLine + StrPas(lineBuffer);
-      {$ENDIF Unicode}
+      if consoleCodePage = CP_OEMCP then begin
+        // caller made sure that buffer is zero terminated
+        OemToCharA(buffer, lineBuffer);
+        {$IFDEF Unicode}
+        partialLine := partialLine + UnicodeString(StrPasA(lineBuffer))
+        {$ELSE}
+        partialLine := partialLine + StrPas(lineBuffer);
+        {$ENDIF Unicode}
+      end
+      else begin
+        {$IFDEF Unicode}
+        partialLine := partialLine + UnicodeString(StrPasA(buffer))
+        {$ELSE}
+        partialLine := partialLine + StrPas(buffer);
+        {$ENDIF Unicode}
+      end;
       repeat
         p := Pos(#13#10, partialLine);
         if p <= 0 then begin
@@ -5211,7 +5501,7 @@ type
         now_ms := DSiTimeGetTime64;
         runningTimeLeft_sec := (endTime_ms - now_ms) div 1000;
         onNewLine(Copy(partialLine, 1, p-1), runningTimeLeft_sec);
-        endTime_ms := now_ms + runningTimeLeft_sec * 1000;
+        endTime_ms := now_ms + int64(runningTimeLeft_sec) * 1000;
         Delete(partialLine, 1, p + tokenLen - 1);
       until false;
     end; { ProcessPartialLine }
@@ -5254,7 +5544,7 @@ type
     partialLine := '';
     lineBufferSize := 0;
     lineBuffer := nil;
-    endTime_ms := DSiTimeGetTime64 + waitTimeout_sec * 1000;
+    endTime_ms := DSiTimeGetTime64 + int64(waitTimeout_sec) * 1000;
     security.nLength := SizeOf(TSecurityAttributes);
     security.bInheritHandle := true;
     security.lpSecurityDescriptor := nil;
@@ -5277,10 +5567,13 @@ type
       appRunning := WAIT_FAILED; // in case CreateProcess fails
       {$IFDEF Unicode}UniqueString(appW);{$ENDIF Unicode}
       if CreateProcess(nil, PChar(appW), @security, @security, true,
-           creationFlags, nil, PChar(useWorkDir), start, processInfo) then
+           creationFlags, environment, PChar(useWorkDir), start, processInfo) then
       begin
         SetLastError(0); // [Mitja] found a situation where CreateProcess succeeded but the last error was 126
         Result := processInfo.hProcess;
+        if assigned(onProcessCreated) then
+          onProcessCreated(processInfo);
+
         totalBytesRead := 0;
         SetLength(waitHandles, 1 + Ord(abortHandle > 0));
         waitHandles[0] := processInfo.hProcess;
@@ -5595,6 +5888,69 @@ type
       GetProcessAffinityMask(GetCurrentProcess, processAffinityMask, Result);
   end; { TDSiRegistry.DSiGetSystemAffinityMask }
 
+  {:Returns affinity mask of efficency cores as a list of CPU IDs (0..9, A..V).
+  }
+  function DSiGetSystemECoreAffinity: string;
+  begin
+    Result := DSiAffinityMaskToString(DSiGetSystemECoreAffinityMask);
+  end; { DSiGetSystemECoreAffinity }
+
+  {:Returns affinity mask of efficency cores as a bitmask.
+  }
+  function  DSiGetSystemECoreAffinityMask: DSiNativeUInt;
+  var
+    bit      : DSiNativeUInt;
+    info     : TSystemLogicalProcessorInformationExArr;
+    iProcInfo: integer;
+  begin
+    if not DSiGetLogicalProcessorInfoEx(RelationProcessorCore, info) then
+      Exit(0);
+
+    Result := 0;
+    for iProcInfo := High(info) downto 0 do begin // get bits in correct order
+      bit := 0;
+      if info[iProcInfo].Processor.EfficiencyClass = 0 then
+        bit := 1;
+      if info[iProcInfo].Processor.Flags = 0 then // normal core
+        Result := Result SHL 1 OR bit
+      else // hyperthreaded core
+        Result := (Result SHL 1 OR bit) SHL 1 OR bit;
+    end;
+  end; { DSiGetSystemECoreAffinityMask }
+
+  {:Returns affinity mask of performance cores as a list of CPU IDs (0..9, A..V).
+  }
+  function  DSiGetSystemPCoreAffinity: string;
+  begin
+    Result := DSiAffinityMaskToString(DSiGetSystemPCoreAffinityMask);
+  end; { DSiGetSystemPCoreAffinity }
+
+  {:Returns affinity mask of performance cores as a bitmask.
+  }
+  function  DSiGetSystemPCoreAffinityMask: DSiNativeUInt;
+  var
+    bit      : DSiNativeUInt;
+    info     : TSystemLogicalProcessorInformationExArr;
+    iProcInfo: integer;
+  begin
+    if not DSiGetLogicalProcessorInfoEx(RelationProcessorCore, info) then
+      Exit(DSiGetSystemAffinityMask);
+
+    Result := 0;
+    for iProcInfo := High(info) downto 0 do begin // get bits in correct order
+      bit := 0;
+      if info[iProcInfo].Processor.EfficiencyClass > 0 then
+        bit := 1;
+      if info[iProcInfo].Processor.Flags = 0 then
+        Result := Result SHL 1 OR bit
+      else
+        Result := (Result SHL 1 OR bit) SHL 1 OR bit;
+    end;
+
+    if Result = 0 then // all EfficiencyClass = 0 => CPU without E-cores
+      Result := DSiGetSystemAffinityMask;
+  end; { DSiGetSystemPCoreAffinityMask }
+
   {:Retrieves affinity mask of the current thread as a list of CPU IDs (0..9,
     A..V).
     @author  gabr
@@ -5625,6 +5981,28 @@ type
       SetThreadAffinityMask(GetCurrentThread, Result);
     end;
   end; { DSiGetThreadAffinityMask }
+
+  ///GetThreadContext expects 16-aligned buffer
+  function DSiGetThreadContext(thread: THandle; var context: TContext;
+    contextFlags: DWORD): boolean;
+  var
+    ContextMemory: Pointer;
+    AlignedContext: PContext;
+  begin
+    ContextMemory := AllocMem(SizeOf(TContext) + 15);
+    try
+      if (NativeUInt(ContextMemory) AND 15) <> 0 then
+        AlignedContext := PContext(NativeUInt(ContextMemory) + 16 AND -16)
+      else
+        AlignedContext := ContextMemory;
+      AlignedContext^.ContextFlags := contextFlags;
+      Result := GetThreadContext(thread, AlignedContext^);
+      if Result then
+        Move(AlignedContext^, context, SizeOf(context))
+      else
+        FillChar(context, SizeOf(TContext), 0);
+    finally FreeMem(ContextMemory); end;
+  end; { DSiGetThreadContext }
 
   {:Returns [kernel time] + [user time] for the current thread.
     @author  gabr
@@ -7254,6 +7632,8 @@ var
     end;
   end; { DSiGetKeyboardLayouts }
 
+  {:Wrapper for DSiGetLogicalProcessorInformation.
+  }
   function DSiGetLogicalProcessorInfo(
     var info: TSystemLogicalProcessorInformationArr): boolean;
   var
@@ -7269,6 +7649,57 @@ var
     if not Result then
       SetLength(info, 0);
   end; { DSiGetLogicalProcessorInfo }
+
+  {:Wrapper for DSiGetLogicalProcessorInformationEx.
+  }
+  function DSiGetLogicalProcessorInfoEx(relationshipType: TLogicalProcessorRelationship;
+    var info: TSystemLogicalProcessorInformationExArr): boolean;
+  var
+    buffer : pointer;
+    bufSize: DWORD;
+    iGroup : integer;
+    pBuffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+    pInfo  : PSystemLogicalProcessorInfoEx;
+  begin
+    bufSize := 0;
+    Result := DSiGetLogicalProcessorInformationEx(relationshipType, nil, bufSize);
+    if (not Result) and (GetLastError = ERROR_INSUFFICIENT_BUFFER) then begin
+      GetMem(buffer, bufSize);
+      try
+        Result := DSiGetLogicalProcessorInformationEx(relationshipType, buffer, bufSize);
+        if Result then begin
+          pBuffer := buffer;
+          repeat
+            SetLength(info, Length(info) + 1);
+            pInfo := @info[Length(info)-1];
+            pInfo.Relationship := pBuffer.Relationship;
+            case pInfo.Relationship of
+              RelationProcessorCore, RelationProcessorDie, RelationProcessorModule, RelationProcessorPackage:
+                begin
+                  pInfo.Processor.Flags := pBuffer.Processor.Flags;
+                  pInfo.Processor.EfficiencyClass := pBuffer.Processor.EfficiencyClass;
+                  pInfo.Processor.GroupCount := pBuffer.Processor.GroupCount;
+                  SetLength(pInfo.Processor.GroupMask, pInfo.Processor.GroupCount);
+                  {$R-}
+                  for iGroup := 0 to High(pInfo.Processor.GroupMask) do
+                    pInfo.Processor.GroupMask[iGroup] := pBuffer.Processor.GroupMask[iGroup];
+                  {$IFDEF RestoreR}{$R+}{$ENDIF}
+                end;
+              RelationNumaNode, RelationNumaNodeEx:
+                Move(pBuffer.NumaNode, pInfo.NumaNode, SizeOf(NUMA_NODE_RELATIONSHIP));
+              RelationCache:
+                Move(pBuffer.Cache, pInfo.Cache, SizeOf(CACHE_RELATIONSHIP));
+              RelationGroup:
+                Move(pBuffer.Group, pInfo.Group, SizeOf(GROUP_RELATIONSHIP));
+            end;
+            pBuffer := pointer(DSiNativeUInt(pBuffer) + pBuffer.Size);
+          until (DSiNativeUInt(pBuffer) - DSiNativeUInt(buffer)) >= bufSize;
+        end;
+      finally FreeMem(buffer); end;
+    end;
+    if not Result then
+      SetLength(info, 0);
+  end; { DSiGetLogicalProcessorInfoEx }
 
   {:Returns My Documents folder.
     @author  xtreme
@@ -8496,19 +8927,19 @@ var
   end; { DSiDateTimeToFileTime }
 
   {gp}
-  function DSiElapsedSince(midTime, startTime: int64): int64;
+  function _DSiElapsedSince(midTime, startTime: int64): int64;
   begin
     if midTime < startTime then
       midTime := midTime + $100000000;
     Result := midTime - startTime;
-  end; { TDSiRegistry.DSiElapsedSince }
+  end; { _DSiElapsedSince }
 
   {:Returns time elapsed since startTime, which must be a result of the GetTickCount.
   }
-  function DSiElapsedTime(startTime: int64): int64;
+  function _DSiElapsedTime(startTime: int64): int64;
   begin
-    Result := DSiElapsedSince(GetTickCount, startTime);
-  end; { DSiElapsedTime }
+    Result := _DSiElapsedSince(GetTickCount, startTime);
+  end; { _DSiElapsedTime }
 
   {:Returns time elapsed since startTime, which must be a result of the DSiTimeGetTime64.
   }
@@ -8556,15 +8987,15 @@ var
   {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
     returned from the GetTickCount.
   }
-  function DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
+  function _DSiHasElapsed(startTime: int64; timeout_ms: DWORD): boolean;
   begin
     if timeout_ms = 0 then
       Result := true
     else if timeout_ms = INFINITE then
       Result := false
     else
-      Result := (DSiElapsedTime(startTime) > timeout_ms);
-  end; { DSiHasElapsed }
+      Result := (_DSiElapsedTime(startTime) > timeout_ms);
+  end; { _DSiHasElapsed }
 
   {:Checks whether the specified timeout_ms period has elapsed. Start time must be a value
     returned from the DSiTimeGetTime64.
@@ -9171,7 +9602,7 @@ var
 
   function DSiGetLogicalProcessorInformationEx(
     RelationshipType: LOGICAL_PROCESSOR_RELATIONSHIP;
-    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+    Buffer: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
     var ReturnedLength: DWORD): BOOL;
   begin
     if not assigned(GGetLogicalProcessorInformationEx) then

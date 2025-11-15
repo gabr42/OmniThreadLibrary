@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2021-02-23
-///   Version           : 2.20a
+///   Last modification : 2022-03-09
+///   Version           : 2.21
 /// </para><para>
 ///   History:
+///     2.21: 2022-03-09
+///       - Avoid range check on 64 CPU systems.
 ///     2.20a: 2021-02-23
 ///       - Fixed TOmniThreadPool.Destroy when TOmniThreadPool.Create raised an exception.
 ///     2.20: 2020-12-21
@@ -428,15 +430,15 @@ type
 
   TOTPGroupAffinity = class
   private
-    FAffinity: int64;
+    FAffinity : uint64;
     FError    : integer;
     FGroup    : integer;
     FProcCount: integer;
   strict protected
-    procedure SetAffinity(const value: int64);
+    procedure SetAffinity(const value: uint64);
   public
-    constructor Create(group: integer; affinity: int64);
-    property Affinity: int64 read FAffinity write SetAffinity;
+    constructor Create(group: integer; affinity: uint64);
+    property Affinity: uint64 read FAffinity write SetAffinity;
     property Group: integer read FGroup;
     property ProcessorCount: integer read FProcCount;
     property Error: integer read FError write FError;
@@ -542,7 +544,7 @@ type
   // invoked from TOmniThreadPool
     procedure Cancel(const params: TOmniValue);
     procedure CancelAll(const params: TOmniValue);
-    procedure MaintainanceTimer;
+    procedure MainteinanceTimer;
   end; { TOTPWorker }
 
   TOTPThreadDataFactoryData = class
@@ -1151,7 +1153,7 @@ begin
   owStoppingWorkers := TObjectList.Create(false);
   owWorkItemQueue := TObjectList.Create(false);
   CountQueued.Value := 0;
-  Task.SetTimer(1, 1000, @TOTPWorker.MaintainanceTimer);
+  Task.SetTimer(1, 1000, @TOTPWorker.MainteinanceTimer);
   UpdateScheduler;
   Result := true;
 end; { TOTPWorker.Initialize }
@@ -1230,7 +1232,7 @@ begin
   {$ENDIF LogThreadPool}
 end; { TOTPWorker.Log }
 
-procedure TOTPWorker.MaintainanceTimer;
+procedure TOTPWorker.MainteinanceTimer;
 var
   iWorker: integer;
   worker : TOTPWorkerThread;
@@ -1293,7 +1295,7 @@ begin
     else
       Inc(iWorker);
   end;
-end; { TOTPWorker.MaintainanceTimer }
+end; { TOTPWorker.MainteinanceTimer }
 
 procedure TOTPWorker.CheckIdleQueue;
 var
@@ -1973,14 +1975,14 @@ end; { TOmniThreadPool.WorkerObj }
 
 { TOTPGroupAffinity }
 
-constructor TOTPGroupAffinity.Create(group: integer; affinity: int64);
+constructor TOTPGroupAffinity.Create(group: integer; affinity: uint64);
 begin
   inherited Create;
   FGroup := group;
   Self.Affinity := affinity;
 end; { TOTPGroupAffinity.Create }
 
-procedure TOTPGroupAffinity.SetAffinity(const value: int64);
+procedure TOTPGroupAffinity.SetAffinity(const value: uint64);
 var
   affSet: IOmniIntegerSet;
 begin
@@ -2016,7 +2018,7 @@ end; { CompareGroupAffinity }
 
 procedure TOTPWorkerScheduler.ApplyAffinityMask(const affinity: IOmniIntegerSet);
 var
-  affinityMask: int64;
+  affinityMask: uint64;
   i           : integer;
 begin
   if affinity.Count > 0 then begin

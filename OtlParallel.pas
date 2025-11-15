@@ -34,12 +34,14 @@
 ///   Author            : Primoz Gabrijelcic
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
-///   Contributors      : Sean B. Durkin, HHasenack
+///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2022-05-11
-///   Version           : 1.55
+///   Last modification : 2025-09-08
+///   Version           : 1.55a
 ///</para><para>
 ///   History:
+///     1.55a: 2025-09-08
+///       - [SMelnyk64] Prevent potentinal AV in TOmniParallelLoopBase.InternalExecute.
 ///     1.55: 2022-05-11
 ///       - Optional thread name can be passed to Parallel.TimedTask.
 ///     1.54a: 2022-02-17
@@ -2592,14 +2594,18 @@ begin
       taskState : TOmniValue;
       value     : TOmniValue;
     begin
-      FTaskInitializer(taskState);
+      if Assigned(FTaskInitializer) then
+        FTaskInitializer(taskState);
       try
         localQueue := FDataManager.CreateLocalQueue;
         try
           while (not Stopped) and localQueue.GetNext(value) do
             loopBody(task, value, taskState);
         finally FreeAndNil(localQueue); end;
-      finally FTaskFinalizer(taskState); end;
+      finally 
+        if Assigned(FTaskFinalizer) then 
+          FTaskFinalizer(taskState); 
+      end;
     end
   );
 end; { TOmniParallelLoopBase.InternalExecute }

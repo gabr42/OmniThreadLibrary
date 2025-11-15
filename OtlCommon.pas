@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2021, Primoz Gabrijelcic
+///Copyright (c) 2025, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,10 +35,18 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2021-02-15
-///   Version           : 1.54a
+///   Last modification : 2025-08-21
+///   Version           : 1.55a
 ///</para><para>
 ///   History:
+///     1.55b: 2025-11-12
+///       - Fixed TOmniEnvironment.LoadNUMAInfo.
+///     1.55a: 2025-08-21
+///       - Fixed TOmniGroupAffinity.Create with 64 processors on 64-bit.
+///     1.55: 2025-07-08
+///       - Implemented TOmniValue.AsUInt64.
+///     1.54b: 2024-03-21
+///       - TOmniValue.TryCastToInt64 was casting Variant into integer insted of int64.
 ///     1.54a: 2021-02-15
 ///       - IOmniIntegerSet/TOmniIntegerSet.AsMask changed to uint64 so it can store
 ///         64-bit NativeUInt without problems. [#148]
@@ -355,6 +363,7 @@ type
     function  CastToPointer: pointer;
     function  CastToRecord: IOmniAutoDestroyObject; inline;
     function  CastToString: string;
+    function  CastToUInt64: uint64; inline;
     function  CastToVariant: Variant;
     function  GetAsArray: TOmniValueContainer; inline;
     function  GetAsArrayItem(idx: integer): TOmniValue; overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
@@ -387,6 +396,7 @@ type
     procedure SetAsRecord(const intf: IOmniAutoDestroyObject); inline;
     procedure SetAsString(const value: string);
     procedure SetAsVariant(const value: Variant);
+    procedure SetAsUInt64(const value: uint64); inline;
     procedure SetOwnsObject(const value: boolean);
     {$REGION 'Documentation'}
     ///  <summary>Most of the code in this method never executes. It is just here so that
@@ -462,6 +472,7 @@ type
     function  TryCastToObject(var value: TObject): boolean; inline;
     function  TryCastToPointer(var value: pointer): boolean;
     function  TryCastToString(var value: string): boolean;
+    function  TryCastToUInt64(var value: uint64): boolean; inline;
     function  TryCastToVariant(var value: Variant): boolean;
     class operator Equal(const a: TOmniValue; i: integer): boolean; inline;
     class operator Equal(const a: TOmniValue; const s: string): boolean; inline;
@@ -510,6 +521,7 @@ type
     property AsOwnedObject: TObject read CastToObject write SetAsOwnedObject;
     property AsPointer: pointer read CastToPointer write SetAsPointer;
     property AsString: string read CastToString write SetAsString;
+    property AsUInt64: uint64 read CastToUInt64 write SetAsUInt64;
     property AsVariant: Variant read CastToVariant write SetAsVariant;
     property DataType: TOmniValueDataType read ovType;
     property OwnsObject: boolean read IsOwnedObject write SetOwnsObject;
@@ -656,6 +668,7 @@ type
     function  GetItem(paramIdx: integer): TOmniValue; overload;
     function  GetItem(const paramName: string): TOmniValue; overload;
     function  GetItem(const param: TOmniValue): TOmniValue; overload;
+    function  GetName(paramIdx: integer): string;
     procedure SetItem(idx: integer; const value: TOmniValue); overload; {$IF CompilerVersion >= 22}inline;{$IFEND}
     procedure SetItem(const name: string; const value: TOmniValue); overload;
     procedure SetItem(const param, value: TOmniValue); overload;
@@ -676,6 +689,7 @@ type
     property Item[paramIdx: integer]: TOmniValue read GetItem write SetItem; default;
     property Item[const paramName: string]: TOmniValue read GetItem write SetItem; default;
     property Item[const param: TOmniValue]: TOmniValue read GetItem write SetItem; default;
+    property Name[paramIdx: integer]: string read GetName;
   end; { TOmniValueContainer }
 
   //:Thread-safe counter
@@ -887,7 +901,7 @@ type
     function GetAffinity: IOmniIntegerSet;
   public
     constructor Create(groupNumber: integer; const affinity: IOmniIntegerSet); overload;
-    constructor Create(groupNumber: integer; const affinityMask: int64); overload;
+    constructor Create(groupNumber: integer; const affinityMask: uint64); overload;
     property Group: integer read FGroup write FGroup;
     property Affinity: IOmniIntegerSet read GetAffinity;
   end; { TOmniGroupAffinity }
@@ -1719,6 +1733,11 @@ begin
     raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');
 end; { TOmniValueContainer.GetItem }
 
+function TOmniValueContainer.GetName(paramIdx: integer): string;
+begin
+  Result := ovcNames[paramIdx];
+end; { TOmniValueContainer.GetName }
+
 procedure TOmniValueContainer.Grow(requiredIdx: integer = -1);
 var
   iValue   : integer;
@@ -2218,10 +2237,26 @@ begin
     ovtInteger,
     ovtInt64:   value := ovData;
     ovtNull:    value := 0;
-    ovtVariant: value := integer(AsVariant);
+    {$IFDEF OTL_VariantHasInt64}
+    ovtVariant: value := int64(AsVariant);
+    {$ENDIF OTL_VariantHasInt64}
     else Result := false;
   end;
 end; { TOmniValue.TryGetAsInt64 }
+
+function TOmniValue.TryCastToUInt64(var value: uint64): boolean;
+begin
+  Result := true;
+  case ovType of
+    ovtInteger: value := ovData;
+    ovtInt64:   value := uint64(ovData);
+    ovtNull:    value := 0;
+    {$IFDEF OTL_VariantHasInt64}
+    ovtVariant: value := uint64(AsVariant);
+    {$ENDIF OTL_VariantHasInt64}
+    else Result := false;
+  end;
+end; { TOmniValue.TryCastToUInt64 }
 
 function TOmniValue.TryCastToInteger(var value: integer): boolean; //integer
 var
@@ -2781,6 +2816,12 @@ begin
     Result := defValue;
 end; { TOmniValue.CastToStringDef }
 
+function TOmniValue.CastToUInt64: uint64;
+begin
+  if not TryCastToUInt64(Result) then
+    raise Exception.Create('TOmniValue cannot be converted to int64');
+end; { TOmniValue.CastToUInt64 }
+
 {$IFDEF OTL_ERTTI}
 function TOmniValue.GetArrayFromTValue(const value: TValue): TOmniValueContainer;
 var
@@ -3198,6 +3239,13 @@ begin
   ovIntf := TOmniStringData.Create(value);
   ovType := ovtString;
 end; { TOmniValue.SetAsString }
+
+procedure TOmniValue.SetAsUInt64(const value: uint64);
+begin
+  ClearIntf;
+  ovData := int64(value);
+  ovType := ovtInt64;
+end; { TOmniValue.SetAsUInt64 }
 
 {$IFDEF OTL_ERTTI}
 procedure TOmniValue.SetAsTValue(const value: TValue);
@@ -4312,47 +4360,36 @@ end; { TOmniEnvironment.GetThread }
 procedure TOmniEnvironment.LoadNUMAInfo;
 {$IFDEF MSWindows}
 var
-  bufLen                 : DWORD;
-  currentInfo            : PSystemLogicalProcessorInformationEx;
   iGroup                 : integer;
+  iInfo                  : integer;
   numaNodesInternal      : IOmniNUMANodesInternal;
   pGroupInfo             : PProcessorGroupInfo;
   processorGroupsInternal: IOmniProcessorGroupsInternal;
-  procInfo               : PSystemLogicalProcessorInformationEx;
+  procInfo               : TSystemLogicalProcessorInformationExArr;
 {$ENDIF}
 begin
   {$IFNDEF MSWindows}
   CreateFakeNUMAInfo;
   {$ELSE}
-  bufLen := 0;
-  DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, nil, bufLen);
+  DSiGetLogicalProcessorInfoEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, procInfo);
   if GetLastError = ERROR_NOT_SUPPORTED then
     CreateFakeNUMAInfo
   else begin
-    if GetLastError <> ERROR_INSUFFICIENT_BUFFER then
-      raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: DSiGetLogicalProcessorInformation[1] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
-    GetMem(procInfo, bufLen);
-    try
-      if not DSiGetLogicalProcessorInformationEx(DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationAll, DSiWin32.PSYSTEM_LOGICAL_PROCESSOR_INFORMATION(procInfo), bufLen) then
-        raise Exception.CreateFmt('TOmniEnvironment.LoadNUMAInfo: DSiGetLogicalProcessorInformation[2] failed with [%d] %s', [GetLastError, SysErrorMessage(GetLastError)]);
-      numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
-      processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
-      currentInfo := procInfo;
-      while (NativeUInt(currentInfo) - NativeUInt(procInfo)) < bufLen do begin
-        if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
-          numaNodesInternal.Add(TOmniNUMANode.Create(currentInfo.NumaNode.NodeNumber,
-            currentInfo.NumaNode.GroupMask.Group, currentInfo.NumaNode.GroupMask.Mask))
-        else if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(currentInfo.Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
-          pGroupInfo := @currentInfo.Group.GroupInfo;
-          for iGroup := 0 to currentInfo.Group.ActiveGroupCount - 1 do begin
-            processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));
-            Inc(pGroupInfo);
-          end;
+    numaNodesInternal := (oeNUMANodes as IOmniNUMANodesInternal);
+    processorGroupsInternal := (oeProcessorGroups as IOmniProcessorGroupsInternal);
+    for iInfo := Low(procInfo) to High(procInfo) do begin
+      if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(procInfo[iInfo].Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationNumaNode then
+        numaNodesInternal.Add(TOmniNUMANode.Create(procInfo[iInfo].NumaNode.NodeNumber,
+          procInfo[iInfo].NumaNode.GroupMask.Group, procInfo[iInfo].NumaNode.GroupMask.Mask))
+      else if DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP(procInfo[iInfo].Relationship) = DSiWin32._LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup then begin
+        pGroupInfo := @procInfo[iInfo].Group.GroupInfo;
+        for iGroup := 0 to procInfo[iInfo].Group.ActiveGroupCount - 1 do begin
+          processorGroupsInternal.Add(TOmniProcessorGroup.Create(iGroup, pGroupInfo^.ActiveProcessorMask));
+          Inc(pGroupInfo);
         end;
-        currentInfo := PSystemLogicalProcessorInformationEx(NativeUInt(currentInfo) + currentInfo.Size);
       end;
-      numaNodesInternal.Sort;
-    finally FreeMem(procInfo); end;
+    end;
+    numaNodesInternal.Sort;
   end;
   {$ENDIF MSWindows}
 end; { TOmniEnvironment.LoadNUMAInfo }
@@ -5077,7 +5114,7 @@ begin
   Create(groupNumber, affinity.AsMask);
 end; { TOmniGroupAffinity.Create }
 
-constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinityMask: int64);
+constructor TOmniGroupAffinity.Create(groupNumber: integer; const affinityMask: uint64);
 begin
   FGroup := groupNumber;
   FAffinity := TOmniIntegerSet.Create;

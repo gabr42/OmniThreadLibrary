@@ -1,2 +1,2 @@
-del /s .\*.map;.\*.rsm;.\*.exe;.\*.dcu;.\*.drc
+del /s .\*.map;.\*.rsm;.\*.exe;.\*.dcu;.\*.drc;.\*.dsv
 pause

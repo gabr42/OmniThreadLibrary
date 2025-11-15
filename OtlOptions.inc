@@ -105,6 +105,7 @@
   {$DEFINE OTL_LongGetMethodInfo}
   {$DEFINE OTL_NameThreadHasStringParameter}
   {$DEFINE OTL_TypeInfoHasTypeData}
+  {$DEFINE OTL_VariantHasInt64}
 {$IFEND}
 
 {$IF CompilerVersion >= 25} //DXE4
@@ -119,8 +120,12 @@
   {$DEFINE OTL_MobileSupport}
 {$IFEND}
 
-{$IF CompilerVersion >= 30} //Seattle
+{$IF CompilerVersion >= 30} //10 Seattle
   {$DEFINE OTL_CanInlineOperators}
+{$IFEND}
+
+{$IF CompilerVersion >= 35} //11 Alexandria
+  {$DEFINE OTL_HasLightweightMREW}
 {$IFEND}
 
 {$IFNDEF MSWINDOWS}
