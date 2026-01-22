@@ -3043,7 +3043,6 @@ const
   CBoolStr: array [boolean] of string = ('F', 'T');
 var
   arr: TOmniValueContainer;
-  autoDestroy: IOmniAutoDestroyObject;
   i: integer;
   maxItems: integer;
   obj: TObject;
