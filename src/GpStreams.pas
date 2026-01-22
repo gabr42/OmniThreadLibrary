@@ -4,7 +4,7 @@
 
 This software is distributed under the BSD license.
 
-Copyright (c) 2023, Primoz Gabrijelcic
+Copyright (c) 2024, Primoz Gabrijelcic
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -30,10 +30,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-21
-   Last modification : 2023-03-22
-   Version           : 2.02a
+   Last modification : 2024-11-08
+   Version           : 2.02b
 </pre>*)(*
    History:
+     2.02b: 2024-11-08
+       - TGpStreamEnhancer.RemoveFirst updates stream position to point to the
+         same data as before removal (or to position 0 if Position was in the
+         removed data).
      2.02a: 2023-03-22
        - TGpBufferedStream.Size was incorrect after .Write.
      2.02: 2023-01-11
@@ -308,6 +312,7 @@ type
     constructor Create(const data: string); overload;
     constructor Create(const data: IGpBuffer); overload;
     constructor CreateA(const data: AnsiString); overload;
+    constructor CreateA(const data: RawByteString); overload;
     function  Read(var data; size: integer): integer; override;
     function  Seek(offset: longint; origin: word): longint; override;
     procedure SetBuffer(const data; size: integer);
@@ -779,15 +784,18 @@ type
   function AppendToFile(const fileName: string; data: TStream): boolean; overload;
   function AppendToFile(const fileName: string; var data; dataSize: integer): boolean; overload;
   function AppendToFile(const fileName: string; const data: AnsiString): boolean; overload;
+  function AppendToFile(const fileName: string; const data: RawByteString): boolean; overload;
   function AppendToFile(const fileName: string; const buffer: IGpBuffer): boolean; overload;
 
   function WriteToFile(const fileName: string; data: TStream): boolean; overload;
   function WriteToFile(const fileName: string; var data; dataSize: integer): boolean; overload;
   function WriteToFile(const fileName: string; const data: AnsiString): boolean; overload;
+  function WriteToFile(const fileName: string; const data: RawByteString): boolean; overload;
   function WriteToFile(const fileName: string; const buffer: IGpBuffer): boolean; overload;
 
   function ReadFromFile(const fileName: string; data: TStream): boolean; overload;
   function ReadFromFile(const fileName: string; var data: AnsiString): boolean; overload;
+  function ReadFromFile(const fileName: string; var data: RawByteString): boolean; overload;
   function ReadFromFile(const fileName: string; var buffer: IGpBuffer): boolean; overload;
 
 implementation
@@ -859,6 +867,12 @@ begin
     AutoDestroyStream(TGpFixedMemoryStream.CreateA(data)).Stream);
 end; { AppendToFile }
 
+function AppendToFile(const fileName: string; const data: RawByteString): boolean;
+begin
+  Result := AppendToFile(fileName,
+    AutoDestroyStream(TGpFixedMemoryStream.CreateA(data)).Stream);
+end; { AppendToFile }
+
 function AppendToFile(const fileName: string; const buffer: IGpBuffer): boolean; overload;
 begin
   Result := AppendToFile(fileName,
@@ -895,6 +909,12 @@ begin
     AutoDestroyStream(TGpFixedMemoryStream.CreateA(data)).Stream);
 end; { WriteToFile }
 
+function WriteToFile(const fileName: string; const data: RawByteString): boolean; overload;
+begin
+  Result := WriteToFile(fileName,
+    AutoDestroyStream(TGpFixedMemoryStream.CreateA(data)).Stream);
+end; { WriteToFile }
+
 function WriteToFile(const fileName: string; const buffer: IGpBuffer): boolean; overload;
 begin
   Result := WriteToFile(fileName,
@@ -906,7 +926,7 @@ var
   fileHandle: THandle;
   fs        : TStream;
 begin
-  fileHandle := FileOpen(fileName, fmOpenRead);
+  fileHandle := FileOpen(fileName, fmOpenRead or fmShareDenyWrite);
   if fileHandle = INVALID_HANDLE_VALUE then
     Exit(false);
 
@@ -919,6 +939,21 @@ begin
 end; { ReadFromFile }
 
 function ReadFromFile(const fileName: string; var data: AnsiString): boolean;
+var
+  stream: TMemoryStream;
+begin
+  stream := TMemoryStream.Create;
+  try
+    Result := ReadFromFile(fileName, stream);
+    if Result then begin
+      SetLength(data, stream.Size);
+      if stream.Size > 0 then
+        Move(stream.Memory^, data[1], stream.Size);
+    end;
+  finally FreeAndNil(stream); end;
+end; { ReadFromFile }
+
+function ReadFromFile(const fileName: string; var data: RawByteString): boolean;
 var
   stream: TMemoryStream;
 begin
@@ -1012,7 +1047,7 @@ begin
     else
       handle := THandle(FileOpen(fileName, mode));
     if (handle <> INVALID_HANDLE_VALUE) or (GetLastError <> ERROR_SHARING_VIOLATION) or
-        DSiHasElapsed(startTime, waitUpTo_ms)
+        DSiHasElapsed64(startTime, waitUpTo_ms)
     then
       break; //repeat
     Sleep(50);
@@ -1043,7 +1078,7 @@ begin
     else
       handle := THandle(FileOpen(fileName, mode));
     if (handle <> INVALID_HANDLE_VALUE) or (GetLastError <> ERROR_SHARING_VIOLATION) or
-        DSiHasElapsed(startTime, waitUpTo_ms)
+        DSiHasElapsed64(startTime, waitUpTo_ms)
     then
       break; //repeat
     Sleep(50);
@@ -1351,6 +1386,15 @@ begin
   else
     SetBuffer(data[1], Length(data)*SizeOf(AnsiChar));
 end; { TGpFixedMemoryStream.Create }
+
+constructor TGpFixedMemoryStream.CreateA(const data: RawByteString);
+begin
+  inherited Create;
+  if data = '' then
+    SetBuffer(self, 0)
+  else
+    SetBuffer(data[1], Length(data)*SizeOf(AnsiChar));
+end;
 
 function TGpFixedMemoryStream.Read(var data; size: integer): integer;
 begin
@@ -2621,6 +2665,7 @@ begin
     Clear
   else begin
     Move(OffsetPtr(memory, numBytes)^, memory^, Size - numBytes);
+    Position := Min(0, Position - numBytes);
     Size := Size - numBytes;
   end;
 end; { TGpStreamEnhancer.RemoveFirst }

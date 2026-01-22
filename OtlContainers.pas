@@ -4,7 +4,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2019 Primoz Gabrijelcic
+///Copyright (c) 2025 Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -37,9 +37,11 @@
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
 ///   Last modification : 2018-04-17
-///   Version           : 3.02b
+///   Version           : 3.02c
 ///</para><para>
 ///   History:
+///     3.02c: 2025-09-05
+///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
 ///       - Fixed race condition in TOmniBaseBoundedQueue.RemoveLink which could cause
 ///         TOmniBaseBoundedQueue.Enqueue to return False when queue was empty.
@@ -108,7 +110,7 @@ unit OtlContainers;
 {$ENDIF ~CPUX64}
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
-//We don't have a platform-independant way of using cmpx8b/cmpx16b
+//We don't have a platform-independent way of using cmpx8b/cmpx16b
 //(5-parameter OtlSync.CAS) so we can't use bus-locking on non-Windows targets.
 {$IFDEF MSWINDOWS}
   {$DEFINE OTL_HaveCmpx16b}
@@ -1140,7 +1142,7 @@ end; { TOmniBoundedQueue.Enqueue }
 //Bus-locking queue implementation.
 //On non-Windows platforms same memory layout is used, but synchronisation
 //is achieved using a critical section, not with bus-locking because we
-//don't have a platform-independant equivalent of cmpx8b/cmpx16b.
+//don't have a platform-independent equivalent of cmpx8b/cmpx16b.
 
 (*
 TOmniQueue
@@ -1777,7 +1779,7 @@ begin
     Proc;
     PickUp := FNotifiableEvents;
     FNotifiableEvents := []
-  finally EnterCriticalSection; end;
+  finally LeaveCriticalSection; end;
   PropagateNotifications(PickUp);
 end; { TOmniValueQueue.DoWithCritSec }
 

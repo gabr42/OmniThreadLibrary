@@ -1,0 +1,60 @@
+OmniThreadLibrary 3.07.11 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.11)
+or as a ZIP archive
+(https://drive.google.com/file/d/1iFFrRHhvldLWv2SwMJaQKfaqs63Wig25/view?usp=sharing).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 
+10.3 Rio, 10.4 Sydney, 11 Alexandria, 12 Athens, and 13 Florence on the 
+Win32 and Win64 platforms. 
+
+There are no plans to support older Delphi compilers. XE2+ support 
+is limited to Windows targets. Firemonkey is currently not supported.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Support: http://www.omnithreadlibrary.com/support/
+Downloads: http://www.omnithreadlibrary.com/download/
+Repository: https://github.com/gabr42/OmniThreadLibrary
+Issue tracker: https://github.com/gabr42/OmniThreadLibrary/issues
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation: http://www.omnithreadlibrary.com/documentation/
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
+
+Changes since version 3.07.10
+============================
+
+- New features:
+  - Added Delphi 13 packages supporting 64-bit IDE.
+  - Implemented TOmniValue.AsUInt64.
+  
+- Bug fixes:
+  - [SMelnyk64] Fix: AV in TOmniParallelLoopBase.InternalExecute when taskFinalizer is not provided.
+  - Fixed TOmniGroupAffinity.Create with 64 processors on 64-bit.    
+  - Use correct time-measurement functions in OtlEventMonitor.
+  - [Anton Alisov] Fixed critical section handling in TOmniValueQueue.DoWithCritSec. 
+  - Avoid range check in OtlThreadPool on 64 CPU systems.
+    
+--
+Primoz
+[http://thedelphigeek.com]
