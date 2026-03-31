@@ -3,7 +3,7 @@
 ///<license>
 ///This software is distributed under the BSD license.
 ///
-///Copyright (c) 2022, Primoz Gabrijelcic
+///Copyright (c) 2021, Primoz Gabrijelcic
 ///All rights reserved.
 ///
 ///Redistribution and use in source and binary forms, with or without modification,
@@ -35,12 +35,10 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2022-03-08
-///   Version           : 1.43b
+///   Last modification : 2021-06-22
+///   Version           : 1.43a
 ///</para><para>
 ///   History:
-///     1.43b: 2022-03-08
-///       - IOmniTaskGroup.WaitForAll/.TerminateAll no longer crashes if the group is empty.
 ///     1.43a: 2021-06-22
 ///       - Prevent 'nil' handlers to be called from TOmniMessageExec.OnMessage.
 ///     1.43: 2021-03-10
@@ -470,7 +468,7 @@ type
     /// <summary>
     ///   Run the task code from within in the calling thread
     /// </summary>
-    function  DirectExecute: IOmniTaskControl;
+    function  DirectExecute:IOmniTaskControl;
     function  Enforced(forceExecution: boolean = true): IOmniTaskControl;
     function  GetFatalException: Exception;
     function  GetParam: TOmniValueContainer;
@@ -951,18 +949,20 @@ type
     function  GetImplementor: TObject;
     function  GetLock: TSynchroObject;
     function  GetName: string; inline;
-    function  GetOptions: TOmniTaskControlOptions;
     function  GetParam: TOmniValueContainer; inline;
     function  GetTerminateEvent: TOmniTransitionEvent; inline;
     function  GetThreadData: IInterface; inline;
     function  GetUniqueID: int64; inline;
     procedure InternalExecute(calledFromTerminate: boolean);
-    procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetThreadData(const value: IInterface); inline;
     procedure Terminate;
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
       sharedInfo: TOmniSharedTaskInfo);
+{$ifdef HH_PATCH_InstanceLeakCheck}
+    class function NewInstance:TObject; override;
+    procedure FreeInstance; override;
+{$endif}
     procedure ClearTimer(timerID: integer = 0);
     procedure Enforced(forceExecution: boolean = true);
     procedure Execute;
@@ -997,7 +997,6 @@ type
     property Implementor: TObject read GetImplementor;
     property Lock: TSynchroObject read GetLock;
     property Name: string read GetName;
-    property Options: TOmniTaskControlOptions read GetOptions write SetOptions;
     property Param: TOmniValueContainer read GetParam;
     property SharedInfo: TOmniSharedTaskInfo read otSharedInfo_ref;
     property TerminateEvent: TOmniTransitionEvent read GetTerminateEvent;
@@ -1111,6 +1110,10 @@ type
     constructor Create(worker: TOmniTaskMethod; const taskName: string); overload;
     constructor Create(worker: TOmniTaskProcedure; const taskName: string); overload;
     destructor  Destroy; override;
+{$ifdef HH_PATCH_InstanceLeakCheck}
+    class function NewInstance:TObject; override;
+    procedure FreeInstance; override;
+{$endif}
     function  Alertable: IOmniTaskControl;
     function  CancelWith(const token: IOmniCancellationToken): IOmniTaskControl;
     function  ChainTo(const task: IOmniTaskControl; ignoreErrors: boolean = false): IOmniTaskControl;
@@ -1520,6 +1523,20 @@ begin
   otSharedInfo_ref := sharedInfo;
 end; { TOmniTask.Create }
 
+{$ifdef HH_PATCH_InstanceLeakCheck}
+    class function TOmniTask.NewInstance:TObject;
+    begin
+      Result:=inherited;
+      AddClassRef(self);
+    end;
+
+    procedure TOmniTask.FreeInstance;
+    begin
+      ReleaseClassRef(ClassType);
+      inherited;
+    end;
+{$endif}
+
 procedure TOmniTask.ClearTimer(timerID: integer);
 begin
   SetTimer(timerID, 0, 0);
@@ -1570,11 +1587,6 @@ begin
   else
     Result := '';
 end; { TOmniTask.GetName }
-
-function TOmniTask.GetOptions: TOmniTaskControlOptions;
-begin
-  Result := otExecutor_ref.Options;
-end; { TOmniTask.GetOptions }
 
 function TOmniTask.GetParam: TOmniValueContainer;
 begin
@@ -1715,11 +1727,6 @@ procedure TOmniTask.SetNUMANode(numaNodeNumber: integer);
 begin
   otExecutor_ref.SetNUMANode(numaNodeNumber);
 end; { TOmniTask.SetNUMANode }
-
-procedure TOmniTask.SetOptions(const value: TOmniTaskControlOptions);
-begin
-  otExecutor_ref.Options := value;
-end; { TOmniTask.SetOptions }
 
 procedure TOmniTask.SetProcessorGroup(procGroupNumber: integer);
 begin
@@ -3202,6 +3209,20 @@ begin
   inherited Destroy;
 end; { TOmniTaskControl.Destroy }
 
+{$ifdef HH_PATCH_InstanceLeakCheck}
+    class function TOmniTaskControl.NewInstance:TObject;
+    begin
+      Result:=inherited;
+      AddClassRef(self);
+    end;
+
+    procedure TOmniTaskControl.FreeInstance;
+    begin
+      ReleaseClassRef(ClassType);
+      inherited;
+    end;
+{$endif}
+
 procedure TOmniTaskControl.EnsureCommChannel; //inline
 begin
   if not assigned(otcSharedInfo.CommChannel) then
@@ -4276,11 +4297,6 @@ var
   Idx        : integer;
   {$ENDIF ~MSWINDOWS}
 begin
-  if otgTaskList.Count = 0 then begin
-    Result := true;
-    Exit;
-  end;
-
   {$IFDEF MSWINDOWS}
   SetLength(waitHandles, otgTaskList.Count);
   for iIntf := 0 to otgTaskList.Count - 1 do
