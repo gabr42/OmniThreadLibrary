@@ -34,10 +34,15 @@
 ///     E-Mail          : primoz@gabrijelcic.org
 ///     Blog            : http://thedelphigeek.com
 ///   Creation date     : 2009-05-17
-///   Last modification : 2016-08-31
-///   Version           : 1.04
+///   Last modification : 2026-04-15
+///   Version           : 1.05
 ///</para><para>
 ///   History:
+///     1.05: 2026-04-15
+///       - Fixed: Register/Unregister for procedure-type callbacks stored address of
+///         stack parameter (@notifyProc) instead of the procedure pointer value
+///         (pointer(notifyProc)). This caused dangling pointer access on Notify and
+///         prevented Unregister from finding the registered entry.
 ///     1.04: 2016-08-31
 ///       - Added thread pool lifecycle notifications.
 ///     1.03: 2015-10-04
@@ -347,8 +352,10 @@ begin
 end; { TThreadNotifications.Notify }
 
 procedure TThreadNotifications.Register(notifyProc: TThreadNotificationProc);
+var
+  p: pointer absolute notifyProc;
 begin
-  tnList.Add(pointer(@notifyProc));
+  tnList.Add(p);
 end; { TThreadNotifications.Register }
 
 procedure TThreadNotifications.Register(notifyMethod: TThreadNotificationMeth);
@@ -357,8 +364,10 @@ begin
 end; { TThreadNotifications.Register }
 
 procedure TThreadNotifications.Unregister(notifyProc: TThreadNotificationProc);
+var
+  p: pointer absolute notifyProc;
 begin
-  tnList.Remove(pointer(@notifyProc));
+  tnList.Remove(p);
 end; { TThreadNotifications.Unregister }
 
 procedure TThreadNotifications.Unregister(notifyMethod: TThreadNotificationMeth);
@@ -405,8 +414,10 @@ begin
 end; { TPoolNotifications.Notify }
 
 procedure TPoolNotifications.Register(notifyProc: TPoolNotificationProc);
+var
+  p: pointer absolute notifyProc;
 begin
-  pnList.Add(pointer(@notifyProc));
+  pnList.Add(p);
 end; { TPoolNotifications.Register }
 
 procedure TPoolNotifications.Register(notifyMethod: TPoolNotificationMeth);
@@ -415,8 +426,10 @@ begin
 end; { TPoolNotifications.Register }
 
 procedure TPoolNotifications.Unregister(notifyProc: TPoolNotificationProc);
+var
+  p: pointer absolute notifyProc;
 begin
-  pnList.Remove(pointer(@notifyProc));
+  pnList.Remove(p);
 end; { TPoolNotifications.Unregister }
 
 procedure TPoolNotifications.Unregister(notifyMethod: TPoolNotificationMeth);
@@ -467,8 +480,10 @@ begin
 end; { TExceptionFilters.Register }
 
 procedure TExceptionFilters.Register(filterProc: TExceptionFilterProc);
+var
+  p: pointer absolute filterProc;
 begin
-  efList.Add(pointer(@filterProc));
+  efList.Add(p);
 end; { TExceptionFilters.Register }
 
 procedure TExceptionFilters.Unregister(filterMethod: TExceptionFilterMeth);
@@ -477,8 +492,10 @@ begin
 end; { TExceptionFilters.Unregister }
 
 procedure TExceptionFilters.Unregister(filterProc: TExceptionFilterProc);
+var
+  p: pointer absolute filterProc;
 begin
-  efList.Remove(pointer(@filterProc));
+  efList.Remove(p);
 end; { TExceptionFilters.Unregister }
 
 initialization

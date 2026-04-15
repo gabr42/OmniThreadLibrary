@@ -36,10 +36,17 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2018-04-17
-///   Version           : 3.02c
+///   Last modification : 2026-04-15
+///   Version           : 3.02d
 ///</para><para>
 ///   History:
+///     3.02d: 2026-04-15
+///       - Fixed: TOmniValueQueue.PropagateNotifications loop used Low..Low instead
+///         of Low..High, silently dropping all observer notifications except inserts.
+///       - Fixed: TOmniValueQueue.CollectionNotifyEvent used FAlmostFullThreshold
+///         instead of FPartlyEmptyThreshold for coiNotifyOnPartlyEmpty detection.
+///       - Fixed: TOmniBaseBoundedQueue.IsFull compared NewLastIn against LastIn
+///         (itself) instead of FirstIn, making full detection unreliable.
 ///     3.02c: 2025-09-05
 ///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
@@ -964,7 +971,7 @@ begin
     NewLastIn := pointer(NativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
     if NativeInt(NewLastIn) > NativeInt(obqPublicRingBuffer.EndBuffer) then
       NewLastIn := obqPublicRingBuffer.StartBuffer;
-    result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.LastIn.PData)) or
+    result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.FirstIn.PData)) or
       (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
   finally Release; end;
 end; { TOmniBaseBoundedQueue.IsFull }
@@ -1763,7 +1770,7 @@ begin
     cnExtracted:
       begin
         Include(FNotifiableEvents, coiNotifyOnAllRemoves);
-        if AfterCount = FAlmostFullThreshold then
+        if AfterCount = FPartlyEmptyThreshold then
           Include(FNotifiableEvents, coiNotifyOnPartlyEmpty);
       end;
   end; //case Action
@@ -1827,7 +1834,7 @@ var
   Ev: TOmniContainerObserverInterest;
 begin
   if assigned(FContainerSubject) and (Events <> []) then
-    for Ev := Low(TOmniContainerObserverInterest) to Low(TOmniContainerObserverInterest) do
+    for Ev := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
       if Ev in Events then
         FContainerSubject.Notify(Ev);
 end; { TOmniValueQueue.PropagateNotifications }

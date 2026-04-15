@@ -36,10 +36,17 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2025-09-08
-///   Version           : 1.55a
+///   Last modification : 2026-04-15
+///   Version           : 1.55b
 ///</para><para>
 ///   History:
+///     1.55b: 2026-04-15
+///       - Fixed: TOmniPipelineStage.Execute used PInteger instead of PNativeInt to
+///         check delegate nil status. On 64-bit, only the low 32 bits were checked.
+///       - Fixed: TOmniPipeline.Run captured shared local variables `exc` and `outQueue`
+///         by reference in loop closures. Concurrent pipeline workers would race on
+///         the shared `exc` and exceptions from early stages would be routed to the
+///         wrong output queue.
 ///     1.55a: 2025-09-08
 ///       - [SMelnyk64] Prevent potentinal AV in TOmniParallelLoopBase.InternalExecute.
 ///     1.55: 2022-05-11
@@ -4008,16 +4015,15 @@ end; { TOmniPipelineStage.Create }
 
 procedure TOmniPipelineStage.Execute(const task: IOmniTask);
 begin
-  // D2009 doesn't like TProc casts so we're casting to NativeInt
   Assert(SizeOf(TProc) = SizeOf(NativeInt));
-  if PInteger(@opsSimpleStage)^ <> NativeInt(nil) then
+  if PNativeInt(@opsSimpleStage)^ <> NativeInt(nil) then
     ExecuteSimpleStage(task, opsSimpleStage, opsInput, opsOutput)
-  else if PInteger(@opsStage)^ <> NativeInt(nil) then begin
-    Assert(PInteger(@opsStageEx)^ = NativeInt(nil));
+  else if PNativeInt(@opsStage)^ <> NativeInt(nil) then begin
+    Assert(PNativeInt(@opsStageEx)^ = NativeInt(nil));
     opsStage(opsInput, opsOutput);
   end
   else begin
-    Assert(PInteger(@opsStageEx)^ <> NativeInt(nil));
+    Assert(PNativeInt(@opsStageEx)^ <> NativeInt(nil));
     opsStageEx(opsInput, opsOutput, task);
   end;
 end; { TOmniPipelineStage.Execute }
@@ -4282,7 +4288,6 @@ end; { TOmniPipeline.OnStopInvoke }
 function TOmniPipeline.Run: IOmniPipeline;
 var
   countStopped: IOmniResourceCount;
-  exc         : Exception;
   inQueue     : IOmniBlockingCollection;
   iStage      : integer;
   iTask       : integer;
@@ -4319,6 +4324,7 @@ begin
       task := CreateTask(
           procedure (const task: IOmniTask)
           var
+            exc    : Exception;
             opStage: IOmniPipelineStageEx;
           begin
             try
@@ -4328,8 +4334,8 @@ begin
                   opStage.Execute(Task);
                 except
                   exc := Exception(AcquireExceptionObject);
-                  if not outQueue.TryAdd(exc) then
-                    Exc.Free;
+                  if not (opStage as IOmniPipelineStage).Output.TryAdd(exc) then
+                    exc.Free;
                 end;
               finally
                 if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then

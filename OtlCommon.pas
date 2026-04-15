@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2025-12-01
-///   Version           : 1.56
+///   Last modification : 2026-04-15
+///   Version           : 1.56a
 ///</para><para>
 ///   History:
+///     1.56a: 2026-04-15
+///       - Fixed: TOmniValue._ReleaseAndClear did not check assigned(ovIntf) before
+///         calling ovIntf._Release, causing AV when type was interfaced but pointer nil.
 ///     1.56: 2025-12-01
 ///       - Improved LogValue.
 ///     1.55b: 2025-11-12
@@ -3525,7 +3528,7 @@ end; { TOmniValue._Release }
 
 procedure TOmniValue._ReleaseAndClear;
 begin
-  if IsInterfacedType then begin
+  if IsInterfacedType and assigned(ovIntf) then begin
     ovIntf._Release;
     RawZero;
   end;
