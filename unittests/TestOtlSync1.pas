@@ -5,7 +5,8 @@ unit TestOtlSync1;
 interface
 
 uses
-  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
+  DUnitX.TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
+  System.Classes, System.Threading,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlSync.Utils, OtlTask;
 
 type
@@ -22,8 +23,90 @@ type
     class property NumSingletons: integer read GetNumSingletons;
   end;
 
+  [TestFixture]
+  TestIEvent = class
+  public
+    [Test]
+    procedure TestManualReset;
+    [Test]
+    procedure TestAutoReset;
+    [Test]
+    procedure TestInitialState;
+  end;
+
+  [TestFixture]
+  TestCancellationToken = class
+  public
+    [Test]
+    procedure TestCreateAndSignal;
+    [Test]
+    procedure TestClear;
+    [Test]
+    procedure TestEventProperty;
+  end;
+
+  [TestFixture]
+  TestCountdownEvent = class
+  public
+    [Test]
+    procedure TestCountdown;
+    [Test]
+    procedure TestReset;
+  end;
+
+  [TestFixture]
+  TestLockedT = class
+  public
+    [Test]
+    procedure TestCreateAndValue;
+    [Test]
+    procedure TestImplicitConversion;
+    [Test]
+    procedure TestInitializeWithFactory;
+    [Test]
+    procedure TestIsInitialized;
+    [Test]
+    procedure TestMREWAccess;
+    [Test]
+    procedure TestLockedCallback;
+    [Test]
+    procedure TestFree;
+  end;
+
+  [TestFixture]
+  TestLightweightMREWEx = class
+  public
+    [Test]
+    procedure TestNestedWrite;
+    [Test]
+    procedure TestReadBlockedByWrite;
+  end;
+
+  [TestFixture]
+  TestLockManager = class
+  public
+    [Test]
+    procedure TestLockUnlockByKey;
+    [Test]
+    procedure TestLockUnlockAutoRelease;
+    [Test]
+    procedure TestLockTimeoutFailure;
+    [Test]
+    procedure TestMultipleKeysIndependent;
+  end;
+
+  [TestFixture]
+  TestSingleThreadUseChecker = class
+  public
+    [Test]
+    procedure TestSameThreadOK;
+    [Test]
+    procedure TestDifferentThreadRaises;
+  end;
+
   // Test methods for basic synchronisation stuff
-  TestOtlSync = class(TTestCase)
+  [TestFixture]
+  TestOtlSync = class
   strict private
     FUnalignedLock: packed record
       FFiller1   : byte;
@@ -46,26 +129,42 @@ type
   {$ENDIF OTL_Generics}
     procedure Asy_LockCS(const task: IOmniTask);
     procedure Asy_ResourceCount(const task: IOmniTask);
-  protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-  published
+  public
+    [Setup]
+    procedure SetUp;
+    [TearDown]
+    procedure TearDown;
+    [Test]
     procedure TestCSInitialization;
+    [Test]
     procedure TestCSParallel;
+    [Test]
     procedure TestCSLock;
+    [Test]
     procedure TestResourceCountBasic;
   {$IFDEF OTL_Generics}
+    [Test]
     procedure TestOptimisticInitialization;
+    [Test]
     procedure TestOptimisticInitializationIntf;
   {$ENDIF OTL_Generics}
+    [Test]
     procedure TestMREWRead;
+    [Test]
     procedure TestMREWReadInitalBlock;
+    [Test]
     procedure TestMREWReadTimeout;
+    [Test]
     procedure TestMREWReadTimeoutFail;
+    [Test]
     procedure TestMREWWrite;
+    [Test]
     procedure TestMREWWriteInitialBlock;
+    [Test]
     procedure TestMREWWriteTimeout;
+    [Test]
     procedure TestMREWWriteTimeoutFailR;
+    [Test]
     procedure TestMREWWriteTimeoutFailW;
   end;
 
@@ -93,7 +192,7 @@ begin
   cs.Release;
   for i := 1 to 1000 do
     AcquireRelease;
-  CheckTrue(true, 'ok');
+  Assert.IsTrue(true, 'ok');
 end;
 
 procedure Asy_InitializeCS(const task: IOmniTask);
@@ -127,7 +226,7 @@ begin
   for i := Low(task) to High(task) do
     task[i].Terminate;
 
-  CheckTrue(true, 'ok');
+  Assert.IsTrue(true, 'ok');
 end;
 
 procedure TestOtlSync.TestMREWRead;
@@ -156,10 +255,10 @@ begin
       Format('TestMREWRead/Reader #%d', [i])).Run;
 
   time := DSiTimeGetTime64;
-  CheckTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
+  Assert.IsTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
   time := DSiTimeGetTime64 - time;
 
-  CheckTrue(time < 1000, 'Readers did not execute in parallel');
+  Assert.IsTrue(time < 1000, 'Readers did not execute in parallel');
 end;
 
 procedure TestOtlSync.TestMREWReadTimeout;
@@ -189,10 +288,10 @@ begin
       Format('TestMREWReadTimeout/Reader #%d', [i])).Run;
 
   time := DSiTimeGetTime64;
-  CheckTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
+  Assert.IsTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
   time := DSiTimeGetTime64 - time;
 
-  CheckTrue(time < 1000, 'Readers did not execute in parallel');
+  Assert.IsTrue(time < 1000, 'Readers did not execute in parallel');
 end;
 
 procedure TestOtlSync.TestMREWReadInitalBlock;
@@ -234,8 +333,8 @@ begin
   Sleep(500);
   mrew.ExitWriteLock;
 
-  CheckTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
-  CheckFalse(FSync.WaitFor('fault', 0), 'At least one reader failed to acquire the lock');
+  Assert.IsTrue(FSync.WaitFor('done', 1000), 'Reader lock failed');
+  Assert.IsFalse(FSync.WaitFor('fault', 0), 'At least one reader failed to acquire the lock');
 end;
 
 procedure TestOtlSync.TestMREWReadTimeoutFail;
@@ -285,19 +384,19 @@ begin
   mrew.EnterWriteLock;
   try
     FSync.Signal('go');
-    CheckTrue(FSync.WaitFor('done', CTimeout * 10), 'Reader lock failed');
+    Assert.IsTrue(FSync.WaitFor('done', CTimeout * 10), 'Reader lock failed');
   finally mrew.ExitWriteLock; end;
 
   for i := Low(readers) to High(readers) do
-    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
+    Assert.IsTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Reader #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
-    Fail('Failed to acquire read lock after timeouts')
+    Assert.Fail('Failed to acquire read lock after timeouts')
   else
     mrew.ExitReadLock;
   if not mrew.TryEnterWriteLock(0) then
-    Fail('Failed to acquire write lock after timeouts')
+    Assert.Fail('Failed to acquire write lock after timeouts')
   else
     mrew.ExitWriteLock;
 end;
@@ -331,8 +430,8 @@ begin
       end,
       Format('TestMREWWrite/Writer #%d', [i])).Run;
 
-  CheckTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
-  CheckFalse(FSync.WaitFor('overflow', 0), 'More than one writer executed in parallel');
+  Assert.IsTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
+  Assert.IsFalse(FSync.WaitFor('overflow', 0), 'More than one writer executed in parallel');
 end;
 
 procedure TestOtlSync.TestMREWWriteInitialBlock;
@@ -374,8 +473,8 @@ begin
   Sleep(500);
   mrew.ExitReadLock;
 
-  CheckTrue(FSync.WaitFor('done', 1000), 'Writer lock failed');
-  CheckFalse(FSync.WaitFor('fault', 0), 'At least one writer failed to acquire the lock');
+  Assert.IsTrue(FSync.WaitFor('done', 1000), 'Writer lock failed');
+  Assert.IsFalse(FSync.WaitFor('fault', 0), 'At least one writer failed to acquire the lock');
 end;
 
 procedure TestOtlSync.TestMREWWriteTimeout;
@@ -410,9 +509,9 @@ begin
       end,
       Format('TestMREWWriteTimeout/Writer #%d', [i])).Run;
 
-  CheckTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
-  CheckFalse(FSync.WaitFor('failed', 0), 'At least one writer failed to acquire lock');
-  CheckFalse(FSync.WaitFor('overflow', 0), 'More than one writer executed in parallel');
+  Assert.IsTrue(FSync.WaitFor('done', Length(writers) * 1000), 'Writer lock failed');
+  Assert.IsFalse(FSync.WaitFor('failed', 0), 'At least one writer failed to acquire lock');
+  Assert.IsFalse(FSync.WaitFor('overflow', 0), 'More than one writer executed in parallel');
 end;
 
 procedure TestOtlSync.TestMREWWriteTimeoutFailR;
@@ -462,19 +561,19 @@ begin
   mrew.EnterReadLock;
   try
     FSync.Signal('go');
-    CheckTrue(FSync.WaitFor('done', CTimeout * 10), 'Writer lock failed');
+    Assert.IsTrue(FSync.WaitFor('done', CTimeout * 10), 'Writer lock failed');
   finally mrew.ExitReadLock; end;
 
   for i := Low(writers) to High(writers) do
-    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
+    Assert.IsTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Writer #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
-    Fail('Failed to acquire read lock after timeouts')
+    Assert.Fail('Failed to acquire read lock after timeouts')
   else
     mrew.ExitReadLock;
   if not mrew.TryEnterWriteLock(0) then
-    Fail('Failed to acquire write lock after timeouts')
+    Assert.Fail('Failed to acquire write lock after timeouts')
   else
     mrew.ExitWriteLock;
 end;
@@ -526,19 +625,19 @@ begin
   mrew.EnterWriteLock;
   try
     FSync.Signal('go');
-    CheckTrue(FSync.WaitFor('done', CTimeout * 10), 'Writer lock failed');
+    Assert.IsTrue(FSync.WaitFor('done', CTimeout * 10), 'Writer lock failed');
   finally mrew.ExitWriteLock; end;
 
   for i := Low(writers) to High(writers) do
-    CheckTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
+    Assert.IsTrue((times[i] > (CTimeout * 0.8)) and (times[i] < (CTimeout * 3)),
       Format('Writer #%d waited %d ms instead of %d ms', [i, times[i], CTimeout]));
 
   if not mrew.TryEnterReadLock(0) then
-    Fail('Failed to acquire read lock after timeouts')
+    Assert.Fail('Failed to acquire read lock after timeouts')
   else
     mrew.ExitReadLock;
   if not mrew.TryEnterWriteLock(0) then
-    Fail('Failed to acquire write lock after timeouts')
+    Assert.Fail('Failed to acquire write lock after timeouts')
   else
     mrew.ExitWriteLock;
 end;
@@ -571,7 +670,7 @@ begin
   for i := Low(task) to High(task) do
     task[i].Terminate;
 
-  CheckEquals(0, FSharedValue);
+  Assert.AreEqual<int64>(0, FSharedValue);
 end;
 
 {$IFDEF OTL_Generics}
@@ -589,7 +688,7 @@ var
   task   : array [1..8] of IOmniTaskControl;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to 100 do begin
     FreeAndNil(FSingleton);
 
     token := CreateOmniCancellationToken;
@@ -601,9 +700,9 @@ begin
     for i := Low(task) to High(task) do
       task[i].Terminate;
 
-    CheckTrue(assigned(FSingleton), 'There is no singleton');
+    Assert.IsTrue(assigned(FSingleton), 'There is no singleton');
   end;
-  CheckEquals(1, TSingleton.NumSingletons);
+  Assert.AreEqual(1, TSingleton.NumSingletons);
   FreeAndNil(FSingleton);
 end;
 
@@ -621,7 +720,7 @@ var
   task   : array [1..8] of IOmniTaskControl;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to 100 do begin
     FSingletonIntf := nil;
 
     token := CreateOmniCancellationToken;
@@ -633,9 +732,9 @@ begin
     for i := Low(task) to High(task) do
       task[i].Terminate;
 
-    CheckTrue(assigned(FSingletonIntf), 'There is no singleton');
+    Assert.IsTrue(assigned(FSingletonIntf), 'There is no singleton');
   end;
-  CheckEquals(1, TSingleton.NumSingletons);
+  Assert.AreEqual(1, TSingleton.NumSingletons);
   FSingletonIntf := nil;
 end;
 {$ENDIF OTL_Generics}
@@ -648,7 +747,6 @@ end;
 
 procedure TestOtlSync.SetUp;
 begin
-  inherited;
   FSync := TOmniSynchronizer.Create;
   FSystemMutex := TMutex.Create(nil, false, '/OmniThreadLibrary/TestOtlSync/A4EDD8C0-88D0-46A9-890B-8EAAF466C44A');
   FSystemMutex.Acquire
@@ -659,7 +757,6 @@ begin
   FSystemMutex.Release;
   FreeAndNil(FSystemMutex);
   FreeAndNil(FSync);
-  inherited;
 end;
 
 procedure TestOtlSync.TestResourceCountBasic;
@@ -678,7 +775,7 @@ begin
   for i := Low(task) to High(task) do
     task[i].Terminate;
 
-  CheckEquals(3, FResourceCount.Allocate);
+  Assert.AreEqual(3, FResourceCount.Allocate);
 end;
 
 constructor TSingleton.Create;
@@ -698,7 +795,342 @@ begin
   Result := FNumSingletons;
 end;
 
-initialization
-  // Register any test cases with the test runner
-  RegisterTest(TestOtlSync.Suite);
+{ TestIEvent }
+
+procedure TestIEvent.TestAutoReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, false);
+  Assert.IsTrue(wrTimeout = event.WaitFor(0));
+  Assert.IsTrue(wrTimeout = event.WaitFor(100));
+  event.SetEvent;
+  Assert.IsTrue(wrSignaled = event.WaitFor(0));
+  Assert.IsTrue(wrTimeout = event.WaitFor(0));
+  event.SetEvent;
+  event.Reset;
+  Assert.IsTrue(wrTimeout = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestInitialState;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, true);
+  Assert.IsTrue(wrSignaled = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestManualReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(true, false);
+  Assert.IsTrue(wrTimeout = event.WaitFor(0));
+  Assert.IsTrue(wrTimeout = event.WaitFor(100));
+  event.SetEvent;
+  Assert.IsTrue(wrSignaled = event.WaitFor(0));
+  Assert.IsTrue(wrSignaled = event.WaitFor(100));
+  event.Reset;
+  Assert.IsTrue(wrTimeout = event.WaitFor(0));
+end;
+
+{ TestCancellationToken }
+
+procedure TestCancellationToken.TestCreateAndSignal;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  Assert.IsFalse(ct.IsSignalled, 'initially not signalled');
+  ct.Signal;
+  Assert.IsTrue(ct.IsSignalled, 'signalled after Signal');
+end;
+
+procedure TestCancellationToken.TestClear;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  ct.Signal;
+  Assert.IsTrue(ct.IsSignalled, 'signalled');
+  ct.Clear;
+  Assert.IsFalse(ct.IsSignalled, 'cleared');
+  ct.Signal;
+  Assert.IsTrue(ct.IsSignalled, 're-signalled after clear');
+end;
+
+procedure TestCancellationToken.TestEventProperty;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  Assert.IsFalse(ct.IsSignalled, 'not signalled initially');
+  ct.Signal;
+  Assert.IsTrue(ct.IsSignalled, 'signalled after Signal');
+  Assert.IsTrue(WaitForSingleObject(ct.Handle, 0) = WAIT_OBJECT_0, 'handle set after signal');
+  ct.Clear;
+  Assert.IsTrue(WaitForSingleObject(ct.Handle, 0) = WAIT_TIMEOUT, 'handle cleared');
+end;
+
+{ TestCountdownEvent }
+
+procedure TestCountdownEvent.TestCountdown;
+var
+  cde: IOmniCountdownEvent;
+begin
+  cde := CreateOmniCountdownEvent(3, 0);
+  Assert.IsTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=3');
+  cde.BaseCountdown.Signal;
+  Assert.IsTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=2');
+  cde.BaseCountdown.Signal;
+  Assert.IsTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=1');
+  cde.BaseCountdown.Signal;
+  Assert.IsTrue(cde.IsSignalled, 'signalled at count=0');
+end;
+
+procedure TestCountdownEvent.TestReset;
+var
+  cde: IOmniCountdownEvent;
+begin
+  cde := CreateOmniCountdownEvent(1, 0);
+  cde.BaseCountdown.Signal;
+  Assert.IsTrue(cde.IsSignalled, 'signalled');
+  cde.Reset;
+  Assert.IsFalse(cde.IsSignalled, 'not signalled after reset');
+  cde.BaseCountdown.Signal;
+  Assert.IsTrue(cde.IsSignalled, 'signalled again');
+end;
+
+{ TestLockedT }
+
+procedure TestLockedT.TestCreateAndValue;
+var
+  li: Locked<integer>;
+begin
+  li := Locked<integer>.Create(42);
+  Assert.AreEqual<integer>(42, li.Value);
+end;
+
+procedure TestLockedT.TestImplicitConversion;
+var
+  li: Locked<integer>;
+  v: integer;
+begin
+  li := Locked<integer>.Create(17);
+  v := li;
+  Assert.AreEqual<integer>(17, v);
+end;
+
+procedure TestLockedT.TestInitializeWithFactory;
+var
+  factory: Locked<integer>.TFactory;
+  li     : Locked<integer>;
+  v      : integer;
+begin
+  FillChar(li, SizeOf(li), 0);
+  factory := function: integer begin Result := 99; end;
+  v := li.Initialize(factory);
+  Assert.AreEqual<integer>(99, v);
+  Assert.AreEqual<integer>(99, li.Value);
+  // Second call returns same value without calling factory again
+  factory := function: integer begin Result := 200; end;
+  v := li.Initialize(factory);
+  Assert.AreEqual<integer>(99, v, 'factory not called on second Initialize');
+end;
+
+procedure TestLockedT.TestIsInitialized;
+var
+  li: Locked<integer>;
+begin
+  FillChar(li, SizeOf(li), 0);
+  Assert.IsFalse(li.IsInitialized, 'not initialized initially');
+  li := Locked<integer>.Create(1);
+  Assert.IsTrue(li.IsInitialized, 'initialized after Create');
+end;
+
+procedure TestLockedT.TestMREWAccess;
+var
+  li: Locked<integer>;
+  v: integer;
+begin
+  li := Locked<integer>.Create(10);
+  v := li.BeginRead;
+  Assert.AreEqual<integer>(10, v);
+  li.EndRead;
+  v := li.BeginWrite;
+  Assert.AreEqual<integer>(10, v);
+  li.EndWrite;
+end;
+
+procedure TestLockedT.TestLockedCallback;
+var
+  li  : Locked<integer>;
+  proc: Locked<integer>.TProcT;
+  sum : integer;
+begin
+  li := Locked<integer>.Create(5);
+  sum := 0;
+  proc := procedure(const value: integer) begin sum := value + 10; end;
+  li.Locked(proc);
+  Assert.AreEqual<integer>(15, sum);
+end;
+
+procedure TestLockedT.TestFree;
+var
+  li: Locked<TStringList>;
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  sl.Add('test');
+  li := Locked<TStringList>.Create(sl, true);
+  Assert.AreEqual<integer>(1, li.Value.Count);
+  li.Free;
+  // After Free, value should be nil
+  Assert.IsTrue(li.Value = nil, 'value nil after Free');
+end;
+
+{ TestLightweightMREWEx }
+
+procedure TestLightweightMREWEx.TestNestedWrite;
+var
+  mrew: TLightweightMREWEx;
+begin
+  mrew.BeginWrite;
+  // Nested write from same thread should succeed
+  mrew.BeginWrite;
+  mrew.EndWrite;
+  mrew.EndWrite;
+  Assert.IsTrue(true, 'nested write succeeded');
+end;
+
+procedure TestLightweightMREWEx.TestReadBlockedByWrite;
+var
+  mrew   : ILightweightMREWEx;
+  synch  : IOmniSynchronizer;
+  blocked: TOmniAlignedInt32;
+  proc   : TProc;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  synch := TOmniSynchronizer.Create;
+  blocked.Value := 0;
+
+  mrew.BeginWrite;
+  proc :=
+    procedure
+    begin
+      synch.Signal('started');
+      blocked.Value := 1;
+      mrew.BeginRead;
+      blocked.Value := 2;
+      mrew.EndRead;
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('started');
+  Sleep(200);
+  Assert.AreEqual<integer>(1, blocked.Value, 'reader is blocked');
+  mrew.EndWrite;
+  Sleep(200);
+  Assert.AreEqual<integer>(2, blocked.Value, 'reader unblocked after EndWrite');
+end;
+
+{ TestLockManager }
+
+procedure TestLockManager.TestLockUnlockByKey;
+var
+  lm: IOmniLockManager<string>;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  Assert.IsTrue(lm.Lock('key1', 0), 'lock key1');
+  lm.Unlock('key1');
+  Assert.IsTrue(lm.Lock('key1', 0), 're-lock key1 after unlock');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestLockUnlockAutoRelease;
+var
+  lm: IOmniLockManager<string>;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  begin
+    var autoUnlock := lm.LockUnlock('key1', 1000);
+    Assert.IsNotNull(autoUnlock, 'auto-unlock acquired');
+  end;
+  // After autoUnlock goes out of scope, lock should be released
+  Assert.IsTrue(lm.Lock('key1', 0), 'lock available after auto-unlock');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestLockTimeoutFailure;
+var
+  lm   : IOmniLockManager<string>;
+  synch: IOmniSynchronizer;
+  proc : TProc;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  synch := TOmniSynchronizer.Create;
+
+  lm.Lock('key1', 0);
+
+  proc :=
+    procedure
+    begin
+      Assert.IsFalse(lm.Lock('key1', 100), 'lock fails with short timeout');
+      synch.Signal('done');
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('done');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestMultipleKeysIndependent;
+var
+  lm: IOmniLockManager<string>;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  Assert.IsTrue(lm.Lock('a', 0), 'lock a');
+  Assert.IsTrue(lm.Lock('b', 0), 'lock b while a locked');
+  lm.Unlock('a');
+  lm.Unlock('b');
+end;
+
+{ TestSingleThreadUseChecker }
+
+procedure TestSingleThreadUseChecker.TestSameThreadOK;
+var
+  checker: TOmniSingleThreadUseChecker;
+begin
+  checker.AttachToCurrentThread;
+  checker.Check;
+  Assert.IsTrue(true, 'Check from same thread OK');
+end;
+
+procedure TestSingleThreadUseChecker.TestDifferentThreadRaises;
+var
+  checker: TOmniSingleThreadUseChecker;
+  synch  : IOmniSynchronizer;
+  raised : TOmniAlignedInt32;
+  proc   : TProc;
+begin
+  synch := TOmniSynchronizer.Create;
+  raised.Value := 0;
+  checker.AttachToCurrentThread;
+
+  proc :=
+    procedure
+    begin
+      try
+        checker.Check;
+      except
+        raised.Value := 1;
+      end;
+      synch.Signal('done');
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('done');
+  Assert.AreEqual<integer>(1, raised.Value, 'Check from different thread raised exception');
+end;
+
 end.
