@@ -51,6 +51,8 @@
 ///         Two threads calling Parallel.* simultaneously could create two pools.
 ///       - Fixed: TOmniParallelLoop.OnStopInvoke and TOmniParallelSimpleLoop<T>.OnStopInvoke
 ///         did not guard against nil task parameter, causing AV in synchronous mode.
+///       - Fixed: TOmniFuture<T>.FCompleted was a plain boolean used as a cross-thread
+///         flag without memory barrier. Now uses TInterlocked for safe publication.
 ///     1.55a: 2025-09-08
 ///       - [SMelnyk64] Prevent potentinal AV in TOmniParallelLoopBase.InternalExecute.
 ///     1.55: 2022-05-11
@@ -597,7 +599,7 @@ type
   strict private
     FCancellable  : boolean;
     FCancelled    : boolean;
-    FCompleted    : boolean;
+    FCompleted    : integer; // 0=not completed, 1=completed; integer for TInterlocked
     FTaskException: Exception;
     FResult       : T;
     FTask         : IOmniTaskControl;
@@ -3868,14 +3870,14 @@ constructor TOmniFuture<T>.Create(action: TOmniFutureDelegate<T>; taskConfig: IO
 begin
   inherited Create;
   FCancellable := false;
-  FCompleted := false;
+  FCompleted := 0;
   Execute(
     procedure (const task: IOmniTask)
     begin
       try
         FResult := action();
       finally // action may raise exception
-        FCompleted := true;
+        TInterlocked.Exchange(FCompleted, 1);
       end;
     end,
     taskConfig);
@@ -3885,14 +3887,14 @@ constructor TOmniFuture<T>.CreateEx(action: TOmniFutureDelegateEx<T>; taskConfig
 begin
   inherited Create;
   FCancellable := true;
-  FCompleted := false;
+  FCompleted := 0;
   Execute(
     procedure (const task: IOmniTask)
     begin
       try
         FResult := action(task);
       finally // action may raise exception
-        FCompleted := true;
+        TInterlocked.Exchange(FCompleted, 1);
       end;
     end,
     taskConfig);
@@ -3964,7 +3966,7 @@ end; { TOmniFuture<T>.IsCancelled }
 
 function TOmniFuture<T>.IsDone: boolean;
 begin
-  Result := FCompleted;
+  Result := TInterlocked.CompareExchange(FCompleted, 0, 0) <> 0;
 end; { TOmniFuture<T>.IsDone }
 
 function TOmniFuture<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;

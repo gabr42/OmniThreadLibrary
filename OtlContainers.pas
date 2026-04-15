@@ -49,6 +49,10 @@
 ///         (itself) instead of FirstIn, making full detection unreliable.
 ///       - Fixed: TOmniBaseBoundedStack.Empty was not protected by Acquire/Release,
 ///         allowing concurrent calls with Pop/Push to corrupt linked list chains.
+///       - Fixed: Wrong class names in assert/exception messages (TOmniBaseContainer
+///         instead of TOmniBaseBoundedStack/TOmniBaseBoundedQueue).
+///       - Fixed: TOmniValueQueue.Dequeue exception message referenced TOmniBaseQueue.
+///       - Fixed: Double semicolon in TOmniValueQueue.Create.
 ///     3.02c: 2025-09-05
 ///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
@@ -552,7 +556,7 @@ begin
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
   dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
   if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
-    raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
+    raise Exception.Create('TOmniBaseBoundedStack.Initialize: obsBuffer is not aligned');
   obsPublicChainP := dataBuffer;
   inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
   obsRecycleChainP := dataBuffer;
@@ -885,12 +889,12 @@ begin
   obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+    Format('TOmniBaseBoundedQueue.Initialize: obqPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   FreeMem(obqRecycleRingMem);
   obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    Format('TOmniBaseContainer: obcRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+    Format('TOmniBaseBoundedQueue.Initialize: obqRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   // set obqPublicRingBuffer head
   obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
   obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];
@@ -1733,7 +1737,7 @@ end; { TOmniQueue.TryDequeue }
 
 constructor TOmniValueQueue.Create(AThresholdForFull: integer);
 begin
-  FContainerSubject := TOmniContainerSubject.Create;;
+  FContainerSubject := TOmniContainerSubject.Create;
   FInnerQueue := TQueue<TOmniValue>.Create;
   FInnerQueue.OnNotify := CollectionNotifyEvent;
   FFullThreshold := AThresholdForFull;
@@ -1805,7 +1809,7 @@ begin
       if FInnerQueue.Count > 0 then
         EnclosedResult := FInnerQueue.Dequeue
       else
-        raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
+        raise Exception.Create('TOmniValueQueue.Dequeue: Queue is empty');
     end);
   Result := EnclosedResult;
 end; { TOmniValueQueue.Dequeue }
