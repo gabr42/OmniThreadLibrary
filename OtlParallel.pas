@@ -47,6 +47,10 @@
 ///         by reference in loop closures. Concurrent pipeline workers would race on
 ///         the shared `exc` and exceptions from early stages would be routed to the
 ///         wrong output queue.
+///       - Fixed: GlobalParallelPool lazy initialization was not thread-safe.
+///         Two threads calling Parallel.* simultaneously could create two pools.
+///       - Fixed: TOmniParallelLoop.OnStopInvoke and TOmniParallelSimpleLoop<T>.OnStopInvoke
+///         did not guard against nil task parameter, causing AV in synchronous mode.
 ///     1.55a: 2025-09-08
 ///       - [SMelnyk64] Prevent potentinal AV in TOmniParallelLoopBase.InternalExecute.
 ///     1.55: 2022-05-11
@@ -1834,12 +1838,18 @@ begin
 end; { Async }
 
 function GlobalParallelPool: IOmniThreadPool;
+var
+  newPool: IOmniThreadPool;
 begin
   if not assigned(GParallelPool) then begin
-    GParallelPool := CreateThreadPool('OtlParallel pool');
-    GParallelPool.IdleWorkerThreadTimeout_sec := 60; // 1 minute
-    GParallelPool.MaxExecuting := -1;
-    GParallelPool.MaxQueuedTime_sec := 0;
+    newPool := CreateThreadPool('OtlParallel pool');
+    newPool.IdleWorkerThreadTimeout_sec := 60; // 1 minute
+    newPool.MaxExecuting := -1;
+    newPool.MaxQueuedTime_sec := 0;
+    if TInterlockedEx.CAS(pointer(nil), pointer(newPool), PPointer(@GParallelPool)^) then
+      newPool._AddRef // prevent release when newPool goes out of scope
+    else
+      newPool := nil;  // another thread won the race
   end;
   Result := GParallelPool;
 end; { GlobalParallelPool }
@@ -3051,11 +3061,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelLoop.OnStopInvoke }
 
@@ -3825,11 +3838,14 @@ begin
   Result := OnStop(
     procedure (const task: IOmniTask)
     begin
-      task.Invoke(
-        procedure
-        begin
-          stopCode();
-        end);
+      if not assigned(task) then
+        stopCode()
+      else
+        task.Invoke(
+          procedure
+          begin
+            stopCode();
+          end);
     end);
 end; { TOmniParallelSimpleLoop }
 

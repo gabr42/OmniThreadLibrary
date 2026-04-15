@@ -47,6 +47,8 @@
 ///         instead of FPartlyEmptyThreshold for coiNotifyOnPartlyEmpty detection.
 ///       - Fixed: TOmniBaseBoundedQueue.IsFull compared NewLastIn against LastIn
 ///         (itself) instead of FirstIn, making full detection unreliable.
+///       - Fixed: TOmniBaseBoundedStack.Empty was not protected by Acquire/Release,
+///         allowing concurrent calls with Pop/Push to corrupt linked list chains.
 ///     3.02c: 2025-09-05
 ///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
@@ -516,12 +518,15 @@ procedure TOmniBaseBoundedStack.Empty;
 var
   linkedData: POmniLinkedData;
 begin
-  repeat
-    linkedData := PopLink(obsPublicChainP^);
-    if not assigned(linkedData) then
-      break; //repeat
-    PushLink(linkedData, obsRecycleChainP^);
-  until false;
+  Acquire;
+  try
+    repeat
+      linkedData := PopLink(obsPublicChainP^);
+      if not assigned(linkedData) then
+        break; //repeat
+      PushLink(linkedData, obsRecycleChainP^);
+    until false;
+  finally Release; end;
 end; { TOmniBaseBoundedStack.Empty }
 
 procedure TOmniBaseBoundedStack.Initialize(numElements, elementSize: integer);
