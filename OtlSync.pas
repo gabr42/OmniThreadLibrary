@@ -36,10 +36,16 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2025-11-20
-///   Version           : 2.0a
+///   Last modification : 2026-04-15
+///   Version           : 2.0b
 ///</para><para>
 ///   History:
+///     2.0b: 2026-04-15
+///       - Fixed: TOmniSynchroObject.Destroy called inherited inside the
+///         with EnterSpinLock block, causing use-after-free when the spin lock
+///         interface was released after Self was destroyed.
+///       - Fixed: TOmniLockManager.Lock could pass negative wait_ms as cardinal
+///         to WaitForSingleObject, causing extremely long wait instead of timeout.
 ///     2.0a: 2025-11-20
 ///       - Implemented Locked<T>.IsInitialized.
 ///     2.0: 2025-11-11
@@ -2155,8 +2161,9 @@ begin
       end;
     finally FLock.Release; end;
     wait_ms := integer(timeout_ms) - integer(DSiTimeGetTime64 - startWait);
-  until ((timeout_ms <> INFINITE) and (wait_ms <= 0)) or
-        (WaitForSingleObject(waitEvent, cardinal(wait_ms)) = WAIT_TIMEOUT);
+    if (timeout_ms <> INFINITE) and (wait_ms <= 0) then
+      break;
+  until WaitForSingleObject(waitEvent, cardinal(wait_ms)) = WAIT_TIMEOUT;
 
   if waitEvent <> 0 then begin
     FLock.Acquire;
@@ -2728,8 +2735,8 @@ begin
     if FOwnsBase then
       FreeAndNil(FBase);
     FObservers.Free;
-    inherited;
   end;
+  inherited;
 end; { TOmniSynchroObject.Destroy }
 
 class function TOmniSynchroObject.NewInstance: TObject;

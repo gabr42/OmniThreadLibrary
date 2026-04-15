@@ -53,6 +53,7 @@
 ///         instead of TOmniBaseBoundedStack/TOmniBaseBoundedQueue).
 ///       - Fixed: TOmniValueQueue.Dequeue exception message referenced TOmniBaseQueue.
 ///       - Fixed: Double semicolon in TOmniValueQueue.Create.
+///       - Fixed: TOmniValueQueue.IsEmpty missing try/finally around critical section.
 ///     3.02c: 2025-09-05
 ///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
@@ -1834,8 +1835,9 @@ end; { TOmniValueQueue.GetContainerSubject }
 function TOmniValueQueue.IsEmpty: boolean;
 begin
   EnterCriticalSection;
-  Result := FInnerQueue.Count = 0;
-  LeaveCriticalSection;
+  try
+    Result := FInnerQueue.Count = 0;
+  finally LeaveCriticalSection; end;
 end; { TOmniValueQueue.IsEmpty }
 
 procedure TOmniValueQueue.PropagateNotifications(Events: TInterestSet);
