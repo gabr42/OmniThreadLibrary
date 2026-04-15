@@ -2,48 +2,52 @@ unit TestHooks1;
 
 interface
 
+{$I OtlOptions.inc}
+
 uses
-  DUnitX.TestFramework;
+  TestFramework;
 
 type
-  [TestFixture]
-  TestThreadNotifications = class
-  public
-    [Setup] procedure SetUp;
-    [TearDown] procedure TearDown;
-    [Test] procedure TestProcCreateDestroy;
-    [Test] procedure TestUnregisterStopsNotifications;
-    [Test] procedure TestMultipleListeners;
-    [Test] procedure TestIntegrationWithTask;
+  TestThreadNotifications = class(TTestCase)
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestProcCreateDestroy;
+    procedure TestUnregisterStopsNotifications;
+    procedure TestMultipleListeners;
+    {$IFDEF OTL_Anonymous}
+    procedure TestIntegrationWithTask;
+    {$ENDIF}
   end;
 
-  [TestFixture]
-  TestPoolNotifications = class
-  public
-    [Setup] procedure SetUp;
-    [TearDown] procedure TearDown;
-    [Test] procedure TestProcCreateDestroy;
-    [Test] procedure TestUnregisterStopsNotifications;
-    [Test] procedure TestIntegrationWithThreadPool;
+  TestPoolNotifications = class(TTestCase)
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestProcCreateDestroy;
+    procedure TestUnregisterStopsNotifications;
+    procedure TestIntegrationWithThreadPool;
   end;
 
-  [TestFixture]
-  TestExceptionFilters = class
-  public
-    [Setup] procedure SetUp;
-    [TearDown] procedure TearDown;
-    [Test] procedure TestProcFilter;
-    [Test] procedure TestFilterCanReplaceException;
-    [Test] procedure TestFilterChainStopProcessing;
-    [Test] procedure TestUnregisterStopsFiltering;
+  TestExceptionFilters = class(TTestCase)
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestProcFilter;
+    procedure TestFilterCanReplaceException;
+    procedure TestFilterChainStopProcessing;
+    procedure TestUnregisterStopsFiltering;
   end;
 
 implementation
 
 uses
-  System.SysUtils,
-  System.Classes,
-  System.SyncObjs,
+  SysUtils,
+  Classes,
+  SyncObjs,
   OtlSync,
   OtlHooks,
   OtlTask,
@@ -152,10 +156,10 @@ begin
   RegisterThreadNotification(ThreadNotifyProc);
   try
     SendThreadNotifications(tntCreate, 'TestThread');
-    Assert.AreEqual('+TestThread', GThreadNotifyLog);
+    CheckEquals('+TestThread', GThreadNotifyLog);
 
     SendThreadNotifications(tntDestroy, 'TestThread');
-    Assert.AreEqual('+TestThread-TestThread', GThreadNotifyLog);
+    CheckEquals('+TestThread-TestThread', GThreadNotifyLog);
   finally
     UnregisterThreadNotification(ThreadNotifyProc);
   end;
@@ -165,11 +169,11 @@ procedure TestThreadNotifications.TestUnregisterStopsNotifications;
 begin
   RegisterThreadNotification(ThreadNotifyProc);
   SendThreadNotifications(tntCreate, 'A');
-  Assert.AreEqual('+A', GThreadNotifyLog);
+  CheckEquals('+A', GThreadNotifyLog);
 
   UnregisterThreadNotification(ThreadNotifyProc);
   SendThreadNotifications(tntCreate, 'B');
-  Assert.AreEqual('+A', GThreadNotifyLog, 'Should not receive after unregister');
+  CheckEquals('+A', GThreadNotifyLog, 'Should not receive after unregister');
 end;
 
 procedure TestThreadNotifications.TestMultipleListeners;
@@ -178,13 +182,14 @@ begin
   RegisterThreadNotification(ThreadNotifyProc2);
   try
     SendThreadNotifications(tntCreate, 'X');
-    Assert.AreEqual('+X[+X]', GThreadNotifyLog);
+    CheckEquals('+X[+X]', GThreadNotifyLog);
   finally
     UnregisterThreadNotification(ThreadNotifyProc);
     UnregisterThreadNotification(ThreadNotifyProc2);
   end;
 end;
 
+{$IFDEF OTL_Anonymous}
 procedure TestThreadNotifications.TestIntegrationWithTask;
 var
   task    : IOmniTaskControl;
@@ -204,13 +209,14 @@ begin
     task := CreateTask(delegate, 'TestHookTask').Run;
     task.Terminate(5000);
 
-    Assert.IsTrue(GIntGotCreate, 'Thread create notification should have fired');
-    Assert.IsTrue(GIntGotDestroy, 'Thread destroy notification should have fired');
-    Assert.AreEqual('TestHookTask', GIntThreadName);
+    CheckTrue(GIntGotCreate, 'Thread create notification should have fired');
+    CheckTrue(GIntGotDestroy, 'Thread destroy notification should have fired');
+    CheckEquals('TestHookTask', GIntThreadName);
   finally
     UnregisterThreadNotification(IntegrationThreadNotifyProc);
   end;
 end;
+{$ENDIF}
 
 { TestPoolNotifications }
 
@@ -229,10 +235,10 @@ begin
   RegisterPoolNotification(PoolNotifyProc);
   try
     SendPoolNotifications(pntCreate, nil);
-    Assert.AreEqual('+pool', GPoolNotifyLog);
+    CheckEquals('+pool', GPoolNotifyLog);
 
     SendPoolNotifications(pntDestroy, nil);
-    Assert.AreEqual('+pool-pool', GPoolNotifyLog);
+    CheckEquals('+pool-pool', GPoolNotifyLog);
   finally
     UnregisterPoolNotification(PoolNotifyProc);
   end;
@@ -242,25 +248,27 @@ procedure TestPoolNotifications.TestUnregisterStopsNotifications;
 begin
   RegisterPoolNotification(PoolNotifyProc);
   SendPoolNotifications(pntCreate, nil);
-  Assert.AreEqual('+pool', GPoolNotifyLog);
+  CheckEquals('+pool', GPoolNotifyLog);
 
   UnregisterPoolNotification(PoolNotifyProc);
   SendPoolNotifications(pntCreate, nil);
-  Assert.AreEqual('+pool', GPoolNotifyLog, 'Should not receive after unregister');
+  CheckEquals('+pool', GPoolNotifyLog, 'Should not receive after unregister');
 end;
 
 procedure TestPoolNotifications.TestIntegrationWithThreadPool;
+var
+  pool: IOmniThreadPool;
 begin
   GIntPoolCreate := false;
   GIntPoolDestroy := false;
 
   RegisterPoolNotification(IntegrationPoolNotifyProc);
   try
-    var pool := CreateThreadPool('TestHookPool');
-    Assert.IsTrue(GIntPoolCreate, 'Pool create notification should have fired');
+    pool := CreateThreadPool('TestHookPool');
+    CheckTrue(GIntPoolCreate, 'Pool create notification should have fired');
 
     pool := nil; // release triggers destroy
-    Assert.IsTrue(GIntPoolDestroy, 'Pool destroy notification should have fired');
+    CheckTrue(GIntPoolDestroy, 'Pool destroy notification should have fired');
   finally
     UnregisterPoolNotification(IntegrationPoolNotifyProc);
   end;
@@ -287,7 +295,7 @@ begin
     e := Exception.Create('test error');
     try
       FilterException(e);
-      Assert.AreEqual('F1:test error', GFilterLog);
+      CheckEquals('F1:test error', GFilterLog);
     finally
       e.Free;
     end;
@@ -304,7 +312,7 @@ begin
   try
     e := Exception.Create('original');
     FilterException(e);
-    Assert.AreEqual('replaced', e.Message);
+    CheckEquals('replaced', e.Message);
     e.Free;
   finally
     UnregisterExceptionFilter(ExceptionFilterReplace);
@@ -321,7 +329,7 @@ begin
     e := Exception.Create('err');
     try
       FilterException(e);
-      Assert.AreEqual('STOP', GFilterLog, 'Second filter should not have run');
+      CheckEquals('STOP', GFilterLog, 'Second filter should not have run');
     finally
       e.Free;
     end;
@@ -341,10 +349,14 @@ begin
   e := Exception.Create('should not log');
   try
     FilterException(e);
-    Assert.AreEqual('', GFilterLog, 'Filter should not run after unregister');
+    CheckEquals('', GFilterLog, 'Filter should not run after unregister');
   finally
     e.Free;
   end;
 end;
 
+initialization
+  RegisterTest(TestThreadNotifications.Suite);
+  RegisterTest(TestPoolNotifications.Suite);
+  RegisterTest(TestExceptionFilters.Suite);
 end.

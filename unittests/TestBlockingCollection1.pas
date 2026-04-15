@@ -2,44 +2,38 @@ unit TestBlockingCollection1;
 
 interface
 
+{$I OtlOptions.inc}
+
 {$IFDEF Unicode}
 uses
-  DUnitX.TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils,
+  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils,
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync;
 
 type
   // Test methods for class IOmniBlockingCollection
-  [TestFixture]
-  TestIOmniBlockingCollection = class
+  TestIOmniBlockingCollection = class(TTestCase)
   private
     procedure FillOmniValueWithOwnedObject(VAR lValue:TOmniValue);
-  public
-    [Test]
+  published
     procedure TestCompleteAdding;
-    [Test]
     procedure TestOwnedObjectleak;
-    [Test]
     procedure TestOmniValueObjectleak;
-    [Test]
     procedure TestInterfaceLeak;
-    [Test]
     procedure TestTryTakeEmpty;
-    [Test]
+    {$IFDEF OTL_MobileSupport}
     procedure TestTryTakeWithTimeout;
-    [Test]
+    {$ENDIF}
     procedure TestCountAndIsEmpty;
-    [Test]
     procedure TestIsCompletedAndIsFinalized;
-    [Test]
     procedure TestGetEnumerator;
-    [Test]
     procedure TestNext;
-    [Test]
+    {$IFDEF OTL_GoodGenerics}
     procedure TestFromArrayToArray;
-    [Test]
     procedure TestAddRange;
-    [Test]
+    {$ENDIF}
+    {$IFDEF OTL_MobileSupport}
     procedure TestMultiConsumerTryTake;
+    {$ENDIF}
   end;
 {$ENDIF}
 
@@ -47,10 +41,11 @@ implementation
 
 {$IFDEF Unicode}
 uses
-  OtlParallel,
   Classes,
-  System.SyncObjs,
-  System.Threading;
+  {$IFDEF OTL_MobileSupport}
+  Threading,
+  {$ENDIF}
+  OtlParallel;
 
 type
   TMemLeakCheckObj=class(TInterfacedObject)
@@ -94,7 +89,7 @@ begin
         ;
     end
   ]).Execute;
-  Assert.AreEqual(lastAdded, lastRead.AsInteger);
+  CheckEquals(lastAdded, lastRead.AsInteger);
 end;
 
 { TMemLeakCheckObj }
@@ -124,14 +119,14 @@ begin
     lCollection.Add(lValue);
   end;
   lValue.Clear;
-  Assert.AreEqual(cTestSize, vMemLeakCheckObjCount);
+  CheckEquals(cTestSize, vMemLeakCheckObjCount);
   for i := 1 to cTestSize do
     lCollection.Take(lValue);
   lCollection := nil;
 
-  Assert.AreEqual(1, vMemLeakCheckObjCount);
+  CheckEquals(1, vMemLeakCheckObjCount);
   lValue.Clear; // drop the last interface in the queue
-  Assert.AreEqual(0, vMemLeakCheckObjCount);
+  CheckEquals(0, vMemLeakCheckObjCount);
 end;
 
 //Using a separate routine to set the AsOwnedObject property is required because
@@ -147,10 +142,10 @@ VAR lValue:TOmniValue;
 begin
   vMemLeakCheckObjCount := 0;
   FillOmniValueWithOwnedObject(lValue);
-  Assert.AreEqual(1, vMemLeakCheckObjCount);
+  CheckEquals(1, vMemLeakCheckObjCount);
   lValue.Clear; // one would expect the owned object to be destroyed here, but it does NOT
 
-  Assert.AreEqual(0, vMemLeakCheckObjCount); // this test Fails
+  CheckEquals(0, vMemLeakCheckObjCount); // this test Fails
 end;
 
 procedure TestIOmniBlockingCollection.TestOwnedObjectleak;
@@ -169,35 +164,38 @@ begin
     lCollection.Add(lValue);
   end;
   lValue.Clear;
-  Assert.AreEqual(cTestSize, vMemLeakCheckObjCount);
+  CheckEquals(cTestSize, vMemLeakCheckObjCount);
 
   for i := 1 to cTestSize do
     lCollection.Take(lValue);
   lCollection := nil;
 
-  Assert.AreEqual(1, vMemLeakCheckObjCount);
+  CheckEquals(1, vMemLeakCheckObjCount);
 
   // drop the last owned object in the queue
   lValue.Clear; // drop the last owned object in the queue
 
   // this test fails for some strange reason, obviously the lValue is not
   // released until the end of the routine eventhough it is actually cleared
-  Assert.AreEqual(0, vMemLeakCheckObjCount);
+  CheckEquals(0, vMemLeakCheckObjCount);
 end;
 
 procedure TestIOmniBlockingCollection.TestTryTakeEmpty;
 var
+  coll : IOmniBlockingCollection;
   value: TOmniValue;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
-  Assert.IsFalse(coll.TryTake(value, 0));
+  coll := TOmniBlockingCollection.Create;
+  CheckFalse(coll.TryTake(value, 0));
 end;
 
+{$IFDEF OTL_MobileSupport}
 procedure TestIOmniBlockingCollection.TestTryTakeWithTimeout;
 var
+  coll : IOmniBlockingCollection;
   value: TOmniValue;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
+  coll := TOmniBlockingCollection.Create;
 
   // Start a thread that adds a value after a short delay
   System.Threading.TTask.Run(
@@ -208,102 +206,123 @@ begin
     end);
 
   // TryTake should block and then succeed
-  Assert.IsTrue(coll.TryTake(value, 10000));
-  Assert.AreEqual<integer>(42, value.AsInteger);
+  CheckTrue(coll.TryTake(value, 10000));
+  CheckEquals(42, value.AsInteger);
 end;
+{$ENDIF}
 
 procedure TestIOmniBlockingCollection.TestCountAndIsEmpty;
+var
+  coll : IOmniBlockingCollection;
+  value: TOmniValue;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
-  Assert.IsTrue(coll.IsEmpty);
-  Assert.AreEqual<integer>(0, coll.Count);
+  coll := TOmniBlockingCollection.Create;
+  CheckTrue(coll.IsEmpty);
+  CheckEquals(0, coll.Count);
 
   coll.Add(1);
   coll.Add(2);
-  Assert.IsFalse(coll.IsEmpty);
-  Assert.AreEqual<integer>(2, coll.Count);
-
-  var value: TOmniValue;
-  coll.Take(value);
-  Assert.AreEqual<integer>(1, coll.Count);
+  CheckFalse(coll.IsEmpty);
+  CheckEquals(2, coll.Count);
 
   coll.Take(value);
-  Assert.IsTrue(coll.IsEmpty);
+  CheckEquals(1, coll.Count);
+
+  coll.Take(value);
+  CheckTrue(coll.IsEmpty);
 end;
 
 procedure TestIOmniBlockingCollection.TestIsCompletedAndIsFinalized;
+var
+  coll : IOmniBlockingCollection;
+  value: TOmniValue;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
-  Assert.IsFalse(coll.IsCompleted);
-  Assert.IsFalse(coll.IsFinalized);
+  coll := TOmniBlockingCollection.Create;
+  CheckFalse(coll.IsCompleted);
+  CheckFalse(coll.IsFinalized);
 
   coll.Add(1);
   coll.CompleteAdding;
-  Assert.IsTrue(coll.IsCompleted);
-  Assert.IsFalse(coll.IsFinalized);
+  CheckTrue(coll.IsCompleted);
+  CheckFalse(coll.IsFinalized);
 
-  var value: TOmniValue;
   coll.Take(value);
   // After draining all items from a completed collection, it should be finalized
-  Assert.IsTrue(coll.IsFinalized);
+  CheckTrue(coll.IsFinalized);
 end;
 
 procedure TestIOmniBlockingCollection.TestGetEnumerator;
+var
+  coll : IOmniBlockingCollection;
+  enum : IOmniValueEnumerator;
+  sum  : integer;
+  count: integer;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
+  coll := TOmniBlockingCollection.Create;
   coll.Add(10);
   coll.Add(20);
   coll.Add(30);
   coll.CompleteAdding;
 
-  var sum := 0;
-  var count := 0;
-  var enum := coll.GetEnumerator;
+  sum := 0;
+  count := 0;
+  enum := coll.GetEnumerator;
   while enum.MoveNext do begin
     sum := sum + enum.Current.AsInteger;
     Inc(count);
   end;
-  Assert.AreEqual<integer>(3, count);
-  Assert.AreEqual<integer>(60, sum);
+  CheckEquals(3, count);
+  CheckEquals(60, sum);
 end;
 
 procedure TestIOmniBlockingCollection.TestNext;
+var
+  coll: IOmniBlockingCollection;
 begin
-  var coll: IOmniBlockingCollection := TOmniBlockingCollection.Create;
+  coll := TOmniBlockingCollection.Create;
   coll.Add(100);
   coll.Add(200);
   coll.CompleteAdding;
 
-  Assert.AreEqual<integer>(100, coll.Next.AsInteger);
-  Assert.AreEqual<integer>(200, coll.Next.AsInteger);
+  CheckEquals(100, coll.Next.AsInteger);
+  CheckEquals(200, coll.Next.AsInteger);
 end;
 
+{$IFDEF OTL_GoodGenerics}
 procedure TestIOmniBlockingCollection.TestFromArrayToArray;
+var
+  arr   : TArray<integer>;
+  coll  : IOmniBlockingCollection;
+  result: TArray<integer>;
 begin
-  var arr: TArray<integer>;
-  arr := [1, 2, 3, 4, 5];
-  var coll := TOmniBlockingCollection.FromArray<integer>(arr);
+  arr := TArray<integer>.Create(1, 2, 3, 4, 5);
+  coll := TOmniBlockingCollection.FromArray<integer>(arr);
   coll.CompleteAdding; // required before ToArray, which enumerates via Take(INFINITE)
-  var result := TOmniBlockingCollection.ToArray<integer>(coll);
-  Assert.AreEqual<integer>(5, Length(result));
-  Assert.AreEqual<integer>(1, result[0]);
-  Assert.AreEqual<integer>(5, result[4]);
+  result := TOmniBlockingCollection.ToArray<integer>(coll);
+  CheckEquals(5, Length(result));
+  CheckEquals(1, result[0]);
+  CheckEquals(5, result[4]);
 end;
 
 procedure TestIOmniBlockingCollection.TestAddRange;
+var
+  collObj: TOmniBlockingCollection;
+  coll   : IOmniBlockingCollection;
+  value  : TOmniValue;
 begin
-  var collObj := TOmniBlockingCollection.Create;
-  var coll: IOmniBlockingCollection := collObj;
+  collObj := TOmniBlockingCollection.Create;
+  coll := collObj;
   collObj.AddRange<integer>([10, 20, 30, 40]);
-  Assert.AreEqual<integer>(4, coll.Count);
+  CheckEquals(4, coll.Count);
 
-  var value: TOmniValue;
   coll.Take(value);
-  Assert.AreEqual<integer>(10, value.AsInteger);
+  CheckEquals(10, value.AsInteger);
   coll.Take(value);
-  Assert.AreEqual<integer>(20, value.AsInteger);
+  CheckEquals(20, value.AsInteger);
 end;
+{$ENDIF}
 
+{$IFDEF OTL_MobileSupport}
 procedure TestIOmniBlockingCollection.TestMultiConsumerTryTake;
 // Regression: two threads calling TryTake concurrently on the same collection
 const
@@ -311,47 +330,58 @@ const
   CCount      = 500;
 var
   coll         : IOmniBlockingCollection;
+  iter         : integer;
+  producer     : ITask;
+  t1           : ITask;
+  t2           : ITask;
   totalReceived: integer;
 begin
-  for var iter := 1 to CIterations do begin
+  for iter := 1 to CIterations do begin
     coll := TOmniBlockingCollection.Create;
     totalReceived := 0;
 
     // Producer: feed items one at a time (concurrent with consumers)
-    var producer := TTask.Run(
+    producer := TTask.Run(
       procedure
+      var
+        i: integer;
       begin
-        for var i := 1 to CCount do
+        for i := 1 to CCount do
           coll.TryAdd(i);
         coll.CompleteAdding;
       end);
 
     // Two consumers draining concurrently with TryTake(0)
-    var t1 := TTask.Run(
+    t1 := TTask.Run(
       procedure
       var value: TOmniValue;
       begin
         while not coll.IsFinalized do
           if coll.TryTake(value, 0) then
-            System.SyncObjs.TInterlocked.Increment(totalReceived);
+            InterlockedIncrement(totalReceived);
       end);
 
-    var t2 := TTask.Run(
+    t2 := TTask.Run(
       procedure
       var value: TOmniValue;
       begin
         while not coll.IsFinalized do
           if coll.TryTake(value, 0) then
-            System.SyncObjs.TInterlocked.Increment(totalReceived);
+            InterlockedIncrement(totalReceived);
       end);
 
     producer.Wait(5000);
     t1.Wait(5000);
     t2.Wait(5000);
-    Assert.AreEqual<integer>(CCount, totalReceived,
+    CheckEquals(CCount, totalReceived,
       Format('Iteration %d: expected %d, got %d', [iter, CCount, totalReceived]));
   end;
 end;
+{$ENDIF}
+{$ENDIF}
 
+initialization
+{$IFDEF Unicode}
+  RegisterTest(TestIOmniBlockingCollection.Suite);
 {$ENDIF}
 end.

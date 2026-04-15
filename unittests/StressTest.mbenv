@@ -52,3 +52,9 @@ Path=e:\Delphi\21.0\bin
 
 [Delphi 11 Alexandria]
 Path=e:\Delphi\22.0\bin
+
+[Delphi 12 Athens]
+Path=e:\Delphi\23.0\bin
+
+[Delphi 13 Florence]
+Path=e:\Delphi\37.0\bin

@@ -4,51 +4,34 @@ interface
 
 {$IFDEF Unicode}
 uses
-  DUnitX.TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils;
+  TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils;
 
 type
   // Test methods for class IOmniBlockingCollection
-  [TestFixture]
-  TestParallelFor = class
+  TestParallelFor = class(TTestCase)
   protected
     FTestData: array of integer;
     procedure TestRange(iFrom, iTo, iStep: integer);
     procedure InternalTestStepZero;
-  public
-    [Test]
+  published
     procedure TestIncreasingStep;
-    [Test]
     procedure TestIncreasingEndEqStep;
-    [Test]
     procedure TestIncreasingLargeDataStep;
-    [Test]
     procedure TestDecreasingStep;
-    [Test]
     procedure TestDecreasingStartEqStep;
-    [Test]
     procedure TestDecreasingLargeDataStep;
-    [Test]
     procedure TestIncreasingStartEqStep;
-    [Test]
     procedure TestDecreasingEndEqStep;
-    [Test]
     procedure TestNoExecution;
-    [Test]
     procedure TestStepZero;
-    [Test]
     procedure TestRepeatedDefaultTasks;
-    [Test]
     procedure TestRepeatedExplicitTasks;
   end;
 
-  [TestFixture]
-  TestJoin = class
-  public
-    [Test]
+  TestJoin = class(TTestCase)
+  published
     procedure TestTerminationAllStuck;
-    [Test]
     procedure TestTerminationPartialStuck;
-    [Test]
     procedure TestTerminationAllTerminated;
   end;
 {$ENDIF}
@@ -58,7 +41,6 @@ implementation
 {$IFDEF Unicode}
 uses
   Math,
-  System.SyncObjs,
   OtlParallel,
   OtlCommon;
 
@@ -156,7 +138,7 @@ var
     i: integer;
   begin
     for i := Low(FTestData) to High(FTestData) do
-      Assert.AreEqual(-1, FTestData[i]);
+      CheckEquals(-1, FTestData[i]);
   end;
 
 begin
@@ -178,9 +160,9 @@ begin
       CheckAllEmpty
     else for i := iFrom to iTo do begin
       if ((i-iFrom) mod iStep) = 0 then
-        Assert.AreEqual(i, FTestData[i-iMin], Format('at index %d', [i]))
+        CheckEquals(i, FTestData[i-iMin], Format('at index %d', [i]))
       else
-        Assert.AreEqual(-1, FTestData[i-iMin], Format('at index %d', [i]));
+        CheckEquals(-1, FTestData[i-iMin], Format('at index %d', [i]));
     end;
   end
   else begin
@@ -188,16 +170,22 @@ begin
       CheckAllEmpty
     else for i := iFrom downto iTo do begin
       if ((i-iFrom) mod iStep) = 0 then
-        Assert.AreEqual(i, FTestData[i-iMin], Format('at index %d', [i]))
+        CheckEquals(i, FTestData[i-iMin], Format('at index %d', [i]))
       else
-        Assert.AreEqual(-1, FTestData[i-iMin], Format('at index %d', [i]));
+        CheckEquals(-1, FTestData[i-iMin], Format('at index %d', [i]));
     end;
   end;
 end;
 
 procedure TestParallelFor.TestStepZero;
 begin
-  Assert.WillRaise(InternalTestStepZero, Exception);
+  try
+    InternalTestStepZero;
+    Fail('Expected exception not raised');
+  except
+    on E: Exception do
+      ; // expected
+  end;
 end;
 
 procedure TestParallelFor.TestRepeatedDefaultTasks;
@@ -212,9 +200,9 @@ begin
       .Execute(
         procedure (idx: integer)
         begin
-          TInterlocked.Increment(counter);
+          InterlockedIncrement(counter);
         end);
-    Assert.AreEqual(10, counter, Format('iteration %d', [n]));
+    CheckEquals(10, counter, Format('iteration %d', [n]));
   end;
 end;
 
@@ -231,9 +219,9 @@ begin
       .Execute(
         procedure (idx: integer)
         begin
-          TInterlocked.Increment(counter);
+          InterlockedIncrement(counter);
         end);
-    Assert.AreEqual(10, counter, Format('iteration %d', [n]));
+    CheckEquals(10, counter, Format('iteration %d', [n]));
   end;
 end;
 
@@ -268,14 +256,14 @@ begin
 
   join := Parallel.Join(MakeTask(0, true), MakeTask(1, true)).NoWait.Execute;
   time := DSiTimeGetTime64;
-  Assert.IsFalse(join.Terminate(500), 'Terminate');
+  CheckFalse(join.Terminate(500), 'Terminate');
   time := DSiTimeGetTime64 - time;
-  Assert.IsTrue(time < 1900, 'Elapsed time');
+  CheckTrue(time < 1900, 'Elapsed time');
 
   Sleep(2000); // in case tasks are not really dead
   for i := 0 to 1 do begin
-    Assert.IsTrue(started[i], 'started ' + IntToStr(i));
-    Assert.IsFalse(stopped[i], 'stopped ' + IntToStr(i));
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckFalse(stopped[i], 'stopped ' + IntToStr(i));
   end;
 end;
 
@@ -308,13 +296,13 @@ begin
 
   join := Parallel.Join(MakeTask(0, true), MakeTask(1, false)).NoWait.Execute;
   time := DSiTimeGetTime64;
-  Assert.IsFalse(join.Terminate(500), 'Terminate');
+  CheckFalse(join.Terminate(500), 'Terminate');
   time := DSiTimeGetTime64 - time;
-  Assert.IsTrue(time < 1900, 'Elapsed time');
+  CheckTrue(time < 1900, 'Elapsed time');
 
   for i := 0 to 1 do begin
-    Assert.IsTrue(started[i], 'started ' + IntToStr(i));
-    Assert.AreEqual<boolean>(i = 1, stopped[i], 'stopped ' + IntToStr(i));
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckEquals(i = 1, stopped[i], 'stopped ' + IntToStr(i));
   end
 end;
 
@@ -347,15 +335,21 @@ begin
 
   join := Parallel.Join(MakeTask(0, false), MakeTask(1, false)).NoWait.Execute;
   time := DSiTimeGetTime64;
-  Assert.IsTrue(join.Terminate(500), 'Terminate');
+  CheckTrue(join.Terminate(500), 'Terminate');
   time := DSiTimeGetTime64 - time;
-  Assert.IsTrue(time < 1900, 'Elapsed time');
+  CheckTrue(time < 1900, 'Elapsed time');
 
   for i := 0 to 1 do begin
-    Assert.IsTrue(started[i], 'started ' + IntToStr(i));
-    Assert.IsTrue(stopped[i], 'stopped ' + IntToStr(i));
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckTrue(stopped[i], 'stopped ' + IntToStr(i));
   end;
 end;
 
+{$ENDIF}
+
+initialization
+{$IFDEF Unicode}
+  RegisterTest(TestParallelFor.Suite);
+  RegisterTest(TestJoin.Suite);
 {$ENDIF}
 end.

@@ -2,85 +2,84 @@ unit TestOtlCommon1;
 
 interface
 
+{$I OtlOptions.inc}
+
 uses
-  DUnitX.TestFramework,
+  TestFramework,
   OtlCommon;
 
 type
-  [TestFixture]
-  TestOmniCounter = class
-  public
-    [Test] procedure TestInitialValue;
-    [Test] procedure TestIncrement;
-    [Test] procedure TestDecrement;
-    [Test] procedure TestTakeCount;
-    [Test] procedure TestTakeReturnsZeroWhenExhausted;
-    [Test] procedure TestTakeBooleanOverload;
-    [Test] procedure TestValueProperty;
+  TestOmniCounter = class(TTestCase)
+  published
+    procedure TestInitialValue;
+    procedure TestIncrement;
+    procedure TestDecrement;
+    procedure TestTakeCount;
+    procedure TestTakeReturnsZeroWhenExhausted;
+    procedure TestTakeBooleanOverload;
+    procedure TestValueProperty;
   end;
 
-  [TestFixture]
-  TestOmniWaitableValue = class
-  public
-    [Test] procedure TestCreateDefault;
-    [Test] procedure TestSignalWithValue;
-    [Test] procedure TestWaitForReturnsTrue;
-    [Test] procedure TestResetClears;
-    [Test] procedure TestSignalWithoutValue;
-    [Test] procedure TestWaitForTimeout;
+  TestOmniWaitableValue = class(TTestCase)
+  published
+    procedure TestCreateDefault;
+    procedure TestSignalWithValue;
+    procedure TestWaitForReturnsTrue;
+    procedure TestResetClears;
+    procedure TestSignalWithoutValue;
+    procedure TestWaitForTimeout;
   end;
 
-  [TestFixture]
-  TestOmniIntegerSet = class
+  TestOmniIntegerSet = class(TTestCase)
   private
     FChangeFired: boolean;
     procedure HandleChange(const intSet: IOmniIntegerSet);
-  public
-    [Test] procedure TestAddContainsRemove;
-    [Test] procedure TestCountAndIsEmpty;
-    [Test] procedure TestClear;
-    [Test] procedure TestAsMaskRoundTrip;
-    [Test] procedure TestAsArrayRoundTrip;
-    [Test] procedure TestOnChangeFires;
+  published
+    procedure TestAddContainsRemove;
+    procedure TestCountAndIsEmpty;
+    procedure TestClear;
+    procedure TestAsMaskRoundTrip;
+    {$IFDEF OTL_HasArrayOfT}
+    procedure TestAsArrayRoundTrip;
+    {$ENDIF}
+    procedure TestOnChangeFires;
   end;
 
-  [TestFixture]
-  TestOmniValueWrap = class
-  public
-    [Test] procedure TestWrapUnwrapRecord;
-    [Test] procedure TestFromRecordToRecord;
-    [Test] procedure TestFromArrayToArray;
-    [Test] procedure TestCastToInteger;
-    [Test] procedure TestCastToString;
-    [Test] procedure TestCastToBoolean;
-    [Test] procedure TestCastToInt64;
+{$IFDEF OTL_HasArrayOfT}
+  TestOmniValueWrap = class(TTestCase)
+  published
+    procedure TestWrapUnwrapRecord;
+    procedure TestFromRecordToRecord;
+    procedure TestFromArrayToArray;
+    procedure TestCastToInteger;
+    procedure TestCastToString;
+    procedure TestCastToBoolean;
+    procedure TestCastToInt64;
+  end;
+{$ENDIF}
+
+  TestOmniValueOwned = class(TTestCase)
+  published
+    procedure TestAsOwnedObject;
+    procedure TestOwnsObjectProperty;
+    procedure TestOwnedObjectFreedOnClear;
   end;
 
-  [TestFixture]
-  TestOmniValueOwned = class
-  public
-    [Test] procedure TestAsOwnedObject;
-    [Test] procedure TestOwnsObjectProperty;
-    [Test] procedure TestOwnedObjectFreedOnClear;
-  end;
-
-  [TestFixture]
-  TestOmniValueContainer = class
-  public
-    [Test] procedure TestCountAndAdd;
-    [Test] procedure TestAccessByIndex;
-    [Test] procedure TestAccessByName;
-    [Test] procedure TestExists;
-    [Test] procedure TestClear;
-    [Test] procedure TestLock;
+  TestOmniValueContainer = class(TTestCase)
+  published
+    procedure TestCountAndAdd;
+    procedure TestAccessByIndex;
+    procedure TestAccessByName;
+    procedure TestExists;
+    procedure TestClear;
+    procedure TestLock;
   end;
 
 implementation
 
 uses
-  System.SysUtils,
-  System.Classes,
-  System.Threading;
+  SysUtils,
+  Classes;
 
 type
   TTestRecord = record
@@ -91,106 +90,140 @@ type
 { TestOmniCounter }
 
 procedure TestOmniCounter.TestInitialValue;
+var
+  counter: IOmniCounter;
 begin
-  var counter := CreateCounter(10);
-  Assert.AreEqual<integer>(10, counter.Value);
+  counter := CreateCounter(10);
+  CheckEquals(10, counter.Value);
 end;
 
 procedure TestOmniCounter.TestIncrement;
+var
+  counter: IOmniCounter;
 begin
-  var counter := CreateCounter(0);
-  Assert.AreEqual<integer>(1, counter.Increment);
-  Assert.AreEqual<integer>(2, counter.Increment);
-  Assert.AreEqual<integer>(2, counter.Value);
+  counter := CreateCounter(0);
+  CheckEquals(1, counter.Increment);
+  CheckEquals(2, counter.Increment);
+  CheckEquals(2, counter.Value);
 end;
 
 procedure TestOmniCounter.TestDecrement;
+var
+  counter: IOmniCounter;
 begin
-  var counter := CreateCounter(5);
-  Assert.AreEqual<integer>(4, counter.Decrement);
-  Assert.AreEqual<integer>(3, counter.Decrement);
-  Assert.AreEqual<integer>(3, counter.Value);
+  counter := CreateCounter(5);
+  CheckEquals(4, counter.Decrement);
+  CheckEquals(3, counter.Decrement);
+  CheckEquals(3, counter.Value);
 end;
 
 procedure TestOmniCounter.TestTakeCount;
+var
+  counter: IOmniCounter;
+  taken  : integer;
 begin
-  var counter := CreateCounter(10);
-  var taken := counter.Take(3);
-  Assert.AreEqual<integer>(3, taken);
-  Assert.AreEqual<integer>(7, counter.Value);
+  counter := CreateCounter(10);
+  taken := counter.Take(3);
+  CheckEquals(3, taken);
+  CheckEquals(7, counter.Value);
 end;
 
 procedure TestOmniCounter.TestTakeReturnsZeroWhenExhausted;
+var
+  counter: IOmniCounter;
+  taken  : integer;
 begin
-  var counter := CreateCounter(2);
-  var taken := counter.Take(5);
-  Assert.AreEqual<integer>(2, taken);
-  Assert.AreEqual<integer>(0, counter.Value);
+  counter := CreateCounter(2);
+  taken := counter.Take(5);
+  CheckEquals(2, taken);
+  CheckEquals(0, counter.Value);
 end;
 
 procedure TestOmniCounter.TestTakeBooleanOverload;
+var
+  counter: IOmniCounter;
+  taken  : integer;
 begin
-  var counter := CreateCounter(3);
-  var taken: integer;
-  Assert.IsTrue(counter.Take(2, taken));
-  Assert.AreEqual<integer>(2, taken);
-  Assert.IsTrue(counter.Take(5, taken));
-  Assert.AreEqual<integer>(1, taken);
-  Assert.IsFalse(counter.Take(1, taken));
+  counter := CreateCounter(3);
+  CheckTrue(counter.Take(2, taken));
+  CheckEquals(2, taken);
+  CheckTrue(counter.Take(5, taken));
+  CheckEquals(1, taken);
+  CheckFalse(counter.Take(1, taken));
 end;
 
 procedure TestOmniCounter.TestValueProperty;
+var
+  counter: IOmniCounter;
 begin
-  var counter := CreateCounter(0);
+  counter := CreateCounter(0);
   counter.Value := 42;
-  Assert.AreEqual<integer>(42, counter.Value);
+  CheckEquals(42, counter.Value);
   counter.Value := 0;
-  Assert.AreEqual<integer>(0, counter.Value);
+  CheckEquals(0, counter.Value);
 end;
 
 { TestOmniWaitableValue }
 
 procedure TestOmniWaitableValue.TestCreateDefault;
+var
+  ov: TOmniValue;
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
-  Assert.IsTrue(wv.Value.IsEmpty);
+  wv := CreateWaitableValue;
+  ov := wv.Value;
+  CheckTrue(ov.IsEmpty);
 end;
 
 procedure TestOmniWaitableValue.TestSignalWithValue;
+var
+  ov: TOmniValue;
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
+  wv := CreateWaitableValue;
   wv.Signal(42);
-  Assert.AreEqual<integer>(42, wv.Value);
+  ov := wv.Value;
+  CheckEquals(42, ov.AsInteger);
 end;
 
 procedure TestOmniWaitableValue.TestWaitForReturnsTrue;
+var
+  ov: TOmniValue;
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
+  wv := CreateWaitableValue;
   wv.Signal(100);
-  Assert.IsTrue(wv.WaitFor(0));
-  Assert.AreEqual<integer>(100, wv.Value);
+  CheckTrue(wv.WaitFor(0));
+  ov := wv.Value;
+  CheckEquals(100, ov.AsInteger);
 end;
 
 procedure TestOmniWaitableValue.TestResetClears;
+var
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
+  wv := CreateWaitableValue;
   wv.Signal(42);
-  Assert.IsTrue(wv.WaitFor(0));
+  CheckTrue(wv.WaitFor(0));
   wv.Reset;
-  Assert.IsFalse(wv.WaitFor(0));
+  CheckFalse(wv.WaitFor(0));
 end;
 
 procedure TestOmniWaitableValue.TestSignalWithoutValue;
+var
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
+  wv := CreateWaitableValue;
   wv.Signal;
-  Assert.IsTrue(wv.WaitFor(0));
+  CheckTrue(wv.WaitFor(0));
 end;
 
 procedure TestOmniWaitableValue.TestWaitForTimeout;
+var
+  wv: IOmniWaitableValue;
 begin
-  var wv := CreateWaitableValue;
-  Assert.IsFalse(wv.WaitFor(10));
+  wv := CreateWaitableValue;
+  CheckFalse(wv.WaitFor(10));
 end;
 
 { TestOmniIntegerSet }
@@ -201,246 +234,313 @@ begin
 end;
 
 procedure TestOmniIntegerSet.TestAddContainsRemove;
+var
+  s: IOmniIntegerSet;
 begin
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
-  Assert.IsFalse(s.Add(5));
-  Assert.IsFalse(s.Add(10));
-  Assert.IsTrue(s.Add(5));
-  Assert.IsTrue(s.Contains(5));
-  Assert.IsTrue(s.Contains(10));
-  Assert.IsFalse(s.Contains(7));
-  Assert.IsTrue(s.Remove(5));
-  Assert.IsFalse(s.Contains(5));
-  Assert.IsFalse(s.Remove(5));
+  s := TOmniIntegerSet.Create;
+  CheckFalse(s.Add(5));
+  CheckFalse(s.Add(10));
+  CheckTrue(s.Add(5));
+  CheckTrue(s.Contains(5));
+  CheckTrue(s.Contains(10));
+  CheckFalse(s.Contains(7));
+  CheckTrue(s.Remove(5));
+  CheckFalse(s.Contains(5));
+  CheckFalse(s.Remove(5));
 end;
 
 procedure TestOmniIntegerSet.TestCountAndIsEmpty;
+var
+  s: IOmniIntegerSet;
 begin
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
-  Assert.IsTrue(s.IsEmpty);
-  Assert.AreEqual<integer>(0, s.Count);
+  s := TOmniIntegerSet.Create;
+  CheckTrue(s.IsEmpty);
+  CheckEquals(0, s.Count);
   s.Add(1);
   s.Add(2);
-  Assert.IsFalse(s.IsEmpty);
-  Assert.AreEqual<integer>(2, s.Count);
+  CheckFalse(s.IsEmpty);
+  CheckEquals(2, s.Count);
 end;
 
 procedure TestOmniIntegerSet.TestClear;
+var
+  s: IOmniIntegerSet;
 begin
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s := TOmniIntegerSet.Create;
   s.Add(1);
   s.Add(2);
   s.Add(3);
   s.Clear;
-  Assert.IsTrue(s.IsEmpty);
-  Assert.AreEqual<integer>(0, s.Count);
+  CheckTrue(s.IsEmpty);
+  CheckEquals(0, s.Count);
 end;
 
 procedure TestOmniIntegerSet.TestAsMaskRoundTrip;
+var
+  mask: uint64;
+  s   : IOmniIntegerSet;
+  s2  : IOmniIntegerSet;
 begin
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s := TOmniIntegerSet.Create;
   s.Add(0);
   s.Add(3);
   s.Add(5);
-  var mask := s.AsMask;
-  Assert.AreEqual<uint64>(41, mask);
+  mask := s.AsMask;
+  Check(uint64(41) = mask);
 
-  var s2: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s2 := TOmniIntegerSet.Create;
   s2.AsMask := mask;
-  Assert.IsTrue(s2.Contains(0));
-  Assert.IsTrue(s2.Contains(3));
-  Assert.IsTrue(s2.Contains(5));
-  Assert.IsFalse(s2.Contains(1));
+  CheckTrue(s2.Contains(0));
+  CheckTrue(s2.Contains(3));
+  CheckTrue(s2.Contains(5));
+  CheckFalse(s2.Contains(1));
 end;
 
+{$IFDEF OTL_HasArrayOfT}
 procedure TestOmniIntegerSet.TestAsArrayRoundTrip;
+var
+  arr: TArray<integer>;
+  s  : IOmniIntegerSet;
+  s2 : IOmniIntegerSet;
 begin
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s := TOmniIntegerSet.Create;
   s.Add(10);
   s.Add(20);
   s.Add(30);
-  var arr := s.AsArray;
-  Assert.AreEqual<integer>(3, Length(arr));
+  arr := s.AsArray;
+  CheckEquals(3, Length(arr));
 
-  var s2: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s2 := TOmniIntegerSet.Create;
   s2.AsArray := arr;
-  Assert.IsTrue(s2.Contains(10));
-  Assert.IsTrue(s2.Contains(20));
-  Assert.IsTrue(s2.Contains(30));
-  Assert.AreEqual<integer>(3, s2.Count);
+  CheckTrue(s2.Contains(10));
+  CheckTrue(s2.Contains(20));
+  CheckTrue(s2.Contains(30));
+  CheckEquals(3, s2.Count);
 end;
+{$ENDIF}
 
 procedure TestOmniIntegerSet.TestOnChangeFires;
+var
+  s: IOmniIntegerSet;
 begin
   FChangeFired := false;
-  var s: IOmniIntegerSet := TOmniIntegerSet.Create;
+  s := TOmniIntegerSet.Create;
   s.OnChange := HandleChange;
   s.Add(1);
-  Assert.IsTrue(FChangeFired);
+  CheckTrue(FChangeFired);
 end;
 
 { TestOmniValueWrap }
 
+{$IFDEF OTL_HasArrayOfT}
 procedure TestOmniValueWrap.TestWrapUnwrapRecord;
+var
+  rec : TTestRecord;
+  rec2: TTestRecord;
+  v   : TOmniValue;
 begin
-  var rec: TTestRecord;
   rec.X := 10;
   rec.Y := 20;
-  var v := TOmniValue.Wrap<TTestRecord>(rec);
-  var rec2 := v.Unwrap<TTestRecord>;
-  Assert.AreEqual<integer>(10, rec2.X);
-  Assert.AreEqual<integer>(20, rec2.Y);
+  v := TOmniValue.Wrap<TTestRecord>(rec);
+  rec2 := v.Unwrap<TTestRecord>;
+  CheckEquals(10, rec2.X);
+  CheckEquals(20, rec2.Y);
 end;
 
 procedure TestOmniValueWrap.TestFromRecordToRecord;
+var
+  rec : TTestRecord;
+  rec2: TTestRecord;
+  v   : TOmniValue;
 begin
-  var rec: TTestRecord;
   rec.X := 42;
   rec.Y := 99;
-  var v := TOmniValue.FromRecord<TTestRecord>(rec);
-  Assert.IsTrue(v.IsRecord);
-  var rec2 := v.ToRecord<TTestRecord>;
-  Assert.AreEqual<integer>(42, rec2.X);
-  Assert.AreEqual<integer>(99, rec2.Y);
+  v := TOmniValue.FromRecord<TTestRecord>(rec);
+  CheckTrue(v.IsRecord);
+  rec2 := v.ToRecord<TTestRecord>;
+  CheckEquals(42, rec2.X);
+  CheckEquals(99, rec2.Y);
 end;
 
 procedure TestOmniValueWrap.TestFromArrayToArray;
+var
+  arr : TArray<integer>;
+  arr2: TArray<integer>;
+  v   : TOmniValue;
 begin
-  var arr: TArray<integer>;
-  arr := [1, 2, 3, 4, 5];
-  var v := TOmniValue.FromArray<integer>(arr);
-  Assert.IsTrue(v.IsArray);
-  var arr2 := v.ToArray<integer>;
-  Assert.AreEqual<integer>(5, Length(arr2));
-  Assert.AreEqual<integer>(1, arr2[0]);
-  Assert.AreEqual<integer>(5, arr2[4]);
+  arr := TArray<integer>.Create(1, 2, 3, 4, 5);
+  v := TOmniValue.FromArray<integer>(arr);
+  CheckTrue(v.IsArray);
+  arr2 := v.ToArray<integer>;
+  CheckEquals(5, Length(arr2));
+  CheckEquals(1, arr2[0]);
+  CheckEquals(5, arr2[4]);
 end;
 
 procedure TestOmniValueWrap.TestCastToInteger;
+var
+  v: TOmniValue;
 begin
-  var v: TOmniValue := 42;
-  Assert.AreEqual<integer>(42, v.CastTo<integer>);
+  v := 42;
+  CheckEquals(42, v.CastTo<integer>);
 end;
 
 procedure TestOmniValueWrap.TestCastToString;
+var
+  v: TOmniValue;
 begin
-  var v: TOmniValue := 'hello';
-  Assert.AreEqual<string>('hello', v.CastTo<string>);
+  v := 'hello';
+  CheckEquals('hello', v.CastTo<string>);
 end;
 
 procedure TestOmniValueWrap.TestCastToBoolean;
+var
+  v: TOmniValue;
 begin
-  var v: TOmniValue := true;
-  Assert.AreEqual<boolean>(true, v.CastTo<boolean>);
+  v := true;
+  CheckEquals(true, v.CastTo<boolean>);
 end;
 
 procedure TestOmniValueWrap.TestCastToInt64;
+var
+  v: TOmniValue;
 begin
-  var v: TOmniValue := int64(123456789012345);
-  Assert.AreEqual<int64>(123456789012345, v.CastTo<int64>);
+  v := int64(123456789012345);
+  CheckEquals(int64(123456789012345), v.CastTo<int64>);
 end;
+{$ENDIF}
 
 { TestOmniValueOwned }
 
 procedure TestOmniValueOwned.TestAsOwnedObject;
+var
+  obj: TStringList;
+  v  : TOmniValue;
 begin
-  var obj := TStringList.Create;
-  var v: TOmniValue;
+  obj := TStringList.Create;
   v.AsOwnedObject := obj;
-  Assert.IsTrue(v.IsOwnedObject);
-  Assert.IsFalse(v.IsObject);
-  Assert.AreSame(obj, v.AsObject);
+  CheckTrue(v.IsOwnedObject);
+  CheckFalse(v.IsObject);
+  CheckSame(obj, v.AsObject);
 end;
 
 procedure TestOmniValueOwned.TestOwnsObjectProperty;
+var
+  obj: TStringList;
+  v  : TOmniValue;
 begin
-  var obj := TStringList.Create;
-  var v: TOmniValue;
+  obj := TStringList.Create;
   v.AsObject := obj;
-  Assert.IsFalse(v.IsOwnedObject);
+  CheckFalse(v.IsOwnedObject);
   v.OwnsObject := true;
-  Assert.IsTrue(v.IsOwnedObject);
+  CheckTrue(v.IsOwnedObject);
   v.Clear;
 end;
 
 procedure TestOmniValueOwned.TestOwnedObjectFreedOnClear;
+var
+  sl: TStringList;
+  v : TOmniValue;
 begin
-  var sl := TStringList.Create;
-  var v: TOmniValue;
+  sl := TStringList.Create;
   v.AsOwnedObject := sl;
-  Assert.IsTrue(v.IsOwnedObject);
+  CheckTrue(v.IsOwnedObject);
   v.Clear;
-  Assert.IsTrue(v.IsEmpty);
+  CheckTrue(v.IsEmpty);
 end;
 
 { TestOmniValueContainer }
 
 procedure TestOmniValueContainer.TestCountAndAdd;
+var
+  c: TOmniValueContainer;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
-    Assert.AreEqual<integer>(0, c.Count);
+    CheckEquals(0, c.Count);
     c.Add(1);
     c.Add(2);
     c.Add(3);
-    Assert.AreEqual<integer>(3, c.Count);
+    CheckEquals(3, c.Count);
   finally c.Free; end;
 end;
 
 procedure TestOmniValueContainer.TestAccessByIndex;
+var
+  c : TOmniValueContainer;
+  ov: TOmniValue;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
     c.Add(10);
     c.Add(20);
     c.Add(30);
-    Assert.AreEqual<integer>(10, c[0].AsInteger);
-    Assert.AreEqual<integer>(20, c[1].AsInteger);
-    Assert.AreEqual<integer>(30, c[2].AsInteger);
+    ov := c[0]; CheckEquals(10, ov.AsInteger);
+    ov := c[1]; CheckEquals(20, ov.AsInteger);
+    ov := c[2]; CheckEquals(30, ov.AsInteger);
   finally c.Free; end;
 end;
 
 procedure TestOmniValueContainer.TestAccessByName;
+var
+  c : TOmniValueContainer;
+  ov: TOmniValue;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
     c.Add(42, 'answer');
     c.Add('hello', 'greeting');
-    Assert.AreEqual<integer>(42, c.ByName('answer').AsInteger);
-    Assert.AreEqual<string>('hello', c.ByName('greeting').AsString);
+    ov := c.ByName('answer');   CheckEquals(42, ov.AsInteger);
+    ov := c.ByName('greeting'); CheckEquals('hello', ov.AsString);
   finally c.Free; end;
 end;
 
 procedure TestOmniValueContainer.TestExists;
+var
+  c: TOmniValueContainer;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
     c.Add(1, 'first');
-    Assert.IsTrue(c.Exists('first'));
-    Assert.IsFalse(c.Exists('second'));
+    CheckTrue(c.Exists('first'));
+    CheckFalse(c.Exists('second'));
   finally c.Free; end;
 end;
 
 procedure TestOmniValueContainer.TestClear;
+var
+  c : TOmniValueContainer;
+  ov: TOmniValue;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
     c.Assign([1, 2, 3]);
-    Assert.AreEqual<integer>(3, c.Count);
+    CheckEquals(3, c.Count);
     c.Assign([10]);
-    Assert.AreEqual<integer>(1, c.Count);
-    Assert.AreEqual<integer>(10, c[0].AsInteger);
+    CheckEquals(1, c.Count);
+    ov := c[0]; CheckEquals(10, ov.AsInteger);
   finally c.Free; end;
 end;
 
 procedure TestOmniValueContainer.TestLock;
+var
+  c: TOmniValueContainer;
 begin
-  var c := TOmniValueContainer.Create;
+  c := TOmniValueContainer.Create;
   try
-    Assert.IsFalse(c.IsLocked);
+    CheckFalse(c.IsLocked);
     c.Lock;
-    Assert.IsTrue(c.IsLocked);
+    CheckTrue(c.IsLocked);
   finally c.Free; end;
 end;
 
+initialization
+  RegisterTest(TestOmniCounter.Suite);
+  RegisterTest(TestOmniWaitableValue.Suite);
+  RegisterTest(TestOmniIntegerSet.Suite);
+  {$IFDEF OTL_HasArrayOfT}
+  RegisterTest(TestOmniValueWrap.Suite);
+  {$ENDIF}
+  RegisterTest(TestOmniValueOwned.Suite);
+  RegisterTest(TestOmniValueContainer.Suite);
 end.

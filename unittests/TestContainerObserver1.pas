@@ -3,97 +3,107 @@ unit TestContainerObserver1;
 interface
 
 uses
-  DUnitX.TestFramework,
-  OtlContainerObserver, OtlSync;
+  TestFramework,
+  OtlContainerObserver, OtlSync, OtlCommon;
 
 type
-  [TestFixture]
-  TestContainerSubject = class
+  TestContainerSubject = class(TTestCase)
   public
-    [Test] procedure TestAttachAndNotify;
-    [Test] procedure TestDetachStopsNotification;
-    [Test][Ignore('NotifyOnce deactivation behavior differs from NG')]
+    // TestNotifyOnceFiresOnce is not published (ignored: NotifyOnce deactivation behavior differs from NG)
     procedure TestNotifyOnceFiresOnce;
-    [Test] procedure TestRearmAfterNotifyOnce;
+  published
+    procedure TestAttachAndNotify;
+    procedure TestDetachStopsNotification;
+    procedure TestRearmAfterNotifyOnce;
   end;
 
-  [TestFixture]
-  TestContainerEventObserver = class
-  public
-    [Test] procedure TestCreateAndGetEvent;
-    [Test] procedure TestNotifySignalsEvent;
-    [Test] procedure TestDeactivatePreventsNotify;
+  TestContainerEventObserver = class(TTestCase)
+  published
+    procedure TestCreateAndGetEvent;
+    procedure TestNotifySignalsEvent;
+    procedure TestDeactivatePreventsNotify;
   end;
 
-  [TestFixture]
-  TestObserverInterests = class
-  public
-    [Test] procedure TestInsertVsRemoveInterest;
+  TestObserverInterests = class(TTestCase)
+  published
+    procedure TestInsertVsRemoveInterest;
   end;
 
 implementation
 
 uses
-  System.SysUtils, System.SyncObjs;
+  SysUtils, SyncObjs;
 
 { TestContainerSubject }
 
 procedure TestContainerSubject.TestAttachAndNotify;
+var
+  subject : TOmniContainerSubject;
+  observer: TOmniContainerEventObserver;
 begin
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var observer := CreateContainerEventObserver;
+    observer := CreateContainerEventObserver;
     try
       subject.Attach(observer, coiNotifyOnAllInserts);
       subject.Notify(coiNotifyOnAllInserts);
       // Observer's event should be signaled
-      Assert.IsTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
     finally observer.Free; end;
   finally subject.Free; end;
 end;
 
 procedure TestContainerSubject.TestDetachStopsNotification;
+var
+  subject : TOmniContainerSubject;
+  observer: TOmniContainerEventObserver;
 begin
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var observer := CreateContainerEventObserver;
+    observer := CreateContainerEventObserver;
     try
       subject.Attach(observer, coiNotifyOnAllInserts);
       subject.Detach(observer, coiNotifyOnAllInserts);
       subject.Notify(coiNotifyOnAllInserts);
       // Observer's event should NOT be signaled after detach
-      Assert.IsFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
     finally observer.Free; end;
   finally subject.Free; end;
 end;
 
 procedure TestContainerSubject.TestNotifyOnceFiresOnce;
+var
+  subject : TOmniContainerSubject;
+  observer: TOmniContainerEventObserver;
 begin
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var observer := CreateContainerEventObserver;
+    observer := CreateContainerEventObserver;
     try
       subject.Attach(observer, coiNotifyOnAllInserts);
 
       // First NotifyOnce should fire (observer starts active) then deactivate it
       subject.NotifyOnce(coiNotifyOnAllInserts);
-      Assert.IsTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
 
       // Reset the event manually (observer event is manual-reset in current OTL)
       observer.GetEvent.Reset;
 
       // Second NotifyOnce should NOT fire (observer was deactivated by NotifyOnce)
       subject.NotifyOnce(coiNotifyOnAllInserts);
-      Assert.IsFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
     finally observer.Free; end;
   finally subject.Free; end;
 end;
 
 procedure TestContainerSubject.TestRearmAfterNotifyOnce;
+var
+  subject : TOmniContainerSubject;
+  observer: TOmniContainerEventObserver;
 begin
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var observer := CreateContainerEventObserver;
+    observer := CreateContainerEventObserver;
     try
       subject.Attach(observer, coiNotifyOnAllInserts);
 
@@ -108,7 +118,7 @@ begin
 
       // Now NotifyOnce should fire again
       subject.NotifyOnce(coiNotifyOnAllInserts);
-      Assert.IsTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
     finally observer.Free; end;
   finally subject.Free; end;
 end;
@@ -116,39 +126,47 @@ end;
 { TestContainerEventObserver }
 
 procedure TestContainerEventObserver.TestCreateAndGetEvent;
+var
+  observer: TOmniContainerEventObserver;
+  evt     : IOmniEvent;
 begin
-  var observer := CreateContainerEventObserver;
+  observer := CreateContainerEventObserver;
   try
-    Assert.IsNotNull(observer);
-    var evt := observer.GetEvent;
-    Assert.IsNotNull(evt);
+    CheckNotNull(observer);
+    evt := observer.GetEvent;
+    Check(evt <> nil);
   finally observer.Free; end;
 end;
 
 procedure TestContainerEventObserver.TestNotifySignalsEvent;
+var
+  observer: TOmniContainerEventObserver;
 begin
-  var observer := CreateContainerEventObserver;
+  observer := CreateContainerEventObserver;
   try
     // Event should not be signaled initially
-    Assert.IsFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
+    CheckFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
 
     observer.Notify;
-    Assert.IsTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
+    CheckTrue(observer.GetEvent.WaitFor(0) = wrSignaled);
   finally observer.Free; end;
 end;
 
 procedure TestContainerEventObserver.TestDeactivatePreventsNotify;
+var
+  subject : TOmniContainerSubject;
+  observer: TOmniContainerEventObserver;
 begin
   // Deactivate prevents NotifyOnce from firing (not direct Notify)
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var observer := CreateContainerEventObserver;
+    observer := CreateContainerEventObserver;
     try
       subject.Attach(observer, coiNotifyOnPartlyEmpty);
       // Explicitly deactivate - observer starts active from Create
       observer.Deactivate;
       subject.NotifyOnce(coiNotifyOnPartlyEmpty);
-      Assert.IsFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
+      CheckFalse(observer.GetEvent.WaitFor(0) = wrSignaled);
     finally observer.Free; end;
   finally subject.Free; end;
 end;
@@ -156,30 +174,38 @@ end;
 { TestObserverInterests }
 
 procedure TestObserverInterests.TestInsertVsRemoveInterest;
+var
+  subject       : TOmniContainerSubject;
+  insertObserver: TOmniContainerEventObserver;
+  removeObserver: TOmniContainerEventObserver;
 begin
-  var subject := TOmniContainerSubject.Create;
+  subject := TOmniContainerSubject.Create;
   try
-    var insertObserver := CreateContainerEventObserver;
+    insertObserver := CreateContainerEventObserver;
     try
-      var removeObserver := CreateContainerEventObserver;
+      removeObserver := CreateContainerEventObserver;
       try
         subject.Attach(insertObserver, coiNotifyOnAllInserts);
         subject.Attach(removeObserver, coiNotifyOnAllRemoves);
 
         // Notify inserts only
         subject.Notify(coiNotifyOnAllInserts);
-        Assert.IsTrue(insertObserver.GetEvent.WaitFor(0) = wrSignaled);
-        Assert.IsFalse(removeObserver.GetEvent.WaitFor(0) = wrSignaled);
+        CheckTrue(insertObserver.GetEvent.WaitFor(0) = wrSignaled);
+        CheckFalse(removeObserver.GetEvent.WaitFor(0) = wrSignaled);
 
         insertObserver.GetEvent.Reset;
 
         // Notify removes only
         subject.Notify(coiNotifyOnAllRemoves);
-        Assert.IsFalse(insertObserver.GetEvent.WaitFor(0) = wrSignaled);
-        Assert.IsTrue(removeObserver.GetEvent.WaitFor(0) = wrSignaled);
+        CheckFalse(insertObserver.GetEvent.WaitFor(0) = wrSignaled);
+        CheckTrue(removeObserver.GetEvent.WaitFor(0) = wrSignaled);
       finally removeObserver.Free; end;
     finally insertObserver.Free; end;
   finally subject.Free; end;
 end;
 
+initialization
+  RegisterTest(TestContainerSubject.Suite);
+  RegisterTest(TestContainerEventObserver.Suite);
+  RegisterTest(TestObserverInterests.Suite);
 end.

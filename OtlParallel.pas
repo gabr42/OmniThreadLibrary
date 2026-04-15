@@ -599,7 +599,7 @@ type
   strict private
     FCancellable  : boolean;
     FCancelled    : boolean;
-    FCompleted    : integer; // 0=not completed, 1=completed; integer for TInterlocked
+    FCompleted    : integer; // 0=not completed, 1=completed; integer for Interlocked*
     FTaskException: Exception;
     FResult       : T;
     FTask         : IOmniTaskControl;
@@ -3877,7 +3877,7 @@ begin
       try
         FResult := action();
       finally // action may raise exception
-        TInterlocked.Exchange(FCompleted, 1);
+        InterlockedExchange(FCompleted, 1);
       end;
     end,
     taskConfig);
@@ -3894,7 +3894,7 @@ begin
       try
         FResult := action(task);
       finally // action may raise exception
-        TInterlocked.Exchange(FCompleted, 1);
+        InterlockedExchange(FCompleted, 1);
       end;
     end,
     taskConfig);
@@ -3966,7 +3966,7 @@ end; { TOmniFuture<T>.IsCancelled }
 
 function TOmniFuture<T>.IsDone: boolean;
 begin
-  Result := TInterlocked.CompareExchange(FCompleted, 0, 0) <> 0;
+  Result := InterlockedCompareExchange(FCompleted, 0, 0) <> 0;
 end; { TOmniFuture<T>.IsDone }
 
 function TOmniFuture<T>.TryValue(timeout_ms: cardinal; var value: T): boolean;

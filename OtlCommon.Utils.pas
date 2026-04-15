@@ -83,11 +83,13 @@ uses
 {$ENDIF ~OTL_HasNameThreadForDebugging}
 
 {$IFDEF MSWINDOWS}
+{$IFDEF OTL_HasNameThreadForDebugging}
 type
   TSetThreadDescription = function(hThread: THandle; threadDescription: PWideChar): HRESULT; stdcall;
 
 var
   GSetThreadDescription: TSetThreadDescription;
+{$ENDIF OTL_HasNameThreadForDebugging}
 {$ENDIF MSWINDOWS}
 
 threadvar
@@ -146,9 +148,6 @@ begin
     except {ignore} end;
     LastThreadName := ansiName;
   end;
-
-  if assigned(GSetThreadDescription) then
-    GSetThreadDescription(TThread.Current.Handle, PChar(name));
 end; { SetThreadName }
 
 {$WARN SYMBOL_PLATFORM ON}
@@ -163,7 +162,9 @@ end; { SetThreadName }
 {$ENDIF ~OTL_DontSetThreadName}
 
 {$IFDEF MSWINDOWS}
+{$IFDEF OTL_HasNameThreadForDebugging}
 initialization
   GSetThreadDescription := GetProcAddress(GetModuleHandle('kernel32.dll'), 'SetThreadDescription');
+{$ENDIF OTL_HasNameThreadForDebugging}
 {$ENDIF MSWINDOWS}
 end.

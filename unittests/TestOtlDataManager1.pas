@@ -4,10 +4,10 @@ interface
 
 {$IFDEF Unicode}
 uses
-  DUnitX.TestFramework, OtlCommon, OtlDataManager, OtlCollections, GpStuff;
+  TestFramework, OtlCommon, OtlDataManager, OtlCollections, OtlContainers, GpStuff;
 
 type
-  TestTOmniDataManager = class
+  TestTOmniDataManager = class(TTestCase)
   public
     FOmniDataPackage   : TOmniDataPackage;
     FOmniSourceProvider: TOmniSourceProvider;
@@ -29,19 +29,14 @@ type
     procedure Initialize(low, high, step: integer); override;
   end;
 
-  [TestFixture]
   TestIntegerDataPackage = class(TestIntegerProvider)
-  public
-    [Test]
+  published
     procedure TestCreation;
   end;
 
-  [TestFixture]
   TestIntegerSourceProvider = class(TestIntegerProvider)
-  public
-    [Test]
+  published
     procedure TestLoops;
-    [Test]
     procedure TestSplit;
   end;
 
@@ -54,19 +49,14 @@ type
     procedure Initialize(low, high, step: integer); override;
   end;
 
-  [TestFixture]
   TestOmniValueDataPackage = class(TestOmniValueProvider)
-  public
-    [Test]
+  published
     procedure TestCreation;
   end;
 
-  [TestFixture]
   TestOmniValueSourceProvider = class(TestOmniValueProvider)
-  public
-    [Test]
+  published
     procedure TestLoops;
-    [Test]
     procedure TestSplit;
   end;
 {$ENDIF}
@@ -76,7 +66,8 @@ implementation
 {$IFDEF Unicode}
 uses
   Windows,
-  SysUtils;
+  SysUtils,
+  DSiWin32;
 
 function TestTOmniDataManager.GetNext(pkg: TOmniDataPackage; cnt: integer): string;
 var
@@ -102,20 +93,20 @@ var
 begin
   Initialize(low, high, step);
   try
-    Assert.IsTrue(FOmniSourceProvider.GetPackage($FFFF, FOmniDataPackage));
+    CheckTrue(FOmniSourceProvider.GetPackage($FFFF, FOmniDataPackage));
     if fetch1 > 0 then
-      Assert.AreEqual(result1, GetNext(FOmniDataPackage, fetch1));
+      CheckEquals(result1, GetNext(FOmniDataPackage, fetch1));
     pkg2 := FOmniSourceProvider.CreateDataPackage;
     try
-      Assert.IsTrue(assigned(pkg2));
+      Check(assigned(pkg2));
       if splitOK then begin
-        Assert.IsTrue(FOmniDataPackage.Split(pkg2));
-        Assert.AreEqual(result2, GetNext(pkg2, fetch2));
+        CheckTrue(FOmniDataPackage.Split(pkg2));
+        CheckEquals(result2, GetNext(pkg2, fetch2));
       end
       else
-        Assert.IsFalse(FOmniDataPackage.Split(pkg2));
+        CheckFalse(FOmniDataPackage.Split(pkg2));
     finally pkg2.Free; end;
-    Assert.AreEqual(result3, GetNext(FOmniDataPackage, fetch3));
+    CheckEquals(result3, GetNext(FOmniDataPackage, fetch3));
   finally Cleanup; end;
 end;
 
@@ -130,24 +121,24 @@ begin
     Initialize(low, high, step);
     CheckCapabilities(FOmniSourceProvider.GetCapabilities);
     if spcCountable in FOmniSourceProvider.GetCapabilities then
-      Assert.AreEqual(count, integer(FOmniSourceProvider.Count));
+      CheckEquals(count, integer(FOmniSourceProvider.Count));
     expVal := low;
     while FOmniSourceProvider.GetPackage(dataCount, FOmniDataPackage) do begin
       numPkg := 0;
       while FOmniDataPackage.GetNext(value) do begin
         Inc(numPkg);
-        Assert.AreEqual(expVal, value.AsInteger);
+        CheckEquals(expVal, value.AsInteger);
         expVal := expVal + step;
       end;
       if ((step > 0) and (expVal <= high)) or
          ((step < 0) and (expVal >= high))
       then
-        Assert.AreEqual(numPkg, dataCount);
+        CheckEquals(numPkg, dataCount);
     end;
     if step > 0 then
-      Assert.IsTrue(expVal > high)
+      CheckTrue(expVal > high)
     else
-      Assert.IsTrue(expVal < high);
+      CheckTrue(expVal < high);
     Cleanup;
   end;
 end;
@@ -164,7 +155,7 @@ end;
 
 procedure TestIntegerProvider.CheckCapabilities(cap: TOmniSourceProviderCapabilities);
 begin
-  Assert.IsTrue(cap = [spcCountable, spcFast]);
+  CheckTrue(cap = [spcCountable, spcFast]);
 end;
 
 procedure TestIntegerProvider.Cleanup;
@@ -186,7 +177,7 @@ var
   value: TOmniValue;
 begin
   Initialize(1, 3, 1);
-  Assert.IsFalse(FOmniDataPackage.GetNext(value));
+  CheckFalse(FOmniDataPackage.GetNext(value));
   Cleanup;
 end;
 
@@ -206,7 +197,7 @@ end;
 
 procedure TestOmniValueProvider.CheckCapabilities(cap: TOmniSourceProviderCapabilities);
 begin
-  Assert.IsTrue(cap = [spcDataLimit]);
+  CheckTrue(cap = [spcDataLimit]);
 end;
 
 procedure TestOmniValueProvider.Cleanup;
@@ -236,7 +227,7 @@ var
   value: TOmniValue;
 begin
   Initialize(1, 3, 1);
-  Assert.IsFalse(FOmniDataPackage.GetNext(value));
+  CheckFalse(FOmniDataPackage.GetNext(value));
   Cleanup;
 end;
 
@@ -254,5 +245,13 @@ begin
   Split(1, 10, 2, 1, '1',     true,  2, '3/5', 3, '7/9/-');
 end;
 
+{$ENDIF}
+
+initialization
+{$IFDEF Unicode}
+  RegisterTest(TestIntegerDataPackage.Suite);
+  RegisterTest(TestIntegerSourceProvider.Suite);
+  RegisterTest(TestOmniValueDataPackage.Suite);
+  RegisterTest(TestOmniValueSourceProvider.Suite);
 {$ENDIF}
 end.

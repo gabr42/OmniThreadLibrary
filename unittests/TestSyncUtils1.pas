@@ -2,69 +2,86 @@ unit TestSyncUtils1;
 
 interface
 
+{$I OtlOptions.inc}
+
 uses
-  DUnitX.TestFramework;
+  TestFramework;
 
 type
-  [TestFixture]
-  TestOmniSynchronizer = class
-  public
-    [Test] procedure TestSignalAndWaitFor;
-    [Test] procedure TestWaitForTimeout;
-    [Test] procedure TestCount;
-    [Test] procedure TestReset;
-    [Test] procedure TestCrossThreadSignal;
+  TestOmniSynchronizer = class(TTestCase)
+  published
+    procedure TestSignalAndWaitFor;
+    procedure TestWaitForTimeout;
+    procedure TestCount;
+    procedure TestReset;
+    {$IFDEF OTL_MobileSupport}
+    procedure TestCrossThreadSignal;
+    {$ENDIF}
   end;
 
 implementation
 
 uses
-  System.SysUtils,
-  System.Threading,
+  SysUtils,
+  {$IFDEF OTL_MobileSupport}
+  Threading,
+  {$ENDIF}
+  Classes,
   OtlSync.Utils;
 
 { TestOmniSynchronizer }
 
 procedure TestOmniSynchronizer.TestSignalAndWaitFor;
+var
+  sync: IOmniSynchronizer;
 begin
-  var sync: IOmniSynchronizer := TOmniSynchronizer.Create;
+  sync := TOmniSynchronizer.Create;
   sync.Signal('ready');
-  Assert.IsTrue(sync.WaitFor('ready', 0));
+  CheckTrue(sync.WaitFor('ready', 0));
 end;
 
 procedure TestOmniSynchronizer.TestWaitForTimeout;
+var
+  sync: IOmniSynchronizer;
 begin
-  var sync: IOmniSynchronizer := TOmniSynchronizer.Create;
-  Assert.IsFalse(sync.WaitFor('never', 10));
+  sync := TOmniSynchronizer.Create;
+  CheckFalse(sync.WaitFor('never', 10));
 end;
 
 procedure TestOmniSynchronizer.TestCount;
+var
+  sync: IOmniSynchronizer;
 begin
-  var sync: IOmniSynchronizer := TOmniSynchronizer.Create;
-  Assert.AreEqual<integer>(0, sync.Count);
+  sync := TOmniSynchronizer.Create;
+  CheckEquals(0, sync.Count);
   sync.Signal('a');
-  Assert.AreEqual<integer>(1, sync.Count);
+  CheckEquals(1, sync.Count);
   sync.Signal('b');
-  Assert.AreEqual<integer>(2, sync.Count);
+  CheckEquals(2, sync.Count);
   // Signaling same name again doesn't increase count
   sync.Signal('a');
-  Assert.AreEqual<integer>(2, sync.Count);
+  CheckEquals(2, sync.Count);
 end;
 
 procedure TestOmniSynchronizer.TestReset;
+var
+  sync: TOmniSynchronizer;
 begin
-  var sync := TOmniSynchronizer.Create;
+  sync := TOmniSynchronizer.Create;
   try
     sync.Signal('flag');
-    Assert.IsTrue(sync.WaitFor('flag', 0));
+    CheckTrue(sync.WaitFor('flag', 0));
     sync.Reset('flag');
-    Assert.IsFalse(sync.WaitFor('flag', 0));
+    CheckFalse(sync.WaitFor('flag', 0));
   finally sync.Free; end;
 end;
 
+{$IFDEF OTL_MobileSupport}
 procedure TestOmniSynchronizer.TestCrossThreadSignal;
+var
+  sync: IOmniSynchronizer;
 begin
-  var sync: IOmniSynchronizer := TOmniSynchronizer.Create;
+  sync := TOmniSynchronizer.Create;
 
   System.Threading.TTask.Run(
     procedure
@@ -73,7 +90,10 @@ begin
       sync.Signal('done');
     end);
 
-  Assert.IsTrue(sync.WaitFor('done', 5000));
+  CheckTrue(sync.WaitFor('done', 5000));
 end;
+{$ENDIF}
 
+initialization
+  RegisterTest(TestOmniSynchronizer.Suite);
 end.

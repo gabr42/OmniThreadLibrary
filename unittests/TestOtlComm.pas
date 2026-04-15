@@ -3,46 +3,36 @@ unit TestOtlComm;
 interface
 
 uses
-  DUnitX.TestFramework;
+  TestFramework;
 
 type
-  [TestFixture]
-  TestOmniMessageQueue = class
-  public
-    [Test]
+  TestOmniMessageQueue = class(TTestCase)
+  published
     procedure TestBasics;
   end;
 
-  [TestFixture]
-  TestOmniMessageQueueSize1 = class
-  public
-    [Test]
+  TestOmniMessageQueueSize1 = class(TTestCase)
+  published
     procedure TestSize1Queue;
   end;
 
-  [TestFixture]
-  TestIOmniTwoWayChannel = class
-  public
-    [Test]
+  TestIOmniTwoWayChannel = class(TTestCase)
+  published
     procedure TestSendReceive;
-    [Test]
     procedure TestOtherEndpoint;
-    [Test]
     procedure TestFIFOOrder;
   end;
 
-  [TestFixture]
-  TestIOmniMessageQueueTee = class
-  public
-    [Test]
+  TestIOmniMessageQueueTee = class(TTestCase)
+  published
     procedure TestBasicTee;
   end;
 
 implementation
 
 uses
-  Winapi.Windows,
-  System.SysUtils, System.Classes,
+  Windows,
+  SysUtils, Classes,
   OtlSync,
   OtlCommon, OtlComm;
 
@@ -57,33 +47,33 @@ var
   var
     msg: TOmniMessage;
   begin
-    Assert.AreEqual<boolean>(success, mq.TryDequeue(msg), '#' + msgData + '.TryDequeue');
+    CheckEquals(success, mq.TryDequeue(msg), '#' + msgData + '.TryDequeue');
     if success then begin
-      Assert.AreEqual<integer>(msgId, msg.MsgID, '#' + msgData + '.MsgID');
-      Assert.AreEqual<string>(msgData, msg.MsgData.AsString, '#' + msgData + '.MsgData');
+      CheckEquals(msgId, integer(msg.MsgID), '#' + msgData + '.MsgID');
+      CheckEquals(msgData, msg.MsgData.AsString, '#' + msgData + '.MsgData');
     end;
   end;
 
 begin
   mq := TOmniMessageQueue.Create(3);
   try
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(11, '11')));
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(12, '12')));
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(13, '13')));
-    Assert.IsFalse(mq.Enqueue(TOmniMessage.Create(14, '14')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(11, '11')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(12, '12')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(13, '13')));
+    CheckFalse(mq.Enqueue(TOmniMessage.Create(14, '14')));
     mq.Empty;
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(1, '1')));
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(2, '2')));
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(3, '3')));
-    Assert.IsFalse(mq.Enqueue(TOmniMessage.Create(4, '4')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(1, '1')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(2, '2')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(3, '3')));
+    CheckFalse(mq.Enqueue(TOmniMessage.Create(4, '4')));
     CheckDequeue(1, '1', true);
     CheckDequeue(2, '2', true);
     CheckDequeue(3, '3', true);
     CheckDequeue(4, '4', false);
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(9, '9')));
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(9, '9')));
     msg := mq.Dequeue;
-    Assert.AreEqual<integer>(9, msg.MsgID, 'MsgID');
-    Assert.AreEqual<string>('9', msg.MsgData.AsString, 'MsgData');
+    CheckEquals(9, integer(msg.MsgID), 'MsgID');
+    CheckEquals('9', msg.MsgData.AsString, 'MsgData');
   finally FreeAndNil(mq); end;
 end;
 
@@ -91,26 +81,27 @@ end;
 
 procedure TestOmniMessageQueueSize1.TestSize1Queue;
 var
+  mq : TOmniMessageQueue;
   msg: TOmniMessage;
 begin
-  var mq := TOmniMessageQueue.Create(1);
+  mq := TOmniMessageQueue.Create(1);
   try
     // Empty dequeue fails
-    Assert.IsFalse(mq.TryDequeue(msg), 'Empty dequeue');
+    CheckFalse(mq.TryDequeue(msg), 'Empty dequeue');
 
     // Enqueue 1 succeeds
-    Assert.IsTrue(mq.Enqueue(TOmniMessage.Create(1, 'first')), 'Enqueue.1');
+    CheckTrue(mq.Enqueue(TOmniMessage.Create(1, 'first')), 'Enqueue.1');
 
     // Second enqueue fails (full)
-    Assert.IsFalse(mq.Enqueue(TOmniMessage.Create(2, 'second')), 'Enqueue.2');
+    CheckFalse(mq.Enqueue(TOmniMessage.Create(2, 'second')), 'Enqueue.2');
 
     // Dequeue succeeds
-    Assert.IsTrue(mq.TryDequeue(msg), 'Dequeue.1');
-    Assert.AreEqual<integer>(1, msg.MsgID);
-    Assert.AreEqual<string>('first', msg.MsgData.AsString);
+    CheckTrue(mq.TryDequeue(msg), 'Dequeue.1');
+    CheckEquals(1, integer(msg.MsgID));
+    CheckEquals('first', msg.MsgData.AsString);
 
     // Empty again
-    Assert.IsFalse(mq.TryDequeue(msg), 'Dequeue.2');
+    CheckFalse(mq.TryDequeue(msg), 'Dequeue.2');
   finally FreeAndNil(mq); end;
 end;
 
@@ -125,10 +116,10 @@ var
   var
     msg: TOmniMessage;
   begin
-    Assert.AreEqual<boolean>(success, endpoint.Receive(msg), tag + '.Receive');
+    CheckEquals(success, endpoint.Receive(msg), tag + '.Receive');
     if success then begin
-      Assert.AreEqual<integer>(msgID, msg.MsgID, tag + '.MsgID');
-      Assert.AreEqual<string>(msgData, msg.MsgData.AsString, tag + '.MsgData');
+      CheckEquals(msgID, integer(msg.MsgID), tag + '.MsgID');
+      CheckEquals(msgData, msg.MsgData.AsString, tag + '.MsgData');
     end;
   end;
 
@@ -155,10 +146,10 @@ var
   var
     msg: TOmniMessage;
   begin
-    Assert.AreEqual<boolean>(success, endpoint.Receive(msg), tag + '.Receive');
+    CheckEquals(success, endpoint.Receive(msg), tag + '.Receive');
     if success then begin
-      Assert.AreEqual<integer>(msgID, msg.MsgID, tag + '.MsgID');
-      Assert.AreEqual<string>(msgData, msg.MsgData.AsString, tag + '.MsgData');
+      CheckEquals(msgID, integer(msg.MsgID), tag + '.MsgID');
+      CheckEquals(msgData, msg.MsgData.AsString, tag + '.MsgData');
     end;
   end;
 
@@ -174,9 +165,10 @@ end;
 
 procedure TestIOmniTwoWayChannel.TestFIFOOrder;
 var
-  msg: TOmniMessage;
+  chan: IOmniTwoWayChannel;
+  msg : TOmniMessage;
 begin
-  var chan := CreateTwoWayChannel(10);
+  chan := CreateTwoWayChannel(10);
 
   // Send multiple messages
   chan.Endpoint1.Send(TOmniMessage.Create(1, 'a'));
@@ -184,38 +176,41 @@ begin
   chan.Endpoint1.Send(TOmniMessage.Create(3, 'c'));
 
   // Receive in FIFO order
-  Assert.IsTrue(chan.Endpoint2.Receive(msg), 'Receive.1');
-  Assert.AreEqual<integer>(1, msg.MsgID);
-  Assert.IsTrue(chan.Endpoint2.Receive(msg), 'Receive.2');
-  Assert.AreEqual<integer>(2, msg.MsgID);
-  Assert.IsTrue(chan.Endpoint2.Receive(msg), 'Receive.3');
-  Assert.AreEqual<integer>(3, msg.MsgID);
-  Assert.IsFalse(chan.Endpoint2.Receive(msg), 'Receive.4');
+  CheckTrue(chan.Endpoint2.Receive(msg), 'Receive.1');
+  CheckEquals(1, integer(msg.MsgID));
+  CheckTrue(chan.Endpoint2.Receive(msg), 'Receive.2');
+  CheckEquals(2, integer(msg.MsgID));
+  CheckTrue(chan.Endpoint2.Receive(msg), 'Receive.3');
+  CheckEquals(3, integer(msg.MsgID));
+  CheckFalse(chan.Endpoint2.Receive(msg), 'Receive.4');
 end;
 
 { TestIOmniMessageQueueTee }
 
 procedure TestIOmniMessageQueueTee.TestBasicTee;
 var
+  tee       : TOmniMessageQueueTee;
+  q1        : TOmniMessageQueue;
+  q2        : TOmniMessageQueue;
   msg1, msg2: TOmniMessage;
 begin
-  var tee := TOmniMessageQueueTee.Create;
-  var q1 := TOmniMessageQueue.Create(3);
-  var q2 := TOmniMessageQueue.Create(3);
+  tee := TOmniMessageQueueTee.Create;
+  q1 := TOmniMessageQueue.Create(3);
+  q2 := TOmniMessageQueue.Create(3);
   try
     tee.Attach(q1);
     tee.Attach(q2);
 
     // Enqueue via tee - both queues should receive copy
-    Assert.IsTrue(tee.Enqueue(TOmniMessage.Create(42, 'hello')));
+    CheckTrue(tee.Enqueue(TOmniMessage.Create(42, 'hello')));
 
-    Assert.IsTrue(q1.TryDequeue(msg1), 'q1.Dequeue');
-    Assert.AreEqual<integer>(42, msg1.MsgID, 'q1.MsgID');
-    Assert.AreEqual<string>('hello', msg1.MsgData.AsString, 'q1.MsgData');
+    CheckTrue(q1.TryDequeue(msg1), 'q1.Dequeue');
+    CheckEquals(42, integer(msg1.MsgID), 'q1.MsgID');
+    CheckEquals('hello', msg1.MsgData.AsString, 'q1.MsgData');
 
-    Assert.IsTrue(q2.TryDequeue(msg2), 'q2.Dequeue');
-    Assert.AreEqual<integer>(42, msg2.MsgID, 'q2.MsgID');
-    Assert.AreEqual<string>('hello', msg2.MsgData.AsString, 'q2.MsgData');
+    CheckTrue(q2.TryDequeue(msg2), 'q2.Dequeue');
+    CheckEquals(42, integer(msg2.MsgID), 'q2.MsgID');
+    CheckEquals('hello', msg2.MsgData.AsString, 'q2.MsgData');
 
     tee.Detach(q1);
     tee.Detach(q2);
@@ -226,4 +221,9 @@ begin
   end;
 end;
 
+initialization
+  RegisterTest(TestOmniMessageQueue.Suite);
+  RegisterTest(TestOmniMessageQueueSize1.Suite);
+  RegisterTest(TestIOmniTwoWayChannel.Suite);
+  RegisterTest(TestIOmniMessageQueueTee.Suite);
 end.
