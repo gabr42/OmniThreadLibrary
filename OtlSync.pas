@@ -649,7 +649,12 @@ type
     end; { ISyncroClientEx }
     TSynchroClient = class(TInterfacedObject, IOmniSynchroObserver, ISynchroClientEx)
     strict private
-      FController: TSynchroWaitFor;
+      FController  : TSynchroWaitFor;
+      // Gate captured by EnterGate, released by LeaveGate. Stored separately
+      // from FController so a concurrent TSynchroWaitFor.Destroy that nils
+      // FController (via Deref) cannot make LeaveGate skip the release.
+      // Backported from OmniThreadLibrary-NG (commit ac3f364).
+      FAcquiredGate: IOmniCriticalSection;
       procedure EnterGate;
       procedure LeaveGate;
       procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
@@ -2446,14 +2451,24 @@ end; { TSynchroWaitFor.TSynchroClient.Create }
 
 procedure TSynchroWaitFor.TSynchroClient.EnterGate;
 begin
-  if assigned( FController) then
-    FController.FGate.Acquire;
+  // Capture the gate reference BEFORE acquiring. If TSynchroWaitFor.Destroy
+  // runs Deref (nilling FController) while we are blocked in Acquire, the
+  // captured FAcquiredGate keeps the IOmniCriticalSection alive and lets
+  // LeaveGate release it. Without this capture, LeaveGate would see
+  // FController = nil and skip the Release, leaking the gate forever.
+  // Backported from OmniThreadLibrary-NG (commit ac3f364).
+  if assigned(FController) then begin
+    FAcquiredGate := FController.FGate;
+    FAcquiredGate.Acquire;
+  end;
 end; { TSynchroWaitFor.TSynchroClient.EnterGate }
 
 procedure TSynchroWaitFor.TSynchroClient.LeaveGate;
 begin
-  if assigned( FController) then
-    FController.FGate.Release;
+  if assigned(FAcquiredGate) then begin
+    FAcquiredGate.Release;
+    FAcquiredGate := nil;
+  end;
 end; { TSynchroWaitFor.TSynchroClient.LeaveGate }
 
 procedure TSynchroWaitFor.TSynchroClient.Deref;
