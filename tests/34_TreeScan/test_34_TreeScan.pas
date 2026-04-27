@@ -222,7 +222,9 @@ begin
       scanResult.Value.AsPointer := nil;
       for iTask := 1 to numTasks do begin
         CreateTask(ParaScanWorker, 'Parallel scan worker #' + IntToStr(iTask))
-          .SetParameters([nodeQueue, scanResult, value])
+          .SetParameter(nodeQueue)
+          .SetParameter(scanResult)
+          .SetParameter(value)
           .WithCounter(countWorkers)
           .Unobserved
           .Run;
@@ -256,7 +258,7 @@ var
   procedure Add(queue: TOmniBlockingCollection; value: TOmniValue);
   begin
     // triggers internal compiler error in D2007 if inlined
-    queue.Add(value);
+    queue.TryAdd(value);
   end;
 
 begin
