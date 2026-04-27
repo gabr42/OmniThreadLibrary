@@ -1060,7 +1060,14 @@ type
     otcEventMonitor        : TObject{TOmniEventMonitor};
     otcEventMonitorInternal: boolean;
     otcExecutor            : TOmniTaskExecutor;
-    otcInEventHandler      : boolean;
+    // Nested event-handler dispatch counter (interlocked). Terminate
+    // early-exits when > 0 so an OnMessage / OnTerminated callback that
+    // triggers Terminate on its own task does not deadlock waiting for
+    // itself. Plain boolean was racy when a parent task drained child
+    // messages on its own thread while the child's own thread fired
+    // ForwardTaskTerminated. Backported from OmniThreadLibrary-NG
+    // (commit 2de1757).
+    otcEventHandlerDepth   : integer;
     otcOnMessageExec       : TOmniMessageExec;
     otcOnMessageList       : TGpIntegerObjectList;
     otcOnTerminatedExec    : TOmniMessageExec;
@@ -3344,23 +3351,23 @@ begin
         TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
       end;
     exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-    otcInEventHandler := true;
+    TInterlocked.Increment(otcEventHandlerDepth);
     try
       if assigned(exec) then
         exec.OnMessage(Self, msg)
       else if assigned(otcOnMessageExec) then
         otcOnMessageExec.OnMessage(Self, msg);
-    finally otcInEventHandler := false; end;
+    finally TInterlocked.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
   if assigned(otcOnTerminatedExec) then begin
-    otcInEventHandler := true;
+    TInterlocked.Increment(otcEventHandlerDepth);
     try
       otcOnTerminatedExec.OnTerminated(Self);
-    finally otcInEventHandler := false; end;
+    finally TInterlocked.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
@@ -3899,7 +3906,7 @@ var
   msg: TOmniMessage;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
-  if otcInEventHandler then begin
+  if otcEventHandlerDepth > 0 then begin
     otcDelayedTerminate := true;
     Result := true;
     Exit;

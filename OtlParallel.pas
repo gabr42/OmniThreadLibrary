@@ -1088,6 +1088,7 @@ type
     FInput                 : IOmniBlockingCollection;
     FJoinStates            : array of IOmniJoinState;
     FNoWait                : boolean;
+    FNoWaitAcknowledged    : boolean;
     FNumTasks              : integer;
     FOnStop                : TOmniTaskStopDelegate;
     FTaskConfig            : IOmniTaskConfig;
@@ -2207,6 +2208,12 @@ destructor TOmniParallelJoin.Destroy;
 var
   iTask: integer;
 begin
+  // Detect NoWait Join destroyed without WaitFor - this is a programming
+  // error that previously caused a silent use-after-free (workers accessing
+  // freed FTasks list). Backported from OmniThreadLibrary-NG (commit 1cdefbe).
+  if FNoWait and (not FNoWaitAcknowledged) and assigned(FCountStopped) then
+    raise Exception.Create('TOmniParallelJoin.Destroy: Join used with NoWait was ' +
+      'destroyed without calling WaitFor. Call WaitFor before releasing the interface.');
   for iTask := Low(FJoinStates) to High(FJoinStates) do begin
     (FJoinStates[iTask] as IOmniJoinStateEx).TaskControl.Terminate;
     (FJoinStates[iTask] as IOmniJoinStateEx).TaskControl := nil;
@@ -2414,6 +2421,7 @@ function TOmniParallelJoin.WaitFor(timeout_ms: cardinal): boolean;
 var
   taskExcept: Exception;
 begin
+  FNoWaitAcknowledged := true;
   Result := InternalWaitFor(timeout_ms);
   if Result then begin
     if assigned(FTaskException) then begin
@@ -4257,16 +4265,24 @@ begin
   Result := CreateTask(
     procedure (const task: IOmniTask)
     begin
-      if assigned(FInitializerDelegate) then
-        FInitializerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
-      taskDelegate(task, taskIndex);
-      if assigned(FFinalizerDelegate) then
-        FFinalizerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
-      if FCountStopped.Allocate = 1 then begin
-        if FNoWait then
-          if assigned(FOnStop) then
-            FOnStop(task);
-        FCountStopped.Allocate;
+      // The finally block must run even if the user's init / task / finalizer
+      // delegate raises - TOmniParallelSimpleLoop.InternalExecute blocks on
+      // FCountStopped.Synchro.WaitFor(INFINITE), so skipping Allocate would
+      // deadlock the whole loop. Mirrors the try/finally in TOmniParallelJoin.
+      // Backported from OmniThreadLibrary-NG (commit 6da3112).
+      try
+        if assigned(FInitializerDelegate) then
+          FInitializerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
+        taskDelegate(task, taskIndex);
+        if assigned(FFinalizerDelegate) then
+          FFinalizerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
+      finally
+        if FCountStopped.Allocate = 1 then begin
+          if FNoWait then
+            if assigned(FOnStop) then
+              FOnStop(task);
+          FCountStopped.Allocate;
+        end;
       end;
     end,
     'Parallel.For worker #' + IntToStr(taskIndex));
