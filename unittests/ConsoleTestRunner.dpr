@@ -32,6 +32,7 @@ uses
   TestContainers in 'TestContainers.pas',
   TestOtlComm in 'TestOtlComm.pas',
   TestOtlCommon1 in 'TestOtlCommon1.pas',
+  TestStressBlockingCollection1 in 'TestStressBlockingCollection1.pas',
   {$IFDEF OTL_MobileSupport}
   TestContainerObserver1 in 'TestContainerObserver1.pas',
   {$ENDIF}
