@@ -3351,23 +3351,26 @@ begin
         TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
       end;
     exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-    TInterlocked.Increment(otcEventHandlerDepth);
+    // TInterlockedEx wraps TInterlocked (D-XE+) and InterlockedIncrement /
+    // InterlockedDecrement (pre-XE). v3 supports Delphi 2007+ which lacks
+    // TInterlocked.
+    TInterlockedEx.Increment(otcEventHandlerDepth);
     try
       if assigned(exec) then
         exec.OnMessage(Self, msg)
       else if assigned(otcOnMessageExec) then
         otcOnMessageExec.OnMessage(Self, msg);
-    finally TInterlocked.Decrement(otcEventHandlerDepth); end;
+    finally TInterlockedEx.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
   if assigned(otcOnTerminatedExec) then begin
-    TInterlocked.Increment(otcEventHandlerDepth);
+    TInterlockedEx.Increment(otcEventHandlerDepth);
     try
       otcOnTerminatedExec.OnTerminated(Self);
-    finally TInterlocked.Decrement(otcEventHandlerDepth); end;
+    finally TInterlockedEx.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
