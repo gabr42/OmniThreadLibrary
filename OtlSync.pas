@@ -228,6 +228,12 @@ type
   IOmniSynchroObserver = interface ['{03330A74-3C3D-4D2F-9A21-89663DE7FD10}']
     procedure EnterGate;
     procedure LeaveGate;
+    ///<summary>Returns the gate acquired by the most recent EnterGate call, or
+    ///   nil if EnterGate has not been called or LeaveGate has already released
+    ///   it. PerformObservableAction uses this to track gate ownership locally
+    ///   so a concurrent Deref nilling the controller cannot make Release skip.
+    ///   Backported from OmniThreadLibrary-NG (commit 68a7d2a).</summary>
+    procedure GetGate(out gate: IOmniCriticalSection);
     /// <param name="SynchObj">SynchObj must support IOmniSynchroObject.</param>
     procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
     /// <param name="Subtractend">Signaller must support IOmniSynchroObject.</param>
@@ -657,6 +663,7 @@ type
       FAcquiredGate: IOmniCriticalSection;
       procedure EnterGate;
       procedure LeaveGate;
+      procedure GetGate(out gate: IOmniCriticalSection);
       procedure DereferenceSynchObj(const SynchObj: TObject; AllowInterface: boolean);
       procedure BeforeSignal(const Signaller: TObject; var Data: TObject);
       procedure AfterSignal(const Signaller: TObject; var Data: TObject);
@@ -2471,6 +2478,14 @@ begin
   end;
 end; { TSynchroWaitFor.TSynchroClient.LeaveGate }
 
+procedure TSynchroWaitFor.TSynchroClient.GetGate(out gate: IOmniCriticalSection);
+begin
+  // Returns the gate captured by EnterGate. PerformObservableAction stores
+  // this locally so it can release the gate even if a concurrent Deref nils
+  // FController. Backported from OmniThreadLibrary-NG (commit 68a7d2a).
+  gate := FAcquiredGate;
+end; { TSynchroWaitFor.TSynchroClient.GetGate }
+
 procedure TSynchroWaitFor.TSynchroClient.Deref;
 begin
   FController := nil;
@@ -2613,14 +2628,26 @@ destructor TSynchroWaitFor.Destroy;
 var
   SynchClientEx: ISynchroClientEx;
 begin
+  // Acquire FGate before Deref to serialize with PerformObservableAction,
+  // which may hold a snapshot reference to the observer (FSynchClient) after
+  // releasing the spin lock. This ensures FController (and thus FOneSignalled
+  // / FAllSignalled) remain valid while PerformObservableAction holds the
+  // gate. Backported from OmniThreadLibrary-NG (commit 68a7d2a).
+  if assigned(FGate) then
+    FGate.Acquire;
+  try
+    if Supports(FSynchClient, ISynchroClientEx, SynchClientEx) then
+      SynchClientEx.Deref;
+    FSynchClient := nil;
+  finally
+    if assigned(FGate) then
+      FGate.Release;
+  end;
   FSynchObjects.Clear;
   FGate := nil;
   FreeAndNil(FSynchObjects);
   FreeAndNil(FOneSignalled);
   FreeAndNil(FAllSignalled);
-  if Supports(FSynchClient, ISynchroClientEx, SynchClientEx) then
-    SynchClientEx.Deref;
-  FSynchClient := nil;
   inherited;
 end; { TSynchroWaitFor.Destroy }
 
@@ -2820,27 +2847,84 @@ end; { TOmniSynchroObject.QueryInterface }
 
 procedure TOmniSynchroObject.PerformObservableAction(Action: TProc; DoLock: boolean);
 var
-  iObserver: integer;
-  observer : IOmniSynchroObserver;
+  count        : integer;
+  iObserver    : integer;
+  localData    : TArray<TObject>;
+  localGates   : TArray<IOmniCriticalSection>;
+  observersCopy: TArray<IOmniSynchroObserver>;
+  spinGuard    : IInterface;
 begin
-  if DoLock then
-    EnterSpinLock; //until end of method
-
-  if FObservers.Count = 0 then
-    Action
-  else begin
-    for observer in FObservers do
-      observer.EnterGate;
-    try
-      for iObserver := 0 to FObservers.Count - 1 do
-        observer.BeforeSignal(self, FData[iObserver]);
+  // Backported from OmniThreadLibrary-NG (commit 68a7d2a). Fixes two bugs:
+  // 1. Lock-order inversion deadlock: PerformObservableAction acquired the
+  //    spin lock then a gate (via observer.EnterGate), while TCondition.Wait
+  //    acquires the gate then the spin lock (via AddObserver). Concurrent
+  //    Parallel.For with many workers could deadlock here.
+  // 2. Observer-iteration bug: BeforeSignal/AfterSignal calls used the
+  //    `observer` for-in loop variable (always the LAST observer at the
+  //    time of the call) instead of FObservers[iObserver]. With multiple
+  //    observers, only the last one received signal callbacks.
+  //
+  // Fix: snapshot the observer list under the spin lock, release the lock,
+  // then call Enter/BeforeSignal/Action/AfterSignal/Release under the gates
+  // only. Track acquired gates locally via GetGate so release works even if
+  // FController is nilled by a concurrent TSynchroWaitFor.Destroy.
+  if DoLock then begin
+    spinGuard := EnterSpinLock;
+    count := FObservers.Count;
+    if count = 0 then begin
       Action;
-      for iObserver := 0 to FObservers.Count - 1 do
-        observer.AfterSignal(self, FData[iObserver]);
+      Exit; // spinGuard released automatically
+    end;
+    SetLength(observersCopy, count);
+    for iObserver := 0 to count - 1 do
+      observersCopy[iObserver] := FObservers[iObserver];
+    // Release spin lock BEFORE entering gates to prevent lock-order inversion
+    spinGuard := nil;
+
+    SetLength(localData, count);
+    SetLength(localGates, count);
+    for iObserver := 0 to count - 1 do begin
+      observersCopy[iObserver].EnterGate;
+      observersCopy[iObserver].GetGate(localGates[iObserver]);
+    end;
+    try
+      for iObserver := 0 to count - 1 do
+        observersCopy[iObserver].BeforeSignal(self, localData[iObserver]);
+      Action;
+      for iObserver := 0 to count - 1 do
+        observersCopy[iObserver].AfterSignal(self, localData[iObserver]);
     finally
-      for observer in FObservers do
-        observer.LeaveGate;
-    end // try
+      for iObserver := 0 to count - 1 do
+        if assigned(localGates[iObserver]) then
+          localGates[iObserver].Release;
+    end;
+  end
+  else begin
+    count := FObservers.Count;
+    if count = 0 then
+      Action
+    else begin
+      SetLength(observersCopy, count);
+      for iObserver := 0 to count - 1 do
+        observersCopy[iObserver] := FObservers[iObserver];
+      SetLength(localData, count);
+      SetLength(localGates, count);
+      for iObserver := 0 to count - 1 do begin
+        observersCopy[iObserver].EnterGate;
+        observersCopy[iObserver].GetGate(localGates[iObserver]);
+      end;
+      try
+        for iObserver := 0 to count - 1 do
+          observersCopy[iObserver].BeforeSignal(self, localData[iObserver]);
+        Action;
+        for iObserver := 0 to count - 1 do
+          observersCopy[iObserver].AfterSignal(self, localData[iObserver]);
+      finally
+        for iObserver := 0 to count - 1 do
+          if assigned(localGates[iObserver]) then
+            localGates[iObserver].Release;
+      end;
+    end;
   end;
 end; { TOmniSynchroObject.PerformObservableAction }
 
