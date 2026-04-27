@@ -838,6 +838,14 @@ type
     FOwnsBase           : boolean;
     FLock               : TSpinLock;
     FObservers          : TList<IOmniSynchroObserver>;
+    // Per-observer attach count. Multiple TSynchroWaitFor waiters share a
+    // singleton FSynchClient; each Wait call AddObserver-then-RemoveObserver.
+    // Without refcounting, a returning waiter's RemoveObserver evicts the
+    // observer even though other waiters are still sleeping - they never
+    // wake when the next signal fires. FObservers stays in sync with
+    // FObserverRefCount: a synchro is in FObservers iff its refcount is > 0.
+    // Backported from OmniThreadLibrary-NG (commit 2b65be7).
+    FObserverRefCount   : TDictionary<IOmniSynchroObserver, integer>;
     FData               : TArray<TObject>;
     [Volatile] FRefCount: integer;
     FShareLock          : IOmniCriticalSection;
@@ -2478,14 +2486,23 @@ begin
   try
     if not assigned(FController) then
       Exit;
+    // ReleaseAll (broadcast), not Release (wake one): N waiters may share
+    // a single TSynchroWaitFor (e.g. multiple TOmniBlockingCollection.TryTake
+    // callers parked on the same FTakeWaiter). A single wakeup only wakes one
+    // and the rest stay parked forever once the condvar's edge has passed
+    // (a manual-reset event such as obcCompletedSignal stays signalled but
+    // the condvar only fires on the false->true transition). Each waiter
+    // re-tests under FGate after waking; spurious wakes are harmless because
+    // they go straight back to wait. Backported from OmniThreadLibrary-NG
+    // (commit 28f6f36).
     if (not (Data as TPreSignalData).OneSignalled)
        and FController.FOneSignalled.Test(Dummy)
     then
-      FController.FOneSignalled.FCondVar.Release;
+      FController.FOneSignalled.FCondVar.ReleaseAll;
     if (not (Data as TPreSignalData).AllSignalled)
        and FController.FAllSignalled.Test(Dummy)
     then
-      FController.FAllSignalled.FCondVar.Release;
+      FController.FAllSignalled.FCondVar.ReleaseAll;
   finally FreeAndNil(Data); end;
 end; { TSynchroWaitFor.TSynchroClient.AfterSignal }
 
@@ -2720,7 +2737,8 @@ begin
     FShareLock := AShareLock
   else
     FLock.Create(False);
-  FObservers := TList<IOmniSynchroObserver>.Create
+  FObservers := TList<IOmniSynchroObserver>.Create;
+  FObserverRefCount := TDictionary<IOmniSynchroObserver, integer>.Create;
 end; { TOmniSynchroObject.Create }
 
 destructor TOmniSynchroObject.Destroy;
@@ -2735,6 +2753,7 @@ begin
     if FOwnsBase then
       FreeAndNil(FBase);
     FObservers.Free;
+    FObserverRefCount.Free;
   end;
   inherited;
 end; { TOmniSynchroObject.Destroy }
@@ -2844,22 +2863,35 @@ begin
 end; { TOmniSynchroObject.Acquire }
 
 procedure TOmniSynchroObject.AddObserver(const Observer: IOmniSynchroObserver);
+var
+  refCount: integer;
 begin
   with EnterSpinLock do begin
-    if FObservers.IndexOf(Observer) = -1 then
+    if FObserverRefCount.TryGetValue(Observer, refCount) then
+      FObserverRefCount[Observer] := refCount + 1
+    else begin
       FObservers.Add(Observer);
-    SetLength(FData, FObservers.Count);
+      FObserverRefCount.Add(Observer, 1);
+      SetLength(FData, FObservers.Count);
+    end;
   end;
 end; { TOmniSynchroObject.AddObserver }
 
 procedure TOmniSynchroObject.RemoveObserver(const Observer: IOmniSynchroObserver);
+var
+  refCount: integer;
 begin
   with EnterSpinLock do begin
-    if FObservers.Count = 0 then
+    if not FObserverRefCount.TryGetValue(Observer, refCount) then
       Exit;
-    FObservers.Remove(Observer);
-    Observer.DereferenceSynchObj(self, FRefCount > 0);
-    SetLength(FData, FObservers.Count)
+    if refCount > 1 then
+      FObserverRefCount[Observer] := refCount - 1
+    else begin
+      FObservers.Remove(Observer);
+      FObserverRefCount.Remove(Observer);
+      Observer.DereferenceSynchObj(self, FRefCount > 0);
+      SetLength(FData, FObservers.Count);
+    end;
   end;
 end; { TOmniSynchroObject.RemoveObserver }
 
