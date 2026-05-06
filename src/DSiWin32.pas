@@ -12,6 +12,9 @@
    Version           : 2.16a
 </pre>*)(*
    History:
+     2.16a: 2026-05-06
+       - Removed GInterlockedCompareExchange64 - it was not initialized correctly
+         and it was not used anywhere.
      2.16: 2026-03-23
        - Restored compatibility with D2007+.
      2.16: 2026-03-18
@@ -2538,14 +2541,6 @@ type
 function UTF8Encode(const ws: WideString): UTF8String;
 function UTF8Decode(const sUtf: UTF8String): WideString;
 {$ENDIF DSiNeedUTF}
-
-{ internals used in inline functions }
-
-type
-  TInterlockedCompareExchange64 = function(destination: pointer; exchange, comparand: int64): int64; stdcall;
-
-var
-  GInterlockedCompareExchange64: TInterlockedCompareExchange64 = nil;
 
 implementation
 
@@ -10339,11 +10334,6 @@ end; { TBackgroundThread.Execute }
 
 { initialization }
 
-procedure DynaLoadAPIs;
-begin
-  GInterlockedCompareExchange64 := DSiGetProcAddress('kernel.dll', 'InterlockedCompareExchange64');
-end; { DynaLoadAPIs }
-
 procedure InitializeGlobals;
 begin
   InitializeCriticalSection(GDSiWndHandlerCritSect);
@@ -10355,7 +10345,6 @@ begin
   if not QueryPerformanceFrequency(GPerformanceFrequency) then
     GPerformanceFrequency := 0;
   GCF_HTML := RegisterClipboardFormat('HTML Format');
-  DynaLoadAPIs;
   timeBeginPeriod(1);
   Assert(Length(DSiCPUIDs) = 64);
 end; { InitializeGlobals }
