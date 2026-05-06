@@ -2544,9 +2544,6 @@ function UTF8Decode(const sUtf: UTF8String): WideString;
 type
   TInterlockedCompareExchange64 = function(destination: pointer; exchange, comparand: int64): int64; stdcall;
 
-var
-  GInterlockedCompareExchange64: TInterlockedCompareExchange64 = nil;
-
 implementation
 
 uses
@@ -10339,11 +10336,6 @@ end; { TBackgroundThread.Execute }
 
 { initialization }
 
-procedure DynaLoadAPIs;
-begin
-  GInterlockedCompareExchange64 := DSiGetProcAddress('kernel.dll', 'InterlockedCompareExchange64');
-end; { DynaLoadAPIs }
-
 procedure InitializeGlobals;
 begin
   InitializeCriticalSection(GDSiWndHandlerCritSect);
@@ -10355,7 +10347,6 @@ begin
   if not QueryPerformanceFrequency(GPerformanceFrequency) then
     GPerformanceFrequency := 0;
   GCF_HTML := RegisterClipboardFormat('HTML Format');
-  DynaLoadAPIs;
   timeBeginPeriod(1);
   Assert(Length(DSiCPUIDs) = 64);
 end; { InitializeGlobals }
