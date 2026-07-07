@@ -1,3 +1,90 @@
+3.09: <<unreleased>>
+
+- New features:
+  - Backported CSP-style abstractions from OmniThreadLibrary-NG
+    (Delphi XE and newer):
+    - Parallel.Channel<T> - typed bounded channel.
+    - Parallel.Select / SelectCase.Receive<T> / Default - multiplexed
+      channel waiting.
+    - Parallel.Merge<T> - fan-in from multiple receivers.
+    - Parallel.Race<T> / TryRace<T> - first-wins (TryRace is non-raising).
+    - ESelectTimeout exception, raised by Race on timeout.
+
+- Bug fixes:
+  - OtlHooks: procedure-type Register/Unregister stored the address of
+    the stack parameter instead of the procedure pointer, causing
+    dangling access on Notify and preventing Unregister from matching.
+  - OtlContainers:
+    - PropagateNotifications iterated Low..Low instead of Low..High,
+      dropping all observer notifications except inserts.
+    - coiNotifyOnPartlyEmpty used the wrong threshold field.
+    - TOmniBaseBoundedQueue.IsFull compared LastIn against itself instead
+      of FirstIn, breaking ring-buffer full detection.
+    - TOmniBaseBoundedStack.Empty was not protected by Acquire/Release.
+    - TOmniValueQueue.IsEmpty was missing try/finally around the
+      critical section.
+  - OtlCommon:
+    - _ReleaseAndClear did not check assigned(ovIntf) before _Release.
+    - TOmniValueContainer.Grow off-by-one skipped the last element.
+    - TOmniValue.Create/CreateNamed leaked TOmniValueContainer on
+      exception during value conversion.
+    - TOmniIntegerSet.Remove was missing the bounds check that Contains 
+      has.
+    - TOmniProcessorGroups.FindGroup assumed group number equals list
+      index.
+  - OtlParallel:
+    - Fixed PInteger used instead of PNativeInt in pipeline stage
+      dispatch (only low 32 bits checked on 64-bit).
+    - Pipeline Run captured shared exc/outQueue by reference in loop
+      closures, racing workers and routing exceptions to the wrong
+      output queue.
+    - GlobalParallelPool lazy initialization was not thread-safe (could
+      leak a pool); now uses CAS.
+    - TOmniFuture<T>.FCompleted lacked a memory barrier; now integer with
+      TInterlocked for safe publication of FResult.
+    - TOmniParallelLoop.OnStopInvoke and TOmniParallelSimpleLoop<T>.
+      OnStopInvoke did not guard against a nil task in synchronous mode.
+    - TOmniParallelSimpleLoop wrapped the user delegate trio in
+      try/finally so a raising body no longer deadlocks the loop.
+    - TOmniParallelJoin.Destroy raises if .NoWait was used but WaitFor/
+      Terminate was never called (previously a silent use-after-free).
+  - OtlSync:
+    - Fixed lock-order inversion in
+      TOmniSynchroObject.PerformObservableAction that could deadlock
+      Parallel.For under load.
+    - Signal callbacks used the last observer instead of iterating all
+      observers.
+    - TSynchroClient.AfterSignal now broadcasts (ReleaseAll) so all
+      parked waiters wake, fixing a multi-reader missed-wake hang.
+    - Observer attach/detach is refcounted so one returning waiter no
+      longer evicts the observer shared by others.
+    - Fixed a gate leak in TSynchroClient.EnterGate when a concurrent
+      Destroy nilled FController mid-Acquire.
+    - TOmniSynchroObject.Destroy no longer calls inherited inside the
+      spin-lock block (use-after-free).
+    - TOmniLockManager.Lock no longer passes a negative wait_ms as
+      cardinal to WaitForSingleObject.
+  - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
+    with [doOwnsValues], fixing a TEvent leak.
+  - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now
+    thread-safe (CAS).
+  - OtlDataManager: idpPosition/vedpPosition were incremented
+    non-atomically in GetNext, allowing duplicate positions under
+    concurrent access.
+  - OtlTaskControl:
+    - Terminate leaked the TOmniThread object after TerminateThread.
+    - RemoveTerminationEvents did not copy NewMessageEvent/
+      IdxFirstWaitObject/IdxLastWaitObject, breaking wait-object and
+      comm message dispatch.
+    - Asy_UnregisterComm passed an unchecked IndexOf result to Delete,
+      causing a range error on double-unregister.
+    - Replaced the plain boolean otcInEventHandler with an interlocked
+      depth counter to fix a Terminate self-deadlock under
+      background-observer dispatch.
+  - OtlCommon.Utils: SetThreadDescription (Windows 10+ thread naming) was
+    dead code behind an obsolete IFDEF; also removed an incorrect
+    FreeLibrary on a GetModuleHandle handle.
+
 3.08: 2026-04-08
 
 - New features:
