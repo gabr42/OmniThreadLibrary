@@ -4,7 +4,7 @@ interface
 
 {$IFDEF Unicode}
 uses
-  TestFramework, OtlCommon, OtlDataManager, OtlCollections, GpStuff;
+  TestFramework, OtlCommon, OtlDataManager, OtlCollections, OtlContainers, GpStuff;
 
 type
   TestTOmniDataManager = class(TTestCase)
@@ -66,7 +66,8 @@ implementation
 {$IFDEF Unicode}
 uses
   Windows,
-  SysUtils;
+  SysUtils,
+  DSiWin32;
 
 function TestTOmniDataManager.GetNext(pkg: TOmniDataPackage; cnt: integer): string;
 var
@@ -120,13 +121,13 @@ begin
     Initialize(low, high, step);
     CheckCapabilities(FOmniSourceProvider.GetCapabilities);
     if spcCountable in FOmniSourceProvider.GetCapabilities then
-      CheckEquals(count, FOmniSourceProvider.Count);
+      CheckEquals(count, integer(FOmniSourceProvider.Count));
     expVal := low;
     while FOmniSourceProvider.GetPackage(dataCount, FOmniDataPackage) do begin
       numPkg := 0;
       while FOmniDataPackage.GetNext(value) do begin
         Inc(numPkg);
-        CheckEquals(expVal, value);
+        CheckEquals(expVal, value.AsInteger);
         expVal := expVal + step;
       end;
       if ((step > 0) and (expVal <= high)) or
@@ -135,9 +136,9 @@ begin
         CheckEquals(numPkg, dataCount);
     end;
     if step > 0 then
-      Check(expVal > high)
+      CheckTrue(expVal > high)
     else
-      Check(expVal < high);
+      CheckTrue(expVal < high);
     Cleanup;
   end;
 end;
@@ -154,7 +155,7 @@ end;
 
 procedure TestIntegerProvider.CheckCapabilities(cap: TOmniSourceProviderCapabilities);
 begin
-  Check(cap = [spcCountable, spcFast]);
+  CheckTrue(cap = [spcCountable, spcFast]);
 end;
 
 procedure TestIntegerProvider.Cleanup;
@@ -196,7 +197,7 @@ end;
 
 procedure TestOmniValueProvider.CheckCapabilities(cap: TOmniSourceProviderCapabilities);
 begin
-  Check(cap = [spcDataLimit]);
+  CheckTrue(cap = [spcDataLimit]);
 end;
 
 procedure TestOmniValueProvider.Cleanup;
@@ -244,12 +245,13 @@ begin
   Split(1, 10, 2, 1, '1',     true,  2, '3/5', 3, '7/9/-');
 end;
 
+{$ENDIF}
+
 initialization
-  // Register any test cases with the test runner
+{$IFDEF Unicode}
   RegisterTest(TestIntegerDataPackage.Suite);
   RegisterTest(TestIntegerSourceProvider.Suite);
   RegisterTest(TestOmniValueDataPackage.Suite);
   RegisterTest(TestOmniValueSourceProvider.Suite);
 {$ENDIF}
 end.
-

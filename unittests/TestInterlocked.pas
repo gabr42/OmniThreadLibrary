@@ -3,7 +3,9 @@ unit TestInterlocked;
 interface
 
 uses
+  Windows,
   TestFramework,
+  DSiWin32,
   OtlSync,
   OtlCommon;
 
@@ -20,10 +22,6 @@ type
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  DSiWin32,
-  {$ENDIF MSWINDOWS}
   SyncObjs;
 
 { TInterlockedSTTest }
@@ -96,28 +94,28 @@ begin
   CheckTrue((NativeUInt(r.int.Addr) mod 8) = 0, 'alignment');
   r.int.Value := 42;
 
-  CheckEquals(42,    r.int.Value);
-  CheckEquals(42+17, r.int.Add(17));
-  CheckEquals(42+17, r.int.Value);
-  CheckEquals(42,    r.int.Subtract(17));
-  CheckEquals(42,    r.int.Value);
-  CheckEquals(43,    r.int.Increment);
-  CheckEquals(43,    r.int.Value);
-  CheckEquals(42,    r.int.Decrement);
-  CheckEquals(42,    r.int.Value);
-  CheckEquals(42+17, r.int.Increment(17));
-  CheckEquals(42+17, r.int.Value);
-  CheckEquals(42,    r.int.Decrement(17));
-  CheckEquals(42,    r.int.Value);
+  CheckEquals(int64(42),    r.int.Value);
+  CheckEquals(int64(42+17), r.int.Add(17));
+  CheckEquals(int64(42+17), r.int.Value);
+  CheckEquals(int64(42),    r.int.Subtract(17));
+  CheckEquals(int64(42),    r.int.Value);
+  CheckEquals(int64(43),    r.int.Increment);
+  CheckEquals(int64(43),    r.int.Value);
+  CheckEquals(int64(42),    r.int.Decrement);
+  CheckEquals(int64(42),    r.int.Value);
+  CheckEquals(int64(42+17), r.int.Increment(17));
+  CheckEquals(int64(42+17), r.int.Value);
+  CheckEquals(int64(42),    r.int.Decrement(17));
+  CheckEquals(int64(42),    r.int.Value);
   CheckTrue(r.int.CAS(42, 17));
-  CheckEquals(r.int.Value, 17);
+  CheckEquals(int64(17), r.int.Value);
   CheckFalse(r.int.CAS(42, 17));
-  CheckEquals(r.int.Value, 17);
+  CheckEquals(int64(17), r.int.Value);
 
   r.int.Value := $7FFFFFFFFFFFFFFF;
-  CheckEquals($7FFFFFFFFFFFFFFF,  r.int.Value);
+  CheckEquals(int64($7FFFFFFFFFFFFFFF),  r.int.Value);
   r.int.Value := -$7FFFFFFFFFFFFFFF;
-  CheckEquals(-$7FFFFFFFFFFFFFFF, r.int.Value);
+  CheckEquals(int64(-$7FFFFFFFFFFFFFFF), r.int.Value);
 end;
 
 procedure TInterlockedSTTest.TestInterlockedEx;
@@ -125,28 +123,28 @@ var
   ni: NativeInt;
 begin
   ni := 42;
-  CheckEquals(42+17, TInterlockedEx.Add(ni, 17));
-  CheckEquals(42+17, ni);
-  CheckEquals(42,    TInterlockedEx.Add(ni, -17));
-  CheckEquals(42,    ni);
+  Check(42+17 = TInterlockedEx.Add(ni, 17));
+  Check(42+17 = ni);
+  Check(42    = TInterlockedEx.Add(ni, -17));
+  Check(42    = ni);
 
   ni := 42;
-  CheckEquals(42,    TInterlockedEx.CompareExchange(ni, 17, 42));
-  CheckEquals(17,    ni);
-  CheckEquals(17,    TInterlockedEx.CompareExchange(ni, 42, 43));
-  CheckEquals(17,    ni);
+  Check(42 = TInterlockedEx.CompareExchange(ni, 17, 42));
+  Check(17 = ni);
+  Check(17 = TInterlockedEx.CompareExchange(ni, 42, 43));
+  Check(17 = ni);
 
   ni := 17;
   CheckTrue(TInterlockedEx.CAS(17, 42, ni));
-  CheckEquals(42, ni);
+  Check(42 = ni);
   CheckFalse(TInterlockedEx.CAS(17, 43, ni));
-  CheckEquals(42, ni);
+  Check(42 = ni);
 
   ni := 17;
   CheckTrue(TInterlockedEx.CAS(pointer(17), pointer(42), ni));
-  CheckEquals(42, ni);
+  Check(42 = ni);
   CheckFalse(TInterlockedEx.CAS(pointer(17), pointer(43), ni));
-  CheckEquals(42, ni);
+  Check(42 = ni);
 end;
 
 initialization

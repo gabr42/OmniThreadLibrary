@@ -36,10 +36,24 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2018-04-17
-///   Version           : 3.02c
+///   Last modification : 2026-04-15
+///   Version           : 3.02d
 ///</para><para>
 ///   History:
+///     3.02d: 2026-04-15
+///       - Fixed: TOmniValueQueue.PropagateNotifications loop used Low..Low instead
+///         of Low..High, silently dropping all observer notifications except inserts.
+///       - Fixed: TOmniValueQueue.CollectionNotifyEvent used FAlmostFullThreshold
+///         instead of FPartlyEmptyThreshold for coiNotifyOnPartlyEmpty detection.
+///       - Fixed: TOmniBaseBoundedQueue.IsFull compared NewLastIn against LastIn
+///         (itself) instead of FirstIn, making full detection unreliable.
+///       - Fixed: TOmniBaseBoundedStack.Empty was not protected by Acquire/Release,
+///         allowing concurrent calls with Pop/Push to corrupt linked list chains.
+///       - Fixed: Wrong class names in assert/exception messages (TOmniBaseContainer
+///         instead of TOmniBaseBoundedStack/TOmniBaseBoundedQueue).
+///       - Fixed: TOmniValueQueue.Dequeue exception message referenced TOmniBaseQueue.
+///       - Fixed: Double semicolon in TOmniValueQueue.Create.
+///       - Fixed: TOmniValueQueue.IsEmpty missing try/finally around critical section.
 ///     3.02c: 2025-09-05
 ///       - Fixed critical section handling in TOmniValueQueue.DoWithCritSec.
 ///     3.02b: 2018-04-17
@@ -509,12 +523,15 @@ procedure TOmniBaseBoundedStack.Empty;
 var
   linkedData: POmniLinkedData;
 begin
-  repeat
-    linkedData := PopLink(obsPublicChainP^);
-    if not assigned(linkedData) then
-      break; //repeat
-    PushLink(linkedData, obsRecycleChainP^);
-  until false;
+  Acquire;
+  try
+    repeat
+      linkedData := PopLink(obsPublicChainP^);
+      if not assigned(linkedData) then
+        break; //repeat
+      PushLink(linkedData, obsRecycleChainP^);
+    until false;
+  finally Release; end;
 end; { TOmniBaseBoundedStack.Empty }
 
 procedure TOmniBaseBoundedStack.Initialize(numElements, elementSize: integer);
@@ -540,7 +557,7 @@ begin
   GetMem(obsDataBuffer, bufferElementSize * numElements + 2 * SizeOf(TReferencedPtr) + CASAlignment);
   dataBuffer := RoundUpTo(obsDataBuffer, CASAlignment);
   if NativeInt(dataBuffer) AND (SizeOf(pointer) - 1) <> 0 then
-    raise Exception.Create('TOmniBaseContainer: obcBuffer is not aligned');
+    raise Exception.Create('TOmniBaseBoundedStack.Initialize: obsBuffer is not aligned');
   obsPublicChainP := dataBuffer;
   inc(NativeInt(dataBuffer), SizeOf(TReferencedPtr));
   obsRecycleChainP := dataBuffer;
@@ -622,8 +639,12 @@ begin { TOmniBaseBoundedStack.MeasureExecutionTimes }
       end;
       //Calculate first 4 minimum average for RemoveLink rutine
       obsTaskPopLoops := GetMinAndClear(0, 4) div 4;
+      if obsTaskPopLoops < 1 then
+        obsTaskPopLoops := 1;
       //Calculate first 4 minimum average for InsertLink rutine
       obsTaskPushLoops := GetMinAndClear(1, 4) div 4;
+      if obsTaskPushLoops < 1 then
+        obsTaskPushLoops := 1;
       obsIsInitialized := true;
     {$IFDEF MSWINDOWS}
     finally DSiSetThreadAffinity(affinity); end;
@@ -873,12 +894,12 @@ begin
   obqPublicRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqPublicRingBuffer := RoundUpTo(obqPublicRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqPublicRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    Format('TOmniBaseContainer: obcPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+    Format('TOmniBaseBoundedQueue.Initialize: obqPublicRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   FreeMem(obqRecycleRingMem);
   obqRecycleRingMem := AllocMem(ringBufferSize + SizeOf(pointer) * 2);
   obqRecycleRingBuffer := RoundUpTo(obqRecycleRingMem, SizeOf(pointer) * 2);
   Assert(NativeInt(obqRecycleRingBuffer) mod (SizeOf(pointer) * 2) = 0,
-    Format('TOmniBaseContainer: obcRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
+    Format('TOmniBaseBoundedQueue.Initialize: obqRecycleRingBuffer is not %d-aligned', [SizeOf(pointer) * 2]));
   // set obqPublicRingBuffer head
   obqPublicRingBuffer.FirstIn.PData := @obqPublicRingBuffer.Buffer[0];
   obqPublicRingBuffer.LastIn.PData := @obqPublicRingBuffer.Buffer[0];
@@ -964,7 +985,7 @@ begin
     NewLastIn := pointer(NativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
     if NativeInt(NewLastIn) > NativeInt(obqPublicRingBuffer.EndBuffer) then
       NewLastIn := obqPublicRingBuffer.StartBuffer;
-    result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.LastIn.PData)) or
+    result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.FirstIn.PData)) or
       (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
   finally Release; end;
 end; { TOmniBaseBoundedQueue.IsFull }
@@ -1021,7 +1042,11 @@ begin { TOmniBaseBoundedQueue.MeasureExecutionTimes }
         TimeTestField[1, n] := GetCPUTimeStamp - TimeTestField[1, n];
       end;
       obqTaskRemoveLoops := GetMinAndClear(0, 4) div 4;
+      if obqTaskRemoveLoops < 1 then
+        obqTaskRemoveLoops := 1;
       obqTaskInsertLoops := GetMinAndClear(1, 4) div 4;
+      if obqTaskInsertLoops < 1 then
+        obqTaskInsertLoops := 1;
       obqIsInitialized := true;
     {$IFDEF MSWINDOWS}
     finally DSiSetThreadAffinity(affinity); end;
@@ -1721,7 +1746,7 @@ end; { TOmniQueue.TryDequeue }
 
 constructor TOmniValueQueue.Create(AThresholdForFull: integer);
 begin
-  FContainerSubject := TOmniContainerSubject.Create;;
+  FContainerSubject := TOmniContainerSubject.Create;
   FInnerQueue := TQueue<TOmniValue>.Create;
   FInnerQueue.OnNotify := CollectionNotifyEvent;
   FFullThreshold := AThresholdForFull;
@@ -1763,7 +1788,7 @@ begin
     cnExtracted:
       begin
         Include(FNotifiableEvents, coiNotifyOnAllRemoves);
-        if AfterCount = FAlmostFullThreshold then
+        if AfterCount = FPartlyEmptyThreshold then
           Include(FNotifiableEvents, coiNotifyOnPartlyEmpty);
       end;
   end; //case Action
@@ -1793,7 +1818,7 @@ begin
       if FInnerQueue.Count > 0 then
         EnclosedResult := FInnerQueue.Dequeue
       else
-        raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
+        raise Exception.Create('TOmniValueQueue.Dequeue: Queue is empty');
     end);
   Result := EnclosedResult;
 end; { TOmniValueQueue.Dequeue }
@@ -1818,8 +1843,9 @@ end; { TOmniValueQueue.GetContainerSubject }
 function TOmniValueQueue.IsEmpty: boolean;
 begin
   EnterCriticalSection;
-  Result := FInnerQueue.Count = 0;
-  LeaveCriticalSection;
+  try
+    Result := FInnerQueue.Count = 0;
+  finally LeaveCriticalSection; end;
 end; { TOmniValueQueue.IsEmpty }
 
 procedure TOmniValueQueue.PropagateNotifications(Events: TInterestSet);
@@ -1827,7 +1853,7 @@ var
   Ev: TOmniContainerObserverInterest;
 begin
   if assigned(FContainerSubject) and (Events <> []) then
-    for Ev := Low(TOmniContainerObserverInterest) to Low(TOmniContainerObserverInterest) do
+    for Ev := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
       if Ev in Events then
         FContainerSubject.Notify(Ev);
 end; { TOmniValueQueue.PropagateNotifications }

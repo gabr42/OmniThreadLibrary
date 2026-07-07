@@ -36,10 +36,14 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///
 ///   Creation date     : 2010-04-13
-///   Last modification : 2017-10-02
-///   Version           : 1.02a
+///   Last modification : 2026-04-15
+///   Version           : 1.02b
 ///</para><para>
 ///   History:
+///     1.02b: 2026-04-15
+///       - Fixed: idpPosition and vedpPosition were incremented non-atomically in
+///         GetNext, allowing duplicate position values under concurrent access.
+///         Now uses InterlockedIncrement/DSiInterlockedIncrement64.
 ///     1.02a: 2017-10-02
 ///       - Fixed bad implementation of TOmniEnumeratorProvider.GetPackage and
 ///         TOmniValueEnumeratorProvider.GetPackage.
@@ -149,6 +153,7 @@ uses
 {$ENDIF}
   GpLists,
   SysUtils,
+  SyncObjs,
   Classes,
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
@@ -472,10 +477,8 @@ function TOmniIntegerDataPackage.GetNext(var position: int64; var value: TOmniVa
   boolean;
 begin
   Result := GetNext(value);
-  if Result then begin
-    position := idpPosition;
-    Inc(idpPosition);
-  end;
+  if Result then
+    position := InterlockedIncrement(idpPosition) - 1;
 end; { TOmniIntegerDataPackage.GetNext }
 
 function TOmniIntegerDataPackage.HasData: boolean;
@@ -637,10 +640,8 @@ function TOmniValueEnumeratorDataPackage.GetNext(var position: int64;
   var value: TOmniValue): boolean;
 begin
   Result := GetNext(value);
-  if Result then begin
-    position := vedpPosition;
-    Inc(vedpPosition);
-  end;
+  if Result then
+    position := DSiInterlockedIncrement64(vedpPosition) - 1;
 end; { TOmniValueEnumeratorDataPackage.GetNext }
 
 class function TOmniValueEnumeratorDataPackage.GetPackageSizeLimit: integer;

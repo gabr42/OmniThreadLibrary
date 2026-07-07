@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2022-03-09
-///   Version           : 2.21
+///   Last modification : 2026-04-15
+///   Version           : 2.21a
 /// </para><para>
 ///   History:
+///     2.21a: 2026-04-15
+///       - Fixed: GlobalOmniThreadPool lazy initialization was not thread-safe.
+///         Two threads calling simultaneously could create two pools, leaking one.
 ///     2.21: 2022-03-09
 ///       - Avoid range check on 64 CPU systems.
 ///     2.20a: 2021-02-23
@@ -652,9 +655,16 @@ var
 { exports }
 
 function GlobalOmniThreadPool: IOmniThreadPool;
+var
+  newPool: IOmniThreadPool;
 begin
-  if not assigned(GOmniThreadPool) then
-    GOmniThreadPool := CreateThreadPool(CGlobalOmniThreadPoolName);
+  if not assigned(GOmniThreadPool) then begin
+    newPool := CreateThreadPool(CGlobalOmniThreadPoolName);
+    if TInterlockedEx.CAS(pointer(nil), pointer(newPool), PPointer(@GOmniThreadPool)^) then
+      newPool._AddRef // prevent release when newPool goes out of scope
+    else
+      newPool := nil;  // another thread won the race
+  end;
   Result := GOmniThreadPool;
 end; { GlobalOmniThreadPool }
 

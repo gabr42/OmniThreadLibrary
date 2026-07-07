@@ -35,10 +35,18 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2022-03-08
-///   Version           : 1.43b
+///   Last modification : 2026-04-15
+///   Version           : 1.43c
 ///</para><para>
 ///   History:
+///     1.43c: 2026-04-15
+///       - Fixed: Terminate leaked TOmniThread object after TerminateThread
+///         (set nil instead of FreeAndNil).
+///       - Fixed: RemoveTerminationEvents did not copy NewMessageEvent,
+///         IdxFirstWaitObject, or IdxLastWaitObject, breaking wait-object
+///         event dispatch and comm channel message delivery.
+///       - Fixed: Asy_UnregisterComm passed IndexOf result to Delete without
+///         checking for -1, causing range error on double-unregister.
 ///     1.43b: 2022-03-08
 ///       - IOmniTaskGroup.WaitForAll/.TerminateAll no longer crashes if the group is empty.
 ///     1.43a: 2021-06-22
@@ -1052,7 +1060,14 @@ type
     otcEventMonitor        : TObject{TOmniEventMonitor};
     otcEventMonitorInternal: boolean;
     otcExecutor            : TOmniTaskExecutor;
-    otcInEventHandler      : boolean;
+    // Nested event-handler dispatch counter (interlocked). Terminate
+    // early-exits when > 0 so an OnMessage / OnTerminated callback that
+    // triggers Terminate on its own task does not deadlock waiting for
+    // itself. Plain boolean was racy when a parent task drained child
+    // messages on its own thread while the child's own thread fired
+    // ForwardTaskTerminated. Backported from OmniThreadLibrary-NG
+    // (commit 2de1757).
+    otcEventHandlerDepth   : integer;
     otcOnMessageExec       : TOmniMessageExec;
     otcOnMessageList       : TGpIntegerObjectList;
     otcOnTerminatedExec    : TOmniMessageExec;
@@ -2144,6 +2159,8 @@ begin
   oteInternalLock.Acquire;
   try
     idxComm := oteCommList.IndexOf(comm);
+    if idxComm < 0 then
+      raise Exception.Create('TOmniTaskExecutor.Asy_UnregisterComm: Comm endpoint not registered');
     oteCommList.Delete(idxComm);
     oteCommNewMsgList.Delete(idxComm);
     if oteCommList.Count = 0 then begin
@@ -2889,6 +2906,9 @@ begin
   dstMsgInfo.IdxFirstMessage := srcMsgInfo.IdxFirstMessage - offset;
   dstMsgInfo.IdxLastMessage := srcMsgInfo.IdxLastMessage - offset;
   dstMsgInfo.IdxRebuildHandles := srcMsgInfo.IdxRebuildHandles - offset;
+  dstMsgInfo.NewMessageEvent := srcMsgInfo.NewMessageEvent;
+  dstMsgInfo.IdxFirstWaitObject := srcMsgInfo.IdxFirstWaitObject - offset;
+  dstMsgInfo.IdxLastWaitObject := srcMsgInfo.IdxLastWaitObject - offset;
   dstMsgInfo.NumWaitHandles := srcMsgInfo.NumWaitHandles - offset;
   {$IFDEF MSWINDOWS}
   dstMsgInfo.WaitFlags := srcMsgInfo.WaitFlags;
@@ -3331,23 +3351,26 @@ begin
         TOmniMessageExec(kv.Value).OnMessage(Self, msg1);
       end;
     exec := TOmniMessageExec(otcOnMessageList.FetchObject(msg.MsgID));
-    otcInEventHandler := true;
+    // TInterlockedEx wraps TInterlocked (D-XE+) and InterlockedIncrement /
+    // InterlockedDecrement (pre-XE). v3 supports Delphi 2007+ which lacks
+    // TInterlocked.
+    TInterlockedEx.Increment(otcEventHandlerDepth);
     try
       if assigned(exec) then
         exec.OnMessage(Self, msg)
       else if assigned(otcOnMessageExec) then
         otcOnMessageExec.OnMessage(Self, msg);
-    finally otcInEventHandler := false; end;
+    finally TInterlockedEx.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskMessage }
 
 procedure TOmniTaskControl.ForwardTaskTerminated;
 begin
   if assigned(otcOnTerminatedExec) then begin
-    otcInEventHandler := true;
+    TInterlockedEx.Increment(otcEventHandlerDepth);
     try
       otcOnTerminatedExec.OnTerminated(Self);
-    finally otcInEventHandler := false; end;
+    finally TInterlockedEx.Decrement(otcEventHandlerDepth); end;
   end;
 end; { TOmniTaskControl.ForwardTaskTerminated }
 
@@ -3886,7 +3909,7 @@ var
   msg: TOmniMessage;
 begin
   //TODO : reset executor and exit immediately if task was not started at all or raise exception?
-  if otcInEventHandler then begin
+  if otcEventHandlerDepth > 0 then begin
     otcDelayedTerminate := true;
     Result := true;
     Exit;
@@ -3915,7 +3938,7 @@ begin
       {$ELSE}
       otcThread.Terminate;
       {$ENDIF MSWINDOWS}
-      otcThread := nil;
+      FreeAndNil(otcThread);
     end
     else if assigned(otcOwningPool) then begin
       otcOwningPool.Cancel(UniqueID, 0);

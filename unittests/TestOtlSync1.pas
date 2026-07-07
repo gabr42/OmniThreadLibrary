@@ -6,6 +6,8 @@ interface
 
 uses
   TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
+  Classes,
+  {$IFDEF OTL_MobileSupport}Threading,{$ENDIF}
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlSync.Utils, OtlTask;
 
 type
@@ -20,6 +22,65 @@ type
     constructor Create;
     destructor Destroy; override;
     class property NumSingletons: integer read GetNumSingletons;
+  end;
+
+  {$IFDEF OTL_MobileSupport}
+  TestIEvent = class(TTestCase)
+  published
+    procedure TestManualReset;
+    procedure TestAutoReset;
+    procedure TestInitialState;
+  end;
+  {$ENDIF}
+
+  TestCancellationToken = class(TTestCase)
+  published
+    procedure TestCreateAndSignal;
+    procedure TestClear;
+    procedure TestEventProperty;
+  end;
+
+  TestCountdownEvent = class(TTestCase)
+  published
+    procedure TestCountdown;
+    procedure TestReset;
+  end;
+
+  TestLockedT = class(TTestCase)
+  published
+    procedure TestCreateAndValue;
+    procedure TestImplicitConversion;
+    procedure TestInitializeWithFactory;
+    procedure TestIsInitialized;
+    {$IFDEF OTL_HasLightweightMREW}
+    procedure TestMREWAccess;
+    {$ENDIF}
+    procedure TestLockedCallback;
+    procedure TestFree;
+  end;
+
+  {$IFDEF OTL_HasLightweightMREW}
+  TestLightweightMREWEx = class(TTestCase)
+  published
+    procedure TestNestedWrite;
+    {$IFDEF OTL_MobileSupport}
+    procedure TestReadBlockedByWrite;
+    {$ENDIF}
+  end;
+  {$ENDIF}
+
+  TestLockManager = class(TTestCase)
+  published
+    procedure TestLockUnlockByKey;
+    procedure TestLockUnlockAutoRelease;
+    procedure TestLockTimeoutFailure;
+    procedure TestMultipleKeysIndependent;
+  end;
+
+  TestSingleThreadUseChecker = class(TTestCase)
+  published
+    procedure TestSameThreadOK;
+    procedure TestDifferentThreadRaises;
   end;
 
   // Test methods for basic synchronisation stuff
@@ -571,7 +632,7 @@ begin
   for i := Low(task) to High(task) do
     task[i].Terminate;
 
-  CheckEquals(0, FSharedValue);
+  CheckEquals(int64(0), FSharedValue);
 end;
 
 {$IFDEF OTL_Generics}
@@ -589,7 +650,7 @@ var
   task   : array [1..8] of IOmniTaskControl;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to 100 do begin
     FreeAndNil(FSingleton);
 
     token := CreateOmniCancellationToken;
@@ -621,7 +682,7 @@ var
   task   : array [1..8] of IOmniTaskControl;
   token  : IOmniCancellationToken;
 begin
-  for iRepeat := 1 to {$IFDEF CONSOLE_TESTRUNNER}100{$ELSE}10{$ENDIF} do begin
+  for iRepeat := 1 to 100 do begin
     FSingletonIntf := nil;
 
     token := CreateOmniCancellationToken;
@@ -648,9 +709,8 @@ end;
 
 procedure TestOtlSync.SetUp;
 begin
-  inherited;
   FSync := TOmniSynchronizer.Create;
-  FSystemMutex := TMutex.Create(nil, false, '/OmniThreadLibrary/TestOtlSync/A4EDD8C0-88D0-46A9-890B-8EAAF466C44A');
+  FSystemMutex := TMutex.Create(nil, false, '/OmniThreadLibrary/TestOtlSync/A4EDD8C0-88D0-46A9-890B-8EAEF466C44A');
   FSystemMutex.Acquire
 end;
 
@@ -659,7 +719,6 @@ begin
   FSystemMutex.Release;
   FreeAndNil(FSystemMutex);
   FreeAndNil(FSync);
-  inherited;
 end;
 
 procedure TestOtlSync.TestResourceCountBasic;
@@ -698,7 +757,364 @@ begin
   Result := FNumSingletons;
 end;
 
+{ TestIEvent }
+
+{$IFDEF OTL_MobileSupport}
+procedure TestIEvent.TestAutoReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, false);
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(100));
+  event.SetEvent;
+  CheckTrue(wrSignaled = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  event.SetEvent;
+  event.Reset;
+  CheckTrue(wrTimeout = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestInitialState;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(false, true);
+  CheckTrue(wrSignaled = event.WaitFor(0));
+end;
+
+procedure TestIEvent.TestManualReset;
+var
+  event: IOmniEvent;
+begin
+  event := CreateOmniEvent(true, false);
+  CheckTrue(wrTimeout = event.WaitFor(0));
+  CheckTrue(wrTimeout = event.WaitFor(100));
+  event.SetEvent;
+  CheckTrue(wrSignaled = event.WaitFor(0));
+  CheckTrue(wrSignaled = event.WaitFor(100));
+  event.Reset;
+  CheckTrue(wrTimeout = event.WaitFor(0));
+end;
+{$ENDIF}
+
+{ TestCancellationToken }
+
+procedure TestCancellationToken.TestCreateAndSignal;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  CheckFalse(ct.IsSignalled, 'initially not signalled');
+  ct.Signal;
+  CheckTrue(ct.IsSignalled, 'signalled after Signal');
+end;
+
+procedure TestCancellationToken.TestClear;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  ct.Signal;
+  CheckTrue(ct.IsSignalled, 'signalled');
+  ct.Clear;
+  CheckFalse(ct.IsSignalled, 'cleared');
+  ct.Signal;
+  CheckTrue(ct.IsSignalled, 're-signalled after clear');
+end;
+
+procedure TestCancellationToken.TestEventProperty;
+var
+  ct: IOmniCancellationToken;
+begin
+  ct := CreateOmniCancellationToken;
+  CheckFalse(ct.IsSignalled, 'not signalled initially');
+  ct.Signal;
+  CheckTrue(ct.IsSignalled, 'signalled after Signal');
+  CheckTrue(WaitForSingleObject(ct.Handle, 0) = WAIT_OBJECT_0, 'handle set after signal');
+  ct.Clear;
+  CheckTrue(WaitForSingleObject(ct.Handle, 0) = WAIT_TIMEOUT, 'handle cleared');
+end;
+
+{ TestCountdownEvent }
+
+procedure TestCountdownEvent.TestCountdown;
+var
+  cde: IOmniCountdownEvent;
+begin
+  cde := CreateOmniCountdownEvent(3, 0);
+  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=3');
+  cde.BaseCountdown.Signal;
+  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=2');
+  cde.BaseCountdown.Signal;
+  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=1');
+  cde.BaseCountdown.Signal;
+  CheckTrue(cde.IsSignalled, 'signalled at count=0');
+end;
+
+procedure TestCountdownEvent.TestReset;
+var
+  cde: IOmniCountdownEvent;
+begin
+  cde := CreateOmniCountdownEvent(1, 0);
+  cde.BaseCountdown.Signal;
+  CheckTrue(cde.IsSignalled, 'signalled');
+  cde.Reset;
+  CheckFalse(cde.IsSignalled, 'not signalled after reset');
+  cde.BaseCountdown.Signal;
+  CheckTrue(cde.IsSignalled, 'signalled again');
+end;
+
+{ TestLockedT }
+
+procedure TestLockedT.TestCreateAndValue;
+var
+  li: Locked<integer>;
+begin
+  li := Locked<integer>.Create(42);
+  CheckEquals(42, li.Value);
+end;
+
+procedure TestLockedT.TestImplicitConversion;
+var
+  li: Locked<integer>;
+  v: integer;
+begin
+  li := Locked<integer>.Create(17);
+  v := li;
+  CheckEquals(17, v);
+end;
+
+procedure TestLockedT.TestInitializeWithFactory;
+var
+  factory: Locked<integer>.TFactory;
+  li     : Locked<integer>;
+  v      : integer;
+begin
+  FillChar(li, SizeOf(li), 0);
+  factory := function: integer begin Result := 99; end;
+  v := li.Initialize(factory);
+  CheckEquals(99, v);
+  CheckEquals(99, li.Value);
+  // Second call returns same value without calling factory again
+  factory := function: integer begin Result := 200; end;
+  v := li.Initialize(factory);
+  CheckEquals(99, v, 'factory not called on second Initialize');
+end;
+
+procedure TestLockedT.TestIsInitialized;
+var
+  li: Locked<integer>;
+begin
+  FillChar(li, SizeOf(li), 0);
+  CheckFalse(li.IsInitialized, 'not initialized initially');
+  li := Locked<integer>.Create(1);
+  CheckTrue(li.IsInitialized, 'initialized after Create');
+end;
+
+{$IFDEF OTL_HasLightweightMREW}
+procedure TestLockedT.TestMREWAccess;
+var
+  li: Locked<integer>;
+  v: integer;
+begin
+  li := Locked<integer>.Create(10);
+  v := li.BeginRead;
+  CheckEquals(10, v);
+  li.EndRead;
+  v := li.BeginWrite;
+  CheckEquals(10, v);
+  li.EndWrite;
+end;
+{$ENDIF}
+
+procedure TestLockedT.TestLockedCallback;
+var
+  li  : Locked<integer>;
+  proc: Locked<integer>.TProcT;
+  sum : integer;
+begin
+  li := Locked<integer>.Create(5);
+  sum := 0;
+  proc := procedure(const value: integer) begin sum := value + 10; end;
+  li.Locked(proc);
+  CheckEquals(15, sum);
+end;
+
+procedure TestLockedT.TestFree;
+var
+  li: Locked<TStringList>;
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  sl.Add('test');
+  li := Locked<TStringList>.Create(sl, true);
+  CheckEquals(1, li.Value.Count);
+  li.Free;
+  // After Free, value should be nil
+  CheckTrue(li.Value = nil, 'value nil after Free');
+end;
+
+{ TestLightweightMREWEx }
+
+{$IFDEF OTL_HasLightweightMREW}
+procedure TestLightweightMREWEx.TestNestedWrite;
+var
+  mrew: TLightweightMREWEx;
+begin
+  mrew.BeginWrite;
+  // Nested write from same thread should succeed
+  mrew.BeginWrite;
+  mrew.EndWrite;
+  mrew.EndWrite;
+  CheckTrue(true, 'nested write succeeded');
+end;
+
+{$IFDEF OTL_MobileSupport}
+procedure TestLightweightMREWEx.TestReadBlockedByWrite;
+var
+  mrew   : ILightweightMREWEx;
+  synch  : IOmniSynchronizer;
+  blocked: TOmniAlignedInt32;
+  proc   : TProc;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  synch := TOmniSynchronizer.Create;
+  blocked.Value := 0;
+
+  mrew.BeginWrite;
+  proc :=
+    procedure
+    begin
+      synch.Signal('started');
+      blocked.Value := 1;
+      mrew.BeginRead;
+      blocked.Value := 2;
+      mrew.EndRead;
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('started');
+  Sleep(200);
+  CheckEquals(1, blocked.Value, 'reader is blocked');
+  mrew.EndWrite;
+  Sleep(200);
+  CheckEquals(2, blocked.Value, 'reader unblocked after EndWrite');
+end;
+{$ENDIF OTL_MobileSupport}
+{$ENDIF}
+
+{ TestLockManager }
+
+procedure TestLockManager.TestLockUnlockByKey;
+var
+  lm: IOmniLockManager<string>;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  CheckTrue(lm.Lock('key1', 0), 'lock key1');
+  lm.Unlock('key1');
+  CheckTrue(lm.Lock('key1', 0), 're-lock key1 after unlock');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestLockUnlockAutoRelease;
+var
+  lm        : IOmniLockManager<string>;
+  autoUnlock: IOmniLockManagerAutoUnlock;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  begin
+    autoUnlock := lm.LockUnlock('key1', 1000);
+    Check(autoUnlock <> nil, 'auto-unlock acquired');
+  end;
+  // After autoUnlock goes out of scope, lock should be released
+  CheckTrue(lm.Lock('key1', 0), 'lock available after auto-unlock');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestLockTimeoutFailure;
+var
+  lm   : IOmniLockManager<string>;
+  synch: IOmniSynchronizer;
+  proc : TProc;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  synch := TOmniSynchronizer.Create;
+
+  lm.Lock('key1', 0);
+
+  proc :=
+    procedure
+    begin
+      if not lm.Lock('key1', 100) then
+        synch.Signal('done');
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('done');
+  lm.Unlock('key1');
+end;
+
+procedure TestLockManager.TestMultipleKeysIndependent;
+var
+  lm: IOmniLockManager<string>;
+begin
+  lm := TOmniLockManager<string>.CreateInterface;
+  CheckTrue(lm.Lock('a', 0), 'lock a');
+  CheckTrue(lm.Lock('b', 0), 'lock b while a locked');
+  lm.Unlock('a');
+  lm.Unlock('b');
+end;
+
+{ TestSingleThreadUseChecker }
+
+procedure TestSingleThreadUseChecker.TestSameThreadOK;
+var
+  checker: TOmniSingleThreadUseChecker;
+begin
+  checker.AttachToCurrentThread;
+  checker.Check;
+  CheckTrue(true, 'Check from same thread OK');
+end;
+
+procedure TestSingleThreadUseChecker.TestDifferentThreadRaises;
+var
+  checker: TOmniSingleThreadUseChecker;
+  synch  : IOmniSynchronizer;
+  raised : TOmniAlignedInt32;
+  proc   : TProc;
+begin
+  synch := TOmniSynchronizer.Create;
+  raised.Value := 0;
+  checker.AttachToCurrentThread;
+
+  proc :=
+    procedure
+    begin
+      try
+        checker.Check;
+      except
+        raised.Value := 1;
+      end;
+      synch.Signal('done');
+    end;
+  System.Threading.TTask.Run(proc);
+
+  synch.WaitFor('done');
+  CheckEquals(1, raised.Value, 'Check from different thread raised exception');
+end;
+
 initialization
-  // Register any test cases with the test runner
+  {$IFDEF OTL_MobileSupport}
+  RegisterTest(TestIEvent.Suite);
+  {$ENDIF}
+  RegisterTest(TestCancellationToken.Suite);
+  RegisterTest(TestCountdownEvent.Suite);
+  RegisterTest(TestLockedT.Suite);
+  {$IFDEF OTL_HasLightweightMREW}
+  RegisterTest(TestLightweightMREWEx.Suite);
+  {$ENDIF}
+  RegisterTest(TestLockManager.Suite);
+  RegisterTest(TestSingleThreadUseChecker.Suite);
   RegisterTest(TestOtlSync.Suite);
 end.

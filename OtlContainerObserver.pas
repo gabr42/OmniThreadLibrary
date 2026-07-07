@@ -441,7 +441,7 @@ begin
     end;
   finally csListLocks[interest].ExitReadLock; end;
   {$R+}
-end; { TOmniContainerSubject.NotifyAndRemove }
+end; { TOmniContainerSubject.NotifyOnce }
 
 procedure TOmniContainerSubject.Rearm(interest: TOmniContainerObserverInterest);
 var

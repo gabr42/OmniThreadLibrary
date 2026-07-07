@@ -24,6 +24,8 @@ type
     procedure TestDecreasingEndEqStep;
     procedure TestNoExecution;
     procedure TestStepZero;
+    procedure TestRepeatedDefaultTasks;
+    procedure TestRepeatedExplicitTasks;
   end;
 
   TestJoin = class(TTestCase)
@@ -39,7 +41,8 @@ implementation
 {$IFDEF Unicode}
 uses
   Math,
-  OtlParallel;
+  OtlParallel,
+  OtlCommon;
 
 { TestParallelFor }
 
@@ -139,7 +142,7 @@ var
   end;
 
 begin
-  Status(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep]));
+  WriteLn(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep]));
   OutputDebugString(PChar(Format('Testing range %d .. %d, step %d', [iFrom, iTo, iStep])));
   iMin := Min(iFrom, iTo);
   iMax := Max(iFrom, iTo);
@@ -176,7 +179,50 @@ end;
 
 procedure TestParallelFor.TestStepZero;
 begin
-  CheckException(InternalTestStepZero, Exception);
+  try
+    InternalTestStepZero;
+    Fail('Expected exception not raised');
+  except
+    on E: Exception do
+      ; // expected
+  end;
+end;
+
+procedure TestParallelFor.TestRepeatedDefaultTasks;
+var
+  counter: integer;
+  n      : integer;
+begin
+  // Stress test: repeated Parallel.For with default task count (all cores).
+  for n := 1 to 50 do begin
+    counter := 0;
+    Parallel.For(1, 10, 1)
+      .Execute(
+        procedure (idx: integer)
+        begin
+          InterlockedIncrement(counter);
+        end);
+    CheckEquals(10, counter, Format('iteration %d', [n]));
+  end;
+end;
+
+procedure TestParallelFor.TestRepeatedExplicitTasks;
+var
+  counter: integer;
+  n      : integer;
+begin
+  // Stress test with explicit NumTasks(2) and NoThreadPool.
+  for n := 1 to 50 do begin
+    counter := 0;
+    Parallel.For(1, 10, 1).NumTasks(2)
+      .TaskConfig(Parallel.TaskConfig.NoThreadPool)
+      .Execute(
+        procedure (idx: integer)
+        begin
+          InterlockedIncrement(counter);
+        end);
+    CheckEquals(10, counter, Format('iteration %d', [n]));
+  end;
 end;
 
 { TestJoin }
@@ -299,9 +345,11 @@ begin
   end;
 end;
 
+{$ENDIF}
+
 initialization
+{$IFDEF Unicode}
   RegisterTest(TestParallelFor.Suite);
   RegisterTest(TestJoin.Suite);
 {$ENDIF}
 end.
-
