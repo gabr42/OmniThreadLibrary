@@ -20,7 +20,8 @@ uses
   GUITestRunner,
   TextTestRunner,
   StressTestBlockingCollection1 in 'StressTestBlockingCollection1.pas',
-  StressTestOtlSync1 in 'StressTestOtlSync1.pas';
+  StressTestOtlSync1 in 'StressTestOtlSync1.pas',
+  TestOtlIssue216 in 'TestOtlIssue216.pas'; // registers only when OTL_RaceTest is defined
 
 {$R *.RES}
 

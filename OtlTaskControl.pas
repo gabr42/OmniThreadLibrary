@@ -35,10 +35,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-04-15
-///   Version           : 1.43c
+///   Last modification : 2026-07-08
+///   Version           : 1.43d
 ///</para><para>
 ///   History:
+///     1.43d: 2026-07-08
+///       - Fixed data race on the task's TerminatedEvent handle (issue #216).
+///         TOmniTask.InternalExecute now signals TerminatedEvent while still holding
+///         MonitorLock, so a task controller being destroyed on another thread cannot
+///         close (and let the OS recycle) the handle in the window before SetEvent.
 ///     1.43c: 2026-04-15
 ///       - Fixed: Terminate leaked TOmniThread object after TerminateThread
 ///         (set nil instead of FreeAndNil).
@@ -678,6 +683,20 @@ type
   function CreateTaskGroup: IOmniTaskGroup;
 
   function CreateTaskControlList: IOmniTaskControlList;
+
+{$IFDEF OTL_RaceTest}
+type
+  ///<summary>Test-only hook. Fired on the task worker thread immediately before the
+  ///   task's TerminatedEvent is signalled at the end of TOmniTask.InternalExecute,
+  ///   i.e. inside the vulnerable window after MonitorLock has been released but before
+  ///   SetEvent. The issue #216 regression test uses it to deterministically drive
+  ///   task-controller destruction (which closes TerminatedEvent) into that window and
+  ///   then check whether the handle is still valid. Compiled in only when OTL_RaceTest
+  ///   is defined; never present in production builds. See unittests\TestOtlIssue216.pas.</summary>
+  TOtlRaceTestHook = reference to procedure(const eventTerminate: TOmniTransitionEvent);
+var
+  GOtlRaceTestHook: TOtlRaceTestHook;
+{$ENDIF OTL_RaceTest}
 
 type
   TOmniInternalMessageType = (imtStringMsg, imtAddressMsg, imtFuncMsg, imtAnonMsg);
@@ -1626,7 +1645,6 @@ begin
   finally otCleanupLock.ExitWriteLock; end;
   otThreadID := GetThreadID;
   chainTo := nil;
-  eventTerminate := {$IFDEF MSWINDOWS}0{$ELSE}nil{$ENDIF};
   try
     try
       try
@@ -1668,6 +1686,16 @@ begin
             otSharedInfo_ref.Monitor.Send(COmniTaskMsg_Terminated, WPARAM(Int64Rec(UniqueID).Lo), LPARAM(Int64Rec(UniqueID).Hi));
            {$ENDIF} 
           {$ENDIF MSWINDOWS}
+          // Signal TerminatedEvent while still holding MonitorLock. TOmniTaskControl.Destroy
+          // closes TerminatedEvent under the same lock; for a pooled task it does not wait
+          // for this worker thread, so if we released the lock before signalling, Destroy
+          // could close (and the OS could recycle) the handle in between - and we would then
+          // SetEvent an unrelated object. See issue #216 and unittests\TestOtlIssue216.pas.
+          {$IFDEF OTL_RaceTest}
+          if assigned(GOtlRaceTestHook) then
+            GOtlRaceTestHook(eventTerminate);
+          {$ENDIF OTL_RaceTest}
+          SetEvent(eventTerminate);
           otSharedInfo_ref := nil;
         finally sync.Release; end;
       end;
@@ -1677,7 +1705,6 @@ begin
       otExecutor_ref   := nil;
       otParameters_ref := nil;
       otSharedInfo_ref := nil;
-      SetEvent(eventTerminate);
     end;
     if assigned(chainTo) then
       chainTo.Run; // TODO 1 -oPrimoz Gabrijelcic : Should InternalExecute the chained task in the same thread (should work when run in a pool)
