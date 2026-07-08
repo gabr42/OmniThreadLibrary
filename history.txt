@@ -81,6 +81,11 @@
     - Replaced the plain boolean otcInEventHandler with an interlocked
       depth counter to fix a Terminate self-deadlock under
       background-observer dispatch.
+    - Fixed data race on the task's TerminatedEvent handle (issue #216).
+      TOmniTask.InternalExecute now signals TerminatedEvent while still
+      holding MonitorLock, so a task controller being destroyed on another
+      thread cannot close (and let the OS recycle) the handle in the window
+      before SetEvent. Reported by NoAnyName.
   - OtlCommon.Utils: SetThreadDescription (Windows 10+ thread naming) was
     dead code behind an obsolete IFDEF; also removed an incorrect
     FreeLibrary on a GetModuleHandle handle.
