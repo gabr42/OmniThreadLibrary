@@ -377,10 +377,8 @@ interface
 //   core and that 2*<number of cores> is a good number of threads for this particular task.
 
 uses
-  {$IFDEF MSWINDOWS}
   Windows,
   Messages,
-  {$ENDIF MSWINDOWS}
   SysUtils,
   {$IFDEF OTL_ERTTI}
   TypInfo,
@@ -1670,9 +1668,7 @@ type
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}
   DSiWin32,
-  {$ENDIF MSWINDOWS}
   Classes,
   {$IFDEF OTL_GoodGenerics}
   Diagnostics,
@@ -1932,10 +1928,8 @@ type
     property Interval: integer read GetInterval write SetInterval;
   end; { TOmniTimedTask }
 
-{$IFDEF MSWINDOWS}
 const
   MSG_WORK_ITEM_DONE = WM_USER; // used only in internal window created inside TOmniBackgroundWorker
-{$ENDIF MSWINDOWS}
 
 type
   IOmniWorkItemConfigEx = interface ['{42CEC5CB-404F-4868-AE81-6A13AD7E3C6B}']
@@ -2019,25 +2013,19 @@ type
     FDefaultConfig    : IOmniWorkItemConfig;
     FDefaultConfigEx  : IOmniWorkItemConfigEx;
     FNumTasks         : integer;
-    {$IFDEF MSWINDOWS}
     FObserver         : TOmniContainerObserver;
-    {$ENDIF MSWINDOWS}
     FOnStop           : TOmniTaskStopDelegate;
     FStopOn           : IOmniCancellationToken;
     FTaskConfig       : IOmniTaskConfig;
     FTaskFinalizer    : TOmniTaskFinalizerDelegate;
     FTaskInitializer  : TOmniTaskInitializerDelegate;
     FUniqueID         : IOmniCounter;
-    {$IFDEF MSWINDOWS}
     FWindow           : THandle;
-    {$ENDIF MSWINDOWS}
     FWorker           : IOmniPipeline;
   strict protected
     procedure BackgroundWorker(const input, output: IOmniBlockingCollection;
       const task: IOmniTask);
-    {$IFDEF MSWINDOWS}
     procedure ObserverWndProc(var message: TMessage);
-    {$ENDIF MSWINDOWS}
   public
     constructor Create;
     destructor  Destroy; override;
@@ -2318,11 +2306,7 @@ begin
     raise Exception.Create('Task was not started');
 
   // Blocks until FCountStopped value is zero.
-  {$IFDEF MSWINDOWS}
   Result := WaitForSingleObject(FCountStopped.Handle, timeout_ms) = WAIT_OBJECT_0;
-  {$ELSE}
-  Result := FCountStopped.Synchro.WaitFor(timeout_ms) = wrSignaled;
-  {$ENDIF}
 end; { TOmniParallelJoin.InternalWaitFor }
 
 function TOmniParallelJoin.IsCancelled: boolean;
@@ -3371,11 +3355,7 @@ end; { TOmniParallelLoopBase.Create }
 destructor TOmniParallelLoopBase.Destroy;
 begin
   if assigned(FCountStopped) then
-    {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
-    {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
-    {$ENDIF ~MSWINDOWS}
   if FManagedProvider then
     FreeAndNil(FSourceProvider);
   FreeAndNil(FDelegateEnum);
@@ -3639,11 +3619,7 @@ begin
     Parallel.Start(task, FTaskConfig);
   end;
   if not (ploNoWait in Options) then begin
-    {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
-    {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
-    {$ENDIF ~MSWINDOWS}
     if assigned(FIntoQueueIntf) then
       FIntoQueueIntf.CompleteAdding;
     DoOnStop(nil);
@@ -4244,11 +4220,7 @@ destructor TOmniParallelSimpleLoop.Destroy;
 begin
   FreeAndNil(FOnMessageList);
   if assigned(FCountStopped) then
-    {$IFDEF MSWINDOWS}
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
-    {$ELSE}
-    FCountStopped.Synchro.WaitFor(INFINITE);
-    {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniParallelSimpleLoop.Destroy }
 
@@ -4494,11 +4466,7 @@ begin
     if taskCount = 0 then
       FCountStopped.Allocate //all done
     else
-      {$IFDEF MSWINDOWS}
       WaitForSingleObject(FCountStopped.Handle, INFINITE);
-      {$ELSE}
-      FCountStopped.Synchro.WaitFor(INFINITE);
-      {$ENDIF ~MSWINDOWS}
     if assigned(FOnStop) then
       FOnStop(nil);
   end;
@@ -4564,11 +4532,7 @@ end; { TOmniParallelSimpleLoop.TaskConfig }
 
 function TOmniParallelSimpleLoop.WaitFor(maxWait_ms: cardinal): boolean;
 begin
-  {$IFDEF MSWINDOWS}
   Result := WaitForSingleObject(FCountStopped.Handle, maxWait_ms) = WAIT_OBJECT_0;
-  {$ELSE}
-  Result := FCountStopped.Synchro.WaitFor(maxWait_ms) = wrSignaled;
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniParallelSimpleLoop.WaitFor }
 
 {$IFDEF OTL_GoodGenerics}
@@ -5005,11 +4969,7 @@ begin
   opCancelWith := CreateOmniCancellationToken;
   opInput := TOmniBlockingCollection.Create;
   opOutput := TOmniBlockingCollection.Create;
-  {$IFDEF MSWINDOWS}
   opShutDownComplete := CreateEvent(nil, true, false, nil);
-  {$ELSE}
-  opShutDownComplete := CreateOmniEvent(true, false);
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniPipeline.Create }
 
 destructor TOmniPipeline.Destroy;
@@ -5017,11 +4977,7 @@ begin
   Cancel;
   FreeAndNil(opOutQueues);
   FreeAndNil(opStages);
-  {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(opShutDownComplete);
-  {$ELSE}
-  opShutdownComplete := nil;
-  {$ENDIF ~MSWINDOWS}
   inherited Destroy;
 end; { TOmniPipeline.Destroy }
 
@@ -5200,11 +5156,7 @@ begin
               if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
               begin
                 DoOnStop(task);
-                {$IFDEF MSWINDOWS}
                 SetEvent(Task.Param['ShutDownComplete']);
-                {$ELSE}
-                (Task.Param['ShutDownComplete'].AsInterface as IOmniEvent).SetEvent;
-                {$ENDIF MSWINDOWS}
               end;
             end;
           end,
@@ -5315,13 +5267,8 @@ end; { TOmniPipeline.Throttle }
 function TOmniPipeline.WaitFor(timeout_ms: cardinal): boolean;
 begin
   Assert(assigned(opCountStopped));
-  {$IFDEF MSWINDOWS}
   Assert(opShutDownComplete <> 0);
   Result := (WaitForSingleObject(opShutDownComplete, timeout_ms) = WAIT_OBJECT_0);
-  {$ELSE}
-  Assert(opShutDownComplete <> nil);
-  Result := opShutDownComplete.WaitFor(timeout_ms) = wrSignaled;
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniPipeline.WaitFor }
 
 { TOmniCompute<T> }
@@ -5355,7 +5302,7 @@ begin
     if FInput.Take(compute) then
       IOmniCompute<T>(compute.AsInterface).Execute
     else
-      {$IFDEF MSWINDOWS}DSiYield;{$ELSE}TThread.Yield;{$ENDIF};
+      DSiYield;
   end;
   value := FResult;
   Result := true;
@@ -5872,11 +5819,9 @@ begin
                      FOnStop(task);
                  end);
 
-  {$IFDEF MSWINDOWS}
   FWindow := DSiAllocateHWnd(ObserverWndProc);
   FObserver := CreateContainerWindowsMessageObserver(FWindow, MSG_WORK_ITEM_DONE, 0, 0);
   FWorker.Output.ContainerSubject.Attach(FObserver, coiNotifyOnAllInserts);
-  {$ENDIF MSWINDOWS}
   FWorker.Run;
   Result := Self;
 end; { TOmniBackgroundWorker.Execute }
@@ -5907,7 +5852,6 @@ begin
   Result := Self;
 end; { TOmniBackgroundWorker.NumTasks }
 
-{$IFDEF MSWINDOWS}
 procedure TOmniBackgroundWorker.ObserverWndProc(var message: TMessage);
 var
   ovWorkItem: TOmniValue;
@@ -5921,7 +5865,6 @@ begin
     message.Result := Ord(true);
   end;
 end; { TOmniBackgroundWorker.ObserverWndProc }
-{$ENDIF MSWINDOWS}
 
 function TOmniBackgroundWorker.OnRequestDone(const aTask: TOmniWorkItemDoneDelegate):
   IOmniBackgroundWorker;
@@ -5992,7 +5935,6 @@ end; { TOmniBackgroundWorker.TaskConfig }
 function TOmniBackgroundWorker.Terminate(timeout_ms: cardinal): boolean;
 begin
   Result := WaitFor(timeout_ms);
-  {$IFDEF MSWINDOWS}
   if Result then begin
     if assigned(FObserver) then begin
       FWorker.Output.ContainerSubject.Detach(FObserver, coiNotifyOnAllInserts);
@@ -6000,7 +5942,6 @@ begin
     end;
     DSiDeallocateHWnd(FWindow);
   end;
-  {$ENDIF MSWINDOWS}
 end; { TOmniBackgroundWorker.Terminate }
 
 function TOmniBackgroundWorker.WaitFor(timeout_ms: cardinal): boolean;

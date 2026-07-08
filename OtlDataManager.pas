@@ -144,13 +144,9 @@ function  CreateDataManager(sourceProvider: TOmniSourceProvider; numWorkers: int
 implementation
 
 uses
-{$IFDEF MSWINDOWS}
   Windows,
   Contnrs,
   DSiWin32,
-{$ELSE}
-  System.Diagnostics,
-{$ENDIF}
   GpLists,
   SysUtils,
   SyncObjs,
@@ -313,12 +309,8 @@ type
     obsActiveBuffer_ref: TOmniOutputBufferImpl;
     obsShareLock       : IOmniCriticalSection;
     obsBuffers         : array [1..CNumBuffersInSet] of TOmniOutputBufferImpl;
-    {$IFDEF MSWINDOWS}
     obsActiveIndex     : integer;
     obsWaitHandles     : array[1..CNumBuffersInSet] of THandle;
-    {$ELSE}
-    obsWaitEvents      : TWaitFor;
-    {$ENDIF}
   public
     constructor Create(owner: TOmniBaseDataManager; output: IOmniBlockingCollection);
     destructor  Destroy; override;
@@ -397,9 +389,6 @@ type
     const CFetchTimeout_ms = 10;
   strict private
     hdmEstimatedPackageSize: TOmniAlignedInt32;
-    {$IFNDEF MSWINDOWS}
-    FStopWatch: TStopwatch;
-    {$ENDIF}
   public
     constructor Create(sourceProvider: TOmniSourceProvider; numWorkers: integer; options:
       TOmniDataManagerOptions);
@@ -878,20 +867,12 @@ begin
   obiDataManager_ref := owner;
   obiOutput := output;
   obiBuffer := TOmniBlockingCollection.Create;
-  {$IFDEF MSWINDOWS}
   obiEmptyEvent := CreateEvent(nil, false, true, nil);
-  {$ELSE}
-  obiEmptyEvent := CreateOmniEvent(false, true, AShareLock);
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferImpl.Create }
 
 destructor TOmniOutputBufferImpl.Destroy;
 begin
-  {$IFDEF MSWINDOWS}
   DSiCloseHandleAndNull(obiEmptyEvent);
-  {$ELSE}
-  obiEmptyEvent := nil;
-  {$ENDIF ~MSWINDOWS}
   FreeAndNil(obiBuffer);
   inherited;
 end; { TOmniOutputBufferImpl.Destroy }
@@ -934,26 +915,13 @@ constructor TOmniOutputBufferSet.Create(owner: TOmniBaseDataManager;
   output: IOmniBlockingCollection);
 var
   iBuffer: integer;
-  {$IFNDEF MSWINDOWS}
-  Events: array of IOmniSynchro;
-  {$ENDIF ~MSWINDOWS}
 begin
   inherited Create;
   obsShareLock := CreateOmniCriticalSection;
-  {$IFNDEF MSWINDOWS}
-  SetLength(Events, CNumBuffersInSet);
-  {$ENDIF}
   for iBuffer := 1 to CNumBuffersInSet do begin
     obsBuffers[iBuffer] := TOmniOutputBufferImpl.Create(owner, output);
-    {$IFDEF MSWINDOWS}
     obsWaitHandles[iBuffer] := obsBuffers[iBuffer].EmptyEvent;
-    {$ELSE}
-    Events[iBuffer-1] := obsBuffers[iBuffer].EmptyEvent;
-    {$ENDIF ~MSWINDOWS}
   end;
-  {$IFNDEF MSWINDOWS}
-  obsWaitEvents := TWaitFor.Create(Events, obsShareLock);
-  {$ENDIF}
   ActivateBuffer;
 end; { TOmniOutputBufferSet.Create }
 
@@ -963,35 +931,17 @@ var
 begin
   for iBuffer := 1 to CNumBuffersInSet do
     obsBuffers[iBuffer].Free;
-  {$IFNDEF MSWINDOWS}
-  FreeAndNil(obsWaitEvents);
-  {$ENDIF ~MSWINDOWS}
   inherited;
 end; { TOmniOutputBufferSet.Destroy }
 
 procedure TOmniOutputBufferSet.ActivateBuffer;
 var
-  {$IFDEF MSWINDOWS}
   awaited: cardinal;
-  {$ELSE}
-  Signaller: IOmniSynchro;
-  iBuffer  : integer;
-  {$ENDIF}
 begin
-  {$IFDEF MSWINDOWS}
   awaited := WaitForMultipleObjects(CNumBuffersInSet, @obsWaitHandles, false, INFINITE);
   Assert({(awaited >= WAIT_OBJECT_0) and } (awaited < (WAIT_OBJECT_0 + CNumBuffersInSet)));
   obsActiveIndex := awaited - WAIT_OBJECT_0 + 1;
   obsActiveBuffer_ref := obsBuffers[obsActiveIndex];
-  {$ELSE}
-  obsWaitEvents.WaitAny(INFINITE, Signaller);
-  for iBuffer := 1 to CNumBuffersInSet do begin
-    if Signaller <> obsBuffers[iBuffer].EmptyEvent then
-      continue; //for
-    obsActiveBuffer_ref := obsBuffers[iBuffer];
-    break; //for
-  end;
-  {$ENDIF ~MSWINDOWS}
 end; { TOmniOutputBufferSet.ActivateBuffer }
 
 procedure TOmniOutputBufferSet.Submit(position: int64; const data: TOmniValue);
@@ -1189,9 +1139,6 @@ constructor TOmniHeuristicDataManager.Create(sourceProvider: TOmniSourceProvider
 begin
   inherited Create(sourceProvider, numWorkers, options);
   hdmEstimatedPackageSize.Value := GetDataCountForGeneration(High(integer)); // hope for the best
-  {$IFNDEF MSWINDOWS}
-  FStopWatch := TStopWatch.Create;
-  {$ENDIF}
 end; { TOmniHeuristicDataManager.Create }
 
 function TOmniHeuristicDataManager.GetNextFromProvider(package: TOmniDataPackage;
@@ -1209,19 +1156,9 @@ begin
   dataSize := GetDataCountForGeneration(generation);
   if dataSize > hdmEstimatedPackageSize.Value then
     dataSize := hdmEstimatedPackageSize.Value;
-  {$IFDEF MSWINDOWS}
   time := DSiTimeGetTime64;
-  {$ELSE}
-  FStopWatch.Reset;
-  FStopWatch.Start;
-  {$ENDIF}
   Result := SourceProvider.GetPackage(dataSize, package);
-  {$IFDEF MSWINDOWS}
   time := DSiTimeGetTime64 - time;
-  {$ELSE}
-  FStopWatch.Stop;
-  time := FStopWatch.ElapsedMilliseconds;
-  {$ENDIF}
   if Result then begin
     if time = 0 then
       dataPerMs := CDataLimit

@@ -76,13 +76,10 @@ uses
   Windows,
   Classes;
 {$ELSE ~OTL_HasNameThreadForDebugging}
-{$IFDEF MSWINDOWS}
 uses
   Windows;
-{$ENDIF MSWINDOWS}
 {$ENDIF ~OTL_HasNameThreadForDebugging}
 
-{$IFDEF MSWINDOWS}
 {$IFDEF OTL_HasNameThreadForDebugging}
 type
   TSetThreadDescription = function(hThread: THandle; threadDescription: PWideChar): HRESULT; stdcall;
@@ -90,7 +87,6 @@ type
 var
   GSetThreadDescription: TSetThreadDescription;
 {$ENDIF OTL_HasNameThreadForDebugging}
-{$ENDIF MSWINDOWS}
 
 threadvar
   LastThreadName: string[255];
@@ -120,7 +116,6 @@ begin
 end; { SetThreadName }
 
 {$ELSE ~OTL_HasNameThreadForDebugging}
-{$IFDEF MSWINDOWS}
 {$WARN SYMBOL_PLATFORM OFF}
 
 procedure SetThreadName(const name: string);
@@ -151,20 +146,11 @@ begin
 end; { SetThreadName }
 
 {$WARN SYMBOL_PLATFORM ON}
-{$ELSE ~MSWINDOWS}
-
-procedure SetThreadName(const name: string);
-begin
-end; { SetThreadName }
-
-{$ENDIF ~MSWINDOWS}
 {$ENDIF ~OTL_HasNameThreadForDebugging}
 {$ENDIF ~OTL_DontSetThreadName}
 
-{$IFDEF MSWINDOWS}
 {$IFDEF OTL_HasNameThreadForDebugging}
 initialization
   GSetThreadDescription := GetProcAddress(GetModuleHandle('kernel32.dll'), 'SetThreadDescription');
 {$ENDIF OTL_HasNameThreadForDebugging}
-{$ENDIF MSWINDOWS}
 end.

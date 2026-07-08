@@ -1,5 +1,14 @@
 3.09: <<unreleased>>
 
+- Changes:
+  - Removed all POSIX/non-Windows support (mobile, Linux, OSX, Android,
+    iOS). OmniThreadLibrary now targets Windows only; cross-platform
+    support lives in the OmniThreadLibrary-NG project. This drops the
+    OTL_MobileSupport define and all non-Windows conditional code from the
+    core units (the non-Windows path was never functional in this
+    repository) and removes non-Windows platform entries from the package
+    projects.
+
 - New features:
   - Backported CSP-style abstractions from OmniThreadLibrary-NG
     (Delphi XE and newer):

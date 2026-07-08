@@ -100,9 +100,6 @@ uses
   {$IFDEF OTL_Anonymous}
   Generics.Collections,
   {$ELSE}
-  {$IFNDEF MSWINDOWS}
-  Generics.Collections,
-  {$ENDIF ~MSWINDOWS}
   {$ENDIF OTL_Anonymous}
   OtlCommon,
   OtlSync,
@@ -123,7 +120,7 @@ type
     owolAnonResponseHandlers: TList<TOmniWaitObjectProc>;
     {$ENDIF OTL_Anonymous}
     owolResponseHandlers: TGpTMethodList;
-    owolWaitObjects     : {$IFDEF MSWINDOWS}TGpInt64List{$ELSE}TList<IOmniEvent>{$ENDIF};
+    owolWaitObjects     : TGpInt64List;
   strict protected
     {$IFDEF OTL_Anonymous}
     function  GetAnonResponseHandler(idxHandler: integer): TOmniWaitObjectProc;
@@ -146,19 +143,6 @@ type
     property WaitObjects[idxWaitObject: integer]: TOmniTransitionEvent read GetWaitObjects;
   end; { TOmniWaitObjectList }
 
-  {$IFNDEF MSWINDOWS}
-  IOmniEventAndProc = interface(IOmniEvent) ['{2CA14FE0-4616-41CC-BDED-EEDE88BC6492}']
-    function BaseEvent: IOmniEvent;
-    function Proc: TOmniWaitObjectMethod;
-  end; { IOmniEventAndProc }
-
-  TOmniSynchroArray = TArray<IOmniSynchro>;
-  TOmniEventProcList = class(TList<IOmniEventAndProc>)
-  public
-    function  AsSyncroArray: TOmniSynchroArray;
-    procedure RemoveBaseEvent(const Base: IOmniEvent);
-  end;
-  {$ENDIF ~MSWINDOWS}
 
   {$IFDEF OTL_Anonymous}
   TOmniTaskInvokeFunction = reference to procedure;
@@ -227,27 +211,18 @@ type
   TOmniTaskDelegate = reference to procedure(const task: IOmniTask);
 {$ENDIF OTL_Anonymous}
 
-{$IFNDEF MSWINDOWS}
-  function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
-{$ENDIF ~MSWINDOWS}
 
 implementation
 
 { exports }
 
-{$IFNDEF MSWINDOWS}
-function DecorateEvent(const Base: IOmniEvent; AProc: TOmniWaitObjectMethod): IOmniEventAndProc;
-begin
-  // TODO
-end;
-{$ENDIF ~MSWINDOWS}
 
 { TOmniWaitObjectList }
 
 constructor TOmniWaitObjectList.Create;
 begin
   inherited Create;
-  owolWaitObjects := {$IFDEF MSWINDOWS}TGpInt64List.Create{$ELSE}TList<IOmniEvent>.Create{$ENDIF};
+  owolWaitObjects := TGpInt64List.Create;
   owolResponseHandlers := TGpTMethodList.Create;
   {$IFDEF OTL_Anonymous}
   owolAnonResponseHandlers := TList<TOmniWaitObjectProc>.Create;
@@ -314,17 +289,6 @@ begin
   end;
 end; { TOmniWaitObjectList.Remove }
 
-{$IFNDEF MSWINDOWS}
-function TOmniEventProcList.AsSyncroArray: TOmniSynchroArray;
-begin
-  //TODO
-end;
-
-procedure TOmniEventProcList.RemoveBaseEvent(const Base: IOmniEvent);
-begin
-  //TODO
-end;
-{$ENDIF ~MSWINDOWS}
 
 initialization
   Assert(SizeOf(THandle) <= SizeOf(int64));

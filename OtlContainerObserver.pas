@@ -70,13 +70,7 @@ interface
 
 uses
   Classes,
-  {$IFDEF MSWindows}
   Windows,
-  {$ENDIF MSWindows}
-  {$IFDEF OTL_MobileSupport}
-  System.SyncObjs,
-  System.Generics.Collections,
-  {$ENDIF OTL_MobileSupport}
   OtlSync,
   OtlCommon;
 
@@ -101,14 +95,7 @@ type
     procedure Notify; virtual; abstract;
   end; { TOmniContainerObserver }
 
-  {$IFDEF OTL_MobileSupport}
-  TOmniContainerEventObserver = class(TOmniContainerObserver)
-  public
-    function GetEvent: IOmniEvent; virtual; abstract;
-  end; { TOmniContainerEventObserver }
-  {$ENDIF OTL_MobileSupport}
 
-  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserver = class(TOmniContainerObserver)
   public
     function  GetEvent: THandle; virtual; abstract;
@@ -121,7 +108,6 @@ type
     procedure Send(aMessage: cardinal; wParam: WPARAM; lParam: LPARAM); virtual; abstract;
     property Handle: THandle read GetHandle;
   end; { TOmniContainerWindowsMessageObserver }
-  {$ENDIF MSWINDOWS}
 
   TOmniContainerSubject = class
   strict private
@@ -139,16 +125,10 @@ type
     procedure Rearm(interest: TOmniContainerObserverInterest);
   end; { TOmniContainerSubject }
 
-  {$IFDEF OTL_MobileSupport}
-  function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
-    TOmniContainerEventObserver;
-  {$ENDIF OTL_MobileSupport}
-  {$IFDEF MSWINDOWS}
   function CreateContainerWindowsEventObserver(externalEvent: THandle = 0):
     TOmniContainerWindowsEventObserver;
   function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
     wParam: WPARAM; lParam: LPARAM): TOmniContainerWindowsMessageObserver;
-  {$ENDIF MSWINDOWS}
 
 implementation
 
@@ -156,24 +136,11 @@ uses
   {$IFDEF OTL_HasSystemTypes}
   System.Types,
   {$ENDIF}
-  {$IFDEF MSWINDOWS}
   DSiWin32,
-  {$ENDIF MSWINDOWS}
   SysUtils;
 
 type
-  {$IFDEF OTL_MobileSupport}
-  TOmniContainerEventObserverImpl = class(TOmniContainerEventObserver)
-  strict private
-    ceoEvent: IOmniEvent;
-  public
-    constructor Create(const externalEvent: IOmniEvent);
-    function  GetEvent: IOmniEvent; override;
-    procedure Notify; override;
-  end; { TOmniContainerEventObserverImpl }
-  {$ENDIF OTL_MobileSupport}
 
-  {$IFDEF MSWINDOWS}
   TOmniContainerWindowsEventObserverImpl = class(TOmniContainerWindowsEventObserver)
   strict private
     cweoEvent          : THandle;
@@ -199,19 +166,10 @@ type
     procedure Send(aMessage: cardinal; wParam: WPARAM; lParam: LPARAM); override;
     procedure Notify; override;
   end; { TOmniContainerWindowsMessageObserver }
-  {$ENDIF MSWINDOWS}
 
 { exports }
 
-{$IFDEF OTL_MobileSupport}
-function CreateContainerEventObserver(const externalEvent: IOmniEvent = nil):
-  TOmniContainerEventObserver;
-begin
-  Result := TOmniContainerEventObserverImpl.Create(externalEvent);
-end; { CreateContainerWindowsEventObserver }
-{$ENDIF OTL_MobileSupport}
 
-{$IFDEF MSWINDOWS}
 function CreateContainerWindowsEventObserver(externalEvent: THandle):
   TOmniContainerWindowsEventObserver;
 begin
@@ -223,7 +181,6 @@ function CreateContainerWindowsMessageObserver(hWindow: THandle; msg: cardinal;
 begin
   Result := TOmniContainerWindowsMessageObserverImpl.Create(hWindow, msg, wParam, lParam);
 end; { CreateContainerWindowsMessageObserver }
-{$ENDIF MSWINDOWS}
 
 { TOmniContainerObserver }
 
@@ -248,30 +205,7 @@ begin
   coIsActivated.Value := 0;
 end; { TOmniContainerObserver.Deactivate }
 
-{$IFDEF OTL_MobileSupport}
 
-{ TOmniContainerEventObserverImpl }
-
-constructor TOmniContainerEventObserverImpl.Create(const externalEvent: IOmniEvent);
-begin
-  ceoEvent := externalEvent;
-  if not assigned( ceoEvent) then
-    ceoEvent := CreateOmniEvent(False, False)
-end; { TOmniContainerWindowsEventObserverImpl.Create }
-
-function TOmniContainerEventObserverImpl.GetEvent: IOmniEvent;
-begin
-  Result := ceoEvent;
-end; { TOmniContainerWindowsEventObserverImpl.GetEvent }
-
-procedure TOmniContainerEventObserverImpl.Notify;
-begin
-  ceoEvent.SetEvent;
-end; { TOmniContainerWindowsEventObserverImpl.Notify }
-
-{$ENDIF OTL_MobileSupport}
-
-{$IFDEF MSWINDOWS}
 
 { TOmniContainerWindowsEventObserverImpl }
 
@@ -363,7 +297,6 @@ begin
   PostWithRetry(aMessage, wParam, lParam);
 end; { TOmniContainerWindowsMessageObserverImpl.Send }
 
-{$ENDIF MSWINDOWS}
 
 { TOmniContainerSubject }
 
