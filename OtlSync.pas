@@ -36,10 +36,25 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
-///   Last modification : 2026-04-15
-///   Version           : 2.0b
+///   Last modification : 2026-07-24
+///   Version           : 2.1
 ///</para><para>
 ///   History:
+///     2.1: 2026-07-24
+///       - TLightweightMREWEx read locks are now reentrant and deadlock-safe
+///         (ported from OmniThreadLibrary-NG OtlSync 3.09): per-thread tracking
+///         grants nested BeginRead/TryBeginRead without touching the OS lock,
+///         so recursive shared acquisition can no longer deadlock behind a
+///         pending writer (documented SRWLOCK hazard).
+///       - BeginRead/TryBeginRead while owning the write lock is granted as a
+///         nested no-op acquire (exclusive access implies read rights).
+///       - BeginWrite/TryBeginWrite while holding a read lock now raise
+///         (upgrade is impossible; previously deadlocked).
+///       - EndRead without a matching BeginRead raises.
+///       - EndWrite releasing the outermost write lock while a read lock
+///         acquired under it is still held raises.
+///       - EndWrite exception messages now include the class/method context.
+///       - Full XML documentation on the TLightweightMREWEx public surface.
 ///     2.0b: 2026-04-15
 ///       - Fixed: TOmniSynchroObject.Destroy called inherited inside the
 ///         with EnterSpinLock block, causing use-after-free when the spin lock
@@ -297,6 +312,23 @@ type
   end; { IOmniCancellationToken }
 
   {$IFDEF OTL_HasLightweightMREW}
+  ///<summary>Reentrant multi-readers-exclusive-writer lock. Extends TLightweightMREW with:
+  ///  nested (recursive) exclusive locks; nested (recursive) read locks that are safe
+  ///  even when a writer is waiting (recursive shared acquisition of a raw SRWLOCK
+  ///  deadlocks in that scenario); read acquisition while owning the write lock
+  ///  (granted without touching the OS lock); and loud failure on misuse.</summary>
+  ///<remarks><para>Usage errors raise Exception with a 'TLightweightMREWEx.Method: reason'
+  ///  message: upgrading a read lock to a write lock via BeginWrite/TryBeginWrite,
+  ///  EndRead without a matching BeginRead, EndWrite by a thread that does not own
+  ///  the write lock, and EndWrite while a read lock acquired under the write lock
+  ///  is still held.</para><para>
+  ///  Instances must not be copied or moved in memory while any lock is held - the
+  ///  lock's address is its identity.</para><para>
+  ///  A thread must release all its locks before terminating; terminating while
+  ///  holding a lock is undefined behavior (as with the underlying OS locks) and
+  ///  leaks a small per-thread tracking node. If a lock instance is destroyed while
+  ///  such a leaked node exists, a new lock later created at the same address would
+  ///  inherit the stale node on that thread.</para></remarks>
   TLightweightMREWEx = record
   private
     FRWLock        : TLightweightMREW;
@@ -307,14 +339,35 @@ type
     procedure SetLockOwner(value: TThreadID); inline;
   public
     class operator Initialize(out dest: TLightweightMREWEx);
-    procedure BeginRead; inline;
-    function  TryBeginRead: boolean; inline;
-    procedure EndRead; inline;
+    ///<summary>Acquires the lock in shared (reader) mode; blocks until available.
+    ///  Reentrant: nested calls on the same thread only increment a counter and are
+    ///  safe even when a writer is waiting. Callable while owning the write lock
+    ///  (granted immediately). Each call must be paired with EndRead.</summary>
+    procedure BeginRead;
+    ///<summary>Tries to acquire the lock in shared (reader) mode without blocking.
+    ///  Nested calls and calls made while owning the write lock always succeed
+    ///  immediately. Returns False only when another thread holds or waits for
+    ///  the write lock.</summary>
+    function  TryBeginRead: boolean;
+    ///<summary>Releases one level of shared (reader) lock. Raises if the calling
+    ///  thread does not hold a read lock.</summary>
+    procedure EndRead;
+    ///<summary>Acquires the lock in exclusive (writer) mode; blocks until available.
+    ///  Reentrant: the owning thread may call it again (counted). Raises if the
+    ///  calling thread holds a read lock - upgrading is not possible.</summary>
     procedure BeginWrite;
+    ///<summary>Tries to acquire the lock in exclusive (writer) mode without blocking.
+    ///  Nested calls by the owner always succeed. Raises if the calling thread holds
+    ///  a read lock - upgrading is not possible and could never succeed.</summary>
     function  TryBeginWrite: boolean;
+    ///<summary>Releases one level of exclusive (writer) lock. Raises if the caller
+    ///  is not the owner, or when releasing the outermost write lock while a read
+    ///  lock acquired under it is still held.</summary>
     procedure EndWrite;
   end; { TLightweightMREWEx }
 
+  ///<summary>Interface wrapper for TLightweightMREWEx semantics - see
+  ///  TLightweightMREWEx for full documentation of locking behavior.</summary>
   ILightweightMREWEx = interface
     procedure BeginRead;
     function  TryBeginRead: boolean;
@@ -324,6 +377,8 @@ type
     procedure EndWrite;
   end; { ILightweightMREWEx }
 
+  ///<summary>Heap-allocated ILightweightMREWEx implementation delegating to an
+  ///  embedded TLightweightMREWEx - see that record for behavior details.</summary>
   TLightweightMREWExImpl = class(TInterfacedObject, ILightweightMREWEx)
   strict private
     FLock: TLightweightMREWEx;
@@ -334,7 +389,7 @@ type
     procedure BeginWrite;
     function  TryBeginWrite: boolean;
     procedure EndWrite;
-  end; { TLightweightMREWEx }
+  end; { TLightweightMREWExImpl }
   {$ENDIF OTL_HasLightweightMREW}
 
   {$IFDEF OTL_Generics}
@@ -1260,6 +1315,52 @@ end; { Atomic<I,T>.Initialize }
 
 {$IFDEF OTL_HasLightweightMREW}
 
+type
+  PMREWReadNest = ^TMREWReadNest;
+  TMREWReadNest = record
+    Lock  : pointer;       // @instance = lock identity
+    Count : integer;       // nesting depth
+    OSHeld: boolean;       // false when granted under an owned write lock
+    Next  : PMREWReadNest;
+  end;
+
+threadvar
+  GMREWReadNest: PMREWReadNest; // head of this thread's held-read-locks list
+
+function MREWReadNestFind(lock: pointer): PMREWReadNest;
+begin
+  Result := GMREWReadNest;
+  while assigned(Result) and (Result.Lock <> lock) do
+    Result := Result.Next;
+end; { MREWReadNestFind }
+
+procedure MREWReadNestPush(lock: pointer; osHeld: boolean);
+var
+  nest: PMREWReadNest;
+begin
+  New(nest);
+  nest.Lock := lock;
+  nest.Count := 1;
+  nest.OSHeld := osHeld;
+  nest.Next := GMREWReadNest;
+  GMREWReadNest := nest;
+end; { MREWReadNestPush }
+
+procedure MREWReadNestRemove(nest: PMREWReadNest);
+var
+  prev: PMREWReadNest;
+begin
+  if GMREWReadNest = nest then
+    GMREWReadNest := nest.Next
+  else begin
+    prev := GMREWReadNest;
+    while prev.Next <> nest do
+      prev := prev.Next;
+    prev.Next := nest.Next;
+  end;
+  Dispose(nest);
+end; { MREWReadNestRemove }
+
 { TLightweightMREWEx }
 
 function TLightweightMREWEx.GetLockOwner: TThreadID; //inline
@@ -1285,8 +1386,21 @@ begin
 end; { TLightweightMREWEx.Initialize }
 
 procedure TLightweightMREWEx.BeginRead;
+var
+  nest: PMREWReadNest;
 begin
-  FRWLock.BeginRead;
+  nest := MREWReadNestFind(@Self);
+  if assigned(nest) then
+    // Nested read: never touches the OS lock, so it cannot queue behind a
+    // pending writer (documented SRWLOCK deadlock).
+    Inc(nest.Count)
+  else if GetLockOwner = TThread.Current.ThreadID then
+    // Read under owned write lock: exclusive access implies read rights.
+    MREWReadNestPush(@Self, false)
+  else begin
+    FRWLock.BeginRead;
+    MREWReadNestPush(@Self, true);
+  end;
 end; { TLightweightMREWEx.BeginRead }
 
 procedure TLightweightMREWEx.BeginWrite;
@@ -1296,6 +1410,10 @@ begin
     // If another thread executes BeginWrite at this moment, it would enter
     // the 'else' part below and block in the call to FRWLock.BeginWrite.
     FWriteLockCount.Increment
+  else if assigned(MREWReadNestFind(@Self)) then
+    // Upgrade would deadlock: FRWLock.BeginWrite would wait for our own
+    // shared lock to be released.
+    raise Exception.Create('TLightweightMREWEx.BeginWrite: Read lock cannot be upgraded to a write lock')
   else begin
     FRWLock.BeginWrite;
     SetLockOwner(TThread.Current.ThreadID);
@@ -1304,17 +1422,34 @@ begin
 end; { TLightweightMREWEx.BeginWrite }
 
 procedure TLightweightMREWEx.EndRead;
+var
+  nest  : PMREWReadNest;
+  osHeld: boolean;
 begin
-  FRWLock.EndRead;
+  nest := MREWReadNestFind(@Self);
+  if not assigned(nest) then
+    raise Exception.Create('TLightweightMREWEx.EndRead: Thread does not hold a read lock');
+  Dec(nest.Count);
+  if nest.Count = 0 then begin
+    osHeld := nest.OSHeld;
+    MREWReadNestRemove(nest);
+    if osHeld then
+      FRWLock.EndRead;
+  end;
 end; { TLightweightMREWEx.EndRead }
 
 procedure TLightweightMREWEx.EndWrite;
 begin
   if GetLockOwner <> TThread.Current.ThreadID then
-    raise Exception.Create('Not an owner');
+    raise Exception.Create('TLightweightMREWEx.EndWrite: Not an owner');
 
   if FWriteLockCount.Value <= 0 then
-    raise Exception.Create('Attempting to release write lock that was not acquired');
+    raise Exception.Create('TLightweightMREWEx.EndWrite: Attempting to release write lock that was not acquired');
+  if (FWriteLockCount.Value = 1) and assigned(MREWReadNestFind(@Self)) then
+    // Only OSHeld=false nodes can exist here: a real (OSHeld=true) read lock
+    // would have made BeginWrite raise the upgrade error instead of
+    // acquiring. Checked before releasing, so the lock stays held.
+    raise Exception.Create('TLightweightMREWEx.EndWrite: Releasing write lock while nested read locks are still held');
   if FWriteLockCount.Decrement = 0 then begin
     SetLockOwner(0);
     FRWLock.EndWrite;
@@ -1322,10 +1457,22 @@ begin
 end; { TLightweightMREWEx.EndWrite }
 
 function TLightweightMREWEx.TryBeginRead: boolean;
+var
+  nest: PMREWReadNest;
 begin
+  nest := MREWReadNestFind(@Self);
+  if assigned(nest) then begin
+    Inc(nest.Count);
+    Exit(true);
+  end;
+  if GetLockOwner = TThread.Current.ThreadID then begin
+    MREWReadNestPush(@Self, false);
+    Exit(true);
+  end;
   Result := FRWLock.TryBeginRead;
+  if Result then
+    MREWReadNestPush(@Self, true);
 end; { TLightweightMREWEx.TryBeginRead }
-
 
 function TLightweightMREWEx.TryBeginWrite: boolean;
 begin
@@ -1333,6 +1480,10 @@ begin
     FWriteLockCount.Increment;
     Result := true;
   end
+  else if assigned(MREWReadNestFind(@Self)) then
+    // Raise instead of returning False - an upgrade can never succeed, so
+    // False would invite a retry loop that stalls forever.
+    raise Exception.Create('TLightweightMREWEx.TryBeginWrite: Read lock cannot be upgraded to a write lock')
   else begin
     Result := FRWLock.TryBeginWrite;
     if Result then begin
