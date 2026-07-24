@@ -1,15 +1,17 @@
 (*:Various stuff with no other place to go.
    @author Primoz Gabrijelcic
    @desc <pre>
-   (c) 2025 Primoz Gabrijelcic
+   (c) 2026 Primoz Gabrijelcic
    Free for personal and commercial use. No rights reserved.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2006-09-25
-   Last modification : 2025-05-21
-   Version           : 2.29
+   Last modification : 2026-04-28
+   Version           : 2.30
 </pre>*)(*
    History:
+     2.30: 2026-04-28
+       - TGpPreciseWait - precise single-short timer with active-wait loop.
      2.29: 2025-05-21
        - Implemented IGpBuffer.Equals.
      2.28: 2024-12-18
@@ -269,22 +271,6 @@
 
 unit GpStuff;
 
-interface
-
-uses
-  {$IFDEF MSWINDOWS}
-  Windows,
-  Contnrs,
-  DSiWin32,
-  {$ELSE}
-  System.Generics.Collections,
-  {$ENDIF}
-  SysUtils,
-{$IFNDEF MSWINDOWS}
-  System.SyncObjs,
-{$ENDIF NEXTGEN}
-  Classes;
-
 {$IFDEF ConditionalExpressions}
   {$IF CompilerVersion >= 17} //D2005+
     {$DEFINE USE_STRICT}
@@ -303,6 +289,7 @@ uses
   {$IF CompilerVersion >= 21} //D2010+
     {$DEFINE GpStuff_NativeInt}
     {$DEFINE GpStuff_GpMemoryStream}
+    {$DEFINE GpStuff_Stopwatch}
   {$IFEND}
   {$IF CompilerVersion >= 22} //XE
     {$DEFINE GpStuff_RegEx}
@@ -327,6 +314,25 @@ uses
     {$DEFINE GpStuff_AnsiStrings}
   {$IFEND}
 {$ENDIF}
+
+interface
+
+uses
+  {$IFDEF MSWINDOWS}
+  Windows,
+  Contnrs,
+  DSiWin32,
+  {$ELSE}
+  System.Generics.Collections,
+  {$ENDIF}
+  SysUtils,
+{$IFDEF GpStuff_Stopwatch}
+  System.Diagnostics,
+{$ENDIF}
+{$IFNDEF MSWINDOWS}
+  System.SyncObjs,
+{$ENDIF NEXTGEN}
+  Classes;
 
 {$UNDEF GpStuff_CPUINTEL}
 {$IFDEF CPU386}{$DEFINE GpStuff_CPUINTEL}{$ENDIF}
@@ -699,6 +705,31 @@ type
     property Size: integer read GetSize write SetSize;
     property Value: pointer read GetValue;
   end; { TGpBuffer }
+
+{$IFDEF GpStuff_Stopwatch}
+  //:Precise single-short timer with active-wait loop when approached time is close enough.
+  //:Needs messages to be processed in the owner thread.
+  TGpPreciseWait = class
+  private
+  const
+    CEnterActiveWait_ms_before = 20;
+    CEnterFastTimer_ms_before  = 200;
+    CSlowTimerInterval_ms      = 100;
+    CFastTimerInterval_ms      = 10;
+  var
+    FAwaited  : TProc;
+    FDelay_ms : integer;
+    FStopwatch: TStopwatch;
+    FTimer    : TDSiTimer;
+  strict protected
+    procedure ActiveWait;
+    procedure HandleTimer(Sender: TObject);
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure Await(delay_ms: integer; awaitedProc: TProc);
+  end; { TGpPreciseTimer }
+{$ENDIF GpStuff_Stopwatch}
 
   PMethod = ^TMethod;
 
@@ -1202,6 +1233,14 @@ begin
   Result := TGpAutoExecute.Create(proc);
 end; { AutoExecute }
 {$ENDIF GpStuff_Anonymous}
+
+{$IFDEF CPUX64}
+procedure AsmPause;
+asm
+  .noframe
+  pause;
+end; { AsmPause }
+{$ENDIF CPUX64}
 
 //copied from GpString unit
 procedure GetDelimiters(const list: string; const delim: string; const quoteChar: string;
@@ -3548,6 +3587,59 @@ begin
   Result := output;
 end; { _.Assign<T> }
 {$ENDIF GpStuff_Generics}
+
+{$IFDEF GpStuff_Stopwatch}
+{ TGpPreciseWait }
+
+constructor TGpPreciseWait.Create;
+begin
+  inherited Create;
+  FTimer := TDSiTimer.Create(false, 1, HandleTimer)
+end; { TGpPreciseWait.Create }
+
+destructor TGpPreciseWait.Destroy;
+begin
+  FreeAndNil(FTimer);
+  inherited;
+end; { TGpPreciseWait.Destroy }
+
+procedure TGpPreciseWait.ActiveWait;
+begin
+  var togo_ms := FDelay_ms - FStopwatch.ElapsedMilliseconds;
+
+  if togo_ms > CEnterFastTimer_ms_before then begin
+    if not FTimer.Enabled then begin
+      FTimer.Interval := CSlowTimerInterval_ms;
+      FTimer.Enabled := true;
+    end;
+  end
+  else if togo_ms > CEnterActiveWait_ms_before then begin
+    FTimer.Interval := CFastTimerInterval_ms;
+    FTimer.Enabled := true;
+  end
+  else begin
+    FTimer.Enabled := false;
+    if togo_ms > 0 then
+      while FStopwatch.ElapsedMilliseconds < FDelay_ms do
+        {$IFDEF CPUX64}AsmPause;{$ELSE}asm pause; end;{$ENDIF ~CPUX64}
+      FAwaited();
+  end;
+end; { TGpPreciseWait.ActiveWait }
+
+procedure TGpPreciseWait.Await(delay_ms: integer; awaitedProc: TProc);
+begin
+  FAwaited := awaitedProc;
+  FDelay_ms := delay_ms;
+  FTimer.Enabled := false;
+  FStopwatch := TStopwatch.StartNew;
+  ActiveWait;
+end; { TGpPreciseWait.Await }
+
+procedure TGpPreciseWait.HandleTimer(Sender: TObject);
+begin
+  ActiveWait;
+end; { TGpPreciseWait.HandleTimer }
+{$ENDIF GpStuff_Stopwatch}
 
 initialization
   GDisableDebugBreak := false;
