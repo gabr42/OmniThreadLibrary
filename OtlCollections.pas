@@ -471,11 +471,17 @@ procedure TOmniBlockingCollection.InsertElement<T>(const value: T; ti: PTypeInfo
 var
   i : integer;
   ov: TOmniValue;
+  pv: pointer;
 begin
+  // Patched Delphi 13 dcc32 (37.0, patch of 2026-05-08) fails with an internal
+  // error (F2084 C3106) on PInt64(@value)^ when instantiating this method;
+  // taking the address into a local variable first avoids the problem.
+  // dcc64 and Delphi 11/12 compile the original code fine.
+  pv := @value;
   case ti.Kind of
     tkInteger, tkPointer:
       if ds = 8 then
-        ov.AsInt64 := PInt64(@value)^
+        ov.AsInt64 := PInt64(pv)^
       else begin
         Assert(ds <= 4, 'TOmniBlockingCollection.InsertElement<T>: Integer data is too large');
         i := 0;
@@ -483,7 +489,7 @@ begin
         ov.AsInteger := i;
       end;
     tkInt64:
-      ov.AsInt64 := PInt64(@value)^;
+      ov.AsInt64 := PInt64(pv)^;
     tkClass:
       ov.AsObject := PObject(@value)^;
     tkChar, tkWChar, tkString, tkWString, tkLString, tkUString:
