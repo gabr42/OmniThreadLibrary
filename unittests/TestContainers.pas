@@ -15,7 +15,7 @@ type
     procedure TestBasicStack;
     procedure TestOneElementQueue;
     procedure TestOneElementStack;
-    {$IFDEF OTL_MobileSupport}
+    {$IFDEF OTL_HasSystemThreading}
     procedure TestQueueObserverNotification;
     procedure TestStackObserverNotification;
     {$ENDIF}
@@ -185,7 +185,7 @@ begin
   finally FreeAndNil(stack); end;
 end;
 
-{$IFDEF OTL_MobileSupport}
+{$IFDEF OTL_HasSystemThreading}
 procedure TTestContainers.TestQueueObserverNotification;
 var
   queue   : TOmniBoundedQueue;

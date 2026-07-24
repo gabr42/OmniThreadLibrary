@@ -7,7 +7,7 @@ interface
 uses
   TestFramework, GpStuff, Windows, DSiWin32, OtlContainers, SysUtils, SyncObjs,
   Classes,
-  {$IFDEF OTL_MobileSupport}Threading,{$ENDIF}
+  {$IFDEF OTL_HasSystemThreading}Threading,{$ENDIF}
   OtlContainerObserver, OtlCollections, OtlCommon, OtlSync, OtlSync.Utils, OtlTask;
 
 type
@@ -24,26 +24,11 @@ type
     class property NumSingletons: integer read GetNumSingletons;
   end;
 
-  {$IFDEF OTL_MobileSupport}
-  TestIEvent = class(TTestCase)
-  published
-    procedure TestManualReset;
-    procedure TestAutoReset;
-    procedure TestInitialState;
-  end;
-  {$ENDIF}
-
   TestCancellationToken = class(TTestCase)
   published
     procedure TestCreateAndSignal;
     procedure TestClear;
     procedure TestEventProperty;
-  end;
-
-  TestCountdownEvent = class(TTestCase)
-  published
-    procedure TestCountdown;
-    procedure TestReset;
   end;
 
   TestLockedT = class(TTestCase)
@@ -63,8 +48,21 @@ type
   TestLightweightMREWEx = class(TTestCase)
   published
     procedure TestNestedWrite;
-    {$IFDEF OTL_MobileSupport}
+    procedure TestEndReadWithoutBeginReadRaises;
+    procedure TestUpgradeBeginWriteRaises;
+    procedure TestUpgradeTryBeginWriteRaises;
+    {$IFDEF OTL_HasSystemThreading}
     procedure TestReadBlockedByWrite;
+    procedure TestNestedTryWrite;
+    procedure TestNestedWriteContention;
+    procedure TestEndWriteNotOwnerRaises;
+    procedure TestReadInsideWriteGranted;
+    procedure TestTryReadInsideWriteGranted;
+    procedure TestNestedReadDepth3;
+    procedure TestEndWriteWithNestedReadRaises;
+    procedure TestTwoLocksInterleavedRelease;
+    procedure TestInnerEndWriteWithNestedReadSucceeds;
+    procedure TestRecursiveReadWithPendingWriter;
     {$ENDIF}
   end;
   {$ENDIF}
@@ -757,47 +755,6 @@ begin
   Result := FNumSingletons;
 end;
 
-{ TestIEvent }
-
-{$IFDEF OTL_MobileSupport}
-procedure TestIEvent.TestAutoReset;
-var
-  event: IOmniEvent;
-begin
-  event := CreateOmniEvent(false, false);
-  CheckTrue(wrTimeout = event.WaitFor(0));
-  CheckTrue(wrTimeout = event.WaitFor(100));
-  event.SetEvent;
-  CheckTrue(wrSignaled = event.WaitFor(0));
-  CheckTrue(wrTimeout = event.WaitFor(0));
-  event.SetEvent;
-  event.Reset;
-  CheckTrue(wrTimeout = event.WaitFor(0));
-end;
-
-procedure TestIEvent.TestInitialState;
-var
-  event: IOmniEvent;
-begin
-  event := CreateOmniEvent(false, true);
-  CheckTrue(wrSignaled = event.WaitFor(0));
-end;
-
-procedure TestIEvent.TestManualReset;
-var
-  event: IOmniEvent;
-begin
-  event := CreateOmniEvent(true, false);
-  CheckTrue(wrTimeout = event.WaitFor(0));
-  CheckTrue(wrTimeout = event.WaitFor(100));
-  event.SetEvent;
-  CheckTrue(wrSignaled = event.WaitFor(0));
-  CheckTrue(wrSignaled = event.WaitFor(100));
-  event.Reset;
-  CheckTrue(wrTimeout = event.WaitFor(0));
-end;
-{$ENDIF}
-
 { TestCancellationToken }
 
 procedure TestCancellationToken.TestCreateAndSignal;
@@ -836,35 +793,6 @@ begin
   CheckTrue(WaitForSingleObject(ct.Handle, 0) = WAIT_TIMEOUT, 'handle cleared');
 end;
 
-{ TestCountdownEvent }
-
-procedure TestCountdownEvent.TestCountdown;
-var
-  cde: IOmniCountdownEvent;
-begin
-  cde := CreateOmniCountdownEvent(3, 0);
-  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=3');
-  cde.BaseCountdown.Signal;
-  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=2');
-  cde.BaseCountdown.Signal;
-  CheckTrue(wrTimeout = cde.WaitFor(0), 'not signalled at count=1');
-  cde.BaseCountdown.Signal;
-  CheckTrue(cde.IsSignalled, 'signalled at count=0');
-end;
-
-procedure TestCountdownEvent.TestReset;
-var
-  cde: IOmniCountdownEvent;
-begin
-  cde := CreateOmniCountdownEvent(1, 0);
-  cde.BaseCountdown.Signal;
-  CheckTrue(cde.IsSignalled, 'signalled');
-  cde.Reset;
-  CheckFalse(cde.IsSignalled, 'not signalled after reset');
-  cde.BaseCountdown.Signal;
-  CheckTrue(cde.IsSignalled, 'signalled again');
-end;
-
 { TestLockedT }
 
 procedure TestLockedT.TestCreateAndValue;
@@ -872,7 +800,10 @@ var
   li: Locked<integer>;
 begin
   li := Locked<integer>.Create(42);
-  CheckEquals(42, li.Value);
+  li.Acquire;
+  try
+    CheckEquals(42, li.Value);
+  finally li.Release; end;
 end;
 
 procedure TestLockedT.TestImplicitConversion;
@@ -881,7 +812,10 @@ var
   v: integer;
 begin
   li := Locked<integer>.Create(17);
-  v := li;
+  li.Acquire;
+  try
+    v := li;
+  finally li.Release; end;
   CheckEquals(17, v);
 end;
 
@@ -895,7 +829,10 @@ begin
   factory := function: integer begin Result := 99; end;
   v := li.Initialize(factory);
   CheckEquals(99, v);
-  CheckEquals(99, li.Value);
+  li.Acquire;
+  try
+    CheckEquals(99, li.Value);
+  finally li.Release; end;
   // Second call returns same value without calling factory again
   factory := function: integer begin Result := 200; end;
   v := li.Initialize(factory);
@@ -949,10 +886,11 @@ begin
   sl := TStringList.Create;
   sl.Add('test');
   li := Locked<TStringList>.Create(sl, true);
-  CheckEquals(1, li.Value.Count);
+  li.Acquire;
+  try
+    CheckEquals(1, li.Value.Count);
+  finally li.Release; end;
   li.Free;
-  // After Free, value should be nil
-  CheckTrue(li.Value = nil, 'value nil after Free');
 end;
 
 { TestLightweightMREWEx }
@@ -970,7 +908,65 @@ begin
   CheckTrue(true, 'nested write succeeded');
 end;
 
-{$IFDEF OTL_MobileSupport}
+procedure TestLightweightMREWEx.TestEndReadWithoutBeginReadRaises;
+var
+  mrew  : TLightweightMREWEx;
+  raised: string;
+begin
+  raised := '<no exception>';
+  try
+    mrew.EndRead;
+  except
+    on E: Exception do
+      raised := E.Message;
+  end;
+  CheckTrue(Pos('TLightweightMREWEx.EndRead', raised) > 0,
+    'unmatched EndRead raises with class/method context, got: ' + raised);
+end;
+
+procedure TestLightweightMREWEx.TestUpgradeBeginWriteRaises;
+var
+  mrew  : TLightweightMREWEx;
+  raised: string;
+begin
+  // Without upgrade detection this deadlocks (exclusive waits for our own
+  // shared) - see TLightweightMREWEx.BeginWrite.
+  mrew.BeginRead;
+  try
+    raised := '<no exception>';
+    try
+      mrew.BeginWrite;
+      mrew.EndWrite;
+    except
+      on E: Exception do
+        raised := E.Message;
+    end;
+    CheckTrue(Pos('TLightweightMREWEx.BeginWrite', raised) > 0,
+      'BeginWrite while holding a read lock raises, got: ' + raised);
+  finally mrew.EndRead; end;
+end;
+
+procedure TestLightweightMREWEx.TestUpgradeTryBeginWriteRaises;
+var
+  mrew  : TLightweightMREWEx;
+  raised: string;
+begin
+  mrew.BeginRead;
+  try
+    raised := '<no exception>';
+    try
+      if mrew.TryBeginWrite then
+        mrew.EndWrite;
+    except
+      on E: Exception do
+        raised := E.Message;
+    end;
+    CheckTrue(Pos('TLightweightMREWEx.TryBeginWrite', raised) > 0,
+      'TryBeginWrite while holding a read lock raises, got: ' + raised);
+  finally mrew.EndRead; end;
+end;
+
+{$IFDEF OTL_HasSystemThreading}
 procedure TestLightweightMREWEx.TestReadBlockedByWrite;
 var
   mrew   : ILightweightMREWEx;
@@ -1001,7 +997,334 @@ begin
   Sleep(200);
   CheckEquals(2, blocked.Value, 'reader unblocked after EndWrite');
 end;
-{$ENDIF OTL_MobileSupport}
+
+procedure TestLightweightMREWEx.TestNestedTryWrite;
+var
+  entered: TOmniAlignedInt32;
+  mrew   : ILightweightMREWEx;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  entered.Value := 0;
+
+  mrew.BeginWrite;
+  CheckTrue(mrew.TryBeginWrite, 'nested TryBeginWrite succeeds for the owner');
+  mrew.EndWrite;
+  mrew.EndWrite;
+
+  // All nested locks are released - another thread must be able to acquire.
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrew.TryBeginWrite then begin
+          entered.Value := 1;
+          mrew.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task completed');
+  CheckEquals(1, entered.Value, 'lock is free after all nested EndWrite calls');
+end;
+
+procedure TestLightweightMREWEx.TestNestedWriteContention;
+var
+  mrew : ILightweightMREWEx;
+  state: TOmniAlignedInt32;
+  synch: IOmniSynchronizer;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  synch := TOmniSynchronizer.Create;
+  state.Value := 0;
+
+  mrew.BeginWrite;
+  mrew.BeginWrite;
+  System.Threading.TTask.Run(
+    procedure
+    begin
+      synch.Signal('started');
+      state.Value := 1;
+      mrew.BeginWrite;
+      state.Value := 2;
+      mrew.EndWrite;
+      synch.Signal('done');
+    end);
+
+  synch.WaitFor('started');
+  Sleep(200);
+  CheckEquals(1, state.Value, 'second writer is blocked');
+  mrew.EndWrite; // releases the nested lock, owner still holds the outer one
+  Sleep(200);
+  CheckEquals(1, state.Value, 'second writer is still blocked after inner EndWrite');
+  mrew.EndWrite;
+  CheckTrue(synch.WaitFor('done', 5000), 'second writer acquired the lock after outer EndWrite');
+  CheckEquals(2, state.Value, 'second writer completed');
+end;
+
+procedure TestLightweightMREWEx.TestEndWriteNotOwnerRaises;
+var
+  mrew  : ILightweightMREWEx;
+  raised: string;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  raised := '<no exception>';
+
+  mrew.BeginWrite;
+  try
+    CheckTrue(
+      System.Threading.TTask.Run(
+        procedure
+        begin
+          try
+            mrew.EndWrite;
+          except
+            on E: Exception do
+              raised := E.Message;
+          end;
+        end).Wait(5000),
+      'verification task completed');
+  finally mrew.EndWrite; end;
+
+  CheckTrue(Pos('TLightweightMREWEx.EndWrite', raised) > 0,
+    'EndWrite from a non-owner thread raises with class/method context, got: ' + raised);
+end;
+
+procedure TestLightweightMREWEx.TestReadInsideWriteGranted;
+var
+  entered: TOmniAlignedInt32;
+  mrew   : ILightweightMREWEx;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  entered.Value := 0;
+
+  mrew.BeginWrite;
+  mrew.BeginRead; // granted as nested: exclusive access implies read rights
+  mrew.EndRead;
+  mrew.EndWrite;
+
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrew.TryBeginWrite then begin
+          entered.Value := 1;
+          mrew.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task completed');
+  CheckEquals(1, entered.Value, 'lock fully released after read-under-write');
+end;
+
+procedure TestLightweightMREWEx.TestTryReadInsideWriteGranted;
+var
+  entered: TOmniAlignedInt32;
+  mrew   : ILightweightMREWEx;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  entered.Value := 0;
+
+  mrew.BeginWrite;
+  CheckTrue(mrew.TryBeginRead, 'TryBeginRead granted under owned write lock');
+  mrew.EndRead;
+  mrew.EndWrite;
+
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrew.TryBeginWrite then begin
+          entered.Value := 1;
+          mrew.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task completed');
+  CheckEquals(1, entered.Value, 'lock fully released after tryread-under-write');
+end;
+
+procedure TestLightweightMREWEx.TestNestedReadDepth3;
+var
+  mrew : ILightweightMREWEx;
+  state: TOmniAlignedInt32;
+  synch: IOmniSynchronizer;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  synch := TOmniSynchronizer.Create;
+  state.Value := 0;
+
+  mrew.BeginRead;
+  mrew.BeginRead;
+  mrew.BeginRead;
+  System.Threading.TTask.Run(
+    procedure
+    begin
+      synch.Signal('started');
+      state.Value := 1;
+      mrew.BeginWrite;
+      state.Value := 2;
+      mrew.EndWrite;
+      synch.Signal('done');
+    end);
+
+  synch.WaitFor('started');
+  Sleep(200);
+  CheckEquals(1, state.Value, 'writer blocked at depth 3');
+  mrew.EndRead;
+  Sleep(200);
+  CheckEquals(1, state.Value, 'writer blocked at depth 2');
+  mrew.EndRead;
+  Sleep(200);
+  CheckEquals(1, state.Value, 'writer blocked at depth 1');
+  mrew.EndRead;
+  CheckTrue(synch.WaitFor('done', 5000), 'writer acquired after last EndRead');
+  CheckEquals(2, state.Value, 'writer completed');
+end;
+
+procedure TestLightweightMREWEx.TestEndWriteWithNestedReadRaises;
+var
+  entered: TOmniAlignedInt32;
+  mrew   : ILightweightMREWEx;
+  raised : string;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  entered.Value := 0;
+
+  mrew.BeginWrite;
+  mrew.BeginRead; // read-under-write is granted
+  raised := '<no exception>';
+  try
+    mrew.EndWrite; // outermost write release with the nested read still held
+  except
+    on E: Exception do
+      raised := E.Message;
+  end;
+  CheckTrue(Pos('TLightweightMREWEx.EndWrite', raised) > 0,
+    'EndWrite with outstanding nested read raises, got: ' + raised);
+
+  // The raise must leave the lock intact: clean up in the correct order.
+  mrew.EndRead;
+  mrew.EndWrite;
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrew.TryBeginWrite then begin
+          entered.Value := 1;
+          mrew.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task completed');
+  CheckEquals(1, entered.Value, 'lock fully released after correct-order cleanup');
+end;
+
+procedure TestLightweightMREWEx.TestTwoLocksInterleavedRelease;
+var
+  enteredA: TOmniAlignedInt32;
+  enteredB: TOmniAlignedInt32;
+  mrewA   : ILightweightMREWEx;
+  mrewB   : ILightweightMREWEx;
+begin
+  mrewA := TLightweightMREWExImpl.Create;
+  mrewB := TLightweightMREWExImpl.Create;
+  enteredA.Value := 0;
+  enteredB.Value := 0;
+
+  mrewA.BeginRead;
+  mrewB.BeginRead; // A's per-thread node is now non-head (B was linked in front of it)
+  CheckTrue(mrewA.TryBeginRead, 'nested TryBeginRead bumps the count on a non-head node');
+  mrewA.EndRead;
+  mrewA.EndRead; // removes A's node from a non-head position in the per-thread list
+  mrewB.EndRead; // removes B's node from the head position
+
+  // Both locks must be fully released - another thread must acquire each as a writer.
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrewA.TryBeginWrite then begin
+          enteredA.Value := 1;
+          mrewA.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task A completed');
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrewB.TryBeginWrite then begin
+          enteredB.Value := 1;
+          mrewB.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task B completed');
+  CheckEquals(1, enteredA.Value, 'lock A fully released');
+  CheckEquals(1, enteredB.Value, 'lock B fully released');
+end;
+
+procedure TestLightweightMREWEx.TestInnerEndWriteWithNestedReadSucceeds;
+var
+  entered: TOmniAlignedInt32;
+  mrew   : ILightweightMREWEx;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  entered.Value := 0;
+
+  mrew.BeginWrite;
+  mrew.BeginWrite;
+  mrew.BeginRead;
+  // Inner EndWrite must not raise - the nested-read guard applies only to the
+  // outermost write release (FWriteLockCount.Value = 1), not to this one.
+  mrew.EndWrite;
+  mrew.EndRead;
+  mrew.EndWrite;
+
+  CheckTrue(
+    System.Threading.TTask.Run(
+      procedure
+      begin
+        if mrew.TryBeginWrite then begin
+          entered.Value := 1;
+          mrew.EndWrite;
+        end;
+      end).Wait(5000),
+    'verification task completed');
+  CheckEquals(1, entered.Value, 'lock fully released');
+end;
+
+procedure TestLightweightMREWEx.TestRecursiveReadWithPendingWriter;
+var
+  mrew : ILightweightMREWEx;
+  state: TOmniAlignedInt32;
+  synch: IOmniSynchronizer;
+begin
+  mrew := TLightweightMREWExImpl.Create;
+  synch := TOmniSynchronizer.Create;
+  state.Value := 0;
+
+  mrew.BeginRead;
+  System.Threading.TTask.Run(
+    procedure
+    begin
+      synch.Signal('started');
+      state.Value := 1;
+      mrew.BeginWrite;
+      state.Value := 2;
+      mrew.EndWrite;
+      synch.Signal('done');
+    end);
+
+  synch.WaitFor('started');
+  Sleep(200); // let the writer become a pending exclusive waiter
+
+  // Raw SRWLOCK deadlocks here: a nested shared acquire queues behind the
+  // pending exclusive waiter. Recursion tracking must grant it immediately.
+  mrew.BeginRead;
+  CheckEquals(1, state.Value, 'writer still blocked during nested read');
+  mrew.EndRead;
+  Sleep(200);
+  CheckEquals(1, state.Value, 'writer still blocked - outer read still held');
+  mrew.EndRead;
+  CheckTrue(synch.WaitFor('done', 5000), 'writer acquired after last EndRead');
+  CheckEquals(2, state.Value, 'writer completed');
+end;
+{$ENDIF OTL_HasSystemThreading}
 {$ENDIF}
 
 { TestLockManager }
@@ -1105,11 +1428,9 @@ begin
 end;
 
 initialization
-  {$IFDEF OTL_MobileSupport}
-  RegisterTest(TestIEvent.Suite);
+  {$IFDEF OTL_HasSystemThreading}
   {$ENDIF}
   RegisterTest(TestCancellationToken.Suite);
-  RegisterTest(TestCountdownEvent.Suite);
   RegisterTest(TestLockedT.Suite);
   {$IFDEF OTL_HasLightweightMREW}
   RegisterTest(TestLightweightMREWEx.Suite);

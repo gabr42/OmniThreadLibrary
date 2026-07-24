@@ -14,7 +14,7 @@ type
     procedure TestWaitForTimeout;
     procedure TestCount;
     procedure TestReset;
-    {$IFDEF OTL_MobileSupport}
+    {$IFDEF OTL_HasSystemThreading}
     procedure TestCrossThreadSignal;
     {$ENDIF}
   end;
@@ -23,7 +23,7 @@ implementation
 
 uses
   SysUtils,
-  {$IFDEF OTL_MobileSupport}
+  {$IFDEF OTL_HasSystemThreading}
   Threading,
   {$ENDIF}
   Classes,
@@ -76,7 +76,7 @@ begin
   finally sync.Free; end;
 end;
 
-{$IFDEF OTL_MobileSupport}
+{$IFDEF OTL_HasSystemThreading}
 procedure TestOmniSynchronizer.TestCrossThreadSignal;
 var
   sync: IOmniSynchronizer;

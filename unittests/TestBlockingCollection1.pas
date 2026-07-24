@@ -20,7 +20,7 @@ type
     procedure TestOmniValueObjectleak;
     procedure TestInterfaceLeak;
     procedure TestTryTakeEmpty;
-    {$IFDEF OTL_MobileSupport}
+    {$IFDEF OTL_HasSystemThreading}
     procedure TestTryTakeWithTimeout;
     {$ENDIF}
     procedure TestCountAndIsEmpty;
@@ -31,7 +31,7 @@ type
     procedure TestFromArrayToArray;
     procedure TestAddRange;
     {$ENDIF}
-    {$IFDEF OTL_MobileSupport}
+    {$IFDEF OTL_HasSystemThreading}
     procedure TestMultiConsumerTryTake;
     {$ENDIF}
   end;
@@ -42,7 +42,7 @@ implementation
 {$IFDEF Unicode}
 uses
   Classes,
-  {$IFDEF OTL_MobileSupport}
+  {$IFDEF OTL_HasSystemThreading}
   Threading,
   {$ENDIF}
   OtlParallel;
@@ -189,7 +189,7 @@ begin
   CheckFalse(coll.TryTake(value, 0));
 end;
 
-{$IFDEF OTL_MobileSupport}
+{$IFDEF OTL_HasSystemThreading}
 procedure TestIOmniBlockingCollection.TestTryTakeWithTimeout;
 var
   coll : IOmniBlockingCollection;
@@ -322,7 +322,7 @@ begin
 end;
 {$ENDIF}
 
-{$IFDEF OTL_MobileSupport}
+{$IFDEF OTL_HasSystemThreading}
 procedure TestIOmniBlockingCollection.TestMultiConsumerTryTake;
 // Regression: two threads calling TryTake concurrently on the same collection
 const
