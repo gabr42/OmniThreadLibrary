@@ -327,7 +327,7 @@ uses
   {$ENDIF}
   SysUtils,
 {$IFDEF GpStuff_Stopwatch}
-  System.Diagnostics,
+  Diagnostics,
 {$ENDIF}
 {$IFNDEF MSWINDOWS}
   System.SyncObjs,
@@ -3604,8 +3604,10 @@ begin
 end; { TGpPreciseWait.Destroy }
 
 procedure TGpPreciseWait.ActiveWait;
+var
+  togo_ms: int64;
 begin
-  var togo_ms := FDelay_ms - FStopwatch.ElapsedMilliseconds;
+  togo_ms := FDelay_ms - FStopwatch.ElapsedMilliseconds;
 
   if togo_ms > CEnterFastTimer_ms_before then begin
     if not FTimer.Enabled then begin
