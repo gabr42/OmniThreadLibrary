@@ -8,6 +8,9 @@
     core units (the non-Windows path was never functional in this
     repository) and removes non-Windows platform entries from the package
     projects.
+  - Restored IOmniValueQueue/TOmniValueQueue and CreateOmniValueQueue in
+    OtlContainers, previously only available under OTL_MobileSupport, as
+    plain unconditional (Windows) code.
 
 - New features:
   - Backported CSP-style abstractions from OmniThreadLibrary-NG

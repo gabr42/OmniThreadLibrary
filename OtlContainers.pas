@@ -166,6 +166,14 @@ type
     function  IsFull: boolean;
   end; { IOmniQueue }
 
+  IOmniValueQueue = interface ['{3399B817-0502-4837-B1D7-BA167E8E03A7}']
+    function  GetContainerSubject: TOmniContainerSubject;
+    function  IsEmpty: boolean;
+    function  Dequeue: TOmniValue;
+    procedure Enqueue(const value: TOmniValue);
+    function  TryDequeue(var value: TOmniValue): boolean;
+    property  ContainerSubject: TOmniContainerSubject read GetContainerSubject;
+  end; { IOmniValueQueue }
 
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
@@ -375,12 +383,74 @@ type
     property ContainerSubject: TOmniContainerSubject read ocContainerSubject;
   end; { TOmniQueue }
 
+/// <param name="UseBusLocking">Set to true to use a spinlock. Otherwise synchronisation is achieved by a critical section.</param>
+/// <param name="ThresholdForFull">The count of OmniValues to which if the queue reaches or exceeds, it is considered full.
+///   Use a a value of -1 to indicate there is no threshold (and hence events like coiNotifyOnAlmostFull will never fire).</param>
+function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer = -1): IOmniValueQueue;
 
 implementation
 
 uses
   Windows,
+  Generics.Collections,
   SysUtils;
+
+type
+  TInterestSet = set of TOmniContainerObserverInterest;
+
+  TOmniValueQueue = class(TInterfacedObject, IOmniValueQueue)
+  strict private
+    FAlmostFullThreshold : integer;
+    FContainerSubject    : TOmniContainerSubject;
+    FFullThreshold       : integer;
+    FInnerQueue          : TQueue<TOmniValue>;
+    FNotifiableEvents    : TInterestSet;
+    FPartlyEmptyThreshold: integer;
+  strict private
+    procedure CollectionNotifyEvent(Sender: TObject; const Item: TOmniValue; Action: TCollectionNotification);
+    function  Dequeue: TOmniValue;
+    procedure DoWithCritSec( Proc: TProc);
+    procedure Enqueue(const value: TOmniValue);
+    function  GetContainerSubject: TOmniContainerSubject;
+    function  IsEmpty: boolean;
+    procedure PropagateNotifications(Events: TInterestSet);
+    function  TryDequeue(var value: TOmniValue): boolean;
+  protected
+    procedure EnterCriticalSection; virtual; abstract;
+    procedure LeaveCriticalSection; virtual; abstract;
+  public
+    constructor Create(AThresholdForFull: integer);
+    destructor  Destroy; override;
+  end; { TOmniValueQueue }
+
+  TOmniValueQueueCS = class(TOmniValueQueue)
+  strict private
+    FCritSect: TFixedCriticalSection;
+  protected
+    procedure EnterCriticalSection; override;
+    procedure LeaveCriticalSection; override;
+  public
+    constructor Create(AThresholdForFull: integer);
+    destructor  Destroy; override;
+  end; { TOmniValueQueueCS }
+
+  TOmniValueQueueSpin = class(TOmniValueQueue)
+  strict private
+    FLock: TSpinLock;
+  protected
+    procedure EnterCriticalSection; override;
+    procedure LeaveCriticalSection; override;
+  public
+    constructor Create(AThresholdForFull: integer);
+  end; { TOmniValueQueueSpin }
+
+function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer = -1): IOmniValueQueue;
+begin
+  if UseBusLocking then
+    Result := TOmniValueQueueSpin.Create(ThresholdForFull)
+  else
+    Result := TOmniValueQueueCS.Create(ThresholdForFull)
+end; { CreateOmniValueQueue }
 
 
 {$IFDEF CPUX64}
@@ -1640,6 +1710,180 @@ begin
   if Result then
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
 end; { TOmniQueue.TryDequeue }
+
+{ TOmniValueQueue }
+
+constructor TOmniValueQueue.Create(AThresholdForFull: integer);
+begin
+  FContainerSubject := TOmniContainerSubject.Create;
+  FInnerQueue := TQueue<TOmniValue>.Create;
+  FInnerQueue.OnNotify := CollectionNotifyEvent;
+  FFullThreshold := AThresholdForFull;
+  if FFullThreshold > 0 then begin
+    FPartlyEmptyThreshold := Round(FFullThreshold * CPartlyEmptyLoadFactor);
+    FAlmostFullThreshold  := Round(FFullThreshold * CAlmostFullLoadFactor);
+    if FPartlyEmptyThreshold = FAlmostFullThreshold then
+      Inc(FAlmostFullThreshold);
+  end
+  else begin
+    FPartlyEmptyThreshold := -1;
+    FAlmostFullThreshold  := -1
+  end;
+  FNotifiableEvents := [];
+end; { TOmniValueQueue.Create }
+
+destructor TOmniValueQueue.Destroy;
+begin
+  FreeAndNil(FContainerSubject);
+  FreeAndNil(FInnerQueue);
+  inherited
+end; { TOmniValueQueue.Destroy }
+
+procedure TOmniValueQueue.CollectionNotifyEvent(Sender: TObject;
+  const Item: TOmniValue; Action: TCollectionNotification);
+var
+  AfterCount: integer;
+begin
+  // This method occurs within the critical section.
+  AfterCount := FInnerQueue.Count;
+  case Action of
+    cnAdded:
+      begin
+        Include(FNotifiableEvents, coiNotifyOnAllInserts);
+        if AfterCount = FAlmostFullThreshold then
+          Include(FNotifiableEvents, coiNotifyOnAlmostFull);
+      end;
+    cnRemoved,
+    cnExtracted:
+      begin
+        Include(FNotifiableEvents, coiNotifyOnAllRemoves);
+        if AfterCount = FPartlyEmptyThreshold then
+          Include(FNotifiableEvents, coiNotifyOnPartlyEmpty);
+      end;
+  end; //case Action
+end; { TOmniValueQueue.CollectionNotifyEvent }
+
+procedure TOmniValueQueue.DoWithCritSec(Proc: TProc);
+var
+  PickUp: TInterestSet;
+begin
+  EnterCriticalSection;
+  try
+    FNotifiableEvents := [];
+    Proc;
+    PickUp := FNotifiableEvents;
+    FNotifiableEvents := []
+  finally LeaveCriticalSection; end;
+  PropagateNotifications(PickUp);
+end; { TOmniValueQueue.DoWithCritSec }
+
+function TOmniValueQueue.Dequeue: TOmniValue;
+var
+  EnclosedResult: TOmniValue;
+begin
+  DoWithCritSec(
+    procedure
+    begin
+      if FInnerQueue.Count > 0 then
+        EnclosedResult := FInnerQueue.Dequeue
+      else
+        raise Exception.Create('TOmniValueQueue.Dequeue: Queue is empty');
+    end);
+  Result := EnclosedResult;
+end; { TOmniValueQueue.Dequeue }
+
+procedure TOmniValueQueue.Enqueue(const value: TOmniValue);
+var
+  LocalCopy: TOmniValue;
+begin
+  LocalCopy := value;
+  DoWithCritSec(
+    procedure
+    begin
+      FInnerQueue.Enqueue(LocalCopy);
+    end);
+end; { TOmniValueQueue.Enqueue }
+
+function TOmniValueQueue.GetContainerSubject: TOmniContainerSubject;
+begin
+  Result := FContainerSubject;
+end; { TOmniValueQueue.GetContainerSubject }
+
+function TOmniValueQueue.IsEmpty: boolean;
+begin
+  EnterCriticalSection;
+  try
+    Result := FInnerQueue.Count = 0;
+  finally LeaveCriticalSection; end;
+end; { TOmniValueQueue.IsEmpty }
+
+procedure TOmniValueQueue.PropagateNotifications(Events: TInterestSet);
+var
+  Ev: TOmniContainerObserverInterest;
+begin
+  if assigned(FContainerSubject) and (Events <> []) then
+    for Ev := Low(TOmniContainerObserverInterest) to High(TOmniContainerObserverInterest) do
+      if Ev in Events then
+        FContainerSubject.Notify(Ev);
+end; { TOmniValueQueue.PropagateNotifications }
+
+function TOmniValueQueue.TryDequeue(var value: TOmniValue): boolean;
+var
+  EnclosedValue : TOmniValue;
+  EnclosedResult: boolean;
+begin
+  DoWithCritSec(
+    procedure
+    begin
+      EnclosedResult := FInnerQueue.Count > 0;
+      if EnclosedResult then
+        EnclosedValue := FInnerQueue.Dequeue;
+    end);
+  value  := EnclosedValue;
+  Result := EnclosedResult;
+end; { TOmniValueQueue.TryDequeue }
+
+{ TOmniValueQueueSpin }
+
+constructor TOmniValueQueueSpin.Create(AThresholdForFull: integer);
+begin
+  inherited Create(AThresholdForFull);
+  FLock.Create(True);
+end; { TOmniValueQueueSpin.Create }
+
+procedure TOmniValueQueueSpin.EnterCriticalSection;
+begin
+  FLock.Enter;
+end; { TOmniValueQueueSpin.EnterCriticalSection }
+
+procedure TOmniValueQueueSpin.LeaveCriticalSection;
+begin
+  FLock.Exit(True);
+end; { TOmniValueQueueSpin.LeaveCriticalSection }
+
+{ TOmniValueQueueCS }
+
+constructor TOmniValueQueueCS.Create(AThresholdForFull: integer);
+begin
+  inherited Create(AThresholdForFull);
+  FCritSect := TFixedCriticalSection.Create;
+end; { TOmniValueQueueCS.Create }
+
+destructor TOmniValueQueueCS.Destroy;
+begin
+  FCritSect.Free;
+  inherited;
+end; { TOmniValueQueueCS.Destroy }
+
+procedure TOmniValueQueueCS.EnterCriticalSection;
+begin
+  FCritSect.Enter;
+end; { TOmniValueQueueCS.EnterCriticalSection }
+
+procedure TOmniValueQueueCS.LeaveCriticalSection;
+begin
+  FCritSect.Leave;
+end; { TOmniValueQueueCS.LeaveCriticalSection }
 
 
 initialization
