@@ -36,10 +36,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2026-04-15
-///   Version           : 1.55b
+///   Last modification : 2026-10-08
+///   Version           : 1.55c
 ///</para><para>
 ///   History:
+///     1.55c: 2026-10-08
+///       - Parallel.Join, For, ForEach, Future and Pipeline no longer fail (or hang) when
+///         the task config uses MonitorWith (issue #154; fixed in OtlTaskControl.Unobserved).
+///         Parallel.Async still cannot be combined with MonitorWith because it relies on an
+///         OnTerminated handler, which is dispatched by the internal monitor only.
 ///     1.55b: 2026-04-15
 ///       - Fixed: TOmniPipelineStage.Execute used PInteger instead of PNativeInt to
 ///         check delegate nil status. On 64-bit, only the low 32 bits were checked.

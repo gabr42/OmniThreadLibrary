@@ -87,6 +87,11 @@
       could fire while the list was still being filled. Now uses
       UnregisterWaitEx and builds the list under FAwaitedLock (issue #227,
       PR #229 by Oleksiy Penkov).
+  - OtlTaskControl: Unobserved raised 'Task can be only monitored with a
+    single monitor' when the task was already monitored with MonitorWith.
+    This made Parallel.Join, For, ForEach, Future and Pipeline fail (or
+    hang) when their task config used MonitorWith (issue #154).
+    Parallel.Async still cannot be combined with MonitorWith.
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now

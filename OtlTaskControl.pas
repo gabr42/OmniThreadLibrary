@@ -35,10 +35,16 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-07-08
-///   Version           : 1.43d
+///   Last modification : 2026-10-08
+///   Version           : 1.43e
 ///</para><para>
 ///   History:
+///     1.43e: 2026-10-08
+///       - Fixed: Unobserved raised 'Task can be only monitored with a single monitor' if
+///         the task was already monitored with MonitorWith. A task that is monitored by
+///         a user's monitor is already kept alive by it and does not need an internal
+///         monitor (issue #154). Handlers set with OnMessage/OnTerminated are dispatched
+///         by the internal monitor only and still cannot be combined with MonitorWith.
 ///     1.43d: 2026-07-08
 ///       - Fixed data race on the task's TerminatedEvent handle (issue #216).
 ///         TOmniTask.InternalExecute now signals TerminatedEvent while still holding
@@ -3772,7 +3778,10 @@ end; { TOmniTaskControl.TerminateWhen }
 function TOmniTaskControl.Unobserved: IOmniTaskControl;
 begin
   { TODO 1 -oPrimoz Gabrijelcic : reimplement without the internal monitor }
-  CreateInternalMonitor;
+  // A task can have one monitor only. If the user attached one (MonitorWith), it already
+  // keeps the task alive and a second (internal) monitor would be rejected by SetMonitor.
+  if not assigned(otcSharedInfo.Monitor) then
+    CreateInternalMonitor;
   Result := Self;
 end; { TOmniTaskControl.Unobserved }
 
