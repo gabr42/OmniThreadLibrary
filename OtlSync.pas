@@ -2090,19 +2090,24 @@ var
   newWaitObject: THandle;
   waiter       : TWaiter;
 begin
-  FWaitHandles.Clear;
-  for iHandle := Low(FHandles) to High(FHandles) do begin
-    waiter := TWaiter.Create(Self, iHandle);
-    idxWait := FWaitHandles.AddObject(0 {placeholder}, waiter);
-    if iHandle <> idxWait then
-      raise Exception.Create('TWaitFor.RegisterWaitHandles: Indexes out of sync');
+  // A wait registered earlier in this loop can fire at once; Awaited_Asy then reads FWaitHandles.Objects[]
+  // while AddObject below is still growing (reallocating) the list.
+  FAwaitedLock.Acquire;
+  try
+    FWaitHandles.Clear;
+    for iHandle := Low(FHandles) to High(FHandles) do begin
+      waiter := TWaiter.Create(Self, iHandle);
+      idxWait := FWaitHandles.AddObject(0 {placeholder}, waiter);
+      if iHandle <> idxWait then
+        raise Exception.Create('TWaitFor.RegisterWaitHandles: Indexes out of sync');
 {$WARN SYMBOL_PLATFORM OFF}
-    Win32Check(RegisterWaitForSingleObject(newWaitObject, FHandles[iHandle], WaitForCallback,
-                                           pointer(waiter), INFINITE,
-                                           extraFlags OR WT_EXECUTEINPERSISTENTTHREAD));
+      Win32Check(RegisterWaitForSingleObject(newWaitObject, FHandles[iHandle], WaitForCallback,
+                                             pointer(waiter), INFINITE,
+                                             extraFlags OR WT_EXECUTEINPERSISTENTTHREAD));
 {$WARN SYMBOL_PLATFORM ON}
-    FWaitHandles[idxWait] := newWaitObject;
-  end;
+      FWaitHandles[idxWait] := newWaitObject;
+    end;
+  finally FAwaitedLock.Release; end;
   SetLength(FSignalledHandles, 0);
 end; { TWaitFor.RegisterWaitHandles }
 
@@ -2121,8 +2126,10 @@ var
   i             : integer;
   waiter        : TWaiter;
 begin
+  // UnregisterWait does not wait for a callback in flight, which would then read the list cleared below.
+  // UnregisterWaitEx with INVALID_HANDLE_VALUE returns only after running callbacks have finished.
   for i := 0 to FWaitHandles.Count - 1 do
-    UnregisterWait(THandle(FWaitHandles[i]));
+    UnregisterWaitEx(THandle(FWaitHandles[i]), INVALID_HANDLE_VALUE);
 
   SetLength(FSignalledHandles, FWaitHandles.Count);
   countSignalled := 0;
