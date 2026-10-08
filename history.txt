@@ -37,6 +37,10 @@
       critical section.
     - Destroying a TOmniValueQueue that still contained items raised an
       access violation (issue #201).
+    - TOmniBaseQueue relied on the memory manager for the alignment of its
+      head/tail pointers; alignment assertions failed with memory managers
+      that don't return 16-byte aligned blocks, e.g. madExcept's leak
+      tracking on x64 (issue #177).
   - OtlCommon:
     - _ReleaseAndClear did not check assigned(ovIntf) before _Release.
     - TOmniValueContainer.Grow off-by-one skipped the last element.
