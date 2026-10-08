@@ -11,7 +11,11 @@ program Issue213;
   The test uses up the process's window quota (10,000 USER objects), then runs the case
   while no window can be created.
 
-  Usage: Issue213 <Unobserved|ForEach|For>
+  Usage: Issue213 <Unobserved|ForEach|For|ForEachTaskCreateRaises>
+    ForEachTaskCreateRaises does not need the window quota trick: the OnTaskCreate hook
+    raises while the loop is starting its workers, which has the same effect on the loop
+    (it must not wait forever for workers that were never started). It also runs in OTL-NG,
+    which does not use a window for the internal monitor.
   Expected: an exception about the failed window allocation reaches the caller (EOSError or
   similar), not an access violation, and nothing hangs.
 
@@ -63,6 +67,7 @@ begin
   // so that creating it is what fails.
   // Use up the window quota.
   SetLength(windows, 0);
+  if not SameText(caseName, 'ForEachTaskCreateRaises') then
   repeat
     wnd := CreateWindowEx(0, 'STATIC', nil, 0, 0, 0, 0, 0, HWND_MESSAGE, 0, HInstance, nil);
     if wnd <> 0 then begin
@@ -78,6 +83,13 @@ begin
       CreateTask(NoOp, 'NoOp').Unobserved.Run
     else if SameText(caseName, 'ForEach') then
       Parallel.ForEach(1, 100).NoWait.Execute(procedure (const value: integer) begin end)
+    else if SameText(caseName, 'ForEachTaskCreateRaises') then
+      Parallel.ForEach(1, 100).NoWait.
+        OnTaskCreate(procedure (const task: IOmniTaskControl)
+          begin
+            raise Exception.Create('OnTaskCreate failed');
+          end).
+        Execute(procedure (const value: integer) begin end)
     else if SameText(caseName, 'For') then
       Parallel.&For(1, 100).NoWait.Execute(procedure (value: integer) begin end)
     else
@@ -93,7 +105,7 @@ begin
   for i := 0 to High(windows) do
     DestroyWindow(windows[i]);
   if not gotError then
-    Fail(caseName + ': no error although no window could be created');
+    Fail(caseName + ': no error although the task could not be started');
   Writeln('PASS: ', caseName);
   Flush(System.Output);
 end.
