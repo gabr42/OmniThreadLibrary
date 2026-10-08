@@ -36,10 +36,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-02-19
-///   Last modification : 2017-01-22
-///   Version           : 1.06
+///   Last modification : 2026-10-08
+///   Version           : 1.07
 ///</para><para>
 ///   History:
+///     1.07: 2026-10-08
+///       - PostWithRetry waits up to 60 seconds (was about 5 seconds) for a receiver whose
+///         posted-message queue is full (ERROR_NOT_ENOUGH_QUOTA) before it gives up. A
+///         receiver that is stalled for longer (for example a GUI thread on a machine that
+///         is swapping) made worker tasks raise the error (issue #182).
 ///     1.06: 2017-01-22
 ///        - TOmniContainerWindowsMessageObserverImpl.Notify and .Send handle
 ///          ERROR_NOT_ENOUGH_QUOTA (1816) error.
@@ -265,22 +270,28 @@ end; { TOmniContainerWindowsMessageObserver.Notify }
 procedure TOmniContainerWindowsMessageObserverImpl.PostWithRetry(msg: UINT;
   wParam: WPARAM; lParam: LPARAM);
 const
-  CInitialSleep = 1 {ms};
-  CSecondSleep  = 5 {ms};
-  CMaxTries     = 1000;
+  CInitialSleep_ms = 1;
+  CSecondSleep_ms  = 5;
+  CLaterSleep_ms   = 20;
+  CMaxWait_ms      = 60000; // the receiver may be stalled, e.g. by heavy swapping
 var
   lasterr: cardinal;
   retry  : integer;
-  wait   : integer;
+  start_ms: int64;
 begin
   retry := 0;
-  wait := CInitialSleep;
+  start_ms := DSiTimeGetTime64;
   while not PostMessage(cwmoHandle, msg, wParam, lParam) do begin
     Inc(retry);
     lasterr := GetLastError;
-    if (lasterr = ERROR_NOT_ENOUGH_QUOTA) and (retry < CMaxTries) then begin
-      Sleep(wait);
-      wait := CSecondSleep;
+    if (lasterr = ERROR_NOT_ENOUGH_QUOTA) and (not DSiHasElapsed64(start_ms, CMaxWait_ms)) then begin
+      // the message queue of the receiving thread is full (10,000 messages by default)
+      if retry = 1 then
+        Sleep(CInitialSleep_ms)
+      else if retry < 10 then
+        Sleep(CSecondSleep_ms)
+      else
+        Sleep(CLaterSleep_ms);
     end
     else if lasterr = ERROR_INVALID_WINDOW_HANDLE then
       RaiseLastOSError(lasterr {$IFDEF OTL_RaiseLastOSErrorHasAdditionalInfo},

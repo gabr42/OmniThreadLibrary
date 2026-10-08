@@ -41,3 +41,15 @@ Note found while testing #40: tasks started with `.Unobserved` are only released
 pumps messages (the internal monitor is a window). A console program or a tight loop in the main thread
 that never pumps messages accumulates ~600 KB per task. This is probably what is behind the open memory
 issues #194, #78 and #69 (Batch 3).
+
+## Batch 3 status (memory)
+
+| Issue | Classic OTL | Repro | OTL-NG |
+|-------|-------------|-------|--------|
+| #78 nested `Parallel.Async`, #152 `Async` started from a task, #69 pipelines started from `Parallel.For` tasks | Real leak: tasks created in a non-main thread get an internal monitor window in that thread; nothing there processes messages, so finished tasks were never released (380 MB / 300 nested Asyncs, 1.4 GB for the pipeline case). Fixed in OtlTaskControl 1.43f: such a thread processes its monitor's pending messages whenever it creates the next internal monitor. | `69_UnobservedLeaks` (NestedAsync, NestedAsyncTask, NestedPipeline) | Not affected (uses background observers); all cases pass |
+| #194 repeated `Parallel.For` in a button click, #200 `Parallel.ForEach` memory, #197 `Terminate(0)`/app_22 | Works as designed (documented: OTL cleans up through window messages, so the main thread must process messages; a console program must pump them). Memory is released as soon as messages are processed. #197 additionally leaks ~12 KB per thread killed by `TerminateThread`, which cannot be avoided. | `69_UnobservedLeaks` `ForLoopPumped` (messages pumped: flat), `ForLoopUnpumped` (grows by design) | Same: main thread must pump |
+| #182 `ERROR_NOT_ENOUGH_QUOTA` | The observer gave up after ~5 s of a full receiver queue. Now waits up to 60 s. OtlContainerObserver 1.07. | `182_PostQuota` | No such code in NG |
+| #183 bad `TWaiter` cast | `TWaitFor.Awaited_Asy` raced with `RegisterWaitHandles` growing the list; fixed by the #227 fix (74d8a30a), no new repro | existing `59_TWaitFor` test | `TWaitFor.TWaiter` does not exist in NG |
+
+Observation (NG): repeated `Parallel.For` makes the NG thread pool grow to ~150 threads (classic: 16) on a 32-core
+machine and keep them for 10+ s; memory use plateaus (~100 MB in a 32-bit process). Not a leak, but worth a look.

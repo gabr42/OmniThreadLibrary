@@ -121,6 +121,10 @@
     pending messages of its internal monitor whenever it creates the next
     internal monitor. The main thread must still process messages (a GUI
     application does; a console program must pump them).
+  - OtlContainerObserver: a worker task raised ERROR_NOT_ENOUGH_QUOTA when
+    the message queue of the monitoring thread stayed full (10,000 messages)
+    for more than ~5 seconds, e.g. because the GUI thread was stalled by
+    swapping. The observer now waits up to 60 seconds (issue #182).
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now
