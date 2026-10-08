@@ -102,12 +102,6 @@ begin
         end;
         if SameText(mode, 'plain') and (sum <> CNumItems * (CNumItems + 1)) then
           Fail(Format('sum is %d, expected %d', [sum, CNumItems * (CNumItems + 1)]));
-        // NOTE: Ending the program immediately after the last item was taken hangs the
-        // process at exit (loop destructor waits for the worker tasks while the RTL is
-        // finalizing). That is a separate problem from #49; let the loop finish first.
-        while (not outQueue.IsCompleted) and (GetTickCount < startTick + 10000) do
-          Sleep(10);
-        Sleep(200);
       end;
     end;
   except

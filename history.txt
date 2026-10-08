@@ -139,6 +139,12 @@
     code, which swallowed them so that the methods were never executed.
     They are put back into the queue now. OTL reads all messages with the
     internal IOmniCommunicationEndpointInternal.ReceiveAny (issue #50).
+  - OtlParallel: a Parallel.ForEach(...).NoWait loop over a blocking
+    collection could hang the process when the program released its last
+    reference to the collection before the loop had finished (the loop
+    referenced the collection without owning it). The loop now keeps the
+    source of a ForEach(IOmniValueEnumerable / IOmniBlockingCollection)
+    alive until its tasks have stopped.
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now

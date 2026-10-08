@@ -64,3 +64,14 @@ machine and keep them for 10+ s; memory use plateaus (~100 MB in a 32-bit proces
 | #173 Error 1400 on close | Cannot reproduce (timed tasks started from a pool thread, the pool destroyed before the tasks). The linked commit only improved the error text. Likely a thread-lifetime problem in the application: the task owner thread is gone when the task terminates. | `173_TimedTaskInAsync` (regression test) | Passes |
 | #180 `Parallel.For` with `Int64` | Feature request, not a bug (`IOmniParallelSimpleLoop` is `integer` based throughout). Not implemented. | - | same |
 | #165, #166 | #166: mixed builds, answered in the issue, no reply since 2021. #165: no repro and Delphi XE6 / OTL 3.05; not actionable. | - | - |
+
+## NoWait/Into exit hang (found while testing #49)
+
+`Parallel.ForEach(collection).PreserveOrder.NoWait.Into(queue)` could hang the process at exit. The loop's
+enumerator referenced the input collection without owning it (`obceCollection_ref`), so a program that
+released its last reference to the collection before the loop had finished left a worker waiting on a
+destroyed collection. Reproduced in about 1 of 6 runs in classic and 2 of 15 in NG, 0 of 30 after the fix.
+Fix: the loop keeps the source of `ForEach(IOmniValueEnumerable/IOmniBlockingCollection)` alive
+(OtlParallel 1.56b / NG 3.05). Making the enumerator itself hold an interface reference was tried and rejected:
+code that owns a `TOmniBlockingCollection` as an object (the unit tests do) would have the collection destroyed
+when the enumerator is released. Test: `NoWaitIntoExit`.
