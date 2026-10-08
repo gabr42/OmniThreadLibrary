@@ -36,10 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2026-04-15
-///   Version           : 3.02d
+///   Last modification : 2026-10-08
+///   Version           : 3.02e
 ///</para><para>
 ///   History:
+///     3.02e: 2026-10-08
+///       - Fixed: Destroying a TOmniValueQueue that still contained items raised an
+///         access violation (#201). TQueue<T>.Destroy notifies about every removed item
+///         and CollectionNotifyEvent accessed the already nil-ed FInnerQueue.
 ///     3.02d: 2026-04-15
 ///       - Fixed: TOmniValueQueue.PropagateNotifications loop used Low..Low instead
 ///         of Low..High, silently dropping all observer notifications except inserts.
@@ -1735,6 +1739,9 @@ end; { TOmniValueQueue.Create }
 destructor TOmniValueQueue.Destroy;
 begin
   FreeAndNil(FContainerSubject);
+  // TQueue<T>.Destroy clears the queue and fires OnNotify for every item left in it,
+  // but FreeAndNil nils FInnerQueue before the destructor runs and the handler uses it.
+  FInnerQueue.OnNotify := nil;
   FreeAndNil(FInnerQueue);
   inherited
 end; { TOmniValueQueue.Destroy }

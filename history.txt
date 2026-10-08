@@ -35,6 +35,8 @@
     - TOmniBaseBoundedStack.Empty was not protected by Acquire/Release.
     - TOmniValueQueue.IsEmpty was missing try/finally around the
       critical section.
+    - Destroying a TOmniValueQueue that still contained items raised an
+      access violation (issue #201).
   - OtlCommon:
     - _ReleaseAndClear did not check assigned(ovIntf) before _Release.
     - TOmniValueContainer.Grow off-by-one skipped the last element.
