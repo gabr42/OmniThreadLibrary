@@ -5,7 +5,14 @@ runs it (exit code 0 = pass, 1 = fail). A repro is expected to FAIL while the bu
 To run against OTL-NG, compile the same `.dpr` with `-U` and `-I` pointing to
 `h:\RAZVOJ\OmniThreadLibrary-NG` (and its `FastMM4` subfolder).
 
-## Batch 1 status (analysis only, nothing fixed yet)
+## Batch 1 status
+
+Fixed on branch `bugfix-batch1` (classic) and `bugfix-batch1` (NG): #224 (classic only), #201 (both),
+#154 (classic only), #177 (both). #199 and #191 were already fixed; #72 is postponed. All repros pass
+after the fixes. Classic DUnit suite (102 tests) and NG DUnitX suite (341 tests) pass.
+
+Known limitation after the #154 fix: `Parallel.Async` (and any `OnMessage`/`OnTerminated` handler) still
+cannot be combined with `MonitorWith`, because only the internal monitor dispatches per-task handlers.
 
 | Issue | Classic OTL | Repro | OTL-NG |
 |-------|-------------|-------|--------|
