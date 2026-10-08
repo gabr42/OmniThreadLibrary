@@ -44,6 +44,10 @@
       has.
     - TOmniProcessorGroups.FindGroup assumed group number equals list
       index.
+  - OtlComm: ReceiveWait lost a message (and SendWait sent it twice) if an
+    empty wake-up was followed by a successful dequeue/enqueue in the same
+    call; this could hang thread pool workers and Parallel.For (issue #228,
+    PR #230 by Oleksiy Penkov).
   - OtlParallel:
     - Fixed PInteger used instead of PNativeInt in pipeline stage
       dispatch (only low 32 bits checked on 64-bit).
