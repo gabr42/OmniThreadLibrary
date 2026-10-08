@@ -112,6 +112,15 @@
     if a task could not be created or started (e.g. no window handles were
     left for the internal task monitor); the error is now raised to the
     caller of Execute (issue #213).
+  - OtlTaskControl: tasks created with an internal monitor (Unobserved,
+    handlers; everything Parallel.* creates) from a thread other than the
+    main thread were never released, as their termination is signalled
+    through a window message that nobody processed in such a thread. This
+    caused a steady memory growth with nested Parallel.Async, Pipeline
+    and For (issues #78, #69, #152). A non-main thread now processes the
+    pending messages of its internal monitor whenever it creates the next
+    internal monitor. The main thread must still process messages (a GUI
+    application does; a console program must pump them).
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now

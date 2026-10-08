@@ -36,9 +36,17 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-10-08
-///   Version           : 1.43e
+///   Version           : 1.43f
 ///</para><para>
 ///   History:
+///     1.43f: 2026-10-08
+///       - Fixed: Tasks created with an internal monitor (Unobserved, OnMessage/OnTerminated
+///         handlers; everything Parallel.* creates) from a thread that does not process
+///         messages - any thread but the main one - were never released, because their
+///         termination is signalled via messages to a window owned by the creating thread.
+///         That caused a steady memory growth with nested Parallel.Async/Pipeline/For
+///         (issues #78, #69, #152). Such threads now process the pending messages of
+///         their internal monitor when they create the next internal monitor.
 ///     1.43e: 2026-10-08
 ///       - Fixed: Unobserved raised 'Task can be only monitored with a single monitor' if
 ///         the task was already monitored with MonitorWith. A task that is monitored by
@@ -3091,10 +3099,26 @@ begin
 end; { TOmniTaskControl.ClearTimer }
 
 procedure TOmniTaskControl.CreateInternalMonitor;
+var
+  exc: Exception;
 begin
   if not assigned(otcEventMonitor) then begin
     otcEventMonitorInternal := true;
     otcEventMonitor := GTaskControlEventMonitorPool.Allocate;
+    // The monitor window belongs to the current thread and tasks are released only when
+    // the window processes their termination message. A thread that is not the main
+    // thread (e.g. a thread pool thread running a task that starts other tasks) usually
+    // has no message loop, so tasks created earlier would never be released. Release
+    // them here; exceptions from event handlers cannot be raised from an unrelated call.
+    if GetCurrentThreadID <> MainThreadID then
+      try
+        TOmniEventMonitor(otcEventMonitor).ProcessMessages;
+      except
+        on E: Exception do begin
+          exc := E;
+          FilterException(exc);
+        end;
+      end;
     TOmniEventMonitor(otcEventMonitor).Monitor(Self);
   end;
 end; { TOmniTaskControl.CreateInternalMonitor }
