@@ -96,6 +96,15 @@
     This made Parallel.Join, For, ForEach, Future and Pipeline fail (or
     hang) when their task config used MonitorWith (issue #154).
     Parallel.Async still cannot be combined with MonitorWith.
+  - OtlCommon: TOmniValue.CastTo<TOmniValue> raised 'TOmniValue cannot be
+    converted to record', which broke Parallel.ForEach<TOmniValue> (issue
+    #49).
+  - OtlParallel: exceptions raised in the body of Parallel.For and
+    Parallel.ForEach (including the Into and Aggregate variants) hung
+    ForEach and were silently lost in For. They are now collected and
+    raised in the calling thread as EJoinException after all tasks have
+    stopped (not when NoWait is used), the same way Parallel.Join works.
+    ForEach tasks stop taking new elements after a failure (issue #57).
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now

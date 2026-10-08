@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-09-16
-///   Version           : 1.56b
+///   Last modification : 2026-10-08
+///   Version           : 1.56c
 ///</para><para>
 ///   History:
+///     1.56c: 2026-10-08
+///       - Fixed: TOmniValue.CastTo<TOmniValue> raised 'TOmniValue cannot be converted to
+///         record'. This broke Parallel.ForEach<TOmniValue> (issue #49).
 ///     1.56b: 2026-09-16
 ///       - Fixed: TOmniEnvironment.LoadNUMAInfo ignored the result of
 ///         DSiGetLogicalProcessorInfoEx and only handled the "API not present"
@@ -2388,6 +2391,7 @@ end; { TOmniValue.ToRecord }
 function TOmniValue.CastTo<T>: T;
 var
   ds      : integer;
+  pResult : ^TOmniValue;
   maxValue: uint64;
   ti      : PTypeInfo;
 {$IFDEF OTL_TypeInfoHasTypeData}
@@ -2398,6 +2402,11 @@ var
 begin
   ds := 0;
   ti := System.TypeInfo(T);
+  if ti = System.TypeInfo(TOmniValue) then begin
+    pResult := @Result;
+    pResult^ := Self;
+    Exit;
+  end;
   if assigned(ti) then
     if (ti = System.TypeInfo(byte)) or (ti = System.TypeInfo(shortint)) then
       ds := 1

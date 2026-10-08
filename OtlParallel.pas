@@ -37,9 +37,16 @@
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
 ///   Last modification : 2026-10-08
-///   Version           : 1.55c
+///   Version           : 1.56
 ///</para><para>
 ///   History:
+///     1.56: 2026-10-08
+///       - Exceptions raised in the body of Parallel.For and Parallel.ForEach (including
+///         Into/Aggregate variants) no longer hang the loop (ForEach) or get lost (For).
+///         They are collected and, unless NoWait is used, raised in the calling thread as
+///         an EJoinException after all tasks have stopped, just like in Parallel.Join.
+///         ForEach tasks stop taking new elements when one task fails; For tasks run
+///         their partitions to the end (issue #57).
 ///     1.55c: 2026-10-08
 ///       - Parallel.Join, For, ForEach, Future and Pipeline no longer fail (or hang) when
 ///         the task config uses MonitorWith (issue #154; fixed in OtlTaskControl.Unobserved).
@@ -774,6 +781,21 @@ type
   TOmniParallelLoopOption = (ploNoWait, ploPreserveOrder);
   TOmniParallelLoopOptions = set of TOmniParallelLoopOption;
 
+  EJoinException = class;
+
+  ///<summary>Collects exceptions raised in the tasks of a Parallel.For/ForEach loop.</summary>
+  TOmniLoopExceptions = class
+  strict private
+    FException: EJoinException;
+    FFailed   : boolean;
+    FLock     : TOmniCS;
+  public
+    destructor Destroy; override;
+    procedure Capture;
+    procedure RaiseIfAny;
+    property Failed: boolean read FFailed;
+  end; { TOmniLoopExceptions }
+
   TOmniParallelLoopBase = class(TInterfacedObject)
   {$IFDEF OTL_ERTTI}
   strict private
@@ -792,6 +814,7 @@ type
     FCountStopped       : IOmniResourceCount;
     FDataManager        : TOmniDataManager;
     FDelegateEnum       : TOmniDelegateEnumerator;
+    FExceptions         : TOmniLoopExceptions;
     FIntoQueueIntf      : IOmniBlockingCollection;
     FManagedProvider    : boolean;
     FNumTasks           : integer;
@@ -944,6 +967,7 @@ type
   strict private
     FCancelWith         : IOmniCancellationToken;
     FCountStopped       : IOmniResourceCount;
+    FExceptions         : TOmniLoopExceptions;
     FFinalizerDelegate  : TOmniSimpleTaskFinalizerTaskDelegate;
     FFirst              : integer;
     FInitializerDelegate: TOmniSimpleTaskInitializerTaskDelegate;
@@ -3307,6 +3331,40 @@ end; { Parallel.TryRace<T> }
 
 {$ENDIF OTL_GoodGenerics}
 
+{ TOmniLoopExceptions }
+
+destructor TOmniLoopExceptions.Destroy;
+begin
+  FreeAndNil(FException);
+  inherited;
+end; { TOmniLoopExceptions.Destroy }
+
+///<summary>Must be called from an except block. Takes over the current exception.</summary>
+procedure TOmniLoopExceptions.Capture;
+begin
+  FLock.Acquire;
+  try
+    if not assigned(FException) then
+      FException := EJoinException.Create;
+    FException.Add(FException.Count, Exception(AcquireExceptionObject));
+    FFailed := true;
+  finally FLock.Release; end;
+end; { TOmniLoopExceptions.Capture }
+
+///<summary>Raises the collected exceptions (if any) in the calling thread.</summary>
+procedure TOmniLoopExceptions.RaiseIfAny;
+var
+  exc: EJoinException;
+begin
+  FLock.Acquire;
+  try
+    exc := FException;
+    FException := nil;
+  finally FLock.Release; end;
+  if assigned(exc) then
+    raise exc;
+end; { TOmniLoopExceptions.RaiseIfAny }
+
 { TOmniParallelLoopBase }
 
 constructor TOmniParallelLoopBase.Create(const sourceProvider: TOmniSourceProvider;
@@ -3361,6 +3419,7 @@ destructor TOmniParallelLoopBase.Destroy;
 begin
   if assigned(FCountStopped) then
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
+  FreeAndNil(FExceptions);
   if FManagedProvider then
     FreeAndNil(FSourceProvider);
   FreeAndNil(FDelegateEnum);
@@ -3595,22 +3654,33 @@ begin
   else if (ploNoWait in Options) and (numTasks > 1) and (not FNumTasksManual) then
     Dec(numTasks);
   FDataManager := CreateDataManager(FSourceProvider, numTasks, dmOptions); // destructor will do the cleanup
+  FreeAndNil(FExceptions);
+  FExceptions := TOmniLoopExceptions.Create;
   FCountStopped := CreateResourceCount(numTasks + 1);
   lockAggregate := CreateOmniCriticalSection;
   for iTask := 1 to numTasks do begin
     task := CreateTask(
       procedure (const task: IOmniTask)
       begin
-        if assigned(FOnTaskCreate) then
-          FOnTaskCreate(task);
-        taskDelegate(task);
-        if FCountStopped.Allocate = 1 then begin
-          if ploNoWait in Options then begin
-            if assigned(FIntoQueueIntf) then
-              FIntoQueueIntf.CompleteAdding;
-            DoOnStop(task);
+        // Count down even if the loop body raises, otherwise the loop (and its destructor)
+        // would wait forever. The exception is raised in the caller of Execute.
+        try
+          try
+            if assigned(FOnTaskCreate) then
+              FOnTaskCreate(task);
+            taskDelegate(task);
+          except
+            FExceptions.Capture;
           end;
-          FCountStopped.Allocate;
+        finally
+          if FCountStopped.Allocate = 1 then begin
+            if ploNoWait in Options then begin
+              if assigned(FIntoQueueIntf) then
+                FIntoQueueIntf.CompleteAdding;
+              DoOnStop(task);
+            end;
+            FCountStopped.Allocate;
+          end;
         end;
       end,
       'Parallel.ForEach worker #' + IntToStr(iTask))
@@ -3628,6 +3698,7 @@ begin
     if assigned(FIntoQueueIntf) then
       FIntoQueueIntf.CompleteAdding;
     DoOnStop(nil);
+    FExceptions.RaiseIfAny;
   end;
 end; { TOmniParallelLoopBase.InternalExecuteTask }
 
@@ -3722,7 +3793,8 @@ end; { TOmniParallelLoopBase.SetTaskConfig }
 
 function TOmniParallelLoopBase.Stopped: boolean;
 begin
-  Result := (assigned(FCancellationToken) and FCancellationToken.IsSignalled);
+  Result := (assigned(FExceptions) and FExceptions.Failed)
+            or (assigned(FCancellationToken) and FCancellationToken.IsSignalled);
 end; { TOmniParallelLoopBase.Stopped }
 
 { TOmniParallelLoop }
@@ -4226,6 +4298,7 @@ begin
   FreeAndNil(FOnMessageList);
   if assigned(FCountStopped) then
     WaitForSingleObject(FCountStopped.Handle, INFINITE);
+  FreeAndNil(FExceptions);
   inherited;
 end; { TOmniParallelSimpleLoop.Destroy }
 
@@ -4248,11 +4321,15 @@ begin
       // deadlock the whole loop. Mirrors the try/finally in TOmniParallelJoin.
       // Backported from OmniThreadLibrary-NG (commit 6da3112).
       try
-        if assigned(FInitializerDelegate) then
-          FInitializerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
-        taskDelegate(task, taskIndex);
-        if assigned(FFinalizerDelegate) then
-          FFinalizerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
+        try
+          if assigned(FInitializerDelegate) then
+            FInitializerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
+          taskDelegate(task, taskIndex);
+          if assigned(FFinalizerDelegate) then
+            FFinalizerDelegate(task, taskIndex, FPartition[taskIndex].LowBound, FPartition[taskIndex].HighBound);
+        except
+          FExceptions.Capture; // raised in the caller of Execute
+        end;
       finally
         if FCountStopped.Allocate = 1 then begin
           if FNoWait then
@@ -4457,6 +4534,8 @@ begin
   if FNoWait and (taskCount > 1) and (not FNumTasksManual) then
     Dec(taskCount);
   CreatePartitions(taskCount);
+  FreeAndNil(FExceptions);
+  FExceptions := TOmniLoopExceptions.Create;
   FCountStopped := CreateResourceCount(taskCount + 1);
   lockAggregate := CreateOmniCriticalSection;
   for iTask := 0 to taskCount - 1 do begin
@@ -4474,6 +4553,7 @@ begin
       WaitForSingleObject(FCountStopped.Handle, INFINITE);
     if assigned(FOnStop) then
       FOnStop(nil);
+    FExceptions.RaiseIfAny;
   end;
 end; { TOmniParallelSimpleLoop.InternalExecute }
 
