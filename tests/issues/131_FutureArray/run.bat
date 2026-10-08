@@ -1,5 +1,5 @@
 @echo off
-rem Builds the Issue131 repro in 32- and 64-bit mode and runs it (optionally with the arguments listed in CASES).
+rem Builds the Issue131 repro in 32- and 64-bit mode and runs each case in its own process.
 setlocal EnableDelayedExpansion
 set DELPHI=C:\Program Files (x86)\Embarcadero\Studio\37.0\bin
 set OUT=%TEMP%\otl_Issue131
@@ -9,8 +9,10 @@ set NS=System;System.Win;Winapi;Vcl
 "%DELPHI%\dcc64.exe" -B -Q "-U..\..\..;..\..\..\src" "-NS%NS%" "-E%OUT%\w64" "-NU%OUT%\w64" Issue131.dpr || exit /b 2
 set RC=0
 for %%p in (w32 w64) do (
-  echo [%%p]
-  %OUT%\%%p\Issue131.exe
-  if errorlevel 1 set RC=1
+  for %%c in (run) do (
+    echo [%%p] %%c
+    %OUT%\%%p\Issue131.exe %%c
+    if errorlevel 1 set RC=1
+  )
 )
 exit /b %RC%
