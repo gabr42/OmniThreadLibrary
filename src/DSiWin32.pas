@@ -8,10 +8,16 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2026-03-23
-   Version           : 2.16a
+   Last modification : 2026-10-08
+   Version           : 2.16b
 </pre>*)(*
    History:
+     2.16b: 2026-10-08
+       - Fixed: Access violation in DSiTimeGetTime64 (and DSiAllocateHwnd) when called
+         from a thread that outlives the unit finalization, for example from the
+         thread pool maintenance timer at application shutdown (OTL issue #224).
+         The process-global critical sections are no longer deleted; the OS
+         reclaims them when the process exits.
      2.16a: 2026-05-06
        - Removed GInterlockedCompareExchange64 - it was not initialized correctly
          and it was not used anywhere.
@@ -10353,8 +10359,10 @@ procedure CleanupGlobals;
 begin
   timeEndPeriod(1);
   DSiCloseHandleAndNull(GTerminateBackgroundTasks);
-  DeleteCriticalSection(GDSiWndHandlerCritSect);
-  DeleteCriticalSection(GDSiTimeGetTime64Safe);
+  // GDSiWndHandlerCritSect and GDSiTimeGetTime64Safe are intentionally NOT deleted.
+  // A thread that outlives this unit (e.g. an OTL thread pool maintenance timer calling
+  // DSiTimeGetTime64 during application shutdown) would otherwise crash in
+  // EnterCriticalSection. They are reclaimed by the OS when the process exits.
   DSiUnloadLibrary;
   FreeAndNil(_GLibraryList);
 end; { CleanupGlobals }
