@@ -517,7 +517,9 @@ begin
             else
               break; //while
           end; //while
-        until not retry;
+        // Stop once a message is in hand. A wake-up that finds the queue empty sets retry; going round
+        // again after a later successful dequeue would overwrite Result and lose the message in msg.
+        until Result or (not retry);
       finally ceReader_ref.ContainerSubject.Detach(insertObserver, coiNotifyOnAllInserts); end;
     finally FreeAndNil(insertObserver); end;
   end;
@@ -578,7 +580,8 @@ begin
               else
                 break; //while
             end; //while
-          until not retry;
+          // Stop once the message is sent (see ReceiveWait), or it would be sent twice.
+          until Result or (not retry);
         finally ceWriter_ref.ContainerSubject.Detach(partlyEmptyObserver, coiNotifyOnPartlyEmpty); end;
     finally FreeAndNil(partlyEmptyObserver); end;
   end;
