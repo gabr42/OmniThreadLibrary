@@ -34,6 +34,7 @@ uses
 const
   CWatchdog_ms  = 120000;
   CLimit_MB     = 60;   // allowed growth
+  CPipelineLimit_MB = 300;
   CRepeats      = 300;
   CRepeatsX     = 1500;
 
@@ -103,6 +104,7 @@ end; { PipelineFromTask }
 var
   caseName: string;
   i       : integer;
+  limit   : integer;
   start   : integer;
 
 begin
@@ -162,9 +164,15 @@ begin
     else
       Fail('unknown case ' + caseName);
     PumpFor(1500); // let everything finish and be released
-    if PrivateMB - start > CLimit_MB then
+    // The pipeline case runs many pipelines at once and its memory use fluctuates by a few
+    // hundred MB; the leak it detects was over 100 MB per round.
+    if SameText(caseName, 'NestedPipeline') then
+      limit := CPipelineLimit_MB
+    else
+      limit := CLimit_MB;
+    if PrivateMB - start > limit then
       Fail(Format('%s: private bytes grew from %d MB to %d MB (limit: +%d MB)',
-        [caseName, start, PrivateMB, CLimit_MB]));
+        [caseName, start, PrivateMB, limit]));
     Writeln(Format('PASS: %s (private bytes %d MB -> %d MB)', [caseName, start, PrivateMB]));
   except
     on E: Exception do

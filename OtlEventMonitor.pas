@@ -306,7 +306,7 @@ var
     rearmSelf: boolean = true): boolean;
   begin
     Result := true;
-    while task.Comm.Receive(emCurrentMsg) do begin
+    while (task.Comm as IOmniCommunicationEndpointInternal).ReceiveAny(emCurrentMsg) do begin
       if (not (task as IOmniTaskControlInternals).FilterMessage(emCurrentMsg)) and
          assigned(emOnTaskMessage)
       then
@@ -352,11 +352,11 @@ begin { TOmniEventMonitor.WndProc }
       if Supports(emMonitoredTasks.ValueOf(GetUniqueID(msg)), IOmniTaskControl, Task) then
       begin
         endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint1;
-        while endpoint.Receive(emCurrentMsg) do
+        while (endpoint as IOmniCommunicationEndpointInternal).ReceiveAny(emCurrentMsg) do
           if Assigned(emOnTaskMessage) then
             emOnTaskMessage(task, emCurrentMsg);
         endpoint := (task as IOmniTaskControlSharedInfo).SharedInfo.CommChannel.Endpoint2;
-        while endpoint.Receive(emCurrentMsg) do
+        while (endpoint as IOmniCommunicationEndpointInternal).ReceiveAny(emCurrentMsg) do
           if Assigned(emOnTaskUndeliveredMessage) then
             emOnTaskUndeliveredMessage(task, emCurrentMsg);
         emCurrentMsg.MsgData._ReleaseAndClear;

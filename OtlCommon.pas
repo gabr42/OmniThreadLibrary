@@ -36,9 +36,12 @@
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-10-08
-///   Version           : 1.56c
+///   Version           : 1.56d
 ///</para><para>
 ///   History:
+///     1.56d: 2026-10-08
+///       - TOmniValue.SetAsTValue supports objects (tkClass). Parallel.ForEach<T> over an
+///         enumerable whose enumerator returns objects, e.g. TListView.Items, failed (issue #176).
 ///     1.56c: 2026-10-08
 ///       - Fixed: TOmniValue.CastTo<TOmniValue> raised 'TOmniValue cannot be converted to
 ///         record'. This broke Parallel.ForEach<TOmniValue> (issue #49).
@@ -3289,6 +3292,8 @@ begin
       AsInterface := value.AsInterface;
     tkInt64:
       AsInt64 := value.AsInt64;
+    tkClass:
+      AsObject := value.AsObject; // not owned by the TOmniValue
     tkPointer:
     begin
       Assert(SizeOf(pointer) <= SizeOf(int64));

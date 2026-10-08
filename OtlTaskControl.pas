@@ -2164,14 +2164,14 @@ var
 begin
   repeat
     if newMsgHandle = msgInfo.NewMessageEvent then
-      gotMsg := task.Comm.Receive(msg)
+      gotMsg := (task.Comm as IOmniCommunicationEndpointInternal).ReceiveAny(msg)
     else begin
       oteInternalLock.Acquire;
       try
         gotMsg := false;
         for i := 0 to oteCommNewMsgList.Count - 1 do
           if oteCommNewMsgList[i] = newMsgHandle then begin
-            gotMsg := (oteCommList[i] as IOmniCommunicationEndpoint).Receive(msg);
+            gotMsg := (oteCommList[i] as IOmniCommunicationEndpointInternal).ReceiveAny(msg);
             break; //for i
           end;
       finally oteInternalLock.Release; end;
@@ -2359,7 +2359,7 @@ var
   iIntf: IInterface;
   msg  : TOmniMessage;
 begin
-  while task.Comm.Receive(msg) do
+  while (task.Comm as IOmniCommunicationEndpointInternal).ReceiveAny(msg) do
     if assigned(WorkerIntf) then
       DispatchOmniMessage(msg, false);
   if assigned(oteCommList) then begin
@@ -2367,7 +2367,7 @@ begin
     try
       for iIntf in oteCommList do begin
         iComm := iIntf as IOmniCommunicationEndpoint;
-        while iComm.Receive(msg) do begin
+        while (iComm as IOmniCommunicationEndpointInternal).ReceiveAny(msg) do begin
           if assigned(WorkerIntf) then begin
             DispatchOmniMessage(msg, false);
             if not assigned(oteCommList) then
@@ -3761,7 +3761,7 @@ begin
   otcExecutor.Terminating := true;
   Stop;
   Result := WaitFor(maxWait_ms);
-  while Comm.Receive(msg) do
+  while (Comm as IOmniCommunicationEndpointInternal).ReceiveAny(msg) do
     ForwardTaskMessage(msg);
   if otcEventMonitorInternal and assigned(otcEventMonitor) then begin
     //! must process monitor messages first

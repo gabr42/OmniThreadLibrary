@@ -125,6 +125,14 @@
     the message queue of the monitoring thread stayed full (10,000 messages)
     for more than ~5 seconds, e.g. because the GUI thread was stalled by
     swapping. The observer now waits up to 60 seconds (issue #182).
+  - OtlCommon: TOmniValue.SetAsTValue did not support objects, which broke
+    Parallel.ForEach<T> over enumerables returning objects, e.g.
+    TListView.Items (issue #176).
+  - OtlComm: Receive and ReceiveWait returned OTL's internal messages (the
+    calls of methods passed to IOmniTaskControl.Run/Invoke) to the user
+    code, which swallowed them so that the methods were never executed.
+    They are put back into the queue now. OTL reads all messages with the
+    internal IOmniCommunicationEndpointInternal.ReceiveAny (issue #50).
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now
