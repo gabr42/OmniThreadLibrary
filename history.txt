@@ -80,6 +80,11 @@
       spin-lock block (use-after-free).
     - TOmniLockManager.Lock no longer passes a negative wait_ms as
       cardinal to WaitForSingleObject.
+    - TWaitFor with 64 or more handles crashed the process: callbacks could
+      still run after UnregisterWait and read a cleared list, and a wait
+      could fire while the list was still being filled. Now uses
+      UnregisterWaitEx and builds the list under FAwaitedLock (issue #227,
+      PR #229 by Oleksiy Penkov).
   - OtlSync.Utils: TObjectDictionary in TOmniSynchronizer<T> now created
     with [doOwnsValues], fixing a TEvent leak.
   - OtlThreadPool: GlobalOmniThreadPool lazy initialization is now
