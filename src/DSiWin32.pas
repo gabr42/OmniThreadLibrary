@@ -9,9 +9,15 @@
                        bero.
    Creation date     : 2002-10-09
    Last modification : 2026-10-08
-   Version           : 2.16b
+   Version           : 2.16c
 </pre>*)(*
    History:
+     2.16c: 2026-10-08
+       - Define DSiNoTimerResolution to prevent the unit from raising the Windows timer
+         resolution to 1 ms (timeBeginPeriod(1)) for the lifetime of the process. The
+         default behaviour is unchanged. Without the 1 ms resolution, Sleep(1) and timeouts
+         of a few milliseconds are rounded up to the system timer tick (about 15.6 ms), but
+         the process no longer keeps the CPU from idling in deep power states (OTL issue #68).
      2.16b: 2026-10-08
        - Fixed: Access violation in DSiTimeGetTime64 (and DSiAllocateHwnd) when called
          from a thread that outlives the unit finalization, for example from the
@@ -10351,13 +10357,17 @@ begin
   if not QueryPerformanceFrequency(GPerformanceFrequency) then
     GPerformanceFrequency := 0;
   GCF_HTML := RegisterClipboardFormat('HTML Format');
+  {$IFNDEF DSiNoTimerResolution}
   timeBeginPeriod(1);
+  {$ENDIF DSiNoTimerResolution}
   Assert(Length(DSiCPUIDs) = 64);
 end; { InitializeGlobals }
 
 procedure CleanupGlobals;
 begin
+  {$IFNDEF DSiNoTimerResolution}
   timeEndPeriod(1);
+  {$ENDIF DSiNoTimerResolution}
   DSiCloseHandleAndNull(GTerminateBackgroundTasks);
   // GDSiWndHandlerCritSect and GDSiTimeGetTime64Safe are intentionally NOT deleted.
   // A thread that outlives this unit (e.g. an OTL thread pool maintenance timer calling

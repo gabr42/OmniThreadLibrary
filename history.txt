@@ -1,6 +1,12 @@
 3.09: <<unreleased>>
 
 - Changes:
+  - DSiWin32: new define DSiNoTimerResolution prevents DSiWin32 (and so
+    every program using OmniThreadLibrary) from raising the Windows timer
+    resolution to 1 ms with timeBeginPeriod(1) for the whole lifetime of the
+    process (issue #68). The default behaviour is unchanged; without the
+    1 ms resolution Sleep(1) and short timeouts are rounded up to the system
+    timer tick (about 15.6 ms). OTL-NG never changes the resolution.
   - Removed all POSIX/non-Windows support (mobile, Linux, OSX, Android,
     iOS). OmniThreadLibrary now targets Windows only; cross-platform
     support lives in the OmniThreadLibrary-NG project. This drops the
