@@ -53,3 +53,14 @@ issues #194, #78 and #69 (Batch 3).
 
 Observation (NG): repeated `Parallel.For` makes the NG thread pool grow to ~150 threads (classic: 16) on a 32-core
 machine and keep them for 10+ s; memory use plateaus (~100 MB in a 32-bit process). Not a leak, but worth a look.
+
+## Batch 4 status
+
+| Issue | Classic OTL | Repro | OTL-NG |
+|-------|-------------|-------|--------|
+| #50 `ReceiveWait` swallows OTL's internal messages | Real bug: `Receive`/`ReceiveWait` returned internal messages (e.g. the queued `Execute` of `Run(@Method)`) to the user code. They are now put back into the queue; OTL reads with `IOmniCommunicationEndpointInternal.ReceiveAny`. OtlComm 1.14. | `50_ReceiveWaitInternal` (Run, Invoke, Receive) | Same bug, fixed in OtlComm 3.03 |
+| #176 `ForEach` over objects | `TOmniValue.SetAsTValue` had no `tkClass` case. Fixed in OtlCommon 1.56d. | `176_ForEachObjects` | Same, fixed in OtlCommon 3.04 |
+| #68 timer resolution 1 ms | DSiWin32 calls `timeBeginPeriod(1)` for the process lifetime. New define `DSiNoTimerResolution` skips it (default unchanged). DSiWin32 2.16c. | `68_TimerResolution` (checks the import, as the resolution is system wide) | Not affected |
+| #173 Error 1400 on close | Cannot reproduce (timed tasks started from a pool thread, the pool destroyed before the tasks). The linked commit only improved the error text. Likely a thread-lifetime problem in the application: the task owner thread is gone when the task terminates. | `173_TimedTaskInAsync` (regression test) | Passes |
+| #180 `Parallel.For` with `Int64` | Feature request, not a bug (`IOmniParallelSimpleLoop` is `integer` based throughout). Not implemented. | - | same |
+| #165, #166 | #166: mixed builds, answered in the issue, no reply since 2021. #165: no repro and Delphi XE6 / OTL 3.05; not actionable. | - | - |
