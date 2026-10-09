@@ -46,6 +46,11 @@
 ///         move (MoveDPtr) in 32-bit builds too. Define OTL_OLDCPU in the project options to
 ///         get the old behaviour. Without OTL_OLDCPU, the unit initialization checks for SSE2
 ///         support in 32-bit builds and raises an exception if it is not available (#118).
+///       - IOmniValueQueue, TOmniValueQueue and CreateOmniValueQueue are only available when
+///         OTL_GoodGenerics is defined (Delphi XE and newer), as they depend on
+///         Generics.Collections. This fixes compilation with Delphi 2009-2010 (#226).
+///       - Fixed: TOmniBaseQueue.Initialize used PByte arithmetic, which does not compile
+///         in Delphi 2007.
 ///     3.02f: 2026-10-08
 ///       - Fixed: TOmniBaseQueue.Initialize relied on the memory manager to return blocks
 ///         aligned to the CAS requirement (16 bytes on x64) for the head/tail pointers;
@@ -183,6 +188,7 @@ type
     function  IsFull: boolean;
   end; { IOmniQueue }
 
+  {$IFDEF OTL_GoodGenerics}
   IOmniValueQueue = interface ['{3399B817-0502-4837-B1D7-BA167E8E03A7}']
     function  GetContainerSubject: TOmniContainerSubject;
     function  IsEmpty: boolean;
@@ -191,6 +197,7 @@ type
     function  TryDequeue(var value: TOmniValue): boolean;
     property  ContainerSubject: TOmniContainerSubject read GetContainerSubject;
   end; { IOmniValueQueue }
+  {$ENDIF OTL_GoodGenerics}
 
   PReferencedPtr = ^TReferencedPtr;
   TReferencedPtr = record
@@ -401,17 +408,28 @@ type
     property ContainerSubject: TOmniContainerSubject read ocContainerSubject;
   end; { TOmniQueue }
 
+{$IFDEF OTL_GoodGenerics}
 /// <param name="UseBusLocking">Set to true to use a spinlock. Otherwise synchronisation is achieved by a critical section.</param>
 /// <param name="ThresholdForFull">The count of OmniValues to which if the queue reaches or exceeds, it is considered full.
 ///   Use a a value of -1 to indicate there is no threshold (and hence events like coiNotifyOnAlmostFull will never fire).</param>
 function CreateOmniValueQueue(UseBusLocking: boolean; ThresholdForFull: integer = -1): IOmniValueQueue;
+{$ENDIF OTL_GoodGenerics}
 
 implementation
 
 uses
   Windows,
+  {$IFDEF OTL_GoodGenerics}
   Generics.Collections,
+  {$ENDIF OTL_GoodGenerics}
   SysUtils;
+
+const
+  {$IFNDEF CPUX64}
+  PF_XMMI64_INSTRUCTIONS_AVAILABLE = 10; // not declared in the Windows unit of older Delphis
+  {$ENDIF}
+
+{$IFDEF OTL_GoodGenerics}
 
 type
   TInterestSet = set of TOmniContainerObserverInterest;
@@ -469,6 +487,8 @@ begin
   else
     Result := TOmniValueQueueCS.Create(ThresholdForFull)
 end; { CreateOmniValueQueue }
+
+{$ENDIF OTL_GoodGenerics}
 
 
 {$IFDEF CPUX64}
@@ -1464,7 +1484,7 @@ begin
   // Memory managers don't have to guarantee that, so align it explicitly.
   obcPointerMem := AllocMem(2 * SizeOf(TOmniTaggedPointer) + CASAlignment);
   obcTailPointer := RoundUpTo(obcPointerMem, CASAlignment);
-  obcHeadPointer := POmniTaggedPointer(PByte(obcTailPointer) + SizeOf(TOmniTaggedPointer));
+  obcHeadPointer := POmniTaggedPointer(NativeInt(obcTailPointer) + SizeOf(TOmniTaggedPointer));
   Assert(NativeInt(obcTailPointer) mod CASAlignment = 0);
   Assert(NativeInt(obcHeadPointer) mod CASAlignment = 0);
   Assert(NativeInt(@obcCachedBlock) mod SizeOf(pointer) = 0);
@@ -1730,6 +1750,8 @@ begin
     ContainerSubject.Notify(coiNotifyOnAllRemoves);
 end; { TOmniQueue.TryDequeue }
 
+{$IFDEF OTL_GoodGenerics}
+
 { TOmniValueQueue }
 
 constructor TOmniValueQueue.Create(AThresholdForFull: integer);
@@ -1906,6 +1928,8 @@ procedure TOmniValueQueueCS.LeaveCriticalSection;
 begin
   FCritSect.Leave;
 end; { TOmniValueQueueCS.LeaveCriticalSection }
+
+{$ENDIF OTL_GoodGenerics}
 
 
 initialization
