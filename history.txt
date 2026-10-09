@@ -31,7 +31,9 @@
     Windows has SSE2, so the queues now use the SSE2 atomic move in 32-bit
     builds too, as OmniThreadLibrary-NG already does. Define OTL_OLDCPU in
     the project options to get the old behaviour on a CPU without SSE2.
-    There is no runtime SSE2 check.
+    When OTL_OLDCPU is not defined, the initialization of OtlContainers
+    checks for SSE2 in 32-bit builds and raises an exception (telling the
+    user to define OTL_OLDCPU) if the CPU does not support it.
 
 - New features:
   - Parallel.For supports Int64 (issue #180): new overload
