@@ -1,6 +1,15 @@
 3.09: <<unreleased>>
 
 - Changes:
+  - C++Builder (issue #72): the C++ headers generated for DSiWin32, GpLists,
+    OtlCommon, OtlSync and OtlParallel (and so all the others) compile in
+    C++Builder (Win32 and Win64) when BCB is defined, which the C++Builder
+    build does. In that case the overloaded indexed properties are renamed
+    (TOmniValue.AsArrayItemByName/AsArrayItemOV,
+    TOmniValueContainer.ItemByName/ItemOV) and the C++ header declares
+    IOmniCriticalSection.Release and IOmniResourceCount.Release as Leave.
+    The Delphi API does not change. DSiWin32 constants that clashed with
+    Windows SDK macros are not exported to the header.
   - DSiWin32: new define DSiNoTimerResolution prevents DSiWin32 (and so
     every program using OmniThreadLibrary) from raising the Windows timer
     resolution to 1 ms with timeBeginPeriod(1) for the whole lifetime of the

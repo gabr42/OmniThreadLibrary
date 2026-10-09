@@ -8,10 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero.
    Creation date     : 2002-10-09
-   Last modification : 2026-10-08
-   Version           : 2.16c
+   Last modification : 2026-10-09
+   Version           : 2.16d
 </pre>*)(*
    History:
+     2.16d: 2026-10-09
+       - Constants that are macros in the Windows SDK headers (FILE_ANY_ACCESS, THREAD_ALL_ACCESS,
+         SC_MINIMIZE and similar) are marked with EXTERNALSYM so that they are not emitted
+         into DSiWin32.hpp, where they clashed with the macros (OTL issue #72).
      2.16c: 2026-10-08
        - Define DSiNoTimerResolution to prevent the unit from raising the Windows timer
          resolution to 1 ms (timeBeginPeriod(1)) for the lifetime of the process. The
@@ -786,20 +790,29 @@ const
   {$EXTERNALSYM CSIDL_FLAG_CREATE}
   CSIDL_FLAG_CREATE        = $8000; // new for Win2K, OR this in to force creation of folder
 
+  {$EXTERNALSYM FILE_DEVICE_FILE_SYSTEM}
   FILE_DEVICE_FILE_SYSTEM  = 9;
+  {$EXTERNALSYM FILE_DEVICE_MASS_STORAGE}
   FILE_DEVICE_MASS_STORAGE = $2D;
+  {$EXTERNALSYM METHOD_BUFFERED}
   METHOD_BUFFERED          = 0;
+  {$EXTERNALSYM FILE_ANY_ACCESS}
   FILE_ANY_ACCESS          = 0;
+  {$EXTERNALSYM FILE_READ_ACCESS}
   FILE_READ_ACCESS         = 1;
+  {$EXTERNALSYM FILE_WRITE_ACCESS}
   FILE_WRITE_ACCESS        = 2;
+  {$EXTERNALSYM IOCTL_STORAGE_EJECT_MEDIA}
   IOCTL_STORAGE_EJECT_MEDIA = (FILE_DEVICE_MASS_STORAGE shl 16) OR
                               (FILE_READ_ACCESS shl 14)         OR
                               ($202 shl 2)                      OR
                               (METHOD_BUFFERED);
+  {$EXTERNALSYM IOCTL_STORAGE_LOAD_MEDIA}
   IOCTL_STORAGE_LOAD_MEDIA  = (FILE_DEVICE_MASS_STORAGE shl 16) OR
                               (FILE_READ_ACCESS shl 14)         OR
                               ($203 shl 2)                      OR
                               (METHOD_BUFFERED);
+  {$EXTERNALSYM FSCTL_SET_COMPRESSION}
   FSCTL_SET_COMPRESSION     = (FILE_DEVICE_FILE_SYSTEM shl 16)                 OR
                               ((FILE_READ_ACCESS OR FILE_WRITE_ACCESS) shl 14) OR
                               (16 shl 2)                                       OR
@@ -1111,7 +1124,9 @@ const
   SC_RESIZEBOTTOMLEFT  = $F007; // Lock up and right border, resize other border
   SC_RESIZEBOTTOMRIGHT = $F008; // Lock left and up border and resize other
   SC_DRAGMOVE          = $F009; // Drag from anywhere
+  {$EXTERNALSYM SC_MINIMIZE}
   SC_MINIMIZE          = $F020; // Auto-Minimize Form
+  {$EXTERNALSYM SC_MAXIMIZE}
   SC_MAXIMIZE          = $F030; // Auto-Maximize Form
   SC_SCREENSAVER       = $F148; // Activate ScreenSaver
   SC_STARTBUTTON       = $F13E; // Activate StartButton
@@ -1146,22 +1161,36 @@ const
   COPY_FILE_ENABLE_SPARSE_COPY = $20000000;
 
   { CopyFile2 errors }
+  {$EXTERNALSYM ERROR_REQUEST_ABORTED}
   ERROR_REQUEST_ABORTED = 1235;
+  {$EXTERNALSYM ERROR_REQUEST_PAUSED}
   ERROR_REQUEST_PAUSED = 3050;
 
   { thread-specific access rights }
 
+  {$EXTERNALSYM THREAD_TERMINATE}
   THREAD_TERMINATE                 = $0001;
+  {$EXTERNALSYM THREAD_SUSPEND_RESUME}
   THREAD_SUSPEND_RESUME            = $0002;
+  {$EXTERNALSYM THREAD_GET_CONTEXT}
   THREAD_GET_CONTEXT               = $0008;
+  {$EXTERNALSYM THREAD_SET_CONTEXT}
   THREAD_SET_CONTEXT               = $0010;
+  {$EXTERNALSYM THREAD_SET_INFORMATION}
   THREAD_SET_INFORMATION           = $0020;
+  {$EXTERNALSYM THREAD_QUERY_INFORMATION}
   THREAD_QUERY_INFORMATION         = $0040;
+  {$EXTERNALSYM THREAD_SET_THREAD_TOKEN}
   THREAD_SET_THREAD_TOKEN          = $0080;
+  {$EXTERNALSYM THREAD_IMPERSONATE}
   THREAD_IMPERSONATE               = $0100;
+  {$EXTERNALSYM THREAD_DIRECT_IMPERSONATION}
   THREAD_DIRECT_IMPERSONATION      = $0200;
+  {$EXTERNALSYM THREAD_SET_LIMITED_INFORMATION}
   THREAD_SET_LIMITED_INFORMATION   = $0400;
+  {$EXTERNALSYM THREAD_QUERY_LIMITED_INFORMATION}
   THREAD_QUERY_LIMITED_INFORMATION = $0800;
+  {$EXTERNALSYM THREAD_ALL_ACCESS}
   THREAD_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED OR SYNCHRONIZE OR $FFFF;
 
 type

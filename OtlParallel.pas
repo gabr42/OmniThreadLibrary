@@ -37,9 +37,12 @@
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
 ///   Last modification : 2026-10-08
-///   Version           : 1.56b
+///   Version           : 1.56c
 ///</para><para>
 ///   History:
+///     1.56c: 2026-10-09
+///       - Task.Param['name'] replaced with Task.Param.ByName('name') so that the unit compiles
+///         when the string-indexed TOmniValueContainer.Item is not available (C++Builder, #72).
 ///     1.56b: 2026-10-08
 ///       - Parallel.ForEach(...).NoWait over a collection could use an already destroyed
 ///         collection when the program released its last reference to it before the loop finished (issue found while testing #49). The loop now keeps
@@ -2296,7 +2299,7 @@ begin
           procNum    : TOmniValue;
         begin
           try
-            numWorker := Task.Param['NumWorker'].AsInteger;
+            numWorker := Task.Param.ByName('NumWorker').AsInteger;
             joinStateEx := FJoinStates[numWorker] as IOmniJoinStateEx;
             for procNum in FInput do begin
               joinStateEx.SetTask(task);
@@ -5278,7 +5281,7 @@ begin
           begin
             try
               try
-                opStage := Task.Param['Stage'].AsInterface as IOmniPipelineStageEx;
+                opStage := Task.Param.ByName('Stage').AsInterface as IOmniPipelineStageEx;
                 try
                   opStage.Execute(Task);
                 except
@@ -5287,14 +5290,14 @@ begin
                     exc.Free;
                 end;
               finally
-                if (Task.Param['Stopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+                if (Task.Param.ByName('Stopped').AsInterface as IOmniResourceCount).Allocate = 0 then
                   (opStage as IOmniPipelineStage).Output.CompleteAdding;
               end;
             finally
-              if (Task.Param['TotalStopped'].AsInterface as IOmniResourceCount).Allocate = 0 then
+              if (Task.Param.ByName('TotalStopped').AsInterface as IOmniResourceCount).Allocate = 0 then
               begin
                 DoOnStop(task);
-                SetEvent(Task.Param['ShutDownComplete']);
+                SetEvent(Task.Param.ByName('ShutDownComplete'));
               end;
             end;
           end,

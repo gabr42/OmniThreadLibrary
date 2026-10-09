@@ -75,3 +75,20 @@ Fix: the loop keeps the source of `ForEach(IOmniValueEnumerable/IOmniBlockingCol
 (OtlParallel 1.56b / NG 3.05). Making the enumerator itself hold an interface reference was tried and rejected:
 code that owns a `TOmniBlockingCollection` as an object (the unit tests do) would have the collection destroyed
 when the enumerator is released. Test: `NoWaitIntoExit`.
+
+## #72 C++Builder headers
+
+Reproduced with C++Builder 13 (bcc32c / bcc64, Clang based): the generated `DSiWin32.hpp`, `OtlCommon.hpp` and
+`OtlSync.hpp` did not compile (and `GpLists.hpp`, which `OtlSync.hpp` includes, had a further error).
+
+| Problem | Fix |
+|---------|-----|
+| DSiWin32 constants (`FILE_ANY_ACCESS`, `THREAD_ALL_ACCESS`, `SC_MINIMIZE`, ... 25 of them) clash with Windows SDK macros | `{$EXTERNALSYM}` for them (DSiWin32 2.16d) |
+| Overloaded indexed properties `TOmniValue.AsArrayItem` and `TOmniValueContainer.Item` ("duplicate member") | With `BCB` defined: `AsArrayItemByName`, `AsArrayItemOV`, `ItemByName`, `ItemOV` replace the overloads (OtlCommon 1.56e). Delphi API unchanged. Internal `Task.Param['x']` became `Task.Param.ByName('x')`. |
+| `IOmniCriticalSection.Release` / `IOmniResourceCount.Release` conflict with `IUnknown::Release` | With `BCB` defined: `[HPPGEN]` makes the C++ header declare them as `Leave` (same vtable slot, so a C++ call to `Leave` runs the Delphi `Release`) (OtlSync 2.3) |
+| `IGpMovingAverager<T>` has no GUID per instantiation, so the generated `GetInterface` operators in `GpLists.hpp` do not compile | `{$EXTERNALSYM}` for `TGpIntAverager`, `TGpUIntAverager`, `TGpFPAverager` (GpLists 1.89) |
+
+Test `72_CppBuilder`: generates the headers with `dcc32/dcc64 -JPHNE -DBCB`, compiles every header on its own with
+`bcc32c` and `bcc64`, then links and runs `UseOtl.cpp` (critical section via `Leave`, `ItemByName`, resource
+count) against the generated objects. The same changes were applied to OTL-NG (OtlCommon 3.05, OtlSync 3.12,
+OtlParallel 3.06); all its main units' headers compile.
