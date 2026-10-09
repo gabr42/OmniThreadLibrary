@@ -92,3 +92,9 @@ Test `72_CppBuilder`: generates the headers with `dcc32/dcc64 -JPHNE -DBCB`, com
 `bcc32c` and `bcc64`, then links and runs `UseOtl.cpp` (critical section via `Leave`, `ItemByName`, resource
 count) against the generated objects. The same changes were applied to OTL-NG (OtlCommon 3.05, OtlSync 3.12,
 OtlParallel 3.06); all its main units' headers compile.
+
+## Batch 6
+
+| Issue | Classic OTL | Repro | OTL-NG |
+|-------|-------------|-------|--------|
+| #180 `Parallel.For` does not support Int64 | Added `Parallel.For(first, last, step: Int64)`, Int64 loop bodies (`procedure(value: Int64)`, `taskIndex` and `task` variants) and Int64 initializers/finalizers; the loop range, partitions and step are Int64 internally. Integer overloads unchanged; an integer initializer/finalizer on a range that does not fit into an integer raises. OtlParallel 1.57 | `180_Int64For` | Same change, OtlParallel 3.07; DUnitX test `TestRegressions.TestForInt64` |
