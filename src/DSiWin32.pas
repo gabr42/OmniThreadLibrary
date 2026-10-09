@@ -6,28 +6,32 @@
    Contributors      : ales, aoven, gabr, Lee_Nover, _MeSSiah_, Miha-R, Odisej, xtreme,
                        Brdaws, Gre-Gor, krho, Cavlji, radicalb, fora, M.C, MP002, Mitja,
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
-                       bero.
+                       bero, Claude Code.
    Creation date     : 2002-10-09
    Last modification : 2026-10-09
-   Version           : 2.16d
+   Version           : 2.18
 </pre>*)(*
    History:
-     2.16d: 2026-10-09
-       - Constants that are macros in the Windows SDK headers (FILE_ANY_ACCESS, THREAD_ALL_ACCESS,
-         SC_MINIMIZE and similar) are marked with EXTERNALSYM so that they are not emitted
-         into DSiWin32.hpp, where they clashed with the macros (OTL issue #72).
-     2.16c: 2026-10-08
+     2.18: 2026-10-09
        - Define DSiNoTimerResolution to prevent the unit from raising the Windows timer
          resolution to 1 ms (timeBeginPeriod(1)) for the lifetime of the process. The
          default behaviour is unchanged. Without the 1 ms resolution, Sleep(1) and timeouts
          of a few milliseconds are rounded up to the system timer tick (about 15.6 ms), but
          the process no longer keeps the CPU from idling in deep power states (OTL issue #68).
-     2.16b: 2026-10-08
        - Fixed: Access violation in DSiTimeGetTime64 (and DSiAllocateHwnd) when called
          from a thread that outlives the unit finalization, for example from the
-         thread pool maintenance timer at application shutdown (OTL issue #224).
-         The process-global critical sections are no longer deleted; the OS
-         reclaims them when the process exits.
+         OmniThreadLibrary thread pool maintenance timer at application shutdown
+         (OTL issue #224). The process-global critical sections are no longer deleted;
+         the OS reclaims them when the process exits.
+       - Constants that are macros in the Windows SDK headers (FILE_ANY_ACCESS, THREAD_ALL_ACCESS,
+         SC_MINIMIZE and similar) are marked with EXTERNALSYM so that they are not emitted
+         into DSiWin32.hpp, where they clashed with the macros (OTL issue #72).
+     2.17a: 2026-10-09
+       - DSiLoadLibrary, DSiGetProcAddress and DSiUnloadLibrary are thread-safe
+         (concurrent first calls could corrupt the library list or load a library twice).
+     2.17: 2026-09-09
+       - Implemented DSiCreateURLShortcut, creating an Internet Shortcut (.url) file
+         pointing to a URL.
      2.16a: 2026-05-06
        - Removed GInterlockedCompareExchange64 - it was not initialized correctly
          and it was not used anywhere.
@@ -840,6 +844,9 @@ const
 
   // Extension for shortcut files
   CLinkExt = '.lnk';
+
+  // Extension for Internet Shortcut files
+  CURLShortcutExt = '.url';
 
   // ShEmptyRecycleBinA flags
   {$EXTERNALSYM SHERB_NOCONFIRMATION}
@@ -2372,6 +2379,8 @@ type // Firewall management types
     enabled: boolean = true): boolean;
   procedure DSiCreateShortcut(const fileName, displayName, parameters: string;
     folder: integer= CSIDL_STARTUP; const workDir: string = '');
+  procedure DSiCreateURLShortcut(const url, displayName: string;
+    folder: integer = CSIDL_STARTUP);
   function  DSiDeleteShortcut(const displayName: string;
     folder: integer = CSIDL_STARTUP): boolean;
   procedure DSiEditShortcut(const lnkName, fileName, workDir, parameters: string);
@@ -8715,6 +8724,35 @@ var
     finally CoUninitialize; end;
   end; { DSiCreateShortcut }
 
+  {:Creates an "Internet Shortcut" (.url) file that opens the given URL.
+    @author  Claude Code
+    @since   2026-09-09
+  }
+  procedure DSiCreateURLShortcut(const url, displayName: string; folder: integer);
+  var
+    fileDestPath: array [0..MAX_PATH] of char;
+    itemIDList  : PItemIDList;
+    urlFile     : TStringList;
+  begin
+    OleCheck(SHGetSpecialFolderLocation(0, folder, itemIDList));
+    try
+      SHGetPathFromIDList(itemIDList, fileDestPath);
+    finally DSiFreePidl(itemIDList); end;
+    StrCat(fileDestPath, PChar('\' + displayName + CURLShortcutExt));
+    urlFile := TStringList.Create;
+    try
+      urlFile.Add('[InternetShortcut]');
+      urlFile.Add('URL=' + url);
+      try
+        urlFile.SaveToFile(string(fileDestPath));
+      except
+        on E: EStreamError do
+          raise Exception.CreateFmt('DSiCreateURLShortcut: %s (error %d: %s)',
+            [E.Message, GetLastError, SysErrorMessage(GetLastError)]);
+      end;
+    finally FreeAndNil(urlFile); end;
+  end; { DSiCreateURLShortcut }
+
   {gp}
   function DSiDeleteShortcut(const displayName: string; folder: integer): boolean;
   var
@@ -9555,13 +9593,52 @@ end; { DSiInterlockedCompareExchange64 }
 
 { DynaLoad }
 
-var
-  _GLibraryList: TStringList = nil;
+type
+  PDSiLibraryList = ^TDSiLibraryList;
+  TDSiLibraryList = record
+    Lock: TRTLCriticalSection;
+    List: TStringList;
+  end; { TDSiLibraryList }
 
-  function GLibraryList: TStringList;
+var
+  _GLibraryList: PDSiLibraryList = nil;
+
+  {$IFNDEF CPUX64}
+  function DSiInterlockedCompareExchange32(var destination: longint; exchange, comparand: longint): longint;
+    stdcall; external kernel32 name 'InterlockedCompareExchange';
+  {$ENDIF ~CPUX64}
+
+  {:Atomically sets destination to exchange if destination equals comparand.
+    Returns the initial value of destination. Pointer-sized on Win32 and Win64.
+  }
+  function DSiCompareExchangePointer(var destination: pointer; exchange, comparand: pointer): pointer;
   begin
-    if not assigned(_GLibraryList) then
-      _GLibraryList := TStringList.Create;
+  {$IFDEF CPUX64}
+    Result := pointer(DSiInterlockedCompareExchange64(PInt64(@destination), int64(exchange), int64(comparand)));
+  {$ELSE}
+    Result := pointer(DSiInterlockedCompareExchange32(longint(destination), longint(exchange), longint(comparand)));
+  {$ENDIF ~CPUX64}
+  end; { DSiCompareExchangePointer }
+
+  {:Returns the library list holder, creating it on the first call. Safe to call from
+    multiple threads and before the initialization section has run: a complete holder
+    is built first and published with one atomic compare-exchange; the loser of the
+    race destroys its own holder and uses the winner's.
+  }
+  function GLibraryList: PDSiLibraryList;
+  var
+    newList: PDSiLibraryList;
+  begin
+    if not assigned(_GLibraryList) then begin
+      New(newList);
+      InitializeCriticalSection(newList.Lock);
+      newList.List := TStringList.Create;
+      if assigned(DSiCompareExchangePointer(pointer(_GLibraryList), newList, nil)) then begin
+        newList.List.Free;
+        DeleteCriticalSection(newList.Lock);
+        Dispose(newList);
+      end;
+    end;
     Result := _GLibraryList;
   end; { GLibraryList }
 
@@ -9573,20 +9650,25 @@ var
   var
     hLib   : HMODULE;
     idxLib : integer;
+    libList: PDSiLibraryList;
     OldMode: DWORD;
   begin
-    idxLib := GLibraryList.IndexOf(libFileName);
-    if idxLib < 0 then begin
-      OldMode := SetErrorMode (SEM_NOOPENFILEERRORBOX);
-      hLib := LoadLibrary(PChar(libFileName));
-      SetErrorMode (OldMode);
-      if hLib <> 0 then
-        idxLib := GLibraryList.AddObject(libFileName, TObject(hLib));
-    end;
-    if idxLib >= 0 then
-      Result := HMODULE(GLibraryList.Objects[idxLib])
-    else
-      Result := 0;
+    libList := GLibraryList;
+    EnterCriticalSection(libList.Lock);
+    try
+      idxLib := libList.List.IndexOf(libFileName);
+      if idxLib < 0 then begin
+        OldMode := SetErrorMode (SEM_NOOPENFILEERRORBOX);
+        hLib := LoadLibrary(PChar(libFileName));
+        SetErrorMode (OldMode);
+        if hLib <> 0 then
+          idxLib := libList.List.AddObject(libFileName, TObject(hLib));
+      end;
+      if idxLib >= 0 then
+        Result := HMODULE(libList.List.Objects[idxLib])
+      else
+        Result := 0;
+    finally LeaveCriticalSection(libList.Lock); end;
   end; { DSiLoadLibrary }
 
   {:Loads the library if it was not loaded yet (and adds it to the list of
@@ -9610,14 +9692,19 @@ var
   }
   procedure DSiUnloadLibrary;
   var
-    iLib: integer;
+    iLib   : integer;
+    libList: PDSiLibraryList;
   begin
-    for iLib := 0 to GLibraryList.Count-1 do
-      if HMODULE(GLibraryList.Objects[iLib]) <> 0 then begin
-        FreeLibrary(HMODULE(GLibraryList.Objects[iLib]));
-        GLibraryList.Objects[iLib] := TObject(0);
-      end;
-  end; { TDSiRegistry.DSiUnloadLibrary }
+    libList := GLibraryList;
+    EnterCriticalSection(libList.Lock);
+    try
+      for iLib := 0 to libList.List.Count-1 do
+        if HMODULE(libList.List.Objects[iLib]) <> 0 then begin
+          FreeLibrary(HMODULE(libList.List.Objects[iLib]));
+          libList.List.Objects[iLib] := TObject(0);
+        end;
+    finally LeaveCriticalSection(libList.Lock); end;
+  end; { DSiUnloadLibrary }
 
   function DSi9xNetShareAdd(serverName: PChar; shareLevel: smallint;
     buffer: pointer; size: word): integer;
@@ -10403,7 +10490,12 @@ begin
   // DSiTimeGetTime64 during application shutdown) would otherwise crash in
   // EnterCriticalSection. They are reclaimed by the OS when the process exits.
   DSiUnloadLibrary;
-  FreeAndNil(_GLibraryList);
+  if assigned(_GLibraryList) then begin
+    _GLibraryList.List.Free;
+    DeleteCriticalSection(_GLibraryList.Lock);
+    Dispose(_GLibraryList);
+    _GLibraryList := nil;
+  end;
 end; { CleanupGlobals }
 
 initialization
