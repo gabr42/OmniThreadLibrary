@@ -35,10 +35,13 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2018-03-12
-///   Version           : 1.11
+///   Last modification : 2026-10-09
+///   Version           : 1.12
 ///</para><para>
 ///   History:
+///     1.12: 2026-10-09
+///       - Added IOmniBlockingCollection.DeThrottle, which switches throttling off and wakes
+///         up writers blocked on a full collection, and IsThrottling (issue #61).
 ///     1.11: 2018-03-12
 ///       - Added TOmniBlockingCollection.FromArray<T> and .ToArray<T> (multiple overloads).
 ///     1.10a: 2017-09-26
@@ -141,12 +144,18 @@ type
     //
     procedure Add(const value: TOmniValue);
     procedure CompleteAdding;
+    ///<summary>Switches throttling off (see SetThrottling) and unblocks all writers that are
+    ///  waiting in Add/TryAdd for the collection to drain. Can be called at any time from any
+    ///  thread; does nothing if throttling is not enabled. Throttling cannot be enabled again.</summary>
+    procedure DeThrottle;
     function  GetEnumerator: IOmniValueEnumerator;
     function  IsCompleted: boolean;
     function  IsEmpty: boolean;
     ///	<summary>Collection is finalized when it is both completed (i.e. CompleteAdding
     ///	was called) and empty (TryTake would fail).</summary>
     function  IsFinalized: boolean;
+    ///<summary>True if throttling was set (SetThrottling) and not switched off (DeThrottle).</summary>
+    function  IsThrottling: boolean;
     function  Next: TOmniValue;
     {$REGION 'Documentation'}
     /// <summary>If enabled (default: disabled), [Try]Take will check if returned value
@@ -216,10 +225,12 @@ type
     {$ENDIF OTL_ERTTI}{$ENDIF OTL_HasArrayOfT}{$ENDIF OTL_Generics}
     procedure Add(const value: TOmniValue); inline;
     procedure CompleteAdding;
+    procedure DeThrottle;
     function  GetEnumerator: IOmniValueEnumerator; inline;
     function  IsCompleted: boolean; inline;
     function  IsEmpty: boolean; inline;
     function  IsFinalized: boolean;
+    function  IsThrottling: boolean;
     function  Next: TOmniValue;
     procedure ReraiseExceptions(enable: boolean = true);
     procedure SetThrottling(highWaterMark, lowWaterMark: integer);
@@ -422,6 +433,24 @@ procedure TOmniBlockingCollection.ReraiseExceptions(enable: boolean);
 begin
   obcReraiseExceptions := enable;
 end; { TOmniBlockingCollection.ReraiseExceptions }
+
+///<summary>Switches throttling off and unblocks writers that wait for the collection to drain.</summary>
+procedure TOmniBlockingCollection.DeThrottle;
+begin
+  if not obcThrottling then
+    Exit;
+  // TryAdd re-tests obcThrottling after it resets obcNotOverflow, so a writer that is
+  // between the first and the second test cannot miss this.
+  obcThrottling := false;
+  {$WARN SYMBOL_PLATFORM OFF}
+  Win32Check(SetEvent(obcNotOverflow)); // release the blocked writers
+  {$WARN SYMBOL_PLATFORM ON}
+end; { TOmniBlockingCollection.DeThrottle }
+
+function TOmniBlockingCollection.IsThrottling: boolean;
+begin
+  Result := obcThrottling;
+end; { TOmniBlockingCollection.IsThrottling }
 
 ///<summary>When throttling is set, Add will block if there is >= highWaterMark elements
 ///  in the queue. It will only unblock when number of elements drops below lowWaterMark.</summary>

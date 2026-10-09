@@ -98,3 +98,4 @@ OtlParallel 3.06); all its main units' headers compile.
 | Issue | Classic OTL | Repro | OTL-NG |
 |-------|-------------|-------|--------|
 | #180 `Parallel.For` does not support Int64 | Added `Parallel.For(first, last, step: Int64)`, Int64 loop bodies (`procedure(value: Int64)`, `taskIndex` and `task` variants) and Int64 initializers/finalizers; the loop range, partitions and step are Int64 internally. Integer overloads unchanged; an integer initializer/finalizer on a range that does not fit into an integer raises. OtlParallel 1.57 | `180_Int64For` | Same change, OtlParallel 3.07; DUnitX test `TestRegressions.TestForInt64` |
+| #61 de-throttling | `IOmniBlockingCollection.DeThrottle`/`IsThrottling` and `IOmniPipeline.DeThrottle` (OtlCollections 1.12, OtlParallel 1.58); a writer blocked on a full collection is released | `61_DeThrottle` | Same, OtlCollections 3.02, OtlParallel 3.08 |

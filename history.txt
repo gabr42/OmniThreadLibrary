@@ -41,6 +41,11 @@
     range. The integer overloads are unchanged; an integer
     initializer/finalizer used on a range that does not fit into an integer
     raises an exception.
+  - IOmniBlockingCollection.DeThrottle switches throttling off at run time
+    and wakes up writers blocked on a full collection; IsThrottling tells
+    whether throttling is active. IOmniPipeline.DeThrottle does the same for
+    all stages of a running pipeline (issue #61). Pipeline.NoThrottling
+    (before Run) was already available.
   - Backported CSP-style abstractions from OmniThreadLibrary-NG
     (Delphi XE and newer):
     - Parallel.Channel<T> - typed bounded channel.
