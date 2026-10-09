@@ -70,9 +70,19 @@
       "compiler": "10.4",
       "platforms": "Win32, Win64",
       "template": "default"
-    }
+    },
     {
       "compiler": "11",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "12",
+      "platforms": "Win32, Win64",
+      "template": "default"
+    },
+    {
+      "compiler": "13",
       "platforms": "Win32, Win64",
       "template": "default"
     }
