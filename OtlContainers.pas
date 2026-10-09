@@ -44,7 +44,8 @@
 ///       - OTL_OLDCPU is no longer defined by default for 32-bit: every CPU that can run a
 ///         supported version of Windows has SSE2, so the queues now use the SSE2 atomic
 ///         move (MoveDPtr) in 32-bit builds too. Define OTL_OLDCPU in the project options to
-///         get the old behaviour. No runtime SSE2 check is planned (#118).
+///         get the old behaviour. Without OTL_OLDCPU, the unit initialization checks for SSE2
+///         support in 32-bit builds and raises an exception if it is not available (#118).
 ///     3.02f: 2026-10-08
 ///       - Fixed: TOmniBaseQueue.Initialize relied on the memory manager to return blocks
 ///         aligned to the CAS requirement (16 bytes on x64) for the head/tail pointers;
@@ -135,7 +136,9 @@ unit OtlContainers;
 {$WARN SYMBOL_PLATFORM OFF}
 // Define OTL_OLDCPU (project options) if the 32-bit code must run on a CPU without SSE2
 // (more specifically, the Move64 instruction). Every CPU that can run a supported version
-// of Windows has SSE2, so it is not defined by default. There is no runtime SSE2 check (#118).
+// of Windows has SSE2, so it is not defined by default. When it is not defined, the
+// initialization section verifies SSE2 support in 32-bit builds and raises an exception
+// if it is missing (#118).
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
 //We don't have a platform-independent way of using cmpx8b/cmpx16b
@@ -1906,6 +1909,12 @@ end; { TOmniValueQueueCS.LeaveCriticalSection }
 
 
 initialization
+  {$IFDEF USE_MOVEDPTR}{$IFNDEF CPUX64}
+  // MoveDPtr uses SSE2 (movq); on 64-bit targets SSE2 is part of the base instruction set.
+  if not IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE) then
+    raise Exception.Create('OtlContainers: This CPU does not support the SSE2 instruction set, ' +
+      'which is required by OmniThreadLibrary queues. Define OTL_OLDCPU and rebuild the application.');
+  {$ENDIF}{$ENDIF}
   Assert(SizeOf(pointer) = SizeOf(NativeInt));
   {$IFDEF OTL_HaveCmpx16b}
   Assert(SizeOf(TOmniTaggedValue) = {$IFDEF CPUX64}3{$ELSE}4{$ENDIF}*SizeOf(pointer));
