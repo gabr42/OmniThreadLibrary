@@ -9,9 +9,15 @@
                        bero, Claude Code.
    Creation date     : 2002-10-09
    Last modification : 2026-10-09
-   Version           : 2.18
+   Version           : 2.18a
 </pre>*)(*
    History:
+     2.18a: 2026-10-09
+       - Fixed: A thread that outlives the unit finalization (for example the OmniThreadLibrary
+         thread pool maintenance timer at application shutdown) could crash in DSiLoadLibrary or
+         DSiGetProcAddress, because the finalization destroyed the library list and its lock.
+         In an executable the list and its lock are now kept until the process ends (the libraries
+         are still unloaded; late callers get 0/nil). In a DLL they are still destroyed.
      2.18: 2026-10-09
        - Define DSiNoTimerResolution to prevent the unit from raising the Windows timer
          resolution to 1 ms (timeBeginPeriod(1)) for the lifetime of the process. The
@@ -10489,8 +10495,13 @@ begin
   // A thread that outlives this unit (e.g. an OTL thread pool maintenance timer calling
   // DSiTimeGetTime64 during application shutdown) would otherwise crash in
   // EnterCriticalSection. They are reclaimed by the OS when the process exits.
+  // All handles in the library list are zeroed here; a late caller of DSiLoadLibrary or
+  // DSiGetProcAddress finds the name in the list and gets 0/nil.
   DSiUnloadLibrary;
-  if assigned(_GLibraryList) then begin
+  if IsLibrary and assigned(_GLibraryList) then begin
+    // DLL: this code is about to be unloaded, nothing may keep pointing into it.
+    // In an executable the list and its lock are kept: a thread that outlives this unit
+    // can still be inside DSiLoadLibrary/DSiGetProcAddress. The OS reclaims them at process exit.
     _GLibraryList.List.Free;
     DeleteCriticalSection(_GLibraryList.Lock);
     Dispose(_GLibraryList);
