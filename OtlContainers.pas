@@ -1,5 +1,5 @@
 ///<summary>Microlocking containers. Part of the OmniThreadLibrary project.</summary>
-///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer) unless OTL_OLDCPU is defined.</remarks>
+///<remarks>TOmni[Base]Queue requires Pentium 4 processor (or newer) in 32-bit mode unless OTL_OLDCPU is defined.</remarks>
 ///<author>Primoz Gabrijelcic, GJ</author>
 ///<license>
 ///This software is distributed under the BSD license.
@@ -36,10 +36,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Sean B. Durkin
 ///   Creation date     : 2008-07-13
-///   Last modification : 2026-10-08
-///   Version           : 3.02f
+///   Last modification : 2026-10-09
+///   Version           : 3.02g
 ///</para><para>
 ///   History:
+///     3.02g: 2026-10-09
+///       - OTL_OLDCPU is no longer defined by default for 32-bit: every CPU that can run a
+///         supported version of Windows has SSE2, so the queues now use the SSE2 atomic
+///         move (MoveDPtr) in 32-bit builds too. Define OTL_OLDCPU in the project options to
+///         get the old behaviour. No runtime SSE2 check is planned (#118).
 ///     3.02f: 2026-10-08
 ///       - Fixed: TOmniBaseQueue.Initialize relied on the memory manager to return blocks
 ///         aligned to the CAS requirement (16 bytes on x64) for the head/tail pointers;
@@ -128,9 +133,9 @@ unit OtlContainers;
 
 {$OPTIMIZATION ON}
 {$WARN SYMBOL_PLATFORM OFF}
-{$IFNDEF CPUX64}
-  {$DEFINE OTL_OLDCPU} // undefine if you're sure your code will only run on a CPU that supports SSE2 instruction set (more specifically, Move64 instruction)
-{$ENDIF ~CPUX64}
+// Define OTL_OLDCPU (project options) if the 32-bit code must run on a CPU without SSE2
+// (more specifically, the Move64 instruction). Every CPU that can run a supported version
+// of Windows has SSE2, so it is not defined by default. There is no runtime SSE2 check (#118).
 //DEFINE DEBUG_OMNI_QUEUE to enable assertions in TOmniBaseQueue
 
 //We don't have a platform-independent way of using cmpx8b/cmpx16b

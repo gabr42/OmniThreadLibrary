@@ -37,9 +37,13 @@
 ///   Contributors      : GJ, Lee_Nover, dottor_jeckill, Sean B. Durkin, VyPu
 ///   Creation date     : 2009-03-30
 ///   Last modification : 2026-10-09
-///   Version           : 2.3
+///   Version           : 2.3a
 ///</para><para>
 ///   History:
+///     2.3a: 2026-10-09
+///       - Removed a stray 'mov eax, [eax + $24]' from the 32-bit MoveDPtr(newData, newReference,
+///         Destination); it loaded from newData + $24, had no effect, and raised an access
+///         violation when newData was nil (reachable only when OTL_OLDCPU is not defined).
 ///     2.3: 2026-10-09
 ///       - When compiled for C++Builder (BCB is defined), the generated header declares
 ///         IOmniCriticalSection.Release and IOmniResourceCount.Release as Leave, because
@@ -904,7 +908,6 @@ asm
   movd  xmm1, edx
   punpckldq xmm0, xmm1
   movq  qword [Destination], xmm0
-  mov   eax, [eax + $24]
 {$ELSE CPUX64}
 //Move 16 bytes atomically into 16-byte Destination!
   push  rbx
