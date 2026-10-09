@@ -225,15 +225,19 @@
   - Implemented Locked<T>.IsInitialized.
   - On Windows, SetThreadName from OtlCommon.Utils also calls 
     SetThreadDescription Windows API.
+  - Improved TOmniValue.LogValue.
 
 - Bug fixes:
   - Fixed bad 64-bit pointer casts in OtlTaskControl. Now works with Delph 13.1.
+  - Fixed TOmniEnvironment.LoadNUMAInfo and DSiGetLogicalProcessorInformationEx
+    (NUMA and processor group information).
 
 3.07.11: 2025-10-22
 
 - New features:
   - Added Delphi 13 packages supporting 64-bit IDE.
   - Implemented TOmniValue.AsUInt64.
+  - Added TOmniValueContainer.Name property.
   
 - Bug fixes:
   - [SMelnyk64] Fix: AV in TOmniParallelLoopBase.InternalExecute when taskFinalizer is not provided.
@@ -241,18 +245,24 @@
   - Use correct time-measurement functions in OtlEventMonitor.
   - [Anton Alisov] Fixed critical section handling in TOmniValueQueue.DoWithCritSec. 
   - Avoid range check in OtlThreadPool on 64 CPU systems.
+  - TOmniValue.TryCastToInt64 was casting Variant into integer insted of int64.
+  - IOmniTaskGroup.WaitForAll/.TerminateAll no longer crashes if the group is empty.
 
 3.07.10: 2023-11-27
 
 - New features:
-  - Implemented TOmniValue.AsUInt64.
+  - Thread name can be set for Parallel.TimedTask.
+  - Added Delphi 12 packages.
+  - Added DSiEnumProcesses to DSiWin32.
 
 - Bug fixes:
-  - Fixed TOmniGroupAffinity.Create with 64 processors on 64-bit.
-  - TOmniValue.TryCastToInt64 was casting Variant into integer insted of int64.
-  - TOmniEventMonitor uses correct time-measurement functions.
-  - IOmniTaskGroup.WaitForAll/.TerminateAll no longer crashes if the group is empty.
-  - [SMelnyk64] Prevent potential AV in TOmniParallelLoopBase.InternalExecute.
+  - If a negative NumTasks (number of cores to leave free) would result in
+    less than 1 task, OtlParallel now uses 1 task. This
+    applies to Parallel.Join, ParallelTask, For, ForEach, ForkJoin, Map,
+    Pipeline and BackgroundWorker.
+  - Locked<T>.Initialize without the 'factory' parameter could return
+    uninitialized value.
+  - Fixed Delphi 12 hints and warnings.
 
 3.07.9: 2021-10-25
 
@@ -265,6 +275,8 @@
   - [HHasenack] Added Cancel and IsCancelled to IOmniParallelTask.
   - Implemented IOmniParallelJoin.Terminate and IOmniParallelTask.Terminate.
   - Added optional timeout parameter to IOmniThreadPool.Cancel.
+  - Implemented IOmniWorker.EventInfo.
+  - IOmniTaskControl.Terminate cancels thread pool tasks with timeout 0.
   - Added Delphi 11 Alexandria packages.
 
 - Bug fixes:
@@ -280,6 +292,9 @@
 
 - New features:
   - Implemented IOmniTask.RegisterWaitObject with an anonymous method callback.
+  - TOmniWaitableValue constructor and CreateWaitableValue optionally accept
+    an initial value for the Value property.
+  - Added TOmniValue.FromArray<T> overload accepting 'array of T'.
   - [Jacek Laskowski] donated a new OTL icon (res\OTL.ico).
   - Added Delphi 10.4 Sydney packages.
   
