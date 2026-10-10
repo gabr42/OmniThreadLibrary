@@ -424,10 +424,10 @@ uses
   {$ENDIF OTL_GoodGenerics}
   SysUtils;
 
+{$IFNDEF CPUX64}
 const
-  {$IFNDEF CPUX64}
   PF_XMMI64_INSTRUCTIONS_AVAILABLE = 10; // not declared in the Windows unit of older Delphis
-  {$ENDIF}
+{$ENDIF}
 
 {$IFDEF OTL_GoodGenerics}
 
