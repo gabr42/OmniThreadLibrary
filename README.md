@@ -18,6 +18,10 @@ If you have Delphi XE or newer, you can install [Delphinus package manager](http
 
 Download and install the sources. Compile and install the OmniThreadLibrary package. Read the tutorials. Examine the demos, which are part of the OmniThreadLibrary download.
 
+### Can I use OmniThreadLibrary with Claude Code?
+
+The folder [docs/claude-skill](docs/claude-skill) contains `otl-reference`, a [Claude Code](https://claude.com/claude-code) skill with an API reference and usage patterns for OmniThreadLibrary, extracted from the book *Parallel Programming with OmniThreadLibrary*. To use it, copy the folder to `%USERPROFILE%\.claude\skills\otl-reference` (for all projects) or to `.claude\skills\otl-reference` inside your project.
+
 ### Is OmniThreadLibrary supported on my platform?
 
 At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, 10.4 Sydney, 11 Alexandria, 12 Athens, and 13 Florence on Win32 and Win64 platforms using the VCL framework, service or console applications. 
