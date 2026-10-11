@@ -15,6 +15,7 @@ is considered done or committed.
   F2039: `c:\0\MultiBuilder\<env name>\exe` and `c:\0\MultiBuilder\<env name>\dcu\win32`
   (`<env name>` as in the batch file, e.g. `Delphi 2007`, `Delphi 10.1 Berlin`).
 * Delete the untracked `compile_*.log` files afterwards.
+* The batch builds only 32-bit (`dcc32`). Code behind `{$IFDEF CPUX64}`/`{$IFNDEF CPUX64}` is not compiled by it, so also compile `CompileAllUnits.dpr` with `dcc64` from Delphi 12 or 13 (a stray `const` left empty by a 32-bit-only guard broke the 64-bit build this way).
 
 Conditional compilation is feature-based, not version-based: never test `CompilerVersion` or `VERxxx` in
 the units. `OtlOptions.inc` is the only place that maps compiler versions to symbols (`OTL_GoodGenerics`,

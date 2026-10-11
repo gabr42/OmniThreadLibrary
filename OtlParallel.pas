@@ -36,10 +36,16 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2026-10-09
-///   Version           : 1.58
+///   Last modification : 2026-10-11
+///   Version           : 1.59
 ///</para><para>
 ///   History:
+///     1.59: 2026-10-11
+///       - Fixed: A thread blocked in IOmniChannelSender<T>.Send on a full channel was not woken
+///         up when the channel was closed; it waited until a consumer made room (one sender
+///         per received value) or forever if nobody received. Close now wakes up all blocked
+///         senders and Send raises ECollectionCompleted. TrySend waiting for free capacity
+///         returns False immediately when the channel is closed.
 ///     1.58: 2026-10-09
 ///       - Added IOmniPipeline.DeThrottle, which switches throttling off on all stages of a
 ///         running pipeline and unblocks the stages waiting on a full queue (issue #61).
@@ -1377,6 +1383,7 @@ type
   IOmniChannelState = interface
     ['{D1E2F3A4-5B6C-7D8E-9F0A-1B2C3D4E5F6A}']
     function  GetCapSemaphore: TSemaphore;
+    function  GetCloseEvent: TEvent;
     function  GetCollection: IOmniBlockingCollection;
     function  GetCondVar: TConditionVariableCS;
     function  GetLock: TCriticalSection;
@@ -1385,6 +1392,7 @@ type
     procedure RegisterNotifier(const notifier: IOmniSelectNotifier);
     procedure UnregisterNotifier(const notifier: IOmniSelectNotifier);
     property  CapSemaphore: TSemaphore read GetCapSemaphore;
+    property  CloseEvent: TEvent read GetCloseEvent;
     property  Collection: IOmniBlockingCollection read GetCollection;
     property  CondVar: TConditionVariableCS read GetCondVar;
     property  Lock: TCriticalSection read GetLock;
@@ -1393,12 +1401,14 @@ type
   TOmniChannelState = class(TInterfacedObject, IOmniChannelState)
   strict private
     FCapSemaphore: TSemaphore;
+    FCloseEvent  : TEvent;
     FCollection  : IOmniBlockingCollection;
     FCondVar     : TConditionVariableCS;
     FLock        : TCriticalSection;
     FNotifiers   : TList<IOmniSelectNotifier>;
   protected
     function  GetCapSemaphore: TSemaphore;
+    function  GetCloseEvent: TEvent;
     function  GetCollection: IOmniBlockingCollection;
     function  GetCondVar: TConditionVariableCS;
     function  GetLock: TCriticalSection;
@@ -1410,6 +1420,7 @@ type
     procedure RegisterNotifier(const notifier: IOmniSelectNotifier);
     procedure UnregisterNotifier(const notifier: IOmniSelectNotifier);
     property  CapSemaphore: TSemaphore read GetCapSemaphore;
+    property  CloseEvent: TEvent read GetCloseEvent;
     property  Collection: IOmniBlockingCollection read GetCollection;
     property  CondVar: TConditionVariableCS read GetCondVar;
     property  Lock: TCriticalSection read GetLock;
@@ -1451,6 +1462,8 @@ type
   TOmniChannelSender<T> = class(TInterfacedObject, IOmniChannelSender<T>)
   strict private
     FState: IOmniChannelState;
+  strict private
+    function  WaitForCapacity(timeout_ms: cardinal): boolean;
   public
     constructor Create(const state: IOmniChannelState);
     procedure Close;
@@ -2832,6 +2845,7 @@ constructor TOmniChannelState.Create(capacity: integer);
 begin
   inherited Create;
   FCollection := TOmniBlockingCollection.Create;
+  FCloseEvent := TEvent.Create(nil, true, false, ''); // manual reset: stays signalled after Close
   FLock := TCriticalSection.Create;
   FCondVar := TConditionVariableCS.Create;
   FNotifiers := TList<IOmniSelectNotifier>.Create;
@@ -2845,6 +2859,7 @@ begin
   FreeAndNil(FCapSemaphore);
   FreeAndNil(FCondVar);
   FreeAndNil(FLock);
+  FreeAndNil(FCloseEvent);
   inherited;
 end; { TOmniChannelState.Destroy }
 
@@ -2852,6 +2867,11 @@ function TOmniChannelState.GetCapSemaphore: TSemaphore;
 begin
   Result := FCapSemaphore;
 end; { TOmniChannelState.GetCapSemaphore }
+
+function TOmniChannelState.GetCloseEvent: TEvent;
+begin
+  Result := FCloseEvent;
+end; { TOmniChannelState.GetCloseEvent }
 
 function TOmniChannelState.GetCollection: IOmniBlockingCollection;
 begin
@@ -2901,6 +2921,7 @@ var
   i: integer;
 begin
   FCollection.CompleteAdding;
+  FCloseEvent.SetEvent; // wakes up senders blocked on a full channel
   FLock.Enter;
   try
     FCondVar.ReleaseAll;
@@ -3071,19 +3092,45 @@ end; { TOmniChannelSender<T>.IsClosed }
 
 procedure TOmniChannelSender<T>.Send(const value: T);
 begin
-  if assigned(FState.CapSemaphore) then
-    FState.CapSemaphore.Acquire;
+  if not WaitForCapacity(INFINITE) then
+    raise ECollectionCompleted.Create('TOmniChannelSender<T>.Send: Channel is closed');
   FState.Collection.Add(TOmniValue.CastFrom<T>(value));
   FState.SignalDataReady;
 end; { TOmniChannelSender<T>.Send }
 
+///<summary>Takes one unit of the channel capacity. Returns False if the channel was closed
+///  or (with a finite timeout) if no capacity became available in time. A closed channel
+///  wins over free capacity.</summary>
+function TOmniChannelSender<T>.WaitForCapacity(timeout_ms: cardinal): boolean;
+var
+  err    : cardinal;
+  handles: array [0..1] of THandle;
+  res    : cardinal;
+begin
+  if not assigned(FState.CapSemaphore) then
+    Exit(true); // unlimited channel; Collection.Add reports a closed channel
+  handles[0] := FState.CloseEvent.Handle;
+  handles[1] := FState.CapSemaphore.Handle;
+  res := WaitForMultipleObjects(2, @handles[0], false, timeout_ms);
+  case res of
+    WAIT_OBJECT_0 + 1:
+      Result := true;
+    WAIT_OBJECT_0, WAIT_TIMEOUT:
+      Result := false;
+    else begin
+      err := GetLastError;
+      raise Exception.CreateFmt(
+        'TOmniChannelSender<T>.WaitForCapacity: WaitForMultipleObjects failed, error %d: %s',
+        [err, SysErrorMessage(err)]);
+    end;
+  end;
+end; { TOmniChannelSender<T>.WaitForCapacity }
+
 function TOmniChannelSender<T>.TrySend(const value: T;
   timeout_ms: cardinal): boolean;
 begin
-  if assigned(FState.CapSemaphore) then begin
-    if FState.CapSemaphore.WaitFor(timeout_ms) <> wrSignaled then
-      Exit(false);
-  end;
+  if not WaitForCapacity(timeout_ms) then
+    Exit(false);
   Result := FState.Collection.TryAdd(TOmniValue.CastFrom<T>(value));
   if Result then
     FState.SignalDataReady

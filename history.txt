@@ -58,6 +58,11 @@
     - ESelectTimeout exception, raised by Race on timeout.
 
 - Bug fixes:
+  - OtlParallel: IOmniChannelSender<T>.Send blocked on a full channel was
+    not woken up by Close; it stayed blocked until a consumer made room (and
+    then only one blocked sender per received value) or forever if nobody
+    received from the channel. Close now wakes up all blocked senders, Send
+    raises ECollectionCompleted and TrySend returns False.
   - OtlSync: the 32-bit MoveDPtr(newData, newReference, Destination)
     contained a stray load from newData + $24 that raised an access
     violation when newData was nil (reachable only when OTL_OLDCPU is not
