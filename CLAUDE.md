@@ -6,16 +6,16 @@ OTL supports Delphi 2007 to Delphi 13 (see README.md). Each time code is modifie
 code changed, bug fixed, ...), verify that it still compiles with ALL supported compilers before the work
 is considered done or committed.
 
-* Run `unittests\CompileAllUnits_All.bat`. It compiles `CompileAllUnits.dpr` with `dcc32` from
-  `e:\Delphi\<ver>\bin` for all 19 versions. Success is `GLOBAL STATUS: OK`; each failing compiler leaves
-  `unittests\compile_<env>.log`.
+* Run `unittests\CompileAllUnits_All.bat`. It compiles `CompileAllUnits.dpr` for all 19 versions with
+  `dcc32` and, for Delphi XE2 and newer (the first with a 64-bit compiler), also with `dcc64`, using the
+  compilers in `e:\Delphi\<ver>\bin`. Success is `GLOBAL STATUS: OK`.
 * Run it from PowerShell: `cd unittests; cmd /c .\CompileAllUnits_All.bat`. Calling it from Git Bash
   (`cmd //c`) fails.
-* The batch does not create its output folders. They must exist, otherwise every compiler fails with
-  F2039: `c:\0\MultiBuilder\<env name>\exe` and `c:\0\MultiBuilder\<env name>\dcu\win32`
-  (`<env name>` as in the batch file, e.g. `Delphi 2007`, `Delphi 10.1 Berlin`).
-* Delete the untracked `compile_*.log` files afterwards.
-* The batch builds only 32-bit (`dcc32`). Code behind `{$IFDEF CPUX64}`/`{$IFNDEF CPUX64}` is not compiled by it, so also compile `CompileAllUnits.dpr` with `dcc64` from Delphi 12 or 13 (a stray `const` left empty by a 32-bit-only guard broke the 64-bit build this way).
+* The batch creates its output folders under `c:\0\MultiBuilder\<env name>\`.
+* A failing compiler leaves `unittests\compile_<env>.log` (32-bit) or `compile_<env>_64.log` (64-bit);
+  delete these untracked files afterwards.
+* Both bitnesses matter: code behind `{$IFDEF CPUX64}`/`{$IFNDEF CPUX64}` is only compiled by the 64-bit
+  run (a stray `const` left empty by a 32-bit-only guard once broke the 64-bit build unnoticed).
 
 Conditional compilation is feature-based, not version-based: never test `CompilerVersion` or `VERxxx` in
 the units. `OtlOptions.inc` is the only place that maps compiler versions to symbols (`OTL_GoodGenerics`,
