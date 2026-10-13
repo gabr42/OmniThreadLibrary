@@ -1346,9 +1346,15 @@ begin
 end; { TOmniBaseQueue.Create }
 
 function TOmniBaseQueue.Dequeue: TOmniValue;
+
+  procedure RaiseQueueEmpty; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+  begin
+    raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
+  end;
+
 begin
   if not TryDequeue(Result) then
-    raise Exception.Create('TOmniBaseQueue.Dequeue: Message queue is empty');
+    RaiseQueueEmpty;
 end; { TOmniBaseQueue.Dequeue }
 
 destructor TOmniBaseQueue.Destroy;
@@ -1827,11 +1833,17 @@ var
 begin
   DoWithCritSec(
     procedure
+
+      procedure RaiseQueueEmpty; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+      begin
+        raise Exception.Create('TOmniValueQueue.Dequeue: Queue is empty');
+      end;
+
     begin
       if FInnerQueue.Count > 0 then
         EnclosedResult := FInnerQueue.Dequeue
       else
-        raise Exception.Create('TOmniValueQueue.Dequeue: Queue is empty');
+        RaiseQueueEmpty;
     end);
   Result := EnclosedResult;
 end; { TOmniValueQueue.Dequeue }

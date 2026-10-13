@@ -138,6 +138,11 @@
   {$DEFINE OTL_HasLightweightMREW}
 {$IFEND}
 
+{$IF CompilerVersion >= 37} //11 Alexandria
+  {$DEFINE OTL_HasNoReturn}
+{$IFEND}
+
+
 {$IFNDEF MSWINDOWS}
 {$MESSAGE ERROR 'OmniThreadLibrary supports only the Windows platform.'}
 {$ENDIF ~MSWINDOWS}

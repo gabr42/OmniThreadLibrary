@@ -1625,12 +1625,17 @@ begin
   ovcCount := 0;
 end; { TOmniValueContainer.Clear }
 
+procedure RaiseLocked(const ASelf: TObject); {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+begin
+  raise Exception.Create(ASelf.ClassName + ': Locked') at ReturnAddress;
+end;
+
 procedure TOmniValueContainer.Add(const paramValue: TOmniValue; const paramName: string);
 var
   idxParam: integer;
 begin
   if not ovcCanModify then
-    raise Exception.Create('TOmniValueContainer: Locked');
+    RaiseLocked(Self);
   if paramName = '' then
       idxParam := -1
     else
@@ -1654,7 +1659,7 @@ var
   value: TOmniValue;
 begin
   if not ovcCanModify then
-    raise Exception.Create('TOmniValueContainer: Already locked');
+    RaiseLocked(Self);
   Clear;
   Grow(Length(parameters)-1);
   for value in parameters do
@@ -1662,13 +1667,19 @@ begin
 end; { TOmniValueContainer.Assign }
 
 procedure TOmniValueContainer.AssignNamed(const parameters: array of TOmniValue);
+
+  procedure RaiseNotEvenParameterCount; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+  begin
+    raise Exception.Create('TOmniValueContainer.AssignNamed: Not a proper number of parameters') at ReturnAddress;
+  end;
+
 var
   i: integer;
 begin
   if not ovcCanModify then
-    raise Exception.Create('TOmniValueContainer.AssignNamed: Already locked');
+    RaiseLocked(Self);
   if Odd(Length(parameters)) then
-    raise Exception.Create('TOmniValueContainer.AssignNamed: Not a proper number of parameters');
+    RaiseNotEvenParameterCount;
   Clear;
   Grow(Length(parameters) div 2 - 1);
 
@@ -1713,6 +1724,12 @@ begin
 end; { TOmniValueContainer.GetItem }
 
 function TOmniValueContainer.GetItem(const paramName: string): TOmniValue;
+
+  procedure RaiseParameterDoesNotExist; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+  begin
+    raise Exception.CreateFmt('TOmniValueContainer.GetItem: Parameter %s does not exist', [paramName]) at ReturnAddress;
+  end;
+
 var
   idxParam: integer;
 begin
@@ -1720,17 +1737,23 @@ begin
   if idxParam >= 0 then
     Result := GetItem(idxParam)
   else
-    raise Exception.CreateFmt('TOmniValueContainer.GetItem: Parameter %s does not exist', [paramName]);
+    RaiseParameterDoesNotExist;
 end; { TOmniValueContainer.GetItem }
 
 function TOmniValueContainer.GetItem(const param: TOmniValue): TOmniValue;
+
+  procedure RaiseWronParameterType; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+  begin
+    raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.') at ReturnAddress;
+  end;
+
 begin
   if param.IsInteger then
     Result := GetItem(param.AsInteger)
   else if param.IsString then
     Result := GetItem(param.AsString)
   else
-    raise Exception.Create('TOmniValueContainer.GetItem: Container can only be indexed by integer or string.');
+    RaiseWronParameterType;
 end; { TOmniValueContainer.GetItem }
 
 function TOmniValueContainer.GetName(paramIdx: integer): string;
@@ -1793,7 +1816,7 @@ end; { TOmniValueContainer.Lock }
 procedure TOmniValueContainer.SetItem(idx: integer; const value: TOmniValue);
 begin
   if IsLocked then
-    raise Exception.Create('TOmniValueContainer.SetItem: Container is locked');
+    RaiseLocked(Self);
   Insert(idx, value);
 end; { TOmniValueContainer.SetItem }
 
@@ -1802,7 +1825,7 @@ var
   idx: integer;
 begin
   if IsLocked then
-    raise Exception.Create('TOmniValueContainer.SetItem: Container is locked');
+    RaiseLocked(Self);
   idx := IndexOf(name);
   if idx < 0 then
     idx := AddParam(name);
@@ -1810,13 +1833,19 @@ begin
 end; { TOmniValueContainer.SetItem }
 
 procedure TOmniValueContainer.SetItem(const param, value: TOmniValue);
+
+  procedure RaiseWronParameterType; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+  begin
+    raise Exception.Create('TOmniValueContainer.SetItem: Container can only be indexed by integer or string.') at ReturnAddress;
+  end;
+
 begin
   if param.IsInteger then
     SetItem(param.AsInteger, value)
   else if param.IsString then
     SetItem(param.AsString, value)
   else
-    raise Exception.Create('TOmniValueContainer.SetItem: Container can only be indexed by integer or string.');
+    RaiseWronParameterType;
 end; { TOmniValueContainer.SetItem }
 
 { TOmniCounter }
@@ -2590,17 +2619,22 @@ begin
     ovIntf := nil;
 end; { TOmniValue.ClearIntf }
 
+procedure RaiseOmniValueNotArray; {$IFDEF OTL_HasNoReturn} noreturn; {$ENDIF}
+begin
+  raise Exception.Create('TOmniValue does not contain an array') at ReturnAddress;
+end;
+
 function TOmniValue.GetAsArray: TOmniValueContainer;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := TOmniValueContainer(ovData);
 end; { TOmniValue.GetAsArray }
 
 function TOmniValue.GetAsArrayItem(const name: string): TOmniValue;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := TOmniValueContainer(ovData){$IFDEF BCB}.ItemByName{$ENDIF}[name];
 end; { TOmniValue.GetAsArrayItem }
 
@@ -2608,7 +2642,7 @@ end; { TOmniValue.GetAsArrayItem }
 function TOmniValue.GetAsArrayItem(const param: TOmniValue): TOmniValue;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItem }
 {$IFEND}
@@ -2616,21 +2650,21 @@ end; { TOmniValue.GetAsArrayItem }
 function TOmniValue.GetAsArrayItemOV(const param: TOmniValue): TOmniValue;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := TOmniValueContainer(ovData)[param];
 end; { TOmniValue.GetAsArrayItemOV }
 
 function TOmniValue.HasArrayItem(idx: integer): boolean;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := (idx >= 0) and (idx < TOmniValueContainer(ovData).Count);
 end; { TOmniValue.HasArrayItem }
 
 function TOmniValue.HasArrayItem(const name: string): boolean;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := (TOmniValueContainer(ovData).IndexOf(name) >= 0);
 end; { TOmniValue.HasArrayItem }
 
@@ -2647,7 +2681,7 @@ end; { TOmniValue.HasArrayItem }
 function TOmniValue.GetAsArrayItem(idx: integer): TOmniValue;
 begin
   if not IsArray then
-    raise Exception.Create('TOmniValue does not contain an array');
+    RaiseOmniValueNotArray;
   Result := TOmniValueContainer(ovData)[idx];
 end; { TOmniValue.GetAsArrayItem }
 
