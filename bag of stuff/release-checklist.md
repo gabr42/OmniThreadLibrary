@@ -44,7 +44,9 @@ From here on only non-code files may change (`history.txt`, `README.md`, release
 
 ## E. Publish (irreversible)
 
-12. Push `master` and the tag together.
+12. Push `master` and the tag together. A tag is not pushed with the branch: push it explicitly
+    (`git push origin master release-3.xx`, or push the tag by hand in GitKraken) and verify with
+    `git ls-remote --tags origin release-3.xx`.
 13. Create the GitHub release as a draft from the tag, using `release-3.xx.txt` as the text.
     Check it, then publish straight away.
 14. Check that the README links on GitHub work (tag URL and Drive link).
