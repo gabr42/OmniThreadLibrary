@@ -4,9 +4,9 @@ OmniThreadLibrary is a powerful threading library for Delphi. OmniThreadLibrary'
 
 ### How do I get OmniThreadLibrary?
 
-Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.10) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
+Clone the [latest version](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.09) or [follow the trunk](https://github.com/gabr42/OmniThreadLibrary/). 
 
-Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.07.10) or (https://drive.google.com/file/d/1rlTvKIcwAGJ3nbTlKL4os8DJfvbqzBsI).
+Download the [latest release](https://github.com/gabr42/OmniThreadLibrary/tree/release-3.09) or (https://drive.google.com/file/d/1q7HHCb01c8xbEFZAFGUHzMwZOrVItKYP/view).
 
 Download an [older release](https://drive.google.com/drive/folders/0BwqVlLNTK4OxVEgzZnZGM1FNMGc?resourcekey=0-vPGaxR8rszOx4hVa6SFvKA&usp=drive_link).
 
@@ -27,7 +27,7 @@ The folder [docs/claude-skill](docs/claude-skill) contains `otl-reference`, a [C
 At the moment, OTL supports Delphi 2007, 2009, 2010, XE, XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 10.3 Rio, 10.4 Sydney, 11 Alexandria, 12 Athens, and 13 Florence on Win32 and Win64 platforms using the VCL framework, service or console applications. 
 
 There are no plans to support older Delphi compilers.
-We are working on support for mobile devices, OS X, Linux, and FireMonkey.
+Work on cross-platform support continues in a separate project, [OmniThreadLibrary-NG](https://github.com/gabr42/OmniThreadLibrary-NG).
 
 ### How do I get support?
 

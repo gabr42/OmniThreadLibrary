@@ -1,4 +1,4 @@
-3.09: <<unreleased>>
+3.09: 2026-10-13 
 
 - Changes:
   - C++Builder (issue #72): the C++ headers generated for DSiWin32, GpLists,

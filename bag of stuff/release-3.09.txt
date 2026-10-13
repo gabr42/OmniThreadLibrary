@@ -1,7 +1,7 @@
 OmniThreadLibrary 3.09 has just been released. It is available via
 GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.09)
 or as a ZIP archive
-(https://drive.google.com/file/d/<<TODO: ZIP file id>>/view?usp=sharing).
+(https://drive.google.com/file/d/1q7HHCb01c8xbEFZAFGUHzMwZOrVItKYP/view).
 
 What is OmniThreadLibrary?
 ==========================
