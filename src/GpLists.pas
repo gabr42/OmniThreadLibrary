@@ -30,13 +30,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    Author            : Primoz Gabrijelcic
    Creation date     : 2002-07-04
-   Last modification : 2026-10-09
+   Last modification : 2026-09-17
    Version           : 1.89
 </pre>*)(*
    History:
-     1.89: 2026-10-09
-       - TGpIntAverager, TGpUIntAverager and TGpFPAverager are not exported to the C++Builder
-         header (EXTERNALSYM); C++ cannot express the generic interface they implement (OTL issue #72).
+     1.89: 2026-09-17
+       - Fixed TGpSkipList<T,K>.Insert(element, position) leaving `position`
+         unassigned when an element with an equal key already exists; it now
+         always returns the existing (or newly created) node.
      1.88: 2026-02-18
        - Implemented IGpMovingAverager<T>.Last and .IsEmpty.
      1.87a: 2024-12-05
@@ -2641,7 +2642,6 @@ type
     property Sample[idx: integer]: T read GetSample;
   end; { TGpMovingAverager<T> }
 
-  {$EXTERNALSYM TGpIntAverager} // C++ header cannot express the generic interface it implements
   TGpIntAverager = class(TGpMovingAverager<int64>, IGpMovingAverager<int64>)
   strict private
     FSum: int64;
@@ -2652,7 +2652,6 @@ type
     function  Average: int64; override;
   end; { TGpIntAverager }
 
-  {$EXTERNALSYM TGpUIntAverager} // C++ header cannot express the generic interface it implements
   TGpUIntAverager = class(TGpMovingAverager<uint64>, IGpMovingAverager<uint64>)
   strict private
     FSum: uint64;
@@ -2663,7 +2662,6 @@ type
     function  Average: uint64; override;
   end; { TGpUIntAverager }
 
-  {$EXTERNALSYM TGpFPAverager} // C++ header cannot express the generic interface it implements
   TGpFPAverager = class(TGpMovingAverager<extended>, IGpMovingAverager<extended>)
   strict private
     FAverage     : extended;
@@ -8284,8 +8282,12 @@ var
   i    : integer;
   level: integer;
 begin
-  Result := false;
-  if not ContainsElement(element) then begin
+  // WalkDown always sets `position`, either to the already-existing matching
+  // element or to the insertion point; callers must not receive an
+  // unassigned `position` when Result = False (class references are not
+  // auto-nil'd, so leaving it untouched here would return stack garbage).
+  Result := not WalkDown(GetKey(element), position);
+  if Result then begin
     level := RandomLevel;
     if level > FTopLevel then begin
       for i := FTopLevel+1 to level do
@@ -8298,7 +8300,6 @@ begin
       FLast[i].Pointers[i] := position;
     end;
     Inc(FCount);
-    Result := true;
   end;
 end; { TGpSkipList }
 

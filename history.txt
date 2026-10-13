@@ -56,6 +56,25 @@
     - Parallel.Merge<T> - fan-in from multiple receivers.
     - Parallel.Race<T> / TryRace<T> - first-wins (TryRace is non-raising).
     - ESelectTimeout exception, raised by Race on timeout.
+  - TLightweightMREWEx (OtlSync 2.1, 2.2; Delphi 11+ only), ported from
+    OmniThreadLibrary-NG:
+    - Read locks are recursion-safe. Holdings are tracked per thread, so a
+      nested BeginRead/TryBeginRead only bumps a counter and no longer
+      deadlocks behind a pending writer (a documented SRWLOCK hazard).
+    - BeginRead/TryBeginRead while owning the write lock raise by default,
+      as it usually indicates a programming error. Set the new property
+      AllowReadInsideWrite to true to have them granted as a no-op nested
+      acquire. The property must be set before the lock is first used;
+      the setter raises afterwards.
+    - BeginWrite/TryBeginWrite while holding a read lock raise (an upgrade
+      is impossible; it used to deadlock silently).
+    - EndRead without a matching BeginRead raises. So does EndWrite that
+      releases the outermost write lock while a read-under-write is still
+      held.
+  - Added the otl-reference skill for Claude Code (docs/claude-skill): an
+    API reference and usage patterns for OmniThreadLibrary, extracted from
+    the book 'Parallel Programming with OmniThreadLibrary'. See README.md
+    for installation.
 
 - Bug fixes:
   - OtlParallel: IOmniChannelSender<T>.Send blocked on a full channel was

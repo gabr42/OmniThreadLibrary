@@ -8,10 +8,14 @@
                        Christian Wimmer, Tommi Prami, Miha, Craig Peterson, Tommaso Ercole,
                        bero, Claude Code.
    Creation date     : 2002-10-09
-   Last modification : 2026-10-09
-   Version           : 2.18a
+   Last modification : 2026-10-12
+   Version           : 2.18b
 </pre>*)(*
    History:
+     2.18b: 2026-10-12
+       - The library list used by DSiLoadLibrary/DSiGetProcAddress is allocated on the process
+         heap instead of in the Delphi memory manager. In an executable it is kept until the
+         process exits (2.18a), which FastMM reported as a memory leak at shutdown.
      2.18a: 2026-10-09
        - Fixed: A thread that outlives the unit finalization (for example the OmniThreadLibrary
          thread pool maintenance timer at application shutdown) could crash in DSiLoadLibrary or
@@ -9600,10 +9604,21 @@ end; { DSiInterlockedCompareExchange64 }
 { DynaLoad }
 
 type
+  // The library list lives on the process heap, not in the Delphi memory manager: in an
+  // executable it is intentionally kept until the process exits (see CleanupGlobals) and
+  // the memory manager would report it as a leak.
+  PDSiLibraryEntry = ^TDSiLibraryEntry;
+  TDSiLibraryEntry = record
+    Name  : PChar;
+    Handle: HMODULE;
+  end; { TDSiLibraryEntry }
+
   PDSiLibraryList = ^TDSiLibraryList;
   TDSiLibraryList = record
-    Lock: TRTLCriticalSection;
-    List: TStringList;
+    Lock    : TRTLCriticalSection;
+    Count   : integer;
+    Capacity: integer;
+    Entries : PDSiLibraryEntry;
   end; { TDSiLibraryList }
 
 var
@@ -9626,6 +9641,72 @@ var
   {$ENDIF ~CPUX64}
   end; { DSiCompareExchangePointer }
 
+  {:Allocates zero-initialized memory on the process heap.}
+  function DSiHeapAlloc(size: NativeUInt): pointer;
+  begin
+    Result := HeapAlloc(GetProcessHeap, HEAP_ZERO_MEMORY, size);
+    if not assigned(Result) then
+      raise EOutOfMemory.CreateFmt('DSiHeapAlloc: Failed to allocate %d bytes, error %d: %s',
+        [size, GetLastError, SysErrorMessage(GetLastError)]);
+  end; { DSiHeapAlloc }
+
+  {:Frees a library list holder and everything it owns.}
+  procedure DSiFreeLibraryList(libList: PDSiLibraryList);
+  var
+    iLib: integer;
+  begin
+    for iLib := 0 to libList.Count-1 do
+      HeapFree(GetProcessHeap, 0,
+        PDSiLibraryEntry(DSiNativeUInt(libList.Entries) + DSiNativeUInt(iLib) * SizeOf(TDSiLibraryEntry)).Name);
+    if assigned(libList.Entries) then
+      HeapFree(GetProcessHeap, 0, libList.Entries);
+    DeleteCriticalSection(libList.Lock);
+    HeapFree(GetProcessHeap, 0, libList);
+  end; { DSiFreeLibraryList }
+
+  {:Returns the entry at the given index.}
+  function DSiLibraryEntry(libList: PDSiLibraryList; idx: integer): PDSiLibraryEntry;
+  begin
+    Result := PDSiLibraryEntry(DSiNativeUInt(libList.Entries) + DSiNativeUInt(idx) * SizeOf(TDSiLibraryEntry));
+  end; { DSiLibraryEntry }
+
+  {:Returns the index of the library (file names are compared case-insensitively) or -1.
+    The caller must hold the lock.}
+  function DSiLibraryIndexOf(libList: PDSiLibraryList; const libFileName: string): integer;
+  begin
+    for Result := 0 to libList.Count-1 do
+      if lstrcmpi(DSiLibraryEntry(libList, Result).Name, PChar(libFileName)) = 0 then
+        Exit;
+    Result := -1;
+  end; { DSiLibraryIndexOf }
+
+  {:Adds a library to the list and returns its index. The caller must hold the lock.}
+  function DSiLibraryAdd(libList: PDSiLibraryList; const libFileName: string; hLib: HMODULE): integer;
+  var
+    newCapacity: integer;
+    newEntries : pointer;
+    nameCopy   : PChar;
+  begin
+    nameCopy := DSiHeapAlloc((Length(libFileName) + 1) * SizeOf(char));
+    Move(PChar(libFileName)^, nameCopy^, (Length(libFileName) + 1) * SizeOf(char));
+    if libList.Count = libList.Capacity then begin
+      newCapacity := libList.Capacity * 2;
+      if newCapacity = 0 then
+        newCapacity := 8;
+      newEntries := DSiHeapAlloc(newCapacity * SizeOf(TDSiLibraryEntry));
+      if libList.Count > 0 then
+        Move(libList.Entries^, newEntries^, libList.Count * SizeOf(TDSiLibraryEntry));
+      if assigned(libList.Entries) then
+        HeapFree(GetProcessHeap, 0, libList.Entries);
+      libList.Entries := newEntries;
+      libList.Capacity := newCapacity;
+    end;
+    Result := libList.Count;
+    DSiLibraryEntry(libList, Result).Name := nameCopy;
+    DSiLibraryEntry(libList, Result).Handle := hLib;
+    Inc(libList.Count);
+  end; { DSiLibraryAdd }
+
   {:Returns the library list holder, creating it on the first call. Safe to call from
     multiple threads and before the initialization section has run: a complete holder
     is built first and published with one atomic compare-exchange; the loser of the
@@ -9636,14 +9717,10 @@ var
     newList: PDSiLibraryList;
   begin
     if not assigned(_GLibraryList) then begin
-      New(newList);
+      newList := DSiHeapAlloc(SizeOf(TDSiLibraryList));
       InitializeCriticalSection(newList.Lock);
-      newList.List := TStringList.Create;
-      if assigned(DSiCompareExchangePointer(pointer(_GLibraryList), newList, nil)) then begin
-        newList.List.Free;
-        DeleteCriticalSection(newList.Lock);
-        Dispose(newList);
-      end;
+      if assigned(DSiCompareExchangePointer(pointer(_GLibraryList), newList, nil)) then
+        DSiFreeLibraryList(newList);
     end;
     Result := _GLibraryList;
   end; { GLibraryList }
@@ -9662,16 +9739,16 @@ var
     libList := GLibraryList;
     EnterCriticalSection(libList.Lock);
     try
-      idxLib := libList.List.IndexOf(libFileName);
+      idxLib := DSiLibraryIndexOf(libList, libFileName);
       if idxLib < 0 then begin
         OldMode := SetErrorMode (SEM_NOOPENFILEERRORBOX);
         hLib := LoadLibrary(PChar(libFileName));
         SetErrorMode (OldMode);
         if hLib <> 0 then
-          idxLib := libList.List.AddObject(libFileName, TObject(hLib));
+          idxLib := DSiLibraryAdd(libList, libFileName, hLib);
       end;
       if idxLib >= 0 then
-        Result := HMODULE(libList.List.Objects[idxLib])
+        Result := DSiLibraryEntry(libList, idxLib).Handle
       else
         Result := 0;
     finally LeaveCriticalSection(libList.Lock); end;
@@ -9704,10 +9781,10 @@ var
     libList := GLibraryList;
     EnterCriticalSection(libList.Lock);
     try
-      for iLib := 0 to libList.List.Count-1 do
-        if HMODULE(libList.List.Objects[iLib]) <> 0 then begin
-          FreeLibrary(HMODULE(libList.List.Objects[iLib]));
-          libList.List.Objects[iLib] := TObject(0);
+      for iLib := 0 to libList.Count-1 do
+        if DSiLibraryEntry(libList, iLib).Handle <> 0 then begin
+          FreeLibrary(DSiLibraryEntry(libList, iLib).Handle);
+          DSiLibraryEntry(libList, iLib).Handle := 0;
         end;
     finally LeaveCriticalSection(libList.Lock); end;
   end; { DSiUnloadLibrary }
@@ -10501,10 +10578,9 @@ begin
   if IsLibrary and assigned(_GLibraryList) then begin
     // DLL: this code is about to be unloaded, nothing may keep pointing into it.
     // In an executable the list and its lock are kept: a thread that outlives this unit
-    // can still be inside DSiLoadLibrary/DSiGetProcAddress. The OS reclaims them at process exit.
-    _GLibraryList.List.Free;
-    DeleteCriticalSection(_GLibraryList.Lock);
-    Dispose(_GLibraryList);
+    // can still be inside DSiLoadLibrary/DSiGetProcAddress. The OS reclaims them at process exit;
+    // they live on the process heap, so the memory manager does not report them as leaks.
+    DSiFreeLibraryList(_GLibraryList);
     _GLibraryList := nil;
   end;
 end; { CleanupGlobals }

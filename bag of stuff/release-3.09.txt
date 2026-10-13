@@ -1,0 +1,125 @@
+OmniThreadLibrary 3.09 has just been released. It is available via
+GIT (https://github.com/gabr42/OmniThreadLibrary/tree/release-3.09)
+or as a ZIP archive
+(https://drive.google.com/file/d/<<TODO: ZIP file id>>/view?usp=sharing).
+
+What is OmniThreadLibrary?
+==========================
+
+OmniThreadLibrary is simple to use threading library for Delphi. It's
+main "selling" points (besides the price, of course are power,
+simplicity, and openess. With just few lines of code, you can set up
+multiple threads, send messages between them, process Windows messages
+and more. OmniThreadLibrary doesn't limit you in any way - if it is not
+powerfull enough for you, you can ignore any part of its "smartness"
+and replace it with your own code. If you don't like working with
+threads - no problem! You can use high-level primitives like parallel
+for, futures and pipelines to introduce parallelism into your
+application.
+
+OmniThreadLibrary is an open source project. It lives in the Google
+Code and is licensed under the BSD license.
+
+At the moment, OmniThreadLibrary supports Delphi 2007, 2009, 2010, XE,
+XE2, XE3, XE4, XE5, XE6, XE7, XE8, 10 Seattle, 10.1 Berlin, 10.2 Tokyo, 
+10.3 Rio, 10.4 Sydney, 11 Alexandria, 12 Athens, and 13 Florence on the 
+Win32 and Win64 platforms. 
+
+There are no plans to support older Delphi compilers. XE2+ support 
+is limited to Windows targets. Firemonkey is currently not supported.
+
+For cross-platform development (Linux, macOS, Android, iOS) and for new
+features that are not (yet) available here, see OmniThreadLibrary-NG
+(https://github.com/gabr42/OmniThreadLibrary-NG), the next generation of
+the library.
+
+Where can I get more information?
+=================================
+
+Home page: http://www.omnithreadlibrary.com/
+Support: http://www.omnithreadlibrary.com/support/
+Downloads: http://www.omnithreadlibrary.com/download/
+Repository: https://github.com/gabr42/OmniThreadLibrary
+Issue tracker: https://github.com/gabr42/OmniThreadLibrary/issues
+Author's blog: http://thedelphigeek.com
+Author's home page: http://primoz.gabrijelcic.org
+Documentation: http://www.omnithreadlibrary.com/documentation/
+Webinars: http://www.omnithreadlibrary.com/webinars.htm
+
+Changes since version 3.08
+============================
+
+- Important changes:
+  - OmniThreadLibrary is now Windows-only. All POSIX/non-Windows support
+    (mobile, Linux, OSX, Android, iOS) was removed, together with the
+    OTL_MobileSupport define; the non-Windows code path was never
+    functional in this repository. Cross-platform support lives in the
+    OmniThreadLibrary-NG project.
+  - OTL_OLDCPU is no longer defined by default in 32-bit builds (issue #118).
+    The queues now use the SSE2 atomic move, as OmniThreadLibrary-NG does.
+    On a CPU without SSE2, define OTL_OLDCPU in the project options; otherwise
+    OtlContainers raises an exception at startup that tells you to do so.
+  - Exceptions raised in the body of Parallel.For and Parallel.ForEach are
+    now collected and raised in the calling thread as EJoinException (not
+    when NoWait is used), the same way Parallel.Join works (issue #57).
+    Previously they hung ForEach and were silently lost in For.
+  - TLightweightMREWEx is stricter: BeginRead while owning the write lock
+    raises unless AllowReadInsideWrite is set (before first use), and
+    BeginWrite while holding a read lock raises (it used to deadlock).
+
+- New features:
+  - Parallel.For supports Int64 ranges and loop bodies (issue #180).
+  - IOmniBlockingCollection.DeThrottle / IsThrottling and
+    IOmniPipeline.DeThrottle switch throttling off at run time and wake up
+    blocked writers (issue #61).
+  - CSP-style abstractions backported from OmniThreadLibrary-NG
+    (Delphi XE and newer): Parallel.Channel<T>, Parallel.Select (with
+    SelectCase.Receive<T> and Default), Parallel.Merge<T>,
+    Parallel.Race<T> / TryRace<T> and ESelectTimeout.
+  - TLightweightMREWEx has recursion-safe read locks (nested BeginRead can
+    no longer deadlock behind a pending writer) and the new
+    AllowReadInsideWrite property.
+  - C++Builder (Win32 and Win64): the generated headers for DSiWin32,
+    GpLists, OtlCommon, OtlSync and OtlParallel compile (issue #72).
+    The Delphi API does not change.
+  - DSiWin32: define DSiNoTimerResolution to prevent the library from
+    raising the Windows timer resolution to 1 ms (issue #68).
+  - Restored IOmniValueQueue/TOmniValueQueue and CreateOmniValueQueue.
+  - Delphinus/DPM packages updated for Delphi 12 and 13.
+  - Added the otl-reference skill for Claude Code (docs/claude-skill).
+
+- Bug fixes:
+  - Fixed numerous bugs found by static analysis and code review in
+    OtlContainers, OtlCommon, OtlComm, OtlHooks, OtlParallel, OtlSync,
+    OtlTaskControl, OtlThreadPool, OtlDataManager and OtlSync.Utils (lost
+    observer notifications, ring-buffer full detection, races and
+    deadlocks in OtlSync, thread-safe lazy initialization of the global
+    pools, pipeline closure capture, ...). See history.txt for details.
+  - TWaitFor with 64 or more handles crashed the process (issue #227,
+    PR #229 by Oleksiy Penkov).
+  - ReceiveWait/SendWait could lose or duplicate a message and hang thread
+    pool workers or Parallel.For (issue #228, PR #230 by Oleksiy Penkov).
+  - Receive/ReceiveWait swallowed OTL's internal messages (issue #50).
+  - Unobserved conflicted with MonitorWith (issue #154).
+  - Tasks created in non-main threads were never released, causing memory
+    growth with nested Parallel.Async, Pipeline and For (issues #78, #69,
+    #152).
+  - Data race on the task TerminatedEvent handle (issue #216).
+  - AV when destroying a non-empty TOmniValueQueue (issue #201).
+  - TOmniBaseQueue alignment assertions with some memory managers
+    (issue #177).
+  - Parallel.ForEach<TOmniValue> and ForEach over object enumerables
+    failed (issues #49, #176).
+  - NoWait ForEach over a blocking collection could hang at exit.
+  - Parallel.For/ForEach waited forever when a task could not be started
+    (issue #213); TOmniEventMonitor.Destroy raised an AV when its window
+    could not be allocated (issue #24).
+  - A worker raised ERROR_NOT_ENOUGH_QUOTA when the monitoring thread was
+    stalled (issue #182).
+  - DSiWin32: crashes at finalization (issue #224).
+  - Send blocked on a full channel is woken up by Close.
+  - Compilation with Delphi 2007-XE restored (issue #226).
+
+--
+Primoz
+[http://thedelphigeek.com]
