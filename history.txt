@@ -1,3 +1,12 @@
+3.10: unreleased
+
+- Bug fixes:
+  - TOmniBaseBoundedQueue (and so TOmniMessageQueue/task Comm channels): ring
+    buffer pointers were compared as signed values, which broke queues whose
+    ring buffer crosses 0x80000000 in a large-address-aware 32-bit process
+    (lost messages, IsFull returning True on an empty queue, items overwriting
+    each other). Pointers are now compared and rounded as unsigned (issue #233).
+
 3.09: 2026-10-13 
 
 - Changes:

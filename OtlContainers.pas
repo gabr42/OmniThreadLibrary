@@ -507,7 +507,7 @@ end; { AsmPause }
 
 function RoundUpTo(value: pointer; granularity: integer): pointer;
 begin
-  Result := pointer((((NativeInt(value) - 1) div granularity) + 1) * granularity);
+  Result := pointer((((NativeUInt(value) - 1) div NativeUInt(granularity)) + 1) * NativeUInt(granularity));
 end; { RoundUpTo }
 
 { TOmniBaseBoundedStack }
@@ -969,7 +969,7 @@ TryAgain:
       goto TryAgain;    //Calculate ringBuffer next LastIn address
 
     NewLastIn := pointer(NativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
-    if NativeInt(NewLastIn) > NativeInt(EndBuffer) then
+    if NativeUInt(NewLastIn) > NativeUInt(EndBuffer) then
       NewLastIn := StartBuffer;
     //Try to exchange and clear Reference if task own reference
     if not CAS(CurrentLastIn, ThreadReference, NewLastIn, 0, LastIn) then
@@ -980,7 +980,7 @@ TryAgain:
   CurrentLastIn := ringBuffer^.LastIn.PData;
   CurrentLastIn^.PData := data;
   NewLastIn := pointer(NativeInt(CurrentLastIn) + SizeOf(TReferencedPtr));
-  if NativeInt(NewLastIn) > NativeInt(ringBuffer^.EndBuffer) then
+  if NativeUInt(NewLastIn) > NativeUInt(ringBuffer^.EndBuffer) then
     NewLastIn := ringBuffer^.StartBuffer;
   ringBuffer^.LastIn.PData := NewLastIn;
   {$ENDIF ~OTL_HaveCmpx16b}
@@ -998,7 +998,7 @@ begin
   Acquire;
   try
     NewLastIn := pointer(NativeInt(obqPublicRingBuffer.LastIn.PData) + SizeOf(TReferencedPtr));
-    if NativeInt(NewLastIn) > NativeInt(obqPublicRingBuffer.EndBuffer) then
+    if NativeUInt(NewLastIn) > NativeUInt(obqPublicRingBuffer.EndBuffer) then
       NewLastIn := obqPublicRingBuffer.StartBuffer;
     result := (NativeInt(NewLastIn) = NativeInt(obqPublicRingBuffer.FirstIn.PData)) or
       (obqRecycleRingBuffer.FirstIn.PData = obqRecycleRingBuffer.LastIn.PData);
@@ -1104,7 +1104,7 @@ TryAgain:
     Result := PReferencedPtr(FirstIn.PData).PData;
     //Calculate ringBuffer next FirstIn address
     NewFirstIn := pointer(NativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
-    if NativeInt(NewFirstIn) > NativeInt(EndBuffer) then
+    if NativeUInt(NewFirstIn) > NativeUInt(EndBuffer) then
       NewFirstIn := StartBuffer;
 
     //Try to exchange and clear Reference if task own reference
@@ -1118,7 +1118,7 @@ TryAgain:
     Exit(nil);
   Result := PReferencedPtr(ringBuffer^.FirstIn.PData)^.PData;
   NewFirstIn := pointer(NativeInt(CurrentFirstIn) + SizeOf(TReferencedPtr));
-  if NativeInt(NewFirstIn) > NativeInt(ringBuffer^.EndBuffer) then
+  if NativeUInt(NewFirstIn) > NativeUInt(ringBuffer^.EndBuffer) then
     NewFirstIn := ringBuffer^.StartBuffer;
   ringBuffer^.FirstIn.PData := NewFirstIn;
   {$ENDIF ~OTL_HaveCmpx16b}
