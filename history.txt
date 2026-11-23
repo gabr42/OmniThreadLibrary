@@ -57,6 +57,14 @@
     stay alive until the task exits.
   - Thread pool: Cancel(taskID) with a short timeout could fill the message queue of
     a busy worker, which stopped the thread pool manager.
+  - Program crashed or hung at exit if a thread pool task was still running. (The
+    pool was referenced from the task and was not stopped when OTL units were
+    finalized; task controllers were
+    destroyed while tasks were running.) All thread pools are now stopped first; exit can take up to
+    WaitOnTerminate_sec if a task ignores cancellation.
+    DLLs are not changed as waiting for threads in DllMain could hang.
+  - Thread pool: Task, scheduled while the pool is being stopped, is cancelled.
+    Cancel, CancelAll etc don't wait forever if the pool manager is not running.
 
 3.09: 2026-10-13 
 

@@ -15,6 +15,7 @@ program ConsoleTestRunner;
 {$I OtlOptions.Inc}
 
 uses
+  ExitPoolCheck in 'ExitPoolCheck.pas', // must be the first unit
   TextTestRunner,
   SmokeTest in 'SmokeTest.pas',
   TestBlockingCollection1 in 'TestBlockingCollection1.pas',
@@ -28,6 +29,7 @@ uses
   TestValue in 'TestValue.pas',
   TestOtlParallel in 'TestOtlParallel.pas',
   TestDetach1 in 'TestDetach1.pas',
+  TestExitPool1 in 'TestExitPool1.pas',
   TestParallelChannelSelect1 in 'TestParallelChannelSelect1.pas',
   TestInterlocked in 'TestInterlocked.pas',
   TestContainers in 'TestContainers.pas',

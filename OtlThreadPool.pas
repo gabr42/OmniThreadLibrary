@@ -36,9 +36,16 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-11-23
-///   Version           : 2.24
+///   Version           : 2.25
 /// </para><para>
 ///   History:
+///     2.25: 2026-11-23
+///       - Thread pools that are still alive when OTL units are finalized are stopped. A pool is
+///         referenced from its tasks, so it was not destroyed if the program exited while
+///         a task was running; the task then used finalized units and destroyed objects.
+///         (Not done in a DLL; waiting for threads in DllMain could hang.)
+///       - Task, scheduled into a pool that is being stopped, is cancelled.
+///       - Cancel, CancelAll etc don't wait forever if the thread pool manager is not running.
 ///     2.24: 2026-11-23
 ///       - Breaking change: If a task does not stop in time, Cancel(taskID) detaches its
 ///         worker thread instead of killing it with TerminateThread. The same holds for
@@ -342,6 +349,10 @@ function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
 
 function GlobalOmniThreadPool: IOmniThreadPool;
 
+/// <summary>Stops all thread pools that are still alive. Called when OTL units are being finalized;
+///   for internal use.</summary>
+procedure StopAllThreadPools;
+
 implementation
 
 uses
@@ -598,6 +609,7 @@ type
     otpAffinity                      : IOmniIntegerSet;
     otpAsy_OnUnhandledWorkerException: TOTPUnhandledWorkerException;
     otpPoolName                      : string;
+    otpStopped                       : boolean;
     otpThreadDataFactory             : TOTPThreadDataFactory;
     otpUniqueID                      : int64;
     otpWorker                        : IOmniWorker;
@@ -621,6 +633,8 @@ type
     function  GetUniqueID: int64;
     function  GetWaitOnTerminate_sec: integer;
     procedure Log(const msg: string; const params: array of const);
+    function  TryAddRef: boolean;
+    procedure WaitForManager(const res: TOmniWaitableValue);
     procedure NotifyAffinityChanged(const value: IOmniIntegerSet);
     procedure SetAsy_OnUnhandledWorkerException(const value: TOTPUnhandledWorkerException);
     procedure SetIdleWorkerThreadTimeout_sec(value: integer);
@@ -643,6 +657,7 @@ type
   public
     constructor Create(const name: string);
     destructor  Destroy; override;
+    procedure Stop;
     function  Cancel(taskID: int64; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
     function  Cancel(taskID: int64; signalCancellationToken: boolean; timeout_ms: int64 = -1 {use WaitOnTerminate_sec}): boolean; overload;
     procedure CancelAll; overload;
@@ -677,13 +692,17 @@ type
       SetProcessorGroups;
     property NUMANodes: IOmniIntegerSet read GetNUMANodes write SetNUMANodes;
   {$ENDIF OTL_NUMASupport}
+    property Stopped: boolean read otpStopped;
   end; { TOmniThreadPool}
 
 const
   CGlobalOmniThreadPoolName = 'GlobalOmniThreadPool';
 
 var
-  GOmniThreadPool: IOmniThreadPool = nil;
+  GOmniThreadPool     : IOmniThreadPool = nil;
+  GThreadPools        : TList; // all TOmniThreadPool objects, not reference counted
+  GThreadPoolsLock    : TCriticalSection;
+  GThreadPoolsStopping: boolean;
 
 { exports }
 
@@ -700,6 +719,38 @@ begin
   end;
   Result := GOmniThreadPool;
 end; { GlobalOmniThreadPool }
+
+procedure StopAllThreadPools;
+// A pool is referenced from the tasks that are running in it, so it may be still alive when
+// nobody else uses it. If it is not stopped, its threads would use finalized units.
+var
+  iPool  : integer;
+  pool   : IOmniThreadPool;
+  poolObj: TOmniThreadPool;
+begin
+  if not assigned(GThreadPools) then
+    Exit; // already finalized
+  if IsLibrary then // Finalization is called from DllMain. Threads can't exit while the loader
+    Exit;           // lock is owned (or are already dead), so waiting for them could hang forever.
+  GThreadPoolsStopping := true;
+  repeat
+    pool := nil;
+    poolObj := nil;
+    GThreadPoolsLock.Acquire;
+    try
+      for iPool := 0 to GThreadPools.Count - 1 do begin
+        poolObj := TOmniThreadPool(GThreadPools[iPool]);
+        if (not poolObj.Stopped) and poolObj.TryAddRef then begin
+          pool := poolObj;
+          poolObj._Release; // balances TryAddRef; pool holds its own reference
+          break; //for
+        end;
+      end;
+    finally GThreadPoolsLock.Release; end;
+    if assigned(pool) then
+      poolObj.Stop;
+  until not assigned(pool);
+end; { StopAllThreadPools }
 
 function CreateThreadPool(const threadPoolName: string): IOmniThreadPool;
 begin
@@ -1589,6 +1640,11 @@ begin
   CountQueuedLock.Acquire;
   try
     CountQueued.Decrement;
+    if owDestroying then begin // must not start a new worker
+      workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
+      FreeAndNil(workItem);
+      Exit;
+    end;
     ScheduleNext(workItem);
   finally CountQueuedLock.Release; end;
   PruneWorkingQueue;
@@ -1763,14 +1819,27 @@ begin
   otpProcessorGroups := TOmniIntegerSet.Create;
   otpProcessorGroups.OnChange := NotifyProcessorGroupsChanged;
   {$ENDIF OTL_NUMASupport}
+  if assigned(GThreadPools) then begin
+    GThreadPoolsLock.Acquire;
+    try
+      GThreadPools.Add(Self);
+    finally GThreadPoolsLock.Release; end;
+  end;
+  if GThreadPoolsStopping then
+    Stop; // program is exiting
 end; { TOmniThreadPool.Create }
 
 destructor TOmniThreadPool.Destroy;
 begin
   {$IFDEF LogThreadPool}Log('Destroying thread pool %p', [pointer(Self), otpPoolName]);{$ENDIF LogThreadPool}
   SendPoolNotifications(pntDestroy, Self);
-  if assigned(otpWorkerTask) then
-    otpWorkerTask.Terminate;
+  Stop;
+  if assigned(GThreadPools) then begin
+    GThreadPoolsLock.Acquire;
+    try
+      GThreadPools.Remove(Self);
+    finally GThreadPoolsLock.Release; end;
+  end;
   inherited;
 end; { TOmniThreadPool.Destroy }
 
@@ -1792,8 +1861,11 @@ begin
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.Cancel, [taskID, signalCancellationToken, timeout_ms, res]);
-    res.WaitFor(INFINITE);
-    Result := res.Value;
+    WaitForManager(res);
+    if res.WaitFor(0) then
+      Result := res.Value
+    else
+      Result := true; // thread pool is stopped and the task is not running anymore
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.Cancel }
 {$WARN NO_RETVAL ON}
@@ -1810,7 +1882,7 @@ begin
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.CancelAll, [signalCancellationToken, res]);
-    res.WaitFor(INFINITE);
+    WaitForManager(res);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.CancelAll }
 
@@ -1937,7 +2009,7 @@ begin
     copySet := TOmniIntegerSet.Create;
     copySet.Assign(value);
     otpWorkerTask.Invoke(@TOTPWorker.SetAffinity, [copySet, res]);
-    res.WaitFor(INFINITE);
+    WaitForManager(res);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.NotifyAffinityChanged }
 
@@ -1952,7 +2024,7 @@ begin
     copySet := TOmniIntegerSet.Create;
     copySet.Assign(value);
     otpWorkerTask.Invoke(@TOTPWorker.SetNUMANodes, [copySet, res]);
-    res.WaitFor(INFINITE);
+    WaitForManager(res);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.NotifyNUMANodesChanged }
 
@@ -1966,7 +2038,7 @@ begin
     copySet := TOmniIntegerSet.Create;
     copySet.Assign(value);
     otpWorkerTask.Invoke(@TOTPWorker.SetProcessorGroups, [copySet, res]);
-    res.WaitFor(INFINITE);
+    WaitForManager(res);
   finally FreeAndNil(res); end;
 end; { TOmniThreadPool.NotifyProcessorGroupsChanged }
 {$ENDIF OTL_NUMASupport}
@@ -1978,7 +2050,16 @@ begin
 end; { TOmniThreadPool.RemoveMonitor }
 
 procedure TOmniThreadPool.Schedule(const task: IOmniTask);
+var
+  workItem: TOTPWorkItem;
 begin
+  if Stopped then begin
+    workItem := TOTPWorkItem.Create(task);
+    try
+      workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
+    finally FreeAndNil(workItem); end;
+    Exit;
+  end;
   WorkerObj.CountQueued.Increment;
   otpWorkerTask.Invoke(@TOTPWorker.Schedule, TOTPWorkItem.Create(task));
 end; { TOmniThreadPool.Schedule }
@@ -2025,7 +2106,7 @@ begin
   res := TOmniWaitableValue.Create;
   try
     otpWorkerTask.Invoke(@TOTPWorker.SetMonitor, [hWindow, res]);
-    res.WaitFor(INFINITE);
+    WaitForManager(res);
   finally FreeAndNil(res); end;
   Result := Self;
 end; { TOmniThreadPool.SetMonitor }
@@ -2072,6 +2153,45 @@ procedure TOmniThreadPool.SetWaitOnTerminate_sec(value: integer);
 begin
   WorkerObj.WaitOnTerminate_sec.Value := value;
 end; { TOmniThreadPool.SetWaitOnTerminate_sec }
+
+/// <summary>Stops the thread pool manager and all worker threads.</summary>
+/// <since>2026-11-23</since>
+procedure TOmniThreadPool.Stop;
+begin
+  if Stopped then
+    Exit;
+  otpStopped := true;
+  if assigned(otpWorkerTask) then
+    otpWorkerTask.Terminate;
+end; { TOmniThreadPool.Stop }
+
+/// <summary>Adds a reference unless the pool is already being destroyed.</summary>
+/// <since>2026-11-23</since>
+function TOmniThreadPool.TryAddRef: boolean;
+var
+  count: integer;
+begin
+  repeat
+    count := FRefCount;
+    if count <= 0 then begin // negative when objDestroyingFlag is set (newer RTL)
+      Result := false;
+      Exit;
+    end;
+  until InterlockedCompareExchange(FRefCount, count + 1, count) = count;
+  Result := true;
+end; { TOmniThreadPool.TryAddRef }
+
+/// <summary>Waits for an answer from the thread pool manager. Returns without it if the manager
+///   is not running anymore.</summary>
+/// <since>2026-11-23</since>
+procedure TOmniThreadPool.WaitForManager(const res: TOmniWaitableValue);
+const
+  CPoll_ms = 1000;
+begin
+  while not otpWorkerTask.WaitFor(0) do
+    if res.WaitFor(CPoll_ms) then
+      Exit;
+end; { TOmniThreadPool.WaitForManager }
 
 function TOmniThreadPool.WorkerObj: TOTPWorker;
 begin
@@ -2258,6 +2378,11 @@ begin
 end; { TOTPWorkerScheduler.Update }
 
 initialization
+  GThreadPoolsLock := TCriticalSection.Create;
+  GThreadPools := TList.Create;
 finalization
+  StopAllThreadPools;
   GOmniThreadPool := nil;
+  FreeAndNil(GThreadPools);
+  FreeAndNil(GThreadPoolsLock);
 end.

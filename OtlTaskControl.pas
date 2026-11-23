@@ -36,9 +36,11 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-11-23
-///   Version           : 1.44
+///   Version           : 1.45
 ///</para><para>
 ///   History:
+///     1.45: 2026-11-23
+///       - All thread pools are stopped before the unit is finalized.
 ///     1.44: 2026-11-23
 ///       - Breaking change: If a task does not stop in maxWait_ms, Terminate detaches its
 ///         thread instead of killing it with TerminateThread. Terminate returns False and
@@ -4423,6 +4425,7 @@ end; { TOmniMessageExec.SetOnTerminated }
 initialization
   GTaskControlEventMonitorPool := TOmniTaskControlEventMonitorPool.Create;
 finalization
+  StopAllThreadPools; // tasks must not be running when their controllers are released
   FreeAndNil(GTaskControlEventMonitorPool);
 end.
 
