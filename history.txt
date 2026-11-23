@@ -55,8 +55,6 @@
   - A worker thread that was detached by CancelAll used destroyed objects if the
     task controller or Parallel.Join was released before the task exited. They now
     stay alive until the task exits.
-  - Thread pool: Cancel(taskID) with a short timeout could fill the message queue of
-    a busy worker, which stopped the thread pool manager.
   - Program crashed or hung at exit if a thread pool task was still running. (The
     pool was referenced from the task and was not stopped when OTL units were
     finalized; task controllers were
