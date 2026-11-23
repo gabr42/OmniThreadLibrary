@@ -40,6 +40,7 @@ type
     procedure TestCancelAllAfterSchedule;
     procedure TestCancelAllStuckTask;
     procedure TestCancelNotStartedTask;
+    procedure TestCancelEnforcedNotStartedTask;
   end;
 {$ENDIF}
 
@@ -532,6 +533,45 @@ begin
     victim := nil;
     pool := nil;
   end;
+end;
+
+var
+  GDelayedWorkerThread: TThreadID;
+
+function DelayedWorkerThreadData: IInterface;
+// Keeps a new pool worker away from its message loop for 300 ms, so a work item sent
+// to it is assigned but not yet picked up for that long.
+begin
+  GDelayedWorkerThread := GetCurrentThreadId;
+  Sleep(300);
+  Result := nil;
+end;
+
+procedure TestThreadPoolCancel.TestCancelEnforcedNotStartedTask;
+// Cancel must not run the body of an Enforced task that was assigned to a worker
+// but not yet started in the thread pool manager.
+var
+  bodyThread: TThreadID;
+  pool      : IOmniThreadPool;
+  task      : IOmniTaskControl;
+begin
+  bodyThread := 0;
+  GDelayedWorkerThread := 0;
+  pool := CreateThreadPool('TestCancelEnforcedNotStartedTask');
+  pool.SetThreadDataFactory(DelayedWorkerThreadData);
+  task := CreateTask(
+    procedure (const task: IOmniTask)
+    begin
+      bodyThread := GetCurrentThreadId;
+    end)
+  .Enforced
+  .Schedule(pool);
+  CheckTrue(pool.Cancel(task.UniqueID, false, 5000), 'Cancel');
+  CheckTrue(task.WaitFor(5000), 'Cancelled task is not terminated');
+  CheckTrue((bodyThread = 0) or (bodyThread = GDelayedWorkerThread),
+    Format('Enforced task body ran on thread %d, not on the pool worker %d', [bodyThread, GDelayedWorkerThread]));
+  task := nil;
+  pool := nil;
 end;
 
 {$ENDIF}
