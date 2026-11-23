@@ -1,5 +1,15 @@
 3.10: unreleased
 
+- Breaking change:
+  - Thread pool: CancelAll does not wait for a task that ignores cancellation
+    anymore. If a task does not stop in WaitOnTerminate_sec (default: 30 sec),
+    its worker thread is detached and CancelAll returns WHILE THE TASK IS STILL
+    RUNNING. Such task can access objects that the caller destroys after
+    CancelAll. It is also not counted in MaxExecuting/CountExecuting anymore.
+    (Previously, CancelAll waited until the task finished.) The thread is not
+    killed because TerminateThread can leave the memory manager or the RTL
+    locked and block the whole program.
+
 - Bug fixes:
   - TOmniBaseBoundedQueue (and so TOmniMessageQueue/task Comm channels): ring
     buffer pointers were compared as signed values, which broke queues whose
@@ -21,10 +31,6 @@
   - Thread pool: if a task did not stop in WaitOnTerminate_sec, CancelAll left the
     thread pool manager spinning on a closed handle (high CPU usage, thread pool
     destruction never finished).
-  - Thread pool: CancelAll waited for a task that ignores cancellation until
-    that task finished. Its worker thread is now detached
-    after WaitOnTerminate_sec (it is not killed and is destroyed when the task
-    exits).
   - Thread pool: Cancel(taskID) also cancels a task that is waiting in the queue
     and a task that was already sent to a worker thread but not yet picked up by
     it. Previously, it returned True and the task was executed anyway.
@@ -35,6 +41,10 @@
     task was completing.
   - Thread pool: Cancel(taskID) returns as soon as the task stops. Previously, it
     always waited for the full timeout.
+  - TOmniWorker.ProcessMessages could loop forever, waiting on a closed handle, if
+    it was called from a message handler that was executed immediately after a
+    nested ProcessMessages call rebuilt its wait handles. (Happened in the thread
+    pool manager when Cancel and CancelAll were called from multiple threads.)
 
 3.09: 2026-10-13 
 

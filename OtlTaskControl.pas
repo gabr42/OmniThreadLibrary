@@ -36,9 +36,14 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-11-23
-///   Version           : 1.43g
+///   Version           : 1.43h
 ///</para><para>
 ///   History:
+///     1.43h: 2026-11-23
+///       - Fixed: If wait handles were rebuilt inside a nested ProcessMessages call and a
+///         message handler, executed immediately after that, called ProcessMessages again,
+///         that call could use an obsolete (closed) handle and loop forever. (Found when
+///         thread pool's Cancel and CancelAll were called from multiple threads.)
 ///     1.43g: 2026-11-23
 ///       - Added IOmniTaskExecutor.SignalCancellationToken, which can be safely called from
 ///         another thread while the task is completing. Accessing IOmniTask.CancellationToken
@@ -905,6 +910,7 @@ type
     procedure MainMessageLoop(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     procedure MessageLoopPayload; virtual;
     procedure ProcessMessages(task: IOmniTask); virtual;
+    procedure RebuildAllWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo);
     procedure RebuildWaitHandles(const task: IOmniTask; var msgInfo: TOmniMessageInfo); virtual;
     function  TimeUntilNextTimer_ms: cardinal; virtual;
     function  WaitForEvent(const msgInfo: TOmniMessageInfo; timeout_ms: cardinal
@@ -2265,7 +2271,7 @@ begin
 
   ProcessThreadMessages;
   if rebuildHandles then begin
-    RebuildWaitHandles(task, msgInfo);
+    RebuildAllWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
   end
   else
@@ -2703,6 +2709,7 @@ begin
       if waitHandlesGen <> oteWaitHandlesGen then begin
         RebuildWaitHandles(task, oteMsgInfo);
         RemoveTerminationEvents(oteMsgInfo, msgInfo);
+        waitHandlesGen := oteWaitHandlesGen;
         EmptyMessageQueues(task);
       end;
     until false;
@@ -2727,6 +2734,19 @@ begin
                             '(Self, const TOmniValue), (Self, var TObject)',
                             [WorkerIntf.Implementor.ClassName, methodName]);
 end; { TOmniTaskExecutor.RaiseInvalidSignature }
+
+/// <summary>Rebuilds wait handles in msgInfo and in oteMsgInfo.</summary>
+/// <remarks>When called from a nested ProcessMessages, msgInfo is a local copy. oteMsgInfo must
+///   be rebuilt at the same time (before any message is dispatched), because the next nested
+///   ProcessMessages will start with a copy of oteMsgInfo.</remarks>
+/// <since>2026-11-23</since>
+procedure TOmniTaskExecutor.RebuildAllWaitHandles(const task: IOmniTask; var msgInfo:
+  TOmniMessageInfo);
+begin
+  RebuildWaitHandles(task, oteMsgInfo);
+  if @msgInfo <> @oteMsgInfo then
+    RemoveTerminationEvents(oteMsgInfo, msgInfo);
+end; { TOmniTaskExecutor.RebuildAllWaitHandles }
 
 procedure TOmniTaskExecutor.RebuildWaitHandles(const task: IOmniTask; var msgInfo:
   TOmniMessageInfo);
@@ -2925,7 +2945,7 @@ begin
   Result := false;
   if WaitForSingleObject(oteCommRebuildHandles, 0) = WAIT_OBJECT_0 then begin
     //could get set inside timer or message handler
-    RebuildWaitHandles(task, msgInfo);
+    RebuildAllWaitHandles(task, msgInfo);
     EmptyMessageQueues(task);
     Result := true;
   end;

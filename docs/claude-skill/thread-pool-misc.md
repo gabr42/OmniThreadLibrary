@@ -38,7 +38,7 @@ IOmniThreadPool = interface
   property MinWorkers: integer;      // default 0; pre-creates threads
   property Name: string;
   property NumCores: integer;
-  property WaitOnTerminate_sec: integer;  // default 30; then Cancel calls TerminateThread, CancelAll detaches the thread (3.10)
+  property WaitOnTerminate_sec: integer;  // default 30; then Cancel calls TerminateThread, CancelAll detaches the thread and returns while the task is still running (3.10)
 end;
 ```
 
