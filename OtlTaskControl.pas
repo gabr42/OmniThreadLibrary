@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-10-08
-///   Version           : 1.43f
+///   Last modification : 2026-11-23
+///   Version           : 1.43g
 ///</para><para>
 ///   History:
+///     1.43g: 2026-11-23
+///       - Added IOmniTaskExecutor.SignalCancellationToken, which can be safely called from
+///         another thread while the task is completing. Accessing IOmniTask.CancellationToken
+///         at that moment caused an access violation in the thread pool manager.
 ///     1.43f: 2026-10-08
 ///       - Fixed: Tasks created with an internal monitor (Unobserved, OnMessage/OnTerminated
 ///         handlers; everything Parallel.* creates) from a thread that does not process
@@ -971,6 +975,7 @@ type
     procedure InternalExecute(calledFromTerminate: boolean);
     procedure SetOptions(const value: TOmniTaskControlOptions);
     procedure SetThreadData(const value: IInterface); inline;
+    procedure SignalCancellationToken;
     procedure Terminate;
   public
     constructor Create(executor: TOmniTaskExecutor; parameters: TOmniValueContainer;
@@ -1534,6 +1539,17 @@ procedure TOmniTask.Execute;
 begin
   InternalExecute(false);
 end; { TOmniTask.Execute }
+
+/// <summary>Signals the cancellation token. Does nothing if the task has already completed.</summary>
+/// <since>2026-11-23</since>
+procedure TOmniTask.SignalCancellationToken;
+begin
+  otCleanupLock.EnterWriteLock; // InternalExecute clears otSharedInfo_ref inside this lock
+  try
+    if assigned(otSharedInfo_ref) then
+      otSharedInfo_ref.CancellationToken.Signal;
+  finally otCleanupLock.ExitWriteLock; end;
+end; { TOmniTask.SignalCancellationToken }
 
 function TOmniTask.GetCancellationToken: IOmniCancellationToken;
 begin
