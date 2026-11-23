@@ -2458,7 +2458,7 @@ begin
   end
   else begin // simple types
     if ds < 8 then begin
-      maxValue := uint64($FF) SHL ((ds-1) * 8);
+      maxValue := (uint64(1) SHL (ds * 8)) - 1;
       if ovData > maxValue then
         raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [ovData, ti^.Name]);
     end;

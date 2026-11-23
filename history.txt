@@ -6,6 +6,11 @@
     ring buffer crosses 0x80000000 in a large-address-aware 32-bit process
     (lost messages, IsFull returning True on an empty queue, items overwriting
     each other). Pointers are now compared and rounded as unsigned (issue #233).
+  - TOmniValue.CastTo<T>: the range check for 2- and 4-byte types used
+    $FF00/$FF000000 instead of $FFFF/$FFFFFFFF as the upper limit, so
+    CastTo<word>(65535), CastTo<cardinal>($FFFFFFFF) and CastTo<TObject> for an
+    object allocated above $FF000000 (large-address-aware 32-bit process) raised
+    EOmniValueConv "Value ... is too big to fit into ...".
 
 3.09: 2026-10-13 
 
