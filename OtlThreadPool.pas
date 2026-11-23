@@ -36,9 +36,14 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-11-23
-///   Version           : 2.23
+///   Version           : 2.24
 /// </para><para>
 ///   History:
+///     2.24: 2026-11-23
+///       - Breaking change: If a task does not stop in time, Cancel(taskID) detaches its
+///         worker thread instead of killing it with TerminateThread. The same holds for
+///         a worker that does not stop when it is removed from the pool.
+///       - A detached task keeps its task controller alive.
 ///     2.23: 2026-11-23
 ///       - Cancel(taskID) also cancels a task that is waiting in the thread pool queue and
 ///         a task that was already sent to a worker thread but not yet picked up by it.
@@ -439,6 +444,7 @@ type
     function  GetWorkItemInfo(var scheduledAt, startedAt: TDateTime;
       var description: string): boolean;
     procedure AssignWorkItem(workItem: TOTPWorkItem);
+    function  HasStoppedWorkItem: boolean;
     function  HasWorkItem: boolean;
     function  IsExecuting(taskID: int64): boolean;
     procedure Start;
@@ -811,6 +817,9 @@ begin
         if assigned(task) then begin
           if signalCancellationToken then
             (task as IOmniTaskExecutor).SignalCancellationToken;
+          // If the task was not started yet, Terminate would execute it here, in the thread
+          // pool manager (tcoForceExecution is enabled by default).
+          task.Enforced(false);
           task.Terminate;
         end;
       end;
@@ -834,6 +843,7 @@ begin
       if assigned(workItem) and assigned(workItem.task) and
         (not workItem.task.Stopped) then
       begin
+        (workItem.task as IOmniTaskExecutor).PinTaskControl; // task will be detached
         workItem.TerminateTask(EXIT_THREADPOOL_CANCELLED, 'Cancelled');
         Result := true;
       end
@@ -995,6 +1005,17 @@ begin
   finally owtWorkItemLock.Release; end;
 end; { TOTPWorkerThread.AssignWorkItem }
 
+/// <summary>True if the task is stopped but the worker did not report that yet.</summary>
+/// <since>2026-11-23</since>
+function TOTPWorkerThread.HasStoppedWorkItem: boolean;
+begin
+  owtWorkItemLock.Acquire;
+  try
+    Result := assigned(WorkItem_ref) and
+      ((not assigned(WorkItem_ref.task)) or WorkItem_ref.task.Stopped);
+  finally owtWorkItemLock.Release; end;
+end; { TOTPWorkerThread.HasStoppedWorkItem }
+
 function TOTPWorkerThread.HasWorkItem: boolean;
 begin
   owtWorkItemLock.Acquire;
@@ -1085,7 +1106,6 @@ procedure TOTPWorker.Cancel(const params: TOmniValue);
 var
   endWait_ms    : int64;
   iWorker       : integer;
-  killWorker    : boolean;
   signalToken   : boolean;
   taskID        : int64;
   waitForTask_ms: int64;
@@ -1117,22 +1137,21 @@ begin
           Sleep(10);
         end;
         workItem := nil;
-        killWorker := false;
-        if worker.HasWorkItem then begin
-          SuspendThread(worker.Handle);
-          killWorker := worker.Asy_TerminateWorkItem(workItem);
-          if not killWorker then
-            ResumeThread(worker.Handle);
-        end;
-        if killWorker then begin
+          if worker.HasStoppedWorkItem then begin
+          // Worker will send MSG_COMPLETED. It must not receive another work item before that;
+          // it may still have MSG_RUN for this work item in its message queue.
+          owRunningWorkers.Add(worker);
+          CountRunning.Increment;
+        end
+        else if worker.Asy_TerminateWorkItem(workItem) then begin
           {$IFDEF LogThreadPool}Log(
-            'Terminating unstoppable thread %s, num idle = %d, num running = %d[%d]',
+            'Detaching unstoppable thread %s, num idle = %d, num running = %d[%d]',
             [worker.Description, owIdleWorkers.Count, owRunningWorkers.Count,
             MaxExecuting.Value]); {$ENDIF LogThreadPool}
-          TerminateThread(worker.Handle, cardinal(-1));
-          ForwardThreadDestroying(worker.threadID, tpoKillThread, worker);
+          // TerminateThread could stop the thread while it owns a lock (memory manager,
+          // RTL ...) and that would block the whole program.
           workItem.Thread := nil;
-          FreeAndNil(worker);
+          DetachWorker(worker);
           ProcessCompletedWorkItem(workItem);
           wasTerminated := false;
         end
@@ -1339,6 +1358,7 @@ procedure TOTPWorker.MainteinanceTimer;
 var
   iWorker: integer;
   worker : TOTPWorkerThread;
+  workItem: TOTPWorkItem;
 begin
   PruneWorkingQueue;
   if IdleWorkerThreadTimeout_sec > 0 then begin
@@ -1369,19 +1389,20 @@ begin
                          DSiTimeGetTime64 ) then
     begin
       if not worker.Stopped then begin
-        SuspendThread(worker.Handle);
-        if worker.Stopped then begin
-          ResumeThread(worker.Handle);
-          break; // while
-        end;
-        TerminateThread(worker.Handle, cardinal(-1));
-        ForwardThreadDestroying(worker.threadID, tpoKillThread, worker);
+        owStoppingWorkers.Delete(iWorker);
+        workItem := nil;
+        worker.Asy_TerminateWorkItem(workItem);
+        if assigned(workItem) then
+          workItem.Thread := nil;
+        DetachWorker(worker);
+        if assigned(workItem) then
+          ProcessCompletedWorkItem(workItem);
       end
       else begin
         {$IFDEF LogThreadPool}Log('Removing stopped thread %s', [worker.Description]);{$ENDIF LogThreadPool}
+        owStoppingWorkers.Delete(iWorker);
+        FreeAndNil(worker);
       end;
-      owStoppingWorkers.Delete(iWorker);
-      FreeAndNil(worker);
     end
     else
       Inc(iWorker);

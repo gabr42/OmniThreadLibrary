@@ -34,6 +34,7 @@ uses
   OtlCommon in '..\OtlCommon.pas',
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
+  TestDetach1 in 'TestDetach1.pas',
   TestOtlParallel in 'TestOtlParallel.pas';
 
 {$R *.RES}

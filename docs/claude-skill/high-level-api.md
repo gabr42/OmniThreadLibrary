@@ -279,7 +279,7 @@ end;
 
 **OnStop** is called from a worker thread. Use `OnStopInvoke` [3.07.2] to automatically execute in the owner thread.
 
-**Terminate** [3.07.9]: waits up to `maxWait_ms` like `WaitFor` and returns `True` if the tasks stopped; otherwise kills the still-running threads (last resort, dangerous) and returns `False`.
+**Terminate** [3.07.9]: waits up to `maxWait_ms` like `WaitFor` and returns `True` if the tasks stopped; otherwise detaches the still-running tasks - they continue to run [3.10] (before 3.10 the threads were killed) - and returns `False`.
 
 **NoWait lifetime** [3.09]: releasing the last reference to a `NoWait` Join without `WaitFor`/`Terminate` raises an exception in the destructor.
 

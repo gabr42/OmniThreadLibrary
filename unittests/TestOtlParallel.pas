@@ -259,7 +259,8 @@ var
   end;
 
 begin
-  // Tests IOmniParallelJoin.Terminate when all tasks are stuck and don't terminate.
+  // Tests IOmniParallelJoin.Terminate when all tasks are stuck and don't terminate. Such tasks
+  // are detached (since 3.10; before that, they were killed).
 
   FillChar(started[0], Length(started), false);
   FillChar(stopped[0], Length(stopped), false);
@@ -270,10 +271,14 @@ begin
   time := DSiTimeGetTime64 - time;
   CheckTrue(time < 1900, 'Elapsed time');
 
-  Sleep(2000); // in case tasks are not really dead
   for i := 0 to 1 do begin
     CheckTrue(started[i], 'started ' + IntToStr(i));
     CheckFalse(stopped[i], 'stopped ' + IntToStr(i));
+  end;
+  Sleep(2500); // stuck tasks are detached, not killed
+  for i := 0 to 1 do begin
+    CheckTrue(started[i], 'started ' + IntToStr(i));
+    CheckTrue(stopped[i], 'stopped ' + IntToStr(i));
   end;
 end;
 

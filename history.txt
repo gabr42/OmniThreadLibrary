@@ -1,14 +1,21 @@
 3.10: unreleased
 
-- Breaking change:
-  - Thread pool: CancelAll does not wait for a task that ignores cancellation
-    anymore. If a task does not stop in WaitOnTerminate_sec (default: 30 sec),
-    its worker thread is detached and CancelAll returns WHILE THE TASK IS STILL
-    RUNNING. Such task can access objects that the caller destroys after
-    CancelAll. It is also not counted in MaxExecuting/CountExecuting anymore.
-    (Previously, CancelAll waited until the task finished.) The thread is not
-    killed because TerminateThread can leave the memory manager or the RTL
-    locked and block the whole program.
+- Breaking changes:
+  - Threads are not killed anymore. TerminateThread can leave the memory manager
+    or the RTL locked and block the whole program. A task that does not stop in
+    time is detached: it CONTINUES TO RUN and its thread is destroyed when the
+    task exits. Such task can access objects that the caller destroys after the
+    call. OTL objects that the task uses (task controller, parameters, Comm,
+    Parallel.Join ...) stay alive until the task exits. This affects:
+    - IOmniTaskControl.Terminate(timeout) (previously: thread was killed),
+      and with it Parallel.Join, ParallelTask and TimedTask.Terminate,
+    - IOmniThreadPool.Cancel (previously: thread was killed),
+    - IOmniThreadPool.CancelAll (previously: waited until the task finished),
+    - worker threads that do not stop when they are removed from the pool.
+    A detached task is not counted in MaxExecuting/CountExecuting anymore.
+    OnPoolThreadKilled event is also called for a detached thread.
+  - After Parallel.Join.Terminate has timed out, a detached worker does not start
+    other Join tasks.
 
 - Bug fixes:
   - TOmniBaseBoundedQueue (and so TOmniMessageQueue/task Comm channels): ring
@@ -45,6 +52,11 @@
     it was called from a message handler that was executed immediately after a
     nested ProcessMessages call rebuilt its wait handles. (Happened in the thread
     pool manager when Cancel and CancelAll were called from multiple threads.)
+  - A worker thread that was detached by CancelAll used destroyed objects if the
+    task controller or Parallel.Join was released before the task exited. They now
+    stay alive until the task exits.
+  - Thread pool: Cancel(taskID) with a short timeout could fill the message queue of
+    a busy worker, which stopped the thread pool manager.
 
 3.09: 2026-10-13 
 

@@ -205,6 +205,7 @@ type
   IOmniTaskExecutor = interface ['{123F2A63-3769-4C5B-89DA-1FEB6C3421ED}']
     procedure Execute;
     procedure SetThreadData(const value: IInterface);
+    procedure PinTaskControl;
     procedure SignalCancellationToken;
   end; { IOmniTaskExecutor }
 

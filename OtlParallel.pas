@@ -36,10 +36,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2026-10-11
-///   Version           : 1.59
+///   Last modification : 2026-11-23
+///   Version           : 1.60
 ///</para><para>
 ///   History:
+///     1.60: 2026-11-23
+///       - Fixed: A Join worker that was still running after Terminate timed out used the
+///         destroyed Join object. The object now stays alive until all workers exit.
+///       - After Terminate, Join workers do not start other tasks.
 ///     1.59: 2026-10-11
 ///       - Fixed: A thread blocked in IOmniChannelSender<T>.Send on a full channel was not woken
 ///         up when the channel was closed; it waited until a consumer made room (one sender
@@ -1157,13 +1161,16 @@ type
     function  Task(const task: TProc): IOmniParallelJoin; overload;
     function  Task(const task: TOmniJoinDelegate): IOmniParallelJoin; overload;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelJoin;
-    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
+    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will detach thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelJoin }
 
   TOmniParallelJoin = class(TInterfacedObject, IOmniParallelJoin)
   strict private
+    FAllStopped            : boolean; // protected by FDetachLock
     FCountStopped          : IOmniResourceCount;
+    FDetachedSelf          : IOmniParallelJoin; // protected by FDetachLock
+    FDetachLock            : TOmniCS;
     FGlobalCancellationFlag: IOmniCancellationToken;
     FGlobalExceptionFlag   : IOmniCancellationToken;
     FInput                 : IOmniBlockingCollection;
@@ -1176,9 +1183,11 @@ type
     FTaskException         : Exception;
     FTaskExceptionLock     : TOmniCS;
     FTasks                 : TList<TOmniJoinDelegate>;
+    FWorkerStarted         : array of boolean;
   strict protected
     procedure DoOnStop(const task: IOmniTask);
     function  InternalWaitFor(timeout_ms: cardinal): boolean;
+    procedure WorkerStopped(const task: IOmniTask);
   public
     constructor Create;
     destructor  Destroy; override;
@@ -1216,7 +1225,7 @@ type
     function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
-    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
+    function  Terminate(maxWait_ms: cardinal = INFINITE): boolean; //will detach thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { IOmniParallelTask }
 
@@ -1919,7 +1928,7 @@ type
     function  OnStop(const stopCode: TOmniTaskStopDelegate): IOmniParallelTask; overload;
     function  OnStopInvoke(const stopCode: TProc): IOmniParallelTask;
     function  TaskConfig(const config: IOmniTaskConfig): IOmniParallelTask;
-    function  Terminate(timeout_ms: cardinal = INFINITE): boolean; //will kill thread after timeout
+    function  Terminate(timeout_ms: cardinal = INFINITE): boolean; //will detach thread after timeout
     function  WaitFor(timeout_ms: cardinal): boolean;
   end; { TOmniParallelTask }
 
@@ -2332,6 +2341,7 @@ begin
   if taskCount > FTasks.Count then
     taskCount := FTasks.Count;
   SetLength(FJoinStates, taskCount);
+  SetLength(FWorkerStarted, taskCount);
   FCountStopped := CreateResourceCount(taskCount + 1);
   FInput := TOmniBlockingCollection.Create;
   for iProc := 0 to taskCount - 1 do
@@ -2350,8 +2360,11 @@ begin
         begin
           try
             numWorker := Task.Param.ByName('NumWorker').AsInteger;
+            FWorkerStarted[numWorker] := true;
             joinStateEx := FJoinStates[numWorker] as IOmniJoinStateEx;
             for procNum in FInput do begin
+              if task.Terminated then
+                break; //for; Terminate was called, don't start new tasks
               joinStateEx.SetTask(task);
               try
                 FTasks[procNum](FJoinStates[numWorker]);
@@ -2366,11 +2379,7 @@ begin
               end;
             end; //for ovTask
           finally
-            if FCountStopped.Allocate = 1 then begin
-              if FNoWait then
-                DoOnStop(task);
-              FCountStopped.Allocate;
-            end;
+            WorkerStopped(task); // Self must not be accessed after that
           end;
         end,
         Format('Join worker #%d', [iProc + 1])
@@ -2484,16 +2493,58 @@ begin
   Result := Self;
 end; { TOmniParallelJoin.TaskConfig }
 
+/// <summary>Tasks that do not stop in time are detached (they continue to run).</summary>
 function TOmniParallelJoin.Terminate(timeout_ms: cardinal = INFINITE): boolean;
 var
-  task: IOmniJoinState;
+  allStopped : boolean;
+  iTask      : integer;
+  taskControl: IOmniTaskControl;
 begin
   Result := WaitFor(timeout_ms);
-  if not Result then
-    for task in FJoinStates do
-      if not task.Task.Stopped then
-        (task as IOmniJoinStateEx).TaskControl.Terminate(0);
+  if Result then
+    Exit;
+
+  // Detached tasks use fields of this object so it must stay alive until all of them exit.
+  FDetachLock.Acquire;
+  try
+    allStopped := FAllStopped;
+    if not allStopped then
+      FDetachedSelf := Self;
+  finally FDetachLock.Release; end;
+  if allStopped then begin // the last task has completed in the meantime
+    Result := WaitFor(INFINITE);
+    Exit;
+  end;
+
+  for iTask := Low(FJoinStates) to High(FJoinStates) do begin
+    taskControl := (FJoinStates[iTask] as IOmniJoinStateEx).TaskControl;
+    if taskControl.WaitFor(0) then
+      continue; //for
+    taskControl.Terminate(0);
+    // Task that was removed from the thread pool queue will never call WorkerStopped.
+    if taskControl.WaitFor(0) and (not FWorkerStarted[iTask]) then
+      WorkerStopped(nil);
+  end;
 end; { TOmniParallelJoin.Terminate }
+
+/// <summary>Called when a worker stops. If Terminate has detached the workers, the last one
+///   releases (and possibly destroys) this object.</summary>
+procedure TOmniParallelJoin.WorkerStopped(const task: IOmniTask);
+var
+  detachedSelf: IOmniParallelJoin;
+begin
+  if FCountStopped.Allocate = 1 then begin
+    if FNoWait and assigned(task) then
+      DoOnStop(task);
+    FDetachLock.Acquire;
+    try
+      FAllStopped := true;
+      detachedSelf := FDetachedSelf;
+      FDetachedSelf := nil;
+    finally FDetachLock.Release; end;
+    FCountStopped.Allocate;
+  end;
+end; { TOmniParallelJoin.WorkerStopped }
 
 function TOmniParallelJoin.WaitFor(timeout_ms: cardinal): boolean;
 var

@@ -27,6 +27,7 @@ uses
   TestOmniValue in 'TestOmniValue.pas',
   TestValue in 'TestValue.pas',
   TestOtlParallel in 'TestOtlParallel.pas',
+  TestDetach1 in 'TestDetach1.pas',
   TestParallelChannelSelect1 in 'TestParallelChannelSelect1.pas',
   TestInterlocked in 'TestInterlocked.pas',
   TestContainers in 'TestContainers.pas',
