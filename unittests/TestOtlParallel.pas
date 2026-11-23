@@ -34,6 +34,11 @@ type
     procedure TestTerminationPartialStuck;
     procedure TestTerminationAllTerminated;
   end;
+
+  TestThreadPoolCancel = class(TTestCase)
+  published
+    procedure TestCancelAllAfterSchedule;
+  end;
 {$ENDIF}
 
 implementation
@@ -42,6 +47,9 @@ implementation
 uses
   Math,
   OtlParallel,
+  OtlTask,
+  OtlTaskControl,
+  OtlThreadPool,
   OtlCommon;
 
 { TestParallelFor }
@@ -345,11 +353,55 @@ begin
   end;
 end;
 
+{ TestThreadPoolCancel }
+
+procedure TestThreadPoolCancel.TestCancelAllAfterSchedule;
+// CancelAll must also cancel tasks that were already sent to a worker thread but were not
+// yet picked up by it. Otherwise, such task starts after the cancellation and CancelAll
+// waits for it.
+const
+  CGiveUp_ms = 3000; // must be shorter than the default WaitOnTerminate_sec
+  CRounds    = 100;
+  CTaskCount = 8;
+var
+  iRound: integer;
+  iTask : integer;
+  missed: integer;
+  pool  : IOmniThreadPool;
+begin
+  missed := 0;
+  for iRound := 1 to CRounds do begin
+    pool := CreateThreadPool('TestCancelAllAfterSchedule');
+    pool.MaxExecuting := 4;
+    for iTask := 1 to CTaskCount do
+      CreateTask(
+        procedure (const task: IOmniTask)
+        var
+          start: int64;
+        begin
+          start := DSiTimeGetTime64;
+          while not task.CancellationToken.IsSignalled do begin
+            if DSiElapsedTime64(start) > CGiveUp_ms then begin // don't hang the test
+              InterlockedIncrement(missed);
+              break; //while
+            end;
+            Sleep(1);
+          end;
+        end)
+      .Unobserved
+      .Schedule(pool);
+    pool.CancelAll(true);
+    pool := nil;
+    CheckEquals(0, missed, Format('Tasks not cancelled in round %d', [iRound]));
+  end;
+end;
+
 {$ENDIF}
 
 initialization
 {$IFDEF Unicode}
   RegisterTest(TestParallelFor.Suite);
   RegisterTest(TestJoin.Suite);
+  RegisterTest(TestThreadPoolCancel.Suite);
 {$ENDIF}
 end.

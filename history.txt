@@ -14,6 +14,10 @@
   - TOmniBlockingCollection.ToArray<T>: same problem as in TOmniValue.CastTo<T>.
     In addition, ToArray<int64> raised EOmniValueConv for all values when
     compiled with some older compilers (confirmed with Delphi XE7).
+  - Thread pool: CancelAll and pool destruction did not cancel a task that was
+    already sent to a worker thread but not yet picked up by it. Such task
+    started executing after the cancellation and CancelAll could wait for it
+    forever.
 
 3.09: 2026-10-13 
 

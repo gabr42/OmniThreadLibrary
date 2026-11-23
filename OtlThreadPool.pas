@@ -35,10 +35,15 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-09-16
-///   Version           : 2.21b
+///   Last modification : 2026-11-23
+///   Version           : 2.21c
 /// </para><para>
 ///   History:
+///     2.21c: 2026-11-23
+///       - Fixed race in CancelAll and in pool destruction: a task that was already sent
+///         to a worker thread, but not yet picked up by it, was not cancelled. The task
+///         started executing after the cancellation and the pool waited for it forever
+///         (if the task depended on the cancellation token or termination to exit).
 ///     2.21b: 2026-09-16
 ///       - Fixed: TOTPWorkerScheduler.CreateInitialClusters used a processor
 ///         group number as a positional index into IOmniProcessorGroups
@@ -392,6 +397,8 @@ type
     owtStartIdle_ms            : int64;
     owtStartStopping_ms        : int64;
     owtStopped                 : boolean;
+    owtSignalTokenOnStop       : boolean; // protected by owtWorkItemLock
+    owtStopping                : boolean; // protected by owtWorkItemLock
     owtTerminateEvent          : TOmniTransitionEvent;
     owtThreadData              : IInterface;
     owtThreadDataFactory       : TOTPThreadDataFactory;
@@ -407,6 +414,7 @@ type
     constructor Create(const ThreadDataFactory: TOTPThreadDataFactory);
     destructor  Destroy; override;
     procedure Asy_Stop(signalCancellationToken: boolean = false);
+    procedure Asy_StopThread(signalCancellationToken: boolean);
     function  Asy_TerminateWorkItem(var workItem: TOTPWorkItem): boolean;
     function  Description: string;
     procedure Execute; override;
@@ -788,6 +796,23 @@ begin
   end;
 end; { TOTPWorkerThread.Asy_Stop }
 
+/// <summary>Stop the worker thread for good. A work item that was already sent to the
+///    worker (MSG_RUN) but not yet picked up is cancelled in ExecuteWorkItem.</summary>
+/// <since>2026-11-23</since>
+procedure TOTPWorkerThread.Asy_StopThread(signalCancellationToken: boolean);
+begin
+  if assigned(owtWorkItemLock) then begin
+    // One lock for both steps, so that the work item is cancelled either here or in
+    // ExecuteWorkItem, but never in both. Asy_Stop reenters the lock.
+    owtWorkItemLock.Acquire;
+    try
+      owtStopping := true;
+      owtSignalTokenOnStop := signalCancellationToken;
+      Asy_Stop(signalCancellationToken);
+    finally owtWorkItemLock.Release; end;
+  end;
+end; { TOTPWorkerThread.Asy_StopThread }
+
 /// <summary>Take the work item ownership from the thread. Called asynchronously from the thread pool.</summary>
 /// <returns>True if thread should be killed.</returns>
 /// <since>2008-07-26</since>
@@ -880,8 +905,17 @@ var
 var
   task: IOmniTask;
 begin
-  WorkItem_ref := workItem;
-  task := WorkItem_ref.task;
+  if assigned(owtWorkItemLock) then owtWorkItemLock.Acquire;
+  try
+    WorkItem_ref := workItem;
+    task := WorkItem_ref.task;
+    if owtStopping and assigned(task) then begin
+      // Asy_StopThread was called while this work item was still waiting in the queue.
+      if owtSignalTokenOnStop then
+        task.CancellationToken.Signal;
+      task.Terminate;
+    end;
+  finally if assigned(owtWorkItemLock) then owtWorkItemLock.Release; end;
   try
     Environment.Thread.GroupAffinity := workItem.GroupAffinity;
     {$IFDEF LogThreadPool}Log('Thread %s starting execution of %s', [Description, WorkItem_ref.Description]);
@@ -1569,7 +1603,7 @@ begin
   {$IFDEF LogThreadPool}Log('Stopping worker thread %s', [worker.Description]);{$ENDIF LogThreadPool}
   owStoppingWorkers.Add(worker);
   worker.StartStopping_ms := DSiTimeGetTime64;
-  worker.Asy_Stop(signalCancellationToken); // have to force asynchronous stop as the worker thread may be stuck in the ExecuteWorkItem
+  worker.Asy_StopThread(signalCancellationToken); // have to force asynchronous stop as the worker thread may be stuck in the ExecuteWorkItem
   worker.OwnerCommEndpoint.Send(MSG_STOP);
   {$IFDEF LogThreadPool}Log('num stopped = %d', [owStoppingWorkers.Count]);{$ENDIF LogThreadPool}
 end; { TOTPWorker.StopThread }
