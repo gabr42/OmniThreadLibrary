@@ -11,6 +11,9 @@
     CastTo<word>(65535), CastTo<cardinal>($FFFFFFFF) and CastTo<TObject> for an
     object allocated above $FF000000 (large-address-aware 32-bit process) raised
     EOmniValueConv "Value ... is too big to fit into ...".
+  - TOmniBlockingCollection.ToArray<T>: same problem as in TOmniValue.CastTo<T>.
+    In addition, ToArray<int64> raised EOmniValueConv for all values when
+    compiled with some older compilers (confirmed with Delphi XE7).
 
 3.09: 2026-10-13 
 

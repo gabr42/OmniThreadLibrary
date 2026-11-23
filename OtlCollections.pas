@@ -35,10 +35,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin
 ///   Creation date     : 2009-12-27
-///   Last modification : 2026-10-09
-///   Version           : 1.12
+///   Last modification : 2026-11-23
+///   Version           : 1.12a
 ///</para><para>
 ///   History:
+///     1.12a: 2026-11-23
+///       - Fixed range check in TOmniBlockingCollection.ToArray<T> for 2-, 4- and 8-byte types.
 ///     1.12: 2026-10-09
 ///       - Added IOmniBlockingCollection.DeThrottle, which switches throttling off and wakes
 ///         up writers blocked on a full collection, and IsThrottling (issue #61).
@@ -492,8 +494,8 @@ begin
       ds := TOmniValue_DataSize[ti^.Kind];
 
   maxValue := High(uint64);
-  if ds > 0 then
-    maxValue := uint64($FF) SHL ((ds-1) * 8);
+  if (ds > 0) and (ds < 8) then
+    maxValue := (uint64(1) SHL (ds * 8)) - 1;
 end; { GetTypeInformation }
 
 procedure TOmniBlockingCollection.InsertElement<T>(const value: T; ti: PTypeInfo; ds: integer);
@@ -625,7 +627,9 @@ begin
       end;
     end
     else begin
-      if value.RawData^ > maxValue then
+      // Any int64 fits into an 8-byte type. The check must not be executed in that case as older
+      // compilers compare int64 with uint64 as signed, which turns High(uint64) into -1.
+      if (ds < 8) and (value.RawData^ > maxValue) then
         raise EOmniValueConv.CreateFmt('Value %d is too big to fit into %s', [value.RawData^, ti^.Name]);
       Move(value.RawData^, Result[numEl], ds);
     end;
