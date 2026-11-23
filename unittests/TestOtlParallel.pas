@@ -38,7 +38,7 @@ type
   TestThreadPoolCancel = class(TTestCase)
   published
     procedure TestCancelAllAfterSchedule;
-    procedure TestCancelAllSlowTask;
+    procedure TestCancelAllStuckTask;
   end;
 {$ENDIF}
 
@@ -397,43 +397,64 @@ begin
   end;
 end;
 
-procedure TestThreadPoolCancel.TestCancelAllSlowTask;
-// If a task does not stop in WaitOnTerminate_sec, the pool must be functional after
-// CancelAll (the pool manager was spinning on a closed handle and did not process messages).
+procedure TestThreadPoolCancel.TestCancelAllStuckTask;
+// CancelAll must not wait for a task that ignores cancellation longer than
+// WaitOnTerminate_sec and the pool must stay functional.
+const
+  CStuck_ms = 10000;
 var
-  pool   : IOmniThreadPool;
-  started: integer;
-  time   : int64;
-  worked : integer;
+  finished: integer;
+  pool    : IOmniThreadPool;
+  release : integer;
+  started : integer;
+  time    : int64;
+  worked  : integer;
 begin
+  finished := 0;
+  release := 0;
   started := 0;
   worked := 0;
-  pool := CreateThreadPool('TestCancelAllSlowTask');
+  pool := CreateThreadPool('TestCancelAllStuckTask');
   pool.WaitOnTerminate_sec := 1;
-  CreateTask(
-    procedure (const task: IOmniTask)
-    begin
-      InterlockedIncrement(started);
-      Sleep(3000);
-    end)
-  .Unobserved
-  .Schedule(pool);
-  time := DSiTimeGetTime64;
-  while (started = 0) and (DSiElapsedTime64(time) < 5000) do
-    Sleep(1);
-  CheckEquals(1, started, 'started');
-  pool.CancelAll(true);
-  CreateTask(
-    procedure (const task: IOmniTask)
-    begin
-      InterlockedIncrement(worked);
-    end)
-  .Unobserved
-  .Schedule(pool);
-  time := DSiTimeGetTime64;
-  while (worked = 0) and (DSiElapsedTime64(time) < 5000) do
-    Sleep(1);
-  CheckEquals(1, worked, 'worked');
+  try
+    CreateTask(
+      procedure (const task: IOmniTask)
+      var
+        start: int64;
+      begin
+        InterlockedIncrement(started);
+        start := DSiTimeGetTime64;
+        while (release = 0) and (DSiElapsedTime64(start) < CStuck_ms) do
+          Sleep(10);
+        InterlockedIncrement(finished);
+      end)
+    .Unobserved
+    .Schedule(pool);
+    time := DSiTimeGetTime64;
+    while (started = 0) and (DSiElapsedTime64(time) < 5000) do
+      Sleep(1);
+    CheckEquals(1, started, 'started');
+    time := DSiTimeGetTime64;
+    pool.CancelAll(true);
+    time := DSiElapsedTime64(time);
+    CheckTrue(time < (CStuck_ms div 2), Format('CancelAll returned after %d ms', [time]));
+    CreateTask(
+      procedure (const task: IOmniTask)
+      begin
+        InterlockedIncrement(worked);
+      end)
+    .Unobserved
+    .Schedule(pool);
+    time := DSiTimeGetTime64;
+    while (worked = 0) and (DSiElapsedTime64(time) < 5000) do
+      Sleep(1);
+    CheckEquals(1, worked, 'worked');
+  finally
+    InterlockedIncrement(release); // don't leave a running thread behind
+    time := DSiTimeGetTime64;
+    while (finished = 0) and (DSiElapsedTime64(time) < 5000) do
+      Sleep(1);
+  end;
 end;
 
 {$ENDIF}

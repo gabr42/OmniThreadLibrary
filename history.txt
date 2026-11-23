@@ -21,6 +21,10 @@
   - Thread pool: if a task did not stop in WaitOnTerminate_sec, CancelAll left the
     thread pool manager spinning on a closed handle (high CPU usage, thread pool
     destruction never finished).
+  - Thread pool: CancelAll waited for a task that ignores cancellation until
+    that task finished. Its worker thread is now detached
+    after WaitOnTerminate_sec (it is not killed and is destroyed when the task
+    exits).
 
 3.09: 2026-10-13 
 
