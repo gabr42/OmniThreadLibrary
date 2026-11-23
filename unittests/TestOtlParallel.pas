@@ -38,6 +38,7 @@ type
   TestThreadPoolCancel = class(TTestCase)
   published
     procedure TestCancelAllAfterSchedule;
+    procedure TestCancelAllSlowTask;
   end;
 {$ENDIF}
 
@@ -394,6 +395,45 @@ begin
     pool := nil;
     CheckEquals(0, missed, Format('Tasks not cancelled in round %d', [iRound]));
   end;
+end;
+
+procedure TestThreadPoolCancel.TestCancelAllSlowTask;
+// If a task does not stop in WaitOnTerminate_sec, the pool must be functional after
+// CancelAll (the pool manager was spinning on a closed handle and did not process messages).
+var
+  pool   : IOmniThreadPool;
+  started: integer;
+  time   : int64;
+  worked : integer;
+begin
+  started := 0;
+  worked := 0;
+  pool := CreateThreadPool('TestCancelAllSlowTask');
+  pool.WaitOnTerminate_sec := 1;
+  CreateTask(
+    procedure (const task: IOmniTask)
+    begin
+      InterlockedIncrement(started);
+      Sleep(3000);
+    end)
+  .Unobserved
+  .Schedule(pool);
+  time := DSiTimeGetTime64;
+  while (started = 0) and (DSiElapsedTime64(time) < 5000) do
+    Sleep(1);
+  CheckEquals(1, started, 'started');
+  pool.CancelAll(true);
+  CreateTask(
+    procedure (const task: IOmniTask)
+    begin
+      InterlockedIncrement(worked);
+    end)
+  .Unobserved
+  .Schedule(pool);
+  time := DSiTimeGetTime64;
+  while (worked = 0) and (DSiElapsedTime64(time) < 5000) do
+    Sleep(1);
+  CheckEquals(1, worked, 'worked');
 end;
 
 {$ENDIF}

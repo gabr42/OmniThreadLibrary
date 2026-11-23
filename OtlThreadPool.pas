@@ -36,9 +36,14 @@
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin
 ///   Creation date     : 2008-06-12
 ///   Last modification : 2026-11-23
-///   Version           : 2.21c
+///   Version           : 2.21d
 /// </para><para>
 ///   History:
+///     2.21d: 2026-11-23
+///       - Fixed: If a task did not stop in WaitOnTerminate_sec, CancelAll destroyed its
+///         worker thread without unregistering worker's communication channel. Thread
+///         pool manager was then spinning on a closed handle and could not be stopped
+///         (thread pool destruction never finished).
 ///     2.21c: 2026-11-23
 ///       - Fixed race in CancelAll and in pool destruction: a task that was already sent
 ///         to a worker thread, but not yet picked up by it, was not cancelled. The task
@@ -1213,6 +1218,8 @@ begin
   for iWorker := 0 to owStoppingWorkers.Count - 1 do begin
     worker := TOTPWorkerThread(owStoppingWorkers[iWorker]);
     worker.Asy_TerminateWorkItem(workItem);
+    if not worker.Stopped then // unregister worker's comm channel before it is destroyed
+      ForwardThreadDestroying(worker.threadID, tpoDestroyThread, worker);
     FreeAndNil(worker);
   end;
   owStoppingWorkers.Clear;

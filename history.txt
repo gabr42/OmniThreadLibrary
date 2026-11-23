@@ -18,6 +18,9 @@
     already sent to a worker thread but not yet picked up by it. Such task
     started executing after the cancellation and CancelAll could wait for it
     forever.
+  - Thread pool: if a task did not stop in WaitOnTerminate_sec, CancelAll left the
+    thread pool manager spinning on a closed handle (high CPU usage, thread pool
+    destruction never finished).
 
 3.09: 2026-10-13 
 
