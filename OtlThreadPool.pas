@@ -49,7 +49,7 @@
 ///         pool manager was then spinning on a closed handle and could not be stopped
 ///         (thread pool destruction never finished).
 ///     2.21c: 2026-11-23
-///       - Fixed race in CancelAll and in pool destruction: a task that was already sent
+///       - Fixed race in CancelAll: a task that was already sent
 ///         to a worker thread, but not yet picked up by it, was not cancelled. The task
 ///         started executing after the cancellation and the pool waited for it forever
 ///         (if the task depended on the cancellation token or termination to exit).
