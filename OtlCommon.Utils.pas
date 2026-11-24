@@ -37,9 +37,12 @@
 ///
 ///   Creation date     : 2011-08-31
 ///   Last modification : 2026-11-24
-///   Version           : 1.03
+///   Version           : 1.03a
 ///</para><para>
 ///   History:
+///     1.03a: 2026-11-24
+///       - Fixed: Records used for thread tracking were reported as a memory leak when
+///         the program exited.
 ///     1.03: 2026-11-24
 ///       - Added tracking of threads that were created by OTL and detection of
 ///         DLL unload and process exit.
@@ -227,6 +230,32 @@ begin
   end;
 end; { PruneTracked }
 
+/// Releases records of threads that are done. Such thread doesn't access its record anymore, even
+/// if it did not exit yet. Records of threads that are still running must be left alone.
+procedure ReleaseTracked;
+var
+  link   : ^POmniTrackedThread;
+  tracked: POmniTrackedThread;
+begin
+  if not ProcessIsExiting then
+    LockTracked
+  else if InterlockedCompareExchange(GTrackedLock, 1, 0) <> 0 then
+    Exit; // in a DLL; owner of the lock was killed
+  try
+    link := @GTrackedThreads;
+    while assigned(link^) do begin
+      tracked := link^;
+      if tracked^.IsDone then begin
+        link^ := tracked^.Next;
+        CloseHandle(tracked^.Handle);
+        Dispose(tracked);
+      end
+      else
+        link := @tracked^.Next;
+    end;
+  finally UnlockTracked; end;
+end; { ReleaseTracked }
+
 function TrackThread(thread: TThread): POmniTrackedThread;
 begin
   New(Result);
@@ -357,4 +386,6 @@ initialization
   {$IFDEF OTL_HasNameThreadForDebugging}
   GSetThreadDescription := GetProcAddress(GetModuleHandle('kernel32.dll'), 'SetThreadDescription');
   {$ENDIF OTL_HasNameThreadForDebugging}
+finalization
+  ReleaseTracked;
 end.
