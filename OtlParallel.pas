@@ -36,10 +36,12 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : Sean B. Durkin, HHasenack, SMelnyk64
 ///   Creation date     : 2010-01-08
-///   Last modification : 2026-11-23
-///   Version           : 1.60
+///   Last modification : 2026-11-24
+///   Version           : 1.61
 ///</para><para>
 ///   History:
+///     1.61: 2026-11-24
+///       - Parallel.Merge thread is tracked; see StopAllOmniThreads in OtlTaskControl.
 ///     1.60: 2026-11-23
 ///       - Fixed: A Join worker that was still running after Terminate timed out used the
 ///         destroyed Join object. The object now stays alive until all workers exit.
@@ -1776,6 +1778,7 @@ uses
   Diagnostics,
   {$ENDIF OTL_GoodGenerics}
   GpStuff,
+  OtlCommon.Utils,
   OtlComm,
   OtlContainerObserver;
 
@@ -3443,10 +3446,11 @@ end; { SelectCase.Default }
 class function Parallel.Merge<T>(const receivers: array of IOmniChannelReceiver<T>;
   capacity: integer): IOmniChannelReceiver<T>;
 var
-  cases : TArray<IOmniSelectCase>;
-  output: IOmniChannel<T>;
-  thread: TThread;
-  i     : integer;
+  cases  : TArray<IOmniSelectCase>;
+  output : IOmniChannel<T>;
+  thread : TThread;
+  tracked: POmniTrackedThread;
+  i      : integer;
 begin
   output := Parallel.Channel<T>(capacity);
   SetLength(cases, Length(receivers));
@@ -3457,12 +3461,16 @@ begin
     procedure
     var sel: IOmniSelect;
     begin
-      sel := Parallel.Select(cases);
-      while sel.Wait = srHandled do
-        ;
-      output.Close;
+      try
+        sel := Parallel.Select(cases);
+        while sel.Wait = srHandled do
+          ;
+        output.Close;
+        sel := nil;
+      finally TrackedThreadDone(tracked); end;
     end);
   thread.FreeOnTerminate := true;
+  tracked := TrackThread(thread);
   thread.Start;
   Result := output.Receiver;
 end; { Parallel.Merge<T> }
@@ -6912,6 +6920,7 @@ end; { TOmniTimedTask.WaitFor }
 
 initialization
 finalization
+  ModuleFinalization;
   GParallelPool := nil;
 end.
 

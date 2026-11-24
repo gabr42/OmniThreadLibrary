@@ -36,10 +36,13 @@
 ///   Contributors      : GJ, Lee_Nover, scarre, Sean B. Durkin
 ///
 ///   Creation date     : 2011-08-31
-///   Last modification : 2026-04-15
-///   Version           : 1.02
+///   Last modification : 2026-11-24
+///   Version           : 1.03
 ///</para><para>
 ///   History:
+///     1.03: 2026-11-24
+///       - Added tracking of threads that were created by OTL and detection of
+///         DLL unload and process exit.
 ///     1.02: 2026-04-15
 ///       - Fixed: OTL_HasTThreadCurrentThread ifdefs were dead code, preventing
 ///         SetThreadDescription (Windows 10+ thread naming API) from being loaded.
@@ -67,18 +70,58 @@ unit OtlCommon.Utils;
 
 interface
 
-procedure SetThreadName(const name: string);
-
-implementation
-
-{$IFDEF OTL_HasNameThreadForDebugging}
 uses
   Windows,
   Classes;
-{$ELSE ~OTL_HasNameThreadForDebugging}
+
+const
+  /// <summary>When a DLL is being unloaded, all waits in OTL together take at most that long.</summary>
+  COmniUnloadTimeout_ms = 2000;
+
+type
+  POmniTrackedThread = ^TOmniTrackedThread;
+  TOmniTrackedThread = record
+    Next  : POmniTrackedThread;
+    Handle: THandle; // own handle, valid after the TThread is destroyed
+    IsDone: boolean;
+  end; { TOmniTrackedThread }
+
+procedure SetThreadName(const name: string);
+
+// Tracking of threads, created by OTL. For internal use.
+
+/// <summary>Must be called before the thread is started.</summary>
+function  TrackThread(thread: TThread): POmniTrackedThread;
+
+/// <summary>Must be the last thing that the thread does.</summary>
+procedure TrackedThreadDone(tracked: POmniTrackedThread);
+
+/// <summary>Number of threads that are still alive. A thread that is done counts as alive
+///   until it exits only if `untilExit` is set.</summary>
+function  NumTrackedThreads(untilExit: boolean): integer;
+
+/// <summary>True in ExitProcess. All other threads were already killed.</summary>
+function  ProcessIsExiting: boolean;
+
+/// <summary>True if the DLL that contains this code is being unloaded with FreeLibrary. Loader
+///   lock is owned so threads cannot exit; waiting for that would block forever.</summary>
+function  ModuleIsUnloading: boolean;
+
+/// <summary>Must be called first in the finalization of units that wait for threads. Needed if
+///   the DLL has replaced DllProc so that unload was not detected.</summary>
+procedure ModuleFinalization;
+
+/// <summary>Remaining part of COmniUnloadTimeout_ms.</summary>
+function  UnloadTimeLeft_ms: cardinal;
+
+/// <summary>Destroys the thread object. If the module is being unloaded and the thread did not
+///   exit yet, the object is left alone.</summary>
+procedure FreeThread(thread: TThread);
+
+implementation
+
 uses
-  Windows;
-{$ENDIF ~OTL_HasNameThreadForDebugging}
+  SysUtils;
 
 {$IFDEF OTL_HasNameThreadForDebugging}
 type
@@ -149,8 +192,169 @@ end; { SetThreadName }
 {$ENDIF ~OTL_HasNameThreadForDebugging}
 {$ENDIF ~OTL_DontSetThreadName}
 
-{$IFDEF OTL_HasNameThreadForDebugging}
+var
+  // Linked list, protected by a spinlock. Not an object as it must survive finalization.
+  GTrackedLock   : integer;
+  GTrackedThreads: POmniTrackedThread;
+
+procedure LockTracked;
+begin
+  while InterlockedCompareExchange(GTrackedLock, 1, 0) <> 0 do
+    Sleep(0);
+end; { LockTracked }
+
+procedure UnlockTracked;
+begin
+  InterlockedExchange(GTrackedLock, 0);
+end; { UnlockTracked }
+
+/// Removes threads that have exited. Caller must own the lock.
+procedure PruneTracked;
+var
+  link   : ^POmniTrackedThread;
+  tracked: POmniTrackedThread;
+begin
+  link := @GTrackedThreads;
+  while assigned(link^) do begin
+    tracked := link^;
+    if tracked^.IsDone and (WaitForSingleObject(tracked^.Handle, 0) = WAIT_OBJECT_0) then begin
+      link^ := tracked^.Next;
+      CloseHandle(tracked^.Handle);
+      Dispose(tracked);
+    end
+    else
+      link := @tracked^.Next;
+  end;
+end; { PruneTracked }
+
+function TrackThread(thread: TThread): POmniTrackedThread;
+begin
+  New(Result);
+  Result^.Handle := 0;
+  Result^.IsDone := false;
+  if not DuplicateHandle(GetCurrentProcess, thread.Handle, GetCurrentProcess, @Result^.Handle,
+           SYNCHRONIZE, false, 0) then
+  begin
+    Dispose(Result);
+    RaiseLastOSError;
+  end;
+  LockTracked;
+  try
+    PruneTracked;
+    Result^.Next := GTrackedThreads;
+    GTrackedThreads := Result;
+  finally UnlockTracked; end;
+end; { TrackThread }
+
+procedure TrackedThreadDone(tracked: POmniTrackedThread);
+begin
+  if assigned(tracked) then
+    tracked^.IsDone := true; // tracked may be already disposed after this
+end; { TrackedThreadDone }
+
+function NumTrackedThreads(untilExit: boolean): integer;
+var
+  tracked: POmniTrackedThread;
+begin
+  Result := 0;
+  LockTracked;
+  try
+    PruneTracked;
+    tracked := GTrackedThreads;
+    while assigned(tracked) do begin
+      if untilExit or (not tracked^.IsDone) then
+        Inc(Result);
+      tracked := tracked^.Next;
+    end;
+  finally UnlockTracked; end;
+end; { NumTrackedThreads }
+
+var
+  GNextDllProcEx : TDllProcEx;
+  GUnloading     : boolean;
+  GUnloadStart_ms: cardinal;
+
+function  RtlDllShutdownInProgress: ByteBool; stdcall; external 'ntdll.dll';
+
+function ProcessIsExiting: boolean;
+begin
+  Result := RtlDllShutdownInProgress;
+end; { ProcessIsExiting }
+
+procedure MarkUnloading;
+begin
+  if GUnloading or ProcessIsExiting then
+    Exit;
+  GUnloadStart_ms := GetTickCount;
+  GUnloading := true;
+end; { MarkUnloading }
+
+/// Called before units are finalized. Not called if the DLL assigns its own DllProc and doesn't
+/// call the previous one; ModuleFinalization is then called from the finalization of OTL units.
+procedure OtlDllProcEx(reason: integer;
+  reserved: {$IFDEF OTL_DllProcExHasPointerParameter}pointer{$ELSE}integer{$ENDIF});
+begin
+  if (reason = DLL_PROCESS_DETACH) and (pointer(reserved) = nil) then // otherwise process is exiting
+    MarkUnloading;
+  if assigned(GNextDllProcEx) then
+    GNextDllProcEx(reason, reserved);
+end; { OtlDllProcEx }
+
+procedure ModuleFinalization;
+begin
+  if ModuleIsLib and (not ModuleIsPackage) then
+    MarkUnloading;
+end; { ModuleFinalization }
+
+function ModuleIsUnloading: boolean;
+begin
+  Result := GUnloading;
+end; { ModuleIsUnloading }
+
+function UnloadTimeLeft_ms: cardinal;
+var
+  elapsed_ms: cardinal;
+begin
+  elapsed_ms := cardinal(int64(GetTickCount) - int64(GUnloadStart_ms)); // GetTickCount can wrap
+  if elapsed_ms >= COmniUnloadTimeout_ms then
+    Result := 0
+  else
+    Result := COmniUnloadTimeout_ms - elapsed_ms;
+end; { UnloadTimeLeft_ms }
+
+procedure FreeThread(thread: TThread);
+const
+  CPoll_ms = 50;
+var
+  handle: THandle;
+begin
+  if not assigned(thread) then
+    Exit;
+  if not ProcessIsExiting then begin
+    handle := thread.Handle;
+    if ModuleIsUnloading then begin
+      if WaitForSingleObject(handle, 0) <> WAIT_OBJECT_0 then
+        Exit;
+    end
+    else if ModuleIsLib and (not ModuleIsPackage)
+            and (GetCurrentThreadID <> MainThreadID) // TThread.WaitFor calls CheckSynchronize in the main thread
+            and (not thread.Suspended) then
+    begin
+      thread.Terminate;
+      while WaitForSingleObject(handle, CPoll_ms) = WAIT_TIMEOUT do
+        if ModuleIsUnloading then // unload has started while we were waiting
+          Exit;
+    end;
+  end;
+  thread.Free;
+end; { FreeThread }
+
 initialization
+  if ModuleIsLib and (not ModuleIsPackage) then begin
+    GNextDllProcEx := DllProcEx;
+    DllProcEx := OtlDllProcEx;
+  end;
+  {$IFDEF OTL_HasNameThreadForDebugging}
   GSetThreadDescription := GetProcAddress(GetModuleHandle('kernel32.dll'), 'SetThreadDescription');
-{$ENDIF OTL_HasNameThreadForDebugging}
+  {$ENDIF OTL_HasNameThreadForDebugging}
 end.

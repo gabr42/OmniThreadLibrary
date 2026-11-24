@@ -14,8 +14,17 @@
     - worker threads that do not stop when they are removed from the pool.
     A detached task is not counted in MaxExecuting/CountExecuting anymore.
     OnPoolThreadKilled event is also called for a detached thread.
+  - FreeLibrary on a DLL that uses OTL waits at most 2 seconds for running tasks. In some
+    cases it previously waited until tasks were finished (up to WaitOnTerminate_sec).
+    Call StopAllOmniThreads before FreeLibrary (see New features).
   - After Parallel.Join.Terminate has timed out, a detached worker does not start
     other Join tasks.
+
+- New features:
+  - Added function StopAllOmniThreads (OtlTaskControl). It stops all thread pools and
+    waits until all OTL threads have exited. A DLL should call it before FreeLibrary
+    (from an exported function, not from DllMain or finalization). If it returns
+    False, some tasks are still running and the DLL must not be unloaded.
 
 - Bug fixes:
   - TOmniBaseBoundedQueue (and so TOmniMessageQueue/task Comm channels): ring
@@ -60,7 +69,15 @@
     finalized; task controllers were
     destroyed while tasks were running.) All thread pools are now stopped first; exit can take up to
     WaitOnTerminate_sec if a task ignores cancellation.
-    DLLs are not changed as waiting for threads in DllMain could hang.
+  - DLL that uses OTL could hang or crash in FreeLibrary and at process exit. FreeLibrary
+    now waits until OTL threads have finished their work, but at most 2 seconds. Use
+    StopAllOmniThreads to unload a DLL safely: if a task is still running after that
+    time, the program will probably crash. At process exit threads are not waited for.
+    (If they are killed while allocating memory, the RTL can still hang. This also
+    happens without OTL. Call StopAllOmniThreads before the program exits.)
+    Unload is detected with DllProcEx. A DLL that assigns its own DllProc/DllProcEx and
+    does not call the previous one should call StopAllOmniThreads, as the unload is then
+    detected too late for thread pools that are released in the finalization of its units.
   - Thread pool: Task, scheduled while the pool is being stopped, is cancelled.
     Cancel, CancelAll etc don't wait forever if the pool manager is not running.
 

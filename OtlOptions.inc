@@ -30,10 +30,12 @@
 ///<remarks><para>
 ///   Author            : Primoz Gabrijelcic
 ///   Creation date     : 2010-07-01
-///   Last modification : 2026-07-24
-///   Version           : 1.08
+///   Last modification : 2026-11-24
+///   Version           : 1.09
 ///</para><para>
 ///   History:
+///     1.09: 2026-11-24
+///       - Added OTL_DllProcExHasPointerParameter (XE+).
 ///     1.08: 2026-07-24
 ///       - Added OTL_HasSystemThreading (XE8+, same threshold as the removed
 ///         OTL_MobileSupport). Test units still referenced OTL_MobileSupport
@@ -101,6 +103,7 @@
   {$DEFINE OTL_HasTInterlocked}
   {$DEFINE OTL_GoodGenerics}
   {$DEFINE OTL_HasTThreadYield}
+  {$DEFINE OTL_DllProcExHasPointerParameter}
 {$IFEND}
 
 {$IF CompilerVersion >= 23} //DXE2

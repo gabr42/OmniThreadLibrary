@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover, Sean B. Durkin, HHasenack
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-11-23
-///   Version           : 1.45
+///   Last modification : 2026-11-24
+///   Version           : 1.46
 ///</para><para>
 ///   History:
+///     1.46: 2026-11-24
+///       - Added function StopAllOmniThreads. A DLL should call it before it is unloaded.
+///       - Fixed: A DLL could hang or crash in FreeLibrary and at process exit. Threads can't
+///         exit in FreeLibrary and are already dead at process exit.
 ///     1.45: 2026-11-23
 ///       - All thread pools are stopped before the unit is finalized.
 ///     1.44: 2026-11-23
@@ -364,6 +368,7 @@ interface
 
 uses
   OtlCommon,
+  OtlCommon.Utils,
   Windows,
   Messages,
   DetailedRTTI,
@@ -1041,8 +1046,10 @@ type
 
   TOmniThread = class(TThread) // Factor this class into OtlThread unit?
   strict private
-    otTask: IOmniTask;
+    otTask   : IOmniTask;
+    otTracked: POmniTrackedThread;
   protected
+    procedure DoTerminate; override;
     procedure Execute; override;
   public
     constructor Create(task: IOmniTask);
@@ -1291,6 +1298,14 @@ type
     property Tasks: IOmniTaskControlList read GetTasks;
   end; { TOmniTaskGroup }
 
+/// <summary>Stops all thread pools and waits until all OTL threads have exited. Must be called
+///   in a DLL before FreeLibrary (but not from DllMain or from a unit finalization); tasks
+///   that don't run in a thread pool must be stopped by the owner.</summary>
+/// <returns>False if some threads are still running. The DLL must not be unloaded in that
+///   case; function can be called again. OTL must not be used after it returns True.</returns>
+/// <since>2026-11-24</since>
+function StopAllOmniThreads(timeout_ms: cardinal = 30000): boolean;
+
 implementation
 
 uses
@@ -1300,7 +1315,6 @@ uses
   ObjAuto,
   OtlHooks,
   MMSystem,
-  OtlCommon.Utils,
   OtlEventMonitor;
 
 type
@@ -3111,7 +3125,8 @@ begin
   DestroyMonitor;
   if assigned(otcThread) then begin
     Terminate;
-    FreeAndNil(otcThread);
+    FreeThread(otcThread);
+    otcThread := nil;
   end;
   if assigned(otcSharedInfo) then // TOmniTask.InternalExecute could still own the shared info
     otcSharedInfo.MonitorLock.Acquire;
@@ -3865,6 +3880,10 @@ begin
 
   otcExecutor.Terminating := true;
   Stop;
+  if ProcessIsExiting then begin // in a DLL; thread is already dead
+    Result := true;
+    Exit;
+  end;
   Result := WaitFor(maxWait_ms);
   while (Comm as IOmniCommunicationEndpointInternal).ReceiveAny(msg) do
     ForwardTaskMessage(msg);
@@ -3882,7 +3901,8 @@ begin
       otcThread := nil;
     end
     else if assigned(otcOwningPool) then begin
-      otcOwningPool.Cancel(UniqueID, 0);
+      if not ModuleIsUnloading then // would wait for the pool manager
+        otcOwningPool.Cancel(UniqueID, 0);
       otcOwningPool := nil;
     end;
   end;
@@ -3919,6 +3939,12 @@ end; { TOmniTaskControl.Unobserved }
 
 function TOmniTaskControl.WaitFor(maxWait_ms: cardinal): boolean;
 begin
+  if ProcessIsExiting then begin // in a DLL; thread is already dead and will not signal anything
+    Result := true;
+    Exit;
+  end;
+  if ModuleIsUnloading and (maxWait_ms > UnloadTimeLeft_ms) then
+    maxWait_ms := UnloadTimeLeft_ms;
   if assigned(otcThread) then begin
     Result := DSiWaitForTwoObjects(otcSharedInfo.TerminatedEvent, otcThread.Handle, false, maxWait_ms) in [WAIT_OBJECT_0, WAIT_OBJECT_1]
   end
@@ -3956,7 +3982,14 @@ constructor TOmniThread.Create(task: IOmniTask);
 begin
   inherited Create(true);
   otTask := task;
+  otTracked := TrackThread(Self);
 end; { TOmniThread.Create }
+
+procedure TOmniThread.DoTerminate;
+begin
+  inherited;
+  TrackedThreadDone(otTracked); // must be last
+end; { TOmniThread.DoTerminate }
 
 procedure TOmniThread.Execute;
 var
@@ -4422,9 +4455,34 @@ begin
 end; { TOmniMessageExec.SetOnTerminated }
 {$ENDIF OTL_Anonymous}
 
+{ exports }
+
+function StopAllOmniThreads(timeout_ms: cardinal): boolean;
+const
+  CPoll_ms = 5;
+var
+  start_ms: int64;
+begin
+  Result := false;
+  if ProcessIsExiting or ModuleIsUnloading then
+    Exit; // too late
+  start_ms := DSiTimeGetTime64;
+  SignalStopAllThreadPools;
+  while NumTrackedThreads(true) > 0 do begin
+    if (timeout_ms <> INFINITE) and ((DSiTimeGetTime64 - start_ms) >= timeout_ms) then
+      Exit;
+    if GetCurrentThreadID = MainThreadID then
+      CheckSynchronize(CPoll_ms) // a task may be waiting for the main thread
+    else
+      Sleep(CPoll_ms);
+  end;
+  Result := true;
+end; { StopAllOmniThreads }
+
 initialization
   GTaskControlEventMonitorPool := TOmniTaskControlEventMonitorPool.Create;
 finalization
+  ModuleFinalization;
   StopAllThreadPools; // tasks must not be running when their controllers are released
   FreeAndNil(GTaskControlEventMonitorPool);
 end.
