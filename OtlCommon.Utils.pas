@@ -76,7 +76,7 @@ uses
 
 const
   /// <summary>When a DLL is being unloaded, all waits in OTL together take at most that long.</summary>
-  COmniUnloadTimeout_ms = 2000;
+  COmniUnloadTimeout_ms = 30000;
 
 type
   POmniTrackedThread = ^TOmniTrackedThread;
