@@ -81,6 +81,9 @@
   - Thread pool: Task, scheduled while the pool is being stopped, is cancelled.
     Cancel, CancelAll etc don't wait forever if the pool manager is not running.
 
+- New demos:
+  - 68_DLL: Demonstrates how to use OmniThreadLibrary in a DLL.
+
 3.09: 2026-10-13 
 
 - Changes:
