@@ -77,6 +77,8 @@
     detected too late for thread pools that are released in the finalization of its units.
   - Thread pool: Task, scheduled while the pool is being stopped, is cancelled.
     Cancel, CancelAll etc don't wait forever if the pool manager is not running.
+  - TOmniMessageQueue: If OnMessage handler set OnMessage to nil while there were more
+    messages in the queue, the next message was lost and an access violation was raised.
 
 - New demos:
   - 68_DLL: Demonstrates how to use OmniThreadLibrary in a DLL.

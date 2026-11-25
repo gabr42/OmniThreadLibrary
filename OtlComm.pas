@@ -35,10 +35,14 @@
 ///     Blog            : http://thedelphigeek.com
 ///   Contributors      : GJ, Lee_Nover
 ///   Creation date     : 2008-06-12
-///   Last modification : 2026-10-08
-///   Version           : 1.14
+///   Last modification : 2026-11-25
+///   Version           : 1.14a
 ///</para><para>
 ///   History:
+///     1.14a: 2026-11-25
+///       - Fixed: If TOmniMessageQueue.OnMessage handler set OnMessage to nil while there
+///         were more messages in the queue, the next message was lost and an access
+///         violation was raised.
 ///     1.14: 2026-10-08
 ///       - Receive and ReceiveWait no longer return OTL's internal messages (the calls of
 ///         the methods passed to IOmniTaskControl.Run/Invoke etc.) to the user code, where
@@ -437,7 +441,7 @@ var
   queueMsg: TOmniMessage;
 begin
   if (msg.Msg = MSG_CLIENT_MESSAGE) and assigned(mqWinMsgObserver.OnMessage) then
-    while TryDequeue(queueMsg) do
+    while assigned(mqWinMsgObserver.OnMessage) and TryDequeue(queueMsg) do // handler can set OnMessage to nil
       mqWinMsgObserver.OnMessage(Self, queueMsg);
 end; { TOmniMessageQueue.WndProc }
 

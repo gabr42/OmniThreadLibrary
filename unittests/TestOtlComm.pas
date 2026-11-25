@@ -11,6 +11,11 @@ type
     procedure TestBasics;
   end;
 
+  TestOmniMessageQueueOnMessage = class(TTestCase)
+  published
+    procedure TestDetachFromHandler;
+  end;
+
   TestOmniMessageQueueSize1 = class(TTestCase)
   published
     procedure TestSize1Queue;
@@ -190,6 +195,53 @@ begin
   CheckFalse(chan.Endpoint2.Receive(msg), 'Receive.4');
 end;
 
+{ TestOmniMessageQueueOnMessage }
+
+type
+  TDetachingHandler = class
+  public
+    FirstID: integer;
+    NumMsgs: integer;
+    procedure HandleMessage(Sender: TObject; const msg: TOmniMessage);
+  end;
+
+procedure TDetachingHandler.HandleMessage(Sender: TObject; const msg: TOmniMessage);
+begin
+  Inc(NumMsgs);
+  if NumMsgs = 1 then
+    FirstID := msg.MsgID;
+  (Sender as TOmniMessageQueue).OnMessage := nil;
+end;
+
+// Messages that are still in the queue when the handler detaches itself must not be lost.
+procedure TestOmniMessageQueueOnMessage.TestDetachFromHandler;
+var
+  handler: TDetachingHandler;
+  mq     : TOmniMessageQueue;
+  msg    : TOmniMessage;
+  winMsg : TMsg;
+begin
+  handler := TDetachingHandler.Create;
+  try
+    mq := TOmniMessageQueue.Create(5);
+    try
+      mq.OnMessage := handler.HandleMessage;
+      CheckTrue(mq.Enqueue(TOmniMessage.Create(1)));
+      CheckTrue(mq.Enqueue(TOmniMessage.Create(2)));
+      CheckTrue(mq.Enqueue(TOmniMessage.Create(3)));
+      while PeekMessage(winMsg, 0, 0, 0, PM_REMOVE) do
+        DispatchMessage(winMsg);
+      CheckEquals(1, handler.NumMsgs, 'Number of handled messages');
+      CheckEquals(1, handler.FirstID, 'Handled message');
+      CheckTrue(mq.TryDequeue(msg), 'TryDequeue.2');
+      CheckEquals(2, msg.MsgID, 'MsgID.2');
+      CheckTrue(mq.TryDequeue(msg), 'TryDequeue.3');
+      CheckEquals(3, msg.MsgID, 'MsgID.3');
+      CheckFalse(mq.TryDequeue(msg), 'Queue should be empty');
+    finally FreeAndNil(mq); end;
+  finally FreeAndNil(handler); end;
+end;
+
 { TestIOmniMessageQueueTee }
 
 procedure TestIOmniMessageQueueTee.TestBasicTee;
@@ -329,6 +381,7 @@ end;
 initialization
   RegisterTest(TestOmniMessageQueue.Suite);
   RegisterTest(TestOmniMessageQueueSize1.Suite);
+  RegisterTest(TestOmniMessageQueueOnMessage.Suite);
   RegisterTest(TestIOmniTwoWayChannel.Suite);
   RegisterTest(TestIOmniMessageQueueTee.Suite);
   RegisterTest(TestWorkerMessageLoop.Suite);
